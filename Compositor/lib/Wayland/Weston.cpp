@@ -29,6 +29,10 @@ extern "C" {
 
 void weston_init_process_list();
 void weston_compositor_shutdown(struct weston_compositor*);
+void weston_seat_init(struct weston_seat*, struct weston_compositor*, const char*);
+int weston_seat_init_keyboard(struct weston_seat*, struct xkb_keymap*);
+void weston_seat_release(struct weston_seat*);
+void weston_seat_release_keyboard(struct weston_seat*);
 }
 
 namespace WPEFramework {
@@ -205,6 +209,7 @@ namespace Weston {
                 InputController* Parent;
             };
             static constexpr const char* connectorName = "/tmp/keyhandler";
+            static constexpr const TCHAR* WPEKeyboardSeatName = _T("WPEKeyboardSeat");
 
         public:
             InputController() = delete;
@@ -245,15 +250,35 @@ namespace Weston {
         public:
             inline void CollectInputHandlers()
             {
-                struct weston_seat* seat;
+                struct weston_seat* seat = nullptr;
                 struct weston_compositor* compositor = _parent->PlatformCompositor();
                 wl_list_for_each(seat, &compositor->seat_list, link) {
-                    _seats.push_back(seat);
+                    if (seat->keyboard_state) {
+                        _seats.push_back(seat);
+                    }
+                }
+
+                /* Create a KeyBoard Seat for WPE Compositor, since none is available */
+                if (_seats.empty() == true) {
+                    seat = static_cast<struct weston_seat*>(zalloc(sizeof(struct weston_seat)));
+                    if (seat) {
+                        weston_seat_init(seat, compositor, WPEKeyboardSeatName);
+                        weston_seat_init_keyboard(seat, NULL);
+                        _seats.push_back(seat);
+                    }
                 }
             }
             inline void SetInput(struct weston_surface* surface) {
                 for (const auto& seat: _seats) {
                     weston_seat_set_keyboard_focus(seat, surface);
+                }
+            }
+            inline void ReleaseWPESeats() {
+                for (auto& seat: _seats) {
+                    if (strcmp(seat->seat_name, WPEKeyboardSeatName) == 0) {
+                        weston_seat_release_keyboard(seat);
+                        weston_seat_release(seat);
+                    }
                 }
             }
 
@@ -1317,6 +1342,7 @@ namespace Weston {
             Block();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
 
+            _inputController.ReleaseWPESeats();
             wl_event_source_remove(_exitTimer);
             weston_compositor_tear_down(_compositor);
             weston_log_ctx_compositor_destroy(_compositor);
