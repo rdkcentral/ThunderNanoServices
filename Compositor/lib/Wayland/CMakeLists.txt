@@ -53,6 +53,7 @@ if (PLUGIN_COMPOSITOR_NXSERVER)
     target_compile_definitions(${TARGET}
         PRIVATE
             ENABLE_NXSERVER=1)
+    target_include_directories(${TARGET} PRIVATE Nexus)
     if (V3D_DRM_DISABLE)
         target_compile_definitions(${TARGET}
             PRIVATE
