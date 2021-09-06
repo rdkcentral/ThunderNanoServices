@@ -248,7 +248,7 @@ private:
                 : Core::JSON::Container()
                 , hdcpLevel(Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted)
             {
-                Add(_T("hdcpLevel"), &hdcpLevel);
+                Add(_T("hdcplevel"), &hdcpLevel);
             }
 
             Core::JSON::EnumType<Exchange::IConnectionProperties::HDCPProtectionType> hdcpLevel;
