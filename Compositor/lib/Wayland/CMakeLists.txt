@@ -20,17 +20,17 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 message(STATUS "Setup ${TARGET} v${PROJECT_VERSION}...")
 
-if (NOT PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION)
+if(NOT PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION)
     set(PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION "Westeros")
-endif ()
+endif()
 
-if ((NOT "${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston") AND
+if((NOT "${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston") AND
     (NOT "${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros"))
 message( FATAL_ERROR "Invalid Wayland implementation, set PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION (currently: [${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}]) to \"Weston\" or \"Westeros\"" )
-endif ()
+endif()
 
-if (PLUGIN_COMPOSITOR_NXSERVER)
-if (COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
+if(PLUGIN_COMPOSITOR_NXSERVER)
+if(COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
     add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
 else ()
     include(GetExternalCode)
@@ -42,8 +42,8 @@ else ()
         SOURCE_DIR "Nexus"
     )
     add_subdirectory (Nexus/NexusServer)
-endif ()
-endif ()
+endif()
+endif()
 
 # add the platformplugin library
 add_library(${TARGET} Wayland.cpp)
@@ -56,23 +56,23 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(EGL REQUIRED)
 find_package(PNG REQUIRED)
 
-if (PLUGIN_COMPOSITOR_NXSERVER)
+if(PLUGIN_COMPOSITOR_NXSERVER)
     target_link_libraries(${TARGET} 
         PRIVATE 
            ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver)
     target_compile_definitions(${TARGET}
         PRIVATE
             ENABLE_NXSERVER=1)
-    if (V3D_DRM_DISABLE)
+    if(V3D_DRM_DISABLE)
         target_compile_definitions(${TARGET}
             PRIVATE
                 V3D_DRM_DISABLE=1)
-    endif ()
-endif ()
+    endif()
+endif()
 
-if (EGL_FOUND)
+if(EGL_FOUND)
     add_definitions(${EGL_CFLAGS})
-endif (EGL_FOUND)
+endif(EGL_FOUND)
 
 target_link_libraries(${TARGET}
     PRIVATE
@@ -100,9 +100,9 @@ set_target_properties(${TARGET} PROPERTIES
         DEFINE_SYMBOL WPEFRAMEWORK_PLATFORM_PLUGIN
 )
 
-if ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
+if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
     find_package(WestonServer)
-    if (WESTON_SERVER_FOUND)
+    if(WESTON_SERVER_FOUND)
         target_sources(${TARGET}
             PRIVATE
                 Weston.cpp
@@ -111,10 +111,10 @@ if ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
             PRIVATE
                 WestonServer::WestonServer
         )
-    endif (WESTON_SERVER_FOUND)
-elseif ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
+    endif(WESTON_SERVER_FOUND)
+elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     find_package(WesterosServer)
-    if (WESTEROS_SERVER_FOUND)
+    if(WESTEROS_SERVER_FOUND)
         target_sources(${TARGET}
              PRIVATE
                 Westeros.cpp
@@ -125,13 +125,13 @@ elseif ("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
         )
 
         find_package(BCM_HOST QUIET)
-        if (NOT BCM_HOST_FOUND)
+        if(NOT BCM_HOST_FOUND)
             target_compile_definitions(${TARGET}
                 PRIVATE
                     RESOLUTION_SUPPORT=1)
-        endif (NOT BCM_HOST_FOUND)
-    endif (WESTEROS_SERVER_FOUND)
-endif ()
+        endif(NOT BCM_HOST_FOUND)
+    endif(WESTEROS_SERVER_FOUND)
+endif()
 
 if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
     find_package(${NAMESPACE}VirtualInput REQUIRED)
