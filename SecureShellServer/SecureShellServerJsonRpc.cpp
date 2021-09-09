@@ -31,9 +31,9 @@ namespace Plugin {
     // Registration
     void SecureShellServer::RegisterAll()
     {
-	Register<void, Core::JSON::DecUInt32>(_T("activesessionscount"), &SecureShellServer::endpoint_activesessionscount, this);
-	Register<void, Core::JSON::ArrayType<SessioninfoInfo>>(_T("activesessionsinfo"), &SecureShellServer::endpoint_activesessionsinfo, this);
-	Register<SessioninfoInfo,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
+        Register<void, Core::JSON::DecUInt32>(_T("activesessionscount"), &SecureShellServer::endpoint_activesessionscount, this);
+        Register<void, Core::JSON::ArrayType<SessioninfoData>>(_T("activesessionsinfo"), &SecureShellServer::endpoint_activesessionsinfo, this);
+        Register<JsonData::SecureShellServer::CloseclientcessionParamsData,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
     }
 
     void SecureShellServer::UnregisterAll()
@@ -43,59 +43,59 @@ namespace Plugin {
         Unregister(_T("closeclientsession"));
     }
 
-    // API implementation
-    
-    // Property: 
+
+    // Method: Get number of active ssh sessions
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_INCORRECT_URL: Incorrect URL given
-    // Get total active SSH client sessions managed by Dropbear Service.
-    uint32_t SecureShellServer::endpoint_activesessionscount(Core::JSON::DecUInt32& response)
+    //  - ERROR_GENERAL: failure in getting the number of active sessions
+   uint32_t SecureShellServer::endpoint_activesessionscount(Core::JSON::DecUInt32& response)
     {
+        ASSERT(_secureShellServer != nullptr);
         uint32_t result = Core::ERROR_NONE;
 
-        Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
-        if (iter != nullptr)
-        {
-                response = GetSessionsCount(iter);
+        if(_secureShellServer){
+            response = _secureShellServer->GetActiveSessionsCount();
 
-                iter->Reset();
-                iter->Next();
-                iter->Release();
-        }
-
-        return result;
-    }
-
-    // Property: 
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_INCORRECT_URL: Incorrect URL given
-    // Get details of each active SSH client sessions managed by Dropbear Service.
-    uint32_t SecureShellServer::endpoint_activesessionsinfo(Core::JSON::ArrayType<SessioninfoInfo>& response)
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        result = SecureShellServer::GetSessionsInfo(response);
-
-        return result;
-    }
-
-    // Property: 
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_INCORRECT_URL: Incorrect URL given
-    // Close a SSH client session.
-    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoInfo& params)
-    {
-        uint32_t result = Core::ERROR_NONE;
-	    ClientImpl* client = Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.Ipaddress.Value(), params.Timestamp.Value(), params.Pid.Value());
-
-        if(params.Pid.IsSet() == true) {
-            TRACE(Trace::Information, (_T("closing client session with pid: %u"), params.Pid.Value()));
-            result = CloseClientSession(client);
         } else {
-            result = Core::ERROR_UNAVAILABLE;
+            result = Core::ERROR_GENERAL;
+        }
+        return result;
+    }
+
+    // Method: Get details of active ssh sessions
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_GENERAL: failure in getting the information
+    uint32_t SecureShellServer::endpoint_activesessionsinfo(Core::JSON::ArrayType<SessioninfoData>& response)
+    {
+        ASSERT(_secureShellServer != nullptr);
+        uint32_t result = Core::ERROR_NONE;
+
+        std::list<SessioninfoData> allInfos;
+
+        result = GetActiveSessionsInfo(allInfos);
+
+        for (auto& session : allInfos){
+            response.Add(session);
+        }
+        
+        return result;
+    }
+
+    // Method: Close an active ssh Session
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_GENERAL: failure in closing the requested session
+    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientcessionParamsData& params)
+    {
+        ASSERT(_secureShellServer != nullptr);
+        uint32_t result = Core::ERROR_NONE;
+
+        if(_secureShellServer!=nullptr && params.Pid.IsSet() == true) {
+            TRACE(Trace::Information, (_T("closing client session with pid: %u"), params.Pid.Value()));
+            result = _secureShellServer->CloseClientSession(params.Pid.Value());
+        } else {
+            result = Core::ERROR_GENERAL;
         }
 
         return result;

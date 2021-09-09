@@ -28,6 +28,8 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+set(PLUGIN_SECURESHELLSERVER_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(LibDropbear REQUIRED)
@@ -38,6 +40,7 @@ endif( NOT LIBDROPBEAR_FOUND)
 
 
 add_library(${MODULE_NAME} SHARED
+    SecureShellServerImplentation.cpp
     SecureShellServer.cpp
     SecureShellServerJsonRpc.cpp
     Module.cpp)
