@@ -34,9 +34,9 @@ namespace Plugin {
         class Data : public Core::JSON::Container {
         public:
             Data()
-                : Core::JSON::Container()
-                , SessionInfo()
-		, ActiveCount()
+            : Core::JSON::Container()
+            , SessionInfo()
+            , ActiveCount()
             {
                 Add(_T("sessioninfo"), &SessionInfo);
                 Add(_T("activecount"), &ActiveCount);
@@ -48,7 +48,7 @@ namespace Plugin {
 
         public:
             Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoData> SessionInfo;
-	    Core::JSON::DecUInt32 ActiveCount;
+	        Core::JSON::DecUInt32 ActiveCount;
         };
 
 	class Config : public Core::JSON::Container {

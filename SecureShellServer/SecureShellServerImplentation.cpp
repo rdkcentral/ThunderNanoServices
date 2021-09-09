@@ -198,7 +198,8 @@ public:
             return iter;
         }
 
-        uint32_t CloseClientSession(const uint64_t pid) override {
+        uint32_t CloseClientSession(const int pid) override 
+        {
             return close_client_session(pid);
         }
 

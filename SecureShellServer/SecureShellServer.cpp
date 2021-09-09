@@ -101,31 +101,35 @@ namespace Plugin
                 Core::ProxyType<Web::JSONBodyType<SecureShellServer::Data>> response(jsonBodyDataFactory.Element());
 
                 Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+                
+                // Skip the first item, which will be a '/'
+                index.Next();
 
                 result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                result->Message = _T("Unsupported request for the[SecureShellServer] service.");
+                result->Message = _T("Unsupported request or syntax error for SecureShellServer service.");
 
                 if ((request.Verb == Web::Request::HTTP_GET && index.Next()))
                 {
-
-                        if (index.Current().Text() == "GetSessionsCount")
-                        {
-                                        // GET <- GetSessionsCount
+                        if (index.Current().Text() == _T("SessionsCount"))
+                        {   
+                                // GET <- GetSessionsCount
+                                TRACE(Trace::Information, (_T("SecureShellServer received SessionsCount HTTP Get request ")));
                                 response->ActiveCount = _secureShellServer->GetActiveSessionsCount();
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->ContentType = Web::MIMETypes::MIME_JSON;
                                 result->Message = _T("Success");
                                 result->Body(response);
                         }
-                        else if (index.Current().Text() == "GetSessionsInfo")
+                        else if (index.Current().Text() == _T("SessionsInfo"))
                         {
                                 // GET <- GetSessionsInfo
+                                TRACE(Trace::Information, (_T("SecureShellServer received SessionsInfo HTTP Get request ")));
                                 std::list<JsonData::SecureShellServer::SessioninfoData> allSessionsInfo;
                                 uint32_t status = GetActiveSessionsInfo(allSessionsInfo);
                                 if (status != Core::ERROR_NONE)
                                 {
                                         result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                                        result->Message = _T("SecureShellServer GetSessionsInfo failed for ");
+                                        result->Message = _T("SecureShellServer HTTP Get request SessionsInfo failed! ");
                                 }
                                 else
                                 {
@@ -143,19 +147,24 @@ namespace Plugin
                         else
                         {
                                 result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                                result->Message = _T("Unavailable method");
+                                result->Message = _T("SecureShellServer Unavailable method");
                         }
                 }
-                else if ((request.Verb == Web::Request::HTTP_DELETE && index.Next()))
+                else if ((request.Verb == Web::Request::HTTP_DELETE ))
                 {
-                        if (index.Current().Text() == "CloseClientSession")
+                        if(index.IsValid() == true && index.Next() == true)
                         {
-                                // DELETE      <-CloseClientSessio		
-                                uint32_t status = _secureShellServer->CloseClientSession(request.Body<const JsonData::SecureShellServer::CloseclientcessionParamsData > ()->Pid.Value());
+                                // DELETE      <-CloseClientSessio	
+                                //example DELETE http://192.168.2.2:80/Service/SecureShellServer/454	
+                                TRACE(Trace::Information, (_T("SecureShellServer received CloseClientSession HTTP Delete request ")));
+                                uint32_t pidUint;
+                                Core::FromString(index.Current().Text(),pidUint);
+
+                                uint32_t status = _secureShellServer->CloseClientSession(pidUint);
                                 if (status != Core::ERROR_NONE)
                                 {
                                         result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                                        result->Message = _T("SecureShellServer CloseClientSession failed for ");
+                                        result->Message = _T("SecureShellServer CloseClientSession failed ! ");
                                 }
                                 else
                                 {
@@ -168,14 +177,14 @@ namespace Plugin
                         else
                         {
                                 result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                                result->Message = _T("Unavailable method");
+                                result->Message = _T("SecureShellServer Unavailable method");
                         }
                 }
                 else
                 {
                         // Not supported HTTP Method
                         result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                        result->Message = _T("Unavailable method");
+                        result->Message = _T("SecureShellServer Unavailable method");
                 }
 
                 return result;
