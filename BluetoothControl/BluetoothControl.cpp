@@ -526,7 +526,7 @@ namespace Plugin {
         DeviceImpl* impl = Find(address, lowEnergy);
 
         if (impl == nullptr) {
-            TRACE(Trace::Information, (_T("New device discovered %s"), address.ToString().c_str()));
+            TRACE(Trace::Information, (_T("New %s device discovered %s"), (lowEnergy? "BLE" : "BR/EDR"), address.ToString().c_str()));
 
             if (lowEnergy == true) {
                 impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address);
