@@ -434,6 +434,7 @@ namespace Weston {
             SurfaceData(Compositor* parent, const uint32_t id, const string& name, struct weston_surface* surface)
                 : _parent(parent)
                 , _id(id)
+                , _zorder(0)
                 , _name(name)
                 , _refCount(0)
                 , _timer(nullptr)
@@ -495,7 +496,6 @@ namespace Weston {
                         }
                     }
                 }
-                surfaceData->UpdateZOrder(surfaceData->Name(), surfaceData->ZOrder());
                 surfaceData->RemoveTimer();
                 return 1;
             }
@@ -555,10 +555,6 @@ namespace Weston {
             inline void RemoveSurface() const
             {
                 _parent->RemoveSurface(_surface);
-            }
-            inline void UpdateZOrder(const string& name, const uint32_t zorder)
-            {
-                _parent->UpdateZOrder(name, zorder);
             }
        private:
             inline void UpdateViewOpacity(struct weston_surface* surface, float opacity)
@@ -1277,6 +1273,7 @@ namespace Weston {
         static constexpr const uint8_t MaxCloneHeads = 16;
         static constexpr const uint32_t MaxLoadingTime = 3000;
         static constexpr const uint32_t MaxOpacityRange = 250;
+        static constexpr const TCHAR* VideoSurfaceSuffix = _T(":Video");
         static constexpr const TCHAR* ShellInitEntryAPI = _T("wet_shell_init");
         static constexpr const TCHAR* ShellSurfaceUpdateLayerAPI = _T("wet_shell_surface_update_layer");
 
@@ -1469,7 +1466,8 @@ namespace Weston {
         void SetInput(const string& name) override
         {
             struct weston_surface* surface = GetSurface(name);
-            if (surface != nullptr) {
+            string suffix = VideoSurfaceSuffix;
+            if ((name.find(suffix, name.size() - suffix.size()) == string::npos) && (surface != nullptr)) {
                 _inputController.SetInput(surface);
             }
         }
@@ -1588,7 +1586,6 @@ namespace Weston {
         {
             string name = ClientName(label);
             _adminLock.Lock();
-            UpdateZOrder();
             auto index = _surfaces.begin();
             while (index != _surfaces.end()) {
                 if ((*index)->Name() == name) {
@@ -1602,44 +1599,17 @@ namespace Weston {
                 _surfaces.push_back(surface);
                 surface->AddRef();
                 _callback->Attached(id);
-            }
-            _adminLock.Unlock();
-        }
-        inline void UpdateZOrder() {
-            for (const auto& index: _surfaces) {
-                 uint32_t zorder = index->ZOrder();
-                 index->ZOrder(zorder++);
-            }
-        }
-        inline void UpdateZOrder(const string& name, const uint32_t zorder) {
-            _adminLock.Lock();
 
-            /* Remove from the existing list */
-            SurfaceData* surface = nullptr;
-            auto index = _surfaces.begin();
-            while (index != _surfaces.end()) {
-                if (name == (*index)->Name()) {
-                    surface = *index;
-                    _surfaces.erase(index);
-                    break;
+                string suffix = VideoSurfaceSuffix;
+                if (name.find(suffix, name.size() - suffix.size()) != string::npos) {
+                    SurfaceData* matchingSurface = GetMatchingSurface(PrimaryName(name));
+                    _callback->Detached(matchingSurface->Id());
+                    _callback->Attached(matchingSurface->Id());
+                    SetInput(matchingSurface->Name());
+
                 }
-                index++;
-            }
 
-            /* Reinsert based on ZOrder given */
-            index = _surfaces.begin();
-            while (index != _surfaces.end()) {
-                if (zorder < (*index)->ZOrder()) {
-                    break;
-                }
-                index++;
             }
-
-            if (surface != nullptr) {
-                surface->ZOrder(zorder);
-                _surfaces.insert(index, surface);
-            }
-
             _adminLock.Unlock();
         }
         void RemoveSurface(struct weston_surface* westonSurface)
@@ -1671,6 +1641,30 @@ namespace Weston {
             _adminLock.Unlock();
 
             return surface;
+        }
+        SurfaceData* GetMatchingSurface(const string& prefix)
+        {
+            SurfaceData* surface = nullptr;
+            _adminLock.Lock();
+
+            for (const auto& index: _surfaces) {
+                if (index->Name().find(prefix) == 0) {
+                    surface = index;
+                    break;
+                }
+            }
+
+            _adminLock.Unlock();
+
+            return surface;
+        }
+        string PrimaryName(const string& layerName)
+        {
+            size_t pos = layerName.find(':', 0);
+            if (pos != string::npos) {
+                return(layerName.substr(0, pos));
+            }
+            return (layerName);
         }
     public:
         ShellSurfaceSetTop _surfaceSetTopAPI;

@@ -70,7 +70,7 @@ install(TARGETS ${MODULE_NAME}
 
 if(PLUGIN_COMPOSITOR_SERVER)
     add_subdirectory(server)
-endif ()
+endif()
 
 add_subdirectory(lib)
 

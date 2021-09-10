@@ -496,7 +496,7 @@ namespace Plugin {
             else {
                 string layerName = PrimaryName(loop->name);
                 if (std::find(zOrderedList.begin(), zOrderedList.end(), layerName) == zOrderedList.end()) {
-                    zOrderedList.push_back(layerName);
+                    zOrderedList.push_back(loop->name);
                 }
             }
                 
