@@ -743,7 +743,8 @@ namespace Plugin {
             }
             return result;
         }
-
+        
+    public:
         BEGIN_INTERFACE_MAP(WifiControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IWeb)
