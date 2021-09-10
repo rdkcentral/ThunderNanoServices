@@ -139,16 +139,6 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
-            case 'S':
-                if (_smartClient == nullptr) {
-                    printf("Starting getting notifications using smart interface client\n");
-                    _smartClient.reset(new SmartWallClockClient(Core::infinite, comChannel, "COMRPCPluginServer", 10));
-                } else {
-                    printf("Stop getting notifications using smart interface client\n");
-                    _smartClient.reset(nullptr);
-                }
-
-                break;
             case 'D':
                 if (clock == nullptr) {
                     printf("We can not destroy the clock, because we have no clock :-)\n");
@@ -190,6 +180,38 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
+            // "Smart" options below
+            case 'S':
+                if (_smartClient == nullptr) {
+                    printf("Aquiring IWallClock using SmartInterfaceType\n");
+                    _smartClient.reset(new SmartWallClockClient(Core::infinite, comChannel, "COMRPCPluginServer", 10));
+                } else {
+                    printf("Releasing IWallClock using SmartInterfaceType\n");
+                    _smartClient.reset(nullptr);
+                }
+                break;
+            case 'P':
+                if (_smartClient == nullptr) {
+                    printf("We do not have a smart clock interface, so we can not get the time\n");
+                } else {
+                    _smartClient->Now();
+                }
+                break;
+            case 'L':
+                if (_smartClient == nullptr) {
+                    printf("We do not have a smart clock interface, so we can not register callback\n");
+                } else {
+                    _smartClient->Arm(10, [](uint16_t seconds){ printf("The wallclock reports that %d seconds have elapsed since we where armed\n", seconds); });
+                }
+                break;
+            case 'M':
+                if (_smartClient == nullptr) {
+                    printf("We do not have a smart clock interface, so we cannot unregister callback\n");
+                } else {
+                    _smartClient->Disarm();
+                }
+                break;
+            // "smart" options end
             case 'E':
                 exit(0);
                 break;
