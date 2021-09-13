@@ -1273,7 +1273,7 @@ namespace Weston {
         static constexpr const uint8_t MaxCloneHeads = 16;
         static constexpr const uint32_t MaxLoadingTime = 3000;
         static constexpr const uint32_t MaxOpacityRange = 250;
-        static constexpr const TCHAR* VideoSurfaceSuffix = _T(":Video");
+        static constexpr const TCHAR* VideoSurfaceSuffix = _T(":video");
         static constexpr const TCHAR* ShellInitEntryAPI = _T("wet_shell_init");
         static constexpr const TCHAR* ShellSurfaceUpdateLayerAPI = _T("wet_shell_surface_update_layer");
 
@@ -1466,8 +1466,7 @@ namespace Weston {
         void SetInput(const string& name) override
         {
             struct weston_surface* surface = GetSurface(name);
-            string suffix = VideoSurfaceSuffix;
-            if ((name.find(suffix, name.size() - suffix.size()) == string::npos) && (surface != nullptr)) {
+            if ((IsVideoSurface(name) == false) && (surface != nullptr)) {
                 _inputController.SetInput(surface);
             }
         }
@@ -1600,15 +1599,12 @@ namespace Weston {
                 surface->AddRef();
                 _callback->Attached(id);
 
-                string suffix = VideoSurfaceSuffix;
-                if (name.find(suffix, name.size() - suffix.size()) != string::npos) {
+                if (IsVideoSurface(name) == true) {
                     SurfaceData* matchingSurface = GetMatchingSurface(PrimaryName(name));
                     _callback->Detached(matchingSurface->Id());
                     _callback->Attached(matchingSurface->Id());
-                    SetInput(matchingSurface->Name());
-
+                    _inputController.SetInput(matchingSurface->WestonSurface());
                 }
-
             }
             _adminLock.Unlock();
         }
@@ -1658,13 +1654,22 @@ namespace Weston {
 
             return surface;
         }
-        string PrimaryName(const string& layerName)
+        inline string PrimaryName(const string& layerName)
         {
             size_t pos = layerName.find(':', 0);
             if (pos != string::npos) {
                 return(layerName.substr(0, pos));
             }
             return (layerName);
+        }
+        inline bool IsVideoSurface(const string& name)
+        {
+            string nameLower;
+            nameLower.resize(name.size());
+            string suffix = VideoSurfaceSuffix;
+            std::transform(name.begin(), name.end(), nameLower.begin(), ::tolower);
+
+            return (nameLower.find(suffix, nameLower.size() - suffix.size()) != string::npos);
         }
     public:
         ShellSurfaceSetTop _surfaceSetTopAPI;
