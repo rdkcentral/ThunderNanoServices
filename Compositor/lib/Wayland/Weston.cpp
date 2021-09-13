@@ -33,6 +33,7 @@ void weston_seat_init(struct weston_seat*, struct weston_compositor*, const char
 int weston_seat_init_keyboard(struct weston_seat*, struct xkb_keymap*);
 void weston_seat_release(struct weston_seat*);
 void weston_seat_release_keyboard(struct weston_seat*);
+extern struct weston_ring_buffer *weston_primary_flight_recorder_ring_buffer;
 }
 
 namespace WPEFramework {
@@ -152,6 +153,7 @@ namespace Weston {
                 _logger = weston_log_subscriber_create_log(_logFile);
                 weston_log_subscribe(_context, _logger, "log");
 
+                weston_primary_flight_recorder_ring_buffer = nullptr;
                 _flightRec = weston_log_subscriber_create_flight_rec(DefaultFlightRecSize);
                 weston_log_subscribe(_context, _flightRec, "log");
                 weston_log_subscribe(_context, _flightRec, "drm-backend");
@@ -174,7 +176,6 @@ namespace Weston {
                     } else {
                         length = weston_log_scope_printf(_logScope, "%sOut of memory", timeStamp.c_str());
                     }
-                    fflush(0);
                 }
                 return length;
             }
@@ -1351,7 +1352,7 @@ namespace Weston {
             _service = nullptr;
         }
         uint32_t StartComposition()
-               {
+        {
             uint32_t status = Core::ERROR_GENERAL;
             _display = wl_display_create();
 

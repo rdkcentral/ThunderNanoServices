@@ -232,10 +232,10 @@ namespace Plugin {
 
     public:
         CompositorImplementation()
-            : _config()
+            : _active(false)
+            , _config()
             , _compositionClients()
             , _clients()
-            , _active(false)
             , _server(nullptr)
             , _job(*this)
             , _sink(*this)
