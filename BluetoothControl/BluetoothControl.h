@@ -403,23 +403,31 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             uint32_t Open(BluetoothControl& parent)
             {
-                ASSERT (IsOpen() == false);
+                TRACE(ControlFlow, (_T("Opening HCI socket...")));
+                ASSERT(IsOpen() == false);
                 _parent = &parent;
                 Bluetooth::HCISocket::LocalNode(Core::NodeId(_administrator.DeviceId(), HCI_CHANNEL_RAW));
                 return (Bluetooth::HCISocket::Open(Core::infinite));
             }
             uint32_t Close()
             {
-                uint32_t result = Bluetooth::HCISocket::Close(Core::infinite);
+                TRACE(ControlFlow, (_T("Closing HCI socket...")));
+                ASSERT(IsOpen() == true);
+                Bluetooth::HCISocket::Abort();
                 _scanJob.Revoke();
-                Bluetooth::ManagementSocket::Down(_administrator.DeviceId());
-                _administrator.DeviceId(HCI_DEV_NONE);
+                uint32_t result = Bluetooth::HCISocket::Close(Core::infinite);
                 _parent = nullptr;
                 return (result);
             }
-            void PairingComplete(const Bluetooth::Address& /* remote */, const Bluetooth::Address::type /* type */, const uint8_t /* status */)
+            void PairingComplete(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const uint8_t status)
             {
                 // Pairing is considered successful only if the appropriate keys are exchanged.
+                if (status != 0) {
+                    // ...but notify failed paring attempt
+                    UpdateDevice<DeviceImpl>(remote, (type != Bluetooth::Address::BREDR_ADDRESS), [&](DeviceImpl* device) {
+                        device->PairingComplete(status);
+                    });
+                }
             }
             template<typename KEYTYPE>
             uint32_t SecurityKey(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const KEYTYPE& key)
@@ -543,7 +551,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     DeviceImpl* device = Application()->Find(address);
 
                     if (device == nullptr) {
-                        device = Application()->Discovered(true, info.bdaddr);
+                        device = Application()->Discovered(false, info.bdaddr);
                     }
 
                     if (device != nullptr) {
@@ -560,7 +568,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     DeviceImpl* device = Application()->Find(address);
 
                     if (device == nullptr) {
-                        device = Application()->Discovered(true, info.bdaddr);
+                        device = Application()->Discovered(false, info.bdaddr);
                     }
 
                     if (device != nullptr) {
@@ -577,7 +585,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     DeviceImpl* device = Application()->Find(address);
 
                     if (device == nullptr) {
-                        device = Application()->Discovered(true, info.bdaddr);
+                        device = Application()->Discovered(false, info.bdaddr);
                     }
 
                     if (device != nullptr) {
