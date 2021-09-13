@@ -1387,9 +1387,8 @@ namespace WPASupplicant {
             EnabledContainer::iterator entry(_enabled.find(SSID));
             
             if ((entry != _enabled.end()) && (entry->second.Id() != static_cast<uint32_t>(~0))) {
-                ConfigInfo config(entry->second);
                 _adminLock.Unlock();
-                CustomRequest exchange(string(_TXT("REMOVE_NETWORK ")) + Core::NumberType<uint32_t>(config.Id()).Text());
+                CustomRequest exchange(string(_TXT("REMOVE_NETWORK ")) + Core::NumberType<uint32_t>(entry->second.Id()).Text());
 
                 Submit(&exchange);
 
