@@ -21,6 +21,7 @@
 #include "../ExtendedDisplayIdentification.h"
 
 #include <interfaces/IDisplayInfo.h>
+#include <interfaces/IConfiguration.h>
 
 #include <bcm_host.h>
 #include <fstream>
@@ -28,7 +29,10 @@
 namespace WPEFramework {
 namespace Plugin {
 
-class DisplayInfoImplementation : public Exchange::IHDRProperties, public Exchange::IGraphicsProperties, public Exchange::IConnectionProperties {
+class DisplayInfoImplementation : public Exchange::IHDRProperties,
+                                  public Exchange::IGraphicsProperties,
+                                  public Exchange::IConnectionProperties,
+                                  public Exchange::IConfiguration {
 
 public:
     DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
@@ -56,6 +60,15 @@ public:
     virtual ~DisplayInfoImplementation()
     {
         bcm_host_deinit();
+    }
+
+    uint32_t Configure(PluginHost::IShell* framework) override
+    {
+        Config config;
+        config.FromString(framework->ConfigLine());
+        _value = config.hdcpLevel.Value();
+
+        return Core::ERROR_NONE;
     }
 
 public:
@@ -131,13 +144,11 @@ public:
         vf = ~0;
         return (Core::ERROR_NONE);
     }
-    // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
     uint32_t HDCPProtection(HDCPProtectionType& value) const override
     {
-        value = HDCPProtectionType::HDCP_Unencrypted;
+        value = _value;
         return (Core::ERROR_NONE);
     }
-    // HDCP support is not used for RPI now, it is always settings as DISPMANX_PROTECTION_NONE
     uint32_t HDCPProtection(const HDCPProtectionType value) override
     {
         _value = value;
@@ -223,9 +234,26 @@ public:
         INTERFACE_ENTRY(Exchange::IHDRProperties)
         INTERFACE_ENTRY(Exchange::IGraphicsProperties)
         INTERFACE_ENTRY(Exchange::IConnectionProperties)
+        INTERFACE_ENTRY(Exchange::IConfiguration)
     END_INTERFACE_MAP
 
 private:
+
+    class Config : public Core::JSON::Container {
+        public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+            Config()
+                : Core::JSON::Container()
+                , hdcpLevel(Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted)
+            {
+                Add(_T("hdcplevel"), &hdcpLevel);
+            }
+
+            Core::JSON::EnumType<Exchange::IConnectionProperties::HDCPProtectionType> hdcpLevel;
+    };
+
     inline void UpdateTotalGpuRam(uint64_t& totalRam) const
     {
         Command("get_mem reloc_total ", totalRam);

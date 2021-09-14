@@ -135,7 +135,6 @@ namespace Plugin {
             return result;
         }
 
-    private:
         BEGIN_INTERFACE_MAP(CryptographyImplementation)
             INTERFACE_ENTRY(Exchange::IConfiguration)
             INTERFACE_AGGREGATE(Cryptography::ICryptography, _cryptography)
