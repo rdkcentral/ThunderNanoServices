@@ -232,8 +232,7 @@ namespace Plugin {
 
     public:
         CompositorImplementation()
-            : _active(false)
-            , _config()
+            : _config()
             , _compositionClients()
             , _clients()
             , _server(nullptr)
@@ -261,7 +260,8 @@ namespace Plugin {
         {
             TRACE(Trace::Information, (_T("Stopping Wayland\n")));
 
-            _active = false;
+            _job.Stop();
+            _job.Wait(Core::Thread::STOPPED | Core::Thread::STOPPING, Core::infinite);
 
             if (_surface != nullptr) {
                 delete _surface;
@@ -270,7 +270,6 @@ namespace Plugin {
             if (_server != nullptr) {
                 delete _server;
             }
-
 
 #ifdef ENABLE_NXSERVER
             if (_nxserver != nullptr) {
@@ -394,7 +393,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         /* virtual */ bool Dispatch()
         {
-            return _active;
+            return true;
         }
         RPC::IStringIterator* Consumers() const override
         {
@@ -527,7 +526,6 @@ namespace Plugin {
 
                 if (_server->StartController(_config.Display.Value(), &_sink) == true) {
                    // Firing up the compositor controller.
-                    _active = true;
                     _job.Run();
 
                     TRACE(Trace::Information, (_T("Compositor initialized\n")));
@@ -546,7 +544,6 @@ namespace Plugin {
         }
 
     private:
-        bool _active;
         Config _config;
         std::list<Exchange::IComposition::INotification*> _compositionClients;
         std::list<Entry*> _clients;
