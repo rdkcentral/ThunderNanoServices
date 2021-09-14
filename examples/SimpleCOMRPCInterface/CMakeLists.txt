@@ -14,11 +14,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+find_package(${NAMESPACE}Core)
+find_package(${NAMESPACE}COM)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+
+set(ProxyStubGenerator_DIR "/home/lukasz/Desktop/builds/rpi3b+_vc4/build1/buildroot/output/build/wpeframework-custom/Tools/cmake" ${ProxyStubGenerator_DIR})
+find_package(ProxyStubGenerator REQUIRED)
+
+
+if(NOT GENERATOR_SEARCH_PATH)
+    set(GENERATOR_SEARCH_PATH ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/${NAMESPACE})
+endif()
+
+ProxyStubGenerator(INPUT "${CMAKE_CURRENT_SOURCE_DIR}" OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/generated" INCLUDE_PATH ${GENERATOR_SEARCH_PATH})
+
+file(GLOB INTERFACES_HEADERS I*.h)
+list(APPEND INTERFACES_HEADERS Module.h)
+
+file(GLOB PROXY_STUB_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/generated/ProxyStubs*.cpp")
 
 set(TARGET ${NAMESPACE}SimpleCOMRPCInterface)
 
 add_library(${TARGET} SHARED
-        ProxyStub_SimpleCOMRPCInterface.cpp
+        ${PROXY_STUB_SOURCES}        
         Module.cpp
         )
 
@@ -32,12 +50,12 @@ target_link_libraries(${TARGET}
           CompileSettingsDebug::CompileSettingsDebug
         )
 
-set_target_properties(${TARGET} PROPERTIES
+set_target_properties(${TargetMarshalling} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
-        VERSION ${VERSION}
-        SOVERSION ${VERSION_MAJOR}
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
         )
 
 install(
