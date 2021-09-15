@@ -20,7 +20,7 @@
 #pragma once
 
 #include "Module.h"
-#include "AudioCodec.h"
+#include "IAudioCodec.h"
 
 namespace WPEFramework {
 
@@ -71,8 +71,8 @@ namespace A2DP {
         TransportChannel(const TransportChannel&) = delete;
         TransportChannel& operator=(const TransportChannel&) = delete;
 
-        TransportChannel(const uint8_t ssrc, const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t mtu = DefaultMTU)
-            : Bluetooth::RTPSocket(localNode, remoteNode, mtu)
+        TransportChannel(const uint8_t ssrc, const Core::NodeId& localNode, const Core::NodeId& remoteNode)
+            : Bluetooth::RTPSocket(localNode, remoteNode)
             , _lock()
             , _codec(nullptr)
             , _ssrc(ssrc)
@@ -161,7 +161,8 @@ namespace A2DP {
             ASSERT(_codec != nullptr);
 
             // Limit the packet size to MTU, so it does not have to be fragmented.
-            uint8_t scratchPad[SendBufferSize()];
+            uint8_t *scratchPad = static_cast<uint8_t*>(ALLOCA(DefaultMTU));
+            ASSERT(scratchPad != nullptr);
 
             // Payload type should be a value from the dynamic range (96-127).
             // Typically 96 is chosen for A2DP implementations.

@@ -27,9 +27,12 @@
 #include <interfaces/IBluetoothAudio.h>
 #include <interfaces/json/JBluetoothAudioSink.h>
 
+#include "SDPServer.h"
+
 #include "ServiceDiscovery.h"
 #include "SignallingChannel.h"
 #include "TransportChannel.h"
+
 
 namespace WPEFramework {
 
@@ -158,6 +161,7 @@ namespace Plugin {
                 {
                     ASSERT(parent != nullptr);
                 }
+
                 ~DeviceCallback() = default;
 
             public:
@@ -174,10 +178,16 @@ namespace Plugin {
                 A2DPSink& _parent;
             }; // class DeviceCallback
 
-            static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device, const bool local, const uint16_t psm = 0)
+        public:
+            static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device)
             {
                 ASSERT(device != nullptr);
-                return (Bluetooth::Address((local? device->LocalId() : device->RemoteId()).c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0 /* must be zero */, psm));
+                return (Bluetooth::Address(device->LocalId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0, 0));
+            }
+            static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device, const uint16_t psm)
+            {
+                ASSERT(device != nullptr);
+                return (Bluetooth::Address(device->RemoteId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0 /* must be zero */, psm));
             }
 
         public:
@@ -185,7 +195,7 @@ namespace Plugin {
 
         public:
             A2DPSink(const A2DPSink&) = delete;
-            A2DPSink& operator= (const A2DPSink&) = delete;
+            A2DPSink& operator=(const A2DPSink&) = delete;
             A2DPSink(BluetoothAudioSink* parent, Exchange::IBluetooth::IDevice* device, const uint8_t seid, const UpdatedCb& updatedCb)
                 : _parent(*parent)
                 , _device(device)
@@ -193,9 +203,9 @@ namespace Plugin {
                 , _updatedCb(updatedCb)
                 , _lock()
                 , _job()
-                , _discovery(Designator(device, true), Designator(device, false, Bluetooth::SDPSocket::SDP_PSM /* a well-known PSM */))
-                , _signalling(seid, std::bind(&A2DPSink::OnSignallingUpdated, this), Designator(device, true), Designator(device, false))
-                , _transport(1 /* SSRC */, Designator(device, true), Designator(device, false))
+                , _discovery(Designator(device), Designator(device, Bluetooth::SDP::ClientSocket::SDP_PSM /* a well-known PSM */))
+                , _signalling(seid, std::bind(&A2DPSink::OnSignallingUpdated, this), Designator(device), Designator(device, 0 /* yet unknown PSM */))
+                , _transport(1 /* SSRC */, Designator(device), Designator(device, 0 /* yet unknown PSM */))
                 , _endpoint(nullptr)
             {
                 ASSERT(parent != nullptr);
@@ -240,7 +250,7 @@ namespace Plugin {
                 ASSERT(_endpoint != nullptr);
                 uint32_t result = Core::ERROR_GENERAL;
                 if (_endpoint->Open() == Core::ERROR_NONE) {
-                    if (_transport.Connect(Designator(_device, false, _audioService.PSM()), _endpoint->Codec()) == Core::ERROR_NONE) {
+                    if (_transport.Connect(Designator(_device, _audioService.PSM()), _endpoint->Codec()) == Core::ERROR_NONE) {
                         result = Core::ERROR_NONE;
                     }
                 }
@@ -375,6 +385,7 @@ namespace Plugin {
 
                 // Now open AVDTP signalling channel...
                 TRACE(ProfileFlow, (_T("Audio sink device discovered, connect to the sink...")));
+
                 DiscoverAudioStreamEndpoints(_audioService);
 
                 _lock.Unlock();
@@ -383,7 +394,8 @@ namespace Plugin {
         private:
             void DiscoverAudioStreamEndpoints(A2DP::ServiceDiscovery::AudioService& service)
             {
-                if (_signalling.Connect(Designator(_device, false, service.PSM())) == Core::ERROR_NONE) {
+                // Let's see what endpoints does the sink have...
+                if (_signalling.Connect(Designator(_device, service.PSM())) == Core::ERROR_NONE) {
                     _signalling.Discover([this](std::list<A2DP::AudioEndpoint>& endpoints) {
                         _job.Submit([this, &endpoints]() {
                             OnAudioStreamEndpointsDiscovered(endpoints);
@@ -416,6 +428,10 @@ namespace Plugin {
                     _job.Submit([this](){
                         Configure(R"({ "profile":"xq", "samplerate": 44100, "channels": "stereo" })");
                     });
+                } else {
+                    // This should not be possible.
+                    TRACE(Trace::Error, (_T("No supported codec available on the connected audio sink!")));
+                    ASSERT(false && "No SBC codec?");
                 }
 
                 _lock.Unlock();
@@ -437,12 +453,13 @@ namespace Plugin {
 
     public:
         BluetoothAudioSink(const BluetoothAudioSink&) = delete;
-        BluetoothAudioSink& operator= (const BluetoothAudioSink&) = delete;
+        BluetoothAudioSink& operator=(const BluetoothAudioSink&) = delete;
         BluetoothAudioSink()
             : _lock()
             , _service(nullptr)
-            , _sink(nullptr)
             , _controller()
+            , _sdpServer()
+            , _sink(nullptr)
             , _callback(nullptr)
 
         {
@@ -530,8 +547,9 @@ namespace Plugin {
     private:
         mutable Core::CriticalSection _lock;
         PluginHost::IShell* _service;
-        A2DPSink* _sink;
         string _controller;
+        SDP::ServiceDiscoveryServer _sdpServer;
+        A2DPSink* _sink;
         Exchange::IBluetoothAudioSink::ICallback* _callback;
     }; // class BluetoothAudioSink
 

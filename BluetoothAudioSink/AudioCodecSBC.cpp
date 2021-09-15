@@ -19,7 +19,6 @@
 
 #include "Module.h"
 
-#include "AudioCodec.h"
 #include "AudioCodecSBC.h"
 
 #include <sbc/sbc.h>
@@ -297,8 +296,8 @@ namespace A2DP {
         return (consumed);
     }
 
-    /* virtual */ uint32_t AudioCodecSBC::Decode(const uint32_t inBufferSize, const uint8_t inBuffer[],
-                                                 uint32_t& outBufferSize, uint8_t outBuffer[]) const
+    /* virtual */ uint32_t AudioCodecSBC::Decode(const uint32_t /* inBufferSize */, const uint8_t /* inBuffer */[],
+                                                 uint32_t& /* outBufferSize */, uint8_t /* outBuffer */[]) const
     {
         ASSERT(false && "SBC decode not implemented"); // TODO...?
         return (0);
@@ -309,12 +308,6 @@ namespace A2DP {
         uint32_t result = Core::ERROR_NONE;
 
         ASSERT(_preferredBitpool != 0);
-
-        if (policy == 0)
-            ASSERT(false);
-        else {
-            printf("x");
-        }
 
         const uint8_t STEP = (_preferredBitpool / 10);
 

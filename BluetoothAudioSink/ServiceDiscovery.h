@@ -25,9 +25,8 @@ namespace WPEFramework {
 
 namespace A2DP {
 
-    class ServiceDiscovery : public Bluetooth::SDPSocket {
+    class ServiceDiscovery : public Bluetooth::SDP::ClientSocket {
     private:
-        static constexpr uint16_t DefaultMTU = 1024;
         static constexpr uint16_t OpenTimeout = 2000; // ms
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t DiscoverTimeout = 5000;
@@ -66,8 +65,6 @@ namespace A2DP {
         }; // class DiscoveryFlow
 
     public:
-        using ClassID = Bluetooth::SDPProfile::ClassID;
-
         class AudioService {
         private:
             enum attributeid : uint16_t {
@@ -79,7 +76,7 @@ namespace A2DP {
                 UNKNOWN = 0,
                 SOURCE  = 1,
                 SINK    = 2,
-                NEITHER = 3
+                OTHER   = 3
             };
 
             enum features : uint16_t {
@@ -95,6 +92,22 @@ namespace A2DP {
             };
 
         public:
+            class FeaturesDescriptor : public Bluetooth::SDP::Service::Data::Element<uint16_t> {
+            public:
+                using Element::Element;
+
+            public:
+                features Features(const type devType) const
+                {
+                    if (devType == SINK) {
+                        return (static_cast<features>(Value()));
+                    } else {
+                        return (static_cast<features>((static_cast<uint8_t>(Value()) << 4)));
+                    }
+                }
+            }; // class FeaturesDescriptor
+
+        public:
             AudioService()
                 : _l2capPsm(0)
                 , _avdtpVersion(0)
@@ -103,53 +116,45 @@ namespace A2DP {
                 , _type(UNKNOWN)
             {
             }
-            AudioService(const Bluetooth::SDPProfile::Service& service)
+
+            AudioService(const AudioService&) = default;
+            AudioService& operator=(const AudioService&) = default;
+
+            AudioService(const Bluetooth::SDP::Service& service)
                 : AudioService()
             {
-                using SDPProfile = Bluetooth::SDPProfile;
+                namespace SDP = Bluetooth::SDP;
 
-                _type = NEITHER;
+                _type = OTHER;
 
-                const SDPProfile::ProfileDescriptor* a2dp = service.Profile(ClassID::AdvancedAudioDistribution);
-                ASSERT(a2dp != nullptr);
-                if (a2dp != nullptr) {
-                    _a2dpVersion = a2dp->Version();
-                    ASSERT(_a2dpVersion != 0);
+                const auto* a2dpData = service.Profile(SDP::ClassID::AdvancedAudioDistribution);
+                if (a2dpData != nullptr) {
+                    _a2dpVersion = a2dpData->Version();
 
-                    const SDPProfile::ProtocolDescriptor* l2cap = service.Protocol(ClassID::L2CAP);
-                    ASSERT(l2cap != nullptr);
-                    if (l2cap != nullptr) {
-                        SDPSocket::Payload params(l2cap->Parameters());
-                        params.Pop(SDPSocket::use_descriptor, _l2capPsm);
-                        ASSERT(_l2capPsm != 0);
+                    const auto* l2capData = service.Protocol(SDP::ClassID::L2CAP);
+                    if (l2capData != nullptr) {
+                        _l2capPsm = SDP::Service::Protocol::L2CAP(*l2capData).PSM();
 
-                        const SDPProfile::ProtocolDescriptor* avdtp = service.Protocol(ClassID::AVDTP);
-                        ASSERT(avdtp != nullptr);
-                        if (avdtp != nullptr) {
-                            SDPSocket::Payload params(avdtp->Parameters());
-                            params.Pop(SDPSocket::use_descriptor, _avdtpVersion);
-                            ASSERT(_avdtpVersion != 0);
+                        const auto* avdtpData = service.Protocol(SDP::ClassID::AVDTP);
+                        if (avdtpData != nullptr) {
+                            _avdtpVersion = SDP::Service::Protocol::AVDTP(*avdtpData).Version();
 
-                            // It's a A2DP service using L2CAP and AVDTP protocols; finally confirm its class ID
-                            if (service.IsClassSupported(ClassID::AudioSink)) {
+                            if (service.HasClassID(SDP::ClassID::AudioSink)) {
                                 _type = SINK;
-                            } else if (service.IsClassSupported(ClassID::AudioSource)) {
+                            } else if (service.HasClassID(SDP::ClassID::AudioSource)) {
                                 _type = SOURCE;
                             }
 
                             // This one is optional...
-                            const SDPProfile::Service::AttributeDescriptor* supportedFeatures = service.Attribute(SupportedFeatures);
-                            if (supportedFeatures != nullptr) {
-                                SDPSocket::Payload value(supportedFeatures->Value());
-                                value.Pop(SDPSocket::use_descriptor, _features);
-                                if (service.IsClassSupported(ClassID::AudioSource)) {
-                                    _features = static_cast<features>((static_cast<uint8_t>(_features) << 4));
-                                }
+                            const auto* supportedFeaturesData = service.Attribute(attributeid::SupportedFeatures);
+                            if (supportedFeaturesData != nullptr) {
+                                _features = FeaturesDescriptor(*supportedFeaturesData).Features(_type);
                             }
                         }
                     }
                 }
             }
+
             ~AudioService() = default;
 
         public:
@@ -190,10 +195,10 @@ namespace A2DP {
         ServiceDiscovery(const ServiceDiscovery&) = delete;
         ServiceDiscovery& operator=(const ServiceDiscovery&) = delete;
 
-        ServiceDiscovery(const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t mtu = DefaultMTU)
-            : Bluetooth::SDPSocket(localNode, remoteNode, mtu)
+        ServiceDiscovery(const Core::NodeId& localNode, const Core::NodeId& remoteNode)
+            : Bluetooth::SDP::ClientSocket(localNode, remoteNode)
             , _lock()
-            , _profile(ClassID::AdvancedAudioDistribution)
+            , _profile()
         {
         }
         ~ServiceDiscovery() = default;
@@ -242,18 +247,19 @@ namespace A2DP {
         void Discover(const DiscoveryCompleteCb discoveryComplete)
         {
             _discoveryComplete = discoveryComplete;
-            if (SDPSocket::IsOpen() == true) {
-                _profile.Discover(DiscoverTimeout, *this, std::list<Bluetooth::UUID>{ ClassID::AudioSink }, [&](const uint32_t result) {
+            if (IsOpen() == true) {
+                _profile.Discover(DiscoverTimeout, *this, std::list<Bluetooth::UUID>{ Bluetooth::SDP::ClassID::AudioSink }, [&](const uint32_t result) {
                     if (result == Core::ERROR_NONE) {
                         TRACE(DiscoveryFlow, (_T("Service discovery complete")));
 
                         _lock.Lock();
 
-                        DumpProfile();
+                        TRACE(DiscoveryFlow, (_T("Discovered %d service(s)"), _profile.Services().size()));
+                        SDP::Dump<DiscoveryFlow>(_profile);
 
                         if (_profile.Services().empty() == false) {
                             for (auto const& service : _profile.Services()) {
-                                if (service.IsClassSupported(ClassID::AudioSink) == true) {
+                                if (service.HasClassID(Bluetooth::SDP::ClassID::AudioSink) == true) {
                                     _audioServices.emplace_back(service);
                                 }
                             }
@@ -270,58 +276,15 @@ namespace A2DP {
                 });
             }
         }
-
-    private:
-        void DumpProfile() const
-        {
-            TRACE(DiscoveryFlow, (_T("Discovered %d service(s)"), _profile.Services().size()));
-
-            uint16_t cnt = 1;
-            for (auto const& service : _profile.Services()) {
-                TRACE(DiscoveryFlow, (_T("Service #%i"), cnt++));
-                TRACE(DiscoveryFlow, (_T("  Handle: 0x%08x"), service.Handle()));
-
-                if (service.Classes().empty() == false) {
-                    TRACE(DiscoveryFlow, (_T("  Classes:")));
-                    for (auto const& clazz : service.Classes()) {
-                        TRACE(DiscoveryFlow, (_T("    - %s '%s'"),
-                                              clazz.Type().ToString().c_str(), clazz.Name().c_str()));
-                    }
-                }
-                if (service.Profiles().empty() == false) {
-                    TRACE(DiscoveryFlow, (_T("  Profiles:")));
-                    for (auto const& profile : service.Profiles()) {
-                        TRACE(DiscoveryFlow, (_T("    - %s '%s', version: %d.%d"),
-                                              profile.Type().ToString().c_str(), profile.Name().c_str(),
-                                              (profile.Version() >> 8), (profile.Version() & 0xFF)));
-                    }
-                }
-                if (service.Protocols().empty() == false) {
-                    TRACE(DiscoveryFlow, (_T("  Protocols:")));
-                    for (auto const& protocol : service.Protocols()) {
-                        TRACE(DiscoveryFlow, (_T("    - %s '%s', parameters: %s"),
-                                              protocol.Type().ToString().c_str(), protocol.Name().c_str(),
-                                              Bluetooth::DataRecord(protocol.Parameters()).ToString().c_str()));
-                    }
-                }
-                if (service.Attributes().empty() == false) {
-                    TRACE(DiscoveryFlow, (_T("  Attributes:")));
-                    for (auto const& attribute : service.Attributes()) {
-                        TRACE(DiscoveryFlow, (_T("    - %04x '%s', value: %s"),
-                                              attribute.second.Type(), attribute.second.Name().c_str(),
-                                              Bluetooth::DataRecord(attribute.second.Value()).ToString().c_str()));
-                    }
-                }
-            }
-        }
-
     private:
         Core::CriticalSection _lock;
-        Bluetooth::SDPProfile _profile;
+        Bluetooth::SDP::Profile _profile;
         std::list<AudioService> _audioServices;
         DiscoveryCompleteCb _discoveryComplete;
     }; // class ServiceDiscovery
 
 } // namespace A2DP
+
+
 
 }

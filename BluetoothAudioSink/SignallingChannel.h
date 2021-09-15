@@ -77,8 +77,8 @@ namespace A2DP {
         SignallingChannel& operator=(const SignallingChannel&) = delete;
 
         SignallingChannel(const uint8_t seid, const UpdatedCb updatedCb,
-                          const Core::NodeId& localNode, const Core::NodeId& remoteNode, const uint16_t mtu = DefaultMTU)
-            : Bluetooth::AVDTPSocket(localNode, remoteNode, mtu)
+                          const Core::NodeId& localNode, const Core::NodeId& remoteNode)
+            : Bluetooth::AVDTPSocket(localNode, remoteNode)
             , _updatedCb(updatedCb)
             , _seid(seid)
             , _lock()
