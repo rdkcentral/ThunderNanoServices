@@ -32,26 +32,6 @@ namespace WPEFramework
             ResourceMonitor(const ResourceMonitor &) = delete;
             ResourceMonitor &operator=(const ResourceMonitor &) = delete;
 
-            class Config : public Core::JSON::Container
-            {
-            private:
-                Config(const Config &) = delete;
-                Config &operator=(const Config &) = delete;
-
-            public:
-                Config()
-                    : Core::JSON::Container(), OutOfProcess(true)
-                {
-                    Add(_T("outofprocess"), &OutOfProcess);
-                }
-                ~Config()
-                {
-                }
-
-            public:
-                Core::JSON::Boolean OutOfProcess;
-            };
-
         public:
             ResourceMonitor()
                 : _service(nullptr), _monitor(nullptr), _connectionId(0)

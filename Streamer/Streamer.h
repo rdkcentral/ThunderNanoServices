@@ -225,26 +225,6 @@ namespace Plugin {
         typedef std::map<uint8_t, StreamProxy> Streams;
         typedef std::map<uint8_t, ControlProxy> Controls;
 
-        class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&);
-            Config& operator=(const Config&);
-
-        public:
-            Config()
-                : Core::JSON::Container()
-                , OutOfProcess(true)
-            {
-                Add(_T("outofprocess"), &OutOfProcess);
-            }
-            ~Config()
-            {
-            }
-
-        public:
-            Core::JSON::Boolean OutOfProcess;
-        };
-
     public:
         class Data : public Core::JSON::Container {
         private:

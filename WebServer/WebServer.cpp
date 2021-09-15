@@ -34,7 +34,6 @@ namespace Plugin {
     /* virtual */ const string WebServer::Initialize(PluginHost::IShell* service)
     {
         string message;
-        Config config;
 
         ASSERT(_server == nullptr);
         ASSERT(_memory == nullptr);
@@ -44,8 +43,6 @@ namespace Plugin {
         _connectionId = 0;
         _service = service;
         _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
-
-        config.FromString(_service->ConfigLine());
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
