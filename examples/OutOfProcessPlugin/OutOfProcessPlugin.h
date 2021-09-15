@@ -106,26 +106,6 @@ namespace Plugin {
             OutOfProcessPlugin& _parent;
         };
 
-        class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&);
-            Config& operator=(const Config&);
-
-        public:
-            Config()
-                : Core::JSON::Container()
-                , OutOfProcess(true)
-            {
-                Add(_T("outofprocess"), &OutOfProcess);
-            }
-            ~Config()
-            {
-            }
-
-        public:
-            Core::JSON::Boolean OutOfProcess;
-        };
-
     public:
         class Data : public Core::JSON::Container {
         private:
