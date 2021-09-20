@@ -247,38 +247,32 @@ static bool CreateBuffer(int fd, const uint32_t connector, gbm_device*& device, 
                 index++;
             }
 
-            // A large enough initial buffer for scan out
-            struct gbm_bo* bo = gbm_bo_create(
-                                  device, 
-                                  pconnector->modes[modeIndex].hdisplay,
-                                  pconnector->modes[modeIndex].vdisplay,
-                                  ModeSet::SupportedBufferType(),
-                                  GBM_BO_USE_SCANOUT /* presented on a screen */ | GBM_BO_USE_RENDERING /* used for rendering */);
+            ModeSet::GBM::modifier_t _modifiers [1] = { ModeSet::FormatModifier () };
+            ModeSet::GBM::buf_t bo = gbm_bo_create_with_modifiers (device, pconnector->modes[modeIndex].hdisplay, pconnector->modes[modeIndex].vdisplay, ModeSet::SupportedBufferType(), &_modifiers [0], 1);
 
             drmModeFreeConnector(pconnector);
 
-            if(nullptr != bo)
+            if(ModeSet::GBM::InvalidBuf () != bo)
             {
                 // Associate a frame buffer with this bo
-                int32_t fb_fd = gbm_device_get_fd(device);
+                ModeSet::GBM::fd_t fb_fd = gbm_device_get_fd( device);
 
-                uint32_t format = gbm_bo_get_format(bo);
+                ModeSet::GBM::width_t _width = gbm_bo_get_width (bo);
+                ModeSet::GBM::height_t _height = gbm_bo_get_height (bo);
+                ModeSet::GBM::frmt_t _format = gbm_bo_get_format (bo);
+                ModeSet::GBM::handle_t _handle = gbm_bo_get_handle (bo).u32;
+                ModeSet::GBM::stride_t _stride = gbm_bo_get_stride (bo);
+                ModeSet::GBM::modifier_t _modifier = gbm_bo_get_modifier (bo);
 
-                assert (format == DRM_FORMAT_XRGB8888 || format == DRM_FORMAT_ARGB8888);
+                static_assert (GBM_MAX_PLANES == 4);
+                ModeSet::DRM::handle_t const _handles [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::handle_t > (_handle), 0, 0, 0 };
+                ModeSet::DRM::pitch_t const _pitches [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::pitch_t > (_stride), 0, 0, 0 };
+                ModeSet::DRM::offset_t  const _offsets [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::offset_t > (0), 0, 0, 0 };
+                ModeSet::DRM::modifier_t const _modifiers [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::modifier_t > (_modifier), 0, 0, 0};
 
-                uint32_t bpp = gbm_bo_get_bpp(bo);
+                int32_t ret = drmModeAddFB2WithModifiers (fb_fd, _width, _height, _format, &_handles [0], &_pitches [0], &_offsets [0], &_modifiers [0], &id, 0 /* flags */);
 
-                int32_t ret = drmModeAddFB(
-                                fb_fd, 
-                                gbm_bo_get_width(bo), 
-                                gbm_bo_get_height(bo), 
-                                format != DRM_FORMAT_ARGB8888 ? bpp - 8 : bpp,
-                                bpp,
-                                gbm_bo_get_stride(bo), 
-                                gbm_bo_get_handle(bo).u32, &id);
-
-                if(0 == ret)
-                {
+                if(0 == ret) {
                     buffer = bo;
                     created = true;
                 }
@@ -431,9 +425,10 @@ struct gbm_surface* ModeSet::CreateRenderTarget(const uint32_t width, const uint
 {
     struct gbm_surface* result = nullptr;
 
-    if(nullptr != _device)
+    if(GBM::InvalidDev () != _device)
     {
-        result = gbm_surface_create(_device, width, height, SupportedBufferType(), GBM_BO_USE_SCANOUT /* presented on a screen */ | GBM_BO_USE_RENDERING /* used for rendering */);
+        GBM::modifier_t _modifiers [1] = {static_cast <GBM::modifier_t> ( FormatModifier () ) };
+        result = gbm_surface_create_with_modifiers (_device, width, height, SupportedBufferType (), &_modifiers [0], 1);
     }
 
     return result;
@@ -496,14 +491,24 @@ void ModeSet::Swap(struct BufferInfo& buffer) {
     buffer._bo = gbm_surface_lock_front_buffer (buffer._surface);
 
     if (buffer._bo != nullptr) {
-        uint32_t width = gbm_bo_get_width(buffer._bo);
-        uint32_t height = gbm_bo_get_height(buffer._bo);
-        uint32_t format = gbm_bo_get_format (buffer._bo);
-        uint32_t bpp = gbm_bo_get_bpp (buffer._bo);
-        uint32_t stride = gbm_bo_get_stride (buffer._bo);
-        uint32_t handle = gbm_bo_get_handle (buffer._bo).u32;
+        ModeSet::GBM::fd_t fb_fd = gbm_device_get_fd (_device);
 
-        if (drmModeAddFB (_fd, width, height, format != DRM_FORMAT_ARGB8888 ? bpp - BPP () + ColorDepth () : bpp, bpp, stride, handle, &(buffer._id)) != 0) {
+        assert (_fd == fb_fd);
+
+        ModeSet::GBM::width_t _width = gbm_bo_get_width (buffer._bo);
+        ModeSet::GBM::height_t _height = gbm_bo_get_height (buffer._bo);
+        ModeSet::GBM::frmt_t _format = gbm_bo_get_format (buffer._bo);
+        ModeSet::GBM::handle_t _handle = gbm_bo_get_handle (buffer._bo).u32;
+        ModeSet::GBM::stride_t _stride = gbm_bo_get_stride (buffer._bo);
+        ModeSet::GBM::modifier_t _modifier = gbm_bo_get_modifier (buffer._bo);
+
+        static_assert (GBM_MAX_PLANES == 4);
+        ModeSet::DRM::handle_t const _handles [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::handle_t > (_handle), 0, 0, 0 };
+        ModeSet::DRM::pitch_t const _pitches [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::pitch_t > (_stride), 0, 0, 0 };
+        ModeSet::DRM::offset_t  const _offsets [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::offset_t > (0), 0, 0, 0 };
+        ModeSet::DRM::modifier_t const _modifiers [GBM_MAX_PLANES] = { static_cast < ModeSet::DRM::modifier_t > (_modifier), 0, 0, 0};
+
+        if (drmModeAddFB2WithModifiers (_fd, _width, _height, _format, &_handles [0], &_pitches [0], &_offsets [0], &_modifiers [0], &(buffer._id), 0 /* flags */) != 0) {
             buffer._id = 0;
 
             TRACE (Trace::Error, (_T ("Unable to contruct a frame buffer for scan out.")));

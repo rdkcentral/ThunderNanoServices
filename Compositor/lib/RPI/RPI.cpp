@@ -44,6 +44,21 @@ extern "C" {
 #include <functional>
 
 template <class T>
+struct remove_pointer {
+    typedef T type;
+};
+
+template <class T>
+struct remove_pointer <T*> {
+    typedef T type;
+};
+
+template <class T>
+struct remove_pointer <T const *>  {
+    typedef T type;
+};
+
+template <class T>
 struct _remove_const {
     typedef T type;
 };
@@ -737,15 +752,27 @@ class CompositorImplementation;
 
                 // Each coorrdinate in the range [-1.0f, 1.0f]
                 struct offset {
-                    using coordinate_t =  float;
+                    using coordinate_t = GLfloat;
 
                     coordinate_t _x;
                     coordinate_t _y;
                     coordinate_t _z;
 
+                    static_assert (_narrowing <float, coordinate_t, true> :: value != false);
                     offset () : offset (0.0f, 0.0f, 0.0f) {}
                     offset (coordinate_t x, coordinate_t y, coordinate_t z) : _x {x}, _y {y}, _z {z} {}
                 } _offset;
+
+                struct scale {
+                    using fraction_t = GLclampf;
+
+                    fraction_t _horiz;
+                    fraction_t _vert;
+
+                    static_assert (_narrowing <float, fraction_t, true> :: value != false);
+                    scale () : scale (1.0f, 1.0f) {};
+                    scale (fraction_t horiz, fraction_t vert) : _horiz {horiz}, _vert {vert} {}
+                } _scale;
 
                 bool _valid;
 
@@ -754,6 +781,7 @@ class CompositorImplementation;
                 using tgt_t = decltype (_tgt);
                 using tex_t = decltype (_tex);
                 using offset_t = decltype (_offset);
+                using scale_t = decltype (_scale);
 
                 using valid_t = decltype (_valid);
 
@@ -772,7 +800,7 @@ class CompositorImplementation;
                     return _ret;
                 }
 
-                valid_t RenderColor () {
+                valid_t RenderColor (bool red, bool green, bool blue) {
                     constexpr decltype (_degree) const ROTATION = 360;
 
                     constexpr float const OMEGA = 3.14159265 / 180;
@@ -786,8 +814,10 @@ class CompositorImplementation;
 
                         GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA));
 
+                        constexpr GLfloat _default_color = 0.0f;
+
                         // The function clamps the input to [0.0f, 1.0f]
-                        /* void */ glClearColor (_rad, _rad, _rad, 0.0);
+                        /* void */ glClearColor (red != false ? _rad : _default_color, green != false ? _rad : _default_color, blue != false ? _rad : _default_color, 1.0);
 
                         _ret = glGetError () == GL_NO_ERROR;
 
@@ -808,17 +838,35 @@ class CompositorImplementation;
                 }
 
                 // Values used at render stages of different objects
-                static offset InitialOffset () { return offset (0.0f, 0.0f, 0.0f); }
+                static offset_t InitialOffset () { return offset (0.0f, 0.0f, 0.0f); }
 
                 valid_t UpdateOffset (struct offset const & off) {
                     valid_t _ret = false;
 
-                    // Range check without taking into account rounding errors
-                    if ( ((off._x - -0.5f) * (off._x - 0.5f) <= 0.0f)
-                        && ((off._y - -0.5f) * (off._y - 0.5f) <= 0.0f)
-                        && ((off._z - -0.5f) * (off._z - 0.5f) <= 0.0f) ){
+                    // Ramge check without taking into account rounding errors
+                    if (   (off._x + 1.0f >= 0.0f)
+                        && (off._x - 1.0f <= 0.0f)
+                        && (off._y + 1.0f >= 0.0f)
+                        && (off._y - 1.0f <= 0.0f) ) {
 
                         _offset = off;
+
+                        _ret = true;
+                    }
+
+                    return _ret;
+                }
+
+                static scale_t InitialScale () { return scale (1.0f, 1.0f); }
+
+                valid_t UpdateScale (scale_t const & scale) {
+                    valid_t _ret = false;
+
+                    // Ramge check without taking into account rounding errors
+                    if (   (scale._horiz <= 1.0f)
+                        && (scale._vert <= 1.0f) ) {
+
+                        _scale = scale;
 
                         _ret = true;
                     }
@@ -830,6 +878,17 @@ class CompositorImplementation;
                     valid_t _ret = glGetError () == GL_NO_ERROR && img != EGL::InvalidImage () && width > 0 && height > 0;
 
                     if (_ret != false) {
+                        glBindTexture(GL_TEXTURE_2D, 0);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    if (_ret != false) {
+                        glBindFramebuffer (GL_FRAMEBUFFER, 0);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    if (_ret != false) {
+// TODO: only set if none is active ?
                         // Just an arbitrarily selected texture unit
                         glActiveTexture (GL_TEXTURE0);
                         _ret = glGetError () == GL_NO_ERROR;
@@ -848,80 +907,130 @@ class CompositorImplementation;
                             glGenTextures (1, &_tex);
                             _ret = glGetError () == GL_NO_ERROR;
                         }
+                    }
 
-                        if (_ret != false) {
+                    if (_ret != false) {
                             glBindTexture (_tgt, _tex);
                             _ret = glGetError () == GL_NO_ERROR;
-                        }
+                    }
 
-                        if (_ret != false) {
+                    if (_ret != false) {
                             glTexParameteri (_tgt, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
                             _ret = glGetError () == GL_NO_ERROR;
-                        }
+                    }
 
-                        if (_ret != false) {
+                    if (_ret != false) {
                             glTexParameteri (_tgt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                             _ret = glGetError () == GL_NO_ERROR;
-                        }
+                    }
 
-                        if (_ret != false) {
+                    if (_ret != false) {
                             glTexParameteri (_tgt, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                             _ret = glGetError () == GL_NO_ERROR;
-                        }
+                    }
 
-                        if (_ret != false) {
+                    if (_ret != false) {
                             glTexParameteri (_tgt, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                             _ret = glGetError () == GL_NO_ERROR;
-                        }
+                    }
 
 
-                        // A valid GL context should exist for GLES::Supported ()
-                        EGL::ctx_t _ctx = eglGetCurrentContext ();
-                        EGL::dpy_t _dpy = _ctx != EGL::InvalidCtx () ? eglGetCurrentDisplay () : EGL::InvalidDpy ();
+                    // A valid GL context should exist for GLES::Supported ()
+                    EGL::ctx_t _ctx = eglGetCurrentContext ();
+                    EGL::dpy_t _dpy = _ctx != EGL::InvalidCtx () ? eglGetCurrentDisplay () : EGL::InvalidDpy ();
 
-                        _ret = _ret && eglGetError () == EGL_SUCCESS && _ctx != EGL::InvalidCtx ();
+                    _ret = _ret && eglGetError () == EGL_SUCCESS && _ctx != EGL::InvalidCtx ();
 
 
-                        if ( _ret && ( Supported ("GL_OES_EGL_image") && ( EGL::Supported (_dpy, "EGL_KHR_image") || EGL::Supported (_dpy, "EGL_KHR_image_base") ) ) != false) {
-                            // Take storage for the texture from the EGLImage; Pixel data becomes undefined
-                            static void (* _EGLImageTargetTexture2DOES) (GLenum, GLeglImageOES) = reinterpret_cast < void (*) (GLenum, GLeglImageOES) > (eglGetProcAddress ("glEGLImageTargetTexture2DOES"));
+                    if ( _ret && ( Supported ("GL_OES_EGL_image") && ( EGL::Supported (_dpy, "EGL_KHR_image") || EGL::Supported (_dpy, "EGL_KHR_image_base") ) ) != false) {
+                        // Take storage for the texture from the EGLImage; Pixel data becomes undefined
+                        static void (* _EGLImageTargetTexture2DOES) (GLenum, GLeglImageOES) = reinterpret_cast < void (*) (GLenum, GLeglImageOES) > (eglGetProcAddress ("glEGLImageTargetTexture2DOES"));
 
-                            if (_ret != false && _EGLImageTargetTexture2DOES != nullptr) {
-                                // Logical const
-                                using no_const_img_t = _remove_const < decltype (img) > :: type;
-                                _EGLImageTargetTexture2DOES (_tgt, reinterpret_cast <GLeglImageOES> (const_cast < no_const_img_t  >(img)));
-                                _ret = glGetError () == GL_NO_ERROR;
-                            }
-                            else {
-                                _ret = false;
-                            }
-                        }
-
-                        if (_ret != false) {
-                            // Image to full size
-
-                            using width_t = decltype (width);
-                            using height_t = decltype (height);
-
-                            // Narrowing detection
-
-                            // Enable narrowing detection
-// TODO:
-                            constexpr bool _enable = false;
-
-                            if ( ( _narrowing < width_t, GLsizei, _enable > ::value != true
-                                && _narrowing < height_t, GLsizei, _enable > ::value ) != true) {
-                                TRACE (Trace::Information, (_T ("Possible narrowing detected!")));
-                            }
-
-                            glViewport (0, 0, width, height);
+                        if (_ret != false && _EGLImageTargetTexture2DOES != nullptr) {
+                            // Logical const
+                            using no_const_img_t = _remove_const < decltype (img) > :: type;
+                            _EGLImageTargetTexture2DOES (_tgt, reinterpret_cast <GLeglImageOES> (const_cast < no_const_img_t  >(img)));
                             _ret = glGetError () == GL_NO_ERROR;
                         }
+                        else {
+                            _ret = false;
+                        }
+                    }
 
-                        if (_ret != false) {
-                            _ret = RenderTile ();
+
+                    EGLSurface _surf = EGL::InvalidSurf ();
+
+                    if (_ret != false) {
+                        _surf = eglGetCurrentSurface (EGL_DRAW);
+                        _ret  = eglGetError () == EGL_SUCCESS
+                                && _surf != EGL::InvalidSurf ();
+                    }
+
+                    EGLint _width = 0, _height = 0;
+
+                    if (_ret != false) {
+                        _ret = eglQuerySurface (_dpy, _surf, EGL_WIDTH, &_width) != EGL_FALSE
+                               && eglQuerySurface (_dpy, _surf, EGL_HEIGHT, &_height) != EGL_FALSE
+                               && eglGetError () == EGL_SUCCESS;
+                    }
+
+                    GLint _dims [2] = {0, 0};
+
+                    if (_ret != false) {
+                        glGetIntegerv (GL_MAX_VIEWPORT_DIMS, &_dims [0]);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    if (_ret != false) {
+                        // Compositor side; Image rendered as texture on surface
+#define _QUIRKS
+#ifdef _QUIRKS
+                        // glViewport (x, y, width, height)
+                        //
+                        // Applied width = width / 2
+                        // Applied height = height / 2
+                        // Applied origin's x = width / 2 + x
+                        // Applied origin's y = height / 2 + y
+                        //
+                        // Compensate to origin bottom left and true size by
+                        // glViewport (-width, -height, width * 2, height * 2)
+                        //
+                        // _offset is in the range -1..1 wrt to origin, so the effective value maps to -width to width, -height to height
+
+                        constexpr uint8_t _mult = 2;
+
+                        using common_t = std::common_type < decltype (_width), decltype (_height), decltype (_mult), decltype (_scale._horiz), decltype (_scale._vert), decltype (_offset._x), decltype (_offset._y), remove_pointer < std::decay < decltype (_dims) > :: type > :: type > :: type;
+
+                        common_t _quirk_width = static_cast <common_t> (_width) * static_cast <common_t> (_mult) * static_cast <common_t> (_scale._horiz);
+                        common_t _quirk_height = static_cast <common_t> (_height) * static_cast <common_t> (_mult) * static_cast <common_t> (_scale._vert);
+
+                        common_t _quirk_x = ( static_cast <common_t> (-_width) * static_cast <common_t> (_scale._horiz) ) + ( static_cast <common_t> (_offset._x) * static_cast <common_t> (_width) );
+                        common_t _quirk_y = ( static_cast <common_t> (-_height) * static_cast <common_t> (_scale._vert) ) + ( static_cast <common_t> (_offset._y) * static_cast <common_t> (_height) );
+
+                        if (   _quirk_x < ( -_quirk_width / static_cast <common_t> (_mult) )
+                            || _quirk_y < ( -_quirk_height / static_cast <common_t> (_mult) )
+                            || _quirk_x  > static_cast <common_t> (0)
+                            || _quirk_y  > static_cast <common_t> (0)
+                            || _quirk_width > ( static_cast <common_t> (_width) * static_cast <common_t> (_mult) )
+                            || _quirk_height > ( static_cast <common_t> (_height) * static_cast <common_t> (_mult) )
+                            || static_cast <common_t> (_width) > static_cast <common_t> (_dims [0])
+                            || static_cast <common_t> (_height) > static_cast <common_t> (_dims [1])
+                        ) {
+                            // Clipping, or undefined / unknown behavior
+                            std::cout << "Warning: possible clipping or unknown behavior detected. [" << _quirk_x << ", " << _quirk_y << ", " << _quirk_width << ", " << _quirk_height << ", " << _width << ", " << _height << ", " << _dims [0] << ", " << _dims [1] << "]" << std::endl;
                         }
 
+                        glViewport (static_cast <GLint> (_quirk_x), static_cast <GLint> (_quirk_y), static_cast <GLsizei> (_quirk_width), static_cast <GLsizei> (_quirk_height));
+#else
+                        glViewport (0, 0, _width, _height);
+#endif
+
+                        _ret = glGetError () == GL_NO_ERROR && RenderTile () != false;
+
+                        WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
+                        silence (_sync);
+
+                        _ret = _ret != false && glGetError () == GL_NO_ERROR;
                     }
 
                     return _ret;
@@ -948,7 +1057,7 @@ class CompositorImplementation;
 
 // TODO: precompile programs at initialization stage
 
-                valid_t SetupProgram (/* some identifier for a precompiled program */) {
+                valid_t SetupProgram (char const vtx_src [], char const frag_src []) {
                     auto LoadShader = [] (GLuint type, GLchar const code []) -> GLuint {
                         valid_t _ret = glGetError () == GL_NO_ERROR;
 
@@ -971,22 +1080,10 @@ class CompositorImplementation;
                         return _shader;
                     };
 
-                    auto ShadersToProgram = [] (GLuint vertex, GLuint fragment) -> bool {
+                    auto ShadersToProgram = [] (GLuint vertex, GLuint fragment) -> valid_t {
                         valid_t _ret = glGetError () == GL_NO_ERROR;
 
-                        GLuint _prog = 0;
-
-                        if (_ret != false) {
-                            glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-
-                        if (_ret != false && _prog != 0) {
-                            glDeleteProgram (_prog);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-
-                        _prog = 0;
+                         GLuint _prog = 0;
 
                         if (_ret != false) {
                             _prog = glCreateProgram ();
@@ -999,7 +1096,7 @@ class CompositorImplementation;
                         }
 
                         if (_ret != false) {
-                            glAttachShader (_prog, fragment);
+                             glAttachShader (_prog, fragment);
                             _ret = glGetError () == GL_NO_ERROR;
                         }
 
@@ -1017,47 +1114,61 @@ class CompositorImplementation;
                             glUseProgram (_prog);
                             _ret = glGetError () == GL_NO_ERROR;
                         }
-                        else {
-                            glDeleteProgram (_prog);
+
+                        return _ret;
+                    };
+
+                    auto DeleteCurrentProgram = [] () -> valid_t {
+                        valid_t _ret = glGetError () == GL_NO_ERROR;
+
+                        GLuint _prog = 0;
+
+                        if (_ret != false) {
+                            glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
                             _ret = glGetError () == GL_NO_ERROR;
+                        }
 
-                            glDeleteShader (vertex);
-                            _ret = glGetError () == GL_NO_ERROR && _ret;
+                        if (_ret != false && _prog != 0) {
 
-                            glDeleteShader (fragment);
-                            _ret = glGetError () == GL_NO_ERROR && _ret;
+                            GLint _count = 0;
+
+                            glGetProgramiv (_prog, GL_ATTACHED_SHADERS, &_count);
+                            _ret = glGetError () == GL_NO_ERROR && _count > 0;
+
+                            if (_ret != false) {
+                                GLuint _shaders [_count];
+
+                                glGetAttachedShaders (_prog, _count, static_cast <GLsizei *> (&_count), &_shaders [0]);
+                                _ret = glGetError () == GL_NO_ERROR;
+
+                                if (_ret != false) {
+                                    for (_count--; _count >= 0; _count--) {
+                                        glDetachShader (_prog, _shaders [_count]);
+                                        _ret = _ret && glGetError () == GL_NO_ERROR;
+                                        glDeleteShader (_shaders [_count]);
+                                        _ret = _ret && glGetError () == GL_NO_ERROR;
+                                    }
+                                }
+
+                                if (_ret != false) {
+                                    glDeleteProgram (_prog);
+                                    _ret = glGetError () == GL_NO_ERROR;
+                                }
+                            }
+
                         }
 
                         return _ret;
                     };
 
 
-                    bool _ret = glGetError () == GL_NO_ERROR && Supported ("GL_OES_EGL_image_external") != false;
+                    bool _ret = glGetError () == GL_NO_ERROR
+                                && Supported ("GL_OES_EGL_image_external") != false
+                                && DeleteCurrentProgram () != false;
 
                     if (_ret != false) {
-                        constexpr char const _vtx_src [] =
-                            "#version 100                               \n"
-                            "attribute vec3 position;                   \n"
-                            "varying vec2 coordinates;                  \n"
-                            "void main () {                             \n"
-                                "gl_Position = vec4 (position.xyz, 1);  \n"
-                                "coordinates = position.xy;             \n"
-                            "}                                          \n"
-                        ;
-
-                        constexpr char const _frag_src [] =
-                            "#version 100                                                           \n"
-                            "#extension GL_OES_EGL_image_external : require                         \n"
-                            "precision mediump float;                                               \n"
-                            "uniform samplerExternalOES sampler;                                    \n"
-                            "varying vec2 coordinates;                                              \n"
-                            "void main () {                                                         \n"
-                                "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgb, 1.0f);  \n"
-                            "}                                                                      \n"
-                        ;
-
-                        GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, _vtx_src);
-                        GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, _frag_src);
+                        GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, vtx_src);
+                        GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, frag_src);
 
 // TODO: inefficient on every call, reuse compiled program
                         _ret = ShadersToProgram(_vtxShader, _fragShader);
@@ -1088,13 +1199,46 @@ class CompositorImplementation;
                 valid_t RenderTile () {
                     valid_t _ret = glGetError () == GL_NO_ERROR;
 
-                    if (_ret != false) {
-                        _ret = SetupProgram ();
-                    }
+                    constexpr char const _vtx_src [] =
+                        "#version 100                               \n"
+                        "attribute vec3 position;                   \n"
+                        "varying vec2 coordinates;                  \n"
+                        "void main () {                             \n"
+                            "gl_Position = vec4 (position.xyz, 1);  \n"
+                            "coordinates = position.xy;             \n"
+                        "}                                          \n"
+                        ;
 
-// TODO: range
+                    constexpr char  const _frag_src [] =
+                        "#version 100                                                           \n"
+                        "#extension GL_OES_EGL_image_external : require                         \n"
+                        "precision mediump float;                                               \n"
+                        "uniform samplerExternalOES sampler;                                    \n"
+                        "varying vec2 coordinates;                                              \n"
+                        "void main () {                                                         \n"
+                            "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgb, 1.0f);  \n"
+                        "}                                                                      \n"
+                        ;
+
                     static_assert (std::is_same <GLfloat, GLES::offset::coordinate_t>:: value != false);
-                    std::array <GLfloat, 4 * VerticeDimensions> const _vert = {-0.5f + _offset._x, -0.5f + _offset._y, 0.0f + _offset._z /* v0 */, -0.5f + _offset._x, 0.5f + _offset._y, 0.0f + _offset._z /* v1 */, 0.5f + _offset._x, -0.5f + _offset._y, 0.0f + _offset._z /* v2 */, 0.5f + _offset._x, 0.5f + _offset._y, 0.0f + _offset._z /* v3 */};
+                    std::array <GLfloat, 4 * VerticeDimensions> const _vert = {
+                        0.0f, 0.0f, 0.0f /* v0 */,
+                        1.0f, 0.0f, 0.0f /* v1 */,
+                        0.0f, 1.0f, 0.0f /* v2 */,
+                        1.0f, 1.0f, 0.0f /* v3 */
+                    };
+
+                    _ret = glGetError () == GL_NO_ERROR
+                            && RenderColor (true, false, false)
+                            && SetupProgram (_vtx_src, _frag_src)
+                            && RenderPolygon (_vert);
+
+                    return _ret;
+                }
+
+                template <size_t N>
+                valid_t RenderPolygon (std::array <GLfloat, N> const & vert) {
+                    valid_t _ret = glGetError () == GL_NO_ERROR;
 
                     if (_ret != false) {
                         GLuint _prog = 0;
@@ -1111,7 +1255,7 @@ class CompositorImplementation;
                         }
 
                         if (_ret != false) {
-                            glVertexAttribPointer (_loc, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, _vert.data ());
+                            glVertexAttribPointer (_loc, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, vert.data ());
                             _ret = glGetError () == GL_NO_ERROR;
                         }
 
@@ -1119,18 +1263,23 @@ class CompositorImplementation;
                             glEnableVertexAttribArray (_loc);
                             _ret = glGetError () == GL_NO_ERROR;
                         }
-                    }
 
-                    if (_ret != false) {
-                        glDrawArrays (GL_TRIANGLE_STRIP, 0, _vert.size () / VerticeDimensions);
-                        _ret = glGetError () == GL_NO_ERROR;
+                        if (_ret != false) {
+                            glDrawArrays (GL_TRIANGLE_STRIP, 0, vert.size () / VerticeDimensions);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glDisableVertexAttribArray (_loc);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
                     }
 
                     return _ret;
                 }
 
-                bool Supported (std::string const & name) {
-                    bool _ret = false;
+                valid_t Supported (std::string const & name) {
+                    valid_t _ret = false;
 
                     using string_t = std::string::value_type;
                     using ustring_t = std::make_unsigned < string_t > :: type;
@@ -1147,8 +1296,6 @@ class CompositorImplementation;
 
                     return _ret;
                 }
-
-
 
        };
 
@@ -1175,8 +1322,11 @@ class CompositorImplementation;
 #define _EGL_FOREVER EGL_FOREVER_KHR
 #define _EGL_NO_IMAGE EGL_NO_IMAGE_KHR
 #define _EGL_NATIVE_PIXMAP EGL_NATIVE_PIXMAP_KHR
-using EGLAttrib = EGLint;
+                using EGLAttrib = EGLint;
 #endif
+                using EGLuint64KHR = khronos_uint64_t;
+
+            public :
 
                 class Sync final {
 
@@ -1268,6 +1418,7 @@ using EGLAttrib = EGLint;
                 static constexpr img_t InvalidImage () { return WPEFramework::Plugin::EGL::InvalidImage (); }
                 static constexpr dpy_t InvalidDpy () { return Sync::InvalidDpy (); }
                 static constexpr ctx_t InvalidCtx () { return EGL_NO_CONTEXT; }
+                static constexpr surf_t InvalidSurf () { return EGL_NO_SURFACE; }
 
                 dpy_t Display () const { return _dpy; }
                 surf_t Surface () const { return _surf; }
@@ -1278,21 +1429,34 @@ using EGLAttrib = EGLint;
                 static img_t CreateImage (EGL const & egl, ClientSurface::surf_t const & surf) {
                     img_t _ret = InvalidImage ();
 
-                    if (egl.Valid () && ( Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base")  && Supported (egl.Display (), "EGL_KHR_image_pixmap") ) != false ) {
-
+                    if (egl.Valid () && ( Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import_modifiers") ) != false ) {
                         static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, KHRFIX (EGLImage)> :: value ) != false);
 
                         constexpr char _methodName [] = XSTRINGIFY ( KHRFIX (eglCreateImage) );
 
-                        static KHRFIX (EGLImage) (* _eglCreateImage) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const * ) = reinterpret_cast < KHRFIX (EGLImage) (*) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const * ) > (eglGetProcAddress ( _methodName ));
+                        static KHRFIX (EGLImage) (* _eglCreateImage) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const *) = reinterpret_cast < KHRFIX (EGLImage) (*) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const * ) > (eglGetProcAddress ( _methodName ));
 
                         if (_eglCreateImage != nullptr) {
 
                             auto _width = gbm_bo_get_width (surf._buf);
                             auto _height = gbm_bo_get_height (surf._buf);
+                            auto _stride = gbm_bo_get_stride (surf._buf);
+                            auto _format = gbm_bo_get_format (surf._buf);
+                            auto _modifier = gbm_bo_get_modifier (surf._buf);
 
                             using width_t =  decltype (_width);
                             using height_t = decltype (_height);
+                            using stride_t = decltype (_stride);
+                            using format_t = decltype (_format);
+                            using fd_t = decltype (surf._fd);
+                            using modifier_t = decltype (_modifier);
+
+                            // Does it already exist ?
+                            assert (surf._fd > -1);
+
+                            // Test our initial assumption
+                            assert (_format == ModeSet::SupportedBufferType ());
+                            assert (_modifier == ModeSet::FormatModifier ());
 
                             // Narrowing detection
 
@@ -1302,26 +1466,101 @@ using EGLAttrib = EGLint;
 
                             // (Almost) all will fail!
                             if (_narrowing < width_t, EGLAttrib, _enable > :: value != false
-                                && _narrowing < height_t, EGLAttrib, _enable > :: value != false) {
+                                && _narrowing < height_t, EGLAttrib, _enable > :: value != false
+                                && _narrowing < stride_t, EGLAttrib, _enable > :: value != false
+                                && _narrowing < format_t, EGLAttrib, _enable > :: value != false
+                                && _narrowing < fd_t, EGLAttrib, _enable > :: value != false
+                                && _narrowing < modifier_t, EGLuint64KHR, true> :: value) {
                                 TRACE_WITHOUT_THIS (Trace::Information, (_T ("Possible narrowing detected!")));
                             }
 
-                            EGLAttrib const _attrs [] = {
-                                EGL_WIDTH, static_cast <EGLAttrib> (_width),
-                                EGL_HEIGHT, static_cast <EGLAttrib> (_height),
-                                EGL_NONE
-                            };
+                            // EGL may report differently than DRM
+                            ModeSet::GBM::dev_t _dev = gbm_bo_get_device (surf._buf);
+                            ModeSet::GBM::fd_t _fd = gbm_device_get_fd (_dev);
 
-                            static_assert (std::is_convertible < decltype (surf._buf), EGLClientBuffer > :: value != false);
-                            _ret = _eglCreateImage (egl.Display (), EGL_NO_CONTEXT, _EGL_NATIVE_PIXMAP, surf._buf, _attrs);
+                            // EGL may report differently than DRM
+                            auto _list_d_for = ModeSet::AvailableFormats (static_cast <ModeSet::DRM::fd_t> (_fd));
+                            auto _it_d_for = std::find (_list_d_for.begin (), _list_d_for.end (), _format);
+
+                            bool _valid = _it_d_for != _list_d_for.end ();
+
+                            // Query EGL
+                            static EGLBoolean (* _eglQueryDmaBufFormatsEXT) (EGLDisplay, EGLint, EGLint *, EGLint *) = reinterpret_cast < EGLBoolean (*) (EGLDisplay, EGLint, EGLint *, EGLint *) > (eglGetProcAddress ("eglQueryDmaBufFormatsEXT"));
+                            static EGLBoolean (* _eglQueryDmaBufModifiersEXT) (EGLDisplay,EGLint, EGLint, EGLuint64KHR *, EGLBoolean *, EGLint *) = reinterpret_cast < EGLBoolean (*) (EGLDisplay,EGLint, EGLint, EGLuint64KHR *, EGLBoolean *, EGLint *) > (eglGetProcAddress ("eglQueryDmaBufModifiersEXT"));
+
+                            _valid = _valid && _eglQueryDmaBufFormatsEXT != nullptr && _eglQueryDmaBufModifiersEXT != nullptr;
+
+                            EGLint _count = 0;
+
+                            _valid = _valid && _eglQueryDmaBufFormatsEXT (egl.Display (), 0, nullptr, &_count) != EGL_FALSE;
+
+                            _valid = _valid && _eglQueryDmaBufFormatsEXT (egl.Display (), 0, nullptr, &_count) != EGL_FALSE;
+
+                            EGLint _formats [_count];
+
+                            _valid = _valid && _eglQueryDmaBufFormatsEXT (egl.Display (), _count, &_formats [0], &_count) != EGL_FALSE;
+
+                            // _format should be listed as supported
+                            if (_valid != false) {
+                                std::list <EGLint> _list_e_for (&_formats [0], &_formats [_count]);
+
+                                auto _it_e_for = std::find (_list_e_for.begin (), _list_e_for.end (), _format);
+
+                                _valid = _it_e_for != _list_e_for.end ();
+                            }
+
+                            _valid = _valid && _eglQueryDmaBufModifiersEXT (egl.Display (), _format, 0, nullptr, nullptr, &_count) != EGL_FALSE;
+
+                            EGLuint64KHR _modifiers [_count];
+                            EGLBoolean _external [_count];
+
+                            // External is required to exclusive use withGL_TEXTURE_EXTERNAL_OES
+                            _valid = _valid && _eglQueryDmaBufModifiersEXT (egl.Display (), _format, _count, &_modifiers [0], &_external [0], &_count) != FALSE;
+
+                            // _modifier should be listed as supported, and _external should be true
+
+                            if (_valid != false) {
+                                std::list <EGLuint64KHR> _list_e_mod (&_modifiers [0], &_modifiers [_count]);
+
+                                auto _it_e_mod = std::find (_list_e_mod.begin (), _list_e_mod.end (), static_cast <EGLuint64KHR> (_modifier));
+
+                                _valid = _it_e_mod != _list_e_mod.end ();
+
+                                // For the compositor not relevant, only relevant for the client
+#ifdef _0
+                                if (_valid != false) {
+                                    // For the compositor not relevant
+//                                     _valid = _external [ std::distance (_list_e_mod.begin (), _it_e_mod) ] != true;
+                                }
+#endif
+                            }
+
+                            if (_valid != false) {
+                                EGLAttrib const _attrs [] = {
+                                    EGL_WIDTH, static_cast <EGLAttrib> (_width),
+                                    EGL_HEIGHT, static_cast <EGLAttrib> (_height),
+                                    EGL_LINUX_DRM_FOURCC_EXT, static_cast <EGLAttrib> (_format),
+                                    EGL_DMA_BUF_PLANE0_FD_EXT, static_cast <EGLAttrib> (surf._fd),
+// TODO: magic constant
+                                    EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
+                                    EGL_DMA_BUF_PLANE0_PITCH_EXT, static_cast <EGLAttrib> (_stride),
+                                    EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, static_cast <EGLAttrib> (static_cast <EGLuint64KHR> (_modifier) & 0xFFFFFFFF),
+                                    EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, static_cast <EGLAttrib> (static_cast <EGLuint64KHR> (_modifier) >> 32),
+                                    EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
+                                    EGL_NONE
+                                };
+
+                                static_assert (std::is_convertible < decltype (surf._buf), EGLClientBuffer > :: value != false);
+                                _ret = _eglCreateImage (egl.Display (), EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, _attrs);
+                            }
                         }
                         else {
                             // Error
-                            TRACE_WITHOUT_THIS (Trace::Error, (_T ("%s is unavailable or invalid parameters."), _methodName));
+                            TRACE_WITHOUT_THIS (Trace::Error, _T ("%s is unavailable or invalid parameters."), _methodName);
                         }
                     }
                     else {
-                        TRACE_WITHOUT_THIS (Trace::Error, (_T ("EGL is not properly initialized.")));
+                        TRACE_WITHOUT_THIS (Trace::Error, _T ("EGL is not properly initialized."));
                     }
 
                     return _ret;
@@ -1344,11 +1583,11 @@ using EGLAttrib = EGLint;
                         }
                         else {
                             // Error
-                            TRACE_WITHOUT_THIS (Trace::Error, (_T ("%s is unavailable or invalid parameters are provided."), _methodName));
+                            TRACE_WITHOUT_THIS (Trace::Error, _T ("%s is unavailable or invalid parameters are provided."), _methodName);
                         }
                     }
                     else {
-                        TRACE_WITHOUT_THIS (Trace::Error, (_T ("EGL is not properly initialized.")));
+                        TRACE_WITHOUT_THIS (Trace::Error, _T ("EGL is not properly initialized."));
                     }
 
                     return _ret;
@@ -1452,34 +1691,34 @@ using EGLAttrib = EGLint;
 
             public :
 
-                    // Although compile / build time may succeed, runtime checks are also mandatory
-                    static bool Supported (dpy_t const dpy, std::string const & name) {
-                        bool _ret = false;
+                // Although compile / build time may succeed, runtime checks are also mandatory
+                static bool Supported (dpy_t const dpy, std::string const & name) {
+                    bool _ret = false;
 
-                        static_assert ((std::is_same <dpy_t, EGLDisplay> :: value) != false);
+                    static_assert ((std::is_same <dpy_t, EGLDisplay> :: value) != false);
 
 #ifdef EGL_VERSION_1_5
-                        // KHR extentions that have become part of the standard
+                    // KHR extentions that have become part of the standard
 
-                        // Sync capability
-                        _ret = name.find ("EGL_KHR_fence_sync") != std::string::npos
-                               /* CreateImage / DestroyImage */
-                               || name.find ("EGL_KHR_image") != std::string::npos
-                               || name.find ("EGL_KHR_image_base") != std::string::npos;
+                    // Sync capability
+                    _ret = name.find ("EGL_KHR_fence_sync") != std::string::npos
+                           /* CreateImage / DestroyImage */
+                           || name.find ("EGL_KHR_image") != std::string::npos
+                           || name.find ("EGL_KHR_image_base") != std::string::npos;
 #endif
 
-                        if (_ret != true) {
-                            static_assert (std::is_same <std::string::value_type, char> :: value != false);
-                            char const * _ext = eglQueryString (dpy, EGL_EXTENSIONS);
+                    if (_ret != true) {
+                        static_assert (std::is_same <std::string::value_type, char> :: value != false);
+                        char const * _ext = eglQueryString (dpy, EGL_EXTENSIONS);
 
-                            _ret =  _ext != nullptr
-                                    && name.size () > 0
-                                    && ( std::string (_ext).find (name)
-                                         != std::string::npos );
-                        }
-
-                        return _ret;
+                        _ret =  _ext != nullptr
+                                && name.size () > 0
+                                && ( std::string (_ext).find (name)
+                                     != std::string::npos );
                     }
+
+                    return _ret;
+                }
 
                 bool Render (GLES & gles) {
                     bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE;
@@ -1492,6 +1731,7 @@ using EGLAttrib = EGLint;
                     }
 
                     WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
+                    silence (_sync);
 
                     if (_ret != true) {
                         TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
@@ -1511,6 +1751,7 @@ using EGLAttrib = EGLint;
                     }
 
                     WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
+                    silence (_sync);
 
                     if (_ret != true) {
                         TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
@@ -1655,6 +1896,7 @@ using EGLAttrib = EGLint;
                     auto _height = gbm_bo_get_height (_surf._buf);
                     auto _stride = gbm_bo_get_stride (_surf._buf);
                     auto _format = gbm_bo_get_format (_surf._buf);
+                    auto _modifier = gbm_bo_get_modifier (_surf._buf);
 
                     constexpr char _spacer [] = ":";
 
@@ -1662,7 +1904,8 @@ using EGLAttrib = EGLint;
                                 + std::to_string (_width).append (_spacer)
                                 + std::to_string (_height).append (_spacer)
                                 + std::to_string (_stride).append (_spacer)
-                                + std::to_string (_format);
+                                + std::to_string (_format).append (_spacer)
+                                + std::to_string (_modifier);
             }
 
             return _ret;
@@ -1708,8 +1951,7 @@ using EGLAttrib = EGLint;
                     }
 
                     // Update including some GLES preparations
-//                    _ret = ( _gles.UpdateOffset ( GLES::InitialOffset () ) && _egl.Render (std::bind (&GLES::RenderColor, &_gles ), std::bind (&GLES::Render, &_gles) ) ) != false;
-                    _ret = ( _gles.UpdateOffset ( GLES::InitialOffset () ) && _egl.Render (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height ), [] () -> GLES::valid_t { GLES::valid_t _ret = true; return _ret; } ) ) != false;
+                    _ret = ( _gles.UpdateOffset ( GLES::InitialOffset () ) && _gles.UpdateScale ( GLES::InitialScale () ) && _egl.Render (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height ), [] () -> GLES::valid_t { GLES::valid_t _ret = true; return _ret; } ) ) != false;
                 }
 
                 if (_ret != false) {
