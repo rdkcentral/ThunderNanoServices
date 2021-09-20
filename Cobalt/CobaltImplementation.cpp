@@ -154,7 +154,7 @@ private:
         virtual ~CobaltWindow()
         {
             Block();
-            Signal(SIGQUIT);
+            third_party::starboard::wpe::shared::Stop();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
         }
 
