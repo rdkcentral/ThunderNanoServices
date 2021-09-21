@@ -32,7 +32,8 @@ set(PLATFORM_COMPOSITOR "compositorplugin")
 
 option(PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines which implementation is used." "None")
 option(PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to initialisize all hardware (s) [0 - UINT16_MAX]." 0)
-option(PLUGIN_COMPOSITOR_OUTOFPROCESS "Controls if the plugin should run in its own process. [true, false]." true)
+set(PLUGIN_COMPOSITOR_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
+
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
 set(PLUGIN_COMPOSITOR_FAIL_SAFE_HDR OFF CACHE BOOL "Enable fail safe HDR values")
@@ -45,6 +46,11 @@ set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolu
 set(PLUGIN_COMPOSITOR_WESTON_TTY_LIST "1;2;3;4" CACHE STRING "TTY ids for weston drm backend")
 set(PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS "HDMI-A-1,1280x720@60.0 16:9,normal" CACHE STRING "Output configs for weston drm backend")
 
+# deprecated/legacy flags support
+if(PLUGIN_COMPOSITOR_OUTOFPROCESS STREQUAL "false")
+    set(PLUGIN_COMPOSITOR_MODE "Off" CACHE STRING "Process mode"  FORCE)
+    unset(PLUGIN_COMPOSITOR_OUTOFPROCESS CACHE)
+endif()
 
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
