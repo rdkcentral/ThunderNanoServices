@@ -526,45 +526,344 @@ namespace Plugin {
         class GLES {
             private :
 
+                // x, y, z
+                static constexpr uint8_t VerticeDimensions = 3;
+
                 uint16_t _degree = 0;
+
+                GLenum const _tgt;
+                GLuint _tex;
+
+                // Each coorrdinate in the range [-1.0f, 1.0f]
+                struct offset {
+                    using coordinate_t =  float;
+
+                    coordinate_t _x;
+                    coordinate_t _y;
+                    coordinate_t _z;
+
+                    offset () : offset (0.0f, 0.0f, 0.0f) {}
+                    offset (coordinate_t x, coordinate_t y, coordinate_t z) : _x {x}, _y {y}, _z {z} {}
+                } _offset;
+
+                bool _valid;
 
             public :
 
-                GLES () = default;
-                ~GLES () = default;
+                using tgt_t = decltype (_tgt);
+                using tex_t = decltype (_tex);
+                using offset_t = decltype (_offset);
 
-                bool Render () {
+                using valid_t = decltype (_valid);
+
+                GLES () : _tgt {}, _tex { InvalidTex () }, _offset { InitialOffset () }, _valid { Initialize () } {}
+                ~GLES () {
+                    _valid = false;
+                    /* valid_t */ Deinitialize ();
+                }
+
+                static constexpr tex_t InvalidTex () { return 0; }
+
+                valid_t Valid () const { return _valid; }
+
+                valid_t Render () {
+                    bool _ret = Valid ();
+                    return _ret;
+                }
+
+                valid_t RenderColor () {
                     constexpr decltype (_degree) const ROTATION = 360;
 
                     constexpr float const OMEGA = 3.14159265 / 180;
 
-                    bool _ret = false;
-
-                    // Here, for C(++) these type should be identical
-                    // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
-                    static_assert (std::is_same <float, GLfloat>::value);
-
-                    GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA));
-
-                    // The function clamps the input to [0, 1]
-                    /* void */ glClearColor (_rad, _rad, _rad, 1.0);
-
-                    _ret = glGetError () == GL_NO_ERROR;
+                    valid_t  _ret = Valid ();
 
                     if (_ret != false) {
-                        /* void */ glClear (GL_COLOR_BUFFER_BIT);
-                        _ret = glGetError () == GL_NO_ERROR;
-                    }
+                        // Here, for C(++) these type should be identical
+                        // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
+                        static_assert (std::is_same <float, GLfloat>::value);
 
-                    if (_ret != false) {
-                        /* void */ glFlush ();
-                        _ret = glGetError () == GL_NO_ERROR;
-                    }
+                        GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA));
 
-                    _degree = (_degree + 1) % ROTATION;
+                        // The function clamps the input to [0.0f, 1.0f]
+                        /* void */ glClearColor (_rad, _rad, _rad, 0.0);
+
+                        _ret = glGetError () == GL_NO_ERROR;
+
+                        if (_ret != false) {
+                            /* void */ glClear (GL_COLOR_BUFFER_BIT);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            /* void */ glFlush ();
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        _degree = (_degree + 1) % ROTATION;
+                    }
 
                     return _ret;
                 }
+
+                valid_t RenderTile () {
+                    valid_t _ret = glGetError () == GL_NO_ERROR;
+
+                    if (_ret != false) {
+                        _ret = SetupProgram ();
+                    }
+
+                    EGL::dpy_t _dpy = EGL_NO_DISPLAY;
+
+                    if (_ret != false) {
+                        _dpy = eglGetCurrentDisplay ();
+                        _ret = eglGetError () == EGL_SUCCESS && _dpy != EGL_NO_DISPLAY;
+                    }
+
+                    EGL::surf_t _surf = EGL_NO_SURFACE;
+
+                    if (_ret != false) {
+                        _surf = eglGetCurrentSurface (EGL_DRAW);
+                        _ret = eglGetError () == EGL_SUCCESS  && _surf != EGL_NO_SURFACE;
+                    }
+
+                    EGLint _width = 0, _height = 0;
+
+                    if (_ret != false) {
+                        _ret = eglQuerySurface (_dpy, _surf, EGL_WIDTH, &_width) != EGL_FALSE && eglQuerySurface (_dpy, _surf, EGL_HEIGHT, &_height) != EGL_FALSE;
+                        _ret = _ret && eglGetError () == EGL_SUCCESS;
+                    }
+
+                    if (_ret != false) {
+                        glViewport ( static_cast <GLint> (0), static_cast <GLint> (0), static_cast <GLsizei> (_width), static_cast <GLsizei> (_height));
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    static_assert (std::is_same <GLfloat, GLES::offset::coordinate_t>:: value != false);
+                    std::array <GLfloat, 4 * VerticeDimensions> const _vert = {-0.5f , -0.5f, 0.0f /* v0 */, 0.5f , -0.5f, 0.0f /* v1 */, -0.5f , 0.5f, 0.0f /* v2 */, 0.5f , 0.5f, 0.0f /* v3 */};
+
+                    if (_ret != false) {
+                        GLuint _prog = 0;
+
+                        if (_ret != false) {
+                            glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        GLint _loc = 0;
+                        if (_ret != false) {
+                            _loc = glGetAttribLocation (_prog, "position");
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glVertexAttribPointer (_loc, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, _vert.data ());
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glEnableVertexAttribArray (_loc);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+                    }
+
+                    if (_ret != false) {
+                        glDrawArrays (GL_TRIANGLE_STRIP, 0, _vert.size () / VerticeDimensions);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    return _ret;
+                }
+
+                bool Supported (std::string const & name) {
+                    bool _ret = false;
+
+                    using string_t = std::string::value_type;
+                    using ustring_t = std::make_unsigned < string_t > :: type;
+
+                    // Identical underlying types except for signedness
+                    static_assert (std::is_same < ustring_t, GLubyte > :: value != false);
+
+                    string_t const * _ext = reinterpret_cast <string_t const *> ( glGetString (GL_EXTENSIONS) );
+
+                    _ret = _ext != nullptr
+                           && name.size () > 0
+                           && ( std::string (_ext).find (name)
+                                != std::string::npos );
+
+                    return _ret;
+                }
+
+                // Values used at render stages of different objects
+                static offset InitialOffset () { return offset (0.0f, 0.0f, 0.0f); }
+
+                valid_t UpdateOffset (struct offset const & off) {
+                    valid_t _ret = false;
+
+                    // Range check without taking into account rounding errors
+                    if ( ((off._x - -0.5f) * (off._x - 0.5f) <= 0.0f)
+                        && ((off._y - -0.5f) * (off._y - 0.5f) <= 0.0f)
+                        && ((off._z - -0.5f) * (off._z - 0.5f) <= 0.0f) ){
+
+                        _offset = off;
+
+                        _ret = true;
+                    }
+
+                    return _ret;
+                }
+
+            private :
+
+                valid_t Initialize () {
+                    valid_t _ret = false;
+                    _ret = true;
+                    return _ret;
+                }
+
+                valid_t Deinitialize () {
+                    valid_t _ret = false;
+
+                    if (_tex != InvalidTex ()) {
+                        glDeleteTextures (1, &_tex);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    return _ret;
+                }
+
+                valid_t SetupProgram (/* some identifier for a precompiled program */) {
+                    auto LoadShader = [] (GLuint type, GLchar const code []) -> GLuint {
+                        valid_t _ret = glGetError () == GL_NO_ERROR;
+
+                        GLuint _shader = 0;
+                        if (_ret != false) {
+                            _shader = glCreateShader (type);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false && _shader != 0) {
+                            glShaderSource (_shader, 1, &code, nullptr);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glCompileShader (_shader);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        return _shader;
+                    };
+
+                    auto ShadersToProgram = [] (GLuint vertex, GLuint fragment) -> bool {
+                        valid_t _ret = glGetError () == GL_NO_ERROR;
+
+                        GLuint _prog = 0;
+
+                        if (_ret != false) {
+                            glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false && _prog != 0) {
+                            glDeleteProgram (_prog);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        _prog = 0;
+
+                        if (_ret != false) {
+                            _prog = glCreateProgram ();
+                            _ret = _prog != 0;
+                        }
+
+                        if (_ret != false) {
+                            glAttachShader (_prog, vertex);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glAttachShader (_prog, fragment);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glBindAttribLocation (_prog, 0, "position");
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glLinkProgram (_prog);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glUseProgram (_prog);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+                        else {
+                            glDeleteProgram (_prog);
+                            _ret = glGetError () == GL_NO_ERROR;
+
+                            glDeleteShader (vertex);
+                            _ret = glGetError () == GL_NO_ERROR && _ret;
+
+                            glDeleteShader (fragment);
+                            _ret = glGetError () == GL_NO_ERROR && _ret;
+                        }
+
+                        return _ret;
+                    };
+
+
+                    bool _ret = glGetError () == GL_NO_ERROR;
+
+
+                    if (_ret != false) {
+                        constexpr char const _vtx_src [] =
+                            "#version 100                               \n"
+                            "attribute vec3 position;                   \n"
+                            "void main () {                             \n"
+                                "gl_Position = vec4 (position.xyz, 1);  \n"
+                            "}                                          \n"
+                        ;
+
+                        constexpr char const _frag_src [] =
+                            "#version 100                                                           \n"
+                            "precision mediump float;                                               \n"
+                            "void main () {                                                         \n"
+                                "gl_FragColor = vec4 (0.0f, 1.0f, 1.0f, 1.0f);                      \n"
+                            "}                                                                      \n"
+                        ;
+
+                        GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, _vtx_src);
+                        GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, _frag_src);
+
+// TODO: inefficient on every call, reuse compiled program
+                        _ret = ShadersToProgram(_vtxShader, _fragShader);
+                    }
+
+                    // Blend pixels with pixels already present in the frame buffer
+
+                    if (_ret != false) {
+                         glEnable (GL_BLEND);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    if (_ret != false) {
+                        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                        _ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    // Color on error
+                    if (_ret != true) {
+                        glClearColor (1.0f, 0.0f, 0.0f, 0.5f);
+                        //_ret = glGetError () == GL_NO_ERROR;
+                    }
+
+                    return _ret;
+                }
+
         };
 
         class EGL  {
@@ -704,7 +1003,9 @@ namespace Plugin {
                     bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _cont) != EGL_FALSE;
 
                     if (_ret != false) {
-                        _ret = gles.Render () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+//                        _ret = gles.Render () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+//                        _ret = gles.RenderColor () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+                        _ret = gles.RenderTile () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
 
                         // Avoid any memory leak if the worker is stopped (by another thread)
                         _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
@@ -721,7 +1022,8 @@ namespace Plugin {
             // First Sleep the expected time..
             SleepMs(_config.Sleep.Value() * 1000);
 
-            Natives _natives;
+            // Do not re-create
+            static Natives _natives;
 
             EGL _egl (_natives);
 
@@ -730,7 +1032,7 @@ namespace Plugin {
 
                 TRACE (Trace::Information, (_T ("Hardware accelerated rendering properly set up!")));
 
-                while (IsRunning() == true && _egl.Render (_gles) != false) {
+                while (IsRunning() == true && _egl.Render (_gles) != false && _natives.Display ()->Process (0) == 0) {
                     SleepMs(200);
                 }
             }
@@ -740,6 +1042,9 @@ namespace Plugin {
 
             TRACE (Trace::Information, (_T("Leaving the main task of execution, we are done.")));
 
+            Block ();
+
+            // Only effective in a blocked state
             return (Core::infinite);
         }
 
