@@ -39,8 +39,8 @@ namespace A2DP {
         virtual type Type() const = 0;
 
         virtual uint32_t BitRate() const = 0; // bits per second
-        virtual uint32_t ClockRate() const = 0; // bits per second
-        virtual uint8_t Channels() const = 0; // bits per second
+        virtual uint32_t ClockRate() const = 0;
+        virtual uint8_t Channels() const = 0;
 
         virtual uint32_t QOS(const int8_t policy) = 0;
 
@@ -49,11 +49,11 @@ namespace A2DP {
 
         virtual void SerializeConfiguration(Bluetooth::Buffer& output) const = 0;
 
-        virtual uint32_t Encode(const uint32_t inBufferSize, const uint8_t inBuffer[],
-                                uint32_t& outBufferSize, uint8_t outBuffer[]) const = 0;
+        virtual uint16_t Encode(const uint16_t inBufferSize, const uint8_t inBuffer[],
+                                uint16_t& outBufferSize, uint8_t outBuffer[]) const = 0;
 
-        virtual uint32_t Decode(const uint32_t inBufferSize, const uint8_t inBuffer[],
-                                uint32_t& outBufferSize, uint8_t outBuffer[]) const = 0;
+        virtual uint16_t Decode(const uint16_t inBufferSize, const uint8_t inBuffer[],
+                                uint16_t& outBufferSize, uint8_t outBuffer[]) const = 0;
     };
 
 } // namespace A2DP

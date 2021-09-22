@@ -290,11 +290,11 @@ namespace A2DP {
 
         uint32_t QOS(const int8_t policy);
 
-        uint32_t Encode(const uint32_t inBufferSize, const uint8_t inBuffer[],
-                        uint32_t& outBufferSize, uint8_t outBuffer[]) const override;
+        uint16_t Encode(const uint16_t inBufferSize, const uint8_t inBuffer[],
+                        uint16_t& outBufferSize, uint8_t outBuffer[]) const override;
 
-        uint32_t Decode(const uint32_t inBufferSize, const uint8_t inBuffer[],
-                        uint32_t& outBufferSize, uint8_t outBuffer[]) const override;
+        uint16_t Decode(const uint16_t inBufferSize, const uint8_t inBuffer[],
+                        uint16_t& outBufferSize, uint8_t outBuffer[]) const override;
 
     private:
         void Bitpool(uint8_t value);
@@ -320,8 +320,8 @@ namespace A2DP {
         uint32_t _bitRate;
         uint32_t _sampleRate;
         uint8_t _channels;
-        uint32_t _inFrameSize;
-        uint32_t _outFrameSize;
+        uint16_t _inFrameSize;
+        uint16_t _outFrameSize;
         uint32_t _frameDuration;
 
     private:

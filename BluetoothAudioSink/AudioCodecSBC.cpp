@@ -233,8 +233,8 @@ namespace A2DP {
         _lock.Unlock();
     }
 
-    /* virtual */ uint32_t AudioCodecSBC::Encode(const uint32_t inBufferSize, const uint8_t inBuffer[],
-                                                 uint32_t& outSize, uint8_t outBuffer[]) const
+    /* virtual */ uint16_t AudioCodecSBC::Encode(const uint16_t inBufferSize, const uint8_t inBuffer[],
+                                                 uint16_t& outSize, uint8_t outBuffer[]) const
     {
         ASSERT(_inFrameSize != 0);
         ASSERT(_outFrameSize != 0);
@@ -242,8 +242,8 @@ namespace A2DP {
         ASSERT(inBuffer != nullptr);
         ASSERT(outBuffer != nullptr);
 
-        uint32_t consumed = 0;
-        uint32_t produced = sizeof(SBCHeader);
+        uint16_t consumed = 0;
+        uint16_t produced = sizeof(SBCHeader);
         uint16_t count = 0;
 
         _lock.Lock();
@@ -253,7 +253,7 @@ namespace A2DP {
             const uint8_t MAX_FRAMES = 15; // only a four bit number holds the number of frames in a packet
 
             uint16_t frames = (inBufferSize / _inFrameSize);
-            uint32_t available = (outSize - produced);
+            uint16_t available = (outSize - produced);
 
             ASSERT(outSize >= sizeof(SBCHeader));
 
@@ -296,8 +296,8 @@ namespace A2DP {
         return (consumed);
     }
 
-    /* virtual */ uint32_t AudioCodecSBC::Decode(const uint32_t /* inBufferSize */, const uint8_t /* inBuffer */[],
-                                                 uint32_t& /* outBufferSize */, uint8_t /* outBuffer */[]) const
+    /* virtual */ uint16_t AudioCodecSBC::Decode(const uint16_t /* inBufferSize */, const uint8_t /* inBuffer */[],
+                                                 uint16_t& /* outBufferSize */, uint8_t /* outBuffer */[]) const
     {
         ASSERT(false && "SBC decode not implemented"); // TODO...?
         return (0);

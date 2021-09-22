@@ -28,10 +28,16 @@ namespace A2DP {
 
     class TransportChannel : public Bluetooth::RTPSocket {
     private:
-        static constexpr uint16_t DefaultMTU = 672;
+        static constexpr uint16_t A2DP_OMTU = 672;
+
+        // Payload type should be a value from the dynamic range (96-127).
+        // Typically 96 is chosen for A2DP implementations.
+        static constexpr uint8_t A2DP_PAYLOAD_TYPE = 96;
+
         static constexpr uint16_t OpenTimeout = 2000; // ms
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t PacketTimeout = 100;
+
 
     private:
         class TransportFlow {
@@ -95,6 +101,7 @@ namespace A2DP {
             if (setsockopt(Handle(), SOL_BLUETOOTH, BT_FLUSHABLE, &flushable, sizeof(flushable)) < 0) {
                 TRACE(Trace::Error, (_T("Failed to set the RTP socket flushable")));
             }
+
         }
 
     public:
@@ -136,10 +143,6 @@ namespace A2DP {
         {
             return (_timestamp);
         }
-        void Timestamp(const uint32_t newTimestamp)
-        {
-            _timestamp = newTimestamp;
-        }
         uint32_t ClockRate() const
         {
             ASSERT(_codec != nullptr);
@@ -154,33 +157,22 @@ namespace A2DP {
         {
             _timestamp = 0;
             // Ideally the sequence should start with a random value...
-            _sequence = (Core::Time::Now().Ticks() % 65535);
+            _sequence = (Core::Time::Now().Ticks() & 0xFFFF);
         }
-        uint32_t Transmit(const uint32_t length /* in bytes! */, const uint8_t data[])
+        uint32_t Transmit(const uint16_t length /* in bytes! */, const uint8_t data[])
         {
             ASSERT(_codec != nullptr);
 
-            // Limit the packet size to MTU, so it does not have to be fragmented.
-            uint8_t *scratchPad = static_cast<uint8_t*>(ALLOCA(DefaultMTU));
-            ASSERT(scratchPad != nullptr);
-
-            // Payload type should be a value from the dynamic range (96-127).
-            // Typically 96 is chosen for A2DP implementations.
-            const uint16_t payloadType = 96;
-
             uint32_t consumed = 0;
 
-            MediaPacket packet(_ssrc, payloadType, _sequence, _timestamp, sizeof(scratchPad), scratchPad);
-            consumed = packet.Ingest([this, length, data](uint8_t buffer[], const uint32_t maxLength, uint32_t& consumed) -> uint32_t {
-                uint32_t outSize = maxLength;
-                consumed = _codec->Encode(length, data, outSize, buffer);
-                return (outSize);
-            });
+            MediaPacketType<A2DP_OMTU, A2DP_PAYLOAD_TYPE, IAudioCodec> packet(*_codec, _ssrc, _sequence, _timestamp);
+
+            consumed = packet.Ingest(length, data);
 
             if (consumed > 0) {
-                uint32_t result = Exchange(PacketTimeout, packet);
+                uint32_t result = Exchange(250, packet);
                 if (result != Core::ERROR_NONE) {
-                    TRACE_L1("Failed to send out media packet (%d)", result);
+                    printf("BluetoothAudioSink: Failed to send out media packet (%d)\n", result);
                 }
 
                 // Timestamp clock frequency is the same as the sampling frequency.
