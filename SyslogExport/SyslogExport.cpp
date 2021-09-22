@@ -51,13 +51,14 @@ namespace Plugin{
     }
 
     const string SyslogExport::Initialize(PluginHost::IShell* service){
+        Config config;
         std::string returnMessage = "";
-        _config.FromString(service->ConfigLine());
+        config.FromString(service->ConfigLine());
         Logging::SyslogMonitor::Instance().RegisterClient(&_notification);
-        uint32_t maxClientConnection = _config.MaxClientConnection.IsSet() ? _config.MaxClientConnection.Value(): max_client_connection;
+        uint32_t maxClientConnection = config.MaxClientConnection.IsSet() ? config.MaxClientConnection.Value(): max_client_connection;
         if( maxClientConnection != 0){
-            std::unique_ptr<SyslogExport::WebsocketSink> websocketSink(new WebsocketSink(maxClientConnection));
-            _sinkManager.AddOuputSink(std::move(websocketSink));
+            Core::ProxyType<SyslogExport::WebsocketSink> websocketSink(Core::ProxyType<SyslogExport::WebsocketSink>::Create(maxClientConnection));
+            _sinkManager.AddOuputSink(websocketSink);
         }
         _sinkManager.Start();
         
@@ -105,15 +106,15 @@ namespace Plugin{
         return;
     }
 
-    void SyslogExport::SinkManager::AddOuputSink(std::unique_ptr<SyslogExport::WebsocketSink> outputSink)
+    void SyslogExport::SinkManager::AddOuputSink(Core::ProxyType<SyslogExport::WebsocketSink>& outputSink)
     {
-        _websocketSink = std::move(outputSink);
+        _websocketSink = outputSink;
         return;
     }
 
     void SyslogExport::SinkManager::RemoveOutputSink()
     {
-        _websocketSink.reset();
+        _websocketSink.Release();
     }
 
 

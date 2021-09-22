@@ -21,7 +21,6 @@
 
 #include "Module.h"
 #include <map>
-#include <tuple>
 #include <vector>
 #include <mutex>
 #include <memory>
@@ -36,8 +35,7 @@ namespace Plugin {
     public:
         SyslogExport(const SyslogExport&) = delete;
         SyslogExport& operator=(const SyslogExport&) = delete;
-        SyslogExport():  _connectionId(0)
-                    , _sinkManager()
+        SyslogExport(): _sinkManager()
                     , _notification(this)
         {
         }
@@ -122,7 +120,7 @@ namespace Plugin {
             std::map<uint32_t, WPEFramework::PluginHost::Channel*> _exportChannelMap;
         };
 
-        class Notification : public Logging::SyslogMonitorClient {
+        class Notification : public Logging::ISyslogMonitorClient {
         public:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -166,7 +164,7 @@ namespace Plugin {
             SinkManager& operator=(const SinkManager&) = delete;
             void HandleMessage(const std::string& logLine);
             uint32_t Worker() override;
-            void AddOuputSink(std::unique_ptr<SyslogExport::WebsocketSink> );
+            void AddOuputSink(Core::ProxyType<SyslogExport::WebsocketSink>& );
             bool AddChannel(WPEFramework::PluginHost::Channel& channel);
             void RemoveChannel(uint32_t channelId);
             void RemoveOutputSink();
@@ -179,16 +177,14 @@ namespace Plugin {
             std::queue<std::string> _logList;
             std::mutex _mutex;
             std::condition_variable _condVar;
-            std::unique_ptr<SyslogExport::WebsocketSink> _websocketSink;
+            Core::ProxyType<SyslogExport::WebsocketSink> _websocketSink;
 
         };
 
 
     private:
-        uint32_t _connectionId;
         SinkManager _sinkManager;
         Notification _notification;
-        Config _config;
     };
 }
 }
