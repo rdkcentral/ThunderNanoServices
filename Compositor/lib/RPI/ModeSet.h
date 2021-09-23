@@ -167,7 +167,6 @@ class ModeSet
 
                             decltype (drmModePlane::count_formats) _number = _plane->count_formats;
                             decltype (drmModePlane::formats) _formats = _plane->formats;
-                            decltype (drmModePlane::plane_id) _plane_id = _plane->plane_id;
 
                             // Uses the iterator constructor
                             std::list <DRM::frmt_t> _sub (&_formats [0], &_formats [_number]);
