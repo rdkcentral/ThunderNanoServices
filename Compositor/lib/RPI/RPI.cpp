@@ -174,18 +174,21 @@ class CompositorImplementation;
                 return _name;
         }
         void Opacity(const uint32_t value) override {
-            TRACE(Trace::Error, (_T("Opacity is currently not supported for Surface %s"), _name.c_str()));
+            _opacity = value;
+        }
+        uint32_t Opacity () const override {
+            return _opacity;
         }
         uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override {
-            TRACE(Trace::Error, (_T("Geometry is currently not supported for Surface %s"), _name.c_str()));
-            return Core::ERROR_UNAVAILABLE;
+            _destination = rectangle;
+            return Core::ERROR_NONE;
         }
         Exchange::IComposition::Rectangle Geometry() const override {
             return _destination;
         }
         uint32_t ZOrder(const uint16_t zorder) override {
-            TRACE(Trace::Error, (_T("ZOrder is currently not supported for Surface %s"), _name.c_str()));
-            return Core::ERROR_UNAVAILABLE;
+            _layer = zorder;
+            return Core::ERROR_NONE;
         }
         uint32_t ZOrder() const override {
             return _layer;
@@ -750,29 +753,56 @@ class CompositorImplementation;
                 GLenum const _tgt;
                 GLuint _tex;
 
-                // Each coorrdinate in the range [-1.0f, 1.0f]
                 struct offset {
                     using coordinate_t = GLfloat;
+
+                    static_assert (_narrowing <float, coordinate_t, true> :: value != false);
+
+                    // Each coorrdinate in the range [-1.0f, 1.0f]
+                    static constexpr coordinate_t _left = static_cast <coordinate_t> (-1.0f);
+                    static constexpr coordinate_t _right = static_cast <coordinate_t> (1.0f);
+                    static constexpr coordinate_t _bottom = static_cast <coordinate_t> (-1.0f);
+                    static constexpr coordinate_t _top = static_cast <coordinate_t> (1.0f);
+                    static constexpr coordinate_t _near = static_cast <coordinate_t> (-1.0f);
+                    static constexpr coordinate_t _far = static_cast <coordinate_t> (1.0f);
 
                     coordinate_t _x;
                     coordinate_t _y;
                     coordinate_t _z;
 
-                    static_assert (_narrowing <float, coordinate_t, true> :: value != false);
-                    offset () : offset (0.0f, 0.0f, 0.0f) {}
+                    offset () : offset ( (_right - _left) / static_cast <coordinate_t> (2.0f) + _left, (_top - _bottom) / static_cast <coordinate_t> (2.0f) + _bottom, (_far - _near) / static_cast <coordinate_t> (2.0f) + _near ) {}
                     offset (coordinate_t x, coordinate_t y, coordinate_t z) : _x {x}, _y {y}, _z {z} {}
                 } _offset;
 
                 struct scale {
                     using fraction_t = GLclampf;
 
+                    static_assert (_narrowing <float, fraction_t, true> :: value != false);
+
+                    static constexpr fraction_t _identity = static_cast <fraction_t> (1.0f);
+                    static constexpr fraction_t _min  = static_cast <fraction_t> (0.0f);
+                    static constexpr fraction_t _max  = static_cast <fraction_t> (1.0f);
+
                     fraction_t _horiz;
                     fraction_t _vert;
 
-                    static_assert (_narrowing <float, fraction_t, true> :: value != false);
-                    scale () : scale (1.0f, 1.0f) {};
+                    scale () : scale (_identity, _identity) {}
                     scale (fraction_t horiz, fraction_t vert) : _horiz {horiz}, _vert {vert} {}
                 } _scale;
+
+                struct opacity {
+                    using alpha_t = GLfloat;
+
+                    static_assert (_narrowing <float, alpha_t, true> :: value != false);
+
+                    static constexpr alpha_t _min = static_cast <alpha_t> (0.0f);
+                    static constexpr alpha_t _max = static_cast <alpha_t> (1.0f);
+
+                    alpha_t _alpha;;
+
+                    opacity () : opacity {_max} {}
+                    opacity (alpha_t alpha) : _alpha {alpha} {}
+                } _opacity;
 
                 bool _valid;
 
@@ -782,13 +812,70 @@ class CompositorImplementation;
                 using tex_t = decltype (_tex);
                 using offset_t = decltype (_offset);
                 using scale_t = decltype (_scale);
+                using opacity_t = decltype (_opacity);
 
                 using valid_t = decltype (_valid);
 
-                GLES () : _tgt { GL_TEXTURE_EXTERNAL_OES }, _tex { InvalidTex () }, _offset { InitialOffset () }, _valid { Initialize () } {}
+                GLES () : _tgt { GL_TEXTURE_EXTERNAL_OES }, _tex { InvalidTex () }, _offset { InitialOffset () }, _scale {InitialScale () }, _opacity { InitialOpacity () },  _valid { Initialize () } {}
                 ~GLES () {
                     _valid = false;
                     /* valid_t */ Deinitialize ();
+                }
+
+                static offset_t InitialOffset () { return offset (); }
+
+                valid_t UpdateOffset (offset_t const & off) {
+                    valid_t _ret = false;
+
+                    // Ramge check without taking into account rounding errors
+                    if (   off._x >= offset_t::_left
+                        && off._x <= offset_t::_right
+                        && off._y >= offset_t::_bottom
+                        && off._y <= offset_t::_top
+                        && off._z >= offset_t::_near
+                        && off._z <= offset_t::_far
+                    )
+                    {
+                        _offset = off;
+                        _ret = true;
+                    }
+
+                    return _ret;
+                }
+
+                static scale_t InitialScale () { return scale (); }
+
+                valid_t UpdateScale (scale_t const & scale) {
+                    valid_t _ret = false;
+
+                    // Ramge check without taking into account rounding errors
+                    if (   scale._horiz >= scale_t::_min
+                        && scale._horiz <= scale_t::_max
+                        && scale._vert >= scale_t::_min
+                        && scale._vert <= scale_t::_max
+                    )
+                    {
+                        _scale = scale;
+                        _ret = true;
+                    }
+
+                    return _ret;
+                }
+
+                static opacity_t InitialOpacity () { return opacity (); }
+
+                valid_t UpdateOpacity (opacity_t const & opacity) {
+                    valid_t _ret = false;
+
+                    if (   opacity._alpha >= opacity_t::_min
+                        && _opacity._alpha <= opacity_t::_max
+                    )
+                    {
+                        _opacity = opacity;
+                        _ret = true;
+                    }
+
+                    return _ret;
                 }
 
                 static constexpr tex_t InvalidTex () { return 0; }
@@ -832,43 +919,6 @@ class CompositorImplementation;
                         }
 
                         _degree = (_degree + 1) % ROTATION;
-                    }
-
-                    return _ret;
-                }
-
-                // Values used at render stages of different objects
-                static offset_t InitialOffset () { return offset (0.0f, 0.0f, 0.0f); }
-
-                valid_t UpdateOffset (struct offset const & off) {
-                    valid_t _ret = false;
-
-                    // Ramge check without taking into account rounding errors
-                    if (   (off._x + 1.0f >= 0.0f)
-                        && (off._x - 1.0f <= 0.0f)
-                        && (off._y + 1.0f >= 0.0f)
-                        && (off._y - 1.0f <= 0.0f) ) {
-
-                        _offset = off;
-
-                        _ret = true;
-                    }
-
-                    return _ret;
-                }
-
-                static scale_t InitialScale () { return scale (1.0f, 1.0f); }
-
-                valid_t UpdateScale (scale_t const & scale) {
-                    valid_t _ret = false;
-
-                    // Ramge check without taking into account rounding errors
-                    if (   (scale._horiz <= 1.0f)
-                        && (scale._vert <= 1.0f) ) {
-
-                        _scale = scale;
-
-                        _ret = true;
                     }
 
                     return _ret;
@@ -1200,24 +1250,25 @@ class CompositorImplementation;
                     valid_t _ret = glGetError () == GL_NO_ERROR;
 
                     constexpr char const _vtx_src [] =
-                        "#version 100                               \n"
-                        "attribute vec3 position;                   \n"
-                        "varying vec2 coordinates;                  \n"
-                        "void main () {                             \n"
-                            "gl_Position = vec4 (position.xyz, 1);  \n"
-                            "coordinates = position.xy;             \n"
-                        "}                                          \n"
+                        "#version 100                              \n"
+                        "attribute vec3 position;                  \n"
+                        "varying vec2 coordinates;                 \n"
+                        "void main () {                            \n"
+                            "gl_Position = vec4 (position.xyz, 1); \n"
+                            "coordinates = position.xy;            \n"
+                        "}                                         \n"
                         ;
 
                     constexpr char  const _frag_src [] =
-                        "#version 100                                                           \n"
-                        "#extension GL_OES_EGL_image_external : require                         \n"
-                        "precision mediump float;                                               \n"
-                        "uniform samplerExternalOES sampler;                                    \n"
-                        "varying vec2 coordinates;                                              \n"
-                        "void main () {                                                         \n"
-                            "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgb, 1.0f);  \n"
-                        "}                                                                      \n"
+                        "#version 100                                                             \n"
+                        "#extension GL_OES_EGL_image_external : require                           \n"
+                        "precision mediump float;                                                 \n"
+                        "uniform samplerExternalOES sampler;                                      \n"
+                        "uniform float opacity;                                                   \n"
+                        "varying vec2 coordinates;                                                \n"
+                        "void main () {                                                           \n"
+                            "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgb, opacity); \n"
+                        "}                                                                        \n"
                         ;
 
                     static_assert (std::is_same <GLfloat, GLES::offset::coordinate_t>:: value != false);
@@ -1248,19 +1299,30 @@ class CompositorImplementation;
                             _ret = glGetError () == GL_NO_ERROR;
                         }
 
-                        GLint _loc = 0;
+                        GLint _loc_vert = 0, _loc_op = 0;
+
                         if (_ret != false) {
-                            _loc = glGetAttribLocation (_prog, "position");
+                            _loc_op = glGetUniformLocation (_prog, "opacity");
                             _ret = glGetError () == GL_NO_ERROR;
                         }
 
                         if (_ret != false) {
-                            glVertexAttribPointer (_loc, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, vert.data ());
+                            glUniform1f (_loc_op, _opacity._alpha);
                             _ret = glGetError () == GL_NO_ERROR;
                         }
 
                         if (_ret != false) {
-                            glEnableVertexAttribArray (_loc);
+                            _loc_vert = glGetAttribLocation (_prog, "position");
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glVertexAttribPointer (_loc_vert, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, vert.data ());
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            glEnableVertexAttribArray (_loc_vert);
                             _ret = glGetError () == GL_NO_ERROR;
                         }
 
@@ -1270,7 +1332,7 @@ class CompositorImplementation;
                         }
 
                         if (_ret != false) {
-                            glDisableVertexAttribArray (_loc);
+                            glDisableVertexAttribArray (_loc_vert);
                             _ret = glGetError () == GL_NO_ERROR;
                         }
                     }
@@ -1951,7 +2013,72 @@ class CompositorImplementation;
                     }
 
                     // Update including some GLES preparations
-                    _ret = ( _gles.UpdateOffset ( GLES::InitialOffset () ) && _gles.UpdateScale ( GLES::InitialScale () ) && _egl.Render (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height ), [] () -> GLES::valid_t { GLES::valid_t _ret = true; return _ret; } ) ) != false;
+
+                    using geom_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().Geometry ());
+                    using zorder_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().ZOrder ());
+
+                    using geom_x_t = decltype (geom_t::x);
+                    using geom_y_t = decltype (geom_t::y);
+                    using geom_w_t = decltype (geom_t::width);
+                    using geom_h_t = decltype (geom_t::height);
+
+                    using platform_w_t =  decltype (std::declval < decltype (_platform) >().Width ());
+                    using platform_h_t =  decltype (std::declval < decltype (_platform) >().Height ());
+
+                    using offset_x_t = decltype (GLES::offset_t::_x);
+                    using offset_y_t = decltype (GLES::offset_t::_y);
+                    using offset_z_t = decltype (GLES::offset_t::_z);
+
+                    using scale_h_t = decltype (GLES::scale_t::_horiz);
+                    using scale_v_t = decltype (GLES::scale_t::_vert);
+
+
+                    using common_scale_h_t = std::common_type <scale_h_t, geom_w_t, platform_w_t> :: type;
+                    using common_scale_v_t = std::common_type <scale_v_t, geom_h_t, platform_h_t> :: type;
+
+                    // Narrowing is not allowed
+                    static_assert (_narrowing <common_scale_h_t, scale_h_t, true> :: value != false);
+                    static_assert (_narrowing <common_scale_v_t, scale_v_t, true> :: value != false);
+
+
+                    geom_t _geom = _client->Geometry ();
+
+
+                    GLES::scale_t _scale = { static_cast <scale_h_t> ( static_cast <common_scale_h_t> (_geom.width) / static_cast <common_scale_h_t> (_platform.Width ()) ), static_cast <scale_v_t> ( static_cast <common_scale_v_t> (_geom.height) / static_cast <common_scale_v_t> (_platform.Height ()) ) };
+
+
+                    using common_offset_x_t = std::common_type <scale_h_t, geom_x_t, offset_x_t> :: type;
+                    using common_offset_y_t = std::common_type <scale_v_t, geom_y_t, offset_y_t> :: type;
+                    using common_offset_z_t = std::common_type <zorder_t, decltype (WPEFramework::Exchange::IComposition::minZOrder), decltype (WPEFramework::Exchange::IComposition::maxZOrder), offset_z_t> :: type;
+
+
+                    // Narrowing is not allowed
+                    static_assert (_narrowing <common_offset_x_t, offset_x_t, true> :: value != false);
+                    static_assert (_narrowing <common_offset_y_t, offset_y_t, true> :: value != false);
+                    static_assert (_narrowing <common_offset_z_t, offset_z_t, true> :: value != false);
+
+
+                    zorder_t _zorder = _client->ZOrder ();
+
+
+                    GLES::offset_t _offset = { static_cast <offset_x_t> ( static_cast <common_offset_x_t> (_scale._horiz) * static_cast <common_offset_x_t> (_geom.x) / static_cast <common_offset_x_t> (_geom.width) ), static_cast <offset_y_t> ( static_cast <common_offset_y_t> (_scale._vert) * static_cast <common_offset_y_t> (_geom.y) / static_cast <common_offset_y_t> (_geom.height)), static_cast <offset_z_t> (static_cast <common_offset_z_t> (_zorder) / ( static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::maxZOrder) / static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::minZOrder) )) };
+
+
+                    using opacity_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().Opacity ());
+
+                    using opacity_a_t = decltype (GLES::opacity_t::_alpha);
+
+                    using common_opacity_t = std::common_type <opacity_t, opacity_a_t, decltype (WPEFramework::Exchange::IComposition::minOpacity), decltype (WPEFramework::Exchange::IComposition::maxOpacity)> :: type;
+
+                    // Narrowing is not allowed
+                    static_assert (_narrowing <common_opacity_t, opacity_a_t, true> :: value != false);
+
+
+                    opacity_t _opa = _client->Opacity ();
+
+                    GLES::opacity_t _opacity = static_cast <opacity_a_t> ( static_cast <common_opacity_t> (_opa) / ( static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::maxOpacity) - static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::minOpacity) ) );
+
+                    _ret = ( _gles.UpdateOffset ( _offset ) && _gles.UpdateScale ( _scale ) && _gles.UpdateOpacity ( _opacity ) && _egl.Render (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height ), [] () -> GLES::valid_t { GLES::valid_t _ret = true; return _ret; } ) ) != false;
                 }
 
                 if (_ret != false) {
