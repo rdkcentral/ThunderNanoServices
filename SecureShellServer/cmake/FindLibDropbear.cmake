@@ -25,7 +25,7 @@
 message("<FindLibDropbear.cmake>")
 
 find_package(PkgConfig)
-pkg_check_modules(PC_LIBDROPBEAR REQUIRED LibDropbear)
+pkg_check_modules(PC_LIBDROPBEAR REQUIRED libdropbear)
 
 
 if(PC_LIBDROPBEAR_FOUND)

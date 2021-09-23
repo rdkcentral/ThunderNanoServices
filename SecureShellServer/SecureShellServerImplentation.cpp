@@ -159,7 +159,7 @@ public:
         return deactivate_dropbear();
     }
 
-    size_t GetActiveSessionsCount()
+    uint32_t GetActiveSessionsCount()
     {
         return get_active_sessions_count();
     }
