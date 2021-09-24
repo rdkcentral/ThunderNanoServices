@@ -1006,10 +1006,14 @@ namespace Plugin {
 //                        _ret = gles.Render () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
 //                        _ret = gles.RenderColor () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
                         _ret = gles.RenderTile () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
-
-                        // Avoid any memory leak if the worker is stopped (by another thread)
-                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
                     }
+
+                    return _ret;
+                }
+
+                bool Render () {
+                    // Avoid any memory leak if the worker is stopped (by another thread)
+                    bool _ret = Valid () != false && eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE;
 
                     return _ret;
                 }
@@ -1032,7 +1036,8 @@ namespace Plugin {
 
                 TRACE (Trace::Information, (_T ("Hardware accelerated rendering properly set up!")));
 
-                while (IsRunning() == true && _egl.Render (_gles) != false && _natives.Display ()->Process (0) == 0) {
+                // Process () expects EGL currents to be valid
+                while (IsRunning() == true && _egl.Render (_gles) != false && _natives.Display ()->Process (0) == 0 && _egl.Render () != false) {
                     SleepMs(200);
                 }
             }
