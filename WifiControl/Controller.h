@@ -1348,7 +1348,7 @@ namespace WPASupplicant {
             if (entry != _enabled.end()) {
                 //Config call internally calls Lock so unlocking here to avoid dead lock
                 _adminLock.Unlock();
-                // This is an existing config. Easy Piecie.
+                // This is an existing config. Easy Piece.
                 result = Config(Core::ProxyType<Controller>(*this), SSID);
             } else {
                 uint32_t id = ~0;
@@ -1382,20 +1382,12 @@ namespace WPASupplicant {
         }
         void Destroy(const string& SSID)
         {
-            Config result;
-
-            _adminLock.Lock();
-
             // See if the given SSID is enabled.
+            _adminLock.Lock();
             EnabledContainer::iterator entry(_enabled.find(SSID));
-
+            
             if ((entry != _enabled.end()) && (entry->second.Id() != static_cast<uint32_t>(~0))) {
-
-                // This is an existing config. Easy Piecie.
-                //Config internally calls Lock so unlocking here to avoid dead lock
                 _adminLock.Unlock();
-                result = Config(Core::ProxyType<Controller>(*this), SSID);
-
                 CustomRequest exchange(string(_TXT("REMOVE_NETWORK ")) + Core::NumberType<uint32_t>(entry->second.Id()).Text());
 
                 Submit(&exchange);
@@ -1435,7 +1427,6 @@ namespace WPASupplicant {
         }
         inline uint32_t Connect(const string& SSID)
         {
-
             uint32_t result = Core::ERROR_NOT_EXIST;
 
             _adminLock.Lock();

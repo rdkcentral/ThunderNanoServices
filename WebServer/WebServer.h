@@ -65,26 +65,6 @@ namespace Plugin {
             WebServer& _parent;
         };
 
-        class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-
-        public:
-            Config()
-                : Core::JSON::Container()
-                , OutOfProcess(true)
-            {
-                Add(_T("outofprocess"), &OutOfProcess);
-            }
-            ~Config()
-            {
-            }
-
-        public:
-            Core::JSON::Boolean OutOfProcess;
-        };
-
     public:
 #ifdef __WINDOWS__
 #pragma warning(disable : 4355)

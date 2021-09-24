@@ -142,12 +142,12 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
     
-    private:
         BEGIN_INTERFACE_MAP(SubsystemControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
+    private:
         void RegisterAll();
         void UnregisterAll();
 

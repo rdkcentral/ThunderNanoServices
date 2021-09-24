@@ -44,7 +44,6 @@ namespace Plugin {
     const string OutOfProcessPlugin::Initialize(PluginHost::IShell* service) /* override */
     {
         string message;
-        Config config;
 
         ASSERT(_browser == nullptr);
         ASSERT(_memory == nullptr);
@@ -56,7 +55,6 @@ namespace Plugin {
         _service->EnableWebServer(_T("UI"), EMPTY_STRING);
         _service->Register(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _service->Register(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-        config.FromString(_service->ConfigLine());
 
         _browser = service->Root<Exchange::IBrowser>(_connectionId, Core::infinite, _T("OutOfProcessImplementation"));
 
