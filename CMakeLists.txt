@@ -29,6 +29,7 @@ option(PLUGIN_DISPLAYINFO "Include DisplayInfo plugin" OFF)
 option(PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
 option(PLUGIN_DIALSERVER " Include DIALServer plugin" OFF)
 option(PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
+option(PLUGIN_DOGGO "Include watchdog plugin" OFF)
 option(PLUGIN_IOCONNECTOR "Include IOConnector plugin" OFF)
 option(PLUGIN_INPUTSWITCH "Include InputSwitch plugin" OFF)
 option(PLUGIN_FIRMWARECONTROL "Include FirmwareControl Plugin" OFF)
@@ -99,6 +100,10 @@ endif()
 
 if(PLUGIN_DICTIONARY)
     add_subdirectory(Dictionary)
+endif()
+
+if(PLUGIN_DOGGO)
+    add_subdirectory(Doggo)
 endif()
 
 if(PLUGIN_FIRMWARECONTROL)
