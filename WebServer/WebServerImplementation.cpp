@@ -792,7 +792,7 @@ namespace Plugin {
     /* virtual */ void WebServerImplementation::IncomingChannel::Received(Core::ProxyType<Web::Request>& request)
     {
 
-        TRACE(WebFlow, (Core::proxy_cast<Web::Request>(request)));
+        TRACE(WebFlow, (Core::ProxyType<Web::Request>(request)));
 
         // Check if the channel server will relay this message.
         if (_parent.Relay(request, Id()) == false) {

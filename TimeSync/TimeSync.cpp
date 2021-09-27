@@ -124,7 +124,7 @@ namespace Plugin {
             response->SyncTime = (syncTime == 0 ? _T("invalid time") : Core::Time(syncTime).ToRFC1123(true));
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
-            result->Body(Core::proxy_cast<Web::IBody>(response));
+            result->Body(Core::ProxyType<Web::IBody>(response));
             result->ErrorCode = Web::STATUS_OK;
             result->Message = "OK";
         } else if (request.Verb == Web::Request::HTTP_POST) {
