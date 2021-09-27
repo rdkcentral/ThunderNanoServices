@@ -123,7 +123,7 @@ namespace Plugin {
                 response->PowerState = power_get_state();
                 if (response->PowerState) {
                     result->ContentType = Web::MIMETypes::MIME_JSON;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->Body(Core::ProxyType<Web::IBody>(response));
                 } else {
                     result->Message = "Invalid State";
                 }
@@ -143,7 +143,7 @@ namespace Plugin {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
                 response->Status = SetState(state, timeout);
                 result->ContentType = Web::MIMETypes::MIME_JSON;
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             } else {
                 result->ErrorCode = Web::STATUS_BAD_REQUEST;
                 result->Message = "Unknown error";

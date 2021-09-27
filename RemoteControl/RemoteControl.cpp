@@ -314,7 +314,7 @@ namespace Plugin {
     /* virtual */ void RemoteControl::Inbound(Web::Request& request)
     {
 
-        request.Body(Core::proxy_cast<Web::IBody>(jsonCodeFactory.Element()));
+        request.Body(Core::ProxyType<Web::IBody>(jsonCodeFactory.Element()));
         jsonCodeFactory.Element().Release();
     }
 
@@ -471,7 +471,7 @@ namespace Plugin {
             modifiers = modifiers >> 1;
         }
 
-        return (Core::proxy_cast<Web::IBody>(response));
+        return (Core::ProxyType<Web::IBody>(response));
     }
 
     Core::ProxyType<Web::Response> RemoteControl::GetMethod(Core::TextSegmentIterator& index, const Web::Request& request) const
@@ -567,7 +567,7 @@ namespace Plugin {
             result->ErrorCode = Web::STATUS_OK;
             result->Message = string(_T("List of loaded remote devices"));
             result->ContentType = Web::MIMETypes::MIME_JSON;
-            result->Body(Core::proxy_cast<Web::IBody>(response));
+            result->Body(Core::ProxyType<Web::IBody>(response));
         }
 
         return (result);

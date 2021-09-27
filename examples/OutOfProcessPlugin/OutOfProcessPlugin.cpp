@@ -269,7 +269,7 @@ namespace Plugin {
                     Core::ProxyType<Data> info(jsonDataFactory.Element());
 
                     info->URL = _T("ws://<My IP>/JSONPop");
-                    _subscriber->Submit(Core::proxy_cast<Core::JSON::IElement>(info));
+                    _subscriber->Submit(Core::ProxyType<Core::JSON::IElement>(info));
                 } else if ((index.Remainder() == _T("URL")) && (request.HasBody() == true) && (request.Body<Web::TextBody>()->empty() == false)) {
                     _browser->SetURL(*(request.Body<Web::TextBody>()));
                 #ifdef __CORE_EXCEPTION_CATCHING__

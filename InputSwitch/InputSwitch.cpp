@@ -93,7 +93,7 @@ namespace Plugin {
                 }
 
                 result->ContentType = Web::MIMETypes::MIME_JSON;
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
             else {
                 string name (index.Current().Text());
@@ -111,7 +111,7 @@ namespace Plugin {
                     element.Enabled = Consumer(name);
 
                     result->ContentType = Web::MIMETypes::MIME_JSON;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->Body(Core::ProxyType<Web::IBody>(response));
                 }
             }
         }
@@ -156,7 +156,7 @@ namespace Plugin {
                     element.Enabled  = (mode == Exchange::IInputSwitch::ENABLED);
 
                     result->ContentType = Web::MIMETypes::MIME_JSON;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->Body(Core::ProxyType<Web::IBody>(response));
                 }
             }
         } else {
