@@ -91,12 +91,12 @@ namespace Plugin {
             }
 
         public:
-            static Entry* Create(Implementation::IServer* server, Wayland::Display* display, const uint32_t id)
+            static Entry* Create(Implementation::IServer* server, const uint32_t id)
             {
                 Wayland::Display::Surface surface;
                 Entry* result(nullptr);
 
-                display->Get(id, surface);
+                server->Get(id, surface);
 
                 if (surface.IsValid() == true) {
                     result = Core::Service<Entry>::Create<Entry>(&surface, server);
@@ -236,7 +236,6 @@ namespace Plugin {
             , _compositionClients()
             , _clients()
             , _server(nullptr)
-            , _controller(nullptr)
             , _job(*this)
             , _sink(*this)
             , _surface(nullptr)
@@ -261,18 +260,15 @@ namespace Plugin {
         {
             TRACE(Trace::Information, (_T("Stopping Wayland\n")));
 
+            _job.Stop();
+            _job.Wait(Core::Thread::STOPPED | Core::Thread::STOPPING, Core::infinite);
+
             if (_surface != nullptr) {
                 delete _surface;
             }
 
             if (_server != nullptr) {
                 delete _server;
-            }
-
-            if (_controller != nullptr) {
-                // Exit Wayland loop
-                _controller->Signal();
-                _controller->Release();
             }
 
 #ifdef ENABLE_NXSERVER
@@ -397,7 +393,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         /* virtual */ bool Dispatch()
         {
-            return (true);
+            return true;
         }
         RPC::IStringIterator* Consumers() const override
         {
@@ -441,7 +437,7 @@ namespace Plugin {
             }
 
             if (index == _clients.end()) {
-                Entry* entry(Entry::Create(_server, _controller, id));
+                Entry* entry(Entry::Create(_server, id));
 
                 _clients.push_back(entry);
                 TRACE(Trace::Information, (_T("Added client id[%d] name[%s].\n"), entry->Id(), entry->Name().c_str()));
@@ -489,7 +485,7 @@ namespace Plugin {
         void Process()
         {
             TRACE(Trace::Information, (_T("[%s:%d] Starting wayland loop.\n"), __FILE__, __LINE__));
-            _controller->Process(this);
+            _server->Process(this);
             TRACE(Trace::Information, (_T("[%s:%d] Exiting wayland loop.\n"), __FILE__, __LINE__));
         }
         static void CloseDown()
@@ -527,19 +523,18 @@ namespace Plugin {
                 // abstraction, to create/request a client from this abstraction.
                 // This C++ wayland Compositor abstraction instance, will in-fact, call the server, we just
                 // instantiated a few lines above.
-                _controller = &(Wayland::Display::Instance(_config.Display.Value()));
-                // OK ready to receive new connecting surfaces.
-                _controller->Callback(&_sink);
-                // We also want to be know the current surfaces.
-                _controller->LoadSurfaces();
-                // Firing up the compositor controllerr.
-                _job.Run();
 
-                TRACE(Trace::Information, (_T("Compositor initialized\n")));
+                if (_server->StartController(_config.Display.Value(), &_sink) == true) {
+                   // Firing up the compositor controller.
+                    _job.Run();
 
-                if (subSystems != nullptr) {
-                    // Set Graphics event. We need to set up a handler for this at a later moment
-                    subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                    TRACE(Trace::Information, (_T("Compositor initialized\n")));
+                    if (subSystems != nullptr) {
+                        // Set Graphics event. We need to set up a handler for this at a later moment
+                        subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                    }
+                } else {
+                    delete _server;
                 }
             }
 
@@ -553,7 +548,6 @@ namespace Plugin {
         std::list<Exchange::IComposition::INotification*> _compositionClients;
         std::list<Entry*> _clients;
         Implementation::IServer* _server;
-        Wayland::Display* _controller;
         Job _job;
         Sink _sink;
         Wayland::Display::Surface* _surface;

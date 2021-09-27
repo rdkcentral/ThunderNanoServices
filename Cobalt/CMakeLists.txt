@@ -63,10 +63,16 @@ target_link_libraries(${MODULE_NAME}
 string(TOLOWER ${NAMESPACE} STORAGENAME)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
-set(PLUGIN_COBALT_AUTOSTART false CACHE STRING "Automatically start Cobalt plugin")
-set(PLUGIN_COBALT_OUTOFPROCESS false CACHE STRING "Controls if the plugin should run in its own process")
+set(PLUGIN_COBALT_AUTOSTART "false" CACHE STRING "Automatically start Cobalt plugin")
+set(PLUGIN_COBALT_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 set(PLUGIN_COBALT_RESOLUTION "720p" CACHE STRING "Browser resolution")
 set(PLUGIN_COBALT_WEBINSPECTOR_ADDRESS 0.0.0.0:9222 CACHE STRING "IP:Port for WebInspector of Cobalt")
+
+# deprecated/legacy flags support
+if(PLUGIN_COBALT_OUTOFPROCESS STREQUAL "false")
+    set(PLUGIN_COBALT_MODE "Off" CACHE STRING "Process mode"  FORCE)
+    unset(PLUGIN_COBALT_OUTOFPROCESS CACHE)
+endif()
 
 # resolution handling
 if(PLUGIN_COBALT_RESOLUTION EQUAL "720p")

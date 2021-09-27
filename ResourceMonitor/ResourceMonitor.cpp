@@ -36,8 +36,6 @@ namespace WPEFramework
 
             _service = service;
 
-            Config config;
-            config.FromString(_service->ConfigLine());
             _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
 
             _monitor = _service->Root<Exchange::IResourceMonitor>(_connectionId, 2000, _T("ResourceMonitorImplementation"));

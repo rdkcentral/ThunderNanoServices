@@ -44,11 +44,12 @@ namespace WPEFramework {
         Exchange::IComposition::ScreenResolution GetResolution();
         
         struct IServer {
-            virtual void SetInput(const char name[]) = 0;
-
-            virtual ~IServer(){};
+            virtual void SetInput(const string&) = 0;
+            virtual void Get(const uint32_t, Wayland::Display::Surface&) = 0;
+            virtual void Process(Wayland::Display::IProcess*) = 0;
+            virtual bool StartController(const string&, Wayland::Display::ICallback*)  = 0;
+            virtual ~IServer() {}
         };
-
         IServer* Create(PluginHost::IShell* service);
     }
 }

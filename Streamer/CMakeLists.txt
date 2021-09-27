@@ -28,7 +28,13 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_STREAMER_AUTOSTART "true" CACHE STRING "Automatically start Streamer plugin")
-set(PLUGIN_STREAMER_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
+set(PLUGIN_STREAMER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
+
+# deprecated/legacy flags support
+if(PLUGIN_STREAMER_OUTOFPROCESS STREQUAL "false")
+    set(PLUGIN_STREAMER_MODE "Off" CACHE STRING "Process mode"  FORCE)
+    unset(PLUGIN_STREAMER_OUTOFPROCESS CACHE)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
