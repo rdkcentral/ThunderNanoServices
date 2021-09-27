@@ -42,6 +42,7 @@ extern "C" {
 #include <mutex>
 #include <type_traits>
 #include <functional>
+#include <chrono>
 
 template <class T>
 struct remove_pointer {
@@ -2082,6 +2083,54 @@ class CompositorImplementation;
                 }
 
                 if (_ret != false) {
+                    // Limit rate to avoid free run if the Swap fails
+
+                    // Signed and at least 45 bits
+                    using milli_t = int32_t;
+
+                    auto RefreshRateFromResolution = [] (Exchange::IComposition::ScreenResolution const resolution) -> milli_t {
+                        // Assume 'unknown' rate equals 60 Hz
+                        milli_t _rate = 60;
+
+                        switch (resolution) {
+                            case Exchange::IComposition::ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
+                                                                                        _rate = 24; break;
+                            case Exchange::IComposition::ScreenResolution_720p50Hz  : // 1280x720 progressive @ 50 Hz
+                            case Exchange::IComposition::ScreenResolution_1080i50Hz : // 1920x1080 interlaced @ 50 Hz
+                            case Exchange::IComposition::ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
+                            case Exchange::IComposition::ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
+                                                                                        _rate = 50; break;
+                            case Exchange::IComposition::ScreenResolution_480i      : // 720x480
+                            case Exchange::IComposition::ScreenResolution_480p      : // 720x480 progressive
+                            case Exchange::IComposition::ScreenResolution_720p      : // 1280x720 progressive
+                            case Exchange::IComposition::ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
+                            case Exchange::IComposition::ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
+                            case Exchange::IComposition::ScreenResolution_Unknown   :   _rate = 60;
+                        }
+
+                        return _rate;
+                    };
+
+                    constexpr milli_t _milli = 1000;
+
+                    static decltype (_milli) _rate = RefreshRateFromResolution ( ScreenResolution () );
+                    static std::chrono::milliseconds _delay = std::chrono::milliseconds (_milli / _rate);
+
+                    // Delay the (free running) loop
+                    auto _current_time = std::chrono::steady_clock::now ();
+
+                    static decltype (_current_time) _last_access_time = _current_time;
+
+                    auto _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_current_time - _last_access_time);
+
+                    if (_duration.count () < _delay .count () ) {
+                        std::this_thread::sleep_for ( std::chrono::milliseconds (_delay - _duration) );
+                    }
+                    else {
+                    }
+
+                    _last_access_time = _current_time;
+
                     ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
                     /* void */ _platform.Swap (_bufferInfo);
                 }
