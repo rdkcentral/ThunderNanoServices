@@ -35,10 +35,10 @@ namespace Plugin {
             WallClock(COMRPCPluginServer& parent)
                 : _adminLock()
                 , _parent(&parent) {
-                printf("Constructing WallClock\n");
+                printf("Constructing WallClock: %p\n", this);
             }
             ~WallClock() override {
-                printf("Destructing WallClock\n");
+                printf("Destructing WallClock: %p\n", this);
             }
 
         public:
@@ -85,11 +85,8 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Cleanup an interface: %d [%X] on object: [%s]"), interfaceId, interfaceId, typeid(*remote).name()));
             }
             void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId) override
-            {   
+            {                   
                 TRACE(Trace::Information, (_T("Revoking an interface: %d [%X] on object: [%s]"), interfaceId, interfaceId, typeid(*remote).name()));
-
-                // Something happened to the other side
-                ASSERT(interfaceId != Exchange::ID_WALLCLOCK);
 
                 if (interfaceId == Exchange::ID_WALLCLOCK_CALLBACK) {
                     const Exchange::IWallClock::ICallback* result = remote->QueryInterface<const Exchange::IWallClock::ICallback>();
@@ -132,11 +129,16 @@ namespace Plugin {
                 }
                 uint64_t NextSlot(const uint64_t currentSlot) {
                     if (currentSlot >= _ticks) {
-                        TRACE(Trace::Information, (_T("Reporting activity, %d seconds have elapsed"), _period));
                         // Seems we need to execute..
-                        _period = _callback->Elapsed(_period);
-
-                        _ticks = (_period != 0 ? (_ticks + ((_period * 1000) * Core::Time::TicksPerMillisecond)) : ~0);
+                        if(_callback->Elapsed(_period) == 0 ){
+                            TRACE(Trace::Information, (_T("Reporting activity, %d seconds have elapsed, but could not reach reporter"), _period));
+                        }
+                        else {
+                            TRACE(Trace::Information, (_T("Reporting activity, %d seconds have elapsed"), _period));
+                        }
+                        
+                        _ticks = _ticks + ((_period * 1000) * Core::Time::TicksPerMillisecond);
+                        
                     }
                     return (_ticks);
                 }
