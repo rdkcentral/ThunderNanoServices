@@ -125,9 +125,7 @@ namespace Plugin {
             {
                 if ((value == Exchange::IComposition::minOpacity) || (value == Exchange::IComposition::maxOpacity)) {
                     _surface.Visibility(value == Exchange::IComposition::maxOpacity);
-                }
-                else
-                {  
+                } else {
                     _surface.Opacity(value);
                 }
             }

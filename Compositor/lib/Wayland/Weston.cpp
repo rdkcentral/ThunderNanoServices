@@ -445,6 +445,10 @@ namespace Weston {
                 , _timer(nullptr)
                 , _surface(surface)
             {
+                struct weston_geometry geometry = weston_surface_get_bounding_box(_surface);
+                _width = geometry.width;
+                _height = geometry.height;
+
                 RegisterSurfaceDestroyListener(surface);
             }
             virtual ~SurfaceData()
@@ -504,7 +508,7 @@ namespace Weston {
                 surfaceData->RemoveTimer();
                 return 1;
             }
-            void ZOrder(const uint32_t zorder) override
+            uint32_t ZOrder(const uint16_t zorder) override
             {
                 if (_timer != nullptr) {
                     wl_event_source_remove(_timer);
@@ -514,21 +518,28 @@ namespace Weston {
                 struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
                 _timer = wl_event_loop_add_timer(loop, SetZOrder, this);
                 wl_event_source_timer_update(_timer, 1);
+                return (Core::ERROR_NONE);
+            }
+            inline uint32_t ZOrder() const override
+            {
+                return _zorder;
             }
             void Resize(const int x, const int y, const int w, const int h)
             {
-                struct weston_view* view = nullptr;
-                wl_list_for_each(view, &_surface->views, surface_link) {
-                    weston_view_set_position(view, x, y);
-                    weston_view_set_mask(view, 0, 0, w, h);
-                    weston_surface_damage(view->surface);
-                }
+                  struct weston_view* view = nullptr;
+                  wl_list_for_each(view, &_surface->views, surface_link) {
+                      weston_view_set_position(view, x, y);
+                      weston_view_set_mask(view, 0, 0, w, h);
+                      weston_surface_damage(view->surface);
+                  }
+                  _width = w;
+                  _height = h;
             }
-            void Visibility(const bool visible)
+            void Visibility(const bool visible) override
             {
                 UpdateOpacity(visible);
             }
-            void Opacity(const uint32_t opacity)
+            void Opacity(const uint32_t opacity) override
             {
                 UpdateOpacity(static_cast<float>(opacity)/MaxOpacityRange);
             }
@@ -538,10 +549,6 @@ namespace Weston {
                     wl_event_source_remove(_timer);
                     _timer = nullptr;
                 }
-            }
-            inline uint32_t ZOrder() const
-            {
-                return _zorder;
             }
             inline struct weston_compositor* WestonCompositor() const
             {
