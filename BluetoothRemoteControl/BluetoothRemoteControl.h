@@ -329,58 +329,6 @@ namespace Plugin {
                 ~Profile() {
                 }
 
-            public:
-                void Find(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid, std::list<const Bluetooth::Profile::Service::Characteristic*>& characteristics) const
-                {
-                    const Bluetooth::Profile::Service* service = (*this)[serviceUuid];
-                    if (service != nullptr) {
-                        auto it = service->Characteristics();
-                        while (it.Next() == true) {
-                            if (it.Current() == charUuid) {
-                                characteristics.push_back(&it.Current());
-                            }
-                        }
-                    }
-                }
-                uint16_t FindHandle(const Bluetooth::Profile::Service::Characteristic& characteristic, const Bluetooth::UUID& descUuid) const
-                {
-                    uint16_t handle = 0;
-                    const Bluetooth::Profile::Service::Characteristic::Descriptor* descriptor = characteristic[descUuid];
-                    if (descriptor != nullptr) {
-                        handle = descriptor->Handle();
-                    }
-                    return (handle);
-                }
-                uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
-                {
-                    const Bluetooth::Profile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
-                    return (characteristic == nullptr ? 0 : characteristic->Handle());
-                }
-                uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid, const Bluetooth::UUID& descUuid) const
-                {
-                    uint16_t handle = 0;
-                    const Bluetooth::Profile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
-                    if (characteristic != nullptr) {
-                        const Bluetooth::Profile::Service::Characteristic::Descriptor* descriptor= (*characteristic)[descUuid];
-                        if (descriptor != nullptr) {
-                            handle = descriptor->Handle();
-                        }
-                    }
-                    return (handle);
-                }
-
-            private:
-                const Bluetooth::Profile::Service::Characteristic* FindCharacteristic(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
-                {
-                    const Bluetooth::Profile::Service::Characteristic* result = nullptr;
-                    const Bluetooth::Profile::Service* service = (*this)[serviceUuid];
-                    if (service != nullptr) {
-                        result = (*service)[charUuid];
-                    }
-                    return (result);
-                }
-
-            public:
                 Bluetooth::UUID VoiceService;
                 Bluetooth::UUID VoiceCommandChar;
                 Bluetooth::UUID VoiceDataChar;
