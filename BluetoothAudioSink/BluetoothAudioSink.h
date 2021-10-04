@@ -182,7 +182,7 @@ namespace Plugin {
             static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device)
             {
                 ASSERT(device != nullptr);
-                return (Bluetooth::Address(device->LocalId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0, 0));
+                return (Bluetooth::Address(device->LocalId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0, 25));
             }
             static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device, const uint16_t psm)
             {
@@ -193,7 +193,69 @@ namespace Plugin {
         public:
             using UpdatedCb = std::function<void()>;
 
+            class PlayJob : public Core::Thread {
+            private:
+                PlayJob() = delete;
+                PlayJob(const PlayJob&) = delete;
+                PlayJob& operator=(const PlayJob&) = delete;
+
+            public:
+                PlayJob(A2DPSink& parent)
+                    : _parent(parent)
+                {
+                }
+                ~PlayJob() = default;
+
+            public:
+                uint32_t Worker()
+                {
+                    Block();
+                    _parent.Play();
+                    return (Core::infinite);
+                }
+
+            private:
+                A2DPSink& _parent;
+            };
+
         public:
+            class ReceiveBuffer : public Core::SharedBuffer {
+            public:
+                ReceiveBuffer() = delete;
+                ReceiveBuffer(const ReceiveBuffer&) = delete;
+                ReceiveBuffer& operator=(const ReceiveBuffer&) = delete;
+
+                ReceiveBuffer(const string& name, A2DPSink& parent)
+                    : Core::SharedBuffer(name.c_str())
+                    , _parent(parent)
+                {
+                }
+
+                ~ReceiveBuffer() = default;
+
+            public:
+                uint32_t Get(const uint32_t length, uint8_t buffer[])
+                {
+                    uint32_t result = 0;
+
+                    if (IsValid() == true) {
+                        if (RequestConsume(100) == Core::ERROR_NONE) {
+                            ASSERT(BytesWritten() <= length);
+                            const uint32_t size = std::min(BytesWritten(), length);
+                            ::memcpy(buffer, Buffer(), size);
+                            result = size;
+                            Consumed();
+                        }
+                    }
+
+                    return (result);
+                }
+
+            private:
+                A2DPSink& _parent;
+            }; // class ReceiveBuffer
+
+
             A2DPSink(const A2DPSink&) = delete;
             A2DPSink& operator=(const A2DPSink&) = delete;
             A2DPSink(BluetoothAudioSink* parent, Exchange::IBluetooth::IDevice* device, const uint8_t seid, const UpdatedCb& updatedCb)
@@ -207,6 +269,7 @@ namespace Plugin {
                 , _signalling(seid, std::bind(&A2DPSink::OnSignallingUpdated, this), Designator(device), Designator(device, 0 /* yet unknown PSM */))
                 , _transport(1 /* SSRC */, Designator(device), Designator(device, 0 /* yet unknown PSM */))
                 , _endpoint(nullptr)
+                , _player(*this)
             {
                 ASSERT(parent != nullptr);
                 ASSERT(device != nullptr);
@@ -220,6 +283,9 @@ namespace Plugin {
                 if (_device->Callback(&_callback) != Core::ERROR_NONE) {
                     TRACE(Trace::Error, (_T("The device is already in use")));
                 }
+
+                string connector = "/tmp/btaudiobuffer";
+                _buffer = new ReceiveBuffer(connector, *this);
             }
             ~A2DPSink()
             {
@@ -230,6 +296,89 @@ namespace Plugin {
                 }
 
                 _device->Release();
+            }
+            uint16_t PreferredFrameSize() const
+            {
+                return 4608; // TODO
+            }
+            uint16_t MinimumFrameSize() const
+            {
+                return 512; // TODO
+            }
+            bool IsEOS() const
+            {
+                return (false); // TODO
+            }
+            void Play()
+            {
+                const uint16_t maxFrameSize = 8 * 1024;
+                const uint16_t bufferSize = (2 * maxFrameSize);
+                const uint16_t minimumFrameSize = MinimumFrameSize();
+                const uint16_t preferredFrameSize = PreferredFrameSize();
+                uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(bufferSize));
+                uint8_t* readCursor = buffer;
+
+                uint64_t startTime = Core::Time::Now().Ticks();
+                uint16_t available = 0;
+
+                for (;;) {
+
+                    if ((available < minimumFrameSize) && (IsEOS() != true)) {
+                        // Have to replenish the local buffer...
+                        // Make sure we have at least the encoder preferred frame size available.
+                        ::memmove(buffer, readCursor, available);
+
+                        while (available < preferredFrameSize) {
+                            const uint16_t bytesRead =_buffer->Get(maxFrameSize, buffer + available);
+                            ASSERT(bytesRead <= maxFrameSize);
+                            available += bytesRead;
+
+                            if (bytesRead == 0) {
+                                // The audio source has problem providing more data at the moment...
+                                // We don't have the preferred data available, have to play out whatever there is left in the buffer anyway.
+                                printf("Buffer exhausted; waiting...\r");
+
+                                if (available < minimumFrameSize) {
+                                    // All data was used and no new is available, the source has stalled, start anew.
+                                    startTime = Core::Time::Now().Ticks();
+                                    _transport.Reset();
+                                }
+                                break;
+                            }
+                        }
+
+                        readCursor = buffer;
+                    }
+
+                    uint32_t playTime = 0;
+                    if (PlayTime(playTime) != Core::ERROR_NONE) {
+                        printf("Link failure\n");
+                        break;
+                    }
+
+                    uint32_t elapsedTime = ((Core::Time::Now().Ticks() - startTime) / 1000);
+                    if ((playTime > 10) && (playTime - 10> (uint32_t)elapsedTime)) {
+                        uint32_t sleeptime = playTime - (uint32_t)elapsedTime;
+                        //printf("sleep %i\n", sleeptime);
+                        SleepMs(sleeptime);
+                    }
+
+                    uint32_t transmitted = 0;
+                    if (Transmit(available, readCursor, transmitted) != Core::ERROR_NONE) {
+                        // Failed to send data over, most likely the connection was dropped, have to quit.
+                        printf("Link failure");
+                        break;
+                    }
+                    fprintf(stderr,"streaming; time %3i.%03i / %3i.%03i sec; delta %3i ms, frame %i bytes  \r", playTime /1000, playTime % 1000, elapsedTime / 1000, elapsedTime % 1000, playTime-elapsedTime, transmitted);
+
+                    if ((transmitted == 0) && (IsEOS() == true)) {
+                        // Played out everything in the buffer and end-of-stream was signalled, so quit.
+                        break;
+                    }
+
+                    readCursor += transmitted;
+                    available -= transmitted;
+                }
             }
 
         public:
@@ -251,6 +400,9 @@ namespace Plugin {
                 uint32_t result = Core::ERROR_GENERAL;
                 if (_endpoint->Open() == Core::ERROR_NONE) {
                     if (_transport.Connect(Designator(_device, _audioService.PSM()), _endpoint->Codec()) == Core::ERROR_NONE) {
+                        // TODO
+                        Start();
+                        _player.Run();
                         result = Core::ERROR_NONE;
                     }
                 }
@@ -295,7 +447,7 @@ namespace Plugin {
                 ASSERT(_endpoint != nullptr);
                 uint32_t result = Core::ERROR_NONE;
                 if (_transport.IsOpen() == true) {
-                    time = ((1000L * _transport.Timestamp()) / _transport.ClockRate());
+                    time = ((1000ULL * _transport.Timestamp()) / _transport.ClockRate());
                 } else {
                     TRACE(Trace::Error, (_T("Transport channel is not opened!")));
                     result = Core::ERROR_BAD_REQUEST;
@@ -344,6 +496,7 @@ namespace Plugin {
                     TRACE(ProfileFlow, (_T("Audio endpoint connected/idle")));
                 } else if (Status() == Exchange::IBluetoothAudioSink::CONFIGURED) {
                     TRACE(ProfileFlow, (_T("Audio endpoint configured")));
+                    Open();
                 } else if (Status() == Exchange::IBluetoothAudioSink::OPEN) {
                     TRACE(ProfileFlow, (_T("Audio endpoint open")));
                 } else if (Status() == Exchange::IBluetoothAudioSink::STREAMING) {
@@ -426,7 +579,7 @@ namespace Plugin {
                     // For now always choose SBC endpoint.
                     _endpoint = sbcEndpoint;
                     _job.Submit([this](){
-                        Configure(R"({ "profile":"xq", "samplerate": 44100, "channels": "stereo" })");
+                        Configure(R"({ "profile":"hq", "samplerate": 44100, "channels": "stereo" })");
                     });
                 } else {
                     // This should not be possible.
@@ -449,6 +602,8 @@ namespace Plugin {
             A2DP::SignallingChannel _signalling;
             A2DP::TransportChannel _transport;
             A2DP::AudioEndpoint* _endpoint;
+            PlayJob _player;
+            ReceiveBuffer* _buffer;
         }; // class A2DPSink
 
     public:
