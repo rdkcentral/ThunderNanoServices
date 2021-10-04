@@ -560,7 +560,7 @@ int main(int argc, char** argv)
 
                 sendObject->Identifier = testCount++;
                 sendObject->Name = _T("TestCommand");
-                JSONConnector.Submit(WPEFramework::Core::proxy_cast<WPEFramework::Core::JSON::IElement>(sendObject));
+                JSONConnector.Submit(WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>(sendObject));
                 break;
             }
             case '3': {
@@ -588,7 +588,7 @@ int main(int argc, char** argv)
                 sendObject->Name = _T("TestCase6");
                 sendObject->Params.Duration = 100;
 
-                webSocketJSONConnection.Submit(Core::proxy_cast<Core::JSON::IElement>(sendObject));
+                webSocketJSONConnection.Submit(Core::ProxyType<Core::JSON::IElement>(sendObject));
                 break;
             }
             case '7': {

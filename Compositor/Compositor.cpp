@@ -263,19 +263,19 @@ namespace Plugin {
             if (index.Next() == false || index.Current() == "Clients") {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
                 ZOrder(response->Clients);
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
             // http://<ip>/Service/Compositor/ZOrder (top to bottom)
             else if (index.Current() == "ZOrder") {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
                 ZOrder(response->Clients);
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
             // http://<ip>/Service/Compositor/Resolution
             else if (index.Current() == "Resolution") {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
                 response->Resolution = Resolution();
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
 
             // http://<ip>/Service/Compositor/Geometry/[Callsign]
@@ -291,7 +291,7 @@ namespace Plugin {
                     response->Y = rectangle.x;
                     response->Width = rectangle.width;
                     response->Height = rectangle.height;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->Body(Core::ProxyType<Web::IBody>(response));
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                     result->Message = _T("Could not retrieve Geometry, Client not specified");
@@ -392,7 +392,7 @@ namespace Plugin {
             }
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
-            result->Body(Core::proxy_cast<Web::IBody>(response));
+            result->Body(Core::ProxyType<Web::IBody>(response));
         } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = string(_T("Unsupported request for the service."));

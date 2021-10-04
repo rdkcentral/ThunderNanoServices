@@ -225,7 +225,7 @@ public:
         : RPC::Communicator(
             source, 
             proxyServerPath, 
-            Core::proxy_cast<Core::IIPCServer>(engine))
+            Core::ProxyType<Core::IIPCServer>(engine))
         , _remoteEntry(nullptr)
     {
         // Once the socket is opened the first exchange between client and server is an 
