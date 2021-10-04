@@ -149,17 +149,17 @@ public:
         Deactivate_dropbear();
     }
 
-    uint32_t Activate_dropbear(const string& inputConfigs) override
+    uint Activate_dropbear(const string& inputConfigs) override
     {
         return  activate_dropbear(inputConfigs.c_str());
     }
     
-    uint32_t Deactivate_dropbear() override
+    uint Deactivate_dropbear() override
     {
         return deactivate_dropbear();
     }
 
-    uint32_t GetActiveSessionsCount()
+    uint GetActiveSessionsCount()
     {
         return get_active_sessions_count();
     }
@@ -169,7 +169,7 @@ public:
         std::list<ClientSessionImpl*> local_clients;
 	    Exchange::ISecureShellServer::IClientSession::IIterator* iter=nullptr;
 
-        int32_t count = get_active_sessions_count();
+        uint count = get_active_sessions_count();
         TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
 
         if (count>0)
@@ -198,7 +198,7 @@ public:
             return iter;
         }
 
-        uint32_t CloseClientSession(const int pid) override 
+        uint CloseClientSession(const int pid) override 
         {
             return close_client_session(pid);
         }
