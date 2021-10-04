@@ -33,7 +33,6 @@
 #include "SignallingChannel.h"
 #include "TransportChannel.h"
 
-
 namespace WPEFramework {
 
 namespace Plugin {
@@ -44,18 +43,47 @@ namespace Plugin {
     private:
         class Config : public Core::JSON::Container {
         public:
+            class SDPServiceConfig : public Core::JSON::Container {
+            public:
+                SDPServiceConfig(const SDPServiceConfig&) = delete;
+                SDPServiceConfig& operator=(const SDPServiceConfig&) = delete;
+                SDPServiceConfig()
+                    : Core::JSON::Container()
+                    , Enable(true)
+                    , Name(_T("A2DP Audio Source"))
+                    , Description()
+                    , Provider()
+                {
+                    Add("enable", &Enable);
+                    Add("name", &Name);
+                    Add("description", &Description);
+                    Add("provider", &Provider);
+                }
+                ~SDPServiceConfig() = default;
+
+            public:
+                Core::JSON::Boolean Enable;
+                Core::JSON::String Name;
+                Core::JSON::String Description;
+                Core::JSON::String Provider;
+            };
+
+        public:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
             Config()
                 : Core::JSON::Container()
                 , Controller(_T("BluetoothControl"))
+                , SDPService()
             {
                 Add(_T("controller"), &Controller);
+                Add(_T("sdpservice"), &SDPService);
             }
             ~Config() = default;
 
         public:
             Core::JSON::String Controller;
+            SDPServiceConfig SDPService;
         }; // class Config
 
         class DecoupledJob : private Core::WorkerPool::JobType<DecoupledJob&> {

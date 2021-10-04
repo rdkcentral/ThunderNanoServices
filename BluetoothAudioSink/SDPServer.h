@@ -32,9 +32,15 @@ namespace SDP {
 
         uint16_t cnt = 1;
         for (auto const& service : tree.Services()) {
-            string name = "<unknown>";
+            string name = _T("<unknown>");
+            string description;
+            string provider;
 
-            TRACE_GLOBAL(FLOW, (_T("Service #%i '%s'"), cnt++, name.c_str()));
+            if (service.Metadata(string(_T("en")), Service::Attribute::LanguageBaseAttributeIDList::CHARSET_US_ASCII, name, description, provider) == false) {
+                service.Metadata(string(_T("en")), Service::Attribute::LanguageBaseAttributeIDList::CHARSET_UTF8, name, description, provider);
+            }
+
+            TRACE_GLOBAL(FLOW, (_T("Service #%i - %s '%s'"), cnt++, provider.c_str(), name.c_str()));
 
             TRACE_GLOBAL(FLOW, (_T("  Handle:")));
             TRACE_GLOBAL(FLOW, (_T("    - 0x%08x"), service.Handle()));
