@@ -74,13 +74,15 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_ALREADY_CONNECTED;
 
+        _lock.Lock();
+
         if (_sink == nullptr) {
             Exchange::IBluetooth* bluetoothCtl(Controller());
             if (bluetoothCtl != nullptr) {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
                 if (device != nullptr) {
                     const uint8_t seid = 1; // Revisit this if multiple simultaneous sinks are to be supported.
-                    _sink = new A2DPSink(this, device, seid, [this](){
+                    _sink = new A2DPSink(this, device, seid, [this]() {
                         Updated();
                     });
                     if (_sink != nullptr) {
@@ -104,25 +106,27 @@ namespace Plugin {
             TRACE(Trace::Error, (_T("Already assigned, revoke first")));
         }
 
+        _lock.Unlock();
+
         return (result);
     }
 
-    /* virtual */ uint32_t BluetoothAudioSink::Revoke(const string& address)
+    /* virtual */ uint32_t BluetoothAudioSink::Revoke()
     {
         uint32_t result = Core::ERROR_ALREADY_RELEASED;
 
+        _lock.Lock();
+
         if (_sink != nullptr) {
-            if (_sink->Address() == address) {
-                delete _sink;
-                _sink = nullptr;
-                TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), address.c_str()));
-                result = Core::ERROR_NONE;
-            } else {
-                TRACE(Trace::Error, (_T("Device [%s] not assigned"), address.c_str()));
-            }
+            delete _sink;
+            _sink = nullptr;
+            TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
+            result = Core::ERROR_NONE;
         } else {
             TRACE(Trace::Error, (_T("Sink not assigned, assign first")));
         }
+
+        _lock.Unlock();
 
         return (result);
     }

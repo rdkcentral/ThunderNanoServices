@@ -56,12 +56,8 @@ namespace A2DP {
 
         ~AudioEndpoint()
         {
-            if (_cp != nullptr) {
-                delete _cp;
-            }
-            if (_codec != nullptr) {
-                delete _codec;
-            }
+            delete _cp;
+            delete _codec;
         }
 
     public:

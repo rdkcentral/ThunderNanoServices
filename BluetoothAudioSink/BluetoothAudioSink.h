@@ -654,17 +654,19 @@ namespace Plugin {
         }
         uint32_t Status(Exchange::IBluetoothAudioSink::status& sinkStatus) const
         {
-            if (_sink) {
+            _lock.Lock();
+            if (_sink != nullptr) {
                 sinkStatus =_sink->Status();
             } else {
                 sinkStatus = Exchange::IBluetoothAudioSink::UNASSIGNED;
             }
+            _lock.Unlock();
 
             return (Core::ERROR_NONE);
         }
 
         uint32_t Assign(const string& device) override;
-        uint32_t Revoke(const string& device) override;
+        uint32_t Revoke() override;
 
     public:
         Exchange::IBluetooth* Controller() const
