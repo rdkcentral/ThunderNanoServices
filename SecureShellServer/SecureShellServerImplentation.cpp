@@ -26,20 +26,17 @@ namespace WPEFramework {
 namespace Plugin {
 
 class ClientSessionImpl : public Exchange::ISecureShellServer::IClientSession {
-    private:
+public:
         ClientSessionImpl() = delete;
         ClientSessionImpl(const ClientSessionImpl&) = delete;
         ClientSessionImpl& operator=(const ClientSessionImpl&) = delete;
 
-public:
         class IteratorImpl : public Exchange::ISecureShellServer::IClientSession::IIterator {
-        private:
+        public:
             IteratorImpl() = delete;
             IteratorImpl(const IteratorImpl&) = delete;
             IteratorImpl& operator=(const IteratorImpl&) = delete;
 
-
-        public:
             IteratorImpl(const std::list<ClientSessionImpl*>& container)
             {
                 std::list<ClientSessionImpl*>::const_iterator index = container.begin();
@@ -102,7 +99,7 @@ public:
             std::list<Exchange::ISecureShellServer::IClientSession*>::iterator _iterator;
         };
     public:
-        ClientSessionImpl(const string& ipaddress, const string& timestamp, const uint64_t remoteid)
+        ClientSessionImpl(const string& ipaddress, const string& timestamp, const int remoteid)
             : _ipaddress(ipaddress)
             , _timestamp(timestamp)
             , _remoteid(remoteid)
@@ -121,7 +118,7 @@ public:
         {
             return (_timestamp);
         }
-        virtual uint64_t RemoteId() const
+        virtual int RemoteId() const
         {
             return (_remoteid);
         }
@@ -134,7 +131,7 @@ public:
     private:
         std::string _ipaddress;
         std::string _timestamp;
-        uint64_t _remoteid;
+        int _remoteid;
 };
 
 class SecureShellImplementation : public Exchange::ISecureShellServer {
@@ -174,8 +171,7 @@ public:
 
         if (count>0)
             {
-                struct client_info *info = static_cast<struct client_info*>(::malloc(sizeof(struct client_info) * count));
-
+                struct client_info *info = new client_info[count];
                 get_active_sessions_info(info, count);
 
                 for(int32_t i=0; i<count; i++)
@@ -186,7 +182,7 @@ public:
                     local_clients.push_back(Core::Service<ClientSessionImpl>::Create<ClientSessionImpl>(info[i].ipaddress,
                                             info[i].timestamp, info[i].pid));
                 }
-                ::free(info);
+                delete[] info;
 
                 if (local_clients.empty() == false) {
                         iter = Core::Service<ClientSessionImpl::IteratorImpl>::Create<ISecureShellServer::IClientSession::IIterator>(local_clients);

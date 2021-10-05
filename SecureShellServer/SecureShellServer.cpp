@@ -60,7 +60,6 @@ namespace Plugin
 
         void SecureShellServer::Deinitialize(PluginHost::IShell *service)
         {
-                //TODO make sure drop bear closes all open sessions
                 ASSERT(service != nullptr);
                 ASSERT(_secureShellServer != nullptr);
 

@@ -105,11 +105,11 @@ namespace Plugin {
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         
-    private:
+    public:
         SecureShellServer(const SecureShellServer&) = delete;
         SecureShellServer& operator=(const SecureShellServer&) = delete;
 
-        
+    private: 
         void RegisterAll();
         void UnregisterAll();
         

@@ -74,9 +74,10 @@ namespace Plugin {
         std::list<SessioninfoData> allInfos;
 
         result = GetActiveSessionsInfo(allInfos);
-
-        for (auto& session : allInfos){
-            response.Add(session);
+        if (result == Core::ERROR_NONE) {
+            for (auto& session : allInfos){
+                response.Add(session);
+            }
         }
         
         return result;
@@ -85,7 +86,7 @@ namespace Plugin {
     // Method: Close an active ssh Session
     // Return codes:
     //  - ERROR_NONE: Success
-    //  - ERROR_GENERAL: failure in closing the requested session
+    //  - ERROR_GENERAL: failure in closing the requested session 
     uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::CloseclientcessionParamsData& params)
     {
         ASSERT(_secureShellServer != nullptr);
