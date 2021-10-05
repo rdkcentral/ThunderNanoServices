@@ -179,7 +179,7 @@ namespace WPASupplicant {
 
     bool Config::IsHidden() const
     {
-        return ((_comController != nullptr) && (_comController->Hidden(_ssid)));
+        return ((_comController.IsValid() == true) && (_comController->Hidden(_ssid)));
     }
 
     // Methods to apply to a Config.
