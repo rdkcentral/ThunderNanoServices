@@ -296,6 +296,7 @@ namespace Plugin {
             ProxyMap(ChannelMap& server)
                 : _server(server)
                 , _proxies()
+                , _closures()
             {
             }
             ~ProxyMap()
@@ -365,6 +366,12 @@ namespace Plugin {
                 // If we didn't find relay instructions for this path, return false.
                 if (found == true) {
 
+                    if (request->Connection.Value() == Web::Request::CONNECTION_CLOSE) {
+                        // The client allows non-persistant connection, but the closure should not be applied to the relay connection.
+                        request->Connection = Web::Request::CONNECTION_UNKNOWN;
+                        _closures.push_back(channelId);
+                    }
+
                     request->Path = (proxyPath + request->Path.substr(proxyPath.length()));
 
                     (*index)->ProxyRequest(request, channelId);
@@ -401,10 +408,22 @@ namespace Plugin {
             {
                 _server.Submit(channelId, response);
             }
+            inline bool Completed(const uint32_t channelId)
+            {
+                // Relay completed; check if we can close the incoming connection
+                bool close = false;
+                auto it = std::find(_closures.begin(), _closures.end(), channelId);
+                if (it != _closures.end()) {
+                    _closures.erase(it);
+                    close = true;
+                }
+                return (close);
+            }
 
         private:
             ChannelMap& _server;
             std::list<OutgoingChannel*> _proxies;
+            std::list<uint32_t> _closures;
         };
 
         class IncomingChannel : public Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, RequestFactory> {
@@ -442,6 +461,9 @@ namespace Plugin {
             virtual void Send(const Core::ProxyType<Web::Response>& response)
             {
                 TRACE(WebFlow, (response));
+                if (_parent.RelayComplete(Id())) {
+                    Close(0);
+                }
             }
             virtual void StateChange()
             {
@@ -618,6 +640,10 @@ namespace Plugin {
             {
                 return (_proxyMap.Relay(request, id));
             }
+            inline bool RelayComplete(const uint32_t id)
+            {
+                return (_proxyMap.Completed(id));
+            }
             inline string Accessor() const
             {
                 return (_accessor);
@@ -766,7 +792,7 @@ namespace Plugin {
     /* virtual */ void WebServerImplementation::IncomingChannel::Received(Core::ProxyType<Web::Request>& request)
     {
 
-        TRACE(WebFlow, (Core::proxy_cast<Web::Request>(request)));
+        TRACE(WebFlow, (request));
 
         // Check if the channel server will relay this message.
         if (_parent.Relay(request, Id()) == false) {

@@ -25,15 +25,13 @@ namespace WPEFramework {
 
 namespace Exchange {
 
-#ifdef __WINDOWS__
-    static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:63000");
-#else
-    static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
-#endif
+    extern "C" {
+        constexpr static TCHAR SimpleTestAddress[] = _T("127.0.0.1:63000");
+    }
 
     enum example_ids {
         ID_WALLCLOCK = 0x80001000,
-        ID_WALLCLOCK_NOTIFICATION = 0x80001001,
+        ID_WALLCLOCK_CALLBACK = 0x80001001,
         ID_MATH = 0x80001002
     };
 
@@ -41,19 +39,18 @@ namespace Exchange {
         enum { ID = ID_WALLCLOCK };
 
         struct ICallback : virtual public Core::IUnknown {
-            enum { ID = ID_WALLCLOCK_NOTIFICATION };
+            enum { ID = ID_WALLCLOCK_CALLBACK };
 
-            virtual ~ICallback() {}
+            ~ICallback() override = default;
 
-            virtual void Elapsed (const uint16_t seconds) = 0;
+            // Return 0 seconds if the Callback should be dropped, otherwise a new period starts..
+            virtual uint16_t Elapsed (const uint16_t seconds) = 0;
         };
 
-        virtual ~IWallClock() {}
+        ~IWallClock() override = default;
 
-        virtual uint32_t Callback(ICallback*) = 0;
-
-        virtual void Interval(const uint16_t) = 0;
-        virtual uint16_t Interval() const = 0;
+        virtual uint32_t Arm(const uint16_t, ICallback*) = 0;
+        virtual uint32_t Disarm(const ICallback*) = 0;
         virtual uint64_t Now() const = 0;
     };
 
@@ -62,7 +59,7 @@ namespace Exchange {
 
         enum { ID = ID_MATH };
 
-        virtual ~IMath() {}
+        ~IMath() override = default;
 
         virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;
         virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;

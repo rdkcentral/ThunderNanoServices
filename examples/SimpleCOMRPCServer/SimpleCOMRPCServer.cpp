@@ -31,97 +31,153 @@ class COMServer : public RPC::Communicator {
 private:
     class Implementation : public Exchange::IWallClock {
     private:
-        class WallClockNotifier {
+        class WallClockNotifier : public Core::Thread {
         private:
-            typedef std::list< std::pair<uint32_t, Implementation*> > NotifierList;
-
-            class TimeHandler {
+            class Notifier {
             public:
-                TimeHandler()
-                    : _callback(nullptr)
-                {
-                }
-                TimeHandler(Implementation* callback)
-                    : _callback(callback)
-                {
-                }
-                TimeHandler(const TimeHandler& copy)
-                    : _callback(copy._callback)
-                {
-                }
-                ~TimeHandler()
-                {
-                }
+                Notifier() = delete;
+                Notifier(const Notifier&) = delete;
 
-                TimeHandler& operator=(const TimeHandler& RHS)
-                {
-                    _callback = RHS._callback;
-                    return (*this);
+                Notifier(const uint16_t period, Exchange::IWallClock::ICallback* callback)
+                    : _period(period)
+                    , _ticks(Core::Time::Now().Add(_period * 1000).Ticks())
+                    , _callback(_callback) {
+                    _callback->AddRef();
                 }
-                bool operator==(const TimeHandler& RHS) const
-                {
-                    return (_callback == RHS._callback);
-                }
-                bool operator!=(const TimeHandler& RHS) const
-                {
-                    return (_callback != RHS._callback);
+                ~Notifier() {
+                    _callback->Release();
                 }
 
             public:
-                uint64_t Timed(const uint64_t scheduledTime)
-                {
-                    ASSERT(_callback != nullptr);
-                    return (_callback->Trigger(scheduledTime));
+                bool operator== (const Exchange::IWallClock::ICallback* callback) const {
+                    return (callback == _callback);
+                }
+                bool operator!= (const Exchange::IWallClock::ICallback* callback) const {
+                    return (!operator==(callback));
+                }
+                uint64_t NextSlot(const uint64_t currentSlot) {
+                    if (currentSlot >= _ticks) {
+                        // Seems we need to execute..
+                        _period = _callback->Elapsed(_period);
+
+                        _ticks = (_period != 0 ? (_ticks + ((_period * 1000) * Core::Time::TicksPerMillisecond)) : ~0);
+                    }
+                    return (_ticks);
                 }
 
             private:
-                Implementation* _callback;
+                uint16_t _period;
+                uint64_t _ticks;
+                Exchange::IWallClock::ICallback* _callback;
             };
-
-            WallClockNotifier() 
-                : _adminLock()
-                , _timer(Core::Thread::DefaultStackSize(), _T("WallclockTimer")) {
-            }
+            using NotifierList = std::list<Notifier>;
 
         public:
             WallClockNotifier(const WallClockNotifier&) = delete;
-            WallClockNotifier& operator= (const WallClockNotifier&) = delete;
+            WallClockNotifier& operator=(const WallClockNotifier&) = delete;
 
-            static WallClockNotifier& Instance() {
-                static WallClockNotifier singleton;
-                return (singleton);
+#ifdef __WINDOWS__
+#pragma warning(disable: 4355)
+#endif
+            WallClockNotifier()
+                : Core::Thread(Core::Thread::DefaultStackSize(), _T("WallClockNotifier")) {
             }
-            ~WallClockNotifier() {
-            }
+#ifdef __WINDOWS__
+#pragma warning(default: 4355)
+#endif
+            ~WallClockNotifier() = default;
 
         public:
-            void Update(Implementation* sink, const uint32_t sleepTime)
+            uint32_t Arm(const uint16_t seconds, Exchange::IWallClock::ICallback* callback)
             {
-                TimeHandler entry(sink);
-                // This is called in a multithreaded environment. This is not Javascript :-)
-                // So lets make sure that operations on the NotifierList are atomic.
+                uint32_t result = Core::ERROR_ALREADY_CONNECTED;
+
                 _adminLock.Lock();
 
-                _timer.Revoke(entry);
+                NotifierList::iterator index = std::find(_notifiers.begin(), _notifiers.end(), callback);
 
-                _timer.Schedule(Core::Time::Now().Add(sleepTime), entry);
+                if (index == _notifiers.end()) {
+                    _notifiers.emplace_front(seconds, callback);
+                    result = Core::ERROR_NONE;
+                }
 
                 _adminLock.Unlock();
+
+                Core::Thread::Run();
+
+                return (result);
             }
-            void Revoke(Implementation* sink)
+            uint32_t Disarm(const Exchange::IWallClock::ICallback* callback)
             {
-                // This is called in a multithreaded environment. This is not Javascript :-)
-                // So lets make sure that operations on the NotifierList are atomic.
+                uint32_t result = Core::ERROR_NOT_EXIST;
+
                 _adminLock.Lock();
 
-                _timer.Revoke(TimeHandler(sink));
+                NotifierList::iterator index = std::find(_notifiers.begin(), _notifiers.end(), callback);
+
+                if (index == _notifiers.end()) {
+                    _adminLock.Unlock();
+                }
+                else {
+                    _notifiers.erase(index);
+
+                    _adminLock.Unlock();
+
+                    Core::Thread::Run();
+
+                    result = Core::ERROR_NONE;
+                }
+
+                return (result);
+            }
+
+        private:
+            uint32_t Worker() override {
+                uint32_t duration = Core::infinite;
+
+                _adminLock.Lock();
+
+                Core::Thread::Block();
+
+                uint64_t nextSlot;
+                uint64_t timeSlot = Core::Time::Now().Ticks();
+
+                do {
+                    NotifierList::iterator index = _notifiers.begin();
+
+                    nextSlot = ~0;
+
+                    while (index != _notifiers.end()) {
+                        uint64_t thisSlot = index->NextSlot(timeSlot);
+
+                        if (thisSlot == static_cast<uint64_t>(~0)) {
+                            index = _notifiers.erase(index);
+                        }
+                        else if (thisSlot >= nextSlot) {
+                            index++;
+                        }
+                        else {
+                            index++;
+                            nextSlot = thisSlot;
+                        }
+                    }
+
+                    timeSlot = Core::Time::Now().Ticks();
+
+                } while (nextSlot < timeSlot);
+
+                if (nextSlot != static_cast<uint64_t>(~0)) {
+                    duration = static_cast<uint32_t>((nextSlot - timeSlot) / Core::Time::TicksPerMillisecond);
+                }
 
                 _adminLock.Unlock();
+
+                return (duration);
             }
 
         private:
             Core::CriticalSection _adminLock;
-            Core::TimerType<TimeHandler> _timer;
+            NotifierList _notifiers;
         };
 
     public:
@@ -129,59 +185,19 @@ private:
         Implementation& operator= (const Implementation&) = delete;
 
         Implementation() 
-            : _adminLock()
-            , _callback(nullptr)
-            , _interval(~0) {
+            : _notifier() {
 
         }
-        ~Implementation() override {
-        }
+        ~Implementation() override = default;
 
     public:
-        uint32_t Callback(ICallback* callback) override
+        uint32_t Arm (const uint16_t seconds, Exchange::IWallClock::ICallback* callback) override
         {
-            uint32_t result = Core::ERROR_BAD_REQUEST;
-
-            // This is called in a multithreaded environment. This is not Javascript :-)
-            // So lets make sure that operations on the NotifierList are atomic.
-            _adminLock.Lock();
-
-            if ((_callback == nullptr) ^ (callback == nullptr)) {
-
-                if (callback != nullptr) {
-                    WallClockNotifier::Instance().Update(this, _interval);
-                    callback->AddRef();
-                }
-                else {
-                    WallClockNotifier::Instance().Revoke(this);
-                    _callback->Release();
-                }
-
-                result = Core::ERROR_NONE;
-                _callback = callback;
-            }
-
-            _adminLock.Unlock();
-
-            return (result);
+            return (_notifier.Arm(seconds, callback));
         }
-        void Interval(const uint16_t interval) override
+        uint32_t Disarm(const Exchange::IWallClock::ICallback* callback) override
         {
-            _interval = interval;
-
-            // This is called in a multithreaded environment. This is not Javascript :-)
-            // So lets make sure that operations on the NotifierList are atomic.
-            _adminLock.Lock();
-
-            if (_callback != nullptr) {
-                WallClockNotifier::Instance().Update(this, ( _interval * 1000) );
-            }
-
-            _adminLock.Unlock();
-        }
-        uint16_t Interval() const override
-        {
-            return (_interval);
+            return (_notifier.Disarm(callback));
         }
         uint64_t Now() const override
         {
@@ -194,32 +210,7 @@ private:
         END_INTERFACE_MAP
 
     private:
-        uint64_t Trigger(const uint64_t scheduleTime) {
-
-            uint64_t result = Core::Time(scheduleTime).Add(_interval * 1000).Ticks();
-
-            // This is called in a multithreaded environment. This is not Javascript :-)
-            // So lets make sure that operations on the NotifierList are atomic.
-            _adminLock.Lock();
-
-            // If the callback has been set, it is time to trigger the sink on the 
-            // otherside to tell the that there set time has elapsed.
-            if (_callback != nullptr) {
-
-                // This, under the hood is the actual callback over the COMRPC channel to the other side
-                _callback->Elapsed(_interval);
-            }
-
-            // Done, safe to now have the _callback reset.
-            _adminLock.Unlock();
-
-            return (result);
-        }
-
-    private:
-        Core::CriticalSection _adminLock;
-        Exchange::IWallClock::ICallback* _callback;
-        uint16_t _interval;
+        WallClockNotifier _notifier;
     };
 
 public:
@@ -234,7 +225,7 @@ public:
         : RPC::Communicator(
             source, 
             proxyServerPath, 
-            Core::proxy_cast<Core::IIPCServer>(engine))
+            Core::ProxyType<Core::IIPCServer>(engine))
         , _remoteEntry(nullptr)
     {
         // Once the socket is opened the first exchange between client and server is an 

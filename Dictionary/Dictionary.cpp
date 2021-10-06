@@ -185,7 +185,7 @@ namespace Plugin {
             Get(nameSpace, key, value);
             *valueBody = value;
 
-            result->Body(Core::proxy_cast<Web::IBody>(valueBody));
+            result->Body(Core::ProxyType<Web::IBody>(valueBody));
             result->ErrorCode = Web::STATUS_OK;
             result->Message = _T("OK");
         } else if ((request.Verb == Web::Request::HTTP_POST) && (key.empty() == false) && (request.HasBody() == true)) {

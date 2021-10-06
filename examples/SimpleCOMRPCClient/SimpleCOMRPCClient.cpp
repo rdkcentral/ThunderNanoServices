@@ -21,6 +21,7 @@
 
 #include <core/core.h>
 #include <com/com.h>
+#include <plugins/plugins.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
@@ -60,9 +61,12 @@ public:
     Sink(const Sink&) = delete;
     Sink& operator= (const Sink&) = delete;
 
-    Sink() {
-    }
+    Sink(const uint16_t period) 
+        : _period(period) {
+        printf("Sink constructed!!\n");
+    };
     ~Sink() override {
+        printf("Sink destructed!!\n");
     }
 
 public:
@@ -70,12 +74,21 @@ public:
         INTERFACE_ENTRY(Exchange::IWallClock::ICallback)
     END_INTERFACE_MAP
 
-    void Elapsed(const uint16_t seconds) override {
-        printf("The wallclock reports that %d seconds have elapsed since the last callback\n", seconds);
+    uint16_t Elapsed(const uint16_t seconds) override {
+        printf("The wallclock reports that %d seconds have elapsed since we where armed\n", seconds);
+        return(_period);
     }
+
+private:
+    const uint16_t _period;
 };
 
-bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel)
+enum class ServerType{
+    PLUGIN_SERVER,
+    STANDALONE_SERVER
+};
+
+bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, ServerType& type, string& callsign)
 {
     int index = 1;
     bool showHelp = false;
@@ -84,6 +97,22 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel)
     while ((index < argc) && (!showHelp)) {
         if (strcmp(argv[index], "-connect") == 0) {
             comChannel = Core::NodeId(argv[index + 1]);
+            type = ServerType::STANDALONE_SERVER;
+            index++;
+        }
+        else if (strcmp(argv[index], "-plugin") == 0) {
+#ifdef __WINDOWS__
+            comChannel = Core::NodeId("127.0.0.1:62000");
+#else
+            comChannel = Core::NodeId("/tmp/communicator");
+#endif
+            type = ServerType::PLUGIN_SERVER;
+            if ((index + 1) < argc) {
+                callsign = string(argv[index + 1]);
+            }
+            else {
+                callsign = _T("SimpleCOMRPCPluginServer");
+            }
             index++;
         }
         else if (strcmp(argv[index], "-h") == 0) {
@@ -101,20 +130,22 @@ int main(int argc, char* argv[])
     // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address
     // Here we create a domain socket address
     Core::NodeId comChannel;
+    ServerType type;
+    string callsign;
 
     printf("\nSimpleCOMRPCClient is the counterpart for the SimpleCOMRPCServer\n");
 
-    if (ParseOptions(argc, argv, comChannel) == true) {
+    if (ParseOptions(argc, argv, comChannel, type, callsign) == true) {
         printf("Options:\n");
         printf("-connect <IP/FQDN>:<port> [default: %s]\n", Exchange::SimpleTestAddress);
+        printf("-plugin <callsign> [use plugin server and not the stand-alone version]\n");
         printf("-h This text\n\n");
     }
     else
     {
         int element;
-        bool subscribed(false);
         Exchange::IWallClock* clock(nullptr);
-        Core::Sink<Sink> sink;
+        Sink* sink = nullptr; 
         Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
         Math* outbound = Core::Service<Math>::Create<Math>();
         printf("Channel: %s:[%d]\n\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
@@ -147,24 +178,41 @@ int main(int argc, char* argv[])
             case 'C':
                 if (clock != nullptr) {
                     printf("There is no need to create a clock, we already have one!\n");
-                }
-                else {
+                } else {
                     if (client->IsOpen() == false) {
                         client->Open(2000);
                     }
 
                     if (client->IsOpen() == false) {
                         printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
+                        break;
+                    } else {
+                        if (type == ServerType::STANDALONE_SERVER) {
+                            clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
+                        }
+                        else {
+                            WPEFramework::PluginHost::IShell* controller = client->Aquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            if (controller == nullptr) {
+                                printf("Could not get the IShell* interface from the controller to execute the QueryInterfaceByCallsign!\n");
+                            }
+                            else {
+                                clock = controller->QueryInterfaceByCallsign<Exchange::IWallClock>(callsign);
+                                controller->Release();
+                            }
+                        }
                     }
-                    else {
-                        clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
 
-                        if (clock == nullptr) {
+                    if (clock == nullptr) {
+                        client->Close(Core::infinite);
+                        if (type == ServerType::STANDALONE_SERVER) {
                             printf("Tried aquiring the IWallclock, but it is not available\n");
                         }
                         else {
-                            printf("Aquired the IWallclock, ready for use\n");
+                            printf("Tried aquiring the IWallclock, but the plugin (%s) is not available\n", callsign.c_str());
+
                         }
+                    } else {
+                        printf("Aquired the IWallclock, ready for use\n");
                     }
                 }
                 break;
@@ -190,15 +238,30 @@ int main(int argc, char* argv[])
                 if (clock == nullptr) {
                     printf("We do not have a clock interface, so we can not register the callback\n");
                 }
-                else if (subscribed == true) {
-                    subscribed = false;
-                    clock->Callback(nullptr);
-                    printf("We removed the callback from the wallclock. We will nolonger be updated\n");
+                else if (sink != nullptr) {
+                    uint32_t result = clock->Disarm(sink);
+                    sink->Release();
+                    sink = nullptr;
+                    if (result == Core::ERROR_NONE) {
+                        printf("We removed the callback from the wallclock. We will nolonger be updated\n");
+                    }
+                    else if (result == Core::ERROR_NOT_EXIST) {
+                        printf("Looks like it was not Armed, or it fired already!\n");
+                    }
+                    else {
+                        printf("Something went wrong, the imlementation reports: %d\n", result);
+                    }
                 }
                 else {
-                    subscribed = true;
-                    clock->Callback(&sink);
-                    printf("We set the callback on the wallclock. We will be updated\n");
+                    sink = Core::Service<Sink>::Create<Sink>(10); // Fire each 10 Seconds
+                    uint32_t result = clock->Arm(10, sink);
+                    if (result == Core::ERROR_NONE) {
+                        printf("We set the callback on the wallclock. We will be updated\n");
+                    }
+                    else {
+                        printf("Something went wrong, the imlementation reports: %d\n", result);
+                        sink->Release();
+                    }
                 }
                 break;
             case 'E': exit(0); break;
@@ -218,6 +281,15 @@ int main(int argc, char* argv[])
             }
 
         } while (element != 'Q');
+
+        if (sink != nullptr) {
+            clock->Disarm(sink);
+            sink->Release();
+            sink = nullptr;
+        }
+        if (client->IsOpen() == true) {
+            client->Close(Core::infinite);
+        }
 
         if (outbound != nullptr) {
             outbound->Release();

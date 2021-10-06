@@ -80,28 +80,28 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)..\artifacts\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)..\artifacts\ProxyStubs\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)Application\$(TargetName)\</IntDir>
     <TargetExt>.so</TargetExt>
     <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)..\artifacts\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)..\artifacts\ProxyStubs\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)Application\$(TargetName)\</IntDir>
     <TargetExt>.so</TargetExt>
     <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)..\artifacts\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)..\artifacts\ProxyStubs\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)Application\$(TargetName)\</IntDir>
     <TargetExt>.so</TargetExt>
     <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)..\artifacts\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)..\artifacts\ProxyStubs\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)Application\$(TargetName)\</IntDir>
     <TargetExt>.so</TargetExt>
     <PostBuildEventUseInBuild>true</PostBuildEventUseInBuild>
@@ -114,7 +114,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;NDEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
     </ClCompile>
@@ -123,7 +123,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
@@ -140,14 +140,14 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
@@ -164,14 +164,14 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;_DEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
@@ -190,7 +190,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
     </ClCompile>
@@ -199,7 +199,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
