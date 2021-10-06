@@ -1,0 +1,13 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "Syslog Export Plugin",
+      "callsign": "SyslogExport",
+      "locator": "libWPEFrameworkSysLogExport.so",
+      "status": "development",
+      "description": [
+        "The SyslogExport plugin provides functionality for sending syslog messages over websocket."
+      ],
+      "version": "1.0"
+    }
+}
