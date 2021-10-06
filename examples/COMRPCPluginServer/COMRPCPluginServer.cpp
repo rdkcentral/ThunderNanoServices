@@ -41,8 +41,11 @@ namespace Plugin {
     void COMRPCPluginServer::Deinitialize(PluginHost::IShell* service)  /* override */
     {
         ASSERT(service != nullptr);
-        _wallclock->Decouple();
-        _wallclock->Release();
+        
+        if(_wallclock->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED){
+            printf("Somebody still holds reference, I will return 0 as current time: %p", _wallclock);
+            _wallclock->Decouple();
+        }
         _notifier.Clear();
         service->Unregister(&_comNotificationSink);
     }
