@@ -101,17 +101,15 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
-    find_package(WestonServer)
-    if(WESTON_SERVER_FOUND)
-        target_sources(${TARGET}
-            PRIVATE
-                Weston.cpp
-        )
-        target_link_libraries(${TARGET}
-            PRIVATE
-                WestonServer::WestonServer
-        )
-    endif(WESTON_SERVER_FOUND)
+    find_package(WestonServer REQUIRED)
+    target_sources(${TARGET}
+        PRIVATE
+            Weston.cpp
+    )
+    target_link_libraries(${TARGET}
+        PRIVATE
+            WestonServer::WestonServer
+    )
 elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     find_package(WesterosServer)
     if(WESTEROS_SERVER_FOUND)
