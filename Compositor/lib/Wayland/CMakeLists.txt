@@ -38,7 +38,7 @@ else ()
     set(COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor wayland implementation repository")
     GetExternalCode(
         GIT_REPOSITORY ${COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY}
-        GIT_TAG ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
+        GIT_VERSION ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
         SOURCE_DIR "Nexus"
     )
     add_subdirectory (Nexus/NexusServer)

@@ -67,7 +67,7 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         set(VOLUMECONTROL_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/VolumeControl" CACHE STRING "VolumeControl implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${VOLUMECONTROL_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${VOLUMECONTROL_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${VOLUMECONTROL_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}

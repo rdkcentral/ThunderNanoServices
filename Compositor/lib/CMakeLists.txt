@@ -28,7 +28,7 @@ if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
         set(COMPOSITOR_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${COMPOSITOR_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${COMPOSITOR_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${COMPOSITOR_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         add_subdirectory(Nexus)

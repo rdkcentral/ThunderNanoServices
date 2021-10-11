@@ -79,7 +79,7 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
             set(REMOTECONTROL_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl" CACHE STRING "RemoteControl implementation repository")
             GetExternalCode(
                 GIT_REPOSITORY ${REMOTECONTROL_IMPLEMENTATION_REPOSITORY}
-                GIT_TAG ${REMOTECONTROL_IMPLEMENTATION_VERSION}
+                GIT_VERSION ${REMOTECONTROL_IMPLEMENTATION_VERSION}
                 SOURCE_DIR "Nexus"
             )
             target_sources(${MODULE_NAME}

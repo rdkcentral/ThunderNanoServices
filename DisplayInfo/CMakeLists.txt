@@ -90,7 +90,7 @@ elseif (NXCLIENT_FOUND AND NEXUS_FOUND)
         set(DISPLAYINFO_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/DisplayInfo" CACHE STRING "DisplayInfo implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${DISPLAYINFO_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${DISPLAYINFO_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${DISPLAYINFO_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}

@@ -66,7 +66,7 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         set(SNAPSHOT_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot" CACHE STRING "Snapshot implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${SNAPSHOT_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${SNAPSHOT_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${SNAPSHOT_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}

@@ -92,7 +92,7 @@ if(BCM_PM_FOUND)
             set(POWER_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power" CACHE STRING "Power implementation repository")
             GetExternalCode(
                 GIT_REPOSITORY ${POWER_IMPLEMENTATION_REPOSITORY}
-                GIT_TAG ${POWER_IMPLEMENTATION_VERSION}
+                GIT_VERSION ${POWER_IMPLEMENTATION_VERSION}
                 SOURCE_DIR "PowerImplementation/Broadcom"
             )
             target_sources(${MODULE_NAME}
