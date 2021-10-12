@@ -21,6 +21,8 @@
 
 #include "Module.h"
 
+#include <interfaces/IBluetoothAudio.h>
+
 namespace WPEFramework {
 
 namespace A2DP {
@@ -29,10 +31,8 @@ namespace A2DP {
 
         static constexpr uint8_t MEDIA_TYPE = 0x00; // audio
 
-        enum type : uint8_t {
-            INVALID = 0,
-            SBC
-        };
+        using type = Exchange::IBluetoothAudioSink::audiocodec;
+        using StreamFormat = Exchange::IBluetoothAudioSink::IControl::Format;
 
         virtual ~IAudioCodec() { }
 
@@ -42,10 +42,14 @@ namespace A2DP {
         virtual uint32_t ClockRate() const = 0;
         virtual uint8_t Channels() const = 0;
 
+        virtual uint16_t InFrameSize() const = 0;
+        virtual uint16_t OutFrameSize() const = 0;
+
         virtual uint32_t QOS(const int8_t policy) = 0;
 
-        virtual uint32_t Configure(const string& format) = 0;
-        virtual void Configuration(string& format) const = 0;
+        virtual uint32_t Configure(const StreamFormat& format, const string& settings) = 0;
+
+        virtual void Configuration(StreamFormat& format, string& settings) const = 0;
 
         virtual void SerializeConfiguration(Bluetooth::Buffer& output) const = 0;
 

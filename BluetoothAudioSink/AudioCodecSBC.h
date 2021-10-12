@@ -30,8 +30,11 @@ namespace A2DP {
     public:
         static constexpr uint8_t CODEC_TYPE = 0x00; // SBC
 
+        static constexpr uint8_t MIN_BITPOOL = 2;
+        static constexpr uint8_t MAX_BITPOOL = 250;
+
     public:
-        enum qualityprofile {
+        enum preset {
             COMPATIBLE,
             LQ,
             MQ,
@@ -41,9 +44,11 @@ namespace A2DP {
 
         class Config : public Core::JSON::Container {
         public:
-            enum channels {
+            enum channelmode {
+                MONO,
                 STEREO,
-                MONO
+                JOINT_STEREO,
+                DUAL_CHANNEL
             };
 
         public:
@@ -51,25 +56,21 @@ namespace A2DP {
             Config& operator=(const Config&) = delete;
             Config()
                 : Core::JSON::Container()
-                , Profile(COMPATIBLE)
-                , SampleRate(44100)
-                , Channels(STEREO)
+                , Preset(COMPATIBLE)
+                , ChannelMode(JOINT_STEREO)
+                , Bitpool(MIN_BITPOOL)
             {
-                Add(_T("profile"), &Profile);
-                Add(_T("samplerate"), &SampleRate);
-                Add(_T("channels"), &Channels);
+                Add(_T("preset"), &Preset);
+                Add(_T("channelmode"), &ChannelMode);
+                Add(_T("bitpool"), &Bitpool);
             }
             ~Config() = default;
 
         public:
-            Core::JSON::EnumType<qualityprofile> Profile;
-            Core::JSON::DecUInt32 SampleRate;
-            Core::JSON::EnumType<channels> Channels;
+            Core::JSON::EnumType<preset> Preset;
+            Core::JSON::EnumType<channelmode> ChannelMode;
+            Core::JSON::DecUInt32 Bitpool;
         }; // class Config
-
-    private:
-        static constexpr uint8_t MIN_BITPOOL = 2;
-        static constexpr uint8_t MAX_BITPOOL = 250;
 
         class Format {
         public:
@@ -157,7 +158,7 @@ namespace A2DP {
 
                 data.Pop(octet);
                 _samplingFrequency = (octet >> 4);
-                _channelMode = (octet & 0xFF);
+                _channelMode = (octet & 0xF);
 
                 data.Pop(octet);
                 _blockLength = (octet >> 4);
@@ -243,8 +244,7 @@ namespace A2DP {
             : _lock()
             , _supported()
             , _actuals()
-            , _preferredProfile(HQ) // TODO: Perhaps this should come from a config file...?
-            , _profile(COMPATIBLE)
+            , _preset(COMPATIBLE)
             , _sbcHandle(nullptr)
             , _preferredBitpool(0)
             , _bitpool(0)
@@ -266,7 +266,7 @@ namespace A2DP {
     public:
         IAudioCodec::type Type() const override
         {
-            return (IAudioCodec::SBC);
+            return (IAudioCodec::type::LC_SBC);
         }
         uint32_t BitRate() const override
         {
@@ -280,11 +280,19 @@ namespace A2DP {
         {
             return (_channels);
         }
+        uint16_t InFrameSize() const override
+        {
+            return (_inFrameSize);
+        }
+        uint16_t OutFrameSize() const override
+        {
+            return (_outFrameSize);
+        }
 
     public:
-        uint32_t Configure(const string& format) override;
+        uint32_t Configure(const StreamFormat& format, const string& settings) override;
 
-        void Configuration(string& format) const override;
+        void Configuration(StreamFormat& format, string& settings) const override;
 
         void SerializeConfiguration(Bluetooth::Buffer& output) const override;
 
@@ -312,8 +320,7 @@ namespace A2DP {
         mutable Core::CriticalSection _lock;
         Format _supported;
         Format _actuals;
-        qualityprofile _preferredProfile;
-        qualityprofile _profile;
+        preset _preset;
         void* _sbcHandle;
         uint8_t _preferredBitpool;
         uint8_t _bitpool;

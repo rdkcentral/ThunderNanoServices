@@ -91,6 +91,8 @@ namespace A2DP {
         }
         ~SignallingChannel() override
         {
+            printf("Closing SIG\n");
+
             Disconnect();
         }
 
@@ -102,7 +104,6 @@ namespace A2DP {
         void Operational() override
         {
             TRACE(SignallingFlow, (_T("Bluetooth A2DP/AVDTP signalling channel is operational")));
-            Status(Exchange::IBluetoothAudioSink::IDLE);
         }
 
     public:
@@ -127,13 +128,13 @@ namespace A2DP {
                             });
                         }
                     }
-
-                    if (_audioEndpoints.empty() == true) {
-                        TRACE(Trace::Information, (_T("No audio sink stream endpoints available")));
-                    } else {
-                        _discoveryComplete(_audioEndpoints);
-                    }
                 }
+
+                if (_audioEndpoints.empty() == true) {
+                    TRACE(Trace::Information, (_T("No audio sink stream endpoints available")));
+                }
+
+                _discoveryComplete(_audioEndpoints);
             });
         }
 
@@ -164,16 +165,13 @@ namespace A2DP {
                 }
             }
 
-            Status(Exchange::IBluetoothAudioSink::DISCONNECTED);
-
-            return (result);
+             return (result);
         }
         Exchange::IBluetoothAudioSink::status Status() const
         {
             return (_status);
         }
 
-    private:
         void Status(const Exchange::IBluetoothAudioSink::status newStatus)
         {
             _lock.Lock();

@@ -67,10 +67,11 @@ namespace A2DP {
 
                         if (codecType == a2dp_audiocodec::SBC) {
                             _codec = new AudioCodecSBC(caps.Data());
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses LC-SBC codec [0x%02x]"), SEID()));
+                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x supports LC-SBC codec [0x%02x]"),
+                                                       SEID(), static_cast<uint8_t>(codecType)));
                         } else {
                             // TODO?
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses an unknown audio codec! [0x%02x]"),
+                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x supports an unknown audio codec [0x%02x]"),
                                                        SEID(), static_cast<uint8_t>(codecType)));
                         }
                     } else {
@@ -81,17 +82,17 @@ namespace A2DP {
 
             // Optional content protection capability
             if (_codec != nullptr) {
-                auto cpIt = sep.Capabilities().find(ServiceCapabilities::MEDIA_CODEC);
+                auto cpIt = sep.Capabilities().find(ServiceCapabilities::CONTENT_PROTECTION);
                 if (cpIt != sep.Capabilities().end()) {
                     const ServiceCapabilities& caps = (*cpIt).second;
                     if (caps.Data().size() >= 2) {
-                        Bluetooth::DataRecordLE caps(caps.Data());
+                        Bluetooth::DataRecordLE config(caps.Data());
+
                         a2dp_contentprotection cpType{};
-                        caps.Pop(cpType);
+                        config.Pop(cpType);
 
                         if (cpType == a2dp_contentprotection::NONE) {
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses no copy protection"),
-                                                       SEID(), static_cast<uint8_t>(cpType)));
+                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses no copy protection"), SEID()));
                         } else {
                             // TODO?
                             TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x supports unknown copy protection! [0x%02x]"),
@@ -99,7 +100,7 @@ namespace A2DP {
                         }
                     }
                 } else {
-                    TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses no copy protection"), SEID()));
+                    TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x does not support copy protection"), SEID()));
                 }
             }
         } else {
@@ -107,7 +108,7 @@ namespace A2DP {
         }
     }
 
-    uint32_t AudioEndpoint::Configure(const string& format, const bool enableCP)
+    uint32_t AudioEndpoint::Configure(const IAudioCodec::StreamFormat& format, const string& settings, const bool enableCP)
     {
         using ServiceCapabilities = Bluetooth::AVDTPProfile::StreamEndPoint::ServiceCapabilities;
 
@@ -126,7 +127,7 @@ namespace A2DP {
 
         // Configure Media Codec
         if (_codec != nullptr) {
-            if (_codec->Configure(format) == Core::ERROR_NONE) {
+            if (_codec->Configure(format, settings) == Core::ERROR_NONE) {
                 Bluetooth::Buffer mcConfig;
                 _codec->SerializeConfiguration(mcConfig);
                 configuration.emplace(ServiceCapabilities::MEDIA_CODEC, mcConfig);

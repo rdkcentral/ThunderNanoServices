@@ -19,6 +19,8 @@
 
 #pragma once
 
+#define __DEBUG__
+
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_BluetoothAudioSink
 #endif

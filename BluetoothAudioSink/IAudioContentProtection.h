@@ -21,19 +21,23 @@
 
 #include "Module.h"
 
+#include <interfaces/IBluetoothAudio.h>
+
 namespace WPEFramework {
 
 namespace A2DP {
 
     struct IAudioContentProtection {
 
-        enum type {
-            INVALID = 0
-        };
+        using type = Exchange::IBluetoothAudioSink::drmscheme;
 
         virtual ~IAudioContentProtection() { }
 
         virtual type Type() const;
+
+        virtual uint32_t Configure(const string& format) = 0;
+
+        virtual void Configuration(string& format) const = 0;
 
         virtual uint32_t SerializeConfiguration(Bluetooth::Buffer& output) const = 0;
 

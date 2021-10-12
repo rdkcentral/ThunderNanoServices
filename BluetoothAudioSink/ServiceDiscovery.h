@@ -201,7 +201,10 @@ namespace A2DP {
             , _profile()
         {
         }
-        ~ServiceDiscovery() = default;
+        ~ServiceDiscovery()
+        {
+            Disconnect();
+        }
 
     private:
         uint32_t Initialize() override
@@ -263,11 +266,11 @@ namespace A2DP {
                                     _audioServices.emplace_back(service);
                                 }
                             }
-
-                            _discoveryComplete(_audioServices);
                         } else {
                             TRACE(Trace::Information, (_T("Not an A2DP audio sink device!")));
                         }
+
+                        _discoveryComplete(_audioServices);
 
                         _lock.Unlock();
                     } else {

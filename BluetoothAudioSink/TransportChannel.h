@@ -86,7 +86,10 @@ namespace A2DP {
             , _sequence(0)
         {
         }
-        ~TransportChannel() = default;
+        ~TransportChannel()
+        {
+            Disconnect();
+        }
 
     private:
         uint32_t Initialize() override
@@ -152,6 +155,16 @@ namespace A2DP {
         {
             ASSERT(_codec != nullptr);
             return (_codec->Channels());
+        }
+        uint16_t MinFrameSize() const
+        {
+            ASSERT(_codec != nullptr);
+            return (_codec->InFrameSize());
+        }
+        uint16_t PreferredFrameSize() const
+        {
+            ASSERT(_codec != nullptr);
+            return ((A2DP_OMTU / _codec->OutFrameSize()) * _codec->InFrameSize());
         }
         void Reset()
         {

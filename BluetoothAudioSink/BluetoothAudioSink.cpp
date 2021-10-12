@@ -38,6 +38,7 @@ namespace Plugin {
         Config config;
         config.FromString(_service->ConfigLine());
         _controller = config.Controller.Value();
+        _codecSettings = config.Codecs.Value();
 
         Exchange::JBluetoothAudioSink::Register(*this, this);
 
@@ -64,12 +65,40 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
+        if (_sink != nullptr) {
+            _sink->Release();
+        }
+
         _sdpServer.Stop();
 
         Exchange::JBluetoothAudioSink::Unregister(*this);
 
         service->Release();
         _service = nullptr;
+    }
+
+    /* virtual */ uint32_t BluetoothAudioSink::Callback(Exchange::IBluetoothAudioSink::ICallback* callback)
+    {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        _lock.Lock();
+
+        if (callback == nullptr) {
+            if (_callback != nullptr) {
+                _callback->Release();
+                _callback = nullptr;
+                result = Core::ERROR_NONE;
+            }
+        }
+        else if (_callback == nullptr) {
+            _callback = callback;
+            _callback->AddRef();
+            result = Core::ERROR_NONE;
+        }
+
+        _lock.Unlock();
+
+        return (result);
     }
 
     /* virtual */ uint32_t BluetoothAudioSink::Assign(const string& address)
@@ -84,9 +113,7 @@ namespace Plugin {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
                 if (device != nullptr) {
                     const uint8_t seid = 1; // Revisit this if multiple simultaneous sinks are to be supported.
-                    _sink = new A2DPSink(this, device, seid, [this]() {
-                        Updated();
-                    });
+                    _sink = Core::Service<A2DPSink>::Create<A2DPSink>(this, _codecSettings, device, seid);
                     if (_sink != nullptr) {
                         TRACE(Trace::Information, (_T("Assigned [%s] to Bluetooth audio sink"), address.c_str()));
                         result = Core::ERROR_NONE;
@@ -120,10 +147,10 @@ namespace Plugin {
         _lock.Lock();
 
         if (_sink != nullptr) {
-            delete _sink;
-            _sink = nullptr;
             TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
             result = Core::ERROR_NONE;
+            _sink->Release();
+            _sink = nullptr;
         } else {
             TRACE(Trace::Error, (_T("Sink not assigned, assign first")));
         }
