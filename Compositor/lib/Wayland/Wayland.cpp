@@ -403,11 +403,11 @@ namespace Plugin {
             }
             return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
         }
-        bool Consumer(const string& name) const override
+        bool Consumer(VARIABLE_IS_NOT_USED const string& name) const override
         {
             return true;
         }
-        uint32_t Consumer(const string& name, const mode) override
+        uint32_t Consumer(VARIABLE_IS_NOT_USED const string& name, const mode) override
         {
             return (Core::ERROR_UNAVAILABLE);
         }
