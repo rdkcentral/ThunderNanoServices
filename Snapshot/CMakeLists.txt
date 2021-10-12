@@ -62,7 +62,7 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
                 ${SNAPSHOT_IMPLEMENTATION_PATH}/NexusCapture.cpp)
     else()
         include(GetExternalCode)
-        set(SNAPSHOT_IMPLEMENTATION_VERSION "master" CACHE STRING "Snapshot implementation version")
+        set(SNAPSHOT_IMPLEMENTATION_VERSION "master" CACHE STRING "Snapshot implementation version: commit_id_or_tag_or_branch_name")
         set(SNAPSHOT_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot" CACHE STRING "Snapshot implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${SNAPSHOT_IMPLEMENTATION_REPOSITORY}

@@ -34,7 +34,7 @@ if(COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
     add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
 else ()
     include(GetExternalCode)
-    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version")
+    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version: commit_id_or_tag_or_branch_name")
     set(COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor wayland implementation repository")
     GetExternalCode(
         GIT_REPOSITORY ${COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY}
