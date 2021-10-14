@@ -574,7 +574,9 @@ namespace Plugin {
                 valid_t RenderColor () {
                     constexpr decltype (_degree) const ROTATION = 360;
 
-                    constexpr float const OMEGA = 3.14159265 / 180;
+                    constexpr float SPEED = 10;
+
+                    constexpr float const OMEGA = 3.14159265f / 180.0f;
 
                     valid_t  _ret = Valid ();
 
@@ -583,10 +585,10 @@ namespace Plugin {
                         // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
                         static_assert (std::is_same <float, GLfloat>::value);
 
-                        GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA));
+                        GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA * SPEED));
 
                         // The function clamps the input to [0.0f, 1.0f]
-                        /* void */ glClearColor (_rad, _rad, _rad, 0.0);
+                        /* void */ glClearColor (0.0f, _rad, 0.0f, 0.0);
 
                         _ret = glGetError () == GL_NO_ERROR;
 
@@ -655,6 +657,40 @@ namespace Plugin {
                             _loc = glGetAttribLocation (_prog, "position");
                             _ret = glGetError () == GL_NO_ERROR;
                         }
+
+                        static GLfloat _red = 0.0f;
+                        static GLfloat _green = 0.0f;
+                        static GLfloat _blue = 1.0f;
+
+                        GLfloat _color = _red;
+                        _red = _green;
+                        _green = _blue;;
+                        _blue = _color;;
+
+                        if (_ret != false) {
+                            GLint _loc_red = glGetUniformLocation (_prog, "red");
+                            _ret = glGetError () == GL_NO_ERROR;
+
+                            glUniform1f (_loc_red, _red);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            GLint _loc_green = glGetUniformLocation (_prog, "green");
+                            _ret = glGetError () == GL_NO_ERROR;
+
+                            glUniform1f (_loc_green, _green);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
+                        if (_ret != false) {
+                            GLint _loc_blue = glGetUniformLocation (_prog, "blue");
+                            _ret = glGetError () == GL_NO_ERROR;
+
+                            glUniform1f (_loc_blue, _blue);
+                            _ret = glGetError () == GL_NO_ERROR;
+                        }
+
 
                         if (_ret != false) {
                             glVertexAttribPointer (_loc, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, _vert.data ());
@@ -831,8 +867,11 @@ namespace Plugin {
                         constexpr char const _frag_src [] =
                             "#version 100                                                           \n"
                             "precision mediump float;                                               \n"
+                            "uniform float red;\n"
+                            "uniform float green;\n"
+                            "uniform float blue;\n"
                             "void main () {                                                         \n"
-                                "gl_FragColor = vec4 (0.0f, 1.0f, 1.0f, 1.0f);                      \n"
+                                "gl_FragColor = vec4 (red, green, blue, 1.0f);                      \n"
                             "}                                                                      \n"
                         ;
 
@@ -1006,6 +1045,7 @@ namespace Plugin {
 //                        _ret = gles.Render () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
 //                        _ret = gles.RenderColor () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
                         _ret = gles.RenderTile () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+
                     }
 
                     return _ret;
