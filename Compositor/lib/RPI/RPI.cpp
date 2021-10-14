@@ -1069,12 +1069,10 @@ class CompositorImplementation;
                                                 _ret = glGetError () == GL_NO_ERROR;
                                             }
                                         }
-
                                     }; break;
 
                                 case GL_TEXTURE_2D :
                                     {
-
                                         glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, tex._width, tex._height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); 
 
                                         _ret = glGetError () == GL_NO_ERROR;
@@ -1083,9 +1081,7 @@ class CompositorImplementation;
 
                                 default :
                                     {
-
                                         _ret = false;
-
                                     }
                             }
                         }
@@ -1147,11 +1143,6 @@ class CompositorImplementation;
 
                     if (_ret != false) {
                         glBindTexture(_tex_fbo._target, InvalidTex ());
-                        _ret = glGetError () == GL_NO_ERROR;
-                    }
-
-                    if (_ret != false) {
-                        glBindFramebuffer (GL_FRAMEBUFFER, 0);
                         _ret = glGetError () == GL_NO_ERROR;
                     }
 
@@ -1242,12 +1233,6 @@ class CompositorImplementation;
                     _ret = ( _ret && UpdateScale (_tex_oes._scale) && UpdateOffset (_tex_oes._offset) && UpdateOpacity (_tex_fbo._opacity) && SetupViewport (_width, _height) && RenderTileOES () ) != false;
 
 
-                    {
-                        WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
-                        silence (_sync);
-                    }
-
-
                     if (_ret != false) {
                         glBindTexture (_tex_oes._target, InvalidTex ());
                         _ret = glGetError () == GL_NO_ERROR;
@@ -1261,6 +1246,7 @@ class CompositorImplementation;
 
                     /* valid_t */ DestroyTexture (_tex_oes);
 //                    // Do not destroy _text_fbo
+
 
                     return _ret;
                 }
@@ -1366,7 +1352,6 @@ class CompositorImplementation;
 
                     // For all textures in map
                     if (_ret != false) {
-
                         offset_t _off = _offset;
                         scale_t _scl = _scale;
                         opacity_t _op = _opacity;
@@ -1403,12 +1388,6 @@ class CompositorImplementation;
 
                     glDisable (GL_BLEND);
                     _ret = _ret && glGetError () == GL_NO_ERROR;
-
-
-                    EGL::dpy_t _dpy = eglGetCurrentDisplay ();
-
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
-                    silence (_sync);
 
 
                     return _ret;
@@ -1865,6 +1844,10 @@ class CompositorImplementation;
 #define _EGL_FOREVER EGL_FOREVER
 #define _EGL_NO_IMAGE EGL_NO_IMAGE
 #define _EGL_NATIVE_PIXMAP EGL_NATIVE_PIXMAP_KHR
+#define _EGL_CONDITION_SATISFIED EGL_CONDITION_SATISFIED
+#define _EGL_SYNC_STATUS EGL_SYNC_STATUS
+#define _EGL_SIGNALED EGL_SIGNALED
+#define _EGL_SYNC_FLUSH_COMMANDS_BIT EGL_SYNC_FLUSH_COMMANDS_BIT
 #else
 #define _KHRFIX(left, right) left ## right
 #define KHRFIX(name) _KHRFIX(name, KHR)
@@ -1873,6 +1856,11 @@ class CompositorImplementation;
 #define _EGL_FOREVER EGL_FOREVER_KHR
 #define _EGL_NO_IMAGE EGL_NO_IMAGE_KHR
 #define _EGL_NATIVE_PIXMAP EGL_NATIVE_PIXMAP_KHR
+#define _EGL_CONDITION_SATISFIED EGL_CONDITION_SATISFIED_KHR
+#define _EGL_SYNC_STATUS EGL_SYNC_STATUS_KHR
+#define _EGL_SIGNALED EGL_SIGNALED_KHR
+#define _EGL_SYNC_FLUSH_COMMANDS_BIT EGL_SYNC_FLUSH_COMMANDS_BIT_KHR
+
                 using EGLAttrib = EGLint;
 #endif
                 using EGLuint64KHR = khronos_uint64_t;
@@ -1889,32 +1877,51 @@ class CompositorImplementation;
                     private :
 
                         sync_t _sync;
-                        dpy_t _dpy;
+                        dpy_t & _dpy;
 
                     public :
-// TODO: calling Supported is expensive, sync objects are heavily used
+                        Sync () = delete;
+
                         explicit Sync (dpy_t & dpy) : _dpy {dpy} {
+#ifdef _V3D_FENCE
+                            static bool _supported = EGL::Supported (dpy, "EGL_KHR_fence_sync") != false;
+
                             assert (dpy != InvalidDpy ());
 
-                            _sync = ( EGL::Supported (dpy, "EGL_KHR_fence_sync") && dpy != InvalidDpy () ) != false ? KHRFIX (eglCreateSync) (dpy, _EGL_SYNC_FENCE, nullptr) : InvalidSync ();
+                            _sync = ( _supported && dpy != InvalidDpy () ) != false ? KHRFIX (eglCreateSync) (dpy, _EGL_SYNC_FENCE, nullptr) : InvalidSync ();
+#else
+                            _sync = InvalidSync ();
+#endif
                         }
 
                         ~Sync () {
-
                             if (_sync == InvalidSync ()) {
                                 // Error creating sync object or unable to create one
                                 glFinish ();
                             }
                             else {
+                                // Mandatory
                                 glFlush ();
 
-                                EGLint _val = KHRFIX (eglClientWaitSync) (_dpy, _sync, 0 /* no flags */ , _EGL_FOREVER);
+                                // .. but still execute, when needed, an additional flush to be on the safe sidei, and avoid a dreaded  deadlock
+                                EGLint _val = static_cast <EGLint> ( KHRFIX (eglClientWaitSync) (_dpy, _sync, _EGL_SYNC_FLUSH_COMMANDS_BIT, _EGL_FOREVER) );
 
-                                if (_val != EGL_TRUE) {
-                                    // Error
+                                if (_val == static_cast <EGLint> (EGL_FALSE) || _val != static_cast <EGLint> (_EGL_CONDITION_SATISFIED)) {
+                                    EGLAttrib _status;
+
+                                    bool _ret = KHRFIX (eglGetSyncAttrib) (_dpy, _sync, _EGL_SYNC_STATUS, &_status) != EGL_FALSE;
+
+                                    _ret = _ret && _status == _EGL_SIGNALED;
+
+                                    // Assert on error
+                                    if (_ret != true) {
+                                        TRACE (Trace::Error, (_T ("EGL: synchronization primitive")) );
+                                        assert (false);
+                                    }
                                 }
 
-                                // Consume the (possible) error
+                                // Consume the (possible) error(s)
+                                /* ELGint */ glGetError ();
                                 /* ELGint */ eglGetError ();
                             }
                         }
@@ -1928,6 +1935,7 @@ class CompositorImplementation;
                         void * operator new [] (size_t) = delete;
                         void operator delete (void *) = delete;
                         void operator delete [] (void *) = delete;
+
                 };
 
             private :
@@ -2210,6 +2218,19 @@ class CompositorImplementation;
                         _ret = _conf != EGL_NO_CONFIG;
                     }
 
+
+                    if (_ret != false) {
+                        EGLenum _api = eglQueryAPI ();
+
+                        _ret = _api == EGL_OPENGL_ES_API;
+
+                        if (_ret != true) {
+                            /* EGLBoolean */ eglBindAPI (EGL_OPENGL_ES_API);
+                            _ret = eglGetError () == EGL_SUCCESS;
+                        }
+                    }
+
+
                     if (_ret != false) {
                         static_assert (_narrowing <GLES::version_t, EGLint, true> :: value != false);
 
@@ -2275,17 +2296,48 @@ class CompositorImplementation;
                 }
 
                 bool Render (GLES & gles) {
-                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE;
+                    // Ensure the client API is set per thread basis
+                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
 
                     if (_ret != false) {
                         _ret = eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+
+                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
+                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
 
                         // Avoid any memory leak if the local thread is stopped (by another thread)
                         _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
                     }
 
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
-                    silence (_sync);
+                    if (_ret != true) {
+                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
+                    }
+
+                    return _ret;
+                }
+
+                bool Render (std::function < GLES::valid_t () > func, bool post) {
+                    // Ensure the client API is set per thread basis
+                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+
+                    if (_ret != false) {
+                        if (post != false) {
+                            _ret = func () != false;
+
+                            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+
+                           _ret = _ret && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+                        }
+                        else {
+                            _ret = eglSwapBuffers (_dpy, _surf) != EGL_FALSE && func () != false;
+                        }
+
+                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
+                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+
+                        // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
+                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
+                    }
 
                     if (_ret != true) {
                         TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
@@ -2295,17 +2347,44 @@ class CompositorImplementation;
                 }
 
                 bool Render (std::function < GLES::valid_t () > prefunc, std::function < GLES::valid_t () > postfunc) {
-                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE;
+                    // Ensure the client API is set per thread basis
+                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
 
                     if (_ret != false) {
-                        _ret = prefunc () != false && postfunc () != false && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+                        _ret = prefunc () != false;
+
+                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
+                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+
+                        _ret = _ret && eglSwapBuffers (_dpy, _surf) != EGL_FALSE && postfunc () != false;
+
+                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
+                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
 
                         // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
                         _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
                     }
 
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync::sync_t _sync (_dpy);
-                    silence (_sync);
+                    if (_ret != true) {
+                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
+                    }
+
+                    return _ret;
+                }
+
+                bool RenderWithoutSwap (std::function < GLES::valid_t () > func) {
+                    // Ensure the client API is set per thread basis
+                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+
+                    if (_ret != false) {
+                        _ret = func () != false;
+
+                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
+                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+
+                        // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
+                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
+                    }
 
                     if (_ret != true) {
                         TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
@@ -2324,6 +2403,10 @@ class CompositorImplementation;
 #undef _EGL_FOREVER
 #undef _EGL_NO_IMAGE
 #undef _EGL_NATIVE_PIXMAP
+#undef _EGL_CONDITION_SATISFIED
+#undef _EGL_SYNC_STATUS
+#undef _EGL_SIGNALED
+#undef _EGL_SYNC_FLUSH_COMMANDS_BIT
         };
 
     public:
@@ -2572,13 +2655,13 @@ class CompositorImplementation;
                     GLES::opacity_t _opacity = static_cast <opacity_a_t> ( static_cast <common_opacity_t> (_opa) / ( static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::maxOpacity) - static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::minOpacity) ) );
 
 
-                    Exchange::IComposition::ScreenResolution _resolution = Resolution();
-
-
                     _ret = (    _gles.UpdateOffset ( _offset )
                             && _gles.UpdateScale ( _scale ) && _gles.UpdateOpacity ( _opacity )
-                            && _egl.Render (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height ), std::bind (&GLES::RenderScene, &_gles, WidthFromResolution (_resolution), HeightFromResolution (_resolution), [] (GLES::texture_t left, GLES::texture_t right) -> GLES::valid_t { GLES::valid_t _ret = left._offset._z > right._offset._z; return _ret; } ) ) ) != false;
+                            && _egl.RenderWithoutSwap (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height)) ) != false;
                 }
+
+
+                // Update the scene only if sufficient time has elapes
 
                 if (_ret != false) {
                     // Limit rate to avoid free run if the Swap fails
@@ -2611,26 +2694,33 @@ class CompositorImplementation;
 
                     constexpr milli_t _milli = 1000;
 
-                    static decltype (_milli) _rate = RefreshRateFromResolution ( ScreenResolution () );
+// TODO: statis are allowed if resize is not supported
+                    static Exchange::IComposition::ScreenResolution _resolution = Resolution();
+
+                    static decltype (_milli) _rate = RefreshRateFromResolution ( _resolution );
+
                     static std::chrono::milliseconds _delay = std::chrono::milliseconds (_milli / _rate);
 
+
                     // Delay the (free running) loop
-                    auto _current_time = std::chrono::steady_clock::now ();
+                    auto _start = std::chrono::steady_clock::now ();
 
-                    static decltype (_current_time) _last_access_time = _current_time;
 
-                    auto _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_current_time - _last_access_time);
+                    _ret = _egl.Render (std::bind (&GLES::RenderScene, &_gles, WidthFromResolution (_resolution), HeightFromResolution (_resolution), [] (GLES::texture_t left, GLES::texture_t right) -> GLES::valid_t { GLES::valid_t _ret = left._offset._z > right._offset._z; return _ret; } ), true ) != false;
 
-                    if (_duration.count () < _delay .count () ) {
-                        std::this_thread::sleep_for ( std::chrono::milliseconds (_delay - _duration) );
-                    }
-                    else {
+                    if (_ret != false) {
+                        ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
+                        /* void */ _platform.Swap (_bufferInfo);
                     }
 
-                    _last_access_time = _current_time;
 
-                    ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
-                    /* void */ _platform.Swap (_bufferInfo);
+                    auto _end = std::chrono::steady_clock::now ();
+
+                    auto _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_end - _start);
+
+                    if (_duration.count () < _delay.count ()) {
+                        SleepMs (_delay.count () - _duration.count ());
+                    }
                 }
             }
 
