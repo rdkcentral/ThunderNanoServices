@@ -13,4 +13,5 @@ build/
 /.vs
 /artifacts
 */*.so
+*/*/*/*.so
 */config
