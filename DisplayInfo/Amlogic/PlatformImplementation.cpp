@@ -106,7 +106,7 @@ namespace Plugin {
 
         void StateChange() override {}
 
-        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
+        uint16_t SendData(VARIABLE_IS_NOT_USED uint8_t* dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxSendSize) override
         {
             return 0;
         }
@@ -253,12 +253,12 @@ namespace Plugin {
         HDRProperties(const HDRProperties&) = delete;
         const HDRProperties& operator=(const HDRProperties&) = delete;
 
-        uint32_t TVCapabilities(IHDRIterator*& type) const override
+        uint32_t TVCapabilities(VARIABLE_IS_NOT_USED IHDRIterator*& type) const override
         {
             return Core::ERROR_UNAVAILABLE;
         }
 
-        uint32_t STBCapabilities(IHDRIterator*& type) const override
+        uint32_t STBCapabilities(VARIABLE_IS_NOT_USED IHDRIterator*& type) const override
         {
             return Core::ERROR_UNAVAILABLE;
         }
@@ -525,7 +525,7 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
 
-        uint32_t IsAudioPassthrough(bool& passthru) const override
+        uint32_t IsAudioPassthrough(VARIABLE_IS_NOT_USED bool& passthru) const override
         {
             return Core::ERROR_UNAVAILABLE;
         }
@@ -592,12 +592,12 @@ namespace Plugin {
             return result;
         }
 
-        uint32_t WidthInCentimeters(uint8_t& width /* @out */) const override
+        uint32_t WidthInCentimeters(VARIABLE_IS_NOT_USED uint8_t& width /* @out */) const override
         {
             return Core::ERROR_UNAVAILABLE;
         }
 
-        uint32_t HeightInCentimeters(uint8_t& heigth /* @out */) const override
+        uint32_t HeightInCentimeters(VARIABLE_IS_NOT_USED uint8_t& heigth /* @out */) const override
         {
             return Core::ERROR_UNAVAILABLE;
         }
@@ -614,12 +614,12 @@ namespace Plugin {
             return result;
         }
 
-        uint32_t HDCPProtection(const HDCPProtectionType value) override
+        uint32_t HDCPProtection(VARIABLE_IS_NOT_USED const HDCPProtectionType value) override
         {
             return Core::ERROR_UNAVAILABLE;
         }
 
-        uint32_t PortName(string& name) const override
+        uint32_t PortName(VARIABLE_IS_NOT_USED string& name) const override
         {
             return Core::ERROR_UNAVAILABLE;
         }

@@ -600,7 +600,7 @@ namespace Weston {
                 _surfaceDestroyListener.notify = NotifySurfaceDestroy;
                 wl_signal_add(&surface->destroy_signal, &_surfaceDestroyListener);
             }
-            static void NotifySurfaceDestroy(struct wl_listener* listener, void* data)
+            static void NotifySurfaceDestroy(struct wl_listener* listener, VARIABLE_IS_NOT_USED void* data)
             {
                 SurfaceData* surfaceData;
                 surfaceData = wl_container_of(listener, surfaceData, _surfaceDestroyListener);
@@ -1194,7 +1194,7 @@ namespace Weston {
                     DestroyOutput(output);
                 }
             }
-            static void HeadsChanged(struct wl_listener* listener, void* argument)
+            static void HeadsChanged(VARIABLE_IS_NOT_USED struct wl_listener* listener, void* argument)
             {
                 TRACE_GLOBAL(Trace::Information, (_T("DRM Backend Loading in progress")));
                 struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
@@ -1408,6 +1408,7 @@ namespace Weston {
         }
         inline bool LoadBackend(PluginHost::IShell* service)
         {
+            ASSERT(service == _service);
             _backend = Create<DRM>(_service);
             _backend->Load(this);
             weston_compositor_flush_heads_changed(_compositor);
@@ -1544,7 +1545,7 @@ namespace Weston {
             _surfaceActivateListener.notify = NotifySurfaceActivate;
             wl_signal_add(&_compositor->activate_signal, &_surfaceActivateListener);
         }
-        static void NotifySurfaceActivate(struct wl_listener* listener, void* data)
+        static void NotifySurfaceActivate(VARIABLE_IS_NOT_USED struct wl_listener* listener, void* data)
         {
             struct weston_surface_activation_data* activationData =
                    static_cast<struct weston_surface_activation_data*>(data);
