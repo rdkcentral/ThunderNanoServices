@@ -31,7 +31,7 @@
 
 if(WestonServer_FIND_QUIETLY)
     set(_WESTON_SERVER_MODE QUIET)
-else(WestonServer_FIND_REQUIRED)
+elseif(WestonServer_FIND_REQUIRED)
     set(_WESTON_SERVER_MODE REQUIRED)
 endif()
 
@@ -51,7 +51,7 @@ set(WESTON_SERVER_LIBRARIES "${WESTON_SERVER_LIB}" "${WESTON_SERVER_EXECLIB}" "$
 mark_as_advanced(WESTON_SERVER_INCLUDE_DIRS WESTON_SERVER_LIBRARIES)
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(WestonServer DEFAULT_MSG PC_WESTON_SERVER_LIBEXEC_FOUND WESTON_SERVER_LIBRARIES)
+find_package_handle_standard_args(WestonServer DEFAULT_MSG PC_WESTON_SERVER_LIBEXEC_FOUND WESTON_SERVER_LIBRARIES)
 
 if(WestonServer_FOUND AND NOT TARGET WestonServer::WestonServer)
     add_library(WestonServer::WestonServer UNKNOWN IMPORTED)
@@ -62,4 +62,10 @@ if(WestonServer_FOUND AND NOT TARGET WestonServer::WestonServer)
             INTERFACE_COMPILE_OPTIONS "${WESTON_SERVER_CFLAGS_OTHER}"
             INTERFACE_LINK_LIBRARIES "${WESTON_SERVER_LIBRARIES}"
             )
+else()
+    if(WestonServer_FIND_REQUIRED)
+        message(FATAL_ERROR "Could NOT find Weston Server")
+    elseif(NOT WestonServer_FIND_QUIETLY)
+        message(STATUS "Could NOT find Weston Server")
+    endif()
 endif()
