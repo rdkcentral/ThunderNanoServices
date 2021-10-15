@@ -336,7 +336,7 @@ public:
         return 0;
     }
 
-    virtual void Hide(const bool hidden) {
+    virtual void Hide(VARIABLE_IS_NOT_USED const bool hidden) {
     }
 
     virtual void Register(Exchange::IBrowser::INotification *sink) {
@@ -369,11 +369,11 @@ public:
         _adminLock.Unlock();
     }
 
-    void Register(Exchange::IApplication::INotification* sink) override {
+    void Register(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override {
         // Kept empty since visibility change is not supported
     }
 
-    void Unregister(Exchange::IApplication::INotification* sink) override {
+    void Unregister(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override {
         // Kept empty since visibility change is not supported
     }
 
@@ -428,19 +428,19 @@ public:
         return Core::ERROR_NONE;
     }
 
-    uint32_t LaunchPoint(launchpointtype& point) const override {
+    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED launchpointtype& point) const override {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t LaunchPoint(const launchpointtype&) override {
+    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED const launchpointtype& point) override {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(bool& visiblity) const override {
+    uint32_t Visible(VARIABLE_IS_NOT_USED bool& visiblity) const override {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(const bool& visiblity) override {
+    uint32_t Visible(VARIABLE_IS_NOT_USED const bool& visiblity) override {
         return Core::ERROR_UNAVAILABLE;
     }
 
