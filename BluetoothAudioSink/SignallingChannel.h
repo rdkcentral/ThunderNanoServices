@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2021 RDK Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,17 +82,14 @@ namespace A2DP {
             , _updatedCb(updatedCb)
             , _seid(seid)
             , _lock()
-            , _status(Exchange::IBluetoothAudioSink::UNASSIGNED)
+            , _state(Exchange::IBluetoothAudioSink::UNASSIGNED)
             , _profile()
             , _audioEndpoints()
             , _discoveryComplete()
         {
-            Status(Exchange::IBluetoothAudioSink::DISCONNECTED);
         }
         ~SignallingChannel() override
         {
-            printf("Closing SIG\n");
-
             Disconnect();
         }
 
@@ -123,8 +120,8 @@ namespace A2DP {
                         if ((sep.MediaType() == Bluetooth::AVDTPProfile::StreamEndPoint::AUDIO)
                                 && (sep.ServiceType() == Bluetooth::AVDTPProfile::StreamEndPoint::SINK)) {
 
-                            _audioEndpoints.emplace_back(*this, sep, SEID(), [this](const Exchange::IBluetoothAudioSink::status status) {
-                                Status(status);
+                            _audioEndpoints.emplace_back(*this, sep, SEID(), [this](const Exchange::IBluetoothAudioSink::state state) {
+                                State(state);
                             });
                         }
                     }
@@ -167,23 +164,29 @@ namespace A2DP {
 
              return (result);
         }
-        Exchange::IBluetoothAudioSink::status Status() const
+        Exchange::IBluetoothAudioSink::state State() const
         {
-            return (_status);
+            return (_state);
         }
 
-        void Status(const Exchange::IBluetoothAudioSink::status newStatus)
+        void State(const Exchange::IBluetoothAudioSink::state newState)
         {
+            bool updated = false;
+
             _lock.Lock();
 
-            if (_status != newStatus) {
-                _status = newStatus;
-                Core::EnumerateType<Exchange::IBluetoothAudioSink::status> value(_status);
-                TRACE(Trace::Information, (_T("Audio sink status: %s"), (value.IsSet()? value.Data() : "(undefined)")));
-                _updatedCb();
+            if (_state != newState) {
+                _state = newState;
+                updated = true;
             }
 
             _lock.Unlock();
+
+            if (updated == true) {
+                Core::EnumerateType<Exchange::IBluetoothAudioSink::state> value(_state);
+                TRACE(Trace::Information, (_T("Audio sink state: %s"), (value.IsSet()? value.Data() : "(undefined)")));
+                _updatedCb();
+            }
         }
 
     private:
@@ -213,7 +216,7 @@ namespace A2DP {
         UpdatedCb _updatedCb;
         uint8_t _seid;
         Core::CriticalSection _lock;
-        Exchange::IBluetoothAudioSink::status _status;
+        Exchange::IBluetoothAudioSink::state _state;
         Bluetooth::AVDTPProfile _profile;
         std::list<AudioEndpoint> _audioEndpoints;
         DiscoveryCompleteCb _discoveryComplete;

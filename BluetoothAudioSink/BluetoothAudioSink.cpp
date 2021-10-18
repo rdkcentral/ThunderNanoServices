@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2021 RDK Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,9 +65,8 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        if (_sink != nullptr) {
-            _sink->Release();
-        }
+        delete _sink;
+        _sink = nullptr;
 
         _sdpServer.Stop();
 
@@ -113,7 +112,7 @@ namespace Plugin {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
                 if (device != nullptr) {
                     const uint8_t seid = 1; // Revisit this if multiple simultaneous sinks are to be supported.
-                    _sink = Core::Service<A2DPSink>::Create<A2DPSink>(this, _codecSettings, device, seid);
+                    _sink = new A2DPSink(this, _codecSettings, device, seid);
                     if (_sink != nullptr) {
                         TRACE(Trace::Information, (_T("Assigned [%s] to Bluetooth audio sink"), address.c_str()));
                         result = Core::ERROR_NONE;
@@ -149,7 +148,7 @@ namespace Plugin {
         if (_sink != nullptr) {
             TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
             result = Core::ERROR_NONE;
-            _sink->Release();
+            delete _sink;
             _sink = nullptr;
         } else {
             TRACE(Trace::Error, (_T("Sink not assigned, assign first")));

@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2021 RDK Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -185,7 +185,7 @@ namespace A2DP {
             if (consumed > 0) {
                 uint32_t result = Exchange(250, packet);
                 if (result != Core::ERROR_NONE) {
-                    printf("BluetoothAudioSink: Failed to send out media packet (%d)\n", result);
+                    fprintf(stderr, "BluetoothAudioSink: Failed to send out media packet (%d)\n", result);
                 }
 
                 // Timestamp clock frequency is the same as the sampling frequency.

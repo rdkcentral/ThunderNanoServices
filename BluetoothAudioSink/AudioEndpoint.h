@@ -34,14 +34,14 @@ namespace A2DP {
         static constexpr uint16_t CommandTimeout = 1000;
 
     public:
-        using StatusNotifyFn = std::function<void(const Exchange::IBluetoothAudioSink::status)>;
+        using StateNotifyFn = std::function<void(const Exchange::IBluetoothAudioSink::state)>;
 
     public:
         AudioEndpoint() = delete;
         AudioEndpoint& operator=(const AudioEndpoint&) = delete;
 
         AudioEndpoint(Bluetooth::AVDTPSocket& socket, const Bluetooth::AVDTPProfile::StreamEndPoint& sep,
-                      uint8_t sourceSEID, const StatusNotifyFn& notify)
+                      uint8_t sourceSEID, const StateNotifyFn& notify)
             : _acpSeid(sep.SEID())
             , _intSeid(sourceSEID)
             , _socket(socket)
@@ -99,7 +99,7 @@ namespace A2DP {
             return (CmdSuspend());
         }
 
-    public:
+    private:
         uint32_t CmdSetConfiguration(Bluetooth::AVDTPSocket::SEPConfiguration& config)
         {
             uint32_t result = Core::ERROR_NONE;
@@ -173,7 +173,7 @@ namespace A2DP {
         uint32_t CmdSuspend()
         {
             uint32_t result = Core::ERROR_NONE;
-            _command.Start(SEID());
+            _command.Suspend(SEID());
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 _notify(Exchange::IBluetoothAudioSink::READY);
             } else {
@@ -191,7 +191,7 @@ namespace A2DP {
         uint8_t _intSeid;
         Bluetooth::AVDTPSocket& _socket;
         Bluetooth::AVDTPSocket::Command _command;
-        StatusNotifyFn _notify;
+        StateNotifyFn _notify;
         IAudioCodec* _codec;
         IAudioContentProtection* _cp;
         bool _cpEnabled;
