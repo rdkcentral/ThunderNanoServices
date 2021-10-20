@@ -1057,8 +1057,9 @@ class CompositorImplementation;
 
                                         _ret = _dpy != EGL::InvalidDpy () && _ctx != EGL::InvalidCtx ();
 
-// TODO: do not check every pass
-                                        if ( _ret && ( GLES::Supported ("GL_OES_EGL_image") && ( EGL::Supported (_dpy, "EGL_KHR_image") || EGL::Supported (_dpy, "EGL_KHR_image_base") ) ) != false) {
+                                        static valid_t _supported = ( GLES::Supported ("GL_OES_EGL_image") && ( EGL::Supported (_dpy, "EGL_KHR_image") || EGL::Supported (_dpy, "EGL_KHR_image_base") ) ) != false;
+
+                                        if ( _ret && _supported != false) {
                                             // Take storage for the texture from the EGLImage; Pixel data becomes undefined
                                             static void (* _EGLImageTargetTexture2DOES) (GLenum, GLeglImageOES) = reinterpret_cast < void (*) (GLenum, GLeglImageOES) > (eglGetProcAddress ("glEGLImageTargetTexture2DOES"));
 
@@ -1244,7 +1245,7 @@ class CompositorImplementation;
                     }
 
 
-                    // Do not destroy tex-fb0 and _tex_oes !
+                    // Do not destroy tex-fbo and _tex_oes !
 
 
                     return _ret;
@@ -1641,10 +1642,12 @@ class CompositorImplementation;
                     }
 
                     static prog_t _prog = InvalidProg ();;
-// TODO: supported
+
+                    static valid_t _supported = Supported ("GL_OES_EGL_image_external") != false;
+
                     _ret = _ret
                             && RenderColor (false, false, false)
-                            && Supported ("GL_OES_EGL_image_external") != false
+                            && _supported
                             && SetupProgram (_vtx_src, _frag_src, _prog)
                             && RenderPolygon (_vert);
 
@@ -2003,7 +2006,9 @@ class CompositorImplementation;
                 static img_t CreateImage (EGL const & egl, ClientSurface::surf_t const & surf) {
                     img_t _ret = InvalidImage ();
 
-                    if (egl.Valid () && ( Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import_modifiers") ) != false ) {
+                    static valid_t _supported = ( Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import_modifiers") ) != false;
+
+                    if ( (egl.Valid () && _supported ) != false) {
                         static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, KHRFIX (EGLImage)> :: value ) != false);
 
                         constexpr char _methodName [] = XSTRINGIFY ( KHRFIX (eglCreateImage) );
@@ -2134,7 +2139,10 @@ class CompositorImplementation;
                 static img_t DestroyImage (EGL const & egl, ClientSurface::surf_t const & surf) {
                     img_t _ret = surf._khr;
 
-                    if (egl.Valid () && Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") != false ) {
+                    static valid_t _supported = (Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") ) != false;
+
+
+                    if ( (egl.Valid () && _supported) != false ) {
 
                         static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, KHRFIX (EGLImage)> :: value ) != false);
 
@@ -2705,18 +2713,21 @@ class CompositorImplementation;
 
                     static decltype (_milli) _rate = RefreshRateFromResolution ( _resolution );
 
-                    static std::chrono::duration < milli_t, std::milli > _delay (_milli / _rate);
-
 
                     // Skip update if it is too soon to flip the contents
 
-                    static std::chrono::time_point < std::chrono::steady_clock > _start = std::chrono::steady_clock::now ();
-                    static decltype (_start) _end = _start;
+                    static std::chrono::milliseconds _delay (_milli / _rate);
+                    static std::chrono::milliseconds _duration (0);
 
-                    _start = std::chrono::steady_clock::now ();
+		    // Epoch time
+                    static auto _current = std::chrono::time_point < std::chrono::steady_clock > ();
+                    static auto _previous = std::chrono::time_point < std::chrono::steady_clock > ();
 
-                    std::chrono::duration < milli_t, std::milli > _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_start - _end);
+                    _current = std::chrono::steady_clock::now ();
 
+                    _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_current - _previous);
+
+                    // Skip update if it is too soon to flip the contents
                     if (_duration.count () >= _delay.count ()) {
                         _ret = _egl.Render (std::bind (&GLES::RenderScene, &_gles, WidthFromResolution (_resolution), HeightFromResolution (_resolution), [] (GLES::texture_t left, GLES::texture_t right) -> GLES::valid_t { GLES::valid_t _ret = left._offset._z > right._offset._z; return _ret; } ), true ) != false;
 
@@ -2726,7 +2737,8 @@ class CompositorImplementation;
                         }
                     }
 
-                    _end =_start;
+                    _previous = _current;
+
                 }
             }
 
