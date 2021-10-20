@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-SystemCommands plugin for Thunder framework.
+A SystemCommands plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 
 <a name="head.Introduction"></a>
@@ -75,6 +76,13 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkSystemCommands.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [SystemCommands.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/SystemCommands.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -88,7 +96,7 @@ SystemCommands interface methods:
 
 
 <a name="method.usbreset"></a>
-## *usbreset <sup>method</sup>*
+## *usbreset [<sup>method</sup>](#head.Methods)*
 
 Resets a USB device.
 
@@ -123,7 +131,7 @@ With this method a USB device can be reset using USBFS_RESET ioctl command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "SystemCommands.1.usbreset",
     "params": {
         "device": "/dev/usb/001"
@@ -136,7 +144,7 @@ With this method a USB device can be reset using USBFS_RESET ioctl command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```

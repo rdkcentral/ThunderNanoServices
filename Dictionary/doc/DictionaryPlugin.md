@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-Dictionary plugin for Thunder framework.
+A Dictionary plugin for Thunder framework.
 
 ### Table of Contents
 
