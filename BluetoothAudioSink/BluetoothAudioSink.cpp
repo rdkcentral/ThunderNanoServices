@@ -151,7 +151,7 @@ namespace Plugin {
             delete _sink;
             _sink = nullptr;
         } else {
-            TRACE(Trace::Error, (_T("Sink not assigned, assign first")));
+            TRACE(Trace::Error, (_T("Sink not assigned")));
         }
 
         _lock.Unlock();

@@ -27,6 +27,8 @@
 #include <interfaces/IBluetoothAudio.h>
 #include <interfaces/json/JBluetoothAudioSink.h>
 
+#include "AudioPlayer.h"
+
 #include "SDPServer.h"
 
 #include "ServiceDiscovery.h"
@@ -221,220 +223,6 @@ namespace Plugin {
             }
 
         public:
-            class Player : public Core::Thread {
-            private:
-                static constexpr uint16_t WRITE_AHEAD_THRESHOLD = 10 /* miliseconds */;
-
-            private:
-                class ReceiveBuffer : public Core::SharedBuffer {
-                public:
-                    ReceiveBuffer() = delete;
-                    ReceiveBuffer(const ReceiveBuffer&) = delete;
-                    ReceiveBuffer& operator=(const ReceiveBuffer&) = delete;
-
-                    ReceiveBuffer(const string& name)
-                        : Core::SharedBuffer(name.c_str())
-                    {
-                    }
-
-                    ~ReceiveBuffer() = default;
-
-                public:
-                    uint32_t Get(const uint32_t length, uint8_t buffer[])
-                    {
-                        uint32_t result = 0;
-
-                        if (IsValid() == true) {
-                            if (RequestConsume(100) == Core::ERROR_NONE) {
-                                ASSERT(BytesWritten() <= length);
-                                const uint32_t size = std::min(BytesWritten(), length);
-                                ::memcpy(buffer, Buffer(), size);
-                                result = size;
-                                Consumed();
-                            }
-                        }
-
-                        return (result);
-                    }
-                }; // class ReceiveBuffer
-
-            public:
-                Player() = delete;
-                Player(const Player&) = delete;
-                Player& operator=(const Player&) = delete;
-
-            public:
-                Player(A2DP::TransportChannel& transport, const string& connector)
-                    : _transport(transport)
-                    , _startTime(0)
-                    , _offset(0)
-                    , _available(0)
-                    , _minFrameSize(0)
-                    , _maxFrameSize(0)
-                    , _preferredFrameSize(0)
-                    , _receiveBuffer(connector)
-                    , _buffer(nullptr)
-                    , _readCursor(nullptr)
-                    , _eos(false)
-                {
-                    _minFrameSize = _transport.MinFrameSize();
-                    _preferredFrameSize = _transport.PreferredFrameSize();
-                    ASSERT(_minFrameSize != 0);
-                    ASSERT(_preferredFrameSize != 0);
-                    ASSERT(_minFrameSize <= _preferredFrameSize);
-
-                    if (_receiveBuffer.IsValid() == true) {
-                        _maxFrameSize = _receiveBuffer.Size();
-                        if (_maxFrameSize != 0) {
-                            _buffer = static_cast<uint8_t*>(::malloc((2 * _maxFrameSize)));
-                            ASSERT(_buffer != nullptr);
-                        }
-                    }
-
-                    if (_maxFrameSize == 0) {
-                        TRACE(Trace::Error, (_T("Shared buffer not available")));
-                    }
-                }
-                ~Player()
-                {
-                    Stop();
-                    ::free(_buffer);
-                }
-
-            public:
-                bool IsValid() const
-                {
-                    return ((_buffer != nullptr) && (_receiveBuffer.IsValid() == true) && (_transport.IsOpen() == true));
-                }
-                uint32_t Play()
-                {
-                    uint32_t result = Core::ERROR_NONE;
-
-                    if (IsValid() == true) {
-                        _transport.Reset();
-                        _readCursor = _buffer;
-                        _available = 0;
-                        _startTime = Core::Time::Now().Ticks();
-                        Thread::Run();
-                    } else {
-                        TRACE(Trace::Error, (_T("Transport channel is not opened!")));
-                        result = Core::ERROR_ILLEGAL_STATE;
-                    }
-
-                    return (result);
-                }
-                uint32_t Stop()
-                {
-                    uint32_t result = Core::ERROR_NONE;
-
-                    if (IsValid() == true) {
-                        _eos = true;
-                        Thread::Wait(BLOCKED, Core::infinite);
-                    } else {
-                        result = Core::ERROR_ILLEGAL_STATE;
-                    }
-
-                    return (result);
-                }
-                uint32_t GetTime(uint32_t& time /* milliseconds */) const
-                {
-                    uint32_t result = Core::ERROR_NONE;
-
-                    if (IsValid() == true) {
-                        time = _offset + ((1000ULL * _transport.Timestamp()) / _transport.ClockRate());
-                    } else {
-                        result = Core::ERROR_BAD_REQUEST;
-                        time = 0;
-                    }
-
-                    return (result);
-                }
-                uint32_t SetTime(const uint32_t time /* milliseconds */)
-                {
-                    _offset = time;
-                    return (Core::ERROR_NONE);
-                }
-
-            private:
-                uint32_t PlayTime() const
-                {
-                    return ((1000ULL * _transport.Timestamp()) / _transport.ClockRate());
-                }
-
-                uint32_t Worker() override
-                {
-                    if ((_available < _minFrameSize) && (_eos != true)) {
-                        // Have to replenish the local buffer...
-                        // Make sure we have at least the encoder preferred frame size available.
-                        // TODO: optimization opportunity
-                        ::memmove(_buffer, _readCursor, _available);
-
-                        while (_available < _preferredFrameSize) {
-                            const uint16_t bytesRead =_receiveBuffer.Get(_maxFrameSize, _buffer + _available);
-                            ASSERT(bytesRead <= _maxFrameSize);
-
-                            _available += bytesRead;
-
-                            if (bytesRead == 0) {
-                                // The audio source has problem providing more data at the moment...
-                                // We don't have the preferred data available, let's try to play out whatever there is left in the buffer anyway.
-                                 if (_available < _minFrameSize) {
-                                    // All data was used and no new is currently available, apparently the source has stalled - start anew.
-                                    _offset += PlayTime();
-                                    _startTime = Core::Time::Now().Ticks();
-                                    _transport.Reset();
-                                }
-                                break;
-                            }
-                        }
-
-                        _readCursor = _buffer;
-                    }
-
-                    if (_transport.IsOpen() == true) {
-                        const uint32_t playTime = PlayTime();
-                        const uint32_t elapsedTime = ((Core::Time::Now().Ticks() - _startTime) / 1000);
-
-                        if ((playTime > WRITE_AHEAD_THRESHOLD) && (playTime - WRITE_AHEAD_THRESHOLD > elapsedTime)) {
-                            // We're writing ahead of time, let's wait a bit, so the device's buffer does not overflow.
-                            ::SleepMs(playTime - elapsedTime);
-                        }
-
-                        const uint32_t transmitted = _transport.Transmit(_available, _readCursor);
-                        fprintf(stderr, "streaming; time %3i.%03i / %3i.%03i sec; delta %3i ms, frame %i bytes  \r",
-                                (playTime / 1000), (playTime % 1000), (elapsedTime / 1000), (elapsedTime % 1000), (playTime - elapsedTime), transmitted);
-
-                        if ((transmitted == 0) && (_eos == true)) {
-                            // Played out everything in the buffer and end-of-stream was signalled.
-                            Thread::Block();
-                        }
-
-                        _readCursor += transmitted;
-                        _available -= transmitted;
-
-                    } else {
-                        TRACE(Trace::Error, (_T("Bluetooth transport link failure - terminating audio stream")));
-                        Thread::Block();
-                    }
-
-                    return (0);
-                }
-
-            private:
-                A2DP::TransportChannel& _transport;
-                uint64_t _startTime;
-                uint32_t _offset;
-                uint32_t _available;
-                uint32_t _minFrameSize;
-                uint32_t _maxFrameSize;
-                uint32_t _preferredFrameSize;
-                ReceiveBuffer _receiveBuffer;
-                uint8_t* _buffer;
-                uint8_t* _readCursor;
-                bool _eos;
-            };
-
-        public:
             A2DPSink(const A2DPSink&) = delete;
             A2DPSink& operator=(const A2DPSink&) = delete;
             A2DPSink(BluetoothAudioSink* parent, const string& codecSettings, Exchange::IBluetooth::IDevice* device, const uint8_t seid)
@@ -575,7 +363,7 @@ namespace Plugin {
                             if ((result = _endpoint->Open()) == Core::ERROR_NONE) {
                                 ASSERT(_endpoint->Codec() != nullptr);
                                 if ((result = _transport.Connect(Designator(_device, _audioService.PSM()), _endpoint->Codec())) == Core::ERROR_NONE) {
-                                    _player = new Player(_transport, connector);
+                                    _player = new AudioPlayer(_transport, connector);
                                     ASSERT(_player != nullptr);
 
                                     if (_player->IsValid() == true) {
@@ -823,7 +611,7 @@ namespace Plugin {
             Exchange::IBluetoothAudioSink::devicetype _type;
             std::list<Exchange::IBluetoothAudioSink::audiocodec> _codecList;
             std::list<Exchange::IBluetoothAudioSink::drmscheme> _drmList;
-            Player* _player;
+            AudioPlayer* _player;
             DecoupledJob _job;
         }; // class A2DPSink
 

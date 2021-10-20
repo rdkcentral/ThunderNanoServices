@@ -53,7 +53,6 @@ namespace A2DP {
         {
             ParseCapabilities(sep);
         }
-
         ~AudioEndpoint()
         {
             delete _cp;
@@ -105,8 +104,7 @@ namespace A2DP {
             uint32_t result = Core::ERROR_NONE;
             _command.SetConfiguration(SEID(), _intSeid, config);
             if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
-                // Read it back...
-                result = CmdGetConfiguration();
+                // done?
             } else {
                 result = Core::ERROR_ASYNC_FAILED;
                 TRACE(Trace::Error, (_T("Failed to set endpoint configuration, SEID 0x%02x"), SEID()));
