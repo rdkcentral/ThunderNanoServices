@@ -40,6 +40,8 @@ namespace Plugin {
         _controller = config.Controller.Value();
         _codecSettings = config.Codecs.Value();
 
+        service->Register(&_comNotificationSink);
+
         Exchange::JBluetoothAudioSink::Register(*this, this);
 
         if (config.SDPService.Enable.Value() == true) {
@@ -111,6 +113,8 @@ namespace Plugin {
         _sdpServer.Stop();
 
         Exchange::JBluetoothAudioSink::Unregister(*this);
+
+        service->Unregister(&_comNotificationSink);
 
         service->Release();
         _service = nullptr;

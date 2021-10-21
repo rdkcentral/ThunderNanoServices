@@ -149,6 +149,42 @@ namespace Plugin {
         }; // class DecoupledJob
 
     public:
+        class ComNotificationSink : public PluginHost::IShell::ICOMLink::INotification {
+        public:
+            ComNotificationSink() = delete;
+            ComNotificationSink(const ComNotificationSink&) = delete;
+            ComNotificationSink& operator=(const ComNotificationSink&) = delete;
+            ComNotificationSink(BluetoothAudioSink& parent)
+                : _parent(parent)
+            {
+            }
+            ~ComNotificationSink() = default;
+
+        public:
+            void CleanedUp(const Core::IUnknown* remote, const uint32_t interfaceId) override
+            {
+            }
+            void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId) override
+            {
+                ASSERT(remote != nullptr);
+                if (interfaceId == Exchange::ID_BLUETOOTHAUDIOSINK_CALLBACK) {
+                    const Exchange::IBluetoothAudioSink::ICallback* result = remote->QueryInterface<const Exchange::IBluetoothAudioSink::ICallback>();
+                    ASSERT(result != nullptr);
+                    _parent.CallbackRevoked(result);
+                    result->Release();
+                }
+            }
+
+        public:
+            BEGIN_INTERFACE_MAP(ComNotificationSink)
+            INTERFACE_ENTRY(PluginHost::IShell::ICOMLink::INotification)
+            END_INTERFACE_MAP
+
+        private:
+            BluetoothAudioSink& _parent;
+        }; // clas ComNotificationSink
+
+    public:
         class A2DPSink {
         private:
             class ProfileFlow {
@@ -645,6 +681,7 @@ namespace Plugin {
         BluetoothAudioSink()
             : _lock()
             , _service(nullptr)
+            , _comNotificationSink(*this)
             , _controller()
             , _sdpServer()
             , _sink(nullptr)
@@ -899,11 +936,18 @@ namespace Plugin {
             }
         }
 
+        void CallbackRevoked(const Exchange::IBluetoothAudioSink::ICallback* remote VARIABLE_IS_NOT_USED)
+        {
+            TRACE(Trace::Information, (_T("Remote is dead, revoking the callback")));
+            Callback(nullptr);
+        }
+
         void Operational(const A2DPSink::AudioServiceData& data);
 
     private:
         mutable Core::CriticalSection _lock;
         PluginHost::IShell* _service;
+        Core::Sink<ComNotificationSink> _comNotificationSink;
         string _controller;
         SDP::ServiceDiscoveryServer _sdpServer;
         A2DPSink *_sink;
