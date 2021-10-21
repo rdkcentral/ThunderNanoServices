@@ -283,7 +283,7 @@ namespace Plugin {
                     if (composition != nullptr) {
                         _display = composition->QueryInterface <Exchange::IComposition::IDisplay> ();
 
-                        TRACE(i Trace::Information, ( _T ("Using non-COM-RPC path %p"), _display) );
+                        TRACE(Trace::Information, ( _T ("Using non-COM-RPC path %p"), _display) );
 
                         composition->Release ();
                     }
