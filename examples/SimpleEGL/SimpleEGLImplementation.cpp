@@ -22,6 +22,7 @@
 #include <interfaces/ITimeSync.h>
 
 #include <compositor/Client.h>
+#include <interfaces/IComposition.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -229,6 +230,13 @@ namespace Plugin {
         ~SimpleEGLImplementation() override
         {
             TRACE(Trace::Information, (_T("Destructing the SimpleEGLImplementation")));
+
+            if (_display != nullptr) {
+                _display->Release ();
+
+                _display = nullptr;
+            }
+
             Block();
 
             if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false) {
@@ -266,6 +274,21 @@ namespace Plugin {
                     TRACE(Trace::Information, (_T("Configuration requested to take [%d] mS"), _config.Init.Value()));
                     SleepMs(_config.Init.Value());
                 }
+
+                _display = nullptr;
+
+                if (service->COMLink () != nullptr) {
+                    auto composition = service->QueryInterfaceByCallsign <Exchange::IComposition> ("Compositor");
+
+                    if (composition != nullptr) {
+                        _display = composition->QueryInterface <Exchange::IComposition::IDisplay> ();
+
+                        TRACE(i Trace::Information, ( _T ("Using non-COM-RPC path %p"), _display) );
+
+                        composition->Release ();
+                    }
+                }
+
                 Run();
             }
 
@@ -437,7 +460,8 @@ namespace Plugin {
                 using surf_t = decltype (_surf);
                 using valid_t = decltype (_valid);
 
-                Natives () : _valid { Initialize () } {}
+                Natives () = delete;
+                Natives (Exchange::IComposition::IDisplay * display ) : _valid { Initialize ( display ) } {}
                 ~Natives () {
                     _valid = false;
                     DeInitialize ();
@@ -453,7 +477,7 @@ namespace Plugin {
 
             private :
 
-                bool Initialize () {
+                bool Initialize (Exchange::IComposition::IDisplay * display) {
                     constexpr char const * Name  = "SimpleEGL::Worker";
 
                     bool _ret = false;
@@ -471,7 +495,7 @@ namespace Plugin {
 
                     if (_ret != false) {
                         // Trigger the creation of the display.
-                        _dpy = Compositor::IDisplay::Instance (std::string (Name).append (":Display"));
+                        _dpy = Compositor::IDisplay::Instance (std::string (Name).append (":Display"), display);
                         _ret = _dpy != nullptr;
                     }
 
@@ -1067,7 +1091,8 @@ namespace Plugin {
             SleepMs(_config.Sleep.Value() * 1000);
 
             // Do not re-create
-            static Natives _natives;
+            static Natives _natives ( _display );
+
 
             EGL _egl (_natives);
 
@@ -1108,6 +1133,7 @@ namespace Plugin {
         Core::ThreadPool _executor;
         Core::Sink<PluginMonitor> _sink;
         PluginHost::IShell* _service;
+        Exchange::IComposition::IDisplay* _display;
     };
 
     // As a result of ODR use

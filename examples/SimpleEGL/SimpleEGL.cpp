@@ -73,15 +73,7 @@ namespace Plugin {
                 if (sink != nullptr) {
                     _service->Register(sink);
                     sink->Release();
-
-                    RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
-                    if (remoteConnection != nullptr) {
-                        remoteConnection->Release();
-                    }
-                    else {
-                        message = _T("Failed to instantiate the Server.");
-                    }
-                }
+                 }
             }
         }
 
