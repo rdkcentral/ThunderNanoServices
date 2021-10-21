@@ -58,6 +58,46 @@ namespace Plugin {
             _sdpServer.Start();
         }
 
+        if (Core::File(_service->PersistentPath()).IsDirectory() == false) {
+            if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
+                TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), _service->PersistentPath().c_str()));
+            }
+        } else {
+            Exchange::IBluetooth* bluetoothCtl(Controller());
+            if (bluetoothCtl != nullptr) {
+                Core::Directory storageDir (_service->PersistentPath().c_str(), _T("*.json"));
+
+                while ((_sink == nullptr) && (storageDir.Next() == true)) {
+                    string filename = Core::File::FileName(storageDir.Name());
+
+                    Bluetooth::Address address(filename.c_str());
+                    if (address.IsValid() == true) {
+                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
+                        if (device != nullptr) {
+                            Core::File fileData(storageDir.Current().c_str());
+                            if (fileData.Open(true) == true) {
+                                A2DPSink::AudioServiceData data;
+                                data.IElement::FromFile(fileData);
+
+                                _sink = new A2DPSink(this, _codecSettings, device, _sinkSEID, data);
+                                ASSERT(_sink != nullptr);
+
+                                TRACE(Trace::Information, (_T("Loaded assigned audio sink [%s]"), filename.c_str()));
+                            }
+
+                            device->Release();
+                        } else {
+                            TRACE(Trace::Error, (_T("Device [%s] is not known"), filename.c_str()));
+                        }
+                    }
+                }
+
+                bluetoothCtl->Release();
+            } else {
+                TRACE(Trace::Error, (_T("Bluetooth is not available")));
+            }
+        }
+
         return {};
     }
 
@@ -111,8 +151,7 @@ namespace Plugin {
             if (bluetoothCtl != nullptr) {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
                 if (device != nullptr) {
-                    const uint8_t seid = 1; // Revisit this if multiple simultaneous sinks are to be supported.
-                    _sink = new A2DPSink(this, _codecSettings, device, seid);
+                    _sink = new A2DPSink(this, _codecSettings, device, _sinkSEID);
                     if (_sink != nullptr) {
                         TRACE(Trace::Information, (_T("Assigned [%s] to Bluetooth audio sink"), address.c_str()));
                         result = Core::ERROR_NONE;
@@ -146,10 +185,16 @@ namespace Plugin {
         _lock.Lock();
 
         if (_sink != nullptr) {
-            TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
-            result = Core::ERROR_NONE;
-            delete _sink;
-            _sink = nullptr;
+            Core::File file(_service->PersistentPath() + _sink->Address() + _T(".json"));
+            if (file.Destroy() == true) {
+                TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
+                result = Core::ERROR_NONE;
+                delete _sink;
+                _sink = nullptr;
+            } else {
+                result = Core::ERROR_GENERAL;
+                TRACE(Trace::Error, (_T("Failed to revoke [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
+            }
         } else {
             TRACE(Trace::Error, (_T("Sink not assigned")));
         }
@@ -157,6 +202,18 @@ namespace Plugin {
         _lock.Unlock();
 
         return (result);
+    }
+
+    void BluetoothAudioSink::Operational(const A2DPSink::AudioServiceData& data)
+    {
+        ASSERT(_sink != nullptr);
+
+        // Store the settings, if not already done..
+        Core::File settingsFile(_service->PersistentPath() + _sink->Address() + _T(".json"));
+        if ( (settingsFile.Exists() == false) && (settingsFile.Create() == true) ) {
+            data.IElement::ToFile(settingsFile);
+            settingsFile.Close();
+        }
     }
 
 } // namespace Plugin

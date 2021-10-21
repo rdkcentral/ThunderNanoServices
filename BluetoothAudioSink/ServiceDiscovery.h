@@ -21,6 +21,8 @@
 
 #include "Module.h"
 
+#include "SDPServer.h" // TODO: For dump only...
+
 namespace WPEFramework {
 
 namespace A2DP {
@@ -92,6 +94,36 @@ namespace A2DP {
             };
 
         public:
+            class Data : public Core::JSON::Container {
+            public:
+                Data(const Data&) = delete;
+                Data& operator=(const Data&) = delete;
+
+                Data()
+                    : Core::JSON::Container()
+                    , PSM(0)
+                    , A2DPVersion(0)
+                    , AVDTPVersion(0)
+                    , Features(0)
+                    , Type(SINK)
+                {
+                    Add(_T("psm"), &PSM);
+                    Add(_T("a2dp"), &A2DPVersion);
+                    Add(_T("avdtp"), &AVDTPVersion);
+                    Add(_T("features"), &Features);
+                    Add(_T("type"), &Type);                }
+
+                ~Data() = default;
+
+            public:
+                Core::JSON::DecUInt16 PSM;
+                Core::JSON::HexUInt16 A2DPVersion;
+                Core::JSON::HexUInt16 AVDTPVersion;
+                Core::JSON::DecUInt16 Features;
+                Core::JSON::EnumType<type> Type;
+            };
+
+        public:
             class FeaturesDescriptor : public Bluetooth::SDP::Service::Data::Element<uint16_t> {
             public:
                 using Element::Element;
@@ -155,6 +187,16 @@ namespace A2DP {
                 }
             }
 
+            AudioService(const Data& data)
+                : AudioService()
+            {
+                _type = SINK;
+                _l2capPsm = data.PSM.Value();
+                _a2dpVersion = data.A2DPVersion.Value();
+                _avdtpVersion = data.AVDTPVersion.Value();
+                _features = static_cast<features>(data.Features.Value());
+            }
+
             ~AudioService() = default;
 
         public:
@@ -177,6 +219,14 @@ namespace A2DP {
             features Features() const
             {
                 return (_features);
+            }
+            void Settings(Data& data) const
+            {
+                data.PSM = _l2capPsm;
+                data.A2DPVersion = _a2dpVersion;
+                data.AVDTPVersion = _avdtpVersion;
+                data.Features = _avdtpVersion;
+                data.Type = _type;
             }
 
         private:
@@ -279,6 +329,7 @@ namespace A2DP {
                 });
             }
         }
+
     private:
         Core::CriticalSection _lock;
         Bluetooth::SDP::Profile _profile;

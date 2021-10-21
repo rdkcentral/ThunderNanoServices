@@ -41,6 +41,7 @@ add_library(${MODULE_NAME} SHARED
     BluetoothAudioSink.cpp
     AudioCodecSBC.cpp
     AudioEndpoint.cpp
+    ServiceDiscovery.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

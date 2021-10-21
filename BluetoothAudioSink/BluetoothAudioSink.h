@@ -223,6 +223,9 @@ namespace Plugin {
             }
 
         public:
+            using AudioServiceData = A2DP::ServiceDiscovery::AudioService::Data;
+
+        public:
             A2DPSink(const A2DPSink&) = delete;
             A2DPSink& operator=(const A2DPSink&) = delete;
             A2DPSink(BluetoothAudioSink* parent, const string& codecSettings, Exchange::IBluetooth::IDevice* device, const uint8_t seid)
@@ -231,6 +234,7 @@ namespace Plugin {
                 , _device(device)
                 , _callback(*this)
                 , _lock()
+                , _audioService()
                 , _discovery(Designator(device), Designator(device, Bluetooth::SDP::ClientSocket::SDP_PSM /* a well-known PSM */))
                 , _signalling(seid, std::bind(&A2DPSink::OnSignallingUpdated, this), Designator(device), Designator(device, 0 /* yet unknown PSM */))
                 , _transport(1 /* SSRC */, Designator(device), Designator(device, 0 /* yet unknown PSM */))
@@ -255,6 +259,12 @@ namespace Plugin {
                 if (_device->Callback(&_callback) != Core::ERROR_NONE) {
                     TRACE(Trace::Error, (_T("The device is already in use")));
                 }
+            }
+            A2DPSink(BluetoothAudioSink* parent, const string& codecSettings, Exchange::IBluetooth::IDevice* device, const uint8_t seid, const AudioServiceData& data)
+                : A2DPSink(parent, codecSettings, device, seid)
+            {
+                _audioService = A2DP::ServiceDiscovery::AudioService(data);
+                _type = DeviceType(_audioService.Features());
             }
             ~A2DPSink()
             {
@@ -530,20 +540,27 @@ namespace Plugin {
                     // Now open AVDTP signalling channel...
                     TRACE(ProfileFlow, (_T("Audio sink device discovered, connect to the sink...")));
 
-                    if (_audioService.Features() & A2DP::ServiceDiscovery::AudioService::features::HEADPHONE) {
-                        _type = Exchange::IBluetoothAudioSink::HEADPHONE;
-                    } else if (_audioService.Features() & A2DP::ServiceDiscovery::AudioService::features::SPEAKER) {
-                        _type = Exchange::IBluetoothAudioSink::SPEAKER;
-                    } else if (_audioService.Features() & A2DP::ServiceDiscovery::AudioService::features::RECORDER) {
-                        _type = Exchange::IBluetoothAudioSink::RECORDER;
-                    } else if (_audioService.Features() & A2DP::ServiceDiscovery::AudioService::features::AMPLIFIER) {
-                        _type = Exchange::IBluetoothAudioSink::AMPLIFIER;
-                    }
+                    _type = DeviceType(_audioService.Features());
 
                     DiscoverAudioStreamEndpoints(_audioService);
                 } else {
                     _signalling.State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                 }
+            }
+
+            Exchange::IBluetoothAudioSink::devicetype DeviceType(const A2DP::ServiceDiscovery::AudioService::features features) const
+            {
+                Exchange::IBluetoothAudioSink::devicetype type;
+                if (features & A2DP::ServiceDiscovery::AudioService::features::HEADPHONE) {
+                    type = Exchange::IBluetoothAudioSink::HEADPHONE;
+                } else if (features & A2DP::ServiceDiscovery::AudioService::features::SPEAKER) {
+                    type = Exchange::IBluetoothAudioSink::SPEAKER;
+                } else if (features & A2DP::ServiceDiscovery::AudioService::features::RECORDER) {
+                    type = Exchange::IBluetoothAudioSink::RECORDER;
+                } else if (features & A2DP::ServiceDiscovery::AudioService::features::AMPLIFIER) {
+                    type = Exchange::IBluetoothAudioSink::AMPLIFIER;
+                }
+                return (type);
             }
 
         private:
@@ -594,7 +611,14 @@ namespace Plugin {
                     }
                 }
 
-                _signalling.State(_endpoint == nullptr? Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE : Exchange::IBluetoothAudioSink::CONNECTED);
+                if (_endpoint != nullptr) {
+                    AudioServiceData settings;
+                    _audioService.Settings(settings);
+                    _signalling.State(Exchange::IBluetoothAudioSink::CONNECTED);
+                    _parent.Operational(settings);
+                } else {
+                    _signalling.State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
+                }
            }
 
         private:
@@ -624,6 +648,7 @@ namespace Plugin {
             , _controller()
             , _sdpServer()
             , _sink(nullptr)
+            , _sinkSEID(1)
             , _callback(nullptr)
             , _codecSettings()
         {
@@ -874,12 +899,15 @@ namespace Plugin {
             }
         }
 
+        void Operational(const A2DPSink::AudioServiceData& data);
+
     private:
         mutable Core::CriticalSection _lock;
         PluginHost::IShell* _service;
         string _controller;
         SDP::ServiceDiscoveryServer _sdpServer;
         A2DPSink *_sink;
+        uint32_t _sinkSEID;
         Exchange::IBluetoothAudioSink::ICallback* _callback;
         string _codecSettings;
     }; // class BluetoothAudioSink
