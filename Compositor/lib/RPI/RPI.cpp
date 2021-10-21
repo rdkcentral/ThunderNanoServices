@@ -2678,8 +2678,6 @@ class CompositorImplementation;
                 // Update the scene only if sufficient time has elapes
 
                 if (_ret != false) {
-                    // Limit rate to avoid free run if the Swap fails
-
                     // Signed and at least 45 bits
                     using milli_t = int64_t;
 
@@ -2713,20 +2711,16 @@ class CompositorImplementation;
 
                     static decltype (_milli) _rate = RefreshRateFromResolution ( _resolution );
 
-
                     // Skip update if it is too soon to flip the contents
 
                     static std::chrono::milliseconds _delay (_milli / _rate);
-                    static std::chrono::milliseconds _duration (0);
 
-		    // Epoch time
-                    static auto _current = std::chrono::time_point < std::chrono::steady_clock > ();
-                    static auto _previous = std::chrono::time_point < std::chrono::steady_clock > ();
+                    static std::chrono::milliseconds _duration (_delay);
 
-                    _current = std::chrono::steady_clock::now ();
+                    auto _start = std::chrono::steady_clock::now ();
 
-                    _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_current - _previous);
 
+// TODO: allow small margin
                     // Skip update if it is too soon to flip the contents
                     if (_duration.count () >= _delay.count ()) {
                         _ret = _egl.Render (std::bind (&GLES::RenderScene, &_gles, WidthFromResolution (_resolution), HeightFromResolution (_resolution), [] (GLES::texture_t left, GLES::texture_t right) -> GLES::valid_t { GLES::valid_t _ret = left._offset._z > right._offset._z; return _ret; } ), true ) != false;
@@ -2735,11 +2729,15 @@ class CompositorImplementation;
                             ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
                             /* void */ _platform.Swap (_bufferInfo);
                         }
+
                     }
 
-                    _previous = _current;
 
+                    auto _finish = std::chrono::steady_clock::now ();
+
+                    _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_finish - _start);
                 }
+
             }
 
             return _ret;
