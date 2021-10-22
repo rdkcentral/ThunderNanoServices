@@ -1,8 +1,0 @@
-{
- "locator":"libWPEFrameworkSecureShellServer.so",
- "classname":"SecureShellServer",
- "precondition":[
-  "Platform"
- ],
- "autostart":true
-}

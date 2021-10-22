@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-BluetoothRemoteControl plugin for Thunder framework.
+A BluetoothRemoteControl plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -82,6 +83,13 @@ The table below lists configuration options of the plugin.
 | configuration?.keyingest | boolean | <sup>*(optional)*</sup> Enable keyingest |
 | configuration?.recorder | enum | <sup>*(optional)*</sup> Recorder |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [BluetoothRemoteControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/BluetoothRemoteControl.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -96,7 +104,7 @@ BluetoothRemoteControl interface methods:
 
 
 <a name="method.assign"></a>
-## *assign <sup>method</sup>*
+## *assign [<sup>method</sup>](#head.Methods)*
 
 Assigns a bluetooth device as a remote control unit.
 
@@ -128,7 +136,7 @@ Assigns a bluetooth device as a remote control unit.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.assign",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
@@ -141,13 +149,13 @@ Assigns a bluetooth device as a remote control unit.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.revoke"></a>
-## *revoke <sup>method</sup>*
+## *revoke [<sup>method</sup>](#head.Methods)*
 
 Revokes the current remote control assignment.
 
@@ -174,7 +182,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.revoke"
 }
 ```
@@ -184,7 +192,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -207,7 +215,7 @@ BluetoothRemoteControl interface properties:
 
 
 <a name="property.name"></a>
-## *name <sup>property</sup>*
+## *name [<sup>property</sup>](#head.Properties)*
 
 Provides access to the unit name.
 
@@ -232,7 +240,7 @@ Provides access to the unit name.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.name"
 }
 ```
@@ -242,13 +250,13 @@ Provides access to the unit name.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "Acme Bluetooth RCU"
 }
 ```
 
 <a name="property.address"></a>
-## *address <sup>property</sup>*
+## *address [<sup>property</sup>](#head.Properties)*
 
 Provides access to the bluetooth address of the unit.
 
@@ -273,7 +281,7 @@ Provides access to the bluetooth address of the unit.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.address"
 }
 ```
@@ -283,13 +291,13 @@ Provides access to the bluetooth address of the unit.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "81:6F:B0:91:9B:FE"
 }
 ```
 
 <a name="property.info"></a>
-## *info <sup>property</sup>*
+## *info [<sup>property</sup>](#head.Properties)*
 
 Provides access to the unit auxiliary information.
 
@@ -320,7 +328,7 @@ Provides access to the unit auxiliary information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.info"
 }
 ```
@@ -330,7 +338,7 @@ Provides access to the unit auxiliary information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "model": "Acme 1500 Plus",
         "serial": "1234567890",
@@ -342,7 +350,7 @@ Provides access to the unit auxiliary information.
 ```
 
 <a name="property.batterylevel"></a>
-## *batterylevel <sup>property</sup>*
+## *batterylevel [<sup>property</sup>](#head.Properties)*
 
 Provides access to the battery level.
 
@@ -368,7 +376,7 @@ Provides access to the battery level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.batterylevel"
 }
 ```
@@ -378,13 +386,13 @@ Provides access to the battery level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 50
 }
 ```
 
 <a name="property.voice"></a>
-## *voice <sup>property</sup>*
+## *voice [<sup>property</sup>](#head.Properties)*
 
 Provides access to the enable or Disable the flow of Voice data fragments from the remote.
 
@@ -407,7 +415,7 @@ Provides access to the enable or Disable the flow of Voice data fragments from t
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.voice"
 }
 ```
@@ -417,7 +425,7 @@ Provides access to the enable or Disable the flow of Voice data fragments from t
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": false
 }
 ```
@@ -427,7 +435,7 @@ Provides access to the enable or Disable the flow of Voice data fragments from t
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.voice",
     "params": false
 }
@@ -438,13 +446,13 @@ Provides access to the enable or Disable the flow of Voice data fragments from t
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.audioprofile"></a>
-## *audioprofile <sup>property</sup>*
+## *audioprofile [<sup>property</sup>](#head.Properties)*
 
 Provides access to the audio profile details.
 
@@ -474,7 +482,7 @@ Provides access to the audio profile details.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothRemoteControl.1.audioprofile"
 }
 ```
@@ -484,7 +492,7 @@ Provides access to the audio profile details.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "codec": "ADPCM",
         "channels": 1,
@@ -511,7 +519,7 @@ BluetoothRemoteControl interface events:
 
 
 <a name="event.audiotransmission"></a>
-## *audiotransmission <sup>event</sup>*
+## *audiotransmission [<sup>event</sup>](#head.Notifications)*
 
 Notifies about audio data transmission.
 
@@ -539,7 +547,7 @@ Register to this event to be notified about audio transmission status
 ```
 
 <a name="event.audioframe"></a>
-## *audioframe <sup>event</sup>*
+## *audioframe [<sup>event</sup>](#head.Notifications)*
 
 Notifies about new audio data available.
 
@@ -569,7 +577,7 @@ Register to this event to be notified about audio data
 ```
 
 <a name="event.batterylevelchange"></a>
-## *batterylevelchange <sup>event</sup>*
+## *batterylevelchange [<sup>event</sup>](#head.Notifications)*
 
 Notifies about battery level changes.
 

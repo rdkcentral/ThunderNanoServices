@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-DisplayInfo plugin for Thunder framework.
+A DisplayInfo plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -77,6 +78,16 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkDisplayInfo.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- Exchange::IGraphicsProperties ([IDisplayInfo.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IDisplayInfo.h))
+- Exchange::IConnectionProperties ([IDisplayInfo.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IDisplayInfo.h))
+- Exchange::IHDRProperties ([IDisplayInfo.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IDisplayInfo.h))
+- Exchange::IDisplayProperties ([IDisplayInfo.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IDisplayInfo.h))
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -92,7 +103,7 @@ ConnectionProperties interface methods:
 
 
 <a name="method.edid"></a>
-## *edid <sup>method</sup>*
+## *edid [<sup>method</sup>](#head.Methods)*
 
 TV's Extended Display Identification Data.
 
@@ -118,7 +129,7 @@ TV's Extended Display Identification Data.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.edid",
     "params": {
         "length": 0
@@ -131,16 +142,16 @@ TV's Extended Display Identification Data.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "length": 0,
-        "data": ""
+        "data": "..."
     }
 }
 ```
 
 <a name="method.widthincentimeters"></a>
-## *widthincentimeters <sup>method</sup>*
+## *widthincentimeters [<sup>method</sup>](#head.Methods)*
 
 Horizontal size in centimeters.
 
@@ -152,7 +163,7 @@ This method takes no parameters.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | integer |  |
+| width | integer | width in cm |
 
 ### Example
 
@@ -161,7 +172,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.widthincentimeters"
 }
 ```
@@ -171,13 +182,13 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="method.heightincentimeters"></a>
-## *heightincentimeters <sup>method</sup>*
+## *heightincentimeters [<sup>method</sup>](#head.Methods)*
 
 Vertical size in centimeters.
 
@@ -189,7 +200,7 @@ This method takes no parameters.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | integer |  |
+| heigth | integer |  |
 
 ### Example
 
@@ -198,7 +209,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.heightincentimeters"
 }
 ```
@@ -208,7 +219,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
@@ -245,9 +256,20 @@ HDRProperties interface properties:
 | [stbcapabilities](#property.stbcapabilities) <sup>RO</sup> | HDR formats supported by STB |
 | [hdrsetting](#property.hdrsetting) <sup>RO</sup> | HDR format in use |
 
+DisplayProperties interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [colorspace](#property.colorspace) <sup>RO</sup> | Provides access to the display's Colour space (chroma subsampling format) |
+| [framerate](#property.framerate) <sup>RO</sup> | Provides access to Frame Rate |
+| [colourdepth](#property.colourdepth) <sup>RO</sup> | Provides access to display's colour Depth |
+| [colorimetry](#property.colorimetry) <sup>RO</sup> | Provides access to display's colorimetry |
+| [quantizationrange](#property.quantizationrange) <sup>RO</sup> | Provides access to display's Qauntization Range |
+| [eotf](#property.eotf) <sup>RO</sup> | Provides access to display's Electro optical transfer function |
+
 
 <a name="property.totalgpuram"></a>
-## *totalgpuram <sup>property</sup>*
+## *totalgpuram [<sup>property</sup>](#head.Properties)*
 
 Provides access to the total GPU DRAM memory (in bytes).
 
@@ -257,7 +279,7 @@ Provides access to the total GPU DRAM memory (in bytes).
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | integer | Total GPU DRAM memory (in bytes) |
+| total | integer | Total GPU DRAM memory (in bytes) |
 
 ### Example
 
@@ -266,7 +288,7 @@ Provides access to the total GPU DRAM memory (in bytes).
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.totalgpuram"
 }
 ```
@@ -276,13 +298,13 @@ Provides access to the total GPU DRAM memory (in bytes).
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="property.freegpuram"></a>
-## *freegpuram <sup>property</sup>*
+## *freegpuram [<sup>property</sup>](#head.Properties)*
 
 Provides access to the free GPU DRAM memory (in bytes).
 
@@ -292,7 +314,7 @@ Provides access to the free GPU DRAM memory (in bytes).
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | integer | Free GPU DRAM memory (in bytes) |
+| free | integer | Free GPU DRAM memory (in bytes) |
 
 ### Example
 
@@ -301,7 +323,7 @@ Provides access to the free GPU DRAM memory (in bytes).
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.freegpuram"
 }
 ```
@@ -311,13 +333,13 @@ Provides access to the free GPU DRAM memory (in bytes).
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="property.isaudiopassthrough"></a>
-## *isaudiopassthrough <sup>property</sup>*
+## *isaudiopassthrough [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current audio passthrough status on HDMI.
 
@@ -327,7 +349,7 @@ Provides access to the current audio passthrough status on HDMI.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Current audio passthrough status on HDMI |
+| passthru | boolean | enabled/disabled |
 
 ### Example
 
@@ -336,7 +358,7 @@ Provides access to the current audio passthrough status on HDMI.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.isaudiopassthrough"
 }
 ```
@@ -346,13 +368,13 @@ Provides access to the current audio passthrough status on HDMI.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": false
 }
 ```
 
 <a name="property.connected"></a>
-## *connected <sup>property</sup>*
+## *connected [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current HDMI connection status.
 
@@ -362,7 +384,7 @@ Provides access to the current HDMI connection status.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Current HDMI connection status |
+| isconnected | boolean | connected/disconnected |
 
 ### Example
 
@@ -371,7 +393,7 @@ Provides access to the current HDMI connection status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.connected"
 }
 ```
@@ -381,13 +403,13 @@ Provides access to the current HDMI connection status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": false
 }
 ```
 
 <a name="property.width"></a>
-## *width <sup>property</sup>*
+## *width [<sup>property</sup>](#head.Properties)*
 
 Provides access to the horizontal resolution of TV.
 
@@ -397,7 +419,7 @@ Provides access to the horizontal resolution of TV.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | integer | Horizontal resolution of TV |
+| width | integer |  width of TV in pixels |
 
 ### Example
 
@@ -406,7 +428,7 @@ Provides access to the horizontal resolution of TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.width"
 }
 ```
@@ -416,13 +438,13 @@ Provides access to the horizontal resolution of TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="property.height"></a>
-## *height <sup>property</sup>*
+## *height [<sup>property</sup>](#head.Properties)*
 
 Provides access to the vertical resolution of TV.
 
@@ -432,7 +454,7 @@ Provides access to the vertical resolution of TV.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | integer | Vertical resolution of TV |
+| height | integer |  height of TV in pixels |
 
 ### Example
 
@@ -441,7 +463,7 @@ Provides access to the vertical resolution of TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.height"
 }
 ```
@@ -451,13 +473,13 @@ Provides access to the vertical resolution of TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="property.verticalfreq"></a>
-## *verticalfreq <sup>property</sup>*
+## *verticalfreq [<sup>property</sup>](#head.Properties)*
 
 Provides access to the vertical Frequency.
 
@@ -467,7 +489,7 @@ Provides access to the vertical Frequency.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | integer | Vertical Frequency |
+| vf | integer | vertical freq |
 
 ### Example
 
@@ -476,7 +498,7 @@ Provides access to the vertical Frequency.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.verticalfreq"
 }
 ```
@@ -486,13 +508,13 @@ Provides access to the vertical Frequency.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="property.hdcpprotection"></a>
-## *hdcpprotection <sup>property</sup>*
+## *hdcpprotection [<sup>property</sup>](#head.Properties)*
 
 Provides access to the HDCP protocol used for transmission.
 
@@ -500,7 +522,7 @@ Provides access to the HDCP protocol used for transmission.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | HDCP protocol used for transmission (must be one of the following: *HdcpUnencrypted*, *Hdcp1X*, *Hdcp2X*, *HdcpAuto*) |
+| value | string | protocol (must be one of the following: *HdcpUnencrypted*, *Hdcp1X*, *Hdcp2X*, *HdcpAuto*) |
 
 ### Example
 
@@ -509,7 +531,7 @@ Provides access to the HDCP protocol used for transmission.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.hdcpprotection"
 }
 ```
@@ -519,7 +541,7 @@ Provides access to the HDCP protocol used for transmission.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "HdcpUnencrypted"
 }
 ```
@@ -529,7 +551,7 @@ Provides access to the HDCP protocol used for transmission.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.hdcpprotection",
     "params": "HdcpUnencrypted"
 }
@@ -540,13 +562,13 @@ Provides access to the HDCP protocol used for transmission.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.portname"></a>
-## *portname <sup>property</sup>*
+## *portname [<sup>property</sup>](#head.Properties)*
 
 Provides access to the video output port on the STB used for connection to TV.
 
@@ -556,7 +578,7 @@ Provides access to the video output port on the STB used for connection to TV.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Video output port on the STB used for connection to TV |
+| name | string | video output port name |
 
 ### Example
 
@@ -565,7 +587,7 @@ Provides access to the video output port on the STB used for connection to TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.portname"
 }
 ```
@@ -575,13 +597,13 @@ Provides access to the video output port on the STB used for connection to TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": ""
+    "id": 42,
+    "result": "..."
 }
 ```
 
 <a name="property.tvcapabilities"></a>
-## *tvcapabilities <sup>property</sup>*
+## *tvcapabilities [<sup>property</sup>](#head.Properties)*
 
 Provides access to the HDR formats supported by TV.
 
@@ -591,8 +613,8 @@ Provides access to the HDR formats supported by TV.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | HDR formats supported by TV |
-| (property)[#] | string |  (must be one of the following: *HdrOff*, *Hdr10*, *Hdr10Plus*, *HdrHlg*, *HdrDolbyvision*, *HdrTechnicolor*) |
+| type | array | HDR formats supported by TV |
+| type[#] | string |  (must be one of the following: *HdrOff*, *Hdr10*, *Hdr10Plus*, *HdrHlg*, *HdrDolbyvision*, *HdrTechnicolor*) |
 
 ### Example
 
@@ -601,7 +623,7 @@ Provides access to the HDR formats supported by TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.tvcapabilities"
 }
 ```
@@ -611,7 +633,7 @@ Provides access to the HDR formats supported by TV.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "HdrOff"
     ]
@@ -619,7 +641,7 @@ Provides access to the HDR formats supported by TV.
 ```
 
 <a name="property.stbcapabilities"></a>
-## *stbcapabilities <sup>property</sup>*
+## *stbcapabilities [<sup>property</sup>](#head.Properties)*
 
 Provides access to the HDR formats supported by STB.
 
@@ -629,8 +651,8 @@ Provides access to the HDR formats supported by STB.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | HDR formats supported by STB |
-| (property)[#] | string |  (must be one of the following: *HdrOff*, *Hdr10*, *Hdr10Plus*, *HdrHlg*, *HdrDolbyvision*, *HdrTechnicolor*) |
+| type | array | HDR formats supported by STB |
+| type[#] | string |  (must be one of the following: *HdrOff*, *Hdr10*, *Hdr10Plus*, *HdrHlg*, *HdrDolbyvision*, *HdrTechnicolor*) |
 
 ### Example
 
@@ -639,7 +661,7 @@ Provides access to the HDR formats supported by STB.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.stbcapabilities"
 }
 ```
@@ -649,7 +671,7 @@ Provides access to the HDR formats supported by STB.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "HdrOff"
     ]
@@ -657,7 +679,7 @@ Provides access to the HDR formats supported by STB.
 ```
 
 <a name="property.hdrsetting"></a>
-## *hdrsetting <sup>property</sup>*
+## *hdrsetting [<sup>property</sup>](#head.Properties)*
 
 Provides access to the HDR format in use.
 
@@ -667,7 +689,7 @@ Provides access to the HDR format in use.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | HDR format in use (must be one of the following: *HdrOff*, *Hdr10*, *Hdr10Plus*, *HdrHlg*, *HdrDolbyvision*, *HdrTechnicolor*) |
+| type | string | HDR format (must be one of the following: *HdrOff*, *Hdr10*, *Hdr10Plus*, *HdrHlg*, *HdrDolbyvision*, *HdrTechnicolor*) |
 
 ### Example
 
@@ -676,7 +698,7 @@ Provides access to the HDR format in use.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "DisplayInfo.1.hdrsetting"
 }
 ```
@@ -686,8 +708,221 @@ Provides access to the HDR format in use.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "HdrOff"
+}
+```
+
+<a name="property.colorspace"></a>
+## *colorspace [<sup>property</sup>](#head.Properties)*
+
+Provides access to the provides access to the display's Colour space (chroma subsampling format).
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| cs | string | colour space (must be one of the following: *FormatUnknown*, *FormatOther*, *FormatRgb444*, *FormatYcbcr444*, *FormatYcbcr422*, *FormatYcbcr420*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DisplayInfo.1.colorspace"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "FormatUnknown"
+}
+```
+
+<a name="property.framerate"></a>
+## *framerate [<sup>property</sup>](#head.Properties)*
+
+Provides access to the provides access to Frame Rate.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| rate | string | frame rate (must be one of the following: *FramerateUnknown*, *Framerate23976*, *Framerate24*, *Framerate25*, *Framerate2997*, *Framerate30*, *Framerate47952*, *Framerate48*, *Framerate50*, *Framerate5994*, *Framerate60*, *Framerate11988*, *Framerate120*, *Framerate144*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DisplayInfo.1.framerate"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "FramerateUnknown"
+}
+```
+
+<a name="property.colourdepth"></a>
+## *colourdepth [<sup>property</sup>](#head.Properties)*
+
+Provides access to the provides access to display's colour Depth.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| colour | string | colour depth (must be one of the following: *ColordepthUnknown*, *Colordepth8Bit*, *Colordepth10Bit*, *Colordepth12Bit*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DisplayInfo.1.colourdepth"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "ColordepthUnknown"
+}
+```
+
+<a name="property.colorimetry"></a>
+## *colorimetry [<sup>property</sup>](#head.Properties)*
+
+Provides access to the provides access to display's colorimetry.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| colorimetry | array | display colorimetry |
+| colorimetry[#] | string |  (must be one of the following: *ColorimetryUnknown*, *ColorimetryOther*, *ColorimetrySmpte170M*, *ColorimetryBt709*, *ColorimetryXvycc601*, *ColorimetryXvycc709*, *ColorimetrySycc601*, *ColorimetryOpycc601*, *ColorimetryOprgb*, *ColorimetryBt2020Yccbcbrc*, *ColorimetryBt2020RgbYcbcr*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DisplayInfo.1.colorimetry"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": [
+        "ColorimetryUnknown"
+    ]
+}
+```
+
+<a name="property.quantizationrange"></a>
+## *quantizationrange [<sup>property</sup>](#head.Properties)*
+
+Provides access to the provides access to display's Qauntization Range.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| qr | string | quantization range (must be one of the following: *QuantizationrangeUnknown*, *QuantizationrangeLimited*, *QuantizationrangeFull*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DisplayInfo.1.quantizationrange"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "QuantizationrangeUnknown"
+}
+```
+
+<a name="property.eotf"></a>
+## *eotf [<sup>property</sup>](#head.Properties)*
+
+Provides access to the provides access to display's Electro optical transfer function.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| eotf | string | display's EOTF (must be one of the following: *EotfUnknown*, *EotfOther*, *EotfBt1886*, *EotfBt2100*, *EotfSmpteSt2084*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DisplayInfo.1.eotf"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "EotfUnknown"
 }
 ```
 
@@ -706,7 +941,7 @@ ConnectionProperties interface events:
 
 
 <a name="event.updated"></a>
-## *updated <sup>event</sup>*
+## *updated [<sup>event</sup>](#head.Notifications)*
 
 ### Parameters
 

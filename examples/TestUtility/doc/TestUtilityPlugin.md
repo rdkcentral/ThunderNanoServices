@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-TestUtility plugin for Thunder framework.
+A TestUtility plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 
@@ -76,6 +77,13 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkTestUtility.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [TestUtility.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/TestUtility.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -90,7 +98,7 @@ TestUtility interface methods:
 
 
 <a name="method.runmemory"></a>
-## *runmemory <sup>method</sup>*
+## *runmemory [<sup>method</sup>](#head.Methods)*
 
 Runs a memory test command.
 
@@ -125,7 +133,7 @@ Runs a memory test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestUtility.1.runmemory",
     "params": {
         "command": "Malloc",
@@ -139,7 +147,7 @@ Runs a memory test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "allocated": 0,
         "size": 0,
@@ -149,7 +157,7 @@ Runs a memory test command.
 ```
 
 <a name="method.runcrash"></a>
-## *runcrash <sup>method</sup>*
+## *runcrash [<sup>method</sup>](#head.Methods)*
 
 Runs a crash test command.
 
@@ -182,7 +190,7 @@ Runs a crash test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestUtility.1.runcrash",
     "params": {
         "command": "Crash",
@@ -197,7 +205,7 @@ Runs a crash test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -218,7 +226,7 @@ TestUtility interface properties:
 
 
 <a name="property.commands"></a>
-## *commands <sup>property</sup>*
+## *commands [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of test commands.
 
@@ -238,7 +246,7 @@ Provides access to the list of test commands.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestUtility.1.commands"
 }
 ```
@@ -248,7 +256,7 @@ Provides access to the list of test commands.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "Malloc"
     ]
@@ -256,7 +264,7 @@ Provides access to the list of test commands.
 ```
 
 <a name="property.description"></a>
-## *description <sup>property</sup>*
+## *description [<sup>property</sup>](#head.Properties)*
 
 Provides access to the description of a test command.
 
@@ -269,7 +277,7 @@ Provides access to the description of a test command.
 | (property) | object | Description of a test command |
 | (property).description | string | Test command description |
 
-> The *command* shall be passed as the index to the property, e.g. *TestUtility.1.description@Malloc*.
+> The *command* argument shall be passed as the index to the property, e.g. *TestUtility.1.description@Malloc*.
 
 ### Errors
 
@@ -285,7 +293,7 @@ Provides access to the description of a test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestUtility.1.description@Malloc"
 }
 ```
@@ -295,7 +303,7 @@ Provides access to the description of a test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "description": "Allocates desired amount of memory (in KB) and holds it"
     }
@@ -303,7 +311,7 @@ Provides access to the description of a test command.
 ```
 
 <a name="property.parameters"></a>
-## *parameters <sup>property</sup>*
+## *parameters [<sup>property</sup>](#head.Properties)*
 
 Provides access to the parameters of a test command.
 
@@ -324,7 +332,7 @@ Provides access to the parameters of a test command.
 | (property).output.type | string | Test command output parameter type (must be one of the following: *Number*, *String*, *Boolean*, *Object*, *Symbol*) |
 | (property).output.comment | string | Test command output parameter description |
 
-> The *command* shall be passed as the index to the property, e.g. *TestUtility.1.parameters@Malloc*.
+> The *command* argument shall be passed as the index to the property, e.g. *TestUtility.1.parameters@Malloc*.
 
 ### Errors
 
@@ -340,7 +348,7 @@ Provides access to the parameters of a test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestUtility.1.parameters@Malloc"
 }
 ```
@@ -350,7 +358,7 @@ Provides access to the parameters of a test command.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "input": [
             {
@@ -369,7 +377,7 @@ Provides access to the parameters of a test command.
 ```
 
 <a name="property.shutdowntimeout"></a>
-## *shutdowntimeout <sup>property</sup>*
+## *shutdowntimeout [<sup>property</sup>](#head.Properties)*
 
 Provides access to the timeout to be waited before deactivating the plugin.
 
@@ -388,7 +396,7 @@ Provides access to the timeout to be waited before deactivating the plugin.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestUtility.1.shutdowntimeout",
     "params": 5000
 }
@@ -399,7 +407,7 @@ Provides access to the timeout to be waited before deactivating the plugin.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```

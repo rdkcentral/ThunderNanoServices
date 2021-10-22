@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-NetworkControl plugin for Thunder framework.
+A NetworkControl plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -81,6 +82,13 @@ The table below lists configuration options of the plugin.
 | configuration?.response | number | <sup>*(optional)*</sup> Maximum response time out of the DHCP server |
 | configuration?.retries | number | <sup>*(optional)*</sup> Maximum number of retries to the DHCP server |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [NetworkControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/NetworkControl.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -97,7 +105,7 @@ NetworkControl interface methods:
 
 
 <a name="method.reload"></a>
-## *reload <sup>method</sup>*
+## *reload [<sup>method</sup>](#head.Methods)*
 
 Reloads a static or non-static network interface adapter.
 
@@ -127,7 +135,7 @@ Reloads a static or non-static network interface adapter.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.reload",
     "params": {
         "interface": "eth0"
@@ -140,13 +148,13 @@ Reloads a static or non-static network interface adapter.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.request"></a>
-## *request <sup>method</sup>*
+## *request [<sup>method</sup>](#head.Methods)*
 
 Reloads a non-static network interface adapter.
 
@@ -178,7 +186,7 @@ Also see: [connectionchange](#event.connectionchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.request",
     "params": {
         "interface": "eth0"
@@ -191,13 +199,13 @@ Also see: [connectionchange](#event.connectionchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.assign"></a>
-## *assign <sup>method</sup>*
+## *assign [<sup>method</sup>](#head.Methods)*
 
 Reloads a static network interface adapter.
 
@@ -227,7 +235,7 @@ Reloads a static network interface adapter.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.assign",
     "params": {
         "interface": "eth0"
@@ -240,13 +248,13 @@ Reloads a static network interface adapter.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.flush"></a>
-## *flush <sup>method</sup>*
+## *flush [<sup>method</sup>](#head.Methods)*
 
 Flushes a network interface adapter.
 
@@ -276,7 +284,7 @@ Flushes a network interface adapter.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.flush",
     "params": {
         "interface": "eth0"
@@ -289,7 +297,7 @@ Flushes a network interface adapter.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -309,7 +317,7 @@ NetworkControl interface properties:
 
 
 <a name="property.network"></a>
-## *network <sup>property</sup>*
+## *network [<sup>property</sup>](#head.Properties)*
 
 Provides access to the network information.
 
@@ -328,7 +336,7 @@ Provides access to the network information.
 | (property)[#]?.dns | array | <sup>*(optional)*</sup> DNS addresses |
 | (property)[#]?.dns[#] | string | <sup>*(optional)*</sup> DNS addresses |
 
-> The *interface* shall be passed as the index to the property, e.g. *NetworkControl.1.network@eth0*. If network interface is not given, all network interfaces are returned.
+> The *interface* argument shall be passed as the index to the property, e.g. *NetworkControl.1.network@eth0*. If network interface is not given, all network interfaces are returned.
 
 ### Errors
 
@@ -343,7 +351,7 @@ Provides access to the network information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.network@eth0"
 }
 ```
@@ -353,7 +361,7 @@ Provides access to the network information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         {
             "interface": "eth0",
@@ -375,7 +383,7 @@ Provides access to the network information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.network@eth0",
     "params": [
         {
@@ -398,13 +406,13 @@ Provides access to the network information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.dns"></a>
-## *dns <sup>property</sup>*
+## *dns [<sup>property</sup>](#head.Properties)*
 
 Provides access to the DNS addresses.
 
@@ -422,7 +430,7 @@ Provides access to the DNS addresses.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.dns"
 }
 ```
@@ -432,7 +440,7 @@ Provides access to the DNS addresses.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "['192.168.1.1', 'www.google.com', '8.8.8.8']"
     ]
@@ -444,7 +452,7 @@ Provides access to the DNS addresses.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.dns",
     "params": [
         "['192.168.1.1', 'www.google.com', '8.8.8.8']"
@@ -457,13 +465,13 @@ Provides access to the DNS addresses.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.up"></a>
-## *up <sup>property</sup>*
+## *up [<sup>property</sup>](#head.Properties)*
 
 Provides access to the interface up status.
 
@@ -473,7 +481,7 @@ Provides access to the interface up status.
 | :-------- | :-------- | :-------- |
 | (property) | boolean | Interface up status |
 
-> The *interface* shall be passed as the index to the property, e.g. *NetworkControl.1.up@eth0*.
+> The *interface* argument shall be passed as the index to the property, e.g. *NetworkControl.1.up@eth0*.
 
 ### Result
 
@@ -494,7 +502,7 @@ Provides access to the interface up status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.up@eth0"
 }
 ```
@@ -504,7 +512,7 @@ Provides access to the interface up status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": false
 }
 ```
@@ -514,7 +522,7 @@ Provides access to the interface up status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "NetworkControl.1.up@eth0",
     "params": false
 }
@@ -525,7 +533,7 @@ Provides access to the interface up status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -545,7 +553,7 @@ NetworkControl interface events:
 
 
 <a name="event.connectionchange"></a>
-## *connectionchange <sup>event</sup>*
+## *connectionchange [<sup>event</sup>](#head.Notifications)*
 
 Notifies about connection status (created, updated, removed, connected, ipassigned and connectionfailed).
 

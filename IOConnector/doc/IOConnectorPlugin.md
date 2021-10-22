@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-IOConnector plugin for Thunder framework.
+A IOConnector plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
 
@@ -82,6 +83,13 @@ The table below lists configuration options of the plugin.
 | pins[#].mode | string | Pin mode (must be one of the following: *Low*, *High*, *Both*, *Active*, *Inactive*, *Output*) |
 | pins[#]?.activelow | boolean | <sup>*(optional)*</sup> Denotes if pin is active in low state (default: *false*) |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [IOConnector.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/IOConnector.json)
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -95,7 +103,7 @@ IOConnector interface properties:
 
 
 <a name="property.pin"></a>
-## *pin <sup>property</sup>*
+## *pin [<sup>property</sup>](#head.Properties)*
 
 Provides access to the GPIO pin value.
 
@@ -107,7 +115,7 @@ Also see: [activity](#event.activity)
 | :-------- | :-------- | :-------- |
 | (property) | number | GPIO pin value |
 
-> The *pin id* shall be passed as the index to the property, e.g. *IOConnector.1.pin@189*.
+> The *pin id* argument shall be passed as the index to the property, e.g. *IOConnector.1.pin@189*.
 
 ### Errors
 
@@ -122,7 +130,7 @@ Also see: [activity](#event.activity)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "IOConnector.1.pin@189"
 }
 ```
@@ -132,7 +140,7 @@ Also see: [activity](#event.activity)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 1
 }
 ```
@@ -142,7 +150,7 @@ Also see: [activity](#event.activity)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "IOConnector.1.pin@189",
     "params": 1
 }
@@ -153,7 +161,7 @@ Also see: [activity](#event.activity)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -173,7 +181,7 @@ IOConnector interface events:
 
 
 <a name="event.activity"></a>
-## *activity <sup>event</sup>*
+## *activity [<sup>event</sup>](#head.Notifications)*
 
 Notifies about GPIO pin activity.
 
@@ -188,7 +196,7 @@ Register to this event to be notified about pin value changes
 | params | object |  |
 | params.value | number | GPIO pin value |
 
-> The *pin ID* shall be passed within the designator, e.g. *189.client.events.1*.
+> The *pin ID* argument shall be passed within the designator, e.g. *189.client.events.1*.
 
 ### Example
 

@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-BluetoothControl plugin for Thunder framework.
+A BluetoothControl plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -83,6 +84,13 @@ The table below lists configuration options of the plugin.
 | configuration?.autopasskeyconfirm | boolean | <sup>*(optional)*</sup> Enable autopass confirm |
 | configuration?.persistmac | boolean | <sup>*(optional)*</sup> Enable persistent MAC |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [BluetoothControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/BluetoothControl.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -92,7 +100,8 @@ BluetoothControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [scan](#method.scan) | Starts scanning for Bluetooth devices |
+| [scan](#method.scan) | Starts active scanning for Bluetooth devices |
+| [stopscanning](#method.stopscanning) | Stops scanning procedure |
 | [connect](#method.connect) | Connects to a Bluetooth device |
 | [disconnect](#method.disconnect) | Disconnects from a connected Bluetooth device |
 | [pair](#method.pair) | Pairs a Bluetooth device |
@@ -104,11 +113,11 @@ BluetoothControl interface methods:
 
 
 <a name="method.scan"></a>
-## *scan <sup>method</sup>*
+## *scan [<sup>method</sup>](#head.Methods)*
 
-Starts scanning for Bluetooth devices.
+Starts active scanning for Bluetooth devices.
 
-Also see: [scancomplete](#event.scancomplete)
+Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
 
 ### Parameters
 
@@ -117,6 +126,7 @@ Also see: [scancomplete](#event.scancomplete)
 | params | object |  |
 | params.type | string | Bluetooth device type (must be one of the following: *Classic*, *LowEnergy*) |
 | params?.timeout | number | <sup>*(optional)*</sup> Duration of the scan (in seconds); default: 10 seconds |
+| params?.duration | number | <sup>*(optional)*</sup> Duration of the scan (in seconds); default: 10 seconds |
 
 ### Result
 
@@ -138,11 +148,12 @@ Also see: [scancomplete](#event.scancomplete)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.scan",
     "params": {
         "type": "LowEnergy",
-        "timeout": 60
+        "timeout": 60,
+        "duration": 60
     }
 }
 ```
@@ -152,15 +163,65 @@ Also see: [scancomplete](#event.scancomplete)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
+    "result": null
+}
+```
+
+<a name="method.stopscanning"></a>
+## *stopscanning [<sup>method</sup>](#head.Methods)*
+
+Stops scanning procedure.
+
+Also see: [scancomplete](#event.scancomplete)
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 1 | ```ERROR_GENERAL``` | Failed to top scanning |
+| 5 | ```ERROR_ILLEGAL_STATE``` | No scan is in progress |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "BluetoothControl.1.stopscanning"
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.connect"></a>
-## *connect <sup>method</sup>*
+## *connect [<sup>method</sup>](#head.Methods)*
 
 Connects to a Bluetooth device.
+
+### Description
+
+If the device is not available it will be automatically connected as soon it becomes available.
 
 Also see: [devicestatechange](#event.devicestatechange)
 
@@ -182,8 +243,10 @@ Also see: [devicestatechange](#event.devicestatechange)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Device not paired |
 | 9 | ```ERROR_ALREADY_CONNECTED``` | Device already connected |
 | 1 | ```ERROR_GENERAL``` | Failed to connect the device |
+| 27 | ```ERROR_REQUEST_SUBMITTED``` | Device has not been connected but will be automatically connected when available |
 
 ### Example
 
@@ -192,7 +255,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.connect",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
@@ -205,15 +268,19 @@ Also see: [devicestatechange](#event.devicestatechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.disconnect"></a>
-## *disconnect <sup>method</sup>*
+## *disconnect [<sup>method</sup>](#head.Methods)*
 
 Disconnects from a connected Bluetooth device.
+
+### Description
+
+Device will cease to re-connect automatically.
 
 Also see: [devicestatechange](#event.devicestatechange)
 
@@ -236,6 +303,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
 | 36 | ```ERROR_ALREADY_RELEASED``` | Device not connected |
+| 27 | ```ERROR_REQUEST_SUBMITTED``` | Device is currently not connected but it's autoconnection mode has been disabled |
 
 ### Example
 
@@ -244,7 +312,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.disconnect",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
@@ -257,13 +325,13 @@ Also see: [devicestatechange](#event.devicestatechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.pair"></a>
-## *pair <sup>method</sup>*
+## *pair [<sup>method</sup>](#head.Methods)*
 
 Pairs a Bluetooth device.
 
@@ -302,7 +370,7 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.pair",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
@@ -316,13 +384,13 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.unpair"></a>
-## *unpair <sup>method</sup>*
+## *unpair [<sup>method</sup>](#head.Methods)*
 
 Unpairs a paired Bluetooth device.
 
@@ -355,7 +423,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.unpair",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
@@ -368,13 +436,13 @@ Also see: [devicestatechange](#event.devicestatechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.abortpairing"></a>
-## *abortpairing <sup>method</sup>*
+## *abortpairing [<sup>method</sup>](#head.Methods)*
 
 Aborts the pairing process.
 
@@ -405,7 +473,7 @@ Aborts the pairing process.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.abortpairing",
     "params": {
         "address": "81:6F:B0:91:9B:FE"
@@ -418,13 +486,13 @@ Aborts the pairing process.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.pincode"></a>
-## *pincode <sup>method</sup>*
+## *pincode [<sup>method</sup>](#head.Methods)*
 
 Specifies a PIN code for authentication during a legacy pairing process.
 
@@ -462,7 +530,7 @@ Also see: [pincoderequest](#event.pincoderequest)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.pincode",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
@@ -476,13 +544,13 @@ Also see: [pincoderequest](#event.pincoderequest)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.passkey"></a>
-## *passkey <sup>method</sup>*
+## *passkey [<sup>method</sup>](#head.Methods)*
 
 Specifies a passkey for authentication during a pairing process.
 
@@ -520,7 +588,7 @@ Also see: [passkeyrequest](#event.passkeyrequest)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.passkey",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
@@ -534,13 +602,13 @@ Also see: [passkeyrequest](#event.passkeyrequest)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.confirmpasskey"></a>
-## *confirmpasskey <sup>method</sup>*
+## *confirmpasskey [<sup>method</sup>](#head.Methods)*
 
 Confirms a passkey for authentication during a pairing process.
 
@@ -578,7 +646,7 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.confirmpasskey",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
@@ -592,7 +660,7 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -613,7 +681,7 @@ BluetoothControl interface properties:
 
 
 <a name="property.adapters"></a>
-## *adapters <sup>property</sup>*
+## *adapters [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of local Bluetooth adapters.
 
@@ -633,7 +701,7 @@ Provides access to the list of local Bluetooth adapters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.adapters"
 }
 ```
@@ -643,7 +711,7 @@ Provides access to the list of local Bluetooth adapters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         0
     ]
@@ -651,7 +719,7 @@ Provides access to the list of local Bluetooth adapters.
 ```
 
 <a name="property.adapter"></a>
-## *adapter <sup>property</sup>*
+## *adapter [<sup>property</sup>](#head.Properties)*
 
 Provides access to the local Bluetooth adapter information.
 
@@ -669,7 +737,7 @@ Provides access to the local Bluetooth adapter information.
 | (property)?.name | string | <sup>*(optional)*</sup> Device name |
 | (property)?.shortname | string | <sup>*(optional)*</sup> Device short name |
 
-> The *adapter id* shall be passed as the index to the property, e.g. *BluetoothControl.1.adapter@0*.
+> The *adapter id* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.adapter@0*.
 
 ### Errors
 
@@ -684,7 +752,7 @@ Provides access to the local Bluetooth adapter information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.adapter@0"
 }
 ```
@@ -694,7 +762,7 @@ Provides access to the local Bluetooth adapter information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "interface": "hci0",
         "address": "81:6F:B0:91:9B:FE",
@@ -707,7 +775,7 @@ Provides access to the local Bluetooth adapter information.
 ```
 
 <a name="property.devices"></a>
-## *devices <sup>property</sup>*
+## *devices [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of known remote Bluetooth devices.
 
@@ -727,7 +795,7 @@ Provides access to the list of known remote Bluetooth devices.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.devices"
 }
 ```
@@ -737,7 +805,7 @@ Provides access to the list of known remote Bluetooth devices.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "81:6F:B0:91:9B:FE"
     ]
@@ -745,7 +813,7 @@ Provides access to the list of known remote Bluetooth devices.
 ```
 
 <a name="property.device"></a>
-## *device <sup>property</sup>*
+## *device [<sup>property</sup>](#head.Properties)*
 
 Provides access to the remote Bluetooth device information.
 
@@ -762,7 +830,7 @@ Provides access to the remote Bluetooth device information.
 | (property).connected | boolean | Denotes if the device is currently connected to host |
 | (property).paired | boolean | Denotes if the device is currently paired with host |
 
-> The *device address* shall be passed as the index to the property, e.g. *BluetoothControl.1.device@81:6F:B0:91:9B:FE*.
+> The *device address* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.device@81:6F:B0:91:9B:FE*.
 
 ### Errors
 
@@ -777,7 +845,7 @@ Provides access to the remote Bluetooth device information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "BluetoothControl.1.device@81:6F:B0:91:9B:FE"
 }
 ```
@@ -787,7 +855,7 @@ Provides access to the remote Bluetooth device information.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "name": "Acme Bluetooth Device",
         "type": "LowEnergy",
@@ -809,6 +877,7 @@ BluetoothControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
+| [scanstarted](#event.scanstarted) | Notifies about start scanning |
 | [scancomplete](#event.scancomplete) | Notifies about scan completion |
 | [devicestatechange](#event.devicestatechange) | Notifies about device state change |
 | [pincoderequest](#event.pincoderequest) | Notifies about a PIN code request |
@@ -816,8 +885,30 @@ BluetoothControl interface events:
 | [passkeyconfirmrequest](#event.passkeyconfirmrequest) | Notifies about a passkey confirmation request |
 
 
+<a name="event.scanstarted"></a>
+## *scanstarted [<sup>event</sup>](#head.Notifications)*
+
+Notifies about start scanning.
+
+### Description
+
+Register to this event to be notified about device scan start
+
+### Parameters
+
+This event carries no parameters.
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.scanstarted"
+}
+```
+
 <a name="event.scancomplete"></a>
-## *scancomplete <sup>event</sup>*
+## *scancomplete [<sup>event</sup>](#head.Notifications)*
 
 Notifies about scan completion.
 
@@ -839,7 +930,7 @@ This event carries no parameters.
 ```
 
 <a name="event.devicestatechange"></a>
-## *devicestatechange <sup>event</sup>*
+## *devicestatechange [<sup>event</sup>](#head.Notifications)*
 
 Notifies about device state change.
 
@@ -871,7 +962,7 @@ Register to this event to be notified about device state changes
 ```
 
 <a name="event.pincoderequest"></a>
-## *pincoderequest <sup>event</sup>*
+## *pincoderequest [<sup>event</sup>](#head.Notifications)*
 
 Notifies about a PIN code request.
 
@@ -899,7 +990,7 @@ Register to this event to be notified about PIN code requests during a legacy pa
 ```
 
 <a name="event.passkeyrequest"></a>
-## *passkeyrequest <sup>event</sup>*
+## *passkeyrequest [<sup>event</sup>](#head.Notifications)*
 
 Notifies about a passkey request.
 
@@ -927,7 +1018,7 @@ Register to this event to be notified about passkey requests that may be require
 ```
 
 <a name="event.passkeyconfirmrequest"></a>
-## *passkeyconfirmrequest <sup>event</sup>*
+## *passkeyconfirmrequest [<sup>event</sup>](#head.Notifications)*
 
 Notifies about a passkey confirmation request.
 

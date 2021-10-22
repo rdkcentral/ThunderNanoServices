@@ -1,12 +1,12 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Commander_Plugin"></a>
-# Commander Plugin
+<a name="head.Subsystem_Control_Plugin"></a>
+# Subsystem Control Plugin
 
 **Version: 1.0**
 
-**Status: :black_circle::white_circle::white_circle:**
+**Status: :black_circle::black_circle::black_circle:**
 
-A Commander plugin for Thunder framework.
+A SubsystemControl plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -20,7 +20,7 @@ A Commander plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Commander plugin. It includes detailed specification about its configuration.
+This document describes purpose and functionality of the SubsystemControl plugin. It includes detailed specification about its configuration.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -58,7 +58,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The Commander plugin provides web browsing functionality based on the Commander engine.
+.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -69,10 +69,8 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Commander*) |
-| classname | string | Class name: *Commander* |
-| locator | string | Library name: *libWPEFrameworkCommander.so* |
+| callsign | string | Plugin instance name (default: *SubsystemControl*) |
+| classname | string | Class name: *SubsystemControl* |
+| locator | string | Library name: *libWPEFrameworkSubsystemControl.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
-| sequencers | array | <sup>*(optional)*</sup> List of sequencers |
-| sequencers[#] | string | <sup>*(optional)*</sup>  |
 

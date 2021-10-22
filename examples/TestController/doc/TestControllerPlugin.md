@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-TestController plugin for Thunder framework.
+A TestController plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 
@@ -76,6 +77,13 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkTestController.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [TestController.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/TestController.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -89,7 +97,7 @@ TestController interface methods:
 
 
 <a name="method.run"></a>
-## *run <sup>method</sup>*
+## *run [<sup>method</sup>](#head.Methods)*
 
 Runs a single test or multiple tests.
 
@@ -125,7 +133,7 @@ Runs a single test or multiple tests.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestController.1.run",
     "params": {
         "category": "JSONRPC",
@@ -140,7 +148,7 @@ Runs a single test or multiple tests.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         {
             "test": "JSONRPCTest",
@@ -165,7 +173,7 @@ TestController interface properties:
 
 
 <a name="property.categories"></a>
-## *categories <sup>property</sup>*
+## *categories [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of test categories.
 
@@ -185,7 +193,7 @@ Provides access to the list of test categories.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestController.1.categories"
 }
 ```
@@ -195,7 +203,7 @@ Provides access to the list of test categories.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "JSONRPC"
     ]
@@ -203,7 +211,7 @@ Provides access to the list of test categories.
 ```
 
 <a name="property.tests"></a>
-## *tests <sup>property</sup>*
+## *tests [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of tests for a category.
 
@@ -216,7 +224,7 @@ Provides access to the list of tests for a category.
 | (property) | array | List of tests for a category |
 | (property)[#] | string | Test name |
 
-> The *category* shall be passed as the index to the property, e.g. *TestController.1.tests@JSONRPC*.
+> The *category* argument shall be passed as the index to the property, e.g. *TestController.1.tests@JSONRPC*.
 
 ### Errors
 
@@ -232,7 +240,7 @@ Provides access to the list of tests for a category.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestController.1.tests@JSONRPC"
 }
 ```
@@ -242,7 +250,7 @@ Provides access to the list of tests for a category.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "JSONRPCTest"
     ]
@@ -250,7 +258,7 @@ Provides access to the list of tests for a category.
 ```
 
 <a name="property.description"></a>
-## *description <sup>property</sup>*
+## *description [<sup>property</sup>](#head.Properties)*
 
 Provides access to the description of a test.
 
@@ -263,7 +271,7 @@ Provides access to the description of a test.
 | (property) | object | Description of a test |
 | (property).description | string | Test description |
 
-> The *test* shall be passed as the index to the property, e.g. *TestController.1.description@JSONRPC*.
+> The *test* argument shall be passed as the index to the property, e.g. *TestController.1.description@JSONRPC*.
 
 ### Errors
 
@@ -279,7 +287,7 @@ Provides access to the description of a test.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TestController.1.description@JSONRPC"
 }
 ```
@@ -289,7 +297,7 @@ Provides access to the description of a test.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "description": "Tests JSONRPC functionality"
     }

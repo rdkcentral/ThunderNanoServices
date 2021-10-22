@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-PerformanceMonitor plugin for Thunder framework.
+A PerformanceMonitor plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 
@@ -22,12 +23,12 @@ PerformanceMonitor plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the PerformanceMonitor plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the PerformanceMonitor plugin. It includes detailed specification about its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -74,7 +75,14 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *PerformanceMonitor*) |
 | classname | string | Class name: *PerformanceMonitor* |
 | locator | string | Library name: *libWPEFrameworkPerformanceMonitor.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [PerformanceMonitor.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/PerformanceMonitor.json)
 
 <a name="head.Methods"></a>
 # Methods
@@ -90,8 +98,9 @@ PerformanceMonitor interface methods:
 | [receive](#method.receive) | Interface to test receive data |
 | [exchange](#method.exchange) | Interface to test exchange data |
 
+
 <a name="method.clear"></a>
-## *clear <sup>method</sup>*
+## *clear [<sup>method</sup>](#head.Methods)*
 
 Clear all performance data collected.
 
@@ -112,21 +121,23 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PerformanceMonitor.1.clear"
 }
 ```
+
 #### Response
 
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
+
 <a name="method.send"></a>
-## *send <sup>method</sup>*
+## *send [<sup>method</sup>](#head.Methods)*
 
 Interface to test send data.
 
@@ -137,6 +148,7 @@ Interface to test send data.
 | params | object |  |
 | params?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
 | params?.length | number | <sup>*(optional)*</sup>  |
+| params?.duration | number | <sup>*(optional)*</sup>  |
 
 ### Result
 
@@ -151,25 +163,28 @@ Interface to test send data.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PerformanceMonitor.1.send",
     "params": {
         "data": "abababababab",
-        "length": 12
+        "length": 0,
+        "duration": 0
     }
 }
 ```
+
 #### Response
 
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
+
 <a name="method.receive"></a>
-## *receive <sup>method</sup>*
+## *receive [<sup>method</sup>](#head.Methods)*
 
 Interface to test receive data.
 
@@ -186,6 +201,7 @@ Interface to test receive data.
 | result | object |  |
 | result?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
 | result?.length | number | <sup>*(optional)*</sup>  |
+| result?.duration | number | <sup>*(optional)*</sup>  |
 
 ### Example
 
@@ -194,25 +210,28 @@ Interface to test receive data.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PerformanceMonitor.1.receive",
     "params": 0
 }
 ```
+
 #### Response
 
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "data": "abababababab",
-        "length": 12
+        "length": 0,
+        "duration": 0
     }
 }
 ```
+
 <a name="method.exchange"></a>
-## *exchange <sup>method</sup>*
+## *exchange [<sup>method</sup>](#head.Methods)*
 
 Interface to test exchange data.
 
@@ -223,6 +242,7 @@ Interface to test exchange data.
 | params | object |  |
 | params?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
 | params?.length | number | <sup>*(optional)*</sup>  |
+| params?.duration | number | <sup>*(optional)*</sup>  |
 
 ### Result
 
@@ -231,6 +251,7 @@ Interface to test exchange data.
 | result | object |  |
 | result?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
 | result?.length | number | <sup>*(optional)*</sup>  |
+| result?.duration | number | <sup>*(optional)*</sup>  |
 
 ### Example
 
@@ -239,26 +260,30 @@ Interface to test exchange data.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PerformanceMonitor.1.exchange",
     "params": {
-        "data": "axaxaxaxaxax",
-        "length": 12
+        "data": "abababababab",
+        "length": 0,
+        "duration": 0
     }
 }
 ```
+
 #### Response
 
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
-        "data": "cdcdcdcdcdcd",
-        "length": 12
+        "data": "abababababab",
+        "length": 0,
+        "duration": 0
     }
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -270,8 +295,9 @@ PerformanceMonitor interface properties:
 | :-------- | :-------- |
 | [measurement](#property.measurement) <sup>RO</sup> | Retrieve the performance measurement against given package size |
 
+
 <a name="property.measurement"></a>
-## *measurement <sup>property</sup>*
+## *measurement [<sup>property</sup>](#head.Properties)*
 
 Provides access to the retrieve the performance measurement against given package size. Measurements will be provided in milliseconds.
 
@@ -313,7 +339,7 @@ Provides access to the retrieve the performance measurement against given packag
 | (property).total?.average | number | <sup>*(optional)*</sup>  |
 | (property).total?.count | number | <sup>*(optional)*</sup>  |
 
-> The *package size* shall be passed as the index to the property, e.g. *PerformanceMonitor.1.measurement@1000*. Size of package whose statistics info has to be retrieved.
+> The *package size* argument shall be passed as the index to the property, e.g. *PerformanceMonitor.1.measurement@1000*. Size of package whose statistics info has to be retrieved.
 
 ### Result
 
@@ -328,53 +354,55 @@ Provides access to the retrieve the performance measurement against given packag
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PerformanceMonitor.1.measurement@1000"
 }
 ```
+
 #### Get Response
 
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "serialization": {
-            "minimum": 3,
-            "maximum": 63,
-            "average": 23,
-            "count": 6
+            "minimum": 0,
+            "maximum": 0,
+            "average": 0,
+            "count": 0
         },
         "deserialization": {
-            "minimum": 82,
-            "maximum": 293,
-            "average": 125,
-            "count": 6
+            "minimum": 0,
+            "maximum": 0,
+            "average": 0,
+            "count": 0
         },
         "execution": {
-            "minimum": 266,
-            "maximum": 421,
-            "average": 304,
-            "count": 6
+            "minimum": 0,
+            "maximum": 0,
+            "average": 0,
+            "count": 0
         },
         "threadpool": {
-            "minimum": 95,
-            "maximum": 478,
-            "average": 182,
-            "count": 6
+            "minimum": 0,
+            "maximum": 0,
+            "average": 0,
+            "count": 0
         },
         "communication": {
-            "minimum": 2,
-            "maximum": 3,
-            "average": 2,
-            "count": 6
+            "minimum": 0,
+            "maximum": 0,
+            "average": 0,
+            "count": 0
         },
         "total": {
-            "minimum": 514,
-            "maximum": 845,
-            "average": 673,
-            "count": 6
+            "minimum": 0,
+            "maximum": 0,
+            "average": 0,
+            "count": 0
         }
     }
 }
 ```
+
