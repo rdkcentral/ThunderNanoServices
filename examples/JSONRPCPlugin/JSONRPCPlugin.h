@@ -31,18 +31,6 @@
 // within the plugin to make it available. 
 #include <interfaces/IMath.h>
 
-// note JMath tests disabled until this interface is generated from the IMath.h interface
-#if 0
-// From the source, included above (IMath.h) a precompiler will create a method that 
-// can connect a JSONRPC class to the interface implementation. This is typically done 
-// in the constructor of the plugin!
-// The method to connects the JSORPC implementation to the Interface implementation is 
-// generated and it is named as:
-// <interface name>::Register(PluginHost::JSONRPC& handler, <interface name>* implementation);
-// <interface name>::Unregister(PluginHost::JSONRPC& handler);
-#include <interfaces/json/JMath.h>
-#endif
-
 namespace WPEFramework {
 
 namespace Plugin {
@@ -659,6 +647,10 @@ namespace Plugin {
         uint32_t Send(const uint16_t sendSize, const uint8_t buffer[]) override;
         uint32_t Receive(uint16_t& bufferSize, uint8_t buffer[]) const override;
         uint32_t Exchange(uint16_t& bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) override;
+        uint32_t Test1(const uint32_t number) override;
+        uint32_t Test2(const string& text) override;
+        uint32_t Test3(string& text) override;
+        uint32_t Test4(uint32_t& number) override;
 
         //   Exchange::IMath methods
         // -------------------------------------------------------------------------------------------------------

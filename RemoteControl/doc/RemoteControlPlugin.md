@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-RemoteControl plugin for Thunder framework.
+A RemoteControl plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -100,6 +101,13 @@ The table below lists configuration options of the plugin.
 | configuration?.links[#]?.name | string | <sup>*(optional)*</sup> Name |
 | configuration?.links[#]?.mapfile | string | <sup>*(optional)*</sup> Map File |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [RemoteControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/RemoteControl.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -123,7 +131,7 @@ RemoteControl interface methods:
 
 
 <a name="method.key"></a>
-## *key <sup>method</sup>*
+## *key [<sup>method</sup>](#head.Methods)*
 
 Gets key code details.
 
@@ -160,7 +168,7 @@ Gets key code details.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.key",
     "params": {
         "device": "DevInput",
@@ -174,7 +182,7 @@ Gets key code details.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "code": 1,
         "key": 103,
@@ -186,7 +194,7 @@ Gets key code details.
 ```
 
 <a name="method.send"></a>
-## *send <sup>method</sup>*
+## *send [<sup>method</sup>](#head.Methods)*
 
 Sends a key to a device (press and release).
 
@@ -221,7 +229,7 @@ Sends a key to a device (press and release).
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.send",
     "params": {
         "device": "DevInput",
@@ -235,13 +243,13 @@ Sends a key to a device (press and release).
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.press"></a>
-## *press <sup>method</sup>*
+## *press [<sup>method</sup>](#head.Methods)*
 
 Presses a key on a device.
 
@@ -275,7 +283,7 @@ Presses a key on a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.press",
     "params": {
         "device": "DevInput",
@@ -289,13 +297,13 @@ Presses a key on a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.release"></a>
-## *release <sup>method</sup>*
+## *release [<sup>method</sup>](#head.Methods)*
 
 Releases a key on a device.
 
@@ -330,7 +338,7 @@ Releases a key on a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.release",
     "params": {
         "device": "DevInput",
@@ -344,13 +352,13 @@ Releases a key on a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.add"></a>
-## *add <sup>method</sup>*
+## *add [<sup>method</sup>](#head.Methods)*
 
 Adds a key code to the key map.
 
@@ -386,7 +394,7 @@ Adds a key code to the key map.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.add",
     "params": {
         "device": "DevInput",
@@ -404,13 +412,13 @@ Adds a key code to the key map.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.modify"></a>
-## *modify <sup>method</sup>*
+## *modify [<sup>method</sup>](#head.Methods)*
 
 Modifies a key code in the key map.
 
@@ -446,7 +454,7 @@ Modifies a key code in the key map.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.modify",
     "params": {
         "device": "DevInput",
@@ -464,13 +472,13 @@ Modifies a key code in the key map.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.delete"></a>
-## *delete <sup>method</sup>*
+## *delete [<sup>method</sup>](#head.Methods)*
 
 Deletes a key code from the key map.
 
@@ -503,7 +511,7 @@ Deletes a key code from the key map.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.delete",
     "params": {
         "device": "DevInput",
@@ -517,13 +525,13 @@ Deletes a key code from the key map.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.load"></a>
-## *load <sup>method</sup>*
+## *load [<sup>method</sup>](#head.Methods)*
 
 Re-loads the device's key map from persistent memory.
 
@@ -557,7 +565,7 @@ Re-loads the device's key map from persistent memory.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.load",
     "params": {
         "device": "DevInput"
@@ -570,13 +578,13 @@ Re-loads the device's key map from persistent memory.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.save"></a>
-## *save <sup>method</sup>*
+## *save [<sup>method</sup>](#head.Methods)*
 
 Saves the device's key map into persistent path.
 
@@ -609,7 +617,7 @@ Saves the device's key map into persistent path.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.save",
     "params": {
         "device": "DevInput"
@@ -622,13 +630,13 @@ Saves the device's key map into persistent path.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.pair"></a>
-## *pair <sup>method</sup>*
+## *pair [<sup>method</sup>](#head.Methods)*
 
 Activates pairing mode of a device.
 
@@ -660,7 +668,7 @@ Activates pairing mode of a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.pair",
     "params": {
         "device": "DevInput"
@@ -673,13 +681,13 @@ Activates pairing mode of a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.unpair"></a>
-## *unpair <sup>method</sup>*
+## *unpair [<sup>method</sup>](#head.Methods)*
 
 Unpairs a device.
 
@@ -712,7 +720,7 @@ Unpairs a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.unpair",
     "params": {
         "device": "DevInput",
@@ -726,7 +734,7 @@ Unpairs a device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -745,7 +753,7 @@ RemoteControl interface properties:
 
 
 <a name="property.devices"></a>
-## *devices <sup>property</sup>*
+## *devices [<sup>property</sup>](#head.Properties)*
 
 Provides access to the names of all available devices.
 
@@ -765,7 +773,7 @@ Provides access to the names of all available devices.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.devices"
 }
 ```
@@ -775,7 +783,7 @@ Provides access to the names of all available devices.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "Web"
     ]
@@ -783,7 +791,7 @@ Provides access to the names of all available devices.
 ```
 
 <a name="property.device"></a>
-## *device <sup>property</sup>*
+## *device [<sup>property</sup>](#head.Properties)*
 
 Provides access to the metadata of a specific device.
 
@@ -796,7 +804,7 @@ Provides access to the metadata of a specific device.
 | (property) | object | Metadata of a specific device |
 | (property).metadata | string | Device metadata |
 
-> The *device* shall be passed as the index to the property, e.g. *RemoteControl.1.device@DevInput*.
+> The *device* argument shall be passed as the index to the property, e.g. *RemoteControl.1.device@DevInput*.
 
 ### Errors
 
@@ -813,7 +821,7 @@ Provides access to the metadata of a specific device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "RemoteControl.1.device@DevInput"
 }
 ```
@@ -823,7 +831,7 @@ Provides access to the metadata of a specific device.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "metadata": "It is based on protocol A"
     }
@@ -845,7 +853,7 @@ RemoteControl interface events:
 
 
 <a name="event.keypressed"></a>
-## *keypressed <sup>event</sup>*
+## *keypressed [<sup>event</sup>](#head.Notifications)*
 
 Notifies of a key press/release action.
 
@@ -856,7 +864,7 @@ Notifies of a key press/release action.
 | params | object |  |
 | params.pressed | boolean | Denotes if the key was pressed (true) or released (false) |
 
-> The *key code* shall be passed within the designator, e.g. *42.client.events.1*.
+> The *key code* argument shall be passed within the designator, e.g. *42.client.events.1*.
 
 ### Example
 
