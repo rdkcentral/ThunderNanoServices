@@ -237,26 +237,6 @@ namespace Plugin
 
         return (result);
     }
-    uint32_t JSONRPCPlugin::Test1(const uint32_t number) /* override */ {
-        TRACE(Trace::Information, (_T("Received: [%d]"), number));
-        return (Core::ERROR_NONE);
-    }
-    uint32_t JSONRPCPlugin::Test2(const string& text) /* override */ {
-        TRACE(Trace::Information, (_T("Received: [%s]"), text.c_str()));
-        return (Core::ERROR_NONE);
-    }
-    uint32_t JSONRPCPlugin::Test3(string& text) /* override */ {
-        string received = text;
-        text = _T("You are welcome!");
-        TRACE(Trace::Information, (_T("Received: [%s], Sending back: [%s]"), received.c_str(), text.c_str()));
-        return (Core::ERROR_NONE);
-    }
-    uint32_t JSONRPCPlugin::Test4(uint32_t& number) /* override */ {
-        uint32_t received = number;
-        number = ~number;
-        TRACE(Trace::Information, (_T("Received: [%X], Sending back: [%X]"), received, number));
-        return (Core::ERROR_NONE);
-    }
     uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) /* override */ 
     {
         uint32_t result = Core::ERROR_NONE;

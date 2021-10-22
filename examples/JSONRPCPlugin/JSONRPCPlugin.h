@@ -647,10 +647,6 @@ namespace Plugin {
         uint32_t Send(const uint16_t sendSize, const uint8_t buffer[]) override;
         uint32_t Receive(uint16_t& bufferSize, uint8_t buffer[]) const override;
         uint32_t Exchange(uint16_t& bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) override;
-        uint32_t Test1(const uint32_t number) override;
-        uint32_t Test2(const string& text) override;
-        uint32_t Test3(string& text) override;
-        uint32_t Test4(uint32_t& number) override;
 
         //   Exchange::IMath methods
         // -------------------------------------------------------------------------------------------------------
