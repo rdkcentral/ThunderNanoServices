@@ -143,8 +143,11 @@ namespace Plugin
         Unregister(_T("store"));
         Unregister(_T("checkvalidation"));
 
-        Core::JSONRPC::Handler& legacyVersion = JSONRPC::CreateHandler({ 1 }, *this);
-        legacyVersion.Unregister(_T("clueless"));
+        Core::JSONRPC::Handler* legacyVersion = JSONRPC::GetHandler(1);
+
+        ASSERT (legacyVersion != nullptr);
+
+        legacyVersion->Unregister(_T("clueless"));
     }
 
     /* virtual */ const string JSONRPCPlugin::Initialize(PluginHost::IShell * service)
