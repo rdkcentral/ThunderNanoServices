@@ -265,9 +265,9 @@ namespace A2DP {
             return (Core::ERROR_NONE);
         }
 
-        void Operational() override
+        void Operational(const bool upAndRunning) override
         {
-            TRACE(DiscoveryFlow, (_T("Bluetooth A2DP/SDP connection is operational")));
+            TRACE(DiscoveryFlow, (_T("Bluetooth A2DP/SDP connection is %ioperational"), upAndRunning? "" : "in"));
         }
 
     public:

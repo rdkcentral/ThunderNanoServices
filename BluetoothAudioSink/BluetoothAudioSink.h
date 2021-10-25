@@ -161,7 +161,7 @@ namespace Plugin {
             ~ComNotificationSink() = default;
 
         public:
-            void CleanedUp(const Core::IUnknown* remote, const uint32_t interfaceId) override
+            void CleanedUp(const Core::IUnknown* remote VARIABLE_IS_NOT_USED, const uint32_t interfaceId VARIABLE_IS_NOT_USED) override
             {
             }
             void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId) override
@@ -342,12 +342,7 @@ namespace Plugin {
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if (_player != nullptr) {
-                    const uint32_t time = timestamp;
                     result = _player->GetTime(timestamp);
-
-                    if ((result == Core::ERROR_NONE) && (time != static_cast<uint32_t>(~0))) {
-                        result = _player->SetTime(time);
-                    }
                 }
 
                 return (result);

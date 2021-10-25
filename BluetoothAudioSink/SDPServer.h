@@ -147,20 +147,28 @@ namespace SDP {
             ClientConnection(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<ClientConnection>* server)
                 : Bluetooth::SDP::ServerSocket(connector, remoteNode)
                 , _server(*static_cast<Implementation*>(server))
+                , _lastActivity(0)
             {
                 ASSERT(server != nullptr);
             }
 
             ~ClientConnection() = default;
 
-        private:
-            void Operational() override
+        public:
+            uint64_t LastActivity() const
             {
-                TRACE(SDPServerFlow, (_T("Incoming connection from %s"), RemoteId().c_str()));
+                return (_lastActivity);
             }
-            void Inoperational() override
+
+        private:
+            void Operational(const bool upAndRunning) override
             {
-                TRACE(SDPServerFlow, (_T("Closed connection to %s"), RemoteId().c_str()));
+                if (upAndRunning == true) {
+                    _lastActivity = Core::Time::Now().Ticks();
+                    TRACE(SDPServerFlow, (_T("Incoming connection from %s"), RemoteId().c_str()));
+                } else {
+                    TRACE(SDPServerFlow, (_T("Closed connection to %s"), RemoteId().c_str()));
+                }
             }
 
             void Services(const Bluetooth::UUID& uuid, std::list<uint32_t>& serviceHandles) override
@@ -180,6 +188,8 @@ namespace SDP {
                 _server.Tree().Unlock();
 
                 TRACE(SDPServerFlow, (_T("Found %i services"), serviceHandles.size()));
+
+                _lastActivity = Core::Time::Now().Ticks();
             }
 
             void Serialize(const uint32_t serviceHandle, const std::pair<uint16_t, uint16_t>& range, std::function<void(const uint16_t id, const Bluetooth::Buffer& buffer)> Store) const override
@@ -211,10 +221,12 @@ namespace SDP {
                 }
                 _server.Tree().Unlock();
 
+                _lastActivity = Core::Time::Now().Ticks();
             }
 
         private:
             Implementation& _server;
+            mutable uint64_t _lastActivity;
         }; // class ClientConnection
 
         class Implementation : public Core::SocketServerType<ClientConnection> {
@@ -250,8 +262,8 @@ namespace SDP {
             Implementation(const Bluetooth::SDP::Tree& tree, const uint64_t inactivityTimeout)
                 : Core::SocketServerType<ClientConnection>()
                 , _tree(tree)
-                , _inactivityTimeout(inactivityTimeout)
-                , _connectionEvaluationPeriod(inactivityTimeout / 2)
+                , _inactivityTimeout(inactivityTimeout * Core::Time::TicksPerMillisecond /* us */)
+                , _connectionEvaluationPeriod(100 /* ms */)
                 , _connectionEvaluationTimer(Core::Thread::DefaultStackSize(), _T("SDPConnectionChecker"))
             {
             }
@@ -306,7 +318,7 @@ namespace SDP {
 
                 auto index(Clients());
                 while (index.Next() == true) {
-                    if (timeNow - index.Client()->LastActivity() > _inactivityTimeout) {
+                    if (timeNow - index.Client()->LastActivity() >= _inactivityTimeout) {
                         // Close inactive connections
                         TRACE(SDPServerFlow, (_T("Closing inactive connection to %s"), index.Client()->RemoteId().c_str()));
                         index.Client()->Close(0);
