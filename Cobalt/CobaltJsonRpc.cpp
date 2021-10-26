@@ -87,7 +87,7 @@ uint32_t Cobalt::set_url(const Core::JSON::String &param) /* Browser */
 // Return codes:
 //  - ERROR_NONE: Success
 uint32_t Cobalt::get_visibility(
-        Core::JSON::EnumType<VisibilityType> &response) const /* Browser */ {
+        VARIABLE_IS_NOT_USED Core::JSON::EnumType<VisibilityType> &response) const /* Browser */ {
     /*
     response = (_hidden ? VisibilityType::HIDDEN : VisibilityType::VISIBLE);
     return Core::ERROR_NONE;
@@ -99,7 +99,7 @@ uint32_t Cobalt::get_visibility(
 // Return codes:
 //  - ERROR_NONE: Success
 uint32_t Cobalt::set_visibility(
-        const Core::JSON::EnumType<VisibilityType> &param) /* Browser */ {
+        VARIABLE_IS_NOT_USED const Core::JSON::EnumType<VisibilityType> &param) /* Browser */ {
     /*
     ASSERT(_cobalt != nullptr);
     uint32_t result = Core::ERROR_BAD_REQUEST;

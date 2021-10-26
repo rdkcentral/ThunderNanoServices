@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-FirmwareControl plugin for Thunder framework.
+A FirmwareControl plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -81,6 +82,13 @@ The table below lists configuration options of the plugin.
 | configuration?.download | string | <sup>*(optional)*</sup> Location where the firmware to be downloaded |
 | configuration?.waittime | number | <sup>*(optional)*</sup> Maximum duration to finish download or install process |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [FirmwareControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/FirmwareControl.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -95,7 +103,7 @@ FirmwareControl interface methods:
 
 
 <a name="method.upgrade"></a>
-## *upgrade <sup>method</sup>*
+## *upgrade [<sup>method</sup>](#head.Methods)*
 
 Upgrade the device to the given firmware. (Note: Ensure size of firmware image should be < 500MB).
 
@@ -136,7 +144,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "FirmwareControl.1.upgrade",
     "params": {
         "name": "firmware_v.0",
@@ -153,13 +161,13 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.resume"></a>
-## *resume <sup>method</sup>*
+## *resume [<sup>method</sup>](#head.Methods)*
 
 Resume download from the last paused position.
 
@@ -196,7 +204,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "FirmwareControl.1.resume",
     "params": {
         "name": "firmware_v.0",
@@ -210,7 +218,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -229,7 +237,7 @@ FirmwareControl interface properties:
 
 
 <a name="property.status"></a>
-## *status <sup>property</sup>*
+## *status [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current status of a upgrade.
 
@@ -250,7 +258,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "FirmwareControl.1.status"
 }
 ```
@@ -260,13 +268,13 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "completed"
 }
 ```
 
 <a name="property.downloadsize"></a>
-## *downloadsize <sup>property</sup>*
+## *downloadsize [<sup>property</sup>](#head.Properties)*
 
 Provides access to the max free space available to download image.
 
@@ -285,7 +293,7 @@ Provides access to the max free space available to download image.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "FirmwareControl.1.downloadsize"
 }
 ```
@@ -295,7 +303,7 @@ Provides access to the max free space available to download image.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 315576
 }
 ```
@@ -315,7 +323,7 @@ FirmwareControl interface events:
 
 
 <a name="event.upgradeprogress"></a>
-## *upgradeprogress <sup>event</sup>*
+## *upgradeprogress [<sup>event</sup>](#head.Notifications)*
 
 Notifies progress of upgrade.
 
