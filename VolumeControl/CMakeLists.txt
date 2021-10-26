@@ -63,11 +63,11 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
                 ${VOLUMECONTROL_IMPLEMENTATION_PATH}/VolumeControlPlatform.cpp)
     else()
         include(GetExternalCode)
-        set(VOLUMECONTROL_IMPLEMENTATION_VERSION "master" CACHE STRING "VolumeControl implementation version")
+        set(VOLUMECONTROL_IMPLEMENTATION_VERSION "master" CACHE STRING "VolumeControl implementation version: commit_id_or_tag_or_branch_name")
         set(VOLUMECONTROL_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/VolumeControl" CACHE STRING "VolumeControl implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${VOLUMECONTROL_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${VOLUMECONTROL_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${VOLUMECONTROL_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}

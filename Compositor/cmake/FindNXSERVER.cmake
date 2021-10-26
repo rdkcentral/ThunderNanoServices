@@ -1,7 +1,7 @@
 # - Try to find BroadCom RefSW.
 # Once done this will define
-#  BCMREFSW_FOUND - System has Nexus
-#  BCMREFSW_INCLUDE_DIRS - The Nexus include directories
+#  NXSERVER_FOUND - System has Nexus
+#  NXSERVER_INCLUDE_DIRS - The Nexus include directories
 #
 #  All variable from platform_app.inc are available except:
 #  - NEXUS_PLATFORM_VERSION_NUMBER.
@@ -38,18 +38,18 @@ find_path(LIBNXSERVER_INCLUDE_DIR nxserverlib.h
 find_file(NXSERVER_EXECUTABLE NAMES nxserver
         PATHS usr/bin/)
 
-if(NXSERVER_EXECUTABLE OR LIBNXSERVER_LIBRARY)
+if (NOT (${NXSERVER_EXECUTABLE} STREQUAL "NXSERVER_EXECUTABLE-NOTFOUND") OR NOT (${LIBNXSERVER_LIBRARY} STREQUAL "LIBNXSERVER_LIBRARY-NOTFOUND"))
     message(STATUS "Detected a nxserver...")
-    set(NXSERVER_FOUND TRUE)
+else()
+    message(STATUS "NXServer was *NOT* found!!!!")
 endif()
 
 if(LIBNXSERVER_LIBRARY)
     include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(LIBNXSERVER_LIBRARY DEFAULT_MSG LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
-
+    find_package_handle_standard_args(NXSERVER DEFAULT_MSG LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
     mark_as_advanced(LIBNXSERVER_INCLUDE_DIR LIBNXSERVER_LIBRARY)
 
-    if(NOT TARGET NXSERVER::NXSERVER)
+    if(NXSERVER_FOUND AND NOT TARGET NXSERVER::NXSERVER)
         add_library(NXSERVER::NXSERVER UNKNOWN IMPORTED)
         if(EXISTS "${LIBNXSERVER_LIBRARY}")
             set_target_properties(NXSERVER::NXSERVER PROPERTIES

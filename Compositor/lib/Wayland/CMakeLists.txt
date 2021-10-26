@@ -34,11 +34,11 @@ if(COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
     add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
 else ()
     include(GetExternalCode)
-    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version")
+    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version: commit_id_or_tag_or_branch_name")
     set(COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor wayland implementation repository")
     GetExternalCode(
         GIT_REPOSITORY ${COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY}
-        GIT_TAG ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
+        GIT_VERSION ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
         SOURCE_DIR "Nexus"
     )
     add_subdirectory (Nexus/NexusServer)
@@ -101,17 +101,15 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
-    find_package(WestonServer)
-    if(WESTON_SERVER_FOUND)
-        target_sources(${TARGET}
-            PRIVATE
-                Weston.cpp
-        )
-        target_link_libraries(${TARGET}
-            PRIVATE
-                WestonServer::WestonServer
-        )
-    endif(WESTON_SERVER_FOUND)
+    find_package(WestonServer REQUIRED)
+    target_sources(${TARGET}
+        PRIVATE
+            Weston.cpp
+    )
+    target_link_libraries(${TARGET}
+        PRIVATE
+            WestonServer::WestonServer
+    )
 elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     find_package(WesterosServer)
     if(WESTEROS_SERVER_FOUND)

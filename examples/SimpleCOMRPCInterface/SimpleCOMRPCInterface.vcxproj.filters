@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="Module.cpp">
-      <Filter>Base Files</Filter>
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ProxyStubs_SimpleCOMRPCInterface.cpp">
       <Filter>Generated Files</Filter>
@@ -12,19 +12,22 @@
     <Filter Include="Interface FIles">
       <UniqueIdentifier>{b8782bed-4c03-45b6-8679-cab40e0cb46b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Base Files">
-      <UniqueIdentifier>{43924fcc-5425-4527-8afc-5861ad200ed0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Generated Files">
       <UniqueIdentifier>{fc169866-d839-430c-8455-e915c9344ba4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{43924fcc-5425-4527-8afc-5861ad200ed0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{e927ae9a-d68c-4e13-b3ef-4026fed1ff8b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Module.h">
-      <Filter>Base Files</Filter>
-    </ClInclude>
     <ClInclude Include="ISimpleCOMRPCInterface.h">
       <Filter>Interface FIles</Filter>
+    </ClInclude>
+    <ClInclude Include="Module.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

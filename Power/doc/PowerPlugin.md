@@ -6,12 +6,13 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-Power plugin for Thunder framework.
+A Power plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 
@@ -75,6 +76,13 @@ The table below lists configuration options of the plugin.
 | configuration?.gpiotype | sting | <sup>*(optional)*</sup> GPIO type (Broadcom) |
 | configuration?.statechange | number | <sup>*(optional)*</sup> Statechange (Broadcom) |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [Power.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Power.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -88,7 +96,7 @@ Power interface methods:
 
 
 <a name="method.set"></a>
-## *set <sup>method</sup>*
+## *set [<sup>method</sup>](#head.Methods)*
 
 Sets power state.
 
@@ -122,7 +130,7 @@ Sets power state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Power.1.set",
     "params": {
         "powerstate": "on",
@@ -136,7 +144,7 @@ Sets power state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -154,7 +162,7 @@ Power interface properties:
 
 
 <a name="property.state"></a>
-## *state <sup>property</sup>*
+## *state [<sup>property</sup>](#head.Properties)*
 
 Provides access to the power state.
 
@@ -173,7 +181,7 @@ Provides access to the power state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Power.1.state"
 }
 ```
@@ -183,7 +191,7 @@ Provides access to the power state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "on"
 }
 ```

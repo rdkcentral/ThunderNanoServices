@@ -24,11 +24,6 @@
 #include <plugins/plugins.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
-#ifdef __WINDOWS__
-    static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:62000");
-#else
-    static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
-#endif
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
 using namespace WPEFramework;
@@ -97,7 +92,7 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, ServerType& t
 {
     int index = 1;
     bool showHelp = false;
-    comChannel = Core::NodeId(SimpleTestAddress);
+    comChannel = Core::NodeId(Exchange::SimpleTestAddress);
 
     while ((index < argc) && (!showHelp)) {
         if (strcmp(argv[index], "-connect") == 0) {
@@ -142,7 +137,7 @@ int main(int argc, char* argv[])
 
     if (ParseOptions(argc, argv, comChannel, type, callsign) == true) {
         printf("Options:\n");
-        printf("-connect <IP/FQDN>:<port> [default: %s]\n", SimpleTestAddress);
+        printf("-connect <IP/FQDN>:<port> [default: %s]\n", Exchange::SimpleTestAddress);
         printf("-plugin <callsign> [use plugin server and not the stand-alone version]\n");
         printf("-h This text\n\n");
     }

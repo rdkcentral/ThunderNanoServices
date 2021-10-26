@@ -37,15 +37,13 @@ find_library(CJSON_LIBRARY cjson)
 if(EXISTS "${CJSON_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    set(CJSON_FOUND TRUE)
-
-    find_package_handle_standard_args(CJSON DEFAULT_MSG CJSON_FOUND CJSON_INCLUDE CJSON_LIBRARY)
+    find_package_handle_standard_args(CJSON DEFAULT_MSG CJSON_INCLUDE CJSON_LIBRARY)
     mark_as_advanced(CJSON_INCLUDE CJSON_LIBRARY)
 
-    if(NOT TARGET cjson::cjson)
-        add_library(cjson::cjson UNKNOWN IMPORTED)
+    if(CJSON_FOUND AND NOT TARGET CJSON::CJSON)
+        add_library(CJSON::CJSON UNKNOWN IMPORTED)
 
-        set_target_properties(cjson::cjson PROPERTIES
+        set_target_properties(CJSON::CJSON PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${CJSON_LIBRARY}"
                 INTERFACE_INCLUDE_DIRECTORIES "${CJSON_INCLUDE}"

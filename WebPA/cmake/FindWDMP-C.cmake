@@ -37,15 +37,13 @@ find_library(WDMP_C_LIBRARY wdmp-c)
 if(EXISTS "${WDMP_C_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    set(WDMP_C_FOUND TRUE)
-
-    find_package_handle_standard_args(WDMP_C DEFAULT_MSG WDMP_C_FOUND WDMP_C_INCLUDE WDMP_C_LIBRARY)
+    find_package_handle_standard_args(WDMP_C DEFAULT_MSG WDMP_C_INCLUDE WDMP_C_LIBRARY)
     mark_as_advanced(WDMP_C_INCLUDE WDMP_C_LIBRARY)
 
-    if(NOT TARGET wdmp_c::wdmp_c)
-        add_library(wdmp_c::wdmp_c UNKNOWN IMPORTED)
+    if(WDMP_C_FOUND AND NOT TARGET WDMP_C::WDMP_C)
+        add_library(WDMP_C::WDMP_C UNKNOWN IMPORTED)
 
-        set_target_properties(wdmp_c::wdmp_c PROPERTIES
+        set_target_properties(WDMP_C::WDMP_C PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${WDMP_C_LIBRARY}"
                 INTERFACE_INCLUDE_DIRECTORIES "${WDMP_C_INCLUDE}"
