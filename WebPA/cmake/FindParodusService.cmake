@@ -46,4 +46,11 @@ if(EXISTS "${PARODUS_SERVICE_LIBRARY}")
                 IMPORTED_LOCATION "${PARODUS_SERVICE_LIBRARY}"
                 )
     endif()
+else()
+    if(ParodusService_FIND_REQUIRED)
+        message(FATAL_ERROR "PARODUS_SERVICE_LIBRARY not available")
+    elseif(NOT ParodusService_FIND_QUIETLY)
+        message(STATUS "PARODUS_SERVICE_LIBRARY not available")
+    endif()
+
 endif()

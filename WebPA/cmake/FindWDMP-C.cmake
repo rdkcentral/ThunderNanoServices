@@ -1,6 +1,6 @@
 # - Try to find WDMP-C
 # Once done this will define
-#  WDMP_C_FOUND - System has WDMP-C
+#  WDMP-C_FOUND - System has WDMP-C
 #  WDMP_C_INCLUDE_DIRS - The WDMP-C include directories
 #  WDMP_C_LIBRARIES - The libraries needed to use WDMP-C
 #
@@ -37,16 +37,23 @@ find_library(WDMP_C_LIBRARY wdmp-c)
 if(EXISTS "${WDMP_C_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    find_package_handle_standard_args(WDMP_C DEFAULT_MSG WDMP_C_INCLUDE WDMP_C_LIBRARY)
+    find_package_handle_standard_args(WDMP-C DEFAULT_MSG WDMP_C_INCLUDE WDMP_C_LIBRARY)
     mark_as_advanced(WDMP_C_INCLUDE WDMP_C_LIBRARY)
 
-    if(WDMP_C_FOUND AND NOT TARGET WDMP_C::WDMP_C)
-        add_library(WDMP_C::WDMP_C UNKNOWN IMPORTED)
+    if(WDMP-C_FOUND AND NOT TARGET WDMP-C::WDMP-C)
+        add_library(WDMP-C::WDMP-C UNKNOWN IMPORTED)
 
-        set_target_properties(WDMP_C::WDMP_C PROPERTIES
+        set_target_properties(WDMP-C::WDMP-C PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${WDMP_C_LIBRARY}"
                 INTERFACE_INCLUDE_DIRECTORIES "${WDMP_C_INCLUDE}"
                 )
     endif()
+else()
+    if(WDMP-C_FIND_REQUIRED)
+        message(FATAL_ERROR "WDMP_C_LIBRARY not available")
+    elseif(NOT WDMP-C_FIND_QUIETLY)
+        message(STATUS "WDMP_C_LIBRARY not available")
+    endif()
+
 endif()
