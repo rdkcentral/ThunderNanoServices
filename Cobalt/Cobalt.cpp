@@ -22,7 +22,48 @@
 namespace WPEFramework {
 namespace Cobalt {
 
-extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
+class MemoryObserverImpl: public Exchange::IMemory {
+private:
+    MemoryObserverImpl();
+    MemoryObserverImpl(const MemoryObserverImpl&);
+    MemoryObserverImpl& operator=(const MemoryObserverImpl&);
+
+    public:
+    MemoryObserverImpl(const RPC::IRemoteConnection* connection) :
+        _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId()) {
+    }
+    ~MemoryObserverImpl() {
+    }
+
+    public:
+    virtual uint64_t Resident() const {
+        return _main.Resident();
+    }
+    virtual uint64_t Allocated() const {
+        return _main.Allocated();
+    }
+    virtual uint64_t Shared() const {
+        return _main.Shared();
+    }
+    virtual uint8_t Processes() const {
+        return (IsOperational() ? 1 : 0);
+    }
+
+    virtual bool IsOperational() const {
+        return _main.IsActive();
+    }
+
+    BEGIN_INTERFACE_MAP (MemoryObserverImpl)INTERFACE_ENTRY (Exchange::IMemory)END_INTERFACE_MAP
+
+private:
+    Core::ProcessInfo _main;
+    };
+
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection) {
+        ASSERT(connection != nullptr);
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        return (result);
+    }
 }
 
 namespace Plugin {
