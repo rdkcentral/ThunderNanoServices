@@ -54,9 +54,9 @@ target_link_libraries(${TARGET}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        wdmp_c::wdmp_c
-        tinyxml::tinyxml
-        libparodus::libparodus
+        WDMP_C::WDMP_C
+        TinyXML::TinyXML
+        LibParodus::LibParodus
         ${GLIB_LIBRARIES}
 )
 

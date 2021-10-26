@@ -1,7 +1,7 @@
 # - Try to find Broadcom Aamp streamer.
 # Once done this will define
 #  AAMP_FOUND     - System has a Aamp streamer
-#  AAMP::AAMP - The Aamp streamer library
+#  Aamp::Aamp - The Aamp streamer library
 #
 # Copyright (C) 2019 Metrological B.V
 #
@@ -34,15 +34,13 @@ find_library(AAMP_LIBRARY aamp)
 if(EXISTS "${AAMP_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    set(AAMP_FOUND TRUE)
-
-    find_package_handle_standard_args(AAMP DEFAULT_MSG AAMP_FOUND AAMP_INCLUDE AAMP_LIBRARY)
+    find_package_handle_standard_args(Aamp DEFAULT_MSG AAMP_INCLUDE AAMP_LIBRARY)
     mark_as_advanced(AAMP_INCLUDE AAMP_LIBRARY)
+    set(AAMP_FOUND ${Aamp_FOUND})
+    if(Aamp_FOUND AND NOT TARGET Aamp::Aamp)
+        add_library(Aamp::Aamp UNKNOWN IMPORTED)
 
-    if(NOT TARGET AAMP::AAMP)
-        add_library(AAMP::AAMP UNKNOWN IMPORTED)
-
-        set_target_properties(AAMP::AAMP PROPERTIES
+        set_target_properties(Aamp::Aamp PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${AAMP_LIBRARY}"
                 INTERFACE_INCLUDE_DIRECTORIES "${AAMP_INCLUDE}"
