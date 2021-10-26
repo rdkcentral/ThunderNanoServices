@@ -51,4 +51,11 @@ if(EXISTS "${LIBPARODUS_LIBRARY}")
                 INTERFACE_INCLUDE_DIRECTORIES "${LIBPARODUS_INCLUDE}"
                 )
     endif()
+else()
+    if(LibParodus_FIND_REQUIRED)
+        message(FATAL_ERROR "LIBPARODUS_LIBRARY not available")
+    elseif(NOT LibParodus_FIND_QUIETLY)
+        message(STATUS "LIBPARODUS_LIBRARY not available")
+    endif()
+
 endif()

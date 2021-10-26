@@ -46,4 +46,11 @@ if(EXISTS "${PROCPS_LIBRARY}")
                 IMPORTED_LOCATION "${PROCPS_LIBRARY}"
                 )
     endif()
+else()
+    if(Procps_FIND_REQUIRED)
+        message(FATAL_ERROR "PROCPS_LIBRARY not available")
+    elseif(NOT Procps_FIND_QUIETLY)
+        message(STATUS "PROCPS_LIBRARY not available")
+    endif()
+
 endif()
