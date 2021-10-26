@@ -182,7 +182,7 @@ namespace Plugin {
 
         private:
             BluetoothAudioSink& _parent;
-        }; // clas ComNotificationSink
+        }; // class ComNotificationSink
 
     public:
         class A2DPSink {

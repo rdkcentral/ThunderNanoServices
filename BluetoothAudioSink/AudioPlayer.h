@@ -81,10 +81,12 @@ namespace Plugin {
             , _receiveBuffer(connector)
             , _buffer(nullptr)
             , _readCursor(nullptr)
+            , _bufferSize(0)
             , _eos(false)
         {
             _minFrameSize = _transport.MinFrameSize();
             _preferredFrameSize = _transport.PreferredFrameSize();
+
             ASSERT(_minFrameSize != 0);
             ASSERT(_preferredFrameSize != 0);
             ASSERT(_minFrameSize <= _preferredFrameSize);
@@ -92,7 +94,9 @@ namespace Plugin {
             if (_receiveBuffer.IsValid() == true) {
                 _maxFrameSize = _receiveBuffer.Size();
                 if (_maxFrameSize != 0) {
-                    _buffer = static_cast<uint8_t*>(::malloc((2 * _maxFrameSize)));
+                    const uint32_t multiplier = (((2 * _preferredFrameSize) / _maxFrameSize) + 1);
+                    _bufferSize = multiplier * _maxFrameSize;
+                    _buffer = static_cast<uint8_t*>(::malloc(_bufferSize));
                     ASSERT(_buffer != nullptr);
                 }
             }
@@ -123,7 +127,7 @@ namespace Plugin {
                 _startTime = Core::Time::Now().Ticks();
                 Thread::Run();
             } else {
-                TRACE(Trace::Error, (_T("Transport channel is not opened!")));
+                TRACE(Trace::Error, (_T("Transport channel is not open!")));
                 result = Core::ERROR_ILLEGAL_STATE;
             }
 
@@ -169,6 +173,9 @@ namespace Plugin {
 
         uint32_t Worker() override
         {
+            uint32_t delay = 0;
+            uint32_t transmitted = 0;
+
             if ((_available < _minFrameSize) && (_eos != true)) {
                 // Have to replenish the local buffer...
                 // Make sure we have at least the encoder preferred frame size available.
@@ -176,7 +183,9 @@ namespace Plugin {
                 ::memmove(_buffer, _readCursor, _available);
 
                 while (_available < _preferredFrameSize) {
-                    const uint16_t bytesRead =_receiveBuffer.Get(_maxFrameSize, _buffer + _available);
+                    ASSERT(_available + _maxFrameSize <= _bufferSize);
+
+                    const uint16_t bytesRead =_receiveBuffer.Get(_maxFrameSize, (_buffer + _available));
                     ASSERT(bytesRead <= _maxFrameSize);
 
                     _available += bytesRead;
@@ -184,7 +193,7 @@ namespace Plugin {
                     if (bytesRead == 0) {
                         // The audio source has problem providing more data at the moment...
                         // We don't have the preferred data available, let's try to play out whatever there is left in the buffer anyway.
-                            if (_available < _minFrameSize) {
+                        if (_available < _minFrameSize) {
                             // All data was used and no new is currently available, apparently the source has stalled - start anew.
                             _offset += PlayTime();
                             _startTime = Core::Time::Now().Ticks();
@@ -206,24 +215,29 @@ namespace Plugin {
                     ::SleepMs(playTime - elapsedTime);
                 }
 
-                const uint32_t transmitted = _transport.Transmit(_available, _readCursor);
-                fprintf(stderr, "streaming; time %3i.%03i / %3i.%03i sec; delta %3i ms, frame %i bytes  \r",
-                        (playTime / 1000), (playTime % 1000), (elapsedTime / 1000), (elapsedTime % 1000), (playTime - elapsedTime), transmitted);
+                if (_available >= _minFrameSize) {
+                    transmitted = _transport.Transmit(_available, _readCursor);
 
-                if ((transmitted == 0) && (_eos == true)) {
-                    // Played out everything in the buffer and end-of-stream was signalled.
-                    Thread::Block();
+#ifdef __DEBUG__
+                    fprintf(stderr, "streaming; time %3i.%03i / %3i.%03i sec; delta %3i ms, frame %i bytes  \r",
+                            (playTime / 1000), (playTime % 1000), (elapsedTime / 1000), (elapsedTime % 1000), (playTime - elapsedTime), transmitted);
+#endif
+
+                    _readCursor += transmitted;
+                    _available -= transmitted;
                 }
-
-                _readCursor += transmitted;
-                _available -= transmitted;
-
             } else {
                 TRACE(Trace::Error, (_T("Bluetooth transport link failure - terminating audio stream")));
-                Thread::Block();
+                _eos = true;
             }
 
-            return (0);
+            if ((transmitted == 0) && (_eos == true)) {
+                // Played out everything in the buffer and end-of-stream was signalled.
+                Thread::Block();
+                delay = Core::infinite;
+            }
+
+            return (delay);
         }
 
     private:
@@ -237,6 +251,7 @@ namespace Plugin {
         ReceiveBuffer _receiveBuffer;
         uint8_t* _buffer;
         uint8_t* _readCursor;
+        uint32_t _bufferSize;
         bool _eos;
     };
 
