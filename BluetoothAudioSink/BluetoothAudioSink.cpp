@@ -84,7 +84,7 @@ namespace Plugin {
                                 _sink = new A2DPSink(this, _codecSettings, device, _sinkSEID, data);
                                 ASSERT(_sink != nullptr);
 
-                                TRACE(Trace::Information, (_T("Loaded assigned audio sink [%s]"), filename.c_str()));
+                                TRACE(Trace::Information, (_T("Loaded previously assigned audio sink [%s]"), filename.c_str()));
                             }
 
                             device->Release();
@@ -215,6 +215,7 @@ namespace Plugin {
         // Store the settings, if not already done..
         Core::File settingsFile(_service->PersistentPath() + _sink->Address() + _T(".json"));
         if ( (settingsFile.Exists() == false) && (settingsFile.Create() == true) ) {
+            TRACE(Trace::Information, (_T("Storing Bluetooth audio sink information [%s]"), _sink->Address().c_str()));
             data.IElement::ToFile(settingsFile);
             settingsFile.Close();
         }

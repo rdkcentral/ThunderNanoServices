@@ -272,9 +272,10 @@ namespace Plugin {
                 , _lock()
                 , _audioService()
                 , _discovery(Designator(device), Designator(device, Bluetooth::SDP::ClientSocket::SDP_PSM /* a well-known PSM */))
-                , _signalling(seid, std::bind(&A2DPSink::OnSignallingUpdated, this), Designator(device), Designator(device, 0 /* yet unknown PSM */))
+                , _signalling(seid, Designator(device), Designator(device, 0 /* yet unknown PSM */))
                 , _transport(1 /* SSRC */, Designator(device), Designator(device, 0 /* yet unknown PSM */))
                 , _endpoint(nullptr)
+                , _state(Exchange::IBluetoothAudioSink::UNASSIGNED)
                 , _type(Exchange::IBluetoothAudioSink::UNKNOWN)
                 , _codecList()
                 , _drmList()
@@ -284,7 +285,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
                 ASSERT(device != nullptr);
 
-                _signalling.State(Exchange::IBluetoothAudioSink::DISCONNECTED);
+                State(Exchange::IBluetoothAudioSink::DISCONNECTED);
 
                 _device->AddRef();
 
@@ -323,7 +324,29 @@ namespace Plugin {
             }
             Exchange::IBluetoothAudioSink::state State() const
             {
-                return (_signalling.State());
+                return (_state);
+            }
+            void State(const Exchange::IBluetoothAudioSink::state newState)
+            {
+                bool updated = false;
+
+                _lock.Lock();
+
+                if (_state != newState) {
+                    _state = newState;
+                    updated = true;
+                }
+
+                _lock.Unlock();
+
+                if (updated == true) {
+                    Core::EnumerateType<Exchange::IBluetoothAudioSink::state> value(_state);
+                    TRACE(Trace::Information, (_T("A2DP sink state: %s"), (value.IsSet()? value.Data() : "(undefined)")));
+
+                    _job.Submit([this]() {
+                        _parent.Updated();
+                    });
+                }
             }
             Exchange::IBluetoothAudioSink::devicetype Type() const
             {
@@ -410,6 +433,7 @@ namespace Plugin {
                                     if (_player->IsValid() == true) {
                                         TRACE(Trace::Information, (_T("Successfully created Bluetooth audio playback session")));
                                         result = Core::ERROR_NONE;
+                                        State(Exchange::IBluetoothAudioSink::READY);
                                     } else {
                                         TRACE(Trace::Error, (_T("Failed to create player")));
                                         result = Core::ERROR_OPENING_FAILED;
@@ -448,6 +472,7 @@ namespace Plugin {
                             _endpoint->Stop();
                         } else {
                             TRACE(Trace::Information, (_T("Starting Bluetooth audio playback")));
+                            State(Exchange::IBluetoothAudioSink::STREAMING);
                         }
                     }
                 }
@@ -459,10 +484,19 @@ namespace Plugin {
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if ((_endpoint != nullptr) && (_player != nullptr)) {
-                    result = _player->Stop();
-                    const uint32_t stopResult = _endpoint->Stop();
-                    result = (result != Core::ERROR_NONE? result : stopResult);
-                    TRACE(Trace::Information, (_T("Stopped Bluetooth audio playback")));
+                    if (_state == Exchange::IBluetoothAudioSink::READY) {
+                        result = Core::ERROR_NONE;
+                    } else if (_state == Exchange::IBluetoothAudioSink::STREAMING) {
+                        const uint32_t stopResult = _player->Stop();
+                        result = _endpoint->Stop();
+                        result = (result != Core::ERROR_NONE? result : stopResult);
+
+                        TRACE(Trace::Information, (_T("Stopped Bluetooth audio playback%s"), (result == Core::ERROR_NONE? "" : " (with errors)")));
+
+                        if (_signalling.IsOpen() == true) {
+                            State(Exchange::IBluetoothAudioSink::READY);
+                        }
+                    }
                 }
 
                 return (result);
@@ -472,18 +506,22 @@ namespace Plugin {
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if ((_endpoint != nullptr) && (_player != nullptr)) {
-                    result = Core::ERROR_ASYNC_FAILED;
 
-                    Stop();
+                    const uint32_t stopResult = Stop();
 
                     delete _player;
                     _player = nullptr;
 
-                    if (_endpoint->Close() == Core::ERROR_NONE) {
-                        if (_transport.Disconnect() == Core::ERROR_NONE) {
-                            result = Core::ERROR_NONE;
-                            TRACE(Trace::Information, (_T("Closed Bluetooth audio session")));
-                        }
+                    const uint32_t closeResult = _endpoint->Close();
+
+                    result = _transport.Disconnect();
+
+                    result = (result != Core::ERROR_NONE? result : (closeResult != Core::ERROR_NONE? closeResult : stopResult));
+
+                    TRACE(Trace::Information, (_T("Closed Bluetooth audio session%s"), (result == Core::ERROR_NONE? "" : " (with errors)")));
+
+                    if (_device->IsConnected() == true) {
+                        State(Exchange::IBluetoothAudioSink::CONNECTED);
                     }
                 }
 
@@ -504,8 +542,8 @@ namespace Plugin {
                             DiscoverAudioStreamEndpoints(_audioService);
                         } else {
                             // It's not an audio sink device, can't do anything.
-                            TRACE(Trace::Information, (_T("Connected device does not feature an audio sink!")));
-                            _signalling.State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
+                            TRACE(ProfileFlow, (_T("Connected device does not feature an audio sink!")));
+                            State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                         }
                     } else {
                         TRACE(ProfileFlow, (_T("Device disconnected")));
@@ -513,29 +551,9 @@ namespace Plugin {
                         Close();
                         _signalling.Disconnect();
                         _discovery.Disconnect();
-                        _signalling.State(Exchange::IBluetoothAudioSink::DISCONNECTED);
+                        State(Exchange::IBluetoothAudioSink::DISCONNECTED);
                     }
                 }
-            }
-            void OnSignallingUpdated()
-            {
-                if ((State() == Exchange::IBluetoothAudioSink::CONNECTED)) {
-                    TRACE(ProfileFlow, (_T("Audio sink connected")));
-                } else if (State() == Exchange::IBluetoothAudioSink::READY) {
-                    TRACE(ProfileFlow, (_T("Audio sink ready")));
-                } else if (State() == Exchange::IBluetoothAudioSink::STREAMING) {
-                    TRACE(ProfileFlow, (_T("Audio sink streaming")));
-                } else if (State() == Exchange::IBluetoothAudioSink::DISCONNECTED) {
-                    TRACE(ProfileFlow, (_T("Audio sink disconnected")));
-                } else if (State() == Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE) {
-                    TRACE(ProfileFlow, (_T("Bluetooth device connected but is not an audio sink!")));
-                } else if (State() == Exchange::IBluetoothAudioSink::CONNECTED_RESTRICTED) {
-                    TRACE(ProfileFlow, (_T("Audio sink connected but blocked by content protection criteria!")));
-                }
-
-                _job.Submit([this]() {
-                    _parent.Updated();
-                });
             }
 
         private:
@@ -560,13 +578,13 @@ namespace Plugin {
                     // Disregard possibility of multiple sink services for now.
                     _audioService = services.front();
                     if (services.size() > 1) {
-                        TRACE(Trace::Information, (_T("More than one audio sink available, using the first one!")));
+                        TRACE(ProfileFlow, (_T("More than one audio sink available, using the first one!")));
                     }
 
-                    TRACE(Trace::Information, (_T("Audio sink service available! A2DP v%d.%d, AVDTP v%d.%d, L2CAP PSM: %i, features: 0b%s"),
-                                            (_audioService.ProfileVersion() >> 8), (_audioService.ProfileVersion() & 0xFF),
-                                            (_audioService.TransportVersion() >> 8), (_audioService.TransportVersion() & 0xFF),
-                                            _audioService.PSM(), std::bitset<8>(_audioService.Features()).to_string().c_str()));
+                    TRACE(ProfileFlow, (_T("Audio sink service available! A2DP v%d.%d, AVDTP v%d.%d, L2CAP PSM: %i, features: 0b%s"),
+                                        (_audioService.ProfileVersion() >> 8), (_audioService.ProfileVersion() & 0xFF),
+                                        (_audioService.TransportVersion() >> 8), (_audioService.TransportVersion() & 0xFF),
+                                        _audioService.PSM(), std::bitset<8>(_audioService.Features()).to_string().c_str()));
 
                     // Now open AVDTP signalling channel...
                     TRACE(ProfileFlow, (_T("Audio sink device discovered, connect to the sink...")));
@@ -575,7 +593,7 @@ namespace Plugin {
 
                     DiscoverAudioStreamEndpoints(_audioService);
                 } else {
-                    _signalling.State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
+                    State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                 }
             }
 
@@ -645,10 +663,10 @@ namespace Plugin {
                 if (_endpoint != nullptr) {
                     AudioServiceData settings;
                     _audioService.Settings(settings);
-                    _signalling.State(Exchange::IBluetoothAudioSink::CONNECTED);
+                    State(Exchange::IBluetoothAudioSink::CONNECTED);
                     _parent.Operational(settings);
                 } else {
-                    _signalling.State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
+                    State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                 }
            }
 
@@ -663,6 +681,7 @@ namespace Plugin {
             A2DP::SignallingChannel _signalling;
             A2DP::TransportChannel _transport;
             A2DP::AudioEndpoint* _endpoint;
+            Exchange::IBluetoothAudioSink::state _state;
             Exchange::IBluetoothAudioSink::devicetype _type;
             std::list<Exchange::IBluetoothAudioSink::audiocodec> _codecList;
             std::list<Exchange::IBluetoothAudioSink::drmscheme> _drmList;
@@ -683,6 +702,7 @@ namespace Plugin {
             , _sinkSEID(1)
             , _callback(nullptr)
             , _codecSettings()
+            , _cleanupJob()
         {
         }
         ~BluetoothAudioSink() = default;
@@ -869,6 +889,7 @@ namespace Plugin {
                 } else if (speed == 100) {
                     result = _sink->Start();
                 } else {
+                    TRACE(Trace::Error, (_T("Unsupported playback speed requested [%i]"), speed));
                     result = Core::ERROR_NOT_SUPPORTED;
                 }
             } else {
@@ -933,8 +954,11 @@ namespace Plugin {
 
         void CallbackRevoked(const Exchange::IBluetoothAudioSink::ICallback* remote VARIABLE_IS_NOT_USED)
         {
-            TRACE(Trace::Information, (_T("Remote is dead, revoking the callback")));
+            TRACE(Trace::Information, (_T("Bluetooth audio sink remote client died; cleaning up the playback session on behalf of the dead")));
             Callback(nullptr);
+            _cleanupJob.Submit([this]() {
+                Relinquish();
+            });
         }
 
         void Operational(const A2DPSink::AudioServiceData& data);
@@ -949,6 +973,7 @@ namespace Plugin {
         uint32_t _sinkSEID;
         Exchange::IBluetoothAudioSink::ICallback* _callback;
         string _codecSettings;
+        DecoupledJob _cleanupJob;
     }; // class BluetoothAudioSink
 
 } // namespace Plugin

@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 RDK Management
+ * Copyright 2021 RDK Management
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,19 +34,14 @@ namespace A2DP {
         static constexpr uint16_t CommandTimeout = 1000;
 
     public:
-        using StateNotifyFn = std::function<void(const Exchange::IBluetoothAudioSink::state)>;
-
-    public:
         AudioEndpoint() = delete;
         AudioEndpoint& operator=(const AudioEndpoint&) = delete;
 
-        AudioEndpoint(Bluetooth::AVDTPSocket& socket, const Bluetooth::AVDTPProfile::StreamEndPoint& sep,
-                      uint8_t sourceSEID, const StateNotifyFn& notify)
+        AudioEndpoint(Bluetooth::AVDTPSocket& socket, const Bluetooth::AVDTPProfile::StreamEndPoint& sep, uint8_t sourceSEID)
             : _acpSeid(sep.SEID())
             , _intSeid(sourceSEID)
             , _socket(socket)
             , _command()
-            , _notify(notify)
             , _codec(nullptr)
             , _cp(nullptr)
             , _cpEnabled(false)
@@ -103,11 +98,14 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_NONE;
             _command.SetConfiguration(SEID(), _intSeid, config);
-            if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
-                // done?
-            } else {
-                result = Core::ERROR_ASYNC_FAILED;
-                TRACE(Trace::Error, (_T("Failed to set endpoint configuration, SEID 0x%02x"), SEID()));
+            if ((_socket.Exchange(CommandTimeout, _command, _command) != Core::ERROR_NONE) || (_command.Result().Status() != Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
+
+                // Try to use "reconfigure" signal instead...
+                _command.Reconfigure(SEID(), _intSeid, config);
+                if ((_socket.Exchange(CommandTimeout, _command, _command) != Core::ERROR_NONE) || (_command.Result().Status() != Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
+                    result = Core::ERROR_ASYNC_FAILED;
+                    TRACE(Trace::Error, (_T("Failed to set endpoint configuration, SEID 0x%02x"), SEID()));
+                }
             }
             return (result);
         }
@@ -136,9 +134,7 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_NONE;
             _command.Open(SEID());
-            if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
-                _notify(Exchange::IBluetoothAudioSink::READY);
-            } else {
+            if ((_socket.Exchange(CommandTimeout, _command, _command) != Core::ERROR_NONE) || (_command.Result().Status() != Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 result = Core::ERROR_ASYNC_FAILED;
                 TRACE(Trace::Error, (_T("Failed to open endpoint, SEID 0x%02x"), SEID()));
             }
@@ -148,9 +144,7 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_NONE;
             _command.Close(SEID());
-            if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
-                _notify(Exchange::IBluetoothAudioSink::CONNECTED);
-            } else {
+            if ((_socket.Exchange(CommandTimeout, _command, _command) != Core::ERROR_NONE) || (_command.Result().Status() != Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 result = Core::ERROR_ASYNC_FAILED;
                 TRACE(Trace::Error, (_T("Failed to close endpoint, SEID 0x%02x"), SEID()));
             }
@@ -160,9 +154,7 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_NONE;
             _command.Start(SEID());
-            if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
-                _notify(Exchange::IBluetoothAudioSink::STREAMING);
-            } else {
+            if ((_socket.Exchange(CommandTimeout, _command, _command) != Core::ERROR_NONE) || (_command.Result().Status() != Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 result = Core::ERROR_ASYNC_FAILED;
                 TRACE(Trace::Error, (_T("Failed to start endpoint, SEID 0x%02x"), SEID()));
             }
@@ -172,9 +164,7 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_NONE;
             _command.Suspend(SEID());
-            if ((_socket.Exchange(CommandTimeout, _command, _command) == Core::ERROR_NONE) && (_command.Result().Status() == Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
-                _notify(Exchange::IBluetoothAudioSink::READY);
-            } else {
+            if ((_socket.Exchange(CommandTimeout, _command, _command) != Core::ERROR_NONE) || (_command.Result().Status() != Bluetooth::AVDTPSocket::Command::Signal::SUCCESS)) {
                 result = Core::ERROR_ASYNC_FAILED;
                 TRACE(Trace::Error, (_T("Failed to suspend endpoint, SEID 0x%02x"), SEID()));
             }
@@ -189,7 +179,6 @@ namespace A2DP {
         uint8_t _intSeid;
         Bluetooth::AVDTPSocket& _socket;
         Bluetooth::AVDTPSocket::Command _command;
-        StateNotifyFn _notify;
         IAudioCodec* _codec;
         IAudioContentProtection* _cp;
         bool _cpEnabled;

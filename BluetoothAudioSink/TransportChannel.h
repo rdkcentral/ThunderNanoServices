@@ -96,15 +96,16 @@ namespace A2DP {
         {
             return (Core::ERROR_NONE);
         }
-        void Operational() override
+        void Operational(const bool upAndRunning) override
         {
-            TRACE(TransportFlow, (_T("Bluetooth A2DP/RTP transport channel is operational")));
+            TRACE(TransportFlow, (_T("Bluetooth A2DP/RTP transport channel is now %soperational"), (upAndRunning == true? "" : "in")));
 
-            uint32_t flushable = 1;
-            if (setsockopt(Handle(), SOL_BLUETOOTH, BT_FLUSHABLE, &flushable, sizeof(flushable)) < 0) {
-                TRACE(Trace::Error, (_T("Failed to set the RTP socket flushable")));
+            if (upAndRunning == true) {
+                uint32_t flushable = 1;
+                if (setsockopt(Handle(), SOL_BLUETOOTH, BT_FLUSHABLE, &flushable, sizeof(flushable)) < 0) {
+                    TRACE(Trace::Error, (_T("Failed to set the RTP socket flushable")));
+                }
             }
-
         }
 
     public:

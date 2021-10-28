@@ -19,7 +19,7 @@
 
 #pragma once
 
-#define __DEBUG__
+#define __DEBUG__ // TODO: Remove eventually
 
 #ifndef MODULE_NAME
 #define MODULE_NAME Plugin_BluetoothAudioSink

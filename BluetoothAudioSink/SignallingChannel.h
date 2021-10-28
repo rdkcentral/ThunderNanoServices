@@ -76,13 +76,10 @@ namespace A2DP {
         SignallingChannel(const SignallingChannel&) = delete;
         SignallingChannel& operator=(const SignallingChannel&) = delete;
 
-        SignallingChannel(const uint8_t seid, const UpdatedCb updatedCb,
-                          const Core::NodeId& localNode, const Core::NodeId& remoteNode)
+        SignallingChannel(const uint8_t seid, const Core::NodeId& localNode, const Core::NodeId& remoteNode)
             : Bluetooth::AVDTPSocket(localNode, remoteNode)
-            , _updatedCb(updatedCb)
             , _seid(seid)
             , _lock()
-            , _state(Exchange::IBluetoothAudioSink::UNASSIGNED)
             , _profile()
             , _audioEndpoints()
             , _discoveryComplete()
@@ -120,9 +117,7 @@ namespace A2DP {
                         if ((sep.MediaType() == Bluetooth::AVDTPProfile::StreamEndPoint::AUDIO)
                                 && (sep.ServiceType() == Bluetooth::AVDTPProfile::StreamEndPoint::SINK)) {
 
-                            _audioEndpoints.emplace_back(*this, sep, SEID(), [this](const Exchange::IBluetoothAudioSink::state state) {
-                                State(state);
-                            });
+                            _audioEndpoints.emplace_back(*this, sep, SEID());
                         }
                     }
                 }
@@ -164,30 +159,6 @@ namespace A2DP {
 
              return (result);
         }
-        Exchange::IBluetoothAudioSink::state State() const
-        {
-            return (_state);
-        }
-
-        void State(const Exchange::IBluetoothAudioSink::state newState)
-        {
-            bool updated = false;
-
-            _lock.Lock();
-
-            if (_state != newState) {
-                _state = newState;
-                updated = true;
-            }
-
-            _lock.Unlock();
-
-            if (updated == true) {
-                Core::EnumerateType<Exchange::IBluetoothAudioSink::state> value(_state);
-                TRACE(Trace::Information, (_T("Audio sink state: %s"), (value.IsSet()? value.Data() : "(undefined)")));
-                _updatedCb();
-            }
-        }
 
     private:
         void DumpProfile() const
@@ -213,10 +184,8 @@ namespace A2DP {
         }
 
     private:
-        UpdatedCb _updatedCb;
         uint8_t _seid;
         Core::CriticalSection _lock;
-        Exchange::IBluetoothAudioSink::state _state;
         Bluetooth::AVDTPProfile _profile;
         std::list<AudioEndpoint> _audioEndpoints;
         DiscoveryCompleteCb _discoveryComplete;
