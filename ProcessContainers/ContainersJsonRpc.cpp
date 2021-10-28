@@ -157,7 +157,8 @@ namespace Plugin {
                     ipJSON = iterator->Address(ip);
 
                     networkData.Ips.Add(ipJSON);
-                }                
+                }
+                response.Add(networkData);
             }
 
             iterator->Release();
