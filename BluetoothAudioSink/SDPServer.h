@@ -20,123 +20,17 @@
 #pragma once
 
 #include "Module.h"
+#include "Tracing.h"
 
 namespace WPEFramework {
 
 namespace SDP {
 
-    template<typename FLOW>
-    void Dump(const Bluetooth::SDP::Tree& tree)
-    {
-        using namespace Bluetooth::SDP;
-
-        uint16_t cnt = 1;
-        for (auto const& service : tree.Services()) {
-            string name = _T("<unknown>");
-            string description;
-            string provider;
-
-            if (service.Metadata(string(_T("en")), Service::Attribute::LanguageBaseAttributeIDList::CHARSET_US_ASCII, name, description, provider) == false) {
-                service.Metadata(string(_T("en")), Service::Attribute::LanguageBaseAttributeIDList::CHARSET_UTF8, name, description, provider);
-            }
-
-            TRACE_GLOBAL(FLOW, (_T("Service #%i - %s '%s'"), cnt++, provider.c_str(), name.c_str()));
-
-            TRACE_GLOBAL(FLOW, (_T("  Handle:")));
-            TRACE_GLOBAL(FLOW, (_T("    - 0x%08x"), service.Handle()));
-
-            if (service.ServiceClassIDList() != nullptr) {
-                TRACE_GLOBAL(FLOW, (_T("  Service Class ID List:")));
-                for (auto const& clazz : service.ServiceClassIDList()->Classes()) {
-                    TRACE_GLOBAL(FLOW, (_T("    - %s '%s'"),
-                                clazz.Type().ToString().c_str(), clazz.Name().c_str()));
-                }
-            }
-
-            if (service.BrowseGroupList() != nullptr) {
-                TRACE_GLOBAL(FLOW, (_T("  Browse Group List:")));
-                for (auto const& group : service.BrowseGroupList()->Classes()) {
-                    TRACE_GLOBAL(FLOW, (_T("    - %s '%s'"),
-                                group.Type().ToString().c_str(), group.Name().c_str()));
-                }
-            }
-
-            if (service.ProtocolDescriptorList() != nullptr) {
-                TRACE_GLOBAL(FLOW, (_T("  Protocol Descriptor List:")));
-                for (auto const& protocol : service.ProtocolDescriptorList()->Protocols()) {
-                    TRACE_GLOBAL(FLOW, (_T("    - %s '%s', parameters: %s"),
-                                protocol.first.Type().ToString().c_str(), protocol.first.Name().c_str(),
-                                Bluetooth::DataRecord(protocol.second).ToString().c_str()));
-                }
-            }
-
-            if (service.LanguageBaseAttributeIDList() != nullptr) {
-                TRACE_GLOBAL(FLOW, (_T("  Language Base Attribute IDs:")));
-                for (auto const& lb : service.LanguageBaseAttributeIDList()->LanguageBases()) {
-                    TRACE_GLOBAL(FLOW, (_T("    - 0x%04x, 0x%04x, 0x%04x"),
-                                lb.Language(), lb.Charset(), lb.Base()));
-                }
-            }
-
-            if (service.ProfileDescriptorList() != nullptr) {
-                TRACE_GLOBAL(FLOW, (_T("  Profile Descriptor List:")));
-                for (auto const& profile : service.ProfileDescriptorList()->Profiles()) {
-                    TRACE_GLOBAL(FLOW, (_T("    - %s '%s', version: %d.%d"),
-                                profile.first.Type().ToString().c_str(), profile.first.Name().c_str(),
-                                (profile.second.Version() >> 8), (profile.second.Version() & 0xFF)));
-                }
-            }
-
-            if (service.Attributes().empty() == false) {
-#ifdef __DEBUG__
-                TRACE_GLOBAL(FLOW, (_T("  All attributes:")));
-#else
-                TRACE_GLOBAL(FLOW, (_T("  Unknown attributes:")));
-#endif
-                for (auto const& attribute : service.Attributes()) {
-                    TRACE_GLOBAL(FLOW, (_T("    - %04x '%s', value: %s"),
-                                attribute.Id(), attribute.Name().c_str(),
-                                Bluetooth::DataRecord(attribute.Value()).ToString().c_str()));
-                }
-            }
-        }
-    }
-
     class ServiceDiscoveryServer : public Bluetooth::SDP::Tree {
 
+        using SDPServerFlow = A2DP::SDPServerFlow;
+
         class Implementation;
-
-        class SDPServerFlow {
-        public:
-            SDPServerFlow() = delete;
-            SDPServerFlow(const SDPServerFlow&) = delete;
-            SDPServerFlow& operator=(const SDPServerFlow&) = delete;
-            SDPServerFlow(const TCHAR formatter[], ...)
-            {
-                va_list ap;
-                va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
-                va_end(ap);
-            }
-            explicit SDPServerFlow(const string& text)
-                : _text(Core::ToString(text))
-            {
-            }
-            ~SDPServerFlow() = default;
-
-        public:
-            const char* Data() const
-            {
-                return (_text.c_str());
-            }
-            uint16_t Length() const
-            {
-                return (static_cast<uint16_t>(_text.length()));
-            }
-
-        private:
-            std::string _text;
-        }; // class SDPServerFlowh
 
         class ClientConnection : public Bluetooth::SDP::ServerSocket {
         public:
@@ -289,7 +183,7 @@ namespace SDP {
                     }
 
                     TRACE(Trace::Information, (_T("Started SDP Server, listening on %s, providing %i services"), node.QualifiedName().c_str(), Tree().Services().size()));
-                    Dump<SDPServerFlow>(Tree());
+                    A2DP::Dump<SDPServerFlow>(Tree());
                 } else {
                     result = Core::ERROR_GENERAL;
                 }

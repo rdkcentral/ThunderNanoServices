@@ -21,6 +21,7 @@
 
 #include "Module.h"
 #include "IAudioCodec.h"
+#include "Tracing.h"
 
 namespace WPEFramework {
 
@@ -36,41 +37,7 @@ namespace A2DP {
 
         static constexpr uint16_t OpenTimeout = 2000; // ms
         static constexpr uint16_t CloseTimeout = 5000;
-        static constexpr uint16_t PacketTimeout = 100;
-
-
-    private:
-        class TransportFlow {
-        public:
-            ~TransportFlow() = default;
-            TransportFlow() = delete;
-            TransportFlow(const TransportFlow&) = delete;
-            TransportFlow& operator=(const TransportFlow&) = delete;
-            TransportFlow(const TCHAR formatter[], ...)
-            {
-                va_list ap;
-                va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
-                va_end(ap);
-            }
-            explicit TransportFlow(const string& text)
-                : _text(Core::ToString(text))
-            {
-            }
-
-        public:
-            const char* Data() const
-            {
-                return (_text.c_str());
-            }
-            uint16_t Length() const
-            {
-                return (static_cast<uint16_t>(_text.length()));
-            }
-
-        private:
-            std::string _text;
-        }; // class TransportFlow
+        static constexpr uint16_t PacketTimeout = 250;
 
     public:
         TransportChannel() = delete;
@@ -184,7 +151,7 @@ namespace A2DP {
             consumed = packet.Ingest(length, data);
 
             if (consumed > 0) {
-                uint32_t result = Exchange(250, packet);
+                uint32_t result = Exchange(PacketTimeout, packet);
                 if (result != Core::ERROR_NONE) {
                     fprintf(stderr, "BluetoothAudioSink: Failed to send out media packet (%d)\n", result);
                 }

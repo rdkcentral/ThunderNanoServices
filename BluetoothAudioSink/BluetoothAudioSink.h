@@ -35,6 +35,9 @@
 #include "SignallingChannel.h"
 #include "TransportChannel.h"
 
+#include "Tracing.h"
+
+
 namespace WPEFramework {
 
 namespace Plugin {
@@ -187,37 +190,7 @@ namespace Plugin {
     public:
         class A2DPSink {
         private:
-            class ProfileFlow {
-            public:
-                ~ProfileFlow() = default;
-                ProfileFlow() = delete;
-                ProfileFlow(const ProfileFlow&) = delete;
-                ProfileFlow& operator=(const ProfileFlow&) = delete;
-                ProfileFlow(const TCHAR formatter[], ...)
-                {
-                    va_list ap;
-                    va_start(ap, formatter);
-                    Trace::Format(_text, formatter, ap);
-                    va_end(ap);
-                }
-                explicit ProfileFlow(const string& text)
-                    : _text(Core::ToString(text))
-                {
-                }
-
-            public:
-                const char* Data() const
-                {
-                    return (_text.c_str());
-                }
-                uint16_t Length() const
-                {
-                    return (static_cast<uint16_t>(_text.length()));
-                }
-
-            private:
-                std::string _text;
-            }; // class ProfileFlow
+            using ProfileFlow = A2DP::ProfileFlow;
 
             class DeviceCallback : public Exchange::IBluetooth::IDevice::ICallback {
             public:
@@ -341,7 +314,7 @@ namespace Plugin {
 
                 if (updated == true) {
                     Core::EnumerateType<Exchange::IBluetoothAudioSink::state> value(_state);
-                    TRACE(Trace::Information, (_T("A2DP sink state: %s"), (value.IsSet()? value.Data() : "(undefined)")));
+                    TRACE(Trace::Information, (_T("Bluetooth audio sink state: %s"), (value.IsSet()? value.Data() : "(undefined)")));
 
                     _job.Submit([this]() {
                         _parent.Updated();
@@ -420,8 +393,8 @@ namespace Plugin {
 
                 if (_endpoint != nullptr) {
                     if (_player == nullptr) {
-                        TRACE(Trace::Information, (_T("Configuring audio endpoint 0x%02x to: sample rate: %i Hz, resolution: %i bits per sample, channels: %i, frame rate: %i Hz"),
-                                                   _endpoint->SEID(), format.SampleRate, format.Resolution, format.Channels, format.FrameRate));
+                        TRACE(ProfileFlow, (_T("Configuring audio endpoint 0x%02x to: sample rate: %i Hz, resolution: %i bits per sample, channels: %i, frame rate: %i Hz"),
+                                            _endpoint->SEID(), format.SampleRate, format.Resolution, format.Channels, format.FrameRate));
 
                         if ((result = _endpoint->Configure(format, _codecSettings)) == Core::ERROR_NONE) {
                             if ((result = _endpoint->Open()) == Core::ERROR_NONE) {
@@ -431,31 +404,31 @@ namespace Plugin {
                                     ASSERT(_player != nullptr);
 
                                     if (_player->IsValid() == true) {
-                                        TRACE(Trace::Information, (_T("Successfully created Bluetooth audio playback session")));
+                                        TRACE(ProfileFlow, (_T("Successfully created Bluetooth audio playback session")));
                                         result = Core::ERROR_NONE;
                                         State(Exchange::IBluetoothAudioSink::READY);
                                     } else {
-                                        TRACE(Trace::Error, (_T("Failed to create player")));
+                                        TRACE(Trace::Error, (_T("Failed to create audio player")));
                                         result = Core::ERROR_OPENING_FAILED;
                                         delete _player;
                                         _player = nullptr;
                                     }
                                 } else {
-                                    TRACE(Trace::Error, (_T("Failed to connect transport channel")));
+                                    TRACE(Trace::Error, (_T("Failed to open A2DP transport channel")));
                                     _endpoint->Close();
                                 }
                             } else {
-                                TRACE(Trace::Error, (_T("Failed to open device endpoint")));
+                                TRACE(Trace::Error, (_T("Failed to open sink device endpoint")));
                             }
                         } else {
-                            TRACE(Trace::Error, (_T("Failed to configure the endpoint")));
+                            TRACE(Trace::Error, (_T("Failed to configure sink device endpoint")));
                         }
                     } else {
-                        TRACE(Trace::Error, (_T("Bluetooth device already in use")));
+                        TRACE(Trace::Error, (_T("Bluetooth sink device already in use")));
                         result = Core::ERROR_UNAVAILABLE;
                     }
                 } else {
-                    TRACE(Trace::Error, (_T("Audio sink not connected")));
+                    TRACE(Trace::Error, (_T("Audio sink device not connected")));
                 }
 
                 return (result);
@@ -542,7 +515,7 @@ namespace Plugin {
                             DiscoverAudioStreamEndpoints(_audioService);
                         } else {
                             // It's not an audio sink device, can't do anything.
-                            TRACE(ProfileFlow, (_T("Connected device does not feature an audio sink!")));
+                            TRACE(Trace::Error, (_T("Connected device does is not an audio sink!")));
                             State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                         }
                     } else {
@@ -574,7 +547,6 @@ namespace Plugin {
                 _discovery.Disconnect();
 
                 if (services.empty() == false) {
-
                     // Disregard possibility of multiple sink services for now.
                     _audioService = services.front();
                     if (services.size() > 1) {
@@ -593,6 +565,7 @@ namespace Plugin {
 
                     DiscoverAudioStreamEndpoints(_audioService);
                 } else {
+                    TRACE(Trace::Error, (_T("Connected audio sink device does not host a valid service!")));
                     State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                 }
             }

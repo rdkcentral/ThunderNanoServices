@@ -385,7 +385,7 @@ namespace A2DP {
         ASSERT(value >= MIN_BITPOOL);
 
         _bitpool = value;
-        TRACE(Trace::Information, (_T("New bitpool value for SBC: %d"), _bitpool));
+        TRACE(SignallingFlow, (_T("New bitpool value for SBC: %d"), _bitpool));
         SBCConfigure();
         DumpBitrateConfiguration();
     }
@@ -515,25 +515,25 @@ namespace A2DP {
     void AudioCodecSBC::DumpConfiguration() const
     {
         #define ELEM(name, val, prop) (_T("  [  %d] " name " [  %d]"), !!(_supported.val() & Format::prop), !!(_actuals.val() & Format::prop))
-        TRACE(Trace::Information, (_T("SBC configuration:")));
-        TRACE(Trace::Information, ELEM("Sampling frequency - 16 kHz     ", SamplingFrequency, SF_16000_HZ));
-        TRACE(Trace::Information, ELEM("Sampling frequency - 32 kHz     ", SamplingFrequency, SF_32000_HZ));
-        TRACE(Trace::Information, ELEM("Sampling frequency - 44.1 kHz   ", SamplingFrequency, SF_44100_HZ));
-        TRACE(Trace::Information, ELEM("Sampling frequency - 48 kHz     ", SamplingFrequency, SF_48000_HZ));
-        TRACE(Trace::Information, ELEM("Channel mode - Mono             ", ChannelMode, CM_MONO));
-        TRACE(Trace::Information, ELEM("Channel mode - Stereo           ", ChannelMode, CM_STEREO));
-        TRACE(Trace::Information, ELEM("Channel mode - Dual Channel     ", ChannelMode, CM_DUAL_CHANNEL));
-        TRACE(Trace::Information, ELEM("Channel mode - Joint Stereo     ", ChannelMode, CM_JOINT_STEREO));
-        TRACE(Trace::Information, ELEM("Block length - 4                ", BlockLength, BL_4));
-        TRACE(Trace::Information, ELEM("Block length - 8                ", BlockLength, BL_8));
-        TRACE(Trace::Information, ELEM("Block length - 12               ", BlockLength, BL_12));
-        TRACE(Trace::Information, ELEM("Block length - 16               ", BlockLength, BL_16));
-        TRACE(Trace::Information, ELEM("Frequency sub-bands - 4         ", SubBands, SB_4));
-        TRACE(Trace::Information, ELEM("Frequency sub-bands - 8         ", SubBands, SB_8));
-        TRACE(Trace::Information, ELEM("Bit allocation method - SNR     ", AllocationMethod, AM_SNR));
-        TRACE(Trace::Information, ELEM("Bit allocation method - Loudness", AllocationMethod, AM_LOUDNESS));
-        TRACE(Trace::Information, (_T("  [%3d] Minimal bitpool value            [%3d]"), _supported.MinBitpool(), _actuals.MinBitpool()));
-        TRACE(Trace::Information, (_T("  [%3d] Maximal bitpool value            [%3d]"), _supported.MaxBitpool(), _actuals.MaxBitpool()));
+        TRACE(SignallingFlow, (_T("SBC configuration:")));
+        TRACE(SignallingFlow, ELEM("Sampling frequency - 16 kHz     ", SamplingFrequency, SF_16000_HZ));
+        TRACE(SignallingFlow, ELEM("Sampling frequency - 32 kHz     ", SamplingFrequency, SF_32000_HZ));
+        TRACE(SignallingFlow, ELEM("Sampling frequency - 44.1 kHz   ", SamplingFrequency, SF_44100_HZ));
+        TRACE(SignallingFlow, ELEM("Sampling frequency - 48 kHz     ", SamplingFrequency, SF_48000_HZ));
+        TRACE(SignallingFlow, ELEM("Channel mode - Mono             ", ChannelMode, CM_MONO));
+        TRACE(SignallingFlow, ELEM("Channel mode - Stereo           ", ChannelMode, CM_STEREO));
+        TRACE(SignallingFlow, ELEM("Channel mode - Dual Channel     ", ChannelMode, CM_DUAL_CHANNEL));
+        TRACE(SignallingFlow, ELEM("Channel mode - Joint Stereo     ", ChannelMode, CM_JOINT_STEREO));
+        TRACE(SignallingFlow, ELEM("Block length - 4                ", BlockLength, BL_4));
+        TRACE(SignallingFlow, ELEM("Block length - 8                ", BlockLength, BL_8));
+        TRACE(SignallingFlow, ELEM("Block length - 12               ", BlockLength, BL_12));
+        TRACE(SignallingFlow, ELEM("Block length - 16               ", BlockLength, BL_16));
+        TRACE(SignallingFlow, ELEM("Frequency sub-bands - 4         ", SubBands, SB_4));
+        TRACE(SignallingFlow, ELEM("Frequency sub-bands - 8         ", SubBands, SB_8));
+        TRACE(SignallingFlow, ELEM("Bit allocation method - SNR     ", AllocationMethod, AM_SNR));
+        TRACE(SignallingFlow, ELEM("Bit allocation method - Loudness", AllocationMethod, AM_LOUDNESS));
+        TRACE(SignallingFlow, (_T("  [%3d] Minimal bitpool value            [%3d]"), _supported.MinBitpool(), _actuals.MinBitpool()));
+        TRACE(SignallingFlow, (_T("  [%3d] Maximal bitpool value            [%3d]"), _supported.MaxBitpool(), _actuals.MaxBitpool()));
         #undef ELEM
     }
 
@@ -541,9 +541,9 @@ namespace A2DP {
     {
         Core::EnumerateType<preset> preset(_preset);
         TRACE(Trace::Information, (_T("Quality preset: %s"), (preset.IsSet() == true? preset.Data() : "(custom)")));
-        TRACE(Trace::Information, (_T("Bitpool value: %d"), _bitpool));
+        TRACE(SignallingFlow, (_T("Bitpool value: %d"), _bitpool));
         TRACE(Trace::Information, (_T("Bitrate: %d bps"), _bitRate));
-        TRACE(Trace::Information, (_T("Frame size: in %d bytes, out %d bytes (%d us)"), _inFrameSize, _outFrameSize, _frameDuration));
+        TRACE(SignallingFlow, (_T("Frame size: in %d bytes, out %d bytes (%d us)"), _inFrameSize, _outFrameSize, _frameDuration));
     }
 
 } // namespace A2DP

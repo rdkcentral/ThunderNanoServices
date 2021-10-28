@@ -20,8 +20,7 @@
 #pragma once
 
 #include "Module.h"
-
-#include "SDPServer.h" // TODO: For dump only...
+#include "Tracing.h"
 
 namespace WPEFramework {
 
@@ -32,39 +31,6 @@ namespace A2DP {
         static constexpr uint16_t OpenTimeout = 2000; // ms
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t DiscoverTimeout = 5000;
-
-    private:
-        class DiscoveryFlow {
-        public:
-            ~DiscoveryFlow() = default;
-            DiscoveryFlow() = delete;
-            DiscoveryFlow(const DiscoveryFlow&) = delete;
-            DiscoveryFlow& operator=(const DiscoveryFlow&) = delete;
-            DiscoveryFlow(const TCHAR formatter[], ...)
-            {
-                va_list ap;
-                va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
-                va_end(ap);
-            }
-            explicit DiscoveryFlow(const string& text)
-                : _text(Core::ToString(text))
-            {
-            }
-
-        public:
-            const char* Data() const
-            {
-                return (_text.c_str());
-            }
-            uint16_t Length() const
-            {
-                return (static_cast<uint16_t>(_text.length()));
-            }
-
-        private:
-            std::string _text;
-        }; // class DiscoveryFlow
 
     public:
         class AudioService {
@@ -111,7 +77,8 @@ namespace A2DP {
                     Add(_T("a2dp"), &A2DPVersion);
                     Add(_T("avdtp"), &AVDTPVersion);
                     Add(_T("features"), &Features);
-                    Add(_T("type"), &Type);                }
+                    Add(_T("type"), &Type);
+                }
 
                 ~Data() = default;
 
@@ -308,7 +275,7 @@ namespace A2DP {
                         _lock.Lock();
 
                         TRACE(DiscoveryFlow, (_T("Discovered %d service(s)"), _profile.Services().size()));
-                        SDP::Dump<DiscoveryFlow>(_profile);
+                        Dump<DiscoveryFlow>(_profile);
 
                         if (_profile.Services().empty() == false) {
                             for (auto const& service : _profile.Services()) {

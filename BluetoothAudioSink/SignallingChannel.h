@@ -35,40 +35,7 @@ namespace A2DP {
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t DiscoverTimeout = 2000;
 
-    private:
-        class SignallingFlow {
-        public:
-            ~SignallingFlow() = default;
-            SignallingFlow() = delete;
-            SignallingFlow(const SignallingFlow&) = delete;
-            SignallingFlow& operator=(const SignallingFlow&) = delete;
-            SignallingFlow(const TCHAR formatter[], ...)
-            {
-                va_list ap;
-                va_start(ap, formatter);
-                Trace::Format(_text, formatter, ap);
-                va_end(ap);
-            }
-            explicit SignallingFlow(const string& text)
-                : _text(Core::ToString(text))
-            {
-            }
-
-        public:
-            const char* Data() const
-            {
-                return (_text.c_str());
-            }
-            uint16_t Length() const
-            {
-                return (static_cast<uint16_t>(_text.length()));
-            }
-
-        private:
-            std::string _text;
-        }; // class SignallingFlow
-
-   public:
+    public:
         using DiscoveryCompleteCb = std::function<void(std::list<AudioEndpoint>&)>;
         using UpdatedCb = std::function<void()>;
 
@@ -123,7 +90,7 @@ namespace A2DP {
                 }
 
                 if (_audioEndpoints.empty() == true) {
-                    TRACE(Trace::Information, (_T("No audio sink stream endpoints available")));
+                    TRACE(SignallingFlow, (_T("No audio sink stream endpoints available")));
                 }
 
                 _discoveryComplete(_audioEndpoints);

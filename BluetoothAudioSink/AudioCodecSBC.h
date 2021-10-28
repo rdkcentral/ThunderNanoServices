@@ -21,6 +21,7 @@
 
 #include "Module.h"
 #include "IAudioCodec.h"
+#include "Tracing.h"
 
 namespace WPEFramework {
 

@@ -20,8 +20,8 @@
 #pragma once
 
 #include "Module.h"
-
 #include "TransportChannel.h"
+#include "Tracing.h"
 
 namespace WPEFramework {
 
@@ -178,10 +178,10 @@ namespace Plugin {
 
             if ((_available < _minFrameSize) && (_eos != true)) {
                 // Have to replenish the local buffer...
-                // Make sure we have at least the encoder preferred frame size available.
                 // TODO: optimization opportunity
                 ::memmove(_buffer, _readCursor, _available);
 
+                // Make sure we have at least the encoder preferred frame size available.
                 while (_available < _preferredFrameSize) {
                     ASSERT(_available + _maxFrameSize <= _bufferSize);
 
@@ -194,7 +194,7 @@ namespace Plugin {
                         // The audio source has problem providing more data at the moment...
                         // We don't have the preferred data available, let's try to play out whatever there is left in the buffer anyway.
                         if (_available < _minFrameSize) {
-                            // All data was used and no new is currently available, apparently the source has stalled - start anew.
+                            // All data was used and no new is currently available, apparently the source has stalled.
                             _offset += PlayTime();
                             _startTime = Core::Time::Now().Ticks();
                             _transport.Reset();

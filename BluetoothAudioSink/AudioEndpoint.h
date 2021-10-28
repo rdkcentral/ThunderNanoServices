@@ -22,6 +22,7 @@
 #include "Module.h"
 #include "IAudioCodec.h"
 #include "IAudioContentProtection.h"
+#include "Tracing.h"
 
 #include <interfaces/IBluetoothAudio.h>
 

@@ -67,15 +67,15 @@ namespace A2DP {
 
                         if (codecType == a2dp_audiocodec::SBC) {
                             _codec = new AudioCodecSBC(caps.Data());
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x supports LC-SBC codec [0x%02x]"),
+                            TRACE(SignallingFlow, (_T("Endpoint SEID 0x%02x supports LC-SBC codec [0x%02x]"),
                                                        SEID(), static_cast<uint8_t>(codecType)));
                         } else {
                             // TODO?
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x supports an unknown audio codec [0x%02x]"),
+                            TRACE(SignallingFlow, (_T("Endpoint SEID 0x%02x supports an unknown audio codec [0x%02x]"),
                                                        SEID(), static_cast<uint8_t>(codecType)));
                         }
                     } else {
-                        TRACE(Trace::Information, (_T("Endpoint media type is not AUDIO! [0x%02x]"), static_cast<uint8_t>(mediaType)));
+                        TRACE(SignallingFlow, (_T("Endpoint media type is not AUDIO! [0x%02x]"), static_cast<uint8_t>(mediaType)));
                     }
                 }
             }
@@ -92,19 +92,19 @@ namespace A2DP {
                         config.Pop(cpType);
 
                         if (cpType == a2dp_contentprotection::NONE) {
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x uses no copy protection"), SEID()));
+                            TRACE(SignallingFlow, (_T("Endpoint SEID 0x%02x uses no copy protection"), SEID()));
                         } else {
                             // TODO?
-                            TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x supports unknown copy protection! [0x%02x]"),
+                            TRACE(SignallingFlow, (_T("Endpoint SEID 0x%02x supports unknown copy protection! [0x%02x]"),
                                                        SEID(), static_cast<uint8_t>(cpType)));
                         }
                     }
                 } else {
-                    TRACE(Trace::Information, (_T("Endpoint SEID 0x%02x does not support copy protection"), SEID()));
+                    TRACE(SignallingFlow, (_T("Endpoint SEID 0x%02x does not support copy protection"), SEID()));
                 }
             }
         } else {
-            TRACE(Trace::Information, (_T("Endpoint does not support media transport")));
+            TRACE(SignallingFlow, (_T("Endpoint does not support media transport")));
         }
     }
 
