@@ -27,22 +27,26 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
+if(TinyXML_FIND_QUIETLY)
+    set(_TINYXML_MODE QUIET)
+elseif(TinyXML_FIND_REQUIRED)
+    set(_TINYXML_MODE REQUIRED)
+endif()
+
 find_package(PkgConfig)
-pkg_check_modules(TINYXML tinyxml)
-
-include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(tinyxml DEFAULT_MSG TINYXML_LIBRARIES)
-
-mark_as_advanced(TINYXML_INCLUDE_DIRS TINYXML_LIBRARIES)
-
+pkg_check_modules(TINYXML ${_TINYXML_MODE} tinyxml)
 
 find_library(TINYXML_LIBRARY NAMES ${TINYXML_LIBRARIES}
         HINTS ${TINYXML_LIBDIR} ${TINYXML_LIBRARY_DIRS}
         )
 
-if(TINYXML_LIBRARY AND NOT TARGET tinyxml::tinyxml)
-    add_library(tinyxml::tinyxml UNKNOWN IMPORTED)
-    set_target_properties(tinyxml::tinyxml PROPERTIES
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(TinyXML DEFAULT_MSG TINYXML_LIBRARIES TINYXML_LIBRARY)
+mark_as_advanced(TINYXML_INCLUDE_DIRS TINYXML_LIBRARIES TINYXML_LIBRARY)
+
+if(TinyXML_FOUND AND NOT TARGET TinyXML::TinyXML)
+    add_library(TinyXML::TinyXML UNKNOWN IMPORTED)
+    set_target_properties(TinyXML::TinyXML PROPERTIES
             IMPORTED_LOCATION "${TINYXML_LIBRARY}"
             INTERFACE_LINK_LIBRARIES "${TINYXML_LIBRARIES}"
             INTERFACE_COMPILE_OPTIONS "${TINYXML_DEFINITIONS}"
