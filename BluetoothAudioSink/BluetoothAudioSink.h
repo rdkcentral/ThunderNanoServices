@@ -333,12 +333,12 @@ namespace Plugin {
             {
                 return (_drmList);
             }
-            uint32_t Time(uint32_t& timestamp)
+            uint32_t Time(uint32_t& timestamp) const
             {
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if (_player != nullptr) {
-                    result = _player->GetTime(timestamp);
+                    result = _player->Time(timestamp);
                 }
 
                 return (result);
@@ -874,7 +874,7 @@ namespace Plugin {
             return (result);
         }
 
-        uint32_t Time(uint32_t& position) override
+        uint32_t Time(uint32_t& position) const override
         {
             uint32_t result = Core::ERROR_NONE;
 

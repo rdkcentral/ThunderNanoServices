@@ -146,7 +146,7 @@ namespace Plugin {
 
             return (result);
         }
-        uint32_t GetTime(uint32_t& time /* milliseconds */) const
+        uint32_t Time(uint32_t& time /* milliseconds */) const
         {
             uint32_t result = Core::ERROR_NONE;
 
@@ -158,11 +158,6 @@ namespace Plugin {
             }
 
             return (result);
-        }
-        uint32_t SetTime(const uint32_t time /* milliseconds */)
-        {
-            _offset = time;
-            return (Core::ERROR_NONE);
         }
 
     private:
