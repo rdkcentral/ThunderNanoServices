@@ -52,16 +52,24 @@ namespace Plugin {
         ASSERT(_service == service);
 
         _service->Unregister(&_notification);
-        _svalbard->Release();
+
+        uint32_t result = _svalbard->Release();
+
+        // It should have been the last reference we are releasing,
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking...
+        ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
 
         if (_connectionId != 0) {
 
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
+            // If this was running in a (container) process...
             if (connection != nullptr) {
-
-                TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
-
+                // Lets trigger the cleanup sequence for
+                // out-of-process code. Which will guard
+                // that unwilling processes, get shot if
+                // not stopped friendly :~)
                 connection->Terminate();
                 connection->Release();
             }

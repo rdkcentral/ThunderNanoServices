@@ -113,17 +113,25 @@ namespace Plugin {
         }
 
         // Stop processing of the browser:
-        _server->Release();
+        uint32_t result = _server->Release();
 
-        if(_connectionId != 0){
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+        // It should have been the last reference we are releasing,
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking...
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+        
+        if(_connectionId != 0) {
+          RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
-            }
+          // If this was running in a (container) process...
+          if (connection != nullptr) {
+              // Lets trigger the cleanup sequence for
+              // out-of-process code. Which will guard
+              // that unwilling processes, get shot if
+              // not stopped friendly :~)
+              connection->Terminate();
+              connection->Release();
+          }
         }
 
         PluginHost::ISubSystem* subSystem = service->SubSystems();

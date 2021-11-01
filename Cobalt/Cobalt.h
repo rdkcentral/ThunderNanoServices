@@ -158,7 +158,13 @@ private:
     {
         if (connectionId != 0) {
             RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
+
+            // Tf this was running in a (container) process...
             if (connection != nullptr) {
+                // Lets trigger the cleanup sequence for 
+                // out-of-process code. Which will guard
+                // that unwilling processes, get shot if
+                // not stopped friendly :~)
                 connection->Terminate();
                 connection->Release();
             }

@@ -73,18 +73,28 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
     _service->Unregister(&_notification);
 
     _webpa->Deinitialize(_service);
-    _webpa->Release();
+
+    uint32_t result = _webpa->Release();
+
+    // It should have been the last reference we are releasing,
+    // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+    // are leaking ...
+    ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
 
     if(_connectionId != 0){
-        RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-        // The connection can disappear in the meantime...
-        if (nullptr != serviceConnection) {
-            // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-            serviceConnection->Terminate();
-            serviceConnection->Release();
+        // If this was running in a (container) process ...
+        if (connection != nullptr) {
+            // Lets trigger the cleanup sequence for
+            // out-of-process code. Will will guard
+            // that unwilling processes, get shot if
+            // not stopped friendly :~)
+            connection->Terminate();
+            connection->Release();
         }
     }
+
     _webpa = nullptr;
     _service = nullptr;
 }

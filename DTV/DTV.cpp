@@ -245,9 +245,28 @@ namespace WPEFramework
          // start cleaning up..
          _service->Unregister(&_notification);
 
-         _dtv->Release();
-         _dtv = nullptr;
+         uint32_t result = _dtv->Release();
+        
+         // It should have been the last reference we are releasing,
+         // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+         // are leaking ...
+         ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
 
+         if(_connectionId != 0){
+             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+
+             // If this was running in a (container) process ...
+             if (connection != nullptr) {
+                 // Lets trigger the cleanup sequence for
+                 // out-of-process code. This will guard
+                 // that unwilling processes, get shot if
+                 // not stopped friendly :~)
+                 connection->Terminate();
+                 connection->Release();
+             }
+         }
+
+         _dtv = nullptr;
          _service = nullptr;
 
          SYSLOG(Logging::Shutdown, (string(_T("DTV de-initialised"))));

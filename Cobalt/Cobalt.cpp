@@ -127,7 +127,12 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         _notification.Release();
     }
 
-    _cobalt->Release();
+    uint32_t result = _cobalt->Release();
+  
+    // It should have been the last reference we are releasing, 
+    // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+    // are leaking...
+    ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
 
     ConnectionTermination(_connectionId);
 
