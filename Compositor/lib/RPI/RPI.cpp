@@ -222,6 +222,14 @@ class CompositorImplementation;
     };
 
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
+        public:
+
+        using lock_t = std::mutex;
+        using ClientContainer = Core::ProxyMapType<string, ClientSurface>;
+
+        using platform_w_t =  decltype (std::declval < ModeSet >().Width ());
+        using platform_h_t =  decltype (std::declval < ModeSet >().Height ());
+
     private:
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
@@ -1013,27 +1021,25 @@ class CompositorImplementation;
                         tgt_t & _tgt = tex._target;
 
                         if (_quick != true) {
-                                glGenTextures (1, &_tex);
-                                GL_ERROR ();
+                            glGenTextures (1, &_tex);
+                            GL_ERROR ();
                         }
 
                             glBindTexture (_tgt, _tex);
                             GL_ERROR ();
 
                         if (_quick != true) {
+                            glTexParameteri (_tgt, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+                            GL_ERROR ();
 
-                                glTexParameteri (_tgt, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-                                GL_ERROR ();
+                            glTexParameteri (_tgt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                            GL_ERROR ();
 
-                                glTexParameteri (_tgt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                                GL_ERROR ();
+                            glTexParameteri (_tgt, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                            GL_ERROR ();
 
-                                glTexParameteri (_tgt, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                                GL_ERROR ();
-
-                                glTexParameteri (_tgt, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                                GL_ERROR ();
-
+                            glTexParameteri (_tgt, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                            GL_ERROR ();
                         }
 
                         tex._width = width;
@@ -1076,7 +1082,9 @@ class CompositorImplementation;
                                     }
                         }
 
+
                         glBindTexture (_tgt, InvalidTex ());
+
 
                         _ret = _ret && GL_ERROR_WITH_RETURN ();
 
@@ -1205,6 +1213,7 @@ class CompositorImplementation;
 
                     _ret = _ret && GL_ERROR_WITH_RETURN ();
 
+
                     // Do not destroy tex-fbo and _tex_oes !
 
 
@@ -1273,9 +1282,9 @@ class CompositorImplementation;
                         glClear (GL_DEPTH_BUFFER_BIT);
                         GL_ERROR ();
 
+
                         // Start with an empty (solid) background
                         _ret = ( _ret && RenderColor (false, false, false) ) != false;
-
 
                         // For all textures in map
                         if (_ret != false) {
@@ -1286,15 +1295,14 @@ class CompositorImplementation;
                             for (auto _begin = _sorted.begin (), _it = _begin, _end = _sorted.end (); _it != _end; _it ++) {
                                 texture_t &_texture = *_it;
 
+                                assert (_texture._target == GL_TEXTURE_2D);
+
                                 glBindTexture (_texture._target, _texture._tex);
                                 GL_ERROR ();
 
                                 // Update the offset, scale, depth to match _tex
 
                                 _ret = ( _ret && UpdateScale (_texture._scale) && UpdateOffset (_texture._offset) && UpdateOpacity (_texture._opacity) && SetupViewport (width, height) && RenderTile () ) != false;
-
-                                glBindTexture (_texture._target, InvalidTex ());
-                                GL_ERROR ();
 
                                 if (_ret != true) {
                                     break;
@@ -1304,6 +1312,9 @@ class CompositorImplementation;
                             _ret = ( _ret && UpdateScale (_scl) && UpdateOffset (_off) && UpdateOpacity (_op) ) != false;
                         }
 
+
+                        glBindTexture (GL_TEXTURE_2D, InvalidTex ());
+                        GL_ERROR ();
 
                         // Unconditionally
                         glDisable (GL_DEPTH_TEST);
@@ -1790,7 +1801,13 @@ class CompositorImplementation;
 #endif
                 using EGLuint64KHR = khronos_uint64_t;
 
+                EGLContext _ctx = EGL_NO_CONTEXT;
+
+                using valid_t = bool;
+
             public :
+
+                using ctx_t = decltype (_ctx);
 
                 class Sync final {
 
@@ -1808,9 +1825,10 @@ class CompositorImplementation;
                         Sync () = delete;
 
                         explicit Sync (dpy_t & dpy) : _dpy {dpy} {
-#ifdef _V3D_FENCE
+#ifdef _V3D_FENCE // For now disable, because it's leaking file descriptors part of synchronization fences
                             static bool _supported = EGL::Supported (dpy, "EGL_KHR_fence_sync") != false;
 
+                            assert (_supported != false);
                             assert (dpy != InvalidDpy ());
 
                             _sync = ( _supported && dpy != InvalidDpy () ) != false ? KHRFIX (eglCreateSync) (dpy, _EGL_SYNC_FENCE, nullptr) : InvalidSync ();
@@ -1841,7 +1859,9 @@ class CompositorImplementation;
                                     // Assert on error
                                     if (_ret != true) {
                                         TRACE (Trace::Error, (_T ("EGL: synchronization primitive")) );
+#ifndef _V3D_FENCE
                                         assert (false);
+#endif
                                     }
                                 }
 
@@ -1863,6 +1883,269 @@ class CompositorImplementation;
 
                 };
 
+                class RenderThread : public Core::Thread {
+
+                    protected :
+
+                        using timeout_t = _remove_const < decltype (WPEFramework::Core::infinite) > :: type;
+                        using lock_t = std::mutex;
+
+                        // Shared texture access
+                        lock_t & _sharing;
+
+                        EGL & _egl;
+                        GLES & _gles;
+
+                        explicit RenderThread (EGL & egl, GLES & gles) : Core::Thread  (), _sharing { Instance () }, _egl { egl }, _gles { gles } {}
+
+                    public :
+
+                        virtual ~RenderThread () {
+                            /* EGLBoolean */ eglMakeCurrent (_egl.Display (), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+                            // Consume any error
+                            /* EGLint */ eglGetError();
+
+                            /* bool */ Wait (WPEFramework::Core::Thread::STOPPED | WPEFramework::Core::Thread::BLOCKED, WPEFramework::Core::infinite);
+
+                            Stop ();
+                        }
+
+                        uint32_t Worker () { return Core::infinite; }
+
+                    private :
+
+                        lock_t & Instance () {
+                            static lock_t _lock;
+
+                            return _lock;
+                        }
+
+                };
+
+                class SceneRenderer final : public RenderThread {
+                    private :
+
+                        using surf_t = ClientSurface;
+
+                        CompositorImplementation & _compositor;
+
+                        // Local
+                        std::mutex _access;
+
+                    public :
+
+                        SceneRenderer () = delete;
+                        explicit SceneRenderer (EGL & egl, GLES & gles, CompositorImplementation & compositor) : RenderThread (egl, gles), _compositor { compositor } {}
+
+                        ~SceneRenderer () {}
+
+                        timeout_t Worker () override {
+                            // Never call us again if the state remains blocked
+                            timeout_t _ret = Core::infinite;
+
+                            while (IsRunning () != false) {
+                                EGL::valid_t _status = ( Render () && _compositor.FrameFlip () ) != false;
+
+                                if (_status != true) {
+                                    break;
+                                }
+                            }
+
+                            Stop ();
+
+                            return _ret;
+                        }
+
+
+                    private :
+
+                        EGL::valid_t Render () {
+                            // No resize supported
+                            static Exchange::IComposition::ScreenResolution _resolution = _compositor.Resolution ();
+
+                            std::lock_guard < decltype (_sharing) > const sharing (_sharing);
+                            EGL::valid_t _ret = _egl.Render (std::bind (&GLES::RenderScene, &_gles, WidthFromResolution (_resolution), HeightFromResolution (_resolution), [] (GLES::texture_t left, GLES::texture_t right) -> GLES::valid_t { GLES::valid_t _ret = left._offset._z > right._offset._z; return _ret; } ), true ) != false;
+
+                            return _ret;
+                        }
+                };
+
+                class TextureRenderer final : public RenderThread {
+                    private :
+
+                        using surf_t = ClientSurface;
+
+                        // Platform
+                        CompositorImplementation::platform_w_t _width;
+                        CompositorImplementation::platform_h_t _height;
+
+                        // Client
+                        std::string _name;
+                        CompositorImplementation::lock_t & _lock;
+
+                        // Local
+                        std::mutex _access;
+
+                        CompositorImplementation::ClientContainer & _clients;
+
+                    public :
+
+                        TextureRenderer () = delete;
+                        explicit TextureRenderer (EGL & egl, GLES & gles, CompositorImplementation::lock_t & lock, CompositorImplementation::ClientContainer & clients) : RenderThread (egl, gles), _width { 0 }, _height { 0 }, _lock { lock }, _clients { clients } {}
+
+                        ~TextureRenderer () {
+                            Stop ();
+                        }
+
+                        void SetClientName (std::string const & name) {
+                            std::lock_guard < decltype (_access) > const lock (_access);
+
+                            _name = name;
+                        }
+
+                        void SetViewportDimensions (platform_w_t width, platform_h_t height) {
+                            std::lock_guard < decltype (_access) > const lock (_access);
+
+                            _width = width;
+                            _height = height;
+                        }
+
+                        timeout_t Worker () override {
+                            timeout_t _ret = WPEFramework::Core::infinite;
+
+                            EGL::valid_t _status = Render () != false;
+
+                            if (_status != false) {
+                                Block ();
+                            }
+                            else {
+                                Stop ();
+                            }
+
+                            return _ret; 
+                        }
+
+                    private :
+
+                        EGL::valid_t Render () {
+                            // Clients should still exist
+                            std::lock_guard < decltype (_lock) > const lock (_lock);
+
+                            EGL::valid_t _ret = false;
+
+                            /* ProxyType <> */ auto _client = _clients.Find (_name);
+
+                            if (_client.IsValid () != true ||  _name.compare (_client->Name ()) != 0) {
+                                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), _name.c_str ()));
+                            }
+                            else {
+                                ClientSurface::surf_t const & _surf = _client->Surface ();
+
+                                _ret = ( _surf.RenderComplete () && _egl.Valid () && _gles.Valid () ) != false;
+
+                                if (_ret != false) {
+                                    TRACE (Trace::Information, (_T ("Client has an associated EGL image.")));
+
+                                    auto _width = gbm_bo_get_width (_surf._buf);
+                                    auto _height = gbm_bo_get_height (_surf._buf);
+
+                                    using width_t = decltype (_width);
+                                    using height_t = decltype (_height);
+
+                                    // Narrowing detection
+
+                                    // Enable narrowing detection
+// TODO:
+                                    constexpr bool _enable = false;
+
+                                    // (Almost) all will fail!
+                                    if (   _narrowing < width_t, EGLint, _enable > :: value != true
+                                        && _narrowing < height_t, EGLint, _enable > :: value != true)
+                                    {
+                                        TRACE (Trace::Information, (_T ("Possible narrowing detected!")));
+                                    }
+
+                                    // Update including some GLES preparations
+
+                                    using geom_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().Geometry ());
+                                    using zorder_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().ZOrder ());
+
+                                    using geom_x_t = decltype (geom_t::x);
+                                    using geom_y_t = decltype (geom_t::y);
+                                    using geom_w_t = decltype (geom_t::width);
+                                    using geom_h_t = decltype (geom_t::height);
+
+
+                                    using offset_x_t = decltype (GLES::offset_t::_x);
+                                    using offset_y_t = decltype (GLES::offset_t::_y);
+                                    using offset_z_t = decltype (GLES::offset_t::_z);
+
+                                    using scale_h_t = decltype (GLES::scale_t::_horiz);
+                                    using scale_v_t = decltype (GLES::scale_t::_vert);
+
+
+                                    using common_scale_h_t = std::common_type <scale_h_t, geom_w_t, platform_w_t> :: type;
+                                    using common_scale_v_t = std::common_type <scale_v_t, geom_h_t, platform_h_t> :: type;
+
+                                    // Narrowing is not allowed
+                                    static_assert (_narrowing <common_scale_h_t, scale_h_t, true> :: value != false);
+                                    static_assert (_narrowing <common_scale_v_t, scale_v_t, true> :: value != false);
+
+
+                                    geom_t _geom = _client->Geometry ();
+
+
+                                    GLES::scale_t _scale = { static_cast <scale_h_t> ( static_cast <common_scale_h_t> (_geom.width) / static_cast <common_scale_h_t> (this->_width) ), static_cast <scale_v_t> ( static_cast <common_scale_v_t> (_geom.height) / static_cast <common_scale_v_t> (this->_height) ) };
+
+
+                                    using common_offset_x_t = std::common_type <scale_h_t, geom_x_t, offset_x_t> :: type;
+                                    using common_offset_y_t = std::common_type <scale_v_t, geom_y_t, offset_y_t> :: type;
+                                    using common_offset_z_t = std::common_type <zorder_t, decltype (WPEFramework::Exchange::IComposition::minZOrder), decltype (WPEFramework::Exchange::IComposition::maxZOrder), offset_z_t> :: type;
+
+
+                                    // Narrowing is not allowed
+                                    static_assert (_narrowing <common_offset_x_t, offset_x_t, true> :: value != false);
+                                    static_assert (_narrowing <common_offset_y_t, offset_y_t, true> :: value != false);
+                                    static_assert (_narrowing <common_offset_z_t, offset_z_t, true> :: value != false);
+
+
+                                    zorder_t _zorder = _client->ZOrder ();
+
+// TODO: z-ordering should support the minimal representable resolution
+
+                                    static_assert ( ( static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::maxZOrder) - static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::minZOrder) ) > static_cast <common_offset_z_t> (0));
+
+                                    GLES::offset_t _offset = { static_cast <offset_x_t> ( static_cast <common_offset_x_t> (_scale._horiz) * static_cast <common_offset_x_t> (_geom.x) / static_cast <common_offset_x_t> (_geom.width) ), static_cast <offset_y_t> ( static_cast <common_offset_y_t> (_scale._vert) * static_cast <common_offset_y_t> (_geom.y) / static_cast <common_offset_y_t> (_geom.height)), static_cast <offset_z_t> (static_cast <common_offset_z_t> (_zorder) / ( static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::maxZOrder) - static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::minZOrder) )) };
+
+
+                                    using opacity_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().Opacity ());
+
+                                    using opacity_a_t = decltype (GLES::opacity_t::_alpha);
+
+                                    using common_opacity_t = std::common_type <opacity_t, opacity_a_t, decltype (WPEFramework::Exchange::IComposition::minOpacity), decltype (WPEFramework::Exchange::IComposition::maxOpacity)> :: type;
+
+                                    // Narrowing is not allowed
+                                    static_assert (_narrowing <common_opacity_t, opacity_a_t, true> :: value != false);
+
+
+                                    opacity_t _opa = _client->Opacity ();
+
+                                    GLES::opacity_t _opacity = static_cast <opacity_a_t> ( static_cast <common_opacity_t> (_opa) / ( static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::maxOpacity) - static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::minOpacity) ) );
+
+                                    std::lock_guard < decltype (_sharing) > const sharing (_sharing);
+
+                                    _ret = (   _gles.UpdateOffset ( _offset )
+                                            && _gles.UpdateScale ( _scale ) && _gles.UpdateOpacity ( _opacity )
+                                            && _egl.RenderWithoutSwap (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height)) ) != false;
+                                }
+
+                            }
+
+                            return _ret;
+                        }
+                };
+
             private :
 
                 // Define the 'invalid' value
@@ -1871,7 +2154,6 @@ class CompositorImplementation;
 
                 Sync::dpy_t _dpy = Sync::InvalidDpy ();
                 EGLConfig _conf = EGL_NO_CONFIG;
-                EGLContext _ctx = EGL_NO_CONTEXT;
                 EGLSurface _surf = EGL_NO_SURFACE;
 
                 WPEFramework::Plugin::EGL::width_t  _width = 0;
@@ -1879,16 +2161,14 @@ class CompositorImplementation;
 
                 Natives const & _natives;
 
-                bool _valid = false;
+                valid_t _valid = false;
 
             public :
 
                 using dpy_t = decltype (_dpy);
                 using surf_t = decltype (_surf);
-                using ctx_t = decltype (_ctx);
                 using height_t = decltype (_height);
                 using width_t = decltype (_width);
-                using valid_t = decltype (_valid);
 
                 using size_t = EGLint;
 
@@ -1915,6 +2195,7 @@ class CompositorImplementation;
 
                 dpy_t Display () const { return _dpy; }
                 surf_t Surface () const { return _surf; }
+                ctx_t Context () const { return _ctx; }
 
                 height_t Height () const { return _height; }
                 width_t Width () const { return _width; }
@@ -2351,6 +2632,9 @@ class CompositorImplementation;
             , _dma { nullptr }
             , _natives (_platform)
             , _egl (_natives)
+            , _clientLock ()
+            , _textureRenderer ( _egl, _gles, _clientLock, _clients )
+            , _sceneRenderer ( _egl, _gles, *this)
         {
         }
         ~CompositorImplementation()
@@ -2478,187 +2762,81 @@ class CompositorImplementation;
             return _ret;
         }
 
-        // The (remote) caller should not continue to render to any shared resource until this completes
         bool CompositeFor (std::string const & name) {
-            std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
+            bool _ret = _textureRenderer.Wait (WPEFramework::Core::Thread::BLOCKED, WPEFramework::Core::infinite);
 
-            bool _ret = false;
+            {
+                std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
 
-            /* ProxyType <> */ auto _client = _clients.Find (name);
-
-            if (_client.IsValid () != true ||  name.compare (_client->Name ()) != 0) {
-                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), name.c_str ()));
+                /* void */ _textureRenderer.SetClientName (name);
+// TODO: only if size change has occured
+                /* void */ _textureRenderer.SetViewportDimensions (_platform.Width (), _platform.Height ());
             }
-            else {
-                ClientSurface::surf_t const & _surf = _client->Surface ();
 
-                _ret = ( _surf.RenderComplete () && _egl.Valid () && _gles.Valid () ) != false;
-
-                if (_ret != false) {
-                    TRACE (Trace::Information, (_T ("Client has an associated EGL image.")));
-
-                    auto _width = gbm_bo_get_width (_surf._buf);
-                    auto _height = gbm_bo_get_height (_surf._buf);
-
-                    using width_t = decltype (_width);
-                    using height_t = decltype (_height);
-
-                    // Narrowing detection
-
-                    // Enable narrowing detection
-// TODO:
-                    constexpr bool _enable = false;
-
-                    // (Almost) all will fail!
-                    if (_narrowing < width_t, EGLint, _enable > :: value != true
-                        && _narrowing < height_t, EGLint, _enable > :: value != true) {
-                        TRACE (Trace::Information, (_T ("Possible narrowing detected!")));
-                    }
-
-                    // Update including some GLES preparations
-
-                    using geom_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().Geometry ());
-                    using zorder_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().ZOrder ());
-
-                    using geom_x_t = decltype (geom_t::x);
-                    using geom_y_t = decltype (geom_t::y);
-                    using geom_w_t = decltype (geom_t::width);
-                    using geom_h_t = decltype (geom_t::height);
-
-                    using platform_w_t =  decltype (std::declval < decltype (_platform) >().Width ());
-                    using platform_h_t =  decltype (std::declval < decltype (_platform) >().Height ());
-
-                    using offset_x_t = decltype (GLES::offset_t::_x);
-                    using offset_y_t = decltype (GLES::offset_t::_y);
-                    using offset_z_t = decltype (GLES::offset_t::_z);
-
-                    using scale_h_t = decltype (GLES::scale_t::_horiz);
-                    using scale_v_t = decltype (GLES::scale_t::_vert);
-
-
-                    using common_scale_h_t = std::common_type <scale_h_t, geom_w_t, platform_w_t> :: type;
-                    using common_scale_v_t = std::common_type <scale_v_t, geom_h_t, platform_h_t> :: type;
-
-                    // Narrowing is not allowed
-                    static_assert (_narrowing <common_scale_h_t, scale_h_t, true> :: value != false);
-                    static_assert (_narrowing <common_scale_v_t, scale_v_t, true> :: value != false);
-
-
-                    geom_t _geom = _client->Geometry ();
-
-
-                    GLES::scale_t _scale = { static_cast <scale_h_t> ( static_cast <common_scale_h_t> (_geom.width) / static_cast <common_scale_h_t> (_platform.Width ()) ), static_cast <scale_v_t> ( static_cast <common_scale_v_t> (_geom.height) / static_cast <common_scale_v_t> (_platform.Height ()) ) };
-
-
-                    using common_offset_x_t = std::common_type <scale_h_t, geom_x_t, offset_x_t> :: type;
-                    using common_offset_y_t = std::common_type <scale_v_t, geom_y_t, offset_y_t> :: type;
-                    using common_offset_z_t = std::common_type <zorder_t, decltype (WPEFramework::Exchange::IComposition::minZOrder), decltype (WPEFramework::Exchange::IComposition::maxZOrder), offset_z_t> :: type;
-
-
-                    // Narrowing is not allowed
-                    static_assert (_narrowing <common_offset_x_t, offset_x_t, true> :: value != false);
-                    static_assert (_narrowing <common_offset_y_t, offset_y_t, true> :: value != false);
-                    static_assert (_narrowing <common_offset_z_t, offset_z_t, true> :: value != false);
-
-
-                    zorder_t _zorder = _client->ZOrder ();
-
-// TODO: z-ordering should support the minimal representable resolution
-
-                    static_assert ( ( static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::maxZOrder) - static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::minZOrder) ) > static_cast <common_offset_z_t> (0));
-
-                    GLES::offset_t _offset = { static_cast <offset_x_t> ( static_cast <common_offset_x_t> (_scale._horiz) * static_cast <common_offset_x_t> (_geom.x) / static_cast <common_offset_x_t> (_geom.width) ), static_cast <offset_y_t> ( static_cast <common_offset_y_t> (_scale._vert) * static_cast <common_offset_y_t> (_geom.y) / static_cast <common_offset_y_t> (_geom.height)), static_cast <offset_z_t> (static_cast <common_offset_z_t> (_zorder) / ( static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::maxZOrder) - static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::minZOrder) )) };
-
-
-                    using opacity_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().Opacity ());
-
-                    using opacity_a_t = decltype (GLES::opacity_t::_alpha);
-
-                    using common_opacity_t = std::common_type <opacity_t, opacity_a_t, decltype (WPEFramework::Exchange::IComposition::minOpacity), decltype (WPEFramework::Exchange::IComposition::maxOpacity)> :: type;
-
-                    // Narrowing is not allowed
-                    static_assert (_narrowing <common_opacity_t, opacity_a_t, true> :: value != false);
-
-
-                    opacity_t _opa = _client->Opacity ();
-
-                    GLES::opacity_t _opacity = static_cast <opacity_a_t> ( static_cast <common_opacity_t> (_opa) / ( static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::maxOpacity) - static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::minOpacity) ) );
-
-
-                    _ret = (    _gles.UpdateOffset ( _offset )
-                            && _gles.UpdateScale ( _scale ) && _gles.UpdateOpacity ( _opacity )
-                            && _egl.RenderWithoutSwap (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height)) ) != false;
-                }
-
-
-                // Update the scene only if sufficient time has elapes
-
-                if (_ret != false) {
-                    // Signed and at least 45 bits
-                    using milli_t = int64_t;
-
-                    auto RefreshRateFromResolution = [] (Exchange::IComposition::ScreenResolution const resolution) -> milli_t {
-                        // Assume 'unknown' rate equals 60 Hz
-                        milli_t _rate = 60;
-
-                        switch (resolution) {
-                            case Exchange::IComposition::ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
-                                                                                        _rate = 24; break;
-                            case Exchange::IComposition::ScreenResolution_720p50Hz  : // 1280x720 progressive @ 50 Hz
-                            case Exchange::IComposition::ScreenResolution_1080i50Hz : // 1920x1080 interlaced @ 50 Hz
-                            case Exchange::IComposition::ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
-                            case Exchange::IComposition::ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
-                                                                                        _rate = 50; break;
-                            case Exchange::IComposition::ScreenResolution_480i      : // 720x480
-                            case Exchange::IComposition::ScreenResolution_480p      : // 720x480 progressive
-                            case Exchange::IComposition::ScreenResolution_720p      : // 1280x720 progressive
-                            case Exchange::IComposition::ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
-                            case Exchange::IComposition::ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
-                            case Exchange::IComposition::ScreenResolution_Unknown   :   _rate = 60;
-                        }
-
-                        return _rate;
-                    };
-
-                    constexpr milli_t _milli = 1000;
-
-                    // No resize supported
-                    static Exchange::IComposition::ScreenResolution _resolution = Resolution();
-
-                    static decltype (_milli) _rate = RefreshRateFromResolution ( _resolution );
-
-                    // Skip update if it is too soon to flip the contents
-
-                    static std::chrono::milliseconds _delay (_milli / _rate);
-
-                    static std::chrono::milliseconds _duration (_delay);
-
-                    static auto _start = std::chrono::steady_clock::now ();
-
-
-// TODO: allow small margin
-                    // Skip update if it is too soon to flip the contents
-                    if (_duration.count () >= _delay.count ()) {
-                        _ret = _egl.Render (std::bind (&GLES::RenderScene, &_gles, WidthFromResolution (_resolution), HeightFromResolution (_resolution), [] (GLES::texture_t left, GLES::texture_t right) -> GLES::valid_t { GLES::valid_t _ret = left._offset._z > right._offset._z; return _ret; } ), true ) != false;
-
-                        if (_ret != false) {
-                            ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
-                            /* void */ _platform.Swap (_bufferInfo);
-                        }
-
-                    }
-
-
-                    auto _finish = std::chrono::steady_clock::now ();
-
-                    _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_finish - _start);
-                    _start=_finish;
-                }
-
-            }
+            /* void */ _textureRenderer.Run ();
 
             return _ret;
         }
+
+        bool FrameFlip () {
+            using milli_t = int64_t;
+
+            auto RefreshRateFromResolution = [] (Exchange::IComposition::ScreenResolution const resolution) -> milli_t {
+                // Assume 'unknown' rate equals 60 Hz
+                milli_t _rate = 60;
+
+                switch (resolution) {
+                    case Exchange::IComposition::ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
+                                                                                _rate = 24; break;
+                    case Exchange::IComposition::ScreenResolution_720p50Hz  : // 1280x720 progressive @ 50 Hz
+                    case Exchange::IComposition::ScreenResolution_1080i50Hz : // 1920x1080 interlaced @ 50 Hz
+                    case Exchange::IComposition::ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
+                    case Exchange::IComposition::ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
+                                                                                _rate = 50; break;
+                    case Exchange::IComposition::ScreenResolution_480i      : // 720x480
+                    case Exchange::IComposition::ScreenResolution_480p      : // 720x480 progressive
+                    case Exchange::IComposition::ScreenResolution_720p      : // 1280x720 progressive
+                    case Exchange::IComposition::ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
+                    case Exchange::IComposition::ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
+                    case Exchange::IComposition::ScreenResolution_Unknown   :   _rate = 60;
+                }
+
+                return _rate;
+            };
+
+            constexpr milli_t _milli = 1000;
+
+            // No resize supported
+            static decltype (_milli) _rate = RefreshRateFromResolution ( Resolution () );
+
+            static std::chrono::milliseconds _delay (_milli / _rate);
+
+            static std::chrono::milliseconds _duration (_delay);
+
+            static auto _start = std::chrono::steady_clock::now ();
+
+
+            ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
+            /* void */ _platform.Swap (_bufferInfo);
+
+
+            auto _finish = std::chrono::steady_clock::now ();
+
+            _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_finish - _start);
+
+            // Do not overstress the system
+// TODO: allow delta
+            if (_duration.count () < _delay.count ()) {
+                SleepMs (_delay.count () - _duration.count ());
+            }
+
+            _start = _finish;
+
+
+            bool _ret = true;
+
+            return _ret;
+        };
 
         //
         // Echange::IComposition
@@ -2855,7 +3033,8 @@ class CompositorImplementation;
                     _dma = nullptr;
                 }
                 else {
-                    _dma->Run ();
+                    /* void */ _dma->Run ();
+                    /* void */ _sceneRenderer.Run ();
                 }
             }
 
@@ -2945,8 +3124,6 @@ class CompositorImplementation;
 
     private:
 
-        using ClientContainer = Core::ProxyMapType<string, ClientSurface>;
-
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Core::ProxyType<RPC::InvokeServer> _engine;
@@ -2960,7 +3137,11 @@ class CompositorImplementation;
         Natives _natives;
         EGL _egl;
         GLES _gles;
-        std::mutex _clientLock;
+
+        lock_t _clientLock;
+
+        EGL::TextureRenderer _textureRenderer;
+        EGL::SceneRenderer _sceneRenderer;
     };
 
     // ODR-use
@@ -3017,7 +3198,7 @@ class CompositorImplementation;
     }
 
     void ClientSurface::ScanOut () {
-        _compositor.CompositeFor (_name);
+        /* bool */ _compositor.CompositeFor (_name);
     }
 
 } // namespace Plugin
