@@ -70,7 +70,7 @@ if(${PLUGIN_POWER_MFRPERSIST_STATE} STREQUAL ON AND MFRPWRMGRLIBS_FOUND)
     message("Enabling Persistent power state feature...")
     target_sources(${MODULE_NAME} PRIVATE
         PowerImplementation/${PLUGIN_POWER_IMPLEMENTATION}/MFRPersistPower.cpp)
-    target_link_libraries(${MODULE_NAME} PRIVATE pwrmgrlibs::pwrmgrlibs)
+    target_link_libraries(${MODULE_NAME} PRIVATE MFRPwrMgrLibs::MFRPwrMgrLibs)
 else()
     target_sources(${MODULE_NAME} PRIVATE
         PowerImplementation/Stub/MFRPersistPowerStub.cpp)
