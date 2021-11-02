@@ -1,8 +1,8 @@
-# - Try to find bcm_host.
+# - Try to find gstreamer.
 # Once done, this will define
 #
-#  BCM_HOST_FOUND - the bcm_host is available
-#  BCM_HOST::BCM_HOST - The bcm_host library and all its dependecies
+#  GSTREAMER_FOUND - the gstreamer is available
+#  GSTREAMER::GSTREAMER - The gstreamer library and all its dependecies
 #
 # Copyright (C) 2019 Metrological B.V
 #
@@ -27,18 +27,23 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+if(GStreamer_FIND_QUIETLY)
+    set(_GSTREAMER_MODE QUIET)
+elseif(GStreamer_FIND_REQUIRED)
+    set(_GSTREAMER_MODE REQUIRED)
+endif()
+
 find_package(PkgConfig)
-pkg_check_modules(PC_GSTREAMER gstreamer-1.0)
+pkg_check_modules(PC_GSTREAMER ${_GSTREAMER_MODE} gstreamer-1.0)
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(PC_GSTREAMER DEFAULT_MSG PC_GSTREAMER_FOUND)
-
+find_package_handle_standard_args(GStreamer DEFAULT_MSG PC_GSTREAMER_FOUND PC_GSTREAMER_INCLUDE_DIRS PC_GSTREAMER_LIBRARIES)
 mark_as_advanced(PC_GSTREAMER_INCLUDE_DIRS PC_GSTREAMER_LIBRARIES PC_GSTREAMER_LIBRARY_DIRS)
 
-if(${PC_GSTREAMER_FOUND})
+if(GStreamer_FOUND)
     set(GSTREAMER_LIBRARIES ${PC_GSTREAMER_LIBRARIES})
     set(GSTREAMER_INCLUDES ${PC_GSTREAMER_INCLUDE_DIRS})
-    set(GSTREAMER_FOUND ${PC_GSTREAMER_FOUND})
+    set(GSTREAMER_FOUND ${GStreamer_FOUND})
     find_library(GSTREAMER_LIBRARY gstreamer-1.0 HINTS ${PC_GSTREAMER_LIBDIR} ${PC_GSTREAMER_LIBRARY_DIRS})
 
     if(NOT TARGET GStreamer::GStreamer)

@@ -24,9 +24,14 @@
 #  GLESV2_DEFINITIONS - Compiler switches required for using EGL.
 #
 
-find_package(PkgConfig)
+if(GLESv2_FIND_QUIETLY)
+    set(_GLESV2_MODE QUIET)
+elseif(GLESv2_FIND_REQUIRED)
+    set(_GLESV2_MODE REQUIRED)
+endif()
 
-pkg_check_modules(PC_GLESV2 glesv2)
+find_package(PkgConfig)
+pkg_check_modules(PC_GLESV2 ${_GLESV2_MODE} glesv2)
 
 if (PC_GLESV2_FOUND)
     set(GLESV2_CFLAGS ${PC_GLESV2_CFLAGS})
@@ -47,17 +52,15 @@ find_library(GLESV2_LIBRARY NAMES GLESv2
         )
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(GLESV2 DEFAULT_MSG GLESV2_FOUND)
+find_package_handle_standard_args(GLESv2 DEFAULT_MSG GLESV2_FOUND GLESV2_INCLUDE_DIRS GLESV2_LIBRARY GLESV2_LIBRARIES)
+mark_as_advanced(GLESV2_INCLUDE_DIRS GLESV2_LIBRARIES)
 
-if(GLESV2_FOUND AND NOT TARGET GLESV2::GLESV2)
-    add_library(GLESV2::GLESV2 UNKNOWN IMPORTED)
-    set_target_properties(GLESV2::GLESV2 PROPERTIES
+if(GLESv2_FOUND AND NOT TARGET GLESv2::GLESv2)
+    add_library(GLESv2::GLESv2 UNKNOWN IMPORTED)
+    set_target_properties(GLESv2::GLESv2 PROPERTIES
             IMPORTED_LOCATION "${GLESV2_LIBRARY}"
             INTERFACE_LINK_LIBRARIES "${GLESV2_LIBRARIES}"
             INTERFACE_COMPILE_OPTIONS "${GLESV2_DEFINITIONS}"
             INTERFACE_INCLUDE_DIRECTORIES "${GLESV2_INCLUDE_DIRS}"
             )
 endif()
-
-
-mark_as_advanced(GLESV2_INCLUDE_DIRS GLESV2_LIBRARIES)
