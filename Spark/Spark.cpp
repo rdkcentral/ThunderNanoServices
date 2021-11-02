@@ -114,15 +114,15 @@ namespace Plugin {
             stateControl->Release();
         }
 
-        uint32_t result = _spark->Release();
-
-        // It should have been the last reference we are releasing,
-        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
-        // are leaking ...
-        ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
-
-        if(_connectionId != 0){
+        if (_connectionId != 0) {
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+
+            uint32_t result = _spark->Release();
+
+            // It should have been the last reference we are releasing,
+            // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+            // are leaking ...
+            ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
 
             // If this was running in a (container) process ...
             if (connection != nullptr) {

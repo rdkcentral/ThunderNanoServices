@@ -127,14 +127,26 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         _notification.Release();
     }
 
-    uint32_t result = _cobalt->Release();
-  
-    // It should have been the last reference we are releasing, 
-    // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
-    // are leaking...
-    ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
+    if (_connectionId != 0) {
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-    ConnectionTermination(_connectionId);
+        uint32_t result = _cobalt->Release();
+  
+        // It should have been the last reference we are releasing, 
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking...
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
+
+        // Tf this was running in a (container) process...
+        if (connection != nullptr) {
+            // Lets trigger the cleanup sequence for 
+            // out-of-process code. Which will guard
+            // that unwilling processes, get shot if
+            // not stopped friendly :~)
+            connection->Terminate();
+            connection->Release();
+        }
+    }
 
     // Deinitialize what we initialized..
     _memory = nullptr;

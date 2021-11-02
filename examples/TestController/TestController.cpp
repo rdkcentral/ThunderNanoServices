@@ -114,10 +114,25 @@ namespace Plugin {
 
         _testControllerImp->TearDown();
 
-
-        _testControllerImp->Release();
         if (_connection != 0) {
-            ProcessTermination(_connection);
+            RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
+
+            uint32_t result = _testControllerImp->Release();
+           
+            // It should have been the last reference we are releasing, 
+            // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
+
+            // Tf this was running in a (container) process...
+            if (process != nullptr) {
+              // Lets trigger the cleanup sequence for 
+              // out-of-process code. Which will guard
+              // that unwilling processes, get shot if
+              // not stopped friendly :~)
+              process->Terminate();
+              process->Release();
+            }
         }
 
         _testControllerImp = nullptr;
