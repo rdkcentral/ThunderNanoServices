@@ -548,6 +548,13 @@ namespace Plugin {
         };
 
         class GLES {
+#define GL_ERROR_WITH_RETURN() ( glGetError () == GL_NO_ERROR )
+#ifdef NDEBUG
+#define GL_ERROR() do {} while (0)
+#else
+#define GL_ERROR() assert (GL_ERROR_WITH_RETURN ())
+#endif
+
             private :
 
                 // x, y, z
@@ -571,6 +578,10 @@ namespace Plugin {
                 } _offset;
 
                 bool _valid;
+
+                using prog_t = GLuint;
+
+                static constexpr prog_t InvalidProg () { return 0; }
 
             public :
 
@@ -614,17 +625,15 @@ namespace Plugin {
                         // The function clamps the input to [0.0f, 1.0f]
                         /* void */ glClearColor (0.0f, _rad, 0.0f, 0.0);
 
-                        _ret = glGetError () == GL_NO_ERROR;
+                        GL_ERROR ();
 
-                        if (_ret != false) {
-                            /* void */ glClear (GL_COLOR_BUFFER_BIT);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        /* void */ glClear (GL_COLOR_BUFFER_BIT);
+                        GL_ERROR ();
 
-                        if (_ret != false) {
-                            /* void */ glFlush ();
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        /* void */ glFlush ();
+                        GL_ERROR ();
+
+                        _ret = GL_ERROR_WITH_RETURN ();
 
                         _degree = (_degree + 1) % ROTATION;
                     }
@@ -633,10 +642,45 @@ namespace Plugin {
                 }
 
                 valid_t RenderTile () {
-                    valid_t _ret = glGetError () == GL_NO_ERROR;
+                    valid_t _ret = GL_ERROR_WITH_RETURN ();
 
                     if (_ret != false) {
-                        _ret = SetupProgram ();
+                        constexpr char const _vtx_src [] =
+                            "#version 100                               \n"
+                            "attribute vec3 position;                   \n"
+                            "void main () {                             \n"
+                                "gl_Position = vec4 (position.xyz, 1);  \n"
+                            "}                                          \n"
+                        ;
+
+                        constexpr char const _frag_src [] =
+                            "#version 100                                                           \n"
+                            "precision mediump float;                                               \n"
+                            "uniform float red;\n"
+                            "uniform float green;\n"
+                            "uniform float blue;\n"
+                            "void main () {                                                         \n"
+                                "gl_FragColor = vec4 (red, green, blue, 1.0f);                      \n"
+                            "}                                                                      \n"
+                        ;
+
+                        static prog_t _prog = InvalidProg ();;
+
+                        _ret = SetupProgram (_vtx_src, _frag_src, _prog);
+                    }
+
+                    // Blend pixels with pixels already present in the frame buffer
+
+                    if (_ret != false) {
+                        glEnable (GL_BLEND);
+                        GL_ERROR ();
+
+                        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                        GL_ERROR ();
+
+                        // Color on error
+                        glClearColor (1.0f, 0.0f, 0.0f, 0.5f);
+                        _ret = GL_ERROR_WITH_RETURN ();
                     }
 
                     EGL::dpy_t _dpy = EGL_NO_DISPLAY;
@@ -662,25 +706,19 @@ namespace Plugin {
 
                     if (_ret != false) {
                         glViewport ( static_cast <GLint> (0), static_cast <GLint> (0), static_cast <GLsizei> (_width), static_cast <GLsizei> (_height));
-                        _ret = glGetError () == GL_NO_ERROR;
-                    }
+                        GL_ERROR ();
 
-                    static_assert (std::is_same <GLfloat, GLES::offset::coordinate_t>:: value != false);
-                    std::array <GLfloat, 4 * VerticeDimensions> const _vert = {-0.5f , -0.5f, 0.0f /* v0 */, 0.5f , -0.5f, 0.0f /* v1 */, -0.5f , 0.5f, 0.0f /* v2 */, 0.5f , 0.5f, 0.0f /* v3 */};
+                        static_assert (std::is_same <GLfloat, GLES::offset::coordinate_t>:: value != false);
+                        std::array <GLfloat, 4 * VerticeDimensions> const _vert = {-0.5f , -0.5f, 0.0f /* v0 */, 0.5f , -0.5f, 0.0f /* v1 */, -0.5f , 0.5f, 0.0f /* v2 */, 0.5f , 0.5f, 0.0f /* v3 */};
 
-                    if (_ret != false) {
                         GLuint _prog = 0;
 
-                        if (_ret != false) {
-                            glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
+                        GL_ERROR ();
 
                         GLint _loc = 0;
-                        if (_ret != false) {
-                            _loc = glGetAttribLocation (_prog, "position");
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        _loc = glGetAttribLocation (_prog, "position");
+                        GL_ERROR ();
 
                         static GLfloat _red = 0.0f;
                         static GLfloat _green = 0.0f;
@@ -691,45 +729,35 @@ namespace Plugin {
                         _green = _blue;;
                         _blue = _color;;
 
-                        if (_ret != false) {
-                            GLint _loc_red = glGetUniformLocation (_prog, "red");
-                            _ret = glGetError () == GL_NO_ERROR;
+                        GLint _loc_red = glGetUniformLocation (_prog, "red");
+                        GL_ERROR ();
 
-                            glUniform1f (_loc_red, _red);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        glUniform1f (_loc_red, _red);
+                        GL_ERROR ();
 
-                        if (_ret != false) {
-                            GLint _loc_green = glGetUniformLocation (_prog, "green");
-                            _ret = glGetError () == GL_NO_ERROR;
+                        GLint _loc_green = glGetUniformLocation (_prog, "green");
+                        GL_ERROR ();
 
-                            glUniform1f (_loc_green, _green);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        glUniform1f (_loc_green, _green);
+                        GL_ERROR ();
 
-                        if (_ret != false) {
-                            GLint _loc_blue = glGetUniformLocation (_prog, "blue");
-                            _ret = glGetError () == GL_NO_ERROR;
+                        GLint _loc_blue = glGetUniformLocation (_prog, "blue");
+                        GL_ERROR ();
 
-                            glUniform1f (_loc_blue, _blue);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        glUniform1f (_loc_blue, _blue);
+                        GL_ERROR ();
 
+                        glVertexAttribPointer (_loc, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, _vert.data ());
+                        GL_ERROR ();
 
-                        if (_ret != false) {
-                            glVertexAttribPointer (_loc, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, _vert.data ());
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                        glEnableVertexAttribArray (_loc);
+                        GL_ERROR ();
 
-                        if (_ret != false) {
-                            glEnableVertexAttribArray (_loc);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-                    }
-
-                    if (_ret != false) {
                         glDrawArrays (GL_TRIANGLE_STRIP, 0, _vert.size () / VerticeDimensions);
-                        _ret = glGetError () == GL_NO_ERROR;
+                        GL_ERROR ();
+
+                        glFinish ();
+                        _ret = GL_ERROR_WITH_RETURN ();
                     }
 
                     return _ret;
@@ -786,147 +814,143 @@ namespace Plugin {
 
                     if (_tex != InvalidTex ()) {
                         glDeleteTextures (1, &_tex);
-                        _ret = glGetError () == GL_NO_ERROR;
+                        GL_ERROR ();
                     }
+
+                    _ret = GL_ERROR_WITH_RETURN ();
 
                     return _ret;
                 }
 
-                valid_t SetupProgram (/* some identifier for a precompiled program */) {
+                valid_t SetupProgram (char const vtx_src [], char const frag_src [], prog_t & prog) {
                     auto LoadShader = [] (GLuint type, GLchar const code []) -> GLuint {
-                        valid_t _ret = glGetError () == GL_NO_ERROR;
+                        GLuint _shader = glCreateShader (type);
+                        GL_ERROR ();
 
-                        GLuint _shader = 0;
+                        valid_t _ret = ( GL_ERROR_WITH_RETURN () && _shader != 0 ) != false;
+
                         if (_ret != false) {
-                            _shader = glCreateShader (type);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-
-                        if (_ret != false && _shader != 0) {
                             glShaderSource (_shader, 1, &code, nullptr);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                            GL_ERROR ();
 
-                        if (_ret != false) {
                             glCompileShader (_shader);
-                            _ret = glGetError () == GL_NO_ERROR;
+                            GL_ERROR ();
+
+                            GLint _status = GL_FALSE;
+
+                            glGetShaderiv (_shader, GL_COMPILE_STATUS, &_status);
+                            GL_ERROR ();
+
+                            _ret = ( GL_ERROR_WITH_RETURN () && _status != GL_FALSE ) != false;
                         }
 
                         return _shader;
                     };
 
-                    auto ShadersToProgram = [] (GLuint vertex, GLuint fragment) -> bool {
-                        valid_t _ret = glGetError () == GL_NO_ERROR;
+                   auto ShadersToProgram = [] (GLuint vertex, GLuint fragment, prog_t & prog) -> valid_t {
+                        prog = glCreateProgram ();
+                        GL_ERROR ();
 
-                        GLuint _prog = 0;
-
-                        if (_ret != false) {
-                            glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-
-                        if (_ret != false && _prog != 0) {
-                            glDeleteProgram (_prog);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-
-                        _prog = 0;
+                        valid_t _ret = ( GL_ERROR_WITH_RETURN () && prog != 0 ) != false;
 
                         if (_ret != false) {
-                            _prog = glCreateProgram ();
-                            _ret = _prog != 0;
-                        }
+                            glAttachShader (prog, vertex);
+                            GL_ERROR ();
 
-                        if (_ret != false) {
-                            glAttachShader (_prog, vertex);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                             glAttachShader (prog, fragment);
+                            GL_ERROR ();
 
-                        if (_ret != false) {
-                            glAttachShader (_prog, fragment);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                            glBindAttribLocation (prog, 0, "position");
+                            GL_ERROR ();
 
-                        if (_ret != false) {
-                            glBindAttribLocation (_prog, 0, "position");
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                            glLinkProgram (prog);
+                            GL_ERROR ();
 
-                        if (_ret != false) {
-                            glLinkProgram (_prog);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
+                            GLint _status = GL_FALSE;
 
-                        if (_ret != false) {
-                            glUseProgram (_prog);
-                            _ret = glGetError () == GL_NO_ERROR;
-                        }
-                        else {
-                            glDeleteProgram (_prog);
-                            _ret = glGetError () == GL_NO_ERROR;
+                            glGetProgramiv (prog, GL_LINK_STATUS, &_status);
+                            GL_ERROR ();
 
-                            glDeleteShader (vertex);
-                            _ret = glGetError () == GL_NO_ERROR && _ret;
-
-                            glDeleteShader (fragment);
-                            _ret = glGetError () == GL_NO_ERROR && _ret;
+                            _ret = ( GL_ERROR_WITH_RETURN () && _status != GL_FALSE ) != false;
                         }
 
                         return _ret;
                     };
 
+                    auto DeleteCurrentProgram = [] () -> valid_t {
+                        GLuint _prog = 0;
 
-                    bool _ret = glGetError () == GL_NO_ERROR;
+                        glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
+                        GL_ERROR ();
 
+                        valid_t _ret = ( GL_ERROR_WITH_RETURN () && _prog != 0 ) != false;;
+
+                        if (_ret != false) {
+                            GLint _count = 0;
+
+                            glGetProgramiv (_prog, GL_ATTACHED_SHADERS, &_count);
+                            GL_ERROR ();
+
+                            _ret = ( GL_ERROR_WITH_RETURN () && _count > 0 ) != false;
+
+                            if (_ret != false) {
+                                GLuint _shaders [_count];
+
+                                glGetAttachedShaders (_prog, _count, static_cast <GLsizei *> (&_count), &_shaders [0]);
+
+                                if (GL_ERROR_WITH_RETURN () != false) {
+                                    for (_count--; _count >= 0; _count--) {
+                                        glDetachShader (_prog, _shaders [_count]);
+                                        GL_ERROR ();
+
+                                        glDeleteShader (_shaders [_count]);
+                                        GL_ERROR ();
+                                    }
+
+                                    glDeleteProgram (_prog);
+                                    GL_ERROR ();
+                                }
+                            }
+
+                            _ret = _ret && GL_ERROR_WITH_RETURN ();
+                        }
+
+                        return _ret;
+                    };
+
+                    bool _ret = GL_ERROR_WITH_RETURN ();
+
+                    if (_ret != false && prog == InvalidProg ()) {
+                        GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, vtx_src);
+                        GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, frag_src);
+
+                        _ret = ShadersToProgram(_vtxShader, _fragShader, prog);
+                    }
 
                     if (_ret != false) {
-                        constexpr char const _vtx_src [] =
-                            "#version 100                               \n"
-                            "attribute vec3 position;                   \n"
-                            "void main () {                             \n"
-                                "gl_Position = vec4 (position.xyz, 1);  \n"
-                            "}                                          \n"
-                        ;
+                        glUseProgram (prog);
+                        GL_ERROR ();
 
-                        constexpr char const _frag_src [] =
-                            "#version 100                                                           \n"
-                            "precision mediump float;                                               \n"
-                            "uniform float red;\n"
-                            "uniform float green;\n"
-                            "uniform float blue;\n"
-                            "void main () {                                                         \n"
-                                "gl_FragColor = vec4 (red, green, blue, 1.0f);                      \n"
-                            "}                                                                      \n"
-                        ;
+                        _ret = GL_ERROR_WITH_RETURN ();
 
-                        GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, _vtx_src);
-                        GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, _frag_src);
+                        if (_ret != true) {
+                            /* valid_t */ DeleteCurrentProgram ();
+                            GL_ERROR ();
 
-// TODO: inefficient on every call, reuse compiled program
-                        _ret = ShadersToProgram(_vtxShader, _fragShader);
+                            prog = InvalidProg ();
+
+                            // Color on error
+                            glClearColor (1.0f, 0.0f, 0.0f, 0.5f);
+                            GL_ERROR ();
+                        }
                     }
 
-                    // Blend pixels with pixels already present in the frame buffer
-
-                    if (_ret != false) {
-                         glEnable (GL_BLEND);
-                        _ret = glGetError () == GL_NO_ERROR;
-                    }
-
-                    if (_ret != false) {
-                        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-                        _ret = glGetError () == GL_NO_ERROR;
-                    }
-
-                    // Color on error
-                    if (_ret != true) {
-                        glClearColor (1.0f, 0.0f, 0.0f, 0.5f);
-                        //_ret = glGetError () == GL_NO_ERROR;
-                    }
+                    _ret = _ret && GL_ERROR_WITH_RETURN ();
 
                     return _ret;
                 }
-
+#undef GL_ERROR_WITH_RETURN
+#undef GL_ERROR
         };
 
         class EGL  {
@@ -1087,9 +1111,6 @@ namespace Plugin {
         {
             TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
 
-            // First Sleep the expected time..
-            SleepMs(_config.Sleep.Value() * 1000);
-
             // Do not re-create
             static Natives _natives ( _display );
 
@@ -1103,7 +1124,6 @@ namespace Plugin {
 
                 // Process () expects EGL currents to be valid
                 while (IsRunning() == true && _egl.Render (_gles) != false && _natives.Display ()->Process (0) == 0 && _egl.Render () != false) {
-                    SleepMs(200);
                 }
             }
             else {
