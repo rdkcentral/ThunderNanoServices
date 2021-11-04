@@ -120,26 +120,23 @@ namespace Plugin {
         }
         _memory = nullptr;
 
-        if (_connection != 0) {
-            RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
+        RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
 
-            uint32_t result = _testUtilityImp->Release();
+        VARIABLE_IS_NOT_USED uint32_t result = _testUtilityImp->Release();
 
-            // It should have been the last reference we are releasing, 
-            // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+        // It should have been the last reference we are releasing, 
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking...
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            // Tf this was running in a (container) process...
-            if (process != nullptr) {
-                // Lets trigger the cleanup sequence for 
-                // out-of-process code. Which will guard
-                // that unwilling processes, get shot if
-                // not stopped friendly :~)
-                process->Terminate();
-                process->Release();
-            }
-
+        // Tf this was running in a (container) process...
+        if (process != nullptr) {
+            // Lets trigger the cleanup sequence for 
+            // out-of-process code. Which will guard
+            // that unwilling processes, get shot if
+            // not stopped friendly :~)
+            process->Terminate();
+            process->Release();
         }
 
         _testUtilityImp = nullptr;

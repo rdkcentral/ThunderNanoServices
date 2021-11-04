@@ -130,7 +130,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     if (_connectionId != 0) {
         RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-        uint32_t result = _cobalt->Release();
+        VARIABLE_IS_NOT_USED uint32_t result = _cobalt->Release();
   
         // It should have been the last reference we are releasing, 
         // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
