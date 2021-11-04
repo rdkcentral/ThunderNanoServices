@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-PlayerInfo plugin for Thunder framework.
+A PlayerInfo plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -77,6 +78,14 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEPlayerInfo.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- Exchange::IPlayerProperties ([IPlayerInfo.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IPlayerInfo.h))
+- Exchange::Dolby::IOutput ([IDolby.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IDolby.h))
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -91,7 +100,7 @@ PlayerProperties interface methods:
 
 
 <a name="method.audiocodecs"></a>
-## *audiocodecs <sup>method</sup>*
+## *audiocodecs [<sup>method</sup>](#head.Methods)*
 
 ### Parameters
 
@@ -101,8 +110,8 @@ This method takes no parameters.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | string |  (must be one of the following: *AudioUndefined*, *AudioAac*, *AudioAc3*, *AudioAc3Plus*, *AudioDts*, *AudioMpeg1*, *AudioMpeg2*, *AudioMpeg3*, *AudioMpeg4*, *AudioOpus*, *AudioVorbisOgg*, *AudioWav*) |
+| codec | array |  |
+| codec[#] | string |  (must be one of the following: *AudioUndefined*, *AudioAac*, *AudioAc3*, *AudioAc3Plus*, *AudioDts*, *AudioMpeg1*, *AudioMpeg2*, *AudioMpeg3*, *AudioMpeg4*, *AudioOpus*, *AudioVorbisOgg*, *AudioWav*) |
 
 ### Example
 
@@ -111,7 +120,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.audiocodecs"
 }
 ```
@@ -121,7 +130,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "AudioUndefined"
     ]
@@ -129,7 +138,7 @@ This method takes no parameters.
 ```
 
 <a name="method.videocodecs"></a>
-## *videocodecs <sup>method</sup>*
+## *videocodecs [<sup>method</sup>](#head.Methods)*
 
 ### Parameters
 
@@ -139,8 +148,8 @@ This method takes no parameters.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | string |  (must be one of the following: *VideoUndefined*, *VideoH263*, *VideoH264*, *VideoH265*, *VideoH26510*, *VideoMpeg*, *VideoVp8*, *VideoVp9*, *VideoVp10*) |
+| codec | array |  |
+| codec[#] | string |  (must be one of the following: *VideoUndefined*, *VideoH263*, *VideoH264*, *VideoH265*, *VideoH26510*, *VideoMpeg*, *VideoVp8*, *VideoVp9*, *VideoVp10*) |
 
 ### Example
 
@@ -149,7 +158,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.videocodecs"
 }
 ```
@@ -159,7 +168,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "VideoUndefined"
     ]
@@ -189,7 +198,7 @@ Dolby Output interface properties:
 
 
 <a name="property.resolution"></a>
-## *resolution <sup>property</sup>*
+## *resolution [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current Video playback resolution.
 
@@ -199,7 +208,7 @@ Provides access to the current Video playback resolution.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Current Video playback resolution (must be one of the following: *ResolutionUnknown*, *Resolution480I*, *Resolution480P*, *Resolution576I*, *Resolution576P*, *Resolution720P*, *Resolution1080I*, *Resolution1080P*, *Resolution2160P30*, *Resolution2160P60*) |
+| res | string | resolution (must be one of the following: *ResolutionUnknown*, *Resolution480I24*, *Resolution480I25*, *Resolution480I30*, *Resolution480I50*, *Resolution480I*, *Resolution480P24*, *Resolution480P25*, *Resolution480P30*, *Resolution480P50*, *Resolution480P*, *Resolution576I24*, *Resolution576I25*, *Resolution576I30*, *Resolution576I50*, *Resolution576I*, *Resolution576P24*, *Resolution576P25*, *Resolution576P30*, *Resolution576P50*, *Resolution576P*, *Resolution720P24*, *Resolution720P25*, *Resolution720P30*, *Resolution720P50*, *Resolution720P*, *Resolution1080I24*, *Resolution1080I25*, *Resolution1080I30*, *Resolution1080I50*, *Resolution1080I*, *Resolution1080P24*, *Resolution1080P25*, *Resolution1080P30*, *Resolution1080P50*, *Resolution1080P*, *Resolution2160P24*, *Resolution2160P25*, *Resolution2160P30*, *Resolution2160P50*, *Resolution2160P60*, *Resolution2160P*) |
 
 ### Example
 
@@ -208,7 +217,7 @@ Provides access to the current Video playback resolution.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.resolution"
 }
 ```
@@ -218,13 +227,13 @@ Provides access to the current Video playback resolution.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "ResolutionUnknown"
 }
 ```
 
 <a name="property.isaudioequivalenceenabled"></a>
-## *isaudioequivalenceenabled <sup>property</sup>*
+## *isaudioequivalenceenabled [<sup>property</sup>](#head.Properties)*
 
 Provides access to the checks Loudness Equivalence in platform.
 
@@ -234,7 +243,7 @@ Provides access to the checks Loudness Equivalence in platform.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Checks Loudness Equivalence in platform |
+| ae | boolean | enabled/disabled |
 
 ### Example
 
@@ -243,7 +252,7 @@ Provides access to the checks Loudness Equivalence in platform.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.isaudioequivalenceenabled"
 }
 ```
@@ -253,13 +262,13 @@ Provides access to the checks Loudness Equivalence in platform.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": false
 }
 ```
 
 <a name="property.dolby_atmosmetadata"></a>
-## *dolby_atmosmetadata <sup>property</sup>*
+## *dolby_atmosmetadata [<sup>property</sup>](#head.Properties)*
 
 Provides access to the atmos capabilities of Sink.
 
@@ -269,7 +278,7 @@ Provides access to the atmos capabilities of Sink.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Atmos capabilities of Sink |
+| supported | boolean | Atmos capabilities of Sink |
 
 ### Example
 
@@ -278,7 +287,7 @@ Provides access to the atmos capabilities of Sink.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.dolby_atmosmetadata"
 }
 ```
@@ -288,13 +297,13 @@ Provides access to the atmos capabilities of Sink.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": false
 }
 ```
 
 <a name="property.dolby_soundmode"></a>
-## *dolby_soundmode <sup>property</sup>*
+## *dolby_soundmode [<sup>property</sup>](#head.Properties)*
 
 Provides access to the sound Mode - Mono/Stereo/Surround.
 
@@ -304,7 +313,7 @@ Provides access to the sound Mode - Mono/Stereo/Surround.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Sound Mode - Mono/Stereo/Surround (must be one of the following: *Unknown*, *Mono*, *Stereo*, *Surround*, *Passthru*) |
+| mode | string | Sound Mode - Mono/Stereo/Surround (must be one of the following: *Unknown*, *Mono*, *Stereo*, *Surround*, *Passthru*, *SoundmodeAuto*) |
 
 ### Example
 
@@ -313,7 +322,7 @@ Provides access to the sound Mode - Mono/Stereo/Surround.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.dolby_soundmode"
 }
 ```
@@ -323,13 +332,13 @@ Provides access to the sound Mode - Mono/Stereo/Surround.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "Unknown"
 }
 ```
 
 <a name="property.dolby_enableatmosoutput"></a>
-## *dolby_enableatmosoutput <sup>property</sup>*
+## *dolby_enableatmosoutput [<sup>property</sup>](#head.Properties)*
 
 Provides access to the enable Atmos Audio Output.
 
@@ -339,7 +348,7 @@ Provides access to the enable Atmos Audio Output.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Enable Atmos Audio Output |
+| enable | boolean | enable/disable |
 
 ### Example
 
@@ -348,7 +357,7 @@ Provides access to the enable Atmos Audio Output.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.dolby_enableatmosoutput",
     "params": false
 }
@@ -359,13 +368,13 @@ Provides access to the enable Atmos Audio Output.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.dolby_mode"></a>
-## *dolby_mode <sup>property</sup>*
+## *dolby_mode [<sup>property</sup>](#head.Properties)*
 
 Provides access to the dolby Mode.
 
@@ -373,7 +382,7 @@ Provides access to the dolby Mode.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Dolby Mode (must be one of the following: *DigitalPcm*, *DigitalPlus*, *DigitalAc3*, *Auto*, *DigitalPassthrough*, *Ms12*) |
+| mode | string | dolby mode type (must be one of the following: *DigitalPcm*, *DigitalPlus*, *DigitalAc3*, *Auto*, *DigitalPassthrough*, *Ms12*) |
 
 ### Example
 
@@ -382,7 +391,7 @@ Provides access to the dolby Mode.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.dolby_mode"
 }
 ```
@@ -392,7 +401,7 @@ Provides access to the dolby Mode.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "DigitalPcm"
 }
 ```
@@ -402,7 +411,7 @@ Provides access to the dolby Mode.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "PlayerInfo.1.dolby_mode",
     "params": "DigitalPcm"
 }
@@ -413,7 +422,7 @@ Provides access to the dolby Mode.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -433,14 +442,14 @@ Dolby Output interface events:
 
 
 <a name="event.dolby_audiomodechanged"></a>
-## *dolby_audiomodechanged <sup>event</sup>*
+## *dolby_audiomodechanged [<sup>event</sup>](#head.Notifications)*
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.mode | string |  (must be one of the following: *Unknown*, *Mono*, *Stereo*, *Surround*, *Passthru*) |
+| params.mode | string |  (must be one of the following: *Unknown*, *Mono*, *Stereo*, *Surround*, *Passthru*, *SoundmodeAuto*) |
 | params.enabled | boolean |  |
 
 ### Example

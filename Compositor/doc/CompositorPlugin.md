@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-Compositor plugin for Thunder framework.
+A Compositor plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 
@@ -78,7 +79,6 @@ The table below lists configuration options of the plugin.
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.hardwareready | number | <sup>*(optional)*</sup> Hardware delay (Nexus) |
 | configuration?.resolution | string | <sup>*(optional)*</sup> Screen resolution (Nexus) |
-| configuration?.brightness | string | <sup>*(optional)*</sup> Brightness of SDR graphics in HDR display (Nexus) |
 | configuration?.allowedclients | array | <sup>*(optional)*</sup> List of allowed clients (Nexus) |
 | configuration?.allowedclients[#] | string | <sup>*(optional)*</sup>  |
 | configuration?.connector | enum | <sup>*(optional)*</sup> Resolution (Wayland) |
@@ -88,6 +88,13 @@ The table below lists configuration options of the plugin.
 | configuration?.glname | string | <sup>*(optional)*</sup> Name of GL-library (Westeros) |
 | configuration?.width | string | <sup>*(optional)*</sup> Screen width (Westeros) |
 | configuration?.height | string | <sup>*(optional)*</sup> Screen height (Westeros) |
+
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [Compositor.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Compositor.json)
 
 <a name="head.Methods"></a>
 # Methods
@@ -104,7 +111,7 @@ Compositor interface methods:
 
 
 <a name="method.putontop"></a>
-## *putontop <sup>method</sup>*
+## *putontop [<sup>method</sup>](#head.Methods)*
 
 Puts client surface on top in z-order.
 
@@ -138,7 +145,7 @@ Use this method to get a client's surface to the top position.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.putontop",
     "params": {
         "client": "Netflix"
@@ -151,13 +158,13 @@ Use this method to get a client's surface to the top position.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.putbelow"></a>
-## *putbelow <sup>method</sup>*
+## *putbelow [<sup>method</sup>](#head.Methods)*
 
 Puts client surface below another surface.
 
@@ -192,7 +199,7 @@ Use this method to reorder client surfaces in the z-order list.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.putbelow",
     "params": {
         "client": "Netflix",
@@ -206,13 +213,13 @@ Use this method to reorder client surfaces in the z-order list.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.select"></a>
-## *select <sup>method</sup>*
+## *select [<sup>method</sup>](#head.Methods)*
 
 Directs the input to the given client, disabling all the others.
 
@@ -246,7 +253,7 @@ Use this method to direct all inputs to this client. The client that is receivin
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.select",
     "params": {
         "client": "Netflix"
@@ -259,7 +266,7 @@ Use this method to direct all inputs to this client. The client that is receivin
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -274,15 +281,15 @@ Compositor interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [resolution](#property.resolution) | Screen resolution |
-| [brightness](#property.brightness) | Brightness of SDR graphics in HDR display |
 | [zorder](#property.zorder) <sup>RO</sup> | List of compositor clients sorted by z-order |
+| [brightness](#property.brightness) | Brightness of SDR graphics in HDR display |
 | [geometry](#property.geometry) | Client surface geometry |
 | [visiblity](#property.visiblity) <sup>WO</sup> | Client surface visibility |
 | [opacity](#property.opacity) <sup>WO</sup> | Client surface opacity |
 
 
 <a name="property.resolution"></a>
-## *resolution <sup>property</sup>*
+## *resolution [<sup>property</sup>](#head.Properties)*
 
 Provides access to the screen resolution.
 
@@ -311,7 +318,7 @@ Use this property to set or retrieve the current resolution of the screen.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.resolution"
 }
 ```
@@ -321,7 +328,7 @@ Use this property to set or retrieve the current resolution of the screen.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "1080p24"
 }
 ```
@@ -331,7 +338,7 @@ Use this property to set or retrieve the current resolution of the screen.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.resolution",
     "params": "1080p24"
 }
@@ -342,79 +349,13 @@ Use this property to set or retrieve the current resolution of the screen.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": "null"
-}
-```
-
-<a name="property.brightness"></a>
-## *brightness <sup>property</sup>*
-
-Provides access to the screen brightness.
-
-### Description
-
-Use this property to set or retrieve the current brightness of the screen.
-
-### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Screen brightness (must be one of the following: *default*, *match_video*, *max*) |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown brightness |
-| 2 | ```ERROR_UNAVAILABLE``` | Set brightness is not supported or failed |
-| 1 | ```ERROR_GENERAL``` | Failed to set brightness |
-
-### Example
-
-#### Get Request
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "Compositor.1.brightness"
-}
-```
-
-#### Get Response
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": "match_video"
-}
-```
-
-#### Set Request
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "Compositor.1.brightness",
-    "params": "max"
-}
-```
-
-#### Set Response
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.zorder"></a>
-## *zorder <sup>property</sup>*
+## *zorder [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of compositor clients sorted by z-order.
 
@@ -444,7 +385,7 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.zorder"
 }
 ```
@@ -454,15 +395,81 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         "Netflix"
     ]
 }
 ```
 
+<a name="property.brightness"></a>
+## *brightness [<sup>property</sup>](#head.Properties)*
+
+Provides access to the brightness of SDR graphics in HDR display.
+
+### Description
+
+Use this property to set or retrieve the brightness of the SDR graphics.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Brightness of SDR graphics in HDR display (must be one of the following: *default*, *match_video*, *max*) |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown brightness |
+| 2 | ```ERROR_UNAVAILABLE``` | Set brightness is not supported or failed |
+| 1 | ```ERROR_GENERAL``` | Failed to set brightness |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "Compositor.1.brightness"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "match_video"
+}
+```
+
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "Compositor.1.brightness",
+    "params": "match_video"
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
 <a name="property.geometry"></a>
-## *geometry <sup>property</sup>*
+## *geometry [<sup>property</sup>](#head.Properties)*
 
 Provides access to the client surface geometry.
 
@@ -480,7 +487,7 @@ Use this property to update or retrieve the geometry of a client's surface.
 | (property).width | number | Surface width |
 | (property).height | number | Surface height |
 
-> The *client* shall be passed as the index to the property, e.g. *Compositor.1.geometry@Netflix*.
+> The *client* argument shall be passed as the index to the property, e.g. *Compositor.1.geometry@Netflix*.
 
 ### Errors
 
@@ -495,7 +502,7 @@ Use this property to update or retrieve the geometry of a client's surface.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.geometry@Netflix"
 }
 ```
@@ -505,7 +512,7 @@ Use this property to update or retrieve the geometry of a client's surface.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "x": 0,
         "y": 0,
@@ -520,7 +527,7 @@ Use this property to update or retrieve the geometry of a client's surface.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.geometry@Netflix",
     "params": {
         "x": 0,
@@ -536,13 +543,13 @@ Use this property to update or retrieve the geometry of a client's surface.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.visiblity"></a>
-## *visiblity <sup>property</sup>*
+## *visiblity [<sup>property</sup>](#head.Properties)*
 
 Provides access to the client surface visibility.
 
@@ -558,7 +565,7 @@ Use this property to set the client's surface visibility.
 | :-------- | :-------- | :-------- |
 | (property) | string | Client surface visibility (must be one of the following: *visible*, *hidden*) |
 
-> The *client* shall be passed as the index to the property, e.g. *Compositor.1.visiblity@Netflix*.
+> The *client* argument shall be passed as the index to the property, e.g. *Compositor.1.visiblity@Netflix*.
 
 ### Errors
 
@@ -573,7 +580,7 @@ Use this property to set the client's surface visibility.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.visiblity@Netflix",
     "params": "visible"
 }
@@ -584,13 +591,13 @@ Use this property to set the client's surface visibility.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.opacity"></a>
-## *opacity <sup>property</sup>*
+## *opacity [<sup>property</sup>](#head.Properties)*
 
 Provides access to the client surface opacity.
 
@@ -606,7 +613,7 @@ Use this property to set the client's surface opacity level.
 | :-------- | :-------- | :-------- |
 | (property) | number | Opacity level (0 to 255; 0: fully transparent, 255: fully opaque) |
 
-> The *client* shall be passed as the index to the property, e.g. *Compositor.1.opacity@Netflix*.
+> The *client* argument shall be passed as the index to the property, e.g. *Compositor.1.opacity@Netflix*.
 
 ### Errors
 
@@ -621,7 +628,7 @@ Use this property to set the client's surface opacity level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Compositor.1.opacity@Netflix",
     "params": 127
 }
@@ -632,7 +639,7 @@ Use this property to set the client's surface opacity level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```

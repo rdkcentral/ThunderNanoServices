@@ -41,7 +41,7 @@ target_link_libraries(${TARGET}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        procps::procps
+        Procps::Procps
 )
 
 set_target_properties(${TARGET} PROPERTIES SUFFIX ".profile")

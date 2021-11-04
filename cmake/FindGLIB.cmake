@@ -41,8 +41,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+if(GLIB_FIND_QUIETLY)
+    set(_GLIB_MODE QUIET)
+elseif(GLIB_FIND_REQUIRED)
+    set(_GLIB_MODE REQUIRED)
+endif()
+
 find_package(PkgConfig)
-pkg_check_modules(PC_GLIB QUIET glib-2.0)
+pkg_check_modules(PC_GLIB ${_GLIB_MODE} glib-2.0)
 
 find_library(GLIB_LIBRARIES
     NAMES glib-2.0
@@ -106,7 +112,7 @@ foreach (_component ${GLIB_FIND_COMPONENTS})
 endforeach ()
 
 include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(GLIB REQUIRED_VARS GLIB_INCLUDE_DIRS GLIB_LIBRARIES ${ADDITIONAL_REQUIRED_VARS}
+find_package_handle_standard_args(GLIB REQUIRED_VARS GLIB_INCLUDE_DIRS GLIB_LIBRARIES ${ADDITIONAL_REQUIRED_VARS}
                                        VERSION_VAR   GLIB_VERSION)
 
 mark_as_advanced(
