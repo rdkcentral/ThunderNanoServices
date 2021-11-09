@@ -32,6 +32,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 set(PLUGIN_REMOTECONTROL_AUTOSTART true CACHE STRING "Automatically start RemoteControl plugin")
 set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
 set(PLUGIN_REMOTECONTROL_PASSON false CACHE STRING "Enable keys pass-through on default producer")
+set(PLUGIN_REMOTECONTROL_REPEAT_INTERVAL "100" CACHE STRING "Repeat interval for RemoteControl")
+set(PLUGIN_REMOTECONTROL_REPEAT_START "500" CACHE STRING "Repeat start for RemoteControl")
 
 option(PLUGIN_REMOTECONTROL_RFCE "Enable RF4CE functionality." ON)
 
