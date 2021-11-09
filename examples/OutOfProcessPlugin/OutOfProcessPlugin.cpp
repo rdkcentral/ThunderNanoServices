@@ -63,7 +63,7 @@ namespace Plugin {
             _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
             _service = nullptr;
 
-            ConnectionTermination(_connectionId);
+            OutOfProcessTermination();
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
             _browser->Register(_notification);
@@ -124,25 +124,7 @@ namespace Plugin {
             _state->Release();
         }
 
-        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-
-        // Stop processing of the browser:
-        VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
-
-        // It should have been the last reference we are releasing,
-        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
-        // are leaking ...
-        ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
-
-        // If this was running in a (container) process ...
-        if (connection != nullptr) {
-            // Lets trigger the cleanup sequence for
-            // out-of-process code. Will will guard
-            // that unwilling processes, get shot if
-            // not stopped friendly :~)
-            connection->Terminate();
-            connection->Release();
-        }
+        OutOfProcessTermination();
 
         _memory = nullptr;
         _browser = nullptr;
@@ -344,10 +326,24 @@ namespace Plugin {
         _service->Notify(message);
     }
 
-    void OutOfProcessPlugin::ConnectionTermination(uint32_t connectionId)
+    void OutOfProcessPlugin::OutOfProcessTermination()
     {
-        RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+
+        // Stop processing of the browser:
+        VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
+
+        // It should have been the last reference we are releasing,
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking ...
+        ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
+
+        // If this was running in a (container) process ...
         if (connection != nullptr) {
+            // Lets trigger the cleanup sequence for
+            // out-of-process code. Will will guard
+            // that unwilling processes, get shot if
+            // not stopped friendly :~)
             connection->Terminate();
             connection->Release();
         }

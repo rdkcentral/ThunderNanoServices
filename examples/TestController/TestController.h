@@ -53,6 +53,8 @@ namespace Plugin {
 
             virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
 
+            void OutOfProcessTermination();
+
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
@@ -104,7 +106,7 @@ namespace Plugin {
             , _memory(nullptr)
             , _testControllerImp(nullptr)
             , _skipURL(0)
-            , _connection(0)
+            , _connectionId(0)
             , _prevCategory(EMPTY_STRING)
         {
             RegisterAll();
@@ -163,7 +165,7 @@ namespace Plugin {
         Exchange::IMemory* _memory;
         Exchange::ITestController* _testControllerImp;
         uint8_t _skipURL;
-        uint32_t _connection;
+        uint32_t _connectionId;
         string _prevCategory;
     };
 

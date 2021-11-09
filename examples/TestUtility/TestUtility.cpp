@@ -73,7 +73,7 @@ namespace Plugin {
         ASSERT(_service == nullptr);
         ASSERT(_testUtilityImp == nullptr);
         ASSERT(_memory == nullptr);
-        ASSERT(_connection == 0);
+        ASSERT(_connectionId == 0);
 
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
@@ -81,21 +81,22 @@ namespace Plugin {
         config.FromString(_service->ConfigLine());
 
         _service->Register(&_notification);
-        _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
+        _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connectionId, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
-            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
 
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
                 remoteConnection->Release();
+                OutOfProcessTermination();
             } else {
                 _memory = nullptr;
                 TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestUtility")));
             }
 
         } else {
-            ProcessTermination(_connection);
+            OutOfProcessTermination();
 
             _service->Unregister(&_notification);
             _service = nullptr;
@@ -120,28 +121,11 @@ namespace Plugin {
         }
         _memory = nullptr;
 
-        RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
-
-        VARIABLE_IS_NOT_USED uint32_t result = _testUtilityImp->Release();
-
-        // It should have been the last reference we are releasing, 
-        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
-        // are leaking...
-        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-        // Tf this was running in a (container) process...
-        if (process != nullptr) {
-            // Lets trigger the cleanup sequence for 
-            // out-of-process code. Which will guard
-            // that unwilling processes, get shot if
-            // not stopped friendly :~)
-            process->Terminate();
-            process->Release();
-        }
+        OutOfProcessTermination();
 
         _testUtilityImp = nullptr;
         _skipURL = 0;
-        _connection = 0;
+        _connectionId = 0;
         _service = nullptr;
     }
 
@@ -190,21 +174,31 @@ namespace Plugin {
         return result;
     }
 
-    void TestUtility::ProcessTermination(uint32_t _connection)
+    void TestUtility::OutOfProcessTermination()
     {
-        RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
+        VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
 
+        // It should have been the last reference we are releasing, 
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking...
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
 
-        if (process != nullptr) {
-            process->Terminate();
-            process->Release();
+        // Tf this was running in a (container) process...
+        if (connection != nullptr) {
+          // Lets trigger the cleanup sequence for 
+          // out-of-process code. Which will guard
+          // that unwilling processes, get shot if
+          // not stopped friendly :~)
+          connection->Terminate();
+          connection->Release();
         }
     }
 
     void TestUtility::Deactivated(RPC::IRemoteConnection* process)
     {
-        if (_connection == process->Id()) {
+        if (_connectionId == process->Id()) {
             ASSERT(_service != nullptr);
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }

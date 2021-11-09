@@ -114,7 +114,7 @@ namespace Plugin {
 
         RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-        // Stop processing of the browser:
+        // Stop processing of the WebServer:
         VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
 
         // It should have been the last reference we are releasing,

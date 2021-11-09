@@ -223,8 +223,8 @@ namespace Plugin {
         void URLChanged(const string& URL);
         void Hidden(const bool hidden);
         void StateChange(const PluginHost::IStateControl::state value);
-        void ConnectionTermination(uint32_t connection);
         void Deactivated(RPC::IRemoteConnection* connection);
+        void OutOfProcessTermination();
 
         static const char* PluginStateStr(const PluginHost::IShell::state state);
         void Activated(const string& callsign, PluginHost::IShell* plugin);

@@ -62,7 +62,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         PluginHost::IStateControl *stateControl(
                 _cobalt->QueryInterface<PluginHost::IStateControl>());
         if (stateControl == nullptr) {
-            _cobalt->Release();
+            CobaltTermination();
             _cobalt = nullptr;
         } else {
             _application = _cobalt->QueryInterface<Exchange::IApplication>();
@@ -82,7 +82,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
                 Exchange::JApplication::Register(*this, _application);
             } else {
                 stateControl->Release();
-                _cobalt->Release();
+                CobaltTermination();
                 _cobalt = nullptr;
             }
         }
@@ -92,7 +92,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         message = _T("Cobalt could not be instantiated.");
         _service->Unregister(&_notification);
         _service = nullptr;
-        ConnectionTermination(_connectionId);
+        CobaltTermination();
     }
 
     return message;
@@ -127,31 +127,12 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         _notification.Release();
     }
 
-    if (_connectionId != 0) {
-        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-
-        VARIABLE_IS_NOT_USED uint32_t result = _cobalt->Release();
-  
-        // It should have been the last reference we are releasing, 
-        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
-        // are leaking...
-        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
-
-        // Tf this was running in a (container) process...
-        if (connection != nullptr) {
-            // Lets trigger the cleanup sequence for 
-            // out-of-process code. Which will guard
-            // that unwilling processes, get shot if
-            // not stopped friendly :~)
-            connection->Terminate();
-            connection->Release();
-        }
-    }
-
+    CobaltTermination();
+    _cobalt = nullptr;
+    
     // Deinitialize what we initialized..
     _memory = nullptr;
     _application = nullptr;
-    _cobalt = nullptr;
     _service = nullptr;
 }
 

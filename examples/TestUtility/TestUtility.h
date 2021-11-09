@@ -90,7 +90,7 @@ namespace Plugin {
             , _memory(nullptr)
             , _testUtilityImp(nullptr)
             , _skipURL(0)
-            , _connection(0)
+            , _connectionId(0)
         {
             RegisterAll();
         }
@@ -122,7 +122,8 @@ namespace Plugin {
     private:
         void Deactivated(RPC::IRemoteConnection* process);
 
-        void ProcessTermination(uint32_t _connection);
+        void OutOfProcessTermination();
+
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
         string /*JSON*/ TestCommands(void);
 
@@ -140,7 +141,7 @@ namespace Plugin {
         Exchange::IMemory* _memory;
         Exchange::ITestUtility* _testUtilityImp;
         uint8_t _skipURL;
-        uint32_t _connection;
+        uint32_t _connectionId;
     };
 
 } // namespace Plugin

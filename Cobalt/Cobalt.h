@@ -154,20 +154,25 @@ private:
     void Hidden(const bool hidden);
     void Closure();
 
-    inline void ConnectionTermination(uint32_t connectionId)
+    inline void CobaltTermination()
     {
-        if (connectionId != 0) {
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            // Tf this was running in a (container) process...
-            if (connection != nullptr) {
-                // Lets trigger the cleanup sequence for 
-                // out-of-process code. Which will guard
-                // that unwilling processes, get shot if
-                // not stopped friendly :~)
-                connection->Terminate();
-                connection->Release();
-            }
+        VARIABLE_IS_NOT_USED uint32_t result = _cobalt->Release();
+  
+        // It should have been the last reference we are releasing, 
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking...
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
+
+        // Tf this was running in a (container) process...
+        if (connection != nullptr) {
+            // Lets trigger the cleanup sequence for 
+            // out-of-process code. Which will guard
+            // that unwilling processes, get shot if
+            // not stopped friendly :~)
+            connection->Terminate();
+            connection->Release();
         }
     }
 

@@ -76,10 +76,10 @@ namespace Plugin {
         _service = service;
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         _service->Register(&_notification);
-        _testControllerImp = _service->Root<Exchange::ITestController>(_connection, ImplWaitTime, _T("TestControllerImp"));
+        _testControllerImp = _service->Root<Exchange::ITestController>(_connectionId, ImplWaitTime, _T("TestControllerImp"));
 
         if ((_testControllerImp != nullptr) && (_service != nullptr)) {
-            const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connection);
+            const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
             ASSERT(connection != nullptr);
 
             if (connection != nullptr) {
@@ -88,13 +88,14 @@ namespace Plugin {
                 ASSERT(_memory != nullptr);
 
                 connection->Release();
+                OutOfProcessTermination();
                 _testControllerImp->Setup();
             } else {
                 _memory = nullptr;
                 TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestController")));
             }
         } else {
-            ProcessTermination(_connection);
+            OutOfProcessTermination();
             _service = nullptr;
             _testControllerImp = nullptr;
             _service->Unregister(&_notification);
@@ -114,24 +115,7 @@ namespace Plugin {
 
         _testControllerImp->TearDown();
 
-        RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
-
-        VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
-        
-        // It should have been the last reference we are releasing, 
-        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
-        // are leaking...
-        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
-
-        // Tf this was running in a (container) process...
-        if (process != nullptr) {
-          // Lets trigger the cleanup sequence for 
-          // out-of-process code. Which will guard
-          // that unwilling processes, get shot if
-          // not stopped friendly :~)
-          process->Terminate();
-          process->Release();
-        }
+        OutOfProcessTermination();
 
         _testControllerImp = nullptr;
         _memory->Release();
@@ -185,12 +169,25 @@ namespace Plugin {
         return result;
     }
 
-    void TestController::ProcessTermination(uint32_t connection)
+    void TestController::OutOfProcessTermination()
     {
-        RPC::IRemoteConnection* process(_service->RemoteConnection(connection));
-        if (process != nullptr) {
-            process->Terminate();
-            process->Release();
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+
+        VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
+
+        // It should have been the last reference we are releasing, 
+        // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
+        // are leaking...
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
+
+        // Tf this was running in a (container) process...
+        if (connection != nullptr) {
+          // Lets trigger the cleanup sequence for 
+          // out-of-process code. Which will guard
+          // that unwilling processes, get shot if
+          // not stopped friendly :~)
+          connection->Terminate();
+          connection->Release();
         }
     }
 
