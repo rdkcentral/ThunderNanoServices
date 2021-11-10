@@ -165,6 +165,9 @@ private:
         // are leaking...
         ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
 
+        // Release has succeeded, so assign nullptr;
+       _cobalt = nullptr;
+
         // Tf this was running in a (container) process...
         if (connection != nullptr) {
             // Lets trigger the cleanup sequence for 

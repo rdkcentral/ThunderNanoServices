@@ -63,7 +63,6 @@ namespace Plugin {
             _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
             _service = nullptr;
 
-            OutOfProcessTermination();
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
             _browser->Register(_notification);
@@ -337,6 +336,9 @@ namespace Plugin {
         // so it should end up in a DESCRUCTION_SUCCEEDED, if not we
         // are leaking ...
         ASSERT(result == Core::ERROR_DESCRUCTION_SUCCEEDED);
+
+        // Release has succeeded, so assign nullptr;
+        _browser = nullptr;
 
         // If this was running in a (container) process ...
         if (connection != nullptr) {

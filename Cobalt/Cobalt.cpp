@@ -63,7 +63,6 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
                 _cobalt->QueryInterface<PluginHost::IStateControl>());
         if (stateControl == nullptr) {
             CobaltTermination();
-            _cobalt = nullptr;
         } else {
             _application = _cobalt->QueryInterface<Exchange::IApplication>();
             if (_application != nullptr) {
@@ -83,7 +82,6 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             } else {
                 stateControl->Release();
                 CobaltTermination();
-                _cobalt = nullptr;
             }
         }
     }
@@ -92,7 +90,6 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         message = _T("Cobalt could not be instantiated.");
         _service->Unregister(&_notification);
         _service = nullptr;
-        CobaltTermination();
     }
 
     return message;
@@ -128,7 +125,6 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     }
 
     CobaltTermination();
-    _cobalt = nullptr;
     
     // Deinitialize what we initialized..
     _memory = nullptr;

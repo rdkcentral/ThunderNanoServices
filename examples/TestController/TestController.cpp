@@ -88,14 +88,12 @@ namespace Plugin {
                 ASSERT(_memory != nullptr);
 
                 connection->Release();
-                OutOfProcessTermination();
                 _testControllerImp->Setup();
             } else {
                 _memory = nullptr;
                 TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestController")));
             }
         } else {
-            OutOfProcessTermination();
             _service = nullptr;
             _testControllerImp = nullptr;
             _service->Unregister(&_notification);
@@ -115,7 +113,7 @@ namespace Plugin {
 
         _testControllerImp->TearDown();
 
-        OutOfProcessTermination();
+        ImplementationTermination();
 
         _testControllerImp = nullptr;
         _memory->Release();
@@ -169,7 +167,7 @@ namespace Plugin {
         return result;
     }
 
-    void TestController::OutOfProcessTermination()
+    void TestController::ImplementationTermination()
     {
         RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 

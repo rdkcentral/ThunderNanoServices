@@ -178,7 +178,7 @@ namespace Plugin {
     {
         RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-        VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
+        VARIABLE_IS_NOT_USED uint32_t result = _testUtilityImp->Release();
 
         // It should have been the last reference we are releasing, 
         // so it should end up in a DESCRUCTION_SUCCEEDED, if not we

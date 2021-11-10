@@ -53,7 +53,7 @@ namespace Plugin {
 
             virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
 
-            void OutOfProcessTermination();
+            void ImplementationTermination();
 
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
