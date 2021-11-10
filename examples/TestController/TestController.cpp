@@ -178,6 +178,8 @@ namespace Plugin {
         // are leaking...
         ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED)
 
+        _testControllerImp = nullptr;
+
         // Tf this was running in a (container) process...
         if (connection != nullptr) {
           // Lets trigger the cleanup sequence for 
