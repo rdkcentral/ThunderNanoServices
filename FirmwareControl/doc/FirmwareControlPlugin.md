@@ -249,7 +249,7 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installinitiated*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
+| (property) | string | Upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadinitiated*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installinitiated*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
 
 ### Example
 
@@ -332,7 +332,7 @@ Notifies progress of upgrade.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.status | string | Upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installinitiated*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
+| params.status | string | Upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadinitiated*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installinitiated*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
 | params.error | string | Reason of error (must be one of the following: *none*, *generic*, *invalidparameters*, *invalidstate*, *noenoughspace*, *operationotsupported*, *incorrecthash*, *unauthenticated*, *unavailable*, *timedout*, *downloaddirectorynotexist*, *resumenotsupported*, *invalidrange*, *unkown*) |
 | params.progress | number | Progress of upgrade (number of bytes transferred during download or percentage of completion during install |
 

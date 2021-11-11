@@ -170,6 +170,7 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(__FUNCTION__)));
 
+        Status(UpgradeStatus::DOWNLOAD_INITIATED, ErrorType::ERROR_NONE, 0);
         uint32_t status = engine.Start(_source, _destination + Name, _hash, _position);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 

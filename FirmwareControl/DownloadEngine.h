@@ -133,6 +133,7 @@ namespace PluginHost {
                 _notifier->NotifyStatus(result);
             }
         }
+
         void Transferred(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
             uint32_t status = result;
@@ -184,7 +185,7 @@ namespace PluginHost {
                     break;
                 }
             }
-	    return status;
+            return status;
         }
 
         friend Core::ThreadPool::JobType<DownloadEngine&>;

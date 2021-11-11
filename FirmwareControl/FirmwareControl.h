@@ -45,6 +45,7 @@ namespace Plugin {
         enum UpgradeStatus {
             NONE,
             UPGRADE_STARTED,
+            DOWNLOAD_INITIATED,
             DOWNLOAD_STARTED,
             DOWNLOAD_ABORTED,
             DOWNLOAD_COMPLETED,
