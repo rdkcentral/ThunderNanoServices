@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
     // The code that follows now is pseudo code (might still require some changes) but 
     // will be operational next week
 
-    SleepMs(4000);
+    // SleepMs(4000);
 
     // client->Open<Thunder::Exchange::IDictionary>("Dictionary");
 
@@ -245,6 +245,19 @@ int main(int argc, char* argv[])
                 string value;
                 if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
                     printf("Get value: %s\n", value.c_str());
+                }
+                break;
+
+            }
+            case 'X': {
+                uint32_t count = 0;
+                while (count++ != 500000) {
+                    string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
+                    if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
+                        if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
+                            printf("Iteration %6i: Set/Get value: %s\n", count, value.c_str());
+                        }
+                    }
                 }
                 break;
 
