@@ -178,6 +178,9 @@ namespace Plugin {
         }
 
         status = ((status != Core::ERROR_NONE)? status: DownloadStatus());
+        if ((status == Core::ERROR_NONE) && (_hash.empty() != true)) {
+            status = engine.VerifyHash();
+        }
         if (status == Core::ERROR_NONE) {
             Status(UpgradeStatus::DOWNLOAD_COMPLETED, ErrorType::ERROR_NONE, 100);
         } else {

@@ -116,6 +116,16 @@ namespace PluginHost {
         {
             return _isResumeSupported;
         }
+        uint32_t VerifyHash()
+        {
+            uint32_t result = Core::ERROR_UNAUTHENTICATED;
+            if (BaseClass::LoadHash()) {
+                if (::memcmp(BaseClass::Hash(), _HMAC, Crypto::HASH_SHA256) == 0) {
+                    result = Core::ERROR_NONE;
+                }
+            }
+            return result;
+        }
 
     private:
         void InfoCollected(const uint32_t result, const Core::ProxyType<Web::Response>& info) override
@@ -137,12 +147,6 @@ namespace PluginHost {
         {
             uint32_t status = result;
 
-            // Let's see if the calculated HMAC is what we expected....
-            if ((status == Core::ERROR_NONE) && (_checkHash == true) &&
-                (::memcmp(const_cast<Web::SignedFileBodyType<Crypto::SHA256>&>(destination).Hash().Result(), _HMAC, Crypto::HASH_SHA256) != 0)) {
-
-                status = Core::ERROR_UNAUTHENTICATED;
-            }
             _storage.Close();
 
             _adminLock.Lock();
@@ -184,7 +188,7 @@ namespace PluginHost {
                     break;
                 }
             }
-	    return status;
+            return status;
         }
 
         friend Core::ThreadPool::JobType<DownloadEngine&>;
