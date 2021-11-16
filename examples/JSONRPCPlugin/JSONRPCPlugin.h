@@ -103,7 +103,7 @@ namespace Plugin {
             }
 
         private:
-            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+            virtual void* Aquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
@@ -143,7 +143,7 @@ namespace Plugin {
                 return (_singleton);
             }
 
-            Core::ProxyType<INTERFACE> Element(const string& identifier)
+            Core::ProxyType<INTERFACE> Element(const string& identifier VARIABLE_IS_NOT_USED)
             {
                 Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>> message = _jsonRPCFactory.Element();
                 return Core::ProxyType<INTERFACE>(message);
