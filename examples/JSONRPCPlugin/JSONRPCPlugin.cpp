@@ -42,7 +42,7 @@ ENUM_CONVERSION_END(Data::Response::state)
 
 namespace Plugin
 {
-    bool JSONRPCPlugin::Validation(const string& token, const string& method, const string& parameters) {
+    bool JSONRPCPlugin::Validation(const string& token VARIABLE_IS_NOT_USED, const string& method, const string& parameters VARIABLE_IS_NOT_USED) {
         return (method != _T("checkvalidation"));
     }
 
@@ -218,7 +218,7 @@ namespace Plugin
 
     //   Exchange::IPerformance methods
     // -------------------------------------------------------------------------------------------------------
-    uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[]) /* override */
+    uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[] VARIABLE_IS_NOT_USED) /* override */
     {
         uint32_t result = sendSize;
         return (result);
@@ -240,7 +240,7 @@ namespace Plugin
 
         return (result);
     }
-    uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) /* override */ 
+    uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize VARIABLE_IS_NOT_USED, uint8_t buffer[], const uint16_t maxBufferSize) /* override */
     {
         uint32_t result = Core::ERROR_NONE;
         static uint8_t pattern[] = { 0x00, 0x77, 0xCC, 0x88 };
