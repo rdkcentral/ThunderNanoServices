@@ -1,5 +1,6 @@
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
+/*
  * following copyright and licenses apply:
  *
  * Copyright 2020 Metrological
@@ -85,6 +86,8 @@ namespace Plugin {
                 /* ctrl_interface parameter *mandatory */
                 options.Add(_T("-C") + _connector);
 
+                options.Add(_T("-c") + string(_T("/etc/wpa_supplicant.conf")));
+
                 /* driver name (can be multiple drivers: nl80211,wext) *optional */
                 options.Add(_T("-Dnl80211"));
 
@@ -129,6 +132,7 @@ namespace Plugin {
             Core::Process _process;
             uint32_t _pid;
         };
+
         class AutoConnect : public WPASupplicant::Controller::IConnectCallback
         {
         private:
@@ -419,6 +423,148 @@ namespace Plugin {
             string _preferred;
         };
 
+        class WpsConnect {
+        private:
+            enum class states : uint8_t
+            {
+                IDLE,
+                REQUESTED,
+                SUCCESS,
+                ERROR,
+            };
+
+
+         using Job = Core::WorkerPool::JobType<WpsConnect&>;
+            
+         public:
+            WpsConnect() = delete;
+            WpsConnect(const WpsConnect&) = delete;
+            WpsConnect& operator=(const WpsConnect&) = delete;
+
+            WpsConnect(WifiControl& parent, Core::ProxyType<WPASupplicant::Controller>& controller)
+                : _adminLock()
+                , _parent(parent) 
+                , _controller(controller)
+                , _job(*this)
+                , _state(states::IDLE)
+                , _ssid()
+            {
+            }
+            ~WpsConnect()
+            {
+            }
+
+            uint32_t Invoke(const string ssid, const JsonData::WifiControl::ConnectParamsData::AutoconnectType wps, const string pin) {
+
+                uint32_t result;
+                printf("%s \n",__PRETTY_FUNCTION__);
+
+                _ssid = ssid;
+
+                WPASupplicant::Network::wpsmethod wpsmethod = WPASupplicant::Network::wpsmethod::NONE;
+                if ( wps == JsonData::WifiControl::ConnectParamsData::AutoconnectType::WPS_PBC){
+                    wpsmethod = WPASupplicant::Network::wpsmethod::WPS_PBC;
+                }else if( wps == JsonData::WifiControl::ConnectParamsData::AutoconnectType::WPS_PIN){
+                    wpsmethod = WPASupplicant::Network::wpsmethod::WPS_PIN;
+                }
+
+                result = _controller->StartWps(wpsmethod,pin,ssid);
+                if(result == Core::ERROR_NONE) {
+                    _state = states::REQUESTED;
+                }
+                return result;
+            }
+
+            uint32_t Revoke() {
+                uint32_t result = Core::ERROR_NONE;
+                _adminLock.Lock();
+                if(_state != states::IDLE) {
+                    result = _controller->CancelWps();
+                    _state = states::IDLE;
+                }
+                _adminLock.Unlock();
+                return result;
+            }
+
+            void Completed(const uint32_t result) {
+
+                _adminLock.Lock();
+
+                if (result != Core::ERROR_NONE) {
+                    Reset();
+                }
+                else {
+                    _state = states::SUCCESS;
+                    _job.Submit();
+                }
+                _adminLock.Unlock();
+            }            
+        
+
+            void Dispatch(){
+                _adminLock.Lock();
+                printf("%s: \n",__PRETTY_FUNCTION__);
+
+                JsonData::WifiControl::ConfigInfo configInfo;
+                configInfo.Hidden = false;
+                configInfo.Ssid = _ssid;
+                WPASupplicant::Network::wpsauthtypes auth;
+                string networkKey;
+                _controller->WpsCredentials(networkKey,auth);
+
+                if(auth == WPASupplicant::Network::wpsauthtypes::WPS_AUTH_OPEN) {
+                    configInfo.Type = JsonData::WifiControl::TypeType::UNSECURE; 
+                } else{
+                    uint8_t protocolFlags = 0;
+
+                    switch (auth) {
+                        case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPAPSK:
+                          protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
+                       break;
+                       case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPA2PSK:
+                          protocolFlags = WPASupplicant::Config::wpa_protocol::WPA2;
+                       break;
+
+                       default:
+                          //TODO Handle other Protocol types
+                          TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type. ")));
+                    }
+
+                    configInfo.Type = GetWPAProtocolType(protocolFlags);
+                    if(!networkKey.empty()) {
+                        configInfo.Psk = networkKey;
+                    }
+                }
+
+                WPASupplicant::Config profile(_controller->Create(_ssid));
+                if (WifiControl::UpdateConfig(profile, configInfo) != true) {
+                   _controller->Destroy(_ssid);
+                }else {
+                    printf("%s: Connecting \n",__PRETTY_FUNCTION__);
+                    _parent.Connect(_ssid);
+                }
+
+                Reset();
+                _adminLock.Unlock();
+            }
+         
+
+         private:
+
+         void Reset(){
+             _state = states::IDLE;
+             _ssid.clear();
+         }
+
+         private:
+           Core::CriticalSection _adminLock;
+           WifiControl& _parent;
+           Core::ProxyType<WPASupplicant::Controller>& _controller;
+           Job _job;
+           states _state;
+           string _ssid;
+        };
+
     public:
         class Config : public Core::JSON::Container {
         public:
@@ -668,7 +814,7 @@ namespace Plugin {
         uint32_t endpoint_delete(const JsonData::WifiControl::DeleteParamsInfo& params);
         uint32_t endpoint_store();
         uint32_t endpoint_scan();
-        uint32_t endpoint_connect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t endpoint_connect(const JsonData::WifiControl::ConnectParamsData& params);
         uint32_t endpoint_disconnect(const JsonData::WifiControl::DeleteParamsInfo& params);
         uint32_t get_status(JsonData::WifiControl::StatusData& response) const;
         uint32_t get_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response) const;
@@ -680,19 +826,28 @@ namespace Plugin {
         void event_networkchange();
         void event_connectionchange(const string& ssid);
 
-        inline uint32_t Connect(const string& ssid)
+        inline uint32_t Connect(const string& ssid,
+                                const JsonData::WifiControl::ConnectParamsData::AutoconnectType wps=JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE,
+                                const string pin="")
         {
             if (_autoConnectEnabled == true) {
                 _autoConnect.Revoke();
             }
 
-            uint32_t result = _controller->Connect(ssid);
+            printf("%s \n",__PRETTY_FUNCTION__);
+            uint32_t result;
 
-            if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
-                _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? 
-                                                    _T("") : 
-                                                    ssid, _retryInterval, _maxRetries);
-                _autoConnect.UpdateStatus(result);
+            if ( wps != JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE){
+                _wpsConnect.Revoke();
+                _wpsConnect.Invoke(ssid,wps,pin);
+            } else {
+                result = _controller->Connect(ssid);
+                if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
+                    _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? 
+                                                        _T("") : 
+                                                        ssid, _retryInterval, _maxRetries);
+                    _autoConnect.UpdateStatus(result);
+                }
             }
             return result;
         }
@@ -762,6 +917,7 @@ namespace Plugin {
         Core::ProxyType<WPASupplicant::Controller> _controller;
         AutoConnect _autoConnect;
         bool _autoConnectEnabled;
+        WpsConnect _wpsConnect;
     };
 
 } // namespace Plugin

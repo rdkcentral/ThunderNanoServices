@@ -31,7 +31,7 @@
         uint32_t endpoint_delete(const JsonData::WifiControl::DeleteParamsInfo& params);
         uint32_t endpoint_store();
         uint32_t endpoint_scan();
-        uint32_t endpoint_connect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t endpoint_connect(const JsonData::WifiControl::ConnectParamsData& params);
         uint32_t endpoint_disconnect(const JsonData::WifiControl::DeleteParamsInfo& params);
         uint32_t get_status(JsonData::WifiControl::StatusData& response) const;
         uint32_t get_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response) const;
@@ -58,7 +58,7 @@ namespace Plugin {
         Register<DeleteParamsInfo,void>(_T("delete"), &WifiControl::endpoint_delete, this);
         Register<void,void>(_T("store"), &WifiControl::endpoint_store, this);
         Register<void,void>(_T("scan"), &WifiControl::endpoint_scan, this);
-        Register<DeleteParamsInfo,void>(_T("connect"), &WifiControl::endpoint_connect, this);
+        Register<ConnectParamsData,void>(_T("connect"), &WifiControl::endpoint_connect, this);
         Register<DeleteParamsInfo,void>(_T("disconnect"), &WifiControl::endpoint_disconnect, this);
         Property<StatusData>(_T("status"), &WifiControl::get_status, nullptr, this);
         Property<Core::JSON::ArrayType<NetworkInfo>>(_T("networks"), &WifiControl::get_networks, nullptr, this);
@@ -123,11 +123,11 @@ namespace Plugin {
     //  - ERROR_INVALID_SIGNATURE: Returned when connection is attempted with wrong password
     //  - ERROR_ALREADY_CONNECTED: Returned when there is already a connection
     //  - ERROR_ASYNC_ABORTED: Returned when connection attempt fails for other reasons
-    uint32_t WifiControl::endpoint_connect(const DeleteParamsInfo& params)
+    uint32_t WifiControl::endpoint_connect(const ConnectParamsData& params)
     {
         const string& ssid = params.Ssid.Value();
-
-        return Connect(ssid);
+        const string& pin =  params.Wpspin.Value();
+        return Connect(ssid, params.Autoconnect.Value(),pin);
     }
 
     // Method: disconnect - Disconnects from a network

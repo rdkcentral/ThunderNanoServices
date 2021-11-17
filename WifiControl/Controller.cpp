@@ -18,6 +18,7 @@
  */
 
 #include "Controller.h"
+#include <bitset>
 
 namespace WPEFramework {
 
@@ -32,7 +33,14 @@ ENUM_CONVERSION_BEGIN(WPASupplicant::Controller::events)
     { WPASupplicant::Controller::CTRL_EVENT_TERMINATING, _TXT("CTRL-EVENT-TERMINATING") },
     { WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND, _TXT("CTRL-EVENT-NETWORK-NOT-FOUND") },
     { WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED, _TXT("CTRL-EVENT-SSID-TEMP-DISABLED") },
-    { WPASupplicant::Controller::WPS_AP_AVAILABLE, _TXT("WPS-AP-AVAILABLE") },
+    { WPASupplicant::Controller::WPS_EVENT_OVERLAP, _TXT("WPS-OVERLAP-DETECTED") },
+    { WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PBC, _TXT("WPS-AP-AVAILABLE-PBC") },
+    { WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PIN, _TXT("WPS-AP-AVAILABLE-PIN") },
+    { WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE, _TXT("WPS-AP-AVAILABLE") },
+    { WPASupplicant::Controller::WPS_EVENT_CRED_RECEIVED, _TXT("WPS-CRED-RECEIVED") },
+    { WPASupplicant::Controller::WPS_EVENT_SUCCESS, _TXT("WPS-SUCCESS") },
+    { WPASupplicant::Controller::WPS_EVENT_TIMEOUT, _TXT("WPS-TIMEOUT") },
+    { WPASupplicant::Controller::WPS_EVENT_FAIL, _TXT("WPS-FAIL") },
     { WPASupplicant::Controller::AP_ENABLED, _TXT("AP-ENABLED") },
 
     ENUM_CONVERSION_END(WPASupplicant::Controller::events);
@@ -124,6 +132,8 @@ namespace WPASupplicant {
         uint16_t end = infoLine.Length();
         keys = 0;
 
+        printf("%s infoLine - %s\n",__PRETTY_FUNCTION__,infoLine.Text().c_str());
+
         while (index < end) {
             uint16_t keyBegin;
             uint16_t keyEnd;
@@ -144,12 +154,14 @@ namespace WPASupplicant {
                 // Find enum value
                 Core::TextFragment entry(Core::TextFragment(infoLine, keyBegin, keyEnd - keyBegin));
                 Core::TextSegmentIterator element(entry, false, _T("+-"));
+                printf("%s entry - %s\n",__PRETTY_FUNCTION__,entry.Text().c_str());
 
                 // The first key should be the pair system:
                 Core::EnumerateType<Network::pair> pair(element.Next() == true ? element.Current() : entry);
 
                 if (pair.IsSet() == true) {
                     uint32_t value = pair.Value();
+                    printf("%s pair - %u\n",__PRETTY_FUNCTION__,pair.Value());
 
                     if (value != 0) {
 
@@ -171,6 +183,7 @@ namespace WPASupplicant {
             }
         }
 
+        printf("pairs - %s keys - %s\n",std::bitset<sizeof(pairs) * 8>(pairs).to_string().insert(0, "0b").c_str(), std::bitset<sizeof(keys) * 8>(keys).to_string().insert(0, "0b").c_str());
         return (pairs);
     }
 
@@ -192,6 +205,8 @@ namespace WPASupplicant {
     {
 
         string response = string(reinterpret_cast<const char*>(dataFrame), (dataFrame[receivedSize - 1] == '\n' ? receivedSize - 1 : receivedSize));
+
+        TRACE(Communication, (_T("Controller::ReceiveData - Incoming response: [%s]"), response.c_str()));
 
         if (response[0] == '<') {
 
@@ -251,6 +266,7 @@ namespace WPASupplicant {
                         uint32_t reason = Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin)));
 
                         _statusRequest.DisconnectReason(static_cast<reasons>(reason));
+
                     }
                     else {
                         TRACE(Trace::Warning, ("There is no reason code in the event"));
@@ -258,7 +274,8 @@ namespace WPASupplicant {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 }
-                else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_AP_AVAILABLE)) {
+                else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_EVENT_AP_AVAILABLE)) {
+
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
@@ -270,6 +287,26 @@ namespace WPASupplicant {
                     } else {
                         _adminLock.Unlock();
                     }
+                } else if ((event == WPS_EVENT_TIMEOUT) || (event == WPS_EVENT_FAIL) || (event == WPS_EVENT_OVERLAP)) {
+
+                    _wpsRequest.Event(event.Value());
+                    _wpsRequest.Completed(Core::ERROR_ASYNC_FAILED);
+
+                } else if(event == WPS_EVENT_CRED_RECEIVED) {
+
+                    ASSERT(position != string::npos);
+                    Core::TextFragment infoLine(message, position, message.length() - position);
+
+                    // Skip white space
+                    infoLine.TrimBegin(_T(" "));
+                    printf("WPS Credentials Received [%s] \n",infoLine.Text().c_str());
+                    _wpsRequest.Credentials(infoLine);                    
+
+                } else if(event == WPS_EVENT_SUCCESS) {
+
+                    _wpsRequest.Event(event.Value());
+                    _wpsRequest.Completed(Core::ERROR_NONE);
+
                 } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
                     ASSERT(position != string::npos);
@@ -384,6 +421,7 @@ namespace WPASupplicant {
         }
 
         if (scanInProgress == true) {
+            printf("%s Calling Revaluate\n",__PRETTY_FUNCTION__);
             Reevaluate();
         } else if (_callback != nullptr) {
             _callback->Dispatch(CTRL_EVENT_NETWORK_CHANGED);
@@ -408,22 +446,28 @@ namespace WPASupplicant {
             _enabled[ssid] = ConfigInfo((succeeded ? id : 0), false);
         }
 
+        printf("%s Calling Reevaluate\n",__PRETTY_FUNCTION__);
         Reevaluate();
     }
     void Controller::Reevaluate()
     {
+        printf("%s \n",__PRETTY_FUNCTION__);
 
         NetworkInfoContainer::iterator index(_networks.begin());
+        int32_t i = 0;
 
         while ((index != _networks.end()) && (index->second.HasDetail() == true)) {
+            printf("%s Reevaluating index %d id - %d\n",__PRETTY_FUNCTION__,i++,index->second.Id());
             index++;
         }
         if (index != _networks.end()) {
+            printf("%s Sending Detail Req\n",__PRETTY_FUNCTION__);
             if (_detailRequest.Set(index->first) == true) {
                 // send out a request for detail.
                 Submit(&_detailRequest);
             }
         } else if (_enabled.size() == 0) {
+            printf("%s Sending Network Req\n",__PRETTY_FUNCTION__);
             // send out a request for the network list
             if (_networkRequest.Set() == true) {
                 // send out a request for detail.

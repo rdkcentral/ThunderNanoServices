@@ -51,6 +51,7 @@ namespace Plugin
         , _controller()
         , _autoConnect(_controller)
         , _autoConnectEnabled(false)
+        , _wpsConnect(*this,_controller)
     {
         RegisterAll();
     }
@@ -174,6 +175,7 @@ namespace Plugin
 #ifndef USE_WIFI_HAL
 
         _autoConnect.Revoke();
+        _wpsConnect.Revoke();
         _controller->Callback(nullptr);
         _controller->Terminate();
         _controller.Release();
@@ -497,13 +499,33 @@ namespace Plugin
             event_networkchange();
             break;
         }
+
+        case WPASupplicant::Controller::WPS_EVENT_SUCCESS: {
+            _wpsConnect.Completed(Core::ERROR_NONE); 
+            break;
+        }
+
+        case WPASupplicant::Controller::WPS_EVENT_TIMEOUT: {
+            _wpsConnect.Completed(Core::ERROR_TIMEDOUT);
+            break;
+        }
+        case WPASupplicant::Controller::WPS_EVENT_FAIL: {
+            _wpsConnect.Completed(Core::ERROR_ASYNC_FAILED);
+            break;
+        }
+
+        case WPASupplicant::Controller::WPS_EVENT_OVERLAP: {
+            _wpsConnect.Completed(Core::ERROR_INPROGRESS);
+            break;
+        }
+
         case WPASupplicant::Controller::CTRL_EVENT_BSS_ADDED:
         case WPASupplicant::Controller::CTRL_EVENT_BSS_REMOVED:
         case WPASupplicant::Controller::CTRL_EVENT_TERMINATING:
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND:
         case WPASupplicant::Controller::CTRL_EVENT_SCAN_STARTED:
         case WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED:
-        case WPASupplicant::Controller::WPS_AP_AVAILABLE:
+        case WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE:
         case WPASupplicant::Controller::AP_ENABLED:
             break;
         }

@@ -47,7 +47,16 @@ namespace WPASupplicant {
             CTRL_EVENT_NETWORK_NOT_FOUND,
             CTRL_EVENT_NETWORK_CHANGED,
             CTRL_EVENT_SSID_TEMP_DISABLED,
-            WPS_AP_AVAILABLE,
+            WPS_EVENT_OVERLAP,
+            WPS_EVENT_AP_AVAILABLE_PBC,
+            WPS_EVENT_AP_AVAILABLE_PIN,
+            WPS_EVENT_AP_AVAILABLE,
+            WPS_EVENT_CRED_RECEIVED,
+            WPS_EVENT_SUCCESS,
+            WPS_EVENT_TIMEOUT,
+            WPS_EVENT_ACTIVE,
+            WPS_EVENT_DISABLE,
+            WPS_EVENT_FAIL,
             AP_ENABLED
         };
         /* Reason codes (IEEE Std 802.11-2016, 9.4.1.7, Table 9-45) */
@@ -120,6 +129,8 @@ namespace WPASupplicant {
 
             virtual void Completed(const uint32_t result) = 0;
         };
+
+
 
     private:
         static constexpr uint32_t MaxConnectionTime = 3000;
@@ -422,6 +433,7 @@ namespace WPASupplicant {
             virtual void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
+                    printf("%s Response -\n %s\n",__PRETTY_FUNCTION__,response.c_str());
                     Core::TextFragment data(response.c_str(), response.length());
                     uint32_t marker = data.ForwardFind('\n');
                     uint32_t markerEnd = data.ForwardFind('\n', marker + 1);
@@ -429,6 +441,7 @@ namespace WPASupplicant {
                     while (marker != markerEnd) {
 
                         Core::TextFragment element(data, marker + 1, (markerEnd - marker - 1));
+                        printf("%s Next element - %s\n",__PRETTY_FUNCTION__,element.Text().c_str());
                         marker = markerEnd;
                         markerEnd = data.ForwardFind('\n', marker + 1);
                         NetworkInfo newEntry;
@@ -710,8 +723,10 @@ namespace WPASupplicant {
             }
             virtual void Completed(const string& response, const bool abort) override
             {
+                printf("%s \n",__PRETTY_FUNCTION__);
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
+                    printf("%s Response - %s\n",__PRETTY_FUNCTION__,response.c_str());
                     uint32_t marker = data.ForwardFind('\n');
                     uint32_t markerEnd = data.ForwardFind('\n', marker + 1);
 
@@ -770,6 +785,305 @@ namespace WPASupplicant {
         private:
             Controller& _parent;
         };
+        
+        class WpsRequest : public Request {
+        private:
+            enum class wpsstate : uint8_t {
+                INIT,
+                REQUESTED,
+                SUCCESS,
+                WAITING,
+                ERROR
+            };
+
+
+        public:
+            WpsRequest() = delete;
+            WpsRequest(const WpsRequest&) = delete;
+            WpsRequest& operator=(const WpsRequest&) = delete;
+
+            WpsRequest(Controller& parent)
+                : Request()
+                , _parent(parent)
+                , _adminLock()
+                , _state(wpsstate::INIT)
+                , _ssid()
+                , _networkKey()
+                , _callback(nullptr)
+                , _error(Core::ERROR_NONE)
+                , _eventReporting(~0)
+                , _authType(WPASupplicant::Network::wpsauthtypes::WPS_AUTH_NONE)
+            {
+            }
+            ~WpsRequest() override
+            {
+            }
+        
+        public:
+             uint32_t Invoke(IConnectCallback* callback, const string& ssid, const WPASupplicant::Network::wpsmethod& wps, const string pin) {
+
+                 _adminLock.Lock();
+                 uint32_t result = Core::ERROR_ASYNC_FAILED;
+
+                 if (_callback == nullptr) {
+
+                     string cmd;
+
+                     uint64_t bssid = _parent.BSSIDFromSSID(ssid);
+                     if(wps == WPASupplicant::Network::WPS_PBC) {
+                         if(bssid != 0){
+                             cmd = string(_TXT("WPS_PBC ")) + BSSID(bssid);
+                         }
+                         else {
+                             cmd = string(_TXT("WPS_PBC"));
+                         }
+                     } else if(wps == WPASupplicant::Network::WPS_PIN) {
+                         if(bssid != 0){
+                             cmd = string(_TXT("WPS_PIN ")) + BSSID(bssid) + pin;
+                         }
+                         else{
+                             cmd = string(_TXT("WPS_PIN ")) + pin;
+                         }
+                     }
+
+                    printf("%s Invoking %s\n",__PRETTY_FUNCTION__,cmd.c_str());
+
+                    if (Request::Set (cmd) == true) {
+
+                        _ssid = ssid;
+                        _state = wpsstate::REQUESTED;
+                        _callback = callback;
+                        _networkKey.clear();
+                        _adminLock.Unlock();
+                        
+                        result = Core::ERROR_NONE;
+                        _parent.Submit(this);
+
+                    } else {
+                        _adminLock.Unlock();
+                    }
+
+                } else {
+                        _adminLock.Unlock();
+                         result = Core::ERROR_INPROGRESS;
+                }
+
+                return result;
+             }
+    
+             uint32_t Revoke(IConnectCallback* callback) {
+
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+
+                _adminLock.Lock();
+
+                if (callback == _callback) {
+                    _adminLock.Unlock();
+
+                    _parent.Revoke(this);
+
+                    _adminLock.Lock();
+                    _callback = nullptr;
+                    result = Core::ERROR_NONE;
+                }
+                _adminLock.Unlock();
+
+                return (result);
+            }
+
+
+            /*100e003d1026000131104500094e4554474541523236100300020020100f0002000810280001011027000c756e6576656e73656138313210200006b827ebf393af*/
+            /*
+             * Attribute<uint16_t> Length<uint16_t> Data<uint8_t*>, defined in wpa_supplicant/src/wps/wps_defs.h 
+             * 100e - Credential Attribute
+             * 003d - Length - 61
+             * 
+             * 1026 - Network Index Attribute
+             * 0001 - Length - 1
+             * 31   - Index
+             *
+             * 1045 - SSID Attribute
+             * 0009 - Length - 9
+             * 4e4554474541523236 - "NETGEAR26"
+             *
+             * 1003 - Auth Type Attribute
+             * 0002 - Length
+             * 0020 - WPS_AUTH_WPA2PSK (Defined in wpa_supplicant/src/wps/wps_defs.h)
+             *
+             * 100f - Encryption Type Attribute
+             * 0002 - Length
+             * 0008 - WPS_ENCR_AES (Defined in wpa_supplicant/src/wps/wps_defs.h)
+             *
+             * 1028 - Network Key Index Attribute
+             * 0001 - Length
+             * 01 - Index
+             *
+             * 1027 - Network Key Attribute
+             * 000c - Length - 12
+             * 756e6576656e736561383132 - "unevensea12"
+             *
+             * 1020 - Mac Address Attribute
+             * 0006 - Length
+             * b827ebf393af - Mac address
+             *
+             * */
+
+           void Credentials(const Core::TextFragment& infoLine) {
+               printf("%s infoLine.Length() - %d\n",__PRETTY_FUNCTION__,infoLine.Length());
+               if(_state == wpsstate::WAITING) {
+
+                   uint8_t data[infoLine.Length()];
+                   uint16_t attrLen = Core::FromHexString(infoLine.Data(), data, infoLine.Length());
+
+                   printf("%s attrLen = %d RawData[",__PRETTY_FUNCTION__,attrLen);
+                   for(uint32_t i=0; i<attrLen;i++){
+                       printf("%02x",data[i]);
+                   }
+                   printf("]\n");
+
+                   uint8_t pos = 0;
+
+                   while(pos < attrLen) {
+                       printf("%s pos = %d\n",__PRETTY_FUNCTION__,pos);
+                       uint16_t attr = ReadBE16(data + pos);
+                       pos += 2;
+                       uint16_t len = ReadBE16(data + pos);
+                       pos += 2;
+                       printf("%s len = %d attr 0x%04x\n",__PRETTY_FUNCTION__,len,attr);
+                       if (attr == 0x1045){
+                           uint8_t ssid[33];
+                           if(len <= 32){
+                               memcpy(ssid,data+pos,len);
+                               ssid[len]='\0';
+                               ASSERT(_ssid == string(reinterpret_cast<const char*>(ssid)));
+                               printf("%s SSID: [%s]\n",__PRETTY_FUNCTION__,_ssid.c_str());
+                           }
+                       }
+                       else if(attr == 0x1003){
+                           if(len == 2) {
+                               _authType = static_cast<WPASupplicant::Network::wpsauthtypes>(ReadBE16(data + pos));
+                           }
+                       }
+                       else if(attr == 0x1027){
+                           uint8_t key[256];
+                           if(len < 256){
+                               memcpy(key,data+pos,len);
+                               key[len]='\0';
+                               _networkKey = string(reinterpret_cast<const char*>(key));
+                               printf("%s NetworkKey: [%s]\n",__PRETTY_FUNCTION__,_networkKey.c_str());
+                           }
+                       }
+
+                       if(attr != 0x100E){
+                           //This is not the Credential Attribute
+                           pos += len;
+                       }
+
+                    }
+                }
+                else{
+                      printf("%s Wrong State\n",__PRETTY_FUNCTION__);
+                }
+            }
+
+            const string& NetworkKey(){
+                return _networkKey;
+            }
+
+            WPASupplicant::Network::wpsauthtypes AuthType(){
+                return _authType;
+            }
+
+            inline void Event(const events value)
+            {
+                _eventReporting = value;
+            }
+
+
+            void Completed(const string& response, const bool abort) override {
+
+                uint32_t result = Core::ERROR_INPROGRESS;
+                string newCommand;
+
+                _adminLock.Lock();
+                if (abort == true) {
+                    result = Core::ERROR_ASYNC_ABORTED;
+                }
+                else if (response != _T("OK")) {
+                    result = Core::ERROR_ASYNC_FAILED;
+                }
+                else if (_state == wpsstate::ERROR) {
+                    result = _error;
+                }
+                else {
+                    _state = wpsstate::WAITING;
+                }
+
+                if ((_state != wpsstate::INIT) && (_callback != nullptr)) {
+                    _callback->Completed(result);
+                    _adminLock.Unlock();
+                }
+                else {
+                    _adminLock.Unlock();
+                }
+            }
+
+             void Completed(const uint32_t result) {
+
+                _adminLock.Lock();
+
+                if (result != Core::ERROR_NONE) {
+
+                    _error = result;
+                    _state = wpsstate::ERROR;
+                    
+                    _adminLock.Unlock();
+                    if (_parent.IsSubmitted(this) == false) {
+                        Request::Set(string(_TXT("WPS_CANCEL")));
+                        _parent.Submit(this);
+                    }
+                }
+                else if ((_callback != nullptr) && (_state == wpsstate::WAITING)) {
+                    _state = wpsstate::SUCCESS;
+                    _callback->Completed(result);
+                    _adminLock.Unlock();
+                } else {
+                    _adminLock.Unlock();
+                }
+
+                if (_eventReporting != static_cast<uint32_t>(~0)) {
+                    _parent.Notify(static_cast<events>(_eventReporting));
+                    _eventReporting = static_cast<uint32_t>(~0);
+                }
+            }
+
+            void Reset()
+            {
+                _ssid.clear();
+                _networkKey.clear();
+                _state = wpsstate::INIT;
+                _error = Core::ERROR_NONE;
+                _eventReporting = static_cast<uint32_t>(~0);
+            }
+
+
+        private:
+            uint16_t ReadBE16(const uint8_t *data){
+                return ((data[0] << 8) | data[1]);
+            }
+
+        private:
+            Controller& _parent;
+            Core::CriticalSection _adminLock;
+            wpsstate _state;
+            string _ssid;
+            string _networkKey;
+            IConnectCallback* _callback;
+            uint32_t _error;
+            uint32_t _eventReporting;
+            WPASupplicant::Network::wpsauthtypes _authType;
+        };
+
         class ConnectRequest : public Request {
         private:
             enum class connection : uint8_t {
@@ -801,6 +1115,7 @@ namespace WPASupplicant {
             }
 
         public:
+
             uint32_t Invoke(IConnectCallback* callback, const string& ssid, const uint64_t& bssid) {
 
                 uint32_t result = ((bssid == 0) ? Core::ERROR_INCOMPLETE_CONFIG :
@@ -1007,6 +1322,7 @@ namespace WPASupplicant {
             , _networkRequest(*this)
             , _statusRequest(*this)
             , _connectRequest(*this)
+            , _wpsRequest(*this)
         {
             string remoteName(Core::Directory::Normalize(supplicantBase) + interfaceName);
 
@@ -1422,9 +1738,77 @@ namespace WPASupplicant {
             }
 
             _adminLock.Unlock();
+            printf("%s SSID - %s BSSID-%08llx\n",__PRETTY_FUNCTION__,SSID.c_str(),result);
 
             return (result);
         }
+
+        inline uint32_t CancelWps() {
+            uint32_t result = Core::ERROR_NOT_EXIST;
+            
+            CustomRequest exchange(string(_TXT("WPS_CANCEL")));
+
+            Submit(&exchange);
+
+            if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
+                result = Core::ERROR_ASYNC_ABORTED;
+            }
+            else {
+                result = Core::ERROR_NONE;
+            }
+
+            _wpsRequest.Reset();
+
+            return result;
+
+        }
+
+        inline uint32_t StartWps(const WPASupplicant::Network::wpsmethod& wps, const string pin, const string& SSID){
+
+             class WpsSink : public IConnectCallback {
+            public:
+                WpsSink(const WpsSink&) = delete;
+                WpsSink& operator= (const WpsSink&) = delete;
+                WpsSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
+                ~WpsSink() override {};
+
+            public:
+                uint32_t Wait(const uint32_t waitTime) {
+                    return (_signal.Lock(waitTime) == Core::ERROR_NONE ? _result : static_cast<uint32_t>(Core::ERROR_TIMEDOUT));
+                }
+                void Completed(const uint32_t result) override {
+                    _result = result;
+                    _signal.SetEvent();
+                }
+
+            private:
+                Core::Event _signal;
+                uint32_t _result;
+
+            } waitSink;
+
+            printf("%s \n",__PRETTY_FUNCTION__);
+
+            uint32_t result = _wpsRequest.Invoke(&waitSink, SSID, wps, pin);
+
+            if (result == Core::ERROR_NONE) {
+                result = waitSink.Wait(5 * MaxConnectionTime);
+                _wpsRequest.Revoke(&waitSink);
+            }
+
+            printf("%s result:%u\n",__PRETTY_FUNCTION__,result);
+
+            return (result);
+            
+        }
+
+        inline void WpsCredentials(string& NetworkKey, WPASupplicant::Network::wpsauthtypes& AuthType ) {
+            _adminLock.Lock();
+            NetworkKey = _wpsRequest.NetworkKey();
+            AuthType = _wpsRequest.AuthType();
+            _adminLock.Unlock();
+        }
+
         inline uint32_t Connect(const string& SSID)
         {
             uint32_t result = Core::ERROR_NOT_EXIST;
@@ -1465,6 +1849,7 @@ namespace WPASupplicant {
 
             return (result);
         }
+
         inline uint32_t Connect(const string& SSID, const uint64_t& bssid)
         {
             class ConnectSink : public IConnectCallback {
@@ -1488,6 +1873,7 @@ namespace WPASupplicant {
                 uint32_t _result;
 
             } waitSink;
+            printf("%s \n",__PRETTY_FUNCTION__);
 
             uint32_t result = Connect(&waitSink, SSID, bssid);
 
@@ -1501,6 +1887,7 @@ namespace WPASupplicant {
         }
         inline uint32_t Connect(IConnectCallback* sink, const string& SSID, const uint64_t bssid)
         {
+            printf("%s \n",__PRETTY_FUNCTION__);
             return (_connectRequest.Invoke(sink, SSID, bssid));
         }
         inline uint32_t Revoke(IConnectCallback* sink)
@@ -1971,6 +2358,7 @@ namespace WPASupplicant {
         NetworkRequest _networkRequest;
         StatusRequest _statusRequest;
         ConnectRequest _connectRequest;
+        WpsRequest _wpsRequest;
     };
 }
 } // namespace WPEFramework::WPASupplicant
