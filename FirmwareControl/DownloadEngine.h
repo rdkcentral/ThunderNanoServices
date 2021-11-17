@@ -61,12 +61,7 @@ namespace PluginHost {
             memset(_HMAC, 0, Crypto::HASH_SHA256);
             // BaseClass::Hash().Key(hashKey);
         }
-        ~DownloadEngine() override
-        {
-            _adminLock.Lock();
-            _activity.Revoke();
-            _adminLock.Unlock();
-        }
+        ~DownloadEngine() override = default;
 
     public:
         uint32_t CollectInfo(const string& locator)
@@ -125,6 +120,12 @@ namespace PluginHost {
                 }
             }
             return result;
+        }
+        void RevokeNotifier()
+        {
+            _adminLock.Lock();
+            _activity.Revoke();
+            _adminLock.Unlock();
         }
 
     private:

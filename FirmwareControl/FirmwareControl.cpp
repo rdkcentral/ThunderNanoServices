@@ -186,6 +186,8 @@ namespace Plugin {
         } else {
             Status(UpgradeStatus::DOWNLOAD_ABORTED, status, 0);
         }
+
+        engine.RevokeNotifier();
         return status;
     }
 
