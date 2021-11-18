@@ -466,7 +466,7 @@ namespace WPASupplicant {
                 // send out a request for detail.
                 Submit(&_detailRequest);
             }
-        } else if (_enabled.size() == 0) {
+        } else if (_enabled.size() == 0 && _wpsRequest.IsActive() == false) {//When WPS Request is active, a temporary network is enabled. We will not add it
             printf("%s Sending Network Req\n",__PRETTY_FUNCTION__);
             // send out a request for the network list
             if (_networkRequest.Set() == true) {

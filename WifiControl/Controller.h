@@ -785,7 +785,7 @@ namespace WPASupplicant {
         private:
             Controller& _parent;
         };
-        
+
         class WpsRequest : public Request {
         private:
             enum class wpsstate : uint8_t {
@@ -818,7 +818,7 @@ namespace WPASupplicant {
             ~WpsRequest() override
             {
             }
-        
+
         public:
              uint32_t Invoke(IConnectCallback* callback, const string& ssid, const WPASupplicant::Network::wpsmethod& wps, const string pin) {
 
@@ -855,7 +855,7 @@ namespace WPASupplicant {
                         _callback = callback;
                         _networkKey.clear();
                         _adminLock.Unlock();
-                        
+
                         result = Core::ERROR_NONE;
                         _parent.Submit(this);
 
@@ -870,7 +870,7 @@ namespace WPASupplicant {
 
                 return result;
              }
-    
+
              uint32_t Revoke(IConnectCallback* callback) {
 
                 uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -894,10 +894,10 @@ namespace WPASupplicant {
 
             /*100e003d1026000131104500094e4554474541523236100300020020100f0002000810280001011027000c756e6576656e73656138313210200006b827ebf393af*/
             /*
-             * Attribute<uint16_t> Length<uint16_t> Data<uint8_t*>, defined in wpa_supplicant/src/wps/wps_defs.h 
+             * Attribute<uint16_t> Length<uint16_t> Data<uint8_t*>, defined in wpa_supplicant/src/wps/wps_defs.h
              * 100e - Credential Attribute
              * 003d - Length - 61
-             * 
+             *
              * 1026 - Network Index Attribute
              * 0001 - Length - 1
              * 31   - Index
@@ -930,6 +930,9 @@ namespace WPASupplicant {
 
            void Credentials(const Core::TextFragment& infoLine) {
                printf("%s infoLine.Length() - %d\n",__PRETTY_FUNCTION__,infoLine.Length());
+
+               _adminLock.Lock();
+
                if(_state == wpsstate::WAITING) {
 
                    uint8_t data[infoLine.Length()];
@@ -984,6 +987,8 @@ namespace WPASupplicant {
                 else{
                       printf("%s Wrong State\n",__PRETTY_FUNCTION__);
                 }
+
+                _adminLock.Unlock();
             }
 
             const string& NetworkKey(){
@@ -1003,9 +1008,9 @@ namespace WPASupplicant {
             void Completed(const string& response, const bool abort) override {
 
                 uint32_t result = Core::ERROR_INPROGRESS;
-                string newCommand;
 
                 _adminLock.Lock();
+
                 if (abort == true) {
                     result = Core::ERROR_ASYNC_ABORTED;
                 }
@@ -1021,11 +1026,17 @@ namespace WPASupplicant {
 
                 if ((_state != wpsstate::INIT) && (_callback != nullptr)) {
                     _callback->Completed(result);
-                    _adminLock.Unlock();
                 }
-                else {
-                    _adminLock.Unlock();
-                }
+
+                _adminLock.Unlock();
+            }
+
+            bool IsActive(){
+                bool result = false;
+                _adminLock.Lock();
+                result = (_state != wpsstate::INIT);
+                _adminLock.Unlock();
+                return result;
             }
 
              void Completed(const uint32_t result) {
@@ -1036,7 +1047,7 @@ namespace WPASupplicant {
 
                     _error = result;
                     _state = wpsstate::ERROR;
-                    
+
                     _adminLock.Unlock();
                     if (_parent.IsSubmitted(this) == false) {
                         Request::Set(string(_TXT("WPS_CANCEL")));
@@ -1045,11 +1056,9 @@ namespace WPASupplicant {
                 }
                 else if ((_callback != nullptr) && (_state == wpsstate::WAITING)) {
                     _state = wpsstate::SUCCESS;
-                    _callback->Completed(result);
-                    _adminLock.Unlock();
-                } else {
-                    _adminLock.Unlock();
                 }
+
+                _adminLock.Unlock();
 
                 if (_eventReporting != static_cast<uint32_t>(~0)) {
                     _parent.Notify(static_cast<events>(_eventReporting));
@@ -1187,7 +1196,7 @@ namespace WPASupplicant {
                 _adminLock.Lock();
                 if (abort == true) {
                     result = Core::ERROR_ASYNC_ABORTED;
-                } 
+                }
                 else if (response != _T("OK")) {
                     result = Core::ERROR_ASYNC_FAILED;
                 }
@@ -1209,7 +1218,7 @@ namespace WPASupplicant {
                 if ((newCommand.empty() == false) && (Request::Set(newCommand) == true)) {
                     _adminLock.Unlock();
                     _parent.Submit(this);
-                } 
+                }
                 else if ((_state != connection::WAITING) && (_callback != nullptr)) {
                     _callback->Completed(result);
                     _adminLock.Unlock();
@@ -1350,6 +1359,9 @@ namespace WPASupplicant {
                         _error = Core::ERROR_GENERAL;
                     }
                     else if (SetKey("autoscan", "periodic:120") != Core::ERROR_NONE) {
+                        _error = Core::ERROR_GENERAL;
+                    }
+                    else if(SetKey("wps_cred_processing", "1") != Core::ERROR_NONE) {
                         _error = Core::ERROR_GENERAL;
                     }
                     else {
@@ -1701,7 +1713,7 @@ namespace WPASupplicant {
             // See if the given SSID is enabled.
             _adminLock.Lock();
             EnabledContainer::iterator entry(_enabled.find(SSID));
-            
+
             if ((entry != _enabled.end()) && (entry->second.Id() != static_cast<uint32_t>(~0))) {
                 _adminLock.Unlock();
                 CustomRequest exchange(string(_TXT("REMOVE_NETWORK ")) + Core::NumberType<uint32_t>(entry->second.Id()).Text());
@@ -1745,7 +1757,7 @@ namespace WPASupplicant {
 
         inline uint32_t CancelWps() {
             uint32_t result = Core::ERROR_NOT_EXIST;
-            
+
             CustomRequest exchange(string(_TXT("WPS_CANCEL")));
 
             Submit(&exchange);
@@ -1799,7 +1811,7 @@ namespace WPASupplicant {
             printf("%s result:%u\n",__PRETTY_FUNCTION__,result);
 
             return (result);
-            
+
         }
 
         inline void WpsCredentials(string& NetworkKey, WPASupplicant::Network::wpsauthtypes& AuthType ) {
@@ -2126,7 +2138,7 @@ namespace WPASupplicant {
 
             return (result);
         }
-        inline uint32_t SetKey(const string& key, const string& value) 
+        inline uint32_t SetKey(const string& key, const string& value)
         {
             uint32_t result = Core::ERROR_NONE;
 
@@ -2137,7 +2149,7 @@ namespace WPASupplicant {
             if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                 result = Core::ERROR_ASYNC_ABORTED;
-            } 
+            }
 
             Revoke(&exchange);
 
@@ -2154,7 +2166,7 @@ namespace WPASupplicant {
             if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
 
                 result = Core::ERROR_ASYNC_ABORTED;
-            } 
+            }
             else {
                 result = Core::ERROR_NONE;
                 value = exchange.Response();

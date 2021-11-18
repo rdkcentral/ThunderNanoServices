@@ -1,6 +1,6 @@
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
-/*
+ *
  * following copyright and licenses apply:
  *
  * Copyright 2020 Metrological
@@ -85,9 +85,6 @@ namespace Plugin {
 
                 /* ctrl_interface parameter *mandatory */
                 options.Add(_T("-C") + _connector);
-
-                options.Add(_T("-c") + string(_T("/etc/wpa_supplicant.conf")));
-
                 /* driver name (can be multiple drivers: nl80211,wext) *optional */
                 options.Add(_T("-Dnl80211"));
 
@@ -495,11 +492,17 @@ namespace Plugin {
                 }
                 else {
                     _state = states::SUCCESS;
-                    _job.Submit();
                 }
                 _adminLock.Unlock();
             }            
         
+            void Disconnected(){
+                _adminLock.Lock();
+                if (_state == states::SUCCESS) {
+                    _job.Submit();
+                }
+                _adminLock.Unlock();
+            }
 
             void Dispatch(){
                 _adminLock.Lock();

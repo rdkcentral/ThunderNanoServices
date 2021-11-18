@@ -491,6 +491,7 @@ namespace Plugin
             _service->Notify(message);
             event_connectionchange(string());
             _autoConnect.Disconnected();
+            _wpsConnect.Disconnected();
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_CHANGED: {
