@@ -494,8 +494,9 @@ namespace Plugin {
                     }
 
                     if (_ret != false) {
-                        // Trigger the creation of the display.
+                        // Trigger the creation of the display, implicit AddRef () on _dpy
                         _dpy = Compositor::IDisplay::Instance (std::string (Name).append (":Display"), display);
+
                         _ret = _dpy != nullptr;
                     }
 
@@ -507,16 +508,12 @@ namespace Plugin {
                     constexpr width_t _width = 0;
 
                     if (_ret != false) {
-                        /* void */ _dpy->AddRef ();
-
-                        // Trigger the creation of the surface
+                        // Trigger the creation of the surfac, implicit AddRef () on _surf!
                         _surf = _dpy->Create (std::string (Name).append (":Surface"), _width, _height);
                         _ret = _surf != nullptr;
                     }
 
                     if (_ret != false) {
-                        /* void */ _surf->AddRef ();
-
                         width_t _realWidth = _surf->Width ();
                         height_t _realHeight = _surf->Height ();
 
@@ -539,10 +536,12 @@ namespace Plugin {
 
                     if (_surf != nullptr) {
                         _surf->Release ();
+                        _surf = nullptr;
                     }
 
                     if (_dpy != nullptr) {
                         _dpy->Release ();
+                        _dpy = nullptr;
                     }
                 }
         };
