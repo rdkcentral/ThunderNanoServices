@@ -42,6 +42,7 @@
         void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);
+        void event_wpsresult(const uint32_t result);
 */
 
 namespace WPEFramework {
@@ -261,6 +262,33 @@ namespace Plugin {
 
         Notify(_T("connectionchange"), params);
     }
+
+     // Event: wpsresult - Notifies about result of the wps request
+    void WifiControl::event_wpsresult(const uint32_t result)
+    {
+        Core::JSON::String params;
+        switch (result) {
+            case Core::ERROR_NONE: {
+                params = string("success");
+                break;
+            }
+            case Core::ERROR_TIMEDOUT: {
+                params = string("timedout");
+                break;
+            }
+            case Core::ERROR_PENDING_CONDITIONS: {
+                params = string("overlap");
+                break;
+            }
+            default:
+            case Core::ERROR_ASYNC_FAILED: {
+                params = string("failed");
+                break;
+            }
+        }
+        Notify(_T("wpsresult"), params);
+    }
+
 
 } // namespace Plugin
 

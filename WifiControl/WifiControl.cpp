@@ -487,11 +487,14 @@ namespace Plugin
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_DISCONNECTED: {
-            string message("{ \"event\": \"Disconnected\" }");
-            _service->Notify(message);
-            event_connectionchange(string());
-            _autoConnect.Disconnected();
-            _wpsConnect.Disconnected();
+            if(!_wpsConnect.Active()) {
+                string message("{ \"event\": \"Disconnected\" }");
+                _service->Notify(message);
+                event_connectionchange(string());
+                _autoConnect.Disconnected();
+            }else {
+                _wpsConnect.Disconnected();
+            }
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_CHANGED: {
@@ -501,22 +504,28 @@ namespace Plugin
             break;
         }
 
-        case WPASupplicant::Controller::WPS_EVENT_SUCCESS: {
-            _wpsConnect.Completed(Core::ERROR_NONE); 
+        case WPASupplicant::Controller::WPS_EVENT_CRED_RECEIVED: {
+            _wpsConnect.Completed(Core::ERROR_NONE);
+            event_wpsresult(Core::ERROR_NONE);
             break;
         }
 
         case WPASupplicant::Controller::WPS_EVENT_TIMEOUT: {
             _wpsConnect.Completed(Core::ERROR_TIMEDOUT);
+            event_wpsresult(Core::ERROR_TIMEDOUT);
             break;
         }
         case WPASupplicant::Controller::WPS_EVENT_FAIL: {
-            _wpsConnect.Completed(Core::ERROR_ASYNC_FAILED);
+            if(!_wpsConnect.Credentials()){
+                _wpsConnect.Completed(Core::ERROR_ASYNC_FAILED);
+                event_wpsresult(Core::ERROR_ASYNC_FAILED);
+            }
             break;
         }
 
         case WPASupplicant::Controller::WPS_EVENT_OVERLAP: {
-            _wpsConnect.Completed(Core::ERROR_INPROGRESS);
+            _wpsConnect.Completed(Core::ERROR_PENDING_CONDITIONS);
+            event_wpsresult(Core::ERROR_PENDING_CONDITIONS);
             break;
         }
 
@@ -527,6 +536,10 @@ namespace Plugin
         case WPASupplicant::Controller::CTRL_EVENT_SCAN_STARTED:
         case WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED:
         case WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE:
+        case WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PBC:
+        case WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PIN:
+        case WPASupplicant::Controller::WPS_EVENT_ACTIVE:
+        case WPASupplicant::Controller::WPS_EVENT_DISABLE:
         case WPASupplicant::Controller::AP_ENABLED:
             break;
         }

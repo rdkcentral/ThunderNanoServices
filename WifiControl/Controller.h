@@ -796,6 +796,22 @@ namespace WPASupplicant {
                 ERROR
             };
 
+            //As defined in wpa_supplicant/src/wps/wps_defs.h
+            enum class wpsattribute : uint16_t {
+                ATTR_AUTH_TYPE = 0x1003,
+                ATTR_AUTH_TYPE_FLAGS = 0x1004,
+                ATTR_CRED = 0x100e,
+                ATTR_ENCR_TYPE = 0x100f,
+                ATTR_ENCR_TYPE_FLAGS = 0x1010,
+                ATTR_NETWORK_INDEX = 0x1026,
+                ATTR_NETWORK_KEY = 0x1027,
+                ATTR_NETWORK_KEY_INDEX = 0x1028,
+                ATTR_SSID = 0x1045,
+            };
+
+            static constexpr uint32_t MAX_SSID_LEN = 32;
+            static constexpr uint32_t MAX_NETWORK_KEY_LEN = 128;
+
 
         public:
             WpsRequest() = delete;
@@ -808,6 +824,7 @@ namespace WPASupplicant {
                 , _adminLock()
                 , _state(wpsstate::INIT)
                 , _ssid()
+                , _pin()
                 , _networkKey()
                 , _callback(nullptr)
                 , _error(Core::ERROR_NONE)
@@ -839,10 +856,10 @@ namespace WPASupplicant {
                          }
                      } else if(wps == WPASupplicant::Network::WPS_PIN) {
                          if(bssid != 0){
-                             cmd = string(_TXT("WPS_PIN ")) + BSSID(bssid) + pin;
+                             cmd = string(_TXT("WPS_REG ")) + BSSID(bssid) + string(" ") + pin;
                          }
                          else{
-                             cmd = string(_TXT("WPS_PIN ")) + pin;
+                             cmd = string(_TXT("WPS_PIN ")) + string("any ") + pin;
                          }
                      }
 
@@ -851,6 +868,7 @@ namespace WPASupplicant {
                     if (Request::Set (cmd) == true) {
 
                         _ssid = ssid;
+                        _pin = pin;
                         _state = wpsstate::REQUESTED;
                         _callback = callback;
                         _networkKey.clear();
@@ -930,6 +948,7 @@ namespace WPASupplicant {
 
            void Credentials(const Core::TextFragment& infoLine) {
                printf("%s infoLine.Length() - %d\n",__PRETTY_FUNCTION__,infoLine.Length());
+               bool cred = false;
 
                _adminLock.Lock();
 
@@ -937,7 +956,6 @@ namespace WPASupplicant {
 
                    uint8_t data[infoLine.Length()];
                    uint16_t attrLen = Core::FromHexString(infoLine.Data(), data, infoLine.Length());
-
                    printf("%s attrLen = %d RawData[",__PRETTY_FUNCTION__,attrLen);
                    for(uint32_t i=0; i<attrLen;i++){
                        printf("%02x",data[i]);
@@ -952,32 +970,37 @@ namespace WPASupplicant {
                        pos += 2;
                        uint16_t len = ReadBE16(data + pos);
                        pos += 2;
+
                        printf("%s len = %d attr 0x%04x\n",__PRETTY_FUNCTION__,len,attr);
-                       if (attr == 0x1045){
-                           uint8_t ssid[33];
-                           if(len <= 32){
+                       if (static_cast<wpsattribute>(attr) == wpsattribute::ATTR_SSID){
+                           uint8_t ssid[MAX_SSID_LEN + 1];
+                           if(len <= MAX_SSID_LEN){
                                memcpy(ssid,data+pos,len);
                                ssid[len]='\0';
-                               ASSERT(_ssid == string(reinterpret_cast<const char*>(ssid)));
+                               if(_ssid.empty()) {
+                                   //We sent out "WPS_PIN any", so save it
+                                   _ssid = string(reinterpret_cast<const char*>(ssid));
+                               }
                                printf("%s SSID: [%s]\n",__PRETTY_FUNCTION__,_ssid.c_str());
                            }
                        }
-                       else if(attr == 0x1003){
+                       else if(static_cast<wpsattribute>(attr) == wpsattribute::ATTR_AUTH_TYPE){
                            if(len == 2) {
                                _authType = static_cast<WPASupplicant::Network::wpsauthtypes>(ReadBE16(data + pos));
                            }
                        }
-                       else if(attr == 0x1027){
-                           uint8_t key[256];
-                           if(len < 256){
+                       else if(static_cast<wpsattribute>(attr) == wpsattribute::ATTR_NETWORK_KEY){
+                           uint8_t key[MAX_NETWORK_KEY_LEN+1];
+                           if(len <= MAX_NETWORK_KEY_LEN){
                                memcpy(key,data+pos,len);
                                key[len]='\0';
                                _networkKey = string(reinterpret_cast<const char*>(key));
+                               cred = true;
                                printf("%s NetworkKey: [%s]\n",__PRETTY_FUNCTION__,_networkKey.c_str());
                            }
                        }
 
-                       if(attr != 0x100E){
+                       if(static_cast<wpsattribute>(attr) != wpsattribute::ATTR_CRED){
                            //This is not the Credential Attribute
                            pos += len;
                        }
@@ -985,14 +1008,23 @@ namespace WPASupplicant {
                     }
                 }
                 else{
-                      printf("%s Wrong State\n",__PRETTY_FUNCTION__);
+                    TRACE(Trace::Information, (_T("Wrong State %d"), __LINE__));
                 }
 
                 _adminLock.Unlock();
+
+                if(cred) {
+                    _parent.Notify(events::WPS_EVENT_CRED_RECEIVED);
+                }
+
             }
 
             const string& NetworkKey(){
                 return _networkKey;
+            }
+
+            const string& SSID(){
+                return _ssid;
             }
 
             WPASupplicant::Network::wpsauthtypes AuthType(){
@@ -1014,7 +1046,7 @@ namespace WPASupplicant {
                 if (abort == true) {
                     result = Core::ERROR_ASYNC_ABORTED;
                 }
-                else if (response != _T("OK")) {
+                else if ((response != _T("OK")) && (response != _pin)) {
                     result = Core::ERROR_ASYNC_FAILED;
                 }
                 else if (_state == wpsstate::ERROR) {
@@ -1044,15 +1076,8 @@ namespace WPASupplicant {
                 _adminLock.Lock();
 
                 if (result != Core::ERROR_NONE) {
-
                     _error = result;
                     _state = wpsstate::ERROR;
-
-                    _adminLock.Unlock();
-                    if (_parent.IsSubmitted(this) == false) {
-                        Request::Set(string(_TXT("WPS_CANCEL")));
-                        _parent.Submit(this);
-                    }
                 }
                 else if ((_callback != nullptr) && (_state == wpsstate::WAITING)) {
                     _state = wpsstate::SUCCESS;
@@ -1086,6 +1111,7 @@ namespace WPASupplicant {
             Core::CriticalSection _adminLock;
             wpsstate _state;
             string _ssid;
+            string _pin;
             string _networkKey;
             IConnectCallback* _callback;
             uint32_t _error;
@@ -1814,8 +1840,9 @@ namespace WPASupplicant {
 
         }
 
-        inline void WpsCredentials(string& NetworkKey, WPASupplicant::Network::wpsauthtypes& AuthType ) {
+        inline void WpsCredentials(string& SSID, string& NetworkKey, WPASupplicant::Network::wpsauthtypes& AuthType ) {
             _adminLock.Lock();
+            SSID = _wpsRequest.SSID();
             NetworkKey = _wpsRequest.NetworkKey();
             AuthType = _wpsRequest.AuthType();
             _adminLock.Unlock();

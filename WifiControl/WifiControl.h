@@ -487,7 +487,7 @@ namespace Plugin {
 
                 _adminLock.Lock();
 
-                if (result != Core::ERROR_NONE) {
+                if (result != Core::ERROR_NONE && _state == states::REQUESTED) {
                     Reset();
                 }
                 else {
@@ -504,16 +504,42 @@ namespace Plugin {
                 _adminLock.Unlock();
             }
 
+            bool Active() {
+                bool result = false;
+                 _adminLock.Lock();
+                if (_state != states::IDLE) {
+                    result = true;
+                }
+                _adminLock.Unlock();
+                return result;
+            }
+
+            bool Credentials() {
+                bool result = false;
+                 _adminLock.Lock();
+                if (_state != states::SUCCESS) {
+                    result = true;
+                }
+                _adminLock.Unlock();
+                return result;
+            }
+
             void Dispatch(){
                 _adminLock.Lock();
                 printf("%s: \n",__PRETTY_FUNCTION__);
 
-                JsonData::WifiControl::ConfigInfo configInfo;
-                configInfo.Hidden = false;
-                configInfo.Ssid = _ssid;
+
+                //Lets get the Credentials
                 WPASupplicant::Network::wpsauthtypes auth;
                 string networkKey;
-                _controller->WpsCredentials(networkKey,auth);
+                string ssid;
+                _controller->WpsCredentials(ssid,networkKey,auth);
+
+                //Create a new ConfigInfo 
+                JsonData::WifiControl::ConfigInfo configInfo;
+                configInfo.Hidden = false;
+                configInfo.Ssid = ssid;
+
 
                 if(auth == WPASupplicant::Network::wpsauthtypes::WPS_AUTH_OPEN) {
                     configInfo.Type = JsonData::WifiControl::TypeType::UNSECURE; 
@@ -539,12 +565,12 @@ namespace Plugin {
                     }
                 }
 
-                WPASupplicant::Config profile(_controller->Create(_ssid));
+                WPASupplicant::Config profile(_controller->Create(ssid));
                 if (WifiControl::UpdateConfig(profile, configInfo) != true) {
-                   _controller->Destroy(_ssid);
+                   _controller->Destroy(ssid);
                 }else {
                     printf("%s: Connecting \n",__PRETTY_FUNCTION__);
-                    _parent.Connect(_ssid);
+                    _parent.Connect(ssid);
                 }
 
                 Reset();
@@ -828,6 +854,7 @@ namespace Plugin {
         void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);
+        void event_wpsresult(const uint32_t result);
 
         inline uint32_t Connect(const string& ssid,
                                 const JsonData::WifiControl::ConnectParamsData::AutoconnectType wps=JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE,
