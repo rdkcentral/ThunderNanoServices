@@ -31,8 +31,10 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         ASSERT(_connectionProperties == nullptr);
+        ASSERT(_connectionId == 0);
         ASSERT(_graphicsProperties == nullptr);
         ASSERT(_hdrProperties == nullptr);
+
 
         string message;
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
@@ -48,11 +50,11 @@ namespace Plugin {
 
             _graphicsProperties = _connectionProperties->QueryInterface<Exchange::IGraphicsProperties>();
             if (_graphicsProperties == nullptr) {
-                Deinitialize(service);
+                message = _T("DisplayInfo could not be instantiated. Could not aquire GraphicsProperties interface");
             } else {
                 _hdrProperties = _connectionProperties->QueryInterface<Exchange::IHDRProperties>();
                 if (_hdrProperties == nullptr) {
-                    Deinitialize(service);
+                    message = _T("DisplayInfo could not be instantiated. Could not aquire HDRProperties interface");
                 } else {
                     _notification.Initialize(_connectionProperties);
                     Exchange::JGraphicsProperties::Register(*this, _graphicsProperties);
@@ -60,10 +62,12 @@ namespace Plugin {
                     Exchange::JHDRProperties::Register(*this, _hdrProperties);
                 }
             }
+        } else {
+            message = _T("DisplayInfo could not be instantiated. Could not aquire ConnectionProperties interface");
         }
 
-        if (_connectionProperties == nullptr) {
-            message = _T("DisplayInfo could not be instantiated.");
+        if (message.length() != 0) {
+            Deinitialize(service);
         }
 
         return message;
@@ -72,7 +76,6 @@ namespace Plugin {
     void DisplayInfo::Deinitialize(PluginHost::IShell* service) /* override */
     {
         ASSERT(service != nullptr);
-        ASSERT(_connectionProperties != nullptr);
 
         if (_hdrProperties != nullptr) {
 
@@ -90,25 +93,27 @@ namespace Plugin {
             _graphicsProperties = nullptr;
         }
 
-        // Stop processing:
-        RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+        if(_connectionProperties != nullptr) {
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
 
-        VARIABLE_IS_NOT_USED uint32_t result = _connectionProperties->Release();
-        _connectionProperties = nullptr;
+            VARIABLE_IS_NOT_USED uint32_t result = _connectionProperties->Release();
+            _connectionProperties = nullptr;
 
-        // It should have been the last reference we are releasing, 
-        // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-        // are leaking...
-        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            // It should have been the last reference we are releasing, 
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-        // If this was running in a (container) process...
-        if (connection != nullptr) {
-            // Lets trigger the cleanup sequence for 
-            // out-of-process code. Which will guard 
-            // that unwilling processes, get shot if
-            // not stopped friendly :-)
-            connection->Terminate();
-            connection->Release();
+            // If this was running in a (container) process...
+            if (connection != nullptr) {
+                // Lets trigger the cleanup sequence for 
+                // out-of-process code. Which will guard 
+                // that unwilling processes, get shot if
+                // not stopped friendly :-)
+                connection->Terminate();
+                connection->Release();
+            }
         }
 
         _connectionId = 0;
