@@ -50,11 +50,11 @@ namespace Plugin {
 
             _graphicsProperties = _connectionProperties->QueryInterface<Exchange::IGraphicsProperties>();
             if (_graphicsProperties == nullptr) {
-                message = _T("DisplayInfo could not be instantiated. Could not aquire GraphicsProperties interface");
+                message = _T("DisplayInfo could not be instantiated. Could not acquire GraphicsProperties interface");
             } else {
                 _hdrProperties = _connectionProperties->QueryInterface<Exchange::IHDRProperties>();
                 if (_hdrProperties == nullptr) {
-                    message = _T("DisplayInfo could not be instantiated. Could not aquire HDRProperties interface");
+                    message = _T("DisplayInfo could not be instantiated. Could not acquire HDRProperties interface");
                 } else {
                     _notification.Initialize(_connectionProperties);
                     Exchange::JGraphicsProperties::Register(*this, _graphicsProperties);
@@ -63,7 +63,7 @@ namespace Plugin {
                 }
             }
         } else {
-            message = _T("DisplayInfo could not be instantiated. Could not aquire ConnectionProperties interface");
+            message = _T("DisplayInfo could not be instantiated. Could not acquire ConnectionProperties interface");
         }
 
         if (message.length() != 0) {
