@@ -39,6 +39,7 @@ namespace Plugin {
         config.FromString(_service->ConfigLine());
         _controller = config.Controller.Value();
         _codecSettings = config.Codecs.Value();
+        _latency = (config.Latency.Value() <= 10000? config.Latency.Value() : 10000);
 
         service->Register(&_comNotificationSink);
 

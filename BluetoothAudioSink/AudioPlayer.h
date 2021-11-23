@@ -82,6 +82,7 @@ namespace Plugin {
             , _buffer(nullptr)
             , _readCursor(nullptr)
             , _bufferSize(0)
+            , _latency(0)
             , _eos(false)
         {
             _minFrameSize = _transport.MinFrameSize();
@@ -155,6 +156,25 @@ namespace Plugin {
             } else {
                 result = Core::ERROR_BAD_REQUEST;
                 time = 0;
+            }
+
+            return (result);
+        }
+        void Latency(const uint16_t latency /* ms */)
+        {
+            ASSERT(latency <= 20000); // makes sure we don't overflow...
+            _latency = ((_transport.ClockRate() * _transport.Channels() * latency) / 1000);
+            TRACE(A2DP::ProfileFlow, (_T("Latency adjustment: +%i ms (%i samples)"), latency, _latency));
+        }
+        uint32_t Delay(uint32_t& delay /* samples */) const
+        {
+            uint32_t result = Core::ERROR_NONE;
+
+            if (IsValid() == true) {
+                delay = (_latency + (_available) / (_transport.BytesPerSample())); // counting in samples here
+                printf("%i, %i = %i\n", _available, _latency, delay);
+            } else {
+                result = Core::ERROR_BAD_REQUEST;
             }
 
             return (result);
@@ -247,6 +267,7 @@ namespace Plugin {
         uint8_t* _buffer;
         uint8_t* _readCursor;
         uint32_t _bufferSize;
+        uint32_t _latency; // in samples
         bool _eos;
     };
 
