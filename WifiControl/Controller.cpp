@@ -132,8 +132,6 @@ namespace WPASupplicant {
         uint16_t end = infoLine.Length();
         keys = 0;
 
-        printf("%s infoLine - %s\n",__PRETTY_FUNCTION__,infoLine.Text().c_str());
-
         while (index < end) {
             uint16_t keyBegin;
             uint16_t keyEnd;
@@ -154,14 +152,12 @@ namespace WPASupplicant {
                 // Find enum value
                 Core::TextFragment entry(Core::TextFragment(infoLine, keyBegin, keyEnd - keyBegin));
                 Core::TextSegmentIterator element(entry, false, _T("+-"));
-                printf("%s entry - %s\n",__PRETTY_FUNCTION__,entry.Text().c_str());
 
                 // The first key should be the pair system:
                 Core::EnumerateType<Network::pair> pair(element.Next() == true ? element.Current() : entry);
 
                 if (pair.IsSet() == true) {
                     uint32_t value = pair.Value();
-                    printf("%s pair - %u\n",__PRETTY_FUNCTION__,pair.Value());
 
                     if (value != 0) {
 
@@ -183,7 +179,6 @@ namespace WPASupplicant {
             }
         }
 
-        printf("pairs - %s keys - %s\n",std::bitset<sizeof(pairs) * 8>(pairs).to_string().insert(0, "0b").c_str(), std::bitset<sizeof(keys) * 8>(keys).to_string().insert(0, "0b").c_str());
         return (pairs);
     }
 
@@ -274,11 +269,11 @@ namespace WPASupplicant {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 }
-                else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_EVENT_AP_AVAILABLE)) {
-
+                else if (event == CTRL_EVENT_CONNECTED) {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
-                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
+                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS) && _wpsRequest.Active()==false) {
+                    //During WPS walk time, Supplicant keeps scanning for WPS enabled APs and scan_results keeps coming
                     _adminLock.Lock();
                     if (_scanRequest.Set() == true) {
                         _scanRequest.Event(event.Value());
@@ -287,11 +282,8 @@ namespace WPASupplicant {
                     } else {
                         _adminLock.Unlock();
                     }
-                } else if ((event == WPS_EVENT_TIMEOUT) || (event == WPS_EVENT_FAIL) || (event == WPS_EVENT_OVERLAP)) {
-
-                    _wpsRequest.Event(event.Value());
-                    _wpsRequest.Completed(Core::ERROR_ASYNC_FAILED);
-
+                } else if ((event == WPS_EVENT_TIMEOUT) || (event == WPS_EVENT_FAIL) || (event == WPS_EVENT_OVERLAP) || (event == WPS_EVENT_SUCCESS)) {
+                    Notify(event.Value());
                 } else if(event == WPS_EVENT_CRED_RECEIVED) {
 
                     ASSERT(position != string::npos);
@@ -299,14 +291,8 @@ namespace WPASupplicant {
 
                     // Skip white space
                     infoLine.TrimBegin(_T(" "));
-                    printf("WPS Credentials Received [%s] \n",infoLine.Text().c_str());
-                    _wpsRequest.Credentials(infoLine);                    
-
-                } else if(event == WPS_EVENT_SUCCESS) {
-
-                    _wpsRequest.Event(event.Value());
-                    _wpsRequest.Completed(Core::ERROR_NONE);
-
+                    _wpsRequest.ParseAttributes(infoLine);
+                    Notify(event.Value());
                 } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
                     ASSERT(position != string::npos);
@@ -421,7 +407,6 @@ namespace WPASupplicant {
         }
 
         if (scanInProgress == true) {
-            printf("%s Calling Revaluate\n",__PRETTY_FUNCTION__);
             Reevaluate();
         } else if (_callback != nullptr) {
             _callback->Dispatch(CTRL_EVENT_NETWORK_CHANGED);
@@ -446,35 +431,33 @@ namespace WPASupplicant {
             _enabled[ssid] = ConfigInfo((succeeded ? id : 0), false);
         }
 
-        printf("%s Calling Reevaluate\n",__PRETTY_FUNCTION__);
         Reevaluate();
     }
     void Controller::Reevaluate()
     {
-        printf("%s \n",__PRETTY_FUNCTION__);
 
-        NetworkInfoContainer::iterator index(_networks.begin());
-        int32_t i = 0;
+        if(_wpsRequest.Active() == false) { //When WPS Request is active, a temporary network is enabled. We will not add it
 
-        while ((index != _networks.end()) && (index->second.HasDetail() == true)) {
-            printf("%s Reevaluating index %d id - %d\n",__PRETTY_FUNCTION__,i++,index->second.Id());
-            index++;
-        }
-        if (index != _networks.end()) {
-            printf("%s Sending Detail Req\n",__PRETTY_FUNCTION__);
-            if (_detailRequest.Set(index->first) == true) {
-                // send out a request for detail.
-                Submit(&_detailRequest);
+            NetworkInfoContainer::iterator index(_networks.begin());
+            int32_t i = 0;
+
+            while ((index != _networks.end()) && (index->second.HasDetail() == true)) {
+                index++;
             }
-        } else if (_enabled.size() == 0 && _wpsRequest.IsActive() == false) {//When WPS Request is active, a temporary network is enabled. We will not add it
-            printf("%s Sending Network Req\n",__PRETTY_FUNCTION__);
-            // send out a request for the network list
-            if (_networkRequest.Set() == true) {
-                // send out a request for detail.
-                Submit(&_networkRequest);
+            if (index != _networks.end()) {
+                if (_detailRequest.Set(index->first) == true) {
+                    // send out a request for detail.
+                    Submit(&_detailRequest);
+                }
+            } else if (_enabled.size() == 0 && _wpsRequest.Active() == false) {
+                // send out a request for the network list
+                if (_networkRequest.Set() == true) {
+                    // send out a request for detail.
+                    Submit(&_networkRequest);
+                }
+            } else {
+                _callback->Dispatch(CTRL_EVENT_NETWORK_CHANGED);
             }
-        } else {
-            _callback->Dispatch(CTRL_EVENT_NETWORK_CHANGED);
         }
     }
 }

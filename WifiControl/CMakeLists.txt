@@ -31,6 +31,7 @@ set(PLUGIN_WIFICONTROL_AUTOSTART true CACHE STRING "Automatically start WifiCont
 set(PLUGIN_WIFICONTROL_AUTOCONNECT true CACHE STRING "Automatically start to connect with configured SSID")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT_RETRYINTERVAL 30 CACHE STRING "Autoconnect Retry interval in seconds")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT_MAXRETRIES -1 CACHE STRING "Autoconnect max retries")
+set(PLUGIN_WIFICONTROL_WPS_WALKTIME 125 CACHE STRING "Maximum Walk Time for WPS")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)

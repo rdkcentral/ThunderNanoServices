@@ -43,6 +43,7 @@ namespace Plugin
     WifiControl::WifiControl()
         : _skipURL(0)
         , _retryInterval(0)
+        , _walkTime(0)
         , _maxRetries(Core::NumberType<uint32_t>::Max())
         , _service(nullptr)
         , _configurationStore()
@@ -147,6 +148,8 @@ namespace Plugin
                             UpdateConfig(profile, index.Current());
                         }
                     }
+
+                    _walkTime = config.WpsWalkTime.Value();
 
                     if (config.AutoConnect.Value() == false) {
                         _controller->Scan();
@@ -488,6 +491,7 @@ namespace Plugin
         }
         case WPASupplicant::Controller::CTRL_EVENT_DISCONNECTED: {
             if(!_wpsConnect.Active()) {
+                //If Credentials was already received, ignore
                 string message("{ \"event\": \"Disconnected\" }");
                 _service->Notify(message);
                 event_connectionchange(string());
@@ -506,26 +510,26 @@ namespace Plugin
 
         case WPASupplicant::Controller::WPS_EVENT_CRED_RECEIVED: {
             _wpsConnect.Completed(Core::ERROR_NONE);
-            event_wpsresult(Core::ERROR_NONE);
             break;
         }
 
         case WPASupplicant::Controller::WPS_EVENT_TIMEOUT: {
             _wpsConnect.Completed(Core::ERROR_TIMEDOUT);
-            event_wpsresult(Core::ERROR_TIMEDOUT);
+            event_connectionchange(string());
             break;
         }
         case WPASupplicant::Controller::WPS_EVENT_FAIL: {
+            //If Credentials was already received, ignore
             if(!_wpsConnect.Credentials()){
                 _wpsConnect.Completed(Core::ERROR_ASYNC_FAILED);
-                event_wpsresult(Core::ERROR_ASYNC_FAILED);
+                event_connectionchange(string());
             }
             break;
         }
 
         case WPASupplicant::Controller::WPS_EVENT_OVERLAP: {
             _wpsConnect.Completed(Core::ERROR_PENDING_CONDITIONS);
-            event_wpsresult(Core::ERROR_PENDING_CONDITIONS);
+            event_connectionchange(string());
             break;
         }
 

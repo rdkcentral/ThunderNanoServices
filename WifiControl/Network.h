@@ -120,12 +120,6 @@ namespace WPASupplicant {
             MODE_AP
         };
 
-        enum wpsmethod {
-            NONE,
-            WPS_PBC,
-            WPS_PIN
-        };
-
         enum wpsauthtypes {
             WPS_AUTH_NONE = 0,
             WPS_AUTH_OPEN = 0x0001,

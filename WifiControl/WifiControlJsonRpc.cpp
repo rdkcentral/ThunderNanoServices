@@ -33,6 +33,7 @@
         uint32_t endpoint_scan();
         uint32_t endpoint_connect(const JsonData::WifiControl::ConnectParamsData& params);
         uint32_t endpoint_disconnect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t get_pin(Core::JSON::String& response) const;
         uint32_t get_status(JsonData::WifiControl::StatusData& response) const;
         uint32_t get_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response) const;
         uint32_t get_configs(Core::JSON::ArrayType<JsonData::WifiControl::ConfigInfo>& response) const;
@@ -42,7 +43,6 @@
         void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);
-        void event_wpsresult(const uint32_t result);
 */
 
 namespace WPEFramework {
@@ -61,6 +61,7 @@ namespace Plugin {
         Register<void,void>(_T("scan"), &WifiControl::endpoint_scan, this);
         Register<ConnectParamsData,void>(_T("connect"), &WifiControl::endpoint_connect, this);
         Register<DeleteParamsInfo,void>(_T("disconnect"), &WifiControl::endpoint_disconnect, this);
+        Property<Core::JSON::String>(_T("pin"), &WifiControl::get_pin, nullptr, this);
         Property<StatusData>(_T("status"), &WifiControl::get_status, nullptr, this);
         Property<Core::JSON::ArrayType<NetworkInfo>>(_T("networks"), &WifiControl::get_networks, nullptr, this);
         Property<Core::JSON::ArrayType<ConfigInfo>>(_T("configs"), &WifiControl::get_configs, nullptr, this);
@@ -127,7 +128,7 @@ namespace Plugin {
     uint32_t WifiControl::endpoint_connect(const ConnectParamsData& params)
     {
         const string& ssid = params.Ssid.Value();
-        const string& pin =  params.Wpspin.Value();
+        const string& pin =  params.Pin.Value();
         return Connect(ssid, params.Autoconnect.Value(),pin);
     }
 
@@ -242,6 +243,21 @@ namespace Plugin {
         return result;
     }
 
+    // Property: Pin - Random generated WPS Device Pin
+    // Return codes:
+    //  - ERROR_NONE: Success
+    //  - ERROR_UNAVAILABLE: Returned when pin is not generated
+    uint32_t WifiControl::get_pin(Core::JSON::String& response) const
+    {
+        string pin;
+        uint32_t result = _controller->GenerateWpsPin(pin);
+        if(result == Core::ERROR_NONE){
+            response = pin;
+        }
+        return result;
+    }
+
+
     // Event: scanresults - Signals that the scan operation has finished
     void WifiControl::event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list)
     {
@@ -262,33 +278,6 @@ namespace Plugin {
 
         Notify(_T("connectionchange"), params);
     }
-
-     // Event: wpsresult - Notifies about result of the wps request
-    void WifiControl::event_wpsresult(const uint32_t result)
-    {
-        Core::JSON::String params;
-        switch (result) {
-            case Core::ERROR_NONE: {
-                params = string("success");
-                break;
-            }
-            case Core::ERROR_TIMEDOUT: {
-                params = string("timedout");
-                break;
-            }
-            case Core::ERROR_PENDING_CONDITIONS: {
-                params = string("overlap");
-                break;
-            }
-            default:
-            case Core::ERROR_ASYNC_FAILED: {
-                params = string("failed");
-                break;
-            }
-        }
-        Notify(_T("wpsresult"), params);
-    }
-
 
 } // namespace Plugin
 

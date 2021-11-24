@@ -426,8 +426,7 @@ namespace Plugin {
             {
                 IDLE,
                 REQUESTED,
-                SUCCESS,
-                ERROR,
+                SUCCESS
             };
 
 
@@ -451,24 +450,24 @@ namespace Plugin {
             {
             }
 
-            uint32_t Invoke(const string ssid, const JsonData::WifiControl::ConnectParamsData::AutoconnectType wps, const string pin) {
+            uint32_t Invoke(const string ssid, const JsonData::WifiControl::ConnectParamsData::AutoconnectType actype, const string pin, uint32_t walkTime) {
 
-                uint32_t result;
-                printf("%s \n",__PRETTY_FUNCTION__);
+                uint32_t result = Core::ERROR_UNKNOWN_KEY;
 
-                _ssid = ssid;
+                _adminLock.Lock();
 
-                WPASupplicant::Network::wpsmethod wpsmethod = WPASupplicant::Network::wpsmethod::NONE;
-                if ( wps == JsonData::WifiControl::ConnectParamsData::AutoconnectType::WPS_PBC){
-                    wpsmethod = WPASupplicant::Network::wpsmethod::WPS_PBC;
-                }else if( wps == JsonData::WifiControl::ConnectParamsData::AutoconnectType::WPS_PIN){
-                    wpsmethod = WPASupplicant::Network::wpsmethod::WPS_PIN;
+                if ( actype == JsonData::WifiControl::ConnectParamsData::AutoconnectType::PBC){
+                    result = _controller->StartWpsPbc(ssid);
+                }else if( actype == JsonData::WifiControl::ConnectParamsData::AutoconnectType::PIN){
+                    result = _controller->StartWpsPin(ssid, pin);
                 }
 
-                result = _controller->StartWps(wpsmethod,pin,ssid);
                 if(result == Core::ERROR_NONE) {
+                    _ssid = ssid;
                     _state = states::REQUESTED;
+                    _job.Schedule(Core::Time::Now().Add(walkTime * 1000));
                 }
+                _adminLock.Unlock();
                 return result;
             }
 
@@ -477,21 +476,21 @@ namespace Plugin {
                 _adminLock.Lock();
                 if(_state != states::IDLE) {
                     result = _controller->CancelWps();
-                    _state = states::IDLE;
+                    Reset();
                 }
                 _adminLock.Unlock();
                 return result;
             }
 
             void Completed(const uint32_t result) {
-
                 _adminLock.Lock();
-
-                if (result != Core::ERROR_NONE && _state == states::REQUESTED) {
-                    Reset();
-                }
-                else {
-                    _state = states::SUCCESS;
+                if(_state == states::REQUESTED) {
+                    if (result != Core::ERROR_NONE) {
+                        Reset();
+                    }
+                    else {
+                        _state = states::SUCCESS;
+                    }
                 }
                 _adminLock.Unlock();
             }            
@@ -499,6 +498,7 @@ namespace Plugin {
             void Disconnected(){
                 _adminLock.Lock();
                 if (_state == states::SUCCESS) {
+                    _job.Revoke();
                     _job.Submit();
                 }
                 _adminLock.Unlock();
@@ -506,7 +506,7 @@ namespace Plugin {
 
             bool Active() {
                 bool result = false;
-                 _adminLock.Lock();
+                _adminLock.Lock();
                 if (_state != states::IDLE) {
                     result = true;
                 }
@@ -516,8 +516,8 @@ namespace Plugin {
 
             bool Credentials() {
                 bool result = false;
-                 _adminLock.Lock();
-                if (_state != states::SUCCESS) {
+                _adminLock.Lock();
+                if (_state == states::SUCCESS) {
                     result = true;
                 }
                 _adminLock.Unlock();
@@ -525,56 +525,72 @@ namespace Plugin {
             }
 
             void Dispatch(){
+                
+                
                 _adminLock.Lock();
-                printf("%s: \n",__PRETTY_FUNCTION__);
+                if (_state == states::SUCCESS) {
+                    //Lets get the Credentials
+                    WPASupplicant::Network::wpsauthtypes auth;
+                    uint32_t result = Core::ERROR_NONE;
+                    string networkKey;
+                    string ssid;
+                    _controller->GetWpsCredentials(ssid,networkKey,auth);
+
+                    //Create a new ConfigInfo
+                    JsonData::WifiControl::ConfigInfo configInfo;
+                    configInfo.Hidden = false;
+                    configInfo.Ssid = ssid;
 
 
-                //Lets get the Credentials
-                WPASupplicant::Network::wpsauthtypes auth;
-                string networkKey;
-                string ssid;
-                _controller->WpsCredentials(ssid,networkKey,auth);
+                    if(auth == WPASupplicant::Network::wpsauthtypes::WPS_AUTH_OPEN) {
+                        configInfo.Type = JsonData::WifiControl::TypeType::UNSECURE;
+                    } else{
+                        uint8_t protocolFlags = 0;
 
-                //Create a new ConfigInfo 
-                JsonData::WifiControl::ConfigInfo configInfo;
-                configInfo.Hidden = false;
-                configInfo.Ssid = ssid;
+                        switch (auth) {
+                            case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPAPSK:
+                              protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
+                           break;
+                           case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPA2PSK:
+                              protocolFlags = WPASupplicant::Config::wpa_protocol::WPA2;
+                           break;
 
+                           default:
+                              // Handle other Protocol types?
+                              TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type. ")));
+                        }
 
-                if(auth == WPASupplicant::Network::wpsauthtypes::WPS_AUTH_OPEN) {
-                    configInfo.Type = JsonData::WifiControl::TypeType::UNSECURE; 
-                } else{
-                    uint8_t protocolFlags = 0;
-
-                    switch (auth) {
-                        case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPAPSK:
-                          protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
-                       break;
-                       case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPA2PSK:
-                          protocolFlags = WPASupplicant::Config::wpa_protocol::WPA2;
-                       break;
-
-                       default:
-                          //TODO Handle other Protocol types
-                          TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type. ")));
+                        configInfo.Type = GetWPAProtocolType(protocolFlags);
+                        if(!networkKey.empty()) {
+                            configInfo.Psk = networkKey;
+                        }
                     }
 
-                    configInfo.Type = GetWPAProtocolType(protocolFlags);
-                    if(!networkKey.empty()) {
-                        configInfo.Psk = networkKey;
+                    _controller->CancelWps();
+                    Reset();
+                    _adminLock.Unlock();
+
+                    WPASupplicant::Config profile(_controller->Create(ssid));
+                    if (WifiControl::UpdateConfig(profile, configInfo) != true) {
+                        result = Core::ERROR_GENERAL;
+                       _controller->Destroy(ssid);
+                    }else {
+                        result = _parent.Connect(ssid);
+                    }
+                    if((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS)){
+                        _parent.event_connectionchange(string());
                     }
                 }
-
-                WPASupplicant::Config profile(_controller->Create(ssid));
-                if (WifiControl::UpdateConfig(profile, configInfo) != true) {
-                   _controller->Destroy(ssid);
-                }else {
-                    printf("%s: Connecting \n",__PRETTY_FUNCTION__);
-                    _parent.Connect(ssid);
+                else if (_state == states::REQUESTED){
+                    //The WPS Operation didnot complete in time.
+                    _controller->CancelWps();
+                    Reset();
+                    _adminLock.Unlock();
+                    _parent.event_connectionchange(string());
                 }
-
-                Reset();
-                _adminLock.Unlock();
+                else{
+                    _adminLock.Unlock();
+                }
             }
          
 
@@ -610,6 +626,7 @@ namespace Plugin {
                 , MaxRetries(-1)
                 , WaitTime(15)
                 , LogFile()
+                , WpsWalkTime(125)
             {
                 Add(_T("connector"), &ConnectorDirectory);
                 Add(_T("interface"), &Interface);
@@ -620,6 +637,7 @@ namespace Plugin {
                 Add(_T("maxretries"), &MaxRetries);
                 Add(_T("waittime"), &WaitTime);
                 Add(_T("logfile"), &LogFile);
+                Add(_T("wpswalktime"), &WpsWalkTime);
             }
             virtual ~Config()
             {
@@ -635,6 +653,7 @@ namespace Plugin {
             Core::JSON::DecSInt32 MaxRetries;
             Core::JSON::DecUInt8 WaitTime;
             Core::JSON::String LogFile;
+            Core::JSON::DecSInt32 WpsWalkTime;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
@@ -845,6 +864,7 @@ namespace Plugin {
         uint32_t endpoint_scan();
         uint32_t endpoint_connect(const JsonData::WifiControl::ConnectParamsData& params);
         uint32_t endpoint_disconnect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t get_pin(Core::JSON::String& response) const;
         uint32_t get_status(JsonData::WifiControl::StatusData& response) const;
         uint32_t get_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response) const;
         uint32_t get_configs(Core::JSON::ArrayType<JsonData::WifiControl::ConfigInfo>& response) const;
@@ -854,22 +874,22 @@ namespace Plugin {
         void event_scanresults(const Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& list);
         void event_networkchange();
         void event_connectionchange(const string& ssid);
-        void event_wpsresult(const uint32_t result);
 
         inline uint32_t Connect(const string& ssid,
-                                const JsonData::WifiControl::ConnectParamsData::AutoconnectType wps=JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE,
-                                const string pin="")
+                                const JsonData::WifiControl::ConnectParamsData::AutoconnectType actype=JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE,
+                                const string& pin=string(""))
         {
             if (_autoConnectEnabled == true) {
                 _autoConnect.Revoke();
             }
 
-            printf("%s \n",__PRETTY_FUNCTION__);
             uint32_t result;
 
-            if ( wps != JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE){
+            if(_wpsConnect.Active()){
                 _wpsConnect.Revoke();
-                _wpsConnect.Invoke(ssid,wps,pin);
+            }
+            if ( actype != JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE){
+                result = _wpsConnect.Invoke(ssid, actype, pin, _walkTime);
             } else {
                 result = _controller->Connect(ssid);
                 if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
@@ -939,6 +959,7 @@ namespace Plugin {
     private:
         uint8_t _skipURL;
         uint8_t _retryInterval;
+        uint32_t _walkTime;
         uint32_t _maxRetries;
         PluginHost::IShell* _service;
         string _configurationStore;
