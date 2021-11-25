@@ -490,8 +490,8 @@ namespace Plugin
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_DISCONNECTED: {
+            //When WPS operation is active, hide the notification till credentials are received
             if(!_wpsConnect.Active()) {
-                //If Credentials was already received, ignore
                 string message("{ \"event\": \"Disconnected\" }");
                 _service->Notify(message);
                 event_connectionchange(string());
@@ -519,7 +519,7 @@ namespace Plugin
             break;
         }
         case WPASupplicant::Controller::WPS_EVENT_FAIL: {
-            //If Credentials was already received, ignore
+            //If Credentials was already received, ignore the fail.
             if(!_wpsConnect.Credentials()){
                 _wpsConnect.Completed(Core::ERROR_ASYNC_FAILED);
                 event_connectionchange(string());

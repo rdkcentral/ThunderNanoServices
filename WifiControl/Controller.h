@@ -130,8 +130,6 @@ namespace WPASupplicant {
             virtual void Completed(const uint32_t result) = 0;
         };
 
-
-
     private:
         static constexpr uint32_t MaxConnectionTime = 3000;
 

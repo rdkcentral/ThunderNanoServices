@@ -436,10 +436,10 @@ namespace WPASupplicant {
     void Controller::Reevaluate()
     {
 
-        if(_wpsRequest.Active() == false) { //When WPS Request is active, a temporary network is enabled. We will not add it
+        if(_wpsRequest.Active() == false) { 
+            //When WPS Request is active, a temporary network is enabled by supplicant. We will not add/enable it.
 
             NetworkInfoContainer::iterator index(_networks.begin());
-            int32_t i = 0;
 
             while ((index != _networks.end()) && (index->second.HasDetail() == true)) {
                 index++;
@@ -449,7 +449,7 @@ namespace WPASupplicant {
                     // send out a request for detail.
                     Submit(&_detailRequest);
                 }
-            } else if (_enabled.size() == 0 && _wpsRequest.Active() == false) {
+            } else if (_enabled.size() == 0) {
                 // send out a request for the network list
                 if (_networkRequest.Set() == true) {
                     // send out a request for detail.

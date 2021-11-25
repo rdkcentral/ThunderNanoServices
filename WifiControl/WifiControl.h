@@ -1,6 +1,5 @@
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
- *
  * following copyright and licenses apply:
  *
  * Copyright 2020 Metrological
@@ -80,11 +79,12 @@ namespace Plugin {
                 _connector = connector;
 
                 Core::Process::Options options(application);
+
                 /* interface name *mandatory */
                 options.Add(_T("-i")+ _interfaceName);
-
                 /* ctrl_interface parameter *mandatory */
                 options.Add(_T("-C") + _connector);
+
                 /* driver name (can be multiple drivers: nl80211,wext) *optional */
                 options.Add(_T("-Dnl80211"));
 
@@ -429,7 +429,6 @@ namespace Plugin {
                 SUCCESS
             };
 
-
          using Job = Core::WorkerPool::JobType<WpsConnect&>;
             
          public:
@@ -486,6 +485,7 @@ namespace Plugin {
                 _adminLock.Lock();
                 if(_state == states::REQUESTED) {
                     if (result != Core::ERROR_NONE) {
+                         _job.Revoke();
                         Reset();
                     }
                     else {
@@ -526,57 +526,58 @@ namespace Plugin {
 
             void Dispatch(){
                 
-                
                 _adminLock.Lock();
+                uint32_t result = Core::ERROR_NONE;
+
                 if (_state == states::SUCCESS) {
                     //Lets get the Credentials
                     WPASupplicant::Network::wpsauthtypes auth;
-                    uint32_t result = Core::ERROR_NONE;
                     string networkKey;
                     string ssid;
-                    _controller->GetWpsCredentials(ssid,networkKey,auth);
+                    result = _controller->GetWpsCredentials(ssid,networkKey,auth);
+                    if((result == Core::ERROR_NONE) && (networkKey.empty()==false)) {
 
-                    //Create a new ConfigInfo
-                    JsonData::WifiControl::ConfigInfo configInfo;
-                    configInfo.Hidden = false;
-                    configInfo.Ssid = ssid;
+                        //Create a new ConfigInfo
+                        JsonData::WifiControl::ConfigInfo configInfo;
+                        configInfo.Hidden = false;
+                        configInfo.Ssid = ssid;
 
 
-                    if(auth == WPASupplicant::Network::wpsauthtypes::WPS_AUTH_OPEN) {
-                        configInfo.Type = JsonData::WifiControl::TypeType::UNSECURE;
-                    } else{
-                        uint8_t protocolFlags = 0;
+                        if(auth == WPASupplicant::Network::wpsauthtypes::WPS_AUTH_OPEN) {
+                            configInfo.Type = JsonData::WifiControl::TypeType::UNSECURE;
+                        } else{
+                            uint8_t protocolFlags = 0;
 
-                        switch (auth) {
-                            case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPAPSK:
-                              protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
-                           break;
-                           case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPA2PSK:
-                              protocolFlags = WPASupplicant::Config::wpa_protocol::WPA2;
-                           break;
+                            switch (auth) {
+                                case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPAPSK:
+                                  protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
+                               break;
+                               case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPA2PSK:
+                                  protocolFlags = WPASupplicant::Config::wpa_protocol::WPA2;
+                               break;
 
-                           default:
-                              // Handle other Protocol types?
-                              TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type. ")));
-                        }
+                               default:
+                                  // Handle other Protocol types?
+                                  TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type. ")));
+                            }
 
-                        configInfo.Type = GetWPAProtocolType(protocolFlags);
-                        if(!networkKey.empty()) {
+                            configInfo.Type = GetWPAProtocolType(protocolFlags);
                             configInfo.Psk = networkKey;
                         }
+
+                        _controller->CancelWps();
+                        Reset();
+                        _adminLock.Unlock();
+
+                        WPASupplicant::Config profile(_controller->Create(ssid));
+                        if (WifiControl::UpdateConfig(profile, configInfo) != true) {
+                            result = Core::ERROR_GENERAL;
+                           _controller->Destroy(ssid);
+                        }else {
+                            result = _parent.Connect(ssid);
+                        }
                     }
 
-                    _controller->CancelWps();
-                    Reset();
-                    _adminLock.Unlock();
-
-                    WPASupplicant::Config profile(_controller->Create(ssid));
-                    if (WifiControl::UpdateConfig(profile, configInfo) != true) {
-                        result = Core::ERROR_GENERAL;
-                       _controller->Destroy(ssid);
-                    }else {
-                        result = _parent.Connect(ssid);
-                    }
                     if((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS)){
                         _parent.event_connectionchange(string());
                     }
