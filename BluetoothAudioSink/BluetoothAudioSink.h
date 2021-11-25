@@ -756,7 +756,7 @@ namespace Plugin {
             _lock.Lock();
 
             if (_sink != nullptr) {
-                result = _sink->Latency(latency);
+                _sink->Latency(latency);
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
             }
