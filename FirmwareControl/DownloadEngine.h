@@ -74,10 +74,11 @@ namespace PluginHost {
             Core::URL url(locator);
             return BaseClass::CollectInfo(url);
         }
-        uint32_t Start(const string& locator, const string& destination, const string& hashValue, const uint64_t position)
+        uint32_t Start(const string& locator, const string& destination, const string& hashContextFile, const string& hashValue, const uint64_t position)
         {
             Core::URL url(locator);
             uint32_t result = (url.IsValid() == true ? Core::ERROR_INPROGRESS : Core::ERROR_INCORRECT_URL);
+
 
             _adminLock.Lock();
 
@@ -88,6 +89,7 @@ namespace PluginHost {
             if (hashValue.empty() == false) {
                 if (HashStringToBytes(hashValue, _HMAC) == true) {
                     _checkHash = true;
+                    _hashContextFile = hashContextFile;
                 } else {
                     result = Core::ERROR_INCORRECT_HASH;
                 }
@@ -98,8 +100,10 @@ namespace PluginHost {
                 result = Core::ERROR_OPENING_FAILED;
                 _storage = destination;
 
-                (position == 0)? _storage.Create(): _storage.Open(false);
+                (position == 0) ? _storage.Create(): _storage.Open(false);
                 if (_storage.IsOpen() == true) {
+                    ((position != 0) && (_checkHash == true)) ? LoadHashContext() : RemoveHashContextFile();
+
                     result = BaseClass::Download(url, _storage, position);
 
                     if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
@@ -133,15 +137,27 @@ namespace PluginHost {
                 _notifier->NotifyStatus(result);
             }
         }
+
         void Transferred(const uint32_t result, const Web::SignedFileBodyType<Crypto::SHA256>& destination) override
         {
             uint32_t status = result;
 
             // Let's see if the calculated HMAC is what we expected....
-            if ((status == Core::ERROR_NONE) && (_checkHash == true) &&
-                (::memcmp(const_cast<Web::SignedFileBodyType<Crypto::SHA256>&>(destination).Hash().Result(), _HMAC, Crypto::HASH_SHA256) != 0)) {
+            if (_checkHash == true) {
 
-                status = Core::ERROR_UNAUTHENTICATED;
+                if (status == Core::ERROR_NONE) {
+                    if (::memcmp(const_cast<Web::SignedFileBodyType<Crypto::SHA256>&>(destination).Hash().Result(),
+                                 _HMAC, Crypto::HASH_SHA256) != 0) {
+
+                        status = Core::ERROR_UNAUTHENTICATED;
+                    }
+
+                } else if (status == Core::ERROR_UNAVAILABLE) {
+                    _storage.LoadFileInfo();
+                    if (_storage.Position() != 0) {
+                        SaveContext((destination).Hash().CurrentContext());
+                    }
+                }
             }
             _storage.Close();
 
@@ -168,6 +184,44 @@ namespace PluginHost {
             return (result);
         }
 
+        void LoadHashContext()
+        {
+            uint32_t contextLength = Crypto::SHA256::ContextLength();
+
+            _hashContextFile.Open();
+            if (_hashContextFile.IsOpen() == true) {
+
+                uint8_t context[contextLength];
+                memset(context, 0, contextLength);
+
+                _hashContextFile.Position(false, 0);
+                _hashContextFile.Read(context, contextLength);
+                _hashContextFile.Destroy();
+
+                BaseClass::LoadHashContext(context);
+            }
+        }
+
+        void SaveContext(const uint8_t context[])
+        {
+            uint32_t contextLength = Crypto::SHA256::ContextLength();
+            _hashContextFile.Create();
+
+            if (_hashContextFile.IsOpen() == true) {
+
+                _hashContextFile.Write(context, contextLength);
+                _hashContextFile.Close();
+            }
+        }
+
+        inline void RemoveHashContextFile()
+        {
+            Core::File hashContextFile(_hashContextFile);
+            if (hashContextFile.Exists()) {
+                hashContextFile.Destroy();
+            }
+        }
+
         inline bool HashStringToBytes(const string& hash, uint8_t hashHex[Crypto::HASH_SHA256])
         {
             bool status = true;
@@ -184,7 +238,7 @@ namespace PluginHost {
                     break;
                 }
             }
-	    return status;
+            return status;
         }
 
         friend Core::ThreadPool::JobType<DownloadEngine&>;
@@ -226,6 +280,7 @@ namespace PluginHost {
         Core::CriticalSection _adminLock;
         INotifier* _notifier;
         Core::File _storage;
+        Core::File _hashContextFile;
 
         uint32_t _transferred;
         uint16_t _interval;
@@ -235,6 +290,7 @@ namespace PluginHost {
         bool _checkHash;
         bool _isResumeSupported;
         uint8_t _HMAC[Crypto::HASH_SHA256];
+
         Core::WorkerPool::JobType<DownloadEngine&> _activity;
     };
 }
