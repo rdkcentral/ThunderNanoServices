@@ -172,7 +172,6 @@ namespace Plugin {
 
             if (IsValid() == true) {
                 delay = (_latency + (_available) / (_transport.BytesPerSample())); // counting in samples here
-                printf("%i, %i = %i\n", _available, _latency, delay);
             } else {
                 result = Core::ERROR_BAD_REQUEST;
             }

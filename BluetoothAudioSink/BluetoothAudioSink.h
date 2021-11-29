@@ -346,11 +346,11 @@ namespace Plugin {
 
                 return (result);
             }
-            void Latency(int16_t& latency) const
+            uint32_t Latency() const
             {
-                latency = _latency;
+                return (_latency);
             }
-            uint32 Latency(const int16_t latency /* ms */)
+            uint32_t Latency(const int16_t latency /* ms */)
             {
                 uint32_t result = Core::ERROR_NONE;
 
@@ -756,7 +756,7 @@ namespace Plugin {
             _lock.Lock();
 
             if (_sink != nullptr) {
-                _sink->Latency(latency);
+                latency = _sink->Latency();
             } else {
                 result = Core::ERROR_ILLEGAL_STATE;
             }
