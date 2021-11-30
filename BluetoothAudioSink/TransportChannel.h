@@ -124,6 +124,10 @@ namespace A2DP {
             ASSERT(_codec != nullptr);
             return (_codec->Channels());
         }
+        uint8_t BytesPerSample() const
+        {
+            return (2); /* always 16-bit samples! */
+        }
         uint16_t MinFrameSize() const
         {
             ASSERT(_codec != nullptr);
@@ -157,7 +161,7 @@ namespace A2DP {
                 }
 
                 // Timestamp clock frequency is the same as the sampling frequency.
-                _timestamp += (consumed / (_codec->Channels() * 2 /* always 16-bit samples! */));
+                _timestamp += (consumed / (_codec->Channels() * BytesPerSample()));
 
                 _sequence++;
             }
