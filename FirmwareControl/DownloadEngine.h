@@ -186,30 +186,28 @@ namespace PluginHost {
 
         void LoadHashContext()
         {
-            uint32_t contextLength = Crypto::SHA256::ContextLength();
+            uint32_t contextLength = sizeof(Crypto::SHA256::Context);
 
             _hashContextFile.Open();
             if (_hashContextFile.IsOpen() == true) {
 
-                uint8_t context[contextLength];
-                memset(context, 0, contextLength);
-
+                Crypto::SHA256::Context context;
                 _hashContextFile.Position(false, 0);
-                _hashContextFile.Read(context, contextLength);
+                _hashContextFile.Read(reinterpret_cast<uint8_t*>(&context), contextLength);
                 _hashContextFile.Destroy();
 
-                BaseClass::LoadHashContext(context);
+                BaseClass::LoadHash(context);
             }
         }
 
-        void SaveContext(const uint8_t context[])
+        void SaveContext(const Crypto::SHA256::Context& context)
         {
-            uint32_t contextLength = Crypto::SHA256::ContextLength();
+            uint32_t contextLength = sizeof(Crypto::SHA256::Context);
             _hashContextFile.Create();
 
             if (_hashContextFile.IsOpen() == true) {
 
-                _hashContextFile.Write(context, contextLength);
+                _hashContextFile.Write(reinterpret_cast<const uint8_t*>(&context), contextLength);
                 _hashContextFile.Close();
             }
         }
