@@ -16,6 +16,7 @@
 # limitations under the License.
 
 find_package(${NAMESPACE}COM REQUIRED)
+find_package(${NAMESPACE}WebSocket REQUIRED)
 find_package(securityagent QUIET)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -29,6 +30,7 @@ set_target_properties(JSONRPCClient PROPERTIES
 target_link_libraries(JSONRPCClient 
         PRIVATE
         ${NAMESPACE}COM::${NAMESPACE}COM
+        ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
         CompileSettingsDebug::CompileSettingsDebug
     )
 

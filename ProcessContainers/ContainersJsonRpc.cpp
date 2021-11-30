@@ -147,23 +147,25 @@ namespace Plugin {
         if (container != nullptr) {
             auto iterator = container->NetworkInterfaces();
 
-            while(iterator->Next() == true) {
-                NetworksData networkData;
+            if (iterator != nullptr) {
+                while(iterator->Next() == true) {
+                    NetworksData networkData;
 
-                networkData.Interface = iterator->Name();
-                
-                for (int ip = 0; ip < iterator->NumAddresses(); ip++) {
-                    Core::JSON::String ipJSON;
-                    ipJSON = iterator->Address(ip);
+                    networkData.Interface = iterator->Name();
 
-                    networkData.Ips.Add(ipJSON);
+                    for (int ip = 0; ip < iterator->NumAddresses(); ip++) {
+                        Core::JSON::String ipJSON;
+                        ipJSON = iterator->Address(ip);
+
+                        networkData.Ips.Add(ipJSON);
+                    }
+                    response.Add(networkData);
                 }
-                response.Add(networkData);
+                iterator->Release();
             }
-
-            iterator->Release();
             container->Release();
-        } else {
+        }
+        else {
             result = Core::ERROR_UNAVAILABLE;
         }
         
@@ -183,14 +185,15 @@ namespace Plugin {
 
         if (found != nullptr) {
             auto memoryInfo = found->Memory();
-            
-            response.Allocated = memoryInfo->Allocated();
-            response.Resident = memoryInfo->Resident();
-            response.Shared = memoryInfo->Shared();
-
-            memoryInfo->Release();
+            if (memoryInfo != nullptr) {
+                response.Allocated = memoryInfo->Allocated();
+                response.Resident = memoryInfo->Resident();
+                response.Shared = memoryInfo->Shared();
+                memoryInfo->Release();
+            }
             found->Release();
-        } else {
+        }
+        else {
             result = Core::ERROR_UNAVAILABLE;
         }
         
@@ -211,18 +214,22 @@ namespace Plugin {
         if (container != nullptr) {
             auto processorInfo = container->ProcessorInfo();
             
-            response.Total = processorInfo->TotalUsage();
-            
-            for (int i = 0; i < processorInfo->NumberOfCores(); i++) {
-                Core::JSON::DecUInt64 coreTime;
-                coreTime = processorInfo->CoreUsage(i);
+            if (processorInfo != nullptr) {
+                response.Total = processorInfo->TotalUsage();
 
-                response.Cores.Add(coreTime);
+                for (int i = 0; i < processorInfo->NumberOfCores(); i++) {
+                    Core::JSON::DecUInt64 coreTime;
+                    coreTime = processorInfo->CoreUsage(i);
+
+                    response.Cores.Add(coreTime);
+                }
+
+                processorInfo->Release();
             }
 
-            processorInfo->Release();
             container->Release();
-        } else {
+        }
+        else {
             result = Core::ERROR_UNAVAILABLE;
         }
         
