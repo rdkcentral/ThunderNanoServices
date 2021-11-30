@@ -83,6 +83,7 @@ namespace Plugin {
                 , SDPService()
             {
                 Add(_T("controller"), &Controller);
+                Add(_T("latency"), &Latency);
                 Add(_T("sdpservice"), &SDPService);
                 Add(_T("codecs"), &Codecs);
             }
@@ -90,6 +91,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String Controller;
+            Core::JSON::DecUInt16 Latency;
             SDPServiceConfig SDPService;
             Core::JSON::String Codecs;
         }; // class Config
@@ -252,6 +254,7 @@ namespace Plugin {
                 , _type(Exchange::IBluetoothAudioSink::UNKNOWN)
                 , _codecList()
                 , _drmList()
+                , _latency(0)
                 , _player(nullptr)
                 , _job()
             {
@@ -343,6 +346,38 @@ namespace Plugin {
 
                 return (result);
             }
+            uint32_t Latency() const
+            {
+                return (_latency);
+            }
+            uint32_t Latency(const int16_t latency /* ms */)
+            {
+                uint32_t result = Core::ERROR_NONE;
+
+                const int32_t hostLatency = _parent.ControllerLatency();
+
+                if ((latency >= -hostLatency) && (latency <= 10000)) {
+                    _latency = latency;
+
+                    if (_player != nullptr) {
+                        _player->Latency(hostLatency + _latency);
+                    }
+                } else {
+                    result = Core::ERROR_BAD_REQUEST;
+                }
+
+                return (result);
+            }
+            uint32_t Delay(uint32_t& delay /* samples */) const
+            {
+                uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+                if (_player != nullptr) {
+                    result = _player->Delay(delay);
+                }
+
+                return (result);
+            }
             uint32_t Codec(Exchange::IBluetoothAudioSink::CodecProperties& properties) const
             {
                 if (_endpoint != nullptr) {
@@ -393,8 +428,8 @@ namespace Plugin {
 
                 if (_endpoint != nullptr) {
                     if (_player == nullptr) {
-                        TRACE(ProfileFlow, (_T("Configuring audio endpoint 0x%02x to: sample rate: %i Hz, resolution: %i bits per sample, channels: %i, frame rate: %i Hz"),
-                                            _endpoint->SEID(), format.SampleRate, format.Resolution, format.Channels, format.FrameRate));
+                        TRACE(ProfileFlow, (_T("Configuring audio endpoint 0x%02x to: sample rate: %i Hz, resolution: %i bits per sample, channels: %i, frame rate: %i.%02i Hz"),
+                                            _endpoint->SEID(), format.SampleRate, format.Resolution, format.Channels, (format.FrameRate / 100), (format.FrameRate % 100)));
 
                         if ((result = _endpoint->Configure(format, _codecSettings)) == Core::ERROR_NONE) {
                             if ((result = _endpoint->Open()) == Core::ERROR_NONE) {
@@ -406,6 +441,7 @@ namespace Plugin {
                                     if (_player->IsValid() == true) {
                                         TRACE(ProfileFlow, (_T("Successfully created Bluetooth audio playback session")));
                                         result = Core::ERROR_NONE;
+                                        _player->Latency(_parent.ControllerLatency() + _latency);
                                         State(Exchange::IBluetoothAudioSink::READY);
                                     } else {
                                         TRACE(Trace::Error, (_T("Failed to create audio player")));
@@ -658,6 +694,7 @@ namespace Plugin {
             Exchange::IBluetoothAudioSink::devicetype _type;
             std::list<Exchange::IBluetoothAudioSink::audiocodec> _codecList;
             std::list<Exchange::IBluetoothAudioSink::drmscheme> _drmList;
+            uint32_t _latency; // device latency
             AudioPlayer* _player;
             DecoupledJob _job;
         }; // class A2DPSink
@@ -670,6 +707,7 @@ namespace Plugin {
             , _service(nullptr)
             , _comNotificationSink(*this)
             , _controller()
+            , _latency(0)
             , _sdpServer()
             , _sink(nullptr)
             , _sinkSEID(1)
@@ -693,6 +731,40 @@ namespace Plugin {
         uint32_t Assign(const string& device) override;
 
         uint32_t Revoke() override;
+
+        uint32_t Latency(const int16_t latency) override
+        {
+            uint32_t result = Core::ERROR_NONE;
+
+            _lock.Lock();
+
+            if (_sink != nullptr) {
+                result = _sink->Latency(latency);
+            } else {
+                result = Core::ERROR_ILLEGAL_STATE;
+            }
+
+            _lock.Unlock();
+
+            return (result);
+        }
+
+        uint32_t Latency(int16_t& latency) const override
+        {
+            uint32_t result = Core::ERROR_NONE;
+
+            _lock.Lock();
+
+            if (_sink != nullptr) {
+                latency = _sink->Latency();
+            } else {
+                result = Core::ERROR_ILLEGAL_STATE;
+            }
+
+            _lock.Unlock();
+
+            return (result);
+        }
 
         uint32_t State(Exchange::IBluetoothAudioSink::state& sinkState) const override
         {
@@ -891,10 +963,32 @@ namespace Plugin {
             return (result);
         }
 
+        uint32_t Delay(uint32_t& delay) const override
+        {
+            uint32_t result = Core::ERROR_NONE;
+
+            _lock.Lock();
+
+            if (_sink != nullptr) {
+                result = _sink->Delay(delay);
+            } else {
+                result = Core::ERROR_ILLEGAL_STATE;
+            }
+
+            _lock.Unlock();
+
+            return (result);
+        }
+
     public:
         Exchange::IBluetooth* Controller() const
         {
             return (_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
+        }
+
+        uint16_t ControllerLatency() const
+        {
+            return (_latency);
         }
 
     public:
@@ -941,6 +1035,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Core::Sink<ComNotificationSink> _comNotificationSink;
         string _controller;
+        uint16_t _latency; // host latency
         SDP::ServiceDiscoveryServer _sdpServer;
         A2DPSink *_sink;
         uint32_t _sinkSEID;
