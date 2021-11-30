@@ -155,7 +155,7 @@ namespace PluginHost {
                 } else if (status == Core::ERROR_UNAVAILABLE) {
                     _storage.LoadFileInfo();
                     if (_storage.Position() != 0) {
-                        SaveContext((destination).Hash().CurrentContext());
+                        SaveContext(destination.Hash().CurrentContext());
                     }
                 }
             }
