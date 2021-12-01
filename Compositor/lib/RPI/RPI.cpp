@@ -34,6 +34,7 @@ extern "C" {
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 
 #ifdef __cplusplus
 }
@@ -297,7 +298,8 @@ class CompositorImplementation;
                 DMATransfer () = delete;
                 DMATransfer (CompositorImplementation & compositor) : Core::Thread (/*0, _T ("")*/), _compositor (compositor), _listen { -1 }, _transfer { -1 }, _addr { AF_UNIX, "/tmp/Compositor/DMA" }, _valid { _Initialize () } {}
                 ~DMATransfer () {
-                    Stop ();
+                    /* bool */ Wait (WPEFramework::Core::Thread::BLOCKED | WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+
                     /* valid_t */ _Deinitialize ();
                 }
 
@@ -311,12 +313,34 @@ class CompositorImplementation;
             public :
 
                 timeout_t Worker () override {
-                    // Never call 'us' again, delay the next call an infinite amount of time if the state is not 'stopped'
-                    timeout_t _ret = Core::infinite;
+                    // The actual time (schedule) resolution
+// TODO:: arbitrary value
+                    timeout_t _ret = 1000;
 
-                    if (IsRunning () != false) {
+                    Block ();
 
-                        // Blocking
+                    fd_set fds;
+
+                    FD_ZERO (&fds);
+                    FD_SET (_listen, &fds);
+
+                    // Just use 'polling'
+                    constexpr struct timespec timeout = { .tv_sec = 0, .tv_nsec = 0 };
+
+                    int err = pselect(_listen + 1, &fds, nullptr, nullptr, &timeout, nullptr);
+
+                    if (err < 0) {
+                        // Error
+                        TRACE (Trace::Error, (_T ("Unable to accept DMA connections")));
+
+                        Stop ();
+                    }
+                    else if (err == 0) {
+                        // Timeout, no (new) connection available
+                    }
+                    else if (FD_ISSET (_listen, &fds) != 0) {
+
+// TODO: set flags on _transfer ?
                         _transfer = accept (_listen, nullptr, nullptr);
 
                         // Do some processing on the clients
@@ -326,29 +350,35 @@ class CompositorImplementation;
 
                         std::string _props;
 
-                        if (Receive (_msg, _fd) && _compositor.FDFor (_msg, _fd, _props) && Send (_msg + _props, _fd) != false) {
-                            // Just wait for the remote peer to close the connection
-                            ssize_t _size = read (_transfer, nullptr, 0);
+                        if (_transfer > 0) {
+                            if (Receive (_msg, _fd) && _compositor.FDFor (_msg, _fd, _props) && Send (_msg + _props, _fd) != false) {
+                                // Just wait for the remote peer to close the connection
+                                ssize_t _size = read (_transfer, nullptr, 0);
 
-                            decltype (errno) _err = errno;
+                                decltype (errno) _err = errno;
 
-                            switch (_size) {
-                                case -1 :   // Error
-                                            TRACE (Trace::Error, (_T ("Error after DMA transfer : %d."), _err));
-                                            break;
-                                case 0  :   // remote has closed the connection
-                                            TRACE (Trace::Information, (_T ("Remote has closed the DMA connection.")));
-                                            break;
-                                default :   // Unexpected data available
-                                            TRACE (Trace::Error, (_T ("Unexpected data read after DMA transfer.")));
+                                switch (_size) {
+                                    case -1 :   // Error
+                                                TRACE (Trace::Error, (_T ("Error after DMA transfer : %d."), _err));
+                                                break;
+                                    case 0  :   // remote has closed the connection
+                                                 TRACE (Trace::Information, (_T ("Remote has closed the DMA connection.")));
+                                                break;
+                                    default :   // Unexpected data available
+                                                TRACE (Trace::Error, (_T ("Unexpected data read after DMA transfer.")));
+                                }
+
+                                /* int */ close (_transfer);
+
+                                _transfer = -1;
                             }
-
-                            /* int */ close (_transfer);
-
-                            _transfer = -1;
+                            else {
+                                TRACE (Trace::Error, (_T ("Failed to exchange DMA information for %s."),  _msg.length () > 0 ? _msg.c_str () : "'<no name provided>'"));
+                            }
                         }
                         else {
-                            TRACE (Trace::Error, (_T ("Failed to exchange DMA information for %s."),  _msg.length () > 0 ? _msg.c_str () : "'<no name provided>'"));
+                            // Not necessarily an error
+                            TRACE (Trace::Information, ( _T ("Premature incoming connection loss.") ));
                         }
                     }
 
@@ -409,13 +439,17 @@ class CompositorImplementation;
                         _ret = listen (_listen, queue_size) == 0;
                     }
 
+                    if (_ret != false) {
+                        _ret = fcntl (_listen, F_SETFL, O_NONBLOCK) == 0;
+                    }
+
                     return _ret;
                 }
 
                 valid_t _Deinitialize () {
                     valid_t _ret = false;
 
-                    _ret = close (_listen) == 0 && close (_transfer) == 0;
+                    _ret = _listen > 0 && close (_listen) == 0 && _transfer > 0 && close (_transfer) == 0;
 
                     // Delete the (bind) socket in the file system if no reference exist (anymore)
                     _ret = unlink (_addr.sun_path) == 0 && _ret;
