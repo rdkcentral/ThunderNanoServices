@@ -300,6 +300,8 @@ class CompositorImplementation;
                 ~DMATransfer () {
                     /* bool */ Wait (WPEFramework::Core::Thread::BLOCKED | WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
 
+                    Stop ();
+
                     /* valid_t */ _Deinitialize ();
                 }
 
@@ -315,7 +317,8 @@ class CompositorImplementation;
                 timeout_t Worker () override {
                     // The actual time (schedule) resolution
 // TODO:: arbitrary value
-                    timeout_t _ret = 1000;
+                    // Approximately 1 Hz
+                    constexpr timeout_t _ret = 1000;
 
                     Block ();
 
@@ -1972,21 +1975,22 @@ class CompositorImplementation;
                         SceneRenderer () = delete;
                         explicit SceneRenderer (EGL & egl, GLES & gles, CompositorImplementation & compositor) : RenderThread (egl, gles), _compositor { compositor } {}
 
-                        ~SceneRenderer () {}
+                        ~SceneRenderer () {
+                            Stop ();
+                        }
 
                         timeout_t Worker () override {
-                            // Never call us again if the state remains blocked
-                            timeout_t _ret = Core::infinite;
+                            // 'Lightning speed' frame flipping
+                            constexpr timeout_t _ret = 0;
 
-                            while (IsRunning () != false) {
-                                EGL::valid_t _status = ( Render () && _compositor.FrameFlip () ) != false;
+                            EGL::valid_t _status = ( Render () && _compositor.FrameFlip () ) != false;
 
-                                if (_status != true) {
-                                    break;
-                                }
+                            if (_status != false) {
+                                Block ();
                             }
-
-                            Stop ();
+                            else {
+                                Stop ();
+                            }
 
                             return _ret;
                         }
@@ -2046,7 +2050,7 @@ class CompositorImplementation;
                         }
 
                         timeout_t Worker () override {
-                            timeout_t _ret = WPEFramework::Core::infinite;
+                            const timeout_t _ret = WPEFramework::Core::infinite;
 
                             EGL::valid_t _status = Render () != false;
 
