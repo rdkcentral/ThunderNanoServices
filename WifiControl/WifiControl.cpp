@@ -43,6 +43,7 @@ namespace Plugin
     WifiControl::WifiControl()
         : _skipURL(0)
         , _retryInterval(0)
+        , _walkTime(0)
         , _maxRetries(Core::NumberType<uint32_t>::Max())
         , _service(nullptr)
         , _configurationStore()
@@ -51,6 +52,8 @@ namespace Plugin
         , _controller()
         , _autoConnect(_controller)
         , _autoConnectEnabled(false)
+        , _wpsConnect(*this,_controller)
+        , _wpsDisabled(false)
     {
         RegisterAll();
     }
@@ -147,6 +150,9 @@ namespace Plugin
                         }
                     }
 
+                    _walkTime = config.WpsWalkTime.Value();
+                    _wpsDisabled = config.WpsDisabled.Value();
+
                     if (config.AutoConnect.Value() == false) {
                         _controller->Scan();
                     }
@@ -174,6 +180,7 @@ namespace Plugin
 #ifndef USE_WIFI_HAL
 
         _autoConnect.Revoke();
+        _wpsConnect.Revoke();
         _controller->Callback(nullptr);
         _controller->Terminate();
         _controller.Release();
@@ -485,10 +492,15 @@ namespace Plugin
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_DISCONNECTED: {
-            string message("{ \"event\": \"Disconnected\" }");
-            _service->Notify(message);
-            event_connectionchange(string());
-            _autoConnect.Disconnected();
+            //When WPS operation is active, hide the notification till credentials are received
+            if(!_wpsConnect.Active()) {
+                string message("{ \"event\": \"Disconnected\" }");
+                _service->Notify(message);
+                event_connectionchange(string());
+                _autoConnect.Disconnected();
+            }else {
+                _wpsConnect.Disconnected();
+            }
             break;
         }
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_CHANGED: {
@@ -497,13 +509,43 @@ namespace Plugin
             event_networkchange();
             break;
         }
+
+        case WPASupplicant::Controller::WPS_EVENT_CRED_RECEIVED: {
+            _wpsConnect.Completed(Core::ERROR_NONE);
+            break;
+        }
+
+        case WPASupplicant::Controller::WPS_EVENT_TIMEOUT: {
+            _wpsConnect.Completed(Core::ERROR_TIMEDOUT);
+            event_connectionchange(string());
+            break;
+        }
+        case WPASupplicant::Controller::WPS_EVENT_FAIL: {
+            //If Credentials was already received, ignore the fail.
+            if(!_wpsConnect.Credentials()){
+                _wpsConnect.Completed(Core::ERROR_ASYNC_FAILED);
+                event_connectionchange(string());
+            }
+            break;
+        }
+
+        case WPASupplicant::Controller::WPS_EVENT_OVERLAP: {
+            _wpsConnect.Completed(Core::ERROR_PENDING_CONDITIONS);
+            event_connectionchange(string());
+            break;
+        }
+
         case WPASupplicant::Controller::CTRL_EVENT_BSS_ADDED:
         case WPASupplicant::Controller::CTRL_EVENT_BSS_REMOVED:
         case WPASupplicant::Controller::CTRL_EVENT_TERMINATING:
         case WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND:
         case WPASupplicant::Controller::CTRL_EVENT_SCAN_STARTED:
         case WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED:
-        case WPASupplicant::Controller::WPS_AP_AVAILABLE:
+        case WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE:
+        case WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PBC:
+        case WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PIN:
+        case WPASupplicant::Controller::WPS_EVENT_ACTIVE:
+        case WPASupplicant::Controller::WPS_EVENT_DISABLE:
         case WPASupplicant::Controller::AP_ENABLED:
             break;
         }
