@@ -314,14 +314,14 @@ namespace Plugin {
                 Core::JSON::String DataUUID;
             };
 
-            class Profile : public Bluetooth::Profile {
+            class Profile : public Bluetooth::GATTProfile {
             public:
                 Profile() = delete;
                 Profile(const Profile&) = delete;
                 Profile& operator= (const Profile&) = delete;
 
                 Profile(const Config& config)
-                    : Bluetooth::Profile(true) {
+                    : Bluetooth::GATTProfile(true) {
                     VoiceService = Bluetooth::UUID(config.ServiceUUID.Value());
                     VoiceCommandChar = Bluetooth::UUID(config.CommandUUID.Value());
                     VoiceDataChar = Bluetooth::UUID(config.DataUUID.Value());
@@ -330,9 +330,9 @@ namespace Plugin {
                 }
 
             public:
-                void Find(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid, std::list<const Bluetooth::Profile::Service::Characteristic*>& characteristics) const
+                void Find(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid, std::list<const Bluetooth::GATTProfile::Service::Characteristic*>& characteristics) const
                 {
-                    const Bluetooth::Profile::Service* service = (*this)[serviceUuid];
+                    const Bluetooth::GATTProfile::Service* service = (*this)[serviceUuid];
                     if (service != nullptr) {
                         auto it = service->Characteristics();
                         while (it.Next() == true) {
@@ -342,10 +342,10 @@ namespace Plugin {
                         }
                     }
                 }
-                uint16_t FindHandle(const Bluetooth::Profile::Service::Characteristic& characteristic, const Bluetooth::UUID& descUuid) const
+                uint16_t FindHandle(const Bluetooth::GATTProfile::Service::Characteristic& characteristic, const Bluetooth::UUID& descUuid) const
                 {
                     uint16_t handle = 0;
-                    const Bluetooth::Profile::Service::Characteristic::Descriptor* descriptor = characteristic[descUuid];
+                    const Bluetooth::GATTProfile::Service::Characteristic::Descriptor* descriptor = characteristic[descUuid];
                     if (descriptor != nullptr) {
                         handle = descriptor->Handle();
                     }
@@ -353,15 +353,15 @@ namespace Plugin {
                 }
                 uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
                 {
-                    const Bluetooth::Profile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
+                    const Bluetooth::GATTProfile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
                     return (characteristic == nullptr ? 0 : characteristic->Handle());
                 }
                 uint16_t FindHandle(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid, const Bluetooth::UUID& descUuid) const
                 {
                     uint16_t handle = 0;
-                    const Bluetooth::Profile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
+                    const Bluetooth::GATTProfile::Service::Characteristic* characteristic = FindCharacteristic(serviceUuid, charUuid);
                     if (characteristic != nullptr) {
-                        const Bluetooth::Profile::Service::Characteristic::Descriptor* descriptor= (*characteristic)[descUuid];
+                        const Bluetooth::GATTProfile::Service::Characteristic::Descriptor* descriptor= (*characteristic)[descUuid];
                         if (descriptor != nullptr) {
                             handle = descriptor->Handle();
                         }
@@ -370,10 +370,10 @@ namespace Plugin {
                 }
 
             private:
-                const Bluetooth::Profile::Service::Characteristic* FindCharacteristic(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
+                const Bluetooth::GATTProfile::Service::Characteristic* FindCharacteristic(const Bluetooth::UUID& serviceUuid, const Bluetooth::UUID& charUuid) const
                 {
-                    const Bluetooth::Profile::Service::Characteristic* result = nullptr;
-                    const Bluetooth::Profile::Service* service = (*this)[serviceUuid];
+                    const Bluetooth::GATTProfile::Service::Characteristic* result = nullptr;
+                    const Bluetooth::GATTProfile::Service* service = (*this)[serviceUuid];
                     if (service != nullptr) {
                         result = (*service)[charUuid];
                     }
@@ -823,7 +823,7 @@ namespace Plugin {
             {
                 ASSERT (_profile != nullptr);
 
-                uint16_t modelNumberHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::ModelNumberString);
+                uint16_t modelNumberHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::DeviceInformation, Bluetooth::GATTProfile::Service::Characteristic::ModelNumberString);
                 if (modelNumberHandle != 0) {
                     _command.Read(modelNumberHandle);
                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
@@ -844,7 +844,7 @@ namespace Plugin {
             {
                 ASSERT (_profile != nullptr);
 
-                uint16_t serialNumberHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::SerialNumberString);
+                uint16_t serialNumberHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::DeviceInformation, Bluetooth::GATTProfile::Service::Characteristic::SerialNumberString);
                 if (serialNumberHandle != 0) {
                     _command.Read(serialNumberHandle);
                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
@@ -865,7 +865,7 @@ namespace Plugin {
             {
                 ASSERT (_profile != nullptr);
 
-                uint16_t firmwareRevisionHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::FirmwareRevisionString);
+                uint16_t firmwareRevisionHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::DeviceInformation, Bluetooth::GATTProfile::Service::Characteristic::FirmwareRevisionString);
                 if (firmwareRevisionHandle != 0) {
                     _command.Read(firmwareRevisionHandle);
                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
@@ -886,7 +886,7 @@ namespace Plugin {
             {
                 ASSERT (_profile != nullptr);
 
-                uint16_t manufacturerNameHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::ManufacturerNameString);
+                uint16_t manufacturerNameHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::DeviceInformation, Bluetooth::GATTProfile::Service::Characteristic::ManufacturerNameString);
                 if (manufacturerNameHandle != 0) {
                     _command.Read(manufacturerNameHandle);
                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
@@ -904,7 +904,7 @@ namespace Plugin {
             }
             void ReadHIDReportMap()
             {
-                uint16_t hidReportMapHandle = _profile->FindHandle(Bluetooth::Profile::Service::HumanInterfaceDevice, Bluetooth::Profile::Service::Characteristic::ReportMap);
+                uint16_t hidReportMapHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::HumanInterfaceDevice, Bluetooth::GATTProfile::Service::Characteristic::ReportMap);
                 if (hidReportMapHandle != 0) {
                     _command.Read(hidReportMapHandle);
                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
@@ -943,7 +943,7 @@ namespace Plugin {
                             }
 
                             if (_hidInputReports.empty() == false) {
-                                _profile->Find(Bluetooth::Profile::Service::HumanInterfaceDevice, Bluetooth::Profile::Service::Characteristic::Report, _hidReportCharacteristics);
+                                _profile->Find(Bluetooth::GATTProfile::Service::HumanInterfaceDevice, Bluetooth::GATTProfile::Service::Characteristic::Report, _hidReportCharacteristics);
                                 _hidReportCharacteristicsIterator = _hidReportCharacteristics.cbegin();
                                 ReadHIDReportReferences();
                             } else {
@@ -963,7 +963,7 @@ namespace Plugin {
             void ReadHIDReportReferences()
             {
                 if (_hidReportCharacteristicsIterator != _hidReportCharacteristics.cend()) {
-                    uint16_t referenceHandle = _profile->FindHandle(*(*_hidReportCharacteristicsIterator), Bluetooth::Profile::Service::Characteristic::Descriptor::ReportReference);
+                    uint16_t referenceHandle = _profile->FindHandle(*(*_hidReportCharacteristicsIterator), Bluetooth::GATTProfile::Service::Characteristic::Descriptor::ReportReference);
                     if (referenceHandle != 0) {
                         _command.Read(referenceHandle);
                         Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
@@ -1006,7 +1006,7 @@ namespace Plugin {
 
                 // Set all interesting handles...
                 if (_hidReportCharacteristicsIterator != _hidReportCharacteristics.cend()) {
-                    notificationHandle = _profile->FindHandle(*(*_hidReportCharacteristicsIterator), Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
+                    notificationHandle = _profile->FindHandle(*(*_hidReportCharacteristicsIterator), Bluetooth::GATTProfile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
 
                     if (notificationHandle == 0) {
                         // This is the control for the voice Data..
@@ -1022,22 +1022,22 @@ namespace Plugin {
                     }
                 }
                 else if (_batteryLevelHandle == static_cast<uint16_t>(~0)) {
-                    notificationHandle = _profile->FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel, Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
-                    _batteryLevelHandle = _profile->FindHandle(Bluetooth::Profile::Service::BatteryService, Bluetooth::Profile::Service::Characteristic::BatteryLevel);
+                    notificationHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::BatteryService, Bluetooth::GATTProfile::Service::Characteristic::BatteryLevel, Bluetooth::GATTProfile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
+                    _batteryLevelHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::BatteryService, Bluetooth::GATTProfile::Service::Characteristic::BatteryLevel);
                     EnableEvents(_T("Battery handling"), notificationHandle);
                 }
                 else if (_voiceCommandHandle == static_cast<uint16_t>(~0)) {
-                    notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar, Bluetooth::Profile::Service::Characteristic::Characteristic::Descriptor::ClientCharacteristicConfiguration);
+                    notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar, Bluetooth::GATTProfile::Service::Characteristic::Characteristic::Descriptor::ClientCharacteristicConfiguration);
                     _voiceCommandHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar);
                     EnableEvents(_T("Voice Command handling"), notificationHandle);
                 }
                 else if (_voiceDataHandle == static_cast<uint16_t>(~0)) {
-                    notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceDataChar, Bluetooth::Profile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
+                    notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceDataChar, Bluetooth::GATTProfile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
                     _voiceDataHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceDataChar);
                     EnableEvents(_T("Voice Data handling"), notificationHandle);
                 }
                 else {
-                    _softwareRevisionHandle = _profile->FindHandle(Bluetooth::Profile::Service::DeviceInformation, Bluetooth::Profile::Service::Characteristic::SoftwareRevisionString);
+                    _softwareRevisionHandle = _profile->FindHandle(Bluetooth::GATTProfile::Service::DeviceInformation, Bluetooth::GATTProfile::Service::Characteristic::SoftwareRevisionString);
 
                     // We are done with the profile, all is read, all is set, we hope :-) Time
                     // to register what we did.
@@ -1161,22 +1161,22 @@ namespace Plugin {
             }
             void DumpProfile() const
             {
-                Bluetooth::Profile::Iterator serviceIdx = _profile->Services();
+                Bluetooth::GATTProfile::Iterator serviceIdx = _profile->Services();
                 while (serviceIdx.Next() == true) {
-                    const Bluetooth::Profile::Service& service = serviceIdx.Current();
+                    const Bluetooth::GATTProfile::Service& service = serviceIdx.Current();
                     TRACE(Flow, (_T("[0x%04X] Service: [0x%04X]         %s"), service.Handle(), service.Max(), service.Name().c_str()));
 
-                    Bluetooth::Profile::Service::Iterator characteristicIdx = service.Characteristics();
+                    Bluetooth::GATTProfile::Service::Iterator characteristicIdx = service.Characteristics();
                     while (characteristicIdx.Next() == true) {
-                        const Bluetooth::Profile::Service::Characteristic& characteristic(characteristicIdx.Current());
+                        const Bluetooth::GATTProfile::Service::Characteristic& characteristic(characteristicIdx.Current());
                         const Bluetooth::UUID& type(characteristic.Type());
 
                         TRACE(Flow, (_T("[0x%04X]    Characteristic [0x%02X]: %s [%d]"), characteristic.Handle(), characteristic.Rights(), characteristic.Name().c_str(), characteristic.Error()));
                         TRACE(Flow, (_T("[0x%04X]                             %s"), (type.HasShort() ? type.Short() : 0x0000), characteristic.ToString().c_str()));
 
-                        Bluetooth::Profile::Service::Characteristic::Iterator descriptorIdx = characteristic.Descriptors();
+                        Bluetooth::GATTProfile::Service::Characteristic::Iterator descriptorIdx = characteristic.Descriptors();
                         while (descriptorIdx.Next() == true) {
-                            const Bluetooth::Profile::Service::Characteristic::Descriptor& descriptor(descriptorIdx.Current());
+                            const Bluetooth::GATTProfile::Service::Characteristic::Descriptor& descriptor(descriptorIdx.Current());
                             TRACE(Flow, (_T("[0x%04X]       Descriptor:         %s"), descriptor.Handle(), descriptor.Name().c_str()));
                         }
                     }
@@ -1221,8 +1221,8 @@ namespace Plugin {
             uint16_t _voiceDataHandle;
             uint16_t _voiceCommandHandle;
 
-            std::list<const Bluetooth::Profile::Service::Characteristic*> _hidReportCharacteristics;
-            std::list<const Bluetooth::Profile::Service::Characteristic*>::const_iterator _hidReportCharacteristicsIterator;
+            std::list<const Bluetooth::GATTProfile::Service::Characteristic*> _hidReportCharacteristics;
+            std::list<const Bluetooth::GATTProfile::Service::Characteristic*>::const_iterator _hidReportCharacteristicsIterator;
 
             USB::HID _hid;
             std::list<const USB::HID::Report*> _hidInputReports;
