@@ -445,12 +445,10 @@ namespace Plugin {
                 , _ssid()
             {
             }
-            ~WpsConnect()
+            ~WpsConnect() = default;
+
+            uint32_t Invoke(const string& ssid, const JsonData::WifiControl::ConnectParamsData::AutoconnectType actype, const string& pin, const uint32_t walkTime)
             {
-            }
-
-            uint32_t Invoke(const string ssid, const JsonData::WifiControl::ConnectParamsData::AutoconnectType actype, const string pin, uint32_t walkTime) {
-
                 uint32_t result = Core::ERROR_UNKNOWN_KEY;
 
                 _adminLock.Lock();
@@ -470,7 +468,8 @@ namespace Plugin {
                 return result;
             }
 
-            uint32_t Revoke() {
+            uint32_t Revoke()
+            {
                 uint32_t result = Core::ERROR_NONE;
                 _adminLock.Lock();
                 if(_state != states::IDLE) {
@@ -481,7 +480,8 @@ namespace Plugin {
                 return result;
             }
 
-            void Completed(const uint32_t result) {
+            void Completed(const uint32_t result)
+            {
                 _adminLock.Lock();
                 if(_state == states::REQUESTED) {
                     if (result != Core::ERROR_NONE) {
@@ -495,7 +495,8 @@ namespace Plugin {
                 _adminLock.Unlock();
             }            
         
-            void Disconnected(){
+            void Disconnected()
+            {
                 _adminLock.Lock();
                 if (_state == states::SUCCESS) {
                     _job.Revoke();
@@ -504,7 +505,8 @@ namespace Plugin {
                 _adminLock.Unlock();
             }
 
-            bool Active() {
+            bool Active() const
+            {
                 bool result = false;
                 _adminLock.Lock();
                 if (_state != states::IDLE) {
@@ -514,7 +516,8 @@ namespace Plugin {
                 return result;
             }
 
-            bool Credentials() {
+            bool Credentials() const
+            {
                 bool result = false;
                 _adminLock.Lock();
                 if (_state == states::SUCCESS) {
@@ -524,8 +527,8 @@ namespace Plugin {
                 return result;
             }
 
-            void Dispatch(){
-                
+            void Dispatch()
+            {
                 _adminLock.Lock();
                 uint32_t result = Core::ERROR_NONE;
 
@@ -597,13 +600,14 @@ namespace Plugin {
 
          private:
 
-         void Reset(){
+         void Reset()
+         {
              _state = states::IDLE;
              _ssid.clear();
          }
 
          private:
-           Core::CriticalSection _adminLock;
+           mutable Core::CriticalSection _adminLock;
            WifiControl& _parent;
            Core::ProxyType<WPASupplicant::Controller>& _controller;
            Job _job;
@@ -628,6 +632,7 @@ namespace Plugin {
                 , WaitTime(15)
                 , LogFile()
                 , WpsWalkTime(125)
+                , WpsDisabled(false)
             {
                 Add(_T("connector"), &ConnectorDirectory);
                 Add(_T("interface"), &Interface);
@@ -639,6 +644,7 @@ namespace Plugin {
                 Add(_T("waittime"), &WaitTime);
                 Add(_T("logfile"), &LogFile);
                 Add(_T("wpswalktime"), &WpsWalkTime);
+                Add(_T("wpsdisabled"), &WpsDisabled);
             }
             virtual ~Config()
             {
@@ -655,6 +661,7 @@ namespace Plugin {
             Core::JSON::DecUInt8 WaitTime;
             Core::JSON::String LogFile;
             Core::JSON::DecSInt32 WpsWalkTime;
+            Core::JSON::Boolean WpsDisabled;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
@@ -889,9 +896,17 @@ namespace Plugin {
             if(_wpsConnect.Active()){
                 _wpsConnect.Revoke();
             }
-            if ( actype != JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE){
-                result = _wpsConnect.Invoke(ssid, actype, pin, _walkTime);
+            if ( actype != JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE)
+            {
+                if(_wpsDisabled == false) {
+                    result = _wpsConnect.Invoke(ssid, actype, pin, _walkTime);
+                }
+                else{
+                    result = Core::ERROR_UNAVAILABLE;
+                }
+
             } else {
+
                 result = _controller->Connect(ssid);
                 if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
                     _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? 
@@ -970,6 +985,7 @@ namespace Plugin {
         AutoConnect _autoConnect;
         bool _autoConnectEnabled;
         WpsConnect _wpsConnect;
+        bool _wpsDisabled;
     };
 
 } // namespace Plugin

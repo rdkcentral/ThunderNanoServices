@@ -819,10 +819,7 @@ namespace WPASupplicant {
                 , _state(states::IDLE)
             {
             }
-
-            ~WpsRequest()
-            {
-            }
+            ~WpsRequest() = default;
 
             /*100e003d1026000131104500094e4554474541523236100300020020100f0002000810280001011027000c756e6576656e73656138313210200006b827ebf393af*/
             /*
@@ -859,8 +856,8 @@ namespace WPASupplicant {
              * b827ebf393af - Mac address
              *
              * */
-             void ParseAttributes(const Core::TextFragment& infoLine) {
-                 
+             void ParseAttributes(const Core::TextFragment& infoLine)
+             {
                  _adminLock.Lock();
                  
                  uint8_t data[infoLine.Length()];
@@ -904,8 +901,8 @@ namespace WPASupplicant {
                 _adminLock.Unlock();
             }
 
-            uint32_t Cancel() {
-
+            uint32_t Cancel()
+            {
                 uint32_t result = Core::ERROR_NONE;
 
                 if(_state == states::REQUESTED) {
@@ -922,7 +919,8 @@ namespace WPASupplicant {
             }
 
 
-            uint32_t InvokePbc(const uint64_t bssid){
+            uint32_t InvokePbc(const uint64_t bssid)
+            {
                 uint32_t result = Core::ERROR_NONE;
                 string cmd;
 
@@ -950,7 +948,8 @@ namespace WPASupplicant {
                 return (result);
             }
 
-            inline uint32_t CheckPin(const string& pin){
+            inline uint32_t CheckPin(const string& pin) const
+            {
                 uint32_t result = Core::ERROR_NONE;
 
                 CustomRequest exchange(string(_TXT("WPS_CHECK_PIN ")) + pin);
@@ -964,7 +963,8 @@ namespace WPASupplicant {
                 return (result);
             }
 
-            inline uint32_t InvokePin(const uint64_t bssid, const string& pin){
+            inline uint32_t InvokePin(const uint64_t bssid, const string& pin)
+            {
                 uint32_t result = Core::ERROR_NONE;
                 string cmd;
 
@@ -996,8 +996,8 @@ namespace WPASupplicant {
                 return (result);
             }
 
-
-            uint32_t GeneratePin(string& pin) {
+            uint32_t GeneratePin(string& pin) const
+            {
                 uint32_t result = Core::ERROR_NONE;
 
                  CustomRequest exchange(string(_TXT("WPS_PIN get")));
@@ -1015,7 +1015,8 @@ namespace WPASupplicant {
             }
 
 
-            bool Credentials() {
+            bool Credentials() const
+            {
                 bool result = false;
                 _adminLock.Lock();
                 result = (_ssid.empty()==false && _networkKey.empty()==false);
@@ -1023,7 +1024,8 @@ namespace WPASupplicant {
                 return result;
             }
 
-            bool Active() {
+            bool Active() const
+            {
                 bool result = false;
                 _adminLock.Lock();
                 result = (_state == states::REQUESTED);
@@ -1031,7 +1033,8 @@ namespace WPASupplicant {
                 return result;
             }
 
-            void Reset(){
+            void Reset()
+            {
                 _adminLock.Lock();
                 _ssid.clear();
                 _networkKey.clear();
@@ -1040,38 +1043,41 @@ namespace WPASupplicant {
                 _adminLock.Unlock();
             }
 
-            const string NetworkKey(){
+            const string NetworkKey() const
+            {
                 _adminLock.Lock();
                 const string key = _networkKey;
                 _adminLock.Unlock();
                 return key;
             }
 
-            const string SSID(){
+            const string SSID() const
+            {
                 _adminLock.Lock();
                 const string ssid = _ssid;
                 _adminLock.Unlock();
                 return ssid;
             }
 
-            WPASupplicant::Network::wpsauthtypes AuthType(){
+            const WPASupplicant::Network::wpsauthtypes AuthType() const
+            {
                 _adminLock.Lock();
-                WPASupplicant::Network::wpsauthtypes auth =  _authType;
+                const WPASupplicant::Network::wpsauthtypes auth =  _authType;
                 _adminLock.Unlock();
                 return auth;
             }
         private:
-                uint16_t ReadBE16(const uint8_t *data){
-                    return ((data[0] << 8) | data[1]);
-                }
+            uint16_t ReadBE16(const uint8_t *data)
+            {
+                return ((data[0] << 8) | data[1]);
+            }
         private:
-                Controller& _parent;
-                Core::CriticalSection _adminLock;
-                string _ssid;
-                string _networkKey;
-                WPASupplicant::Network::wpsauthtypes _authType;
-                states _state;
-
+            Controller& _parent;
+            mutable Core::CriticalSection _adminLock;
+            string _ssid;
+            string _networkKey;
+            WPASupplicant::Network::wpsauthtypes _authType;
+            states _state;
         };
 
         class ConnectRequest : public Request {
@@ -1735,20 +1741,21 @@ namespace WPASupplicant {
             return (result);
         }
 
-        inline uint32_t CancelWps() {
+        inline uint32_t CancelWps()
+        {
             return (_wpsRequest.Cancel());
         }
 
-
-        inline uint32_t StartWpsPbc(const string& ssid){
-
+        inline uint32_t StartWpsPbc(const string& ssid)
+        {
             uint64_t bssid = BSSIDFromSSID(ssid);
             return (_wpsRequest.InvokePbc(bssid));
         }
 
-        inline uint32_t StartWpsPin(const string& ssid, const string& pin){
-
+        inline uint32_t StartWpsPin(const string& ssid, const string& pin)
+        {
             uint32_t result = Core::ERROR_INCOMPLETE_CONFIG;
+
             if(!pin.empty()){
                 uint64_t bssid = BSSIDFromSSID(ssid);
                 result = _wpsRequest.InvokePin(bssid,pin);
@@ -1756,19 +1763,24 @@ namespace WPASupplicant {
             return result;
         }
 
-        inline uint32_t GenerateWpsPin(string& pin) {
+        inline uint32_t GenerateWpsPin(string& pin) const
+        {
             return (_wpsRequest.GeneratePin(pin));
         }
 
-        inline uint32_t GetWpsCredentials(string& SSID, string& NetworkKey, WPASupplicant::Network::wpsauthtypes& AuthType ) {
+        inline uint32_t GetWpsCredentials(string& SSID, string& NetworkKey, WPASupplicant::Network::wpsauthtypes& AuthType) const
+        {
             uint32_t result = Core::ERROR_NOT_EXIST;
+
             _adminLock.Lock();
+
             if(_wpsRequest.Credentials()){
                 SSID = _wpsRequest.SSID();
                 NetworkKey = _wpsRequest.NetworkKey();
                 AuthType = _wpsRequest.AuthType();
                 result = Core::ERROR_NONE;
             }
+
             _adminLock.Unlock();
             return result;
         }

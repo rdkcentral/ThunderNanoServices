@@ -53,6 +53,7 @@ namespace Plugin
         , _autoConnect(_controller)
         , _autoConnectEnabled(false)
         , _wpsConnect(*this,_controller)
+        , _wpsDisabled(false)
     {
         RegisterAll();
     }
@@ -150,6 +151,7 @@ namespace Plugin
                     }
 
                     _walkTime = config.WpsWalkTime.Value();
+                    _wpsDisabled = config.WpsDisabled.Value();
 
                     if (config.AutoConnect.Value() == false) {
                         _controller->Scan();
