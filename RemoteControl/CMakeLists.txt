@@ -43,6 +43,8 @@ set(PLUGIN_REMOTECONTROL_RFCE_NODE_ID 249 CACHE STRING "Node ID for the device t
 set(PLUGIN_REMOTECONTROL_RFCE_AUTOPAIRING false CACHE BOOL "Enable AutoPairing feature for RF4CE producer")
 set(PLUGIN_REMOTECONTROL_RFCE_NVM_LUT "DEFAULT" CACHE STRING "The NVM LUT to be used (see GreenPeakNvmLut.h)")
 
+option(PLUGIN_REMOTECONTROL_CEC "Enable CEC User Control conversion support." OFF)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(NEXUS QUIET)
@@ -50,26 +52,26 @@ find_package(NXCLIENT QUIET)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
-    Module.cpp 
-    RemoteControl.cpp 
+    Module.cpp
+    RemoteControl.cpp
     RemoteAdministrator.cpp
     RemoteControlJsonRpc.cpp)
 
-target_link_libraries(${MODULE_NAME} 
-    PRIVATE 
+target_link_libraries(${MODULE_NAME}
+    PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-set_target_properties(${MODULE_NAME} PROPERTIES 
+set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_STANDARD 11
 	CXX_STANDARD_REQUIRED YES)
 
 if (NXCLIENT_FOUND AND NEXUS_FOUND)
     if (PLUGIN_REMOTECONTROL_IR)
         message(STATUS "Including IR support")
-        target_compile_definitions(${MODULE_NAME} 
-            PRIVATE 
+        target_compile_definitions(${MODULE_NAME}
+            PRIVATE
                 IR_ENABLED)
         if (REMOTECONTROL_IMPLEMENTATION_PATH)
             target_sources(${MODULE_NAME}
@@ -88,9 +90,9 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
                 PRIVATE
                     Nexus/IRRemote.cpp)
         endif()
-        target_link_libraries(${MODULE_NAME} 
-            PRIVATE 
-                NEXUS::NEXUS 
+        target_link_libraries(${MODULE_NAME}
+            PRIVATE
+                NEXUS::NEXUS
                 NXCLIENT::NXCLIENT)
     endif()
 endif()
@@ -100,31 +102,31 @@ if(PLUGIN_REMOTECONTROL_RFCE)
     if (RF4CE_FOUND)
         message(STATUS "Including RF4CE support")
         add_definitions(${RF4CE_DEFINITIONS})
-        target_compile_definitions(${MODULE_NAME} 
-            PRIVATE 
+        target_compile_definitions(${MODULE_NAME}
+            PRIVATE
                 GP_SCHED_EXTERNAL_MAIN
                 GP_NVM_LUT_${PLUGIN_REMOTECONTROL_RFCE_NVM_LUT})
         include_directories(${RF4CE_INCLUDE_DIRS})
-        target_sources(${MODULE_NAME} 
-            PRIVATE 
+        target_sources(${MODULE_NAME}
+            PRIVATE
                 GreenPeak.cpp)
-        target_link_libraries(${MODULE_NAME} 
-            PRIVATE 
+        target_link_libraries(${MODULE_NAME}
+            PRIVATE
                 ${RF4CE_LIBRARIES})
     endif()
 endif()
 
 if (PLUGIN_REMOTECONTROL_DEVINPUT)
     message(STATUS "Including dev input support")
-    target_sources(${MODULE_NAME} 
-        PRIVATE 
+    target_sources(${MODULE_NAME}
+        PRIVATE
             LinuxDevice.cpp)
-    target_link_libraries(${MODULE_NAME} 
-        PRIVATE 
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
             udev)
 endif()
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
 install(
@@ -136,5 +138,12 @@ install(
 	FILES web-remote.json
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
 	COMPONENT ${MODULE_NAME})
+
+if(PLUGIN_REMOTECONTROL_CEC)
+install(
+	FILES cec-remote.json
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
+	COMPONENT ${MODULE_NAME})
+endif()
 
 write_config()
