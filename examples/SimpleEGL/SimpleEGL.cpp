@@ -155,16 +155,6 @@ namespace Plugin {
         const char* stateStr = PluginStateStr(state);
 
         TRACE(Trace::Information, (_T("SimpleEGL::PluginStateChanged: Got [%s] plugin [%s] event..."), callsign.c_str(), stateStr));
-
-        if (callsign == "SimpleEGL") {
-            if(_state != nullptr) {
-                TRACE(Trace::Information, (_T("SimpleEGL::PluginStateChanged: Doing RPC call with IShell * ptr...")));
-                _state->Configure(plugin); //note this indeed does not make sense but is used to trigger an IShell* call to the OOP side to reproduce an issue there
-                TRACE(Trace::Information, (_T("SimpleEGL::PluginStateChanged: Doing RPC call with IShell * ptr...DONE")));
-            }
-        }
-
-        TRACE(Trace::Information, (_T("SimpleEGL::PluginStateChanged: Got [%s] plugin [%s] event...DONE"), callsign.c_str(), stateStr));
     }
 
     /* virtual */ string SimpleEGL::Information() const
