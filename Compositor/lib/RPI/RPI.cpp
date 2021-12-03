@@ -3196,6 +3196,9 @@ class CompositorImplementation;
         , _layer(0)
         , _destination( { 0, 0, width, height } ) {
 
+        // The compositor should not be destroyed before any existing client surface
+        _compositor.AddRef ();
+
         using surface_t = decltype (_nativeSurface._buf);
         using class_t = std::remove_reference < decltype (_modeSet) > ::type;
         using return_t = decltype ( std::declval < class_t > ().CreateBufferObject (width, height) );
@@ -3233,6 +3236,7 @@ class CompositorImplementation;
 
         _nativeSurface = { nullptr, -1 , WPEFramework::Plugin::EGL::InvalidImage () };
 
+        _compositor.Release ();
     }
 
     void ClientSurface::ScanOut () {
