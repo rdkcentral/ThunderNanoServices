@@ -1108,33 +1108,33 @@ namespace Plugin {
 
         virtual uint32_t Worker()
         {
-            TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
-
             // Do not re-create
             static Natives _natives ( _display );
 
+            static EGL _egl (_natives);
 
-            EGL _egl (_natives);
+            using timeout_t = decltype (WPEFramework::Core::infinite);
 
-            if (_egl.Valid () != false) {
-                GLES _gles;
+            // Maximum rate
+// TODO: match display refresh rate
+            constexpr timeout_t ret = 0;
 
-                TRACE (Trace::Information, (_T ("Hardware accelerated rendering properly set up!")));
+            EGL::valid_t status = _egl.Valid () != false;
 
-                // Process () expects EGL currents to be valid
-                while (IsRunning() == true && _egl.Render (_gles) != false && _natives.Display ()->Process (0) == 0 && _egl.Render () != false) {
-                }
+            if (status != false) {
+                static GLES _gles;
+
+                status = _egl.Render (_gles) != false && _natives.Display ()->Process (0) == 0 && _egl.Render () != false;
+            }
+
+            if (status != false) {
+                Block ();
             }
             else {
-                TRACE (Trace::Information, (_T ("Hardware accelerated rendering NOT properly set up!")));
+                Stop ();
             }
 
-            TRACE (Trace::Information, (_T("Leaving the main task of execution, we are done.")));
-
-            Block ();
-
-            // Only effective in a blocked state
-            return (Core::infinite);
+            return ret;
         }
 
     private:
