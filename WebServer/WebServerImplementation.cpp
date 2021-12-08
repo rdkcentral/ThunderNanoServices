@@ -725,7 +725,7 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
 
                 result = _channelServer.Open(2000);
-			}
+            }
 
             return (result);
         }
@@ -804,9 +804,10 @@ namespace Plugin {
 
                 // If so, don't deal with it ourselves.
                 Web::MIMETypes result;
+                Web::EncodingTypes encoding;
                 string fileToService = _parent.PrefixPath();
 
-                if (Web::MIMETypeForFile(request->Path, fileToService, result) == false) {
+                if (Web::MIMETypeAndEncodingForFile(request->Path, fileToService, result, encoding) == false) {
                     string fullPath = fileToService + _T("index.html");
 
                     // No filename gives, be default, we go for the index.html page..
