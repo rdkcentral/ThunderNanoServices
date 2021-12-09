@@ -666,7 +666,7 @@ namespace Plugin {
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
         {
-            net.Bssid = std::to_string(info.BSSID());
+            net.Bssid = WPASupplicant::Controller::BSSID(info.BSSID());
             net.Frequency = info.Frequency();
             net.Signal = info.Signal();
             net.Ssid = info.SSID();
