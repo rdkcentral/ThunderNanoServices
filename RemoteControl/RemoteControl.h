@@ -222,7 +222,7 @@ namespace Plugin {
             return (index.IsValid());
         }
 
-        //	IPlugin methods
+        //    IPlugin methods
         // -------------------------------------------------------------------------------------------------------
 
         // First time initialization. Whenever a plugin is loaded, it is offered a Service object with relevant
@@ -351,6 +351,9 @@ namespace Plugin {
         virtual void UnregisterEvents(IRemoteControl::INotification* sink) override;
 
     private:
+        uint32_t Load(PluginHost::VirtualInput::KeyMap& map, const string& mappingFile);
+        uint32_t Save(PluginHost::VirtualInput::KeyMap& map, const string& mappingFile);
+
         Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index, const Web::Request& request) const;
         Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
         Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
