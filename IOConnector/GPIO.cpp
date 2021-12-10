@@ -172,7 +172,7 @@ namespace GPIO
             // force HasChanged to be true!!
             _lastValue = !Get();
 
-            Updated();
+            Evaluate();
         }
     }
 
