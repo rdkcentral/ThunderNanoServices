@@ -54,9 +54,7 @@ namespace GPIO {
             if (index == _markers.end()) {
                 _markers.push_back(marker);
             }
-            else {
-                // Do not set the same marker twice!!!
-                ASSERT (marker != *index);
+            else if (marker != *index) {
                 _markers.insert(index, marker);
             }
         }
