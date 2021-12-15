@@ -172,7 +172,7 @@ namespace GPIO
             // force HasChanged to be true!!
             _lastValue = !Get();
 
-            Updated();
+            Evaluate();
         }
     }
 
@@ -290,7 +290,7 @@ namespace GPIO
     }
 
     void Pin::Unregister(IInputPin::INotification* sink) /* override */ {
-        _timedPin.Register(sink);
+        _timedPin.Unregister(sink);
     }
 
     void Pin::AddMarker(const uint32_t marker) /* override */ {

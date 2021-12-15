@@ -121,7 +121,8 @@ namespace GPIO {
 
                     ASSERT(_marker == static_cast<uint32_t>(~0));
                     _marker = marker;
-                    _parent.Updated();
+                    Core::IWorkerPool::Instance().Submit(_job);
+
                     _parent.Unlock();
                 }
             }
