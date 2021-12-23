@@ -28,7 +28,7 @@
 namespace WPEFramework {
 namespace TestCore {
 
-    class TestCategory1 : TestCore::TestCategoryBase {
+    class TestCategory1 : public TestCore::TestCategoryBase {
     protected:
         TestCategory1()
             : TestCategoryBase()
