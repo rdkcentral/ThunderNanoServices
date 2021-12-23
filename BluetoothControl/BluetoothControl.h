@@ -626,7 +626,7 @@ class BluetoothControl : public PluginHost::IPlugin
                             if ((info.evt_type == CONNECTABLE_DIRECTED) || (info.evt_type == CONNECTABLE_UNDIRECTED))
 #endif
                             {
-                                if ((device->IsAutoConnectable() == true) && (device->IsBonded() == true)) {
+                                if ((device->IsAutoConnectable() == true) && (device->IsBonded() == true) && (device->IsConnected() == false)) {
                                     // The device broadcasts connection requests, let's connect now.
                                     _reconnectJob.Submit([device, this]() {
                                         TRACE(ControlFlow, (_T("Reconnecting to %s..."), device->RemoteId().c_str()));
@@ -635,7 +635,7 @@ class BluetoothControl : public PluginHost::IPlugin
                                         };
                                     });
                                 } else {
-                                    TRACE(ControlFlow, (_T("Won't reconnect to %s - not whitelisted"), device->RemoteId().c_str()));
+                                    TRACE(ControlFlow, (_T("Won't reconnect to %s - not enabled for auto-connection"), device->RemoteId().c_str()));
                                 }
                             }
                         }
@@ -1922,6 +1922,7 @@ protected:
                     } else {
                         result = Core::ERROR_ALREADY_CONNECTED;
                         TRACE(Trace::Error, (_T("Device already connected!")));
+                        AutoConnect(false);
                     }
 
                     ClearState(CONNECTING);
