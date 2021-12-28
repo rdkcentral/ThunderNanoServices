@@ -28,8 +28,8 @@
 #include <interfaces/IExternal.h>
 #include <interfaces/IInputPin.h>
 
-#define INPUT_PIN_ID    25
-#define OUTPUT_PIN_ID   24
+#define INPUT_PIN_ID    16
+#define OUTPUT_PIN_ID   20
 
 namespace WPEFramework {
 namespace Plugin {
@@ -108,6 +108,7 @@ void ShowMenu()
            "\tD : De-activate output GPIO pin\n"
            "\tR : Read input GPIO pin\n"
            "\tM : Add markers for input GPIO pin\n"
+           "\tN : Remove markers for input GPIO pin\n"
            "\tH : Help\n"
            "\tQ : Quit\n");
 }
@@ -183,9 +184,30 @@ int main(int argc, char** argv)
                 break;
             }
             case 'R': {
+                TCHAR method[32];
+                sprintf(method, _T("pin@%d"), static_cast<uint32_t>(INPUT_PIN_ID));
+
+                Core::JSON::DecSInt32 value;
+                uint32_t result = jsonrpc.Invoke<void, Core::JSON::DecSInt32>(2000, method, value);
+                if (result != Core::ERROR_NONE) {
+                    printf("Failed to read input GPIO pin\n");
+                } else {
+                    printf("Input GPIO pin value: %d\n", value.Value());
+                }
                 break;
             }
             case 'M': {
+                std::array<uint32_t, 3> markers = { 1000, 5000, 10000 };
+                for (const auto& m : markers) {
+                    inputPin->AddMarker(m);
+                }
+                break;
+            }
+            case 'N': {
+                std::array<uint32_t, 3> markers = { 1000, 5000, 10000 };
+                for (const auto& m : markers) {
+                    inputPin->RemoveMarker(m);
+                }
                 break;
             }
             case '?':
