@@ -2130,8 +2130,8 @@ protected:
 
                             Bluetooth::HCISocket::Command::ConnectLE connect;
                             connect.Clear();
-                            connect->interval = htobs(0x0004);
-                            connect->window = htobs(0x0004);
+                            connect->interval = htobs(4*0x0010);
+                            connect->window = htobs(0x0010); // Have some back off time, so the connection does not hog the link layer completely.
                             connect->initiator_filter = 0;
                             connect->peer_bdaddr_type = LE_PUBLIC_ADDRESS;
                             connect->peer_bdaddr = *(Locator().Data());
