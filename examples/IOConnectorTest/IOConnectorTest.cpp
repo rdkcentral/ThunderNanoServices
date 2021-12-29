@@ -113,6 +113,11 @@ void ShowMenu()
            "\tQ : Quit\n");
 }
 
+void Activity(const JsonObject& param)
+{
+    printf("Value for GPIO pin %d changed to %s\n", INPUT_PIN_ID, param["value"].String().c_str());
+}
+
 int main(int argc, char** argv)
 {
     {
@@ -139,7 +144,10 @@ int main(int argc, char** argv)
 
         // Setup JSONRPC
         Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
-        JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(_T("IOConnector.1"));
+        TCHAR localCallsign[32];
+        sprintf(localCallsign, _T("%d"), static_cast<uint32_t>(INPUT_PIN_ID));
+        JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(_T("IOConnector.1"), localCallsign, false, "");
+        jsonrpc.Subscribe<JsonObject>(1000, _T("activity"), &Activity);
 
         // Aquire interfaces over comrpc and register notification sinks
         Exchange::IExternal::ICatalog* comrpc = client->Aquire<Exchange::IExternal::ICatalog>(2000, _T("IOConnector"), ~0);
