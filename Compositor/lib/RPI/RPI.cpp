@@ -36,10 +36,16 @@ extern "C" {
 #include <sys/socket.h>
 #include <fcntl.h>
 
+#ifndef _GNU_SOURCE
+#error mkotemp requires feature macro _GNU_SOURCE to be defined
+#endif
+
 #ifdef __cplusplus
 }
 #endif
 
+#include <stdlib.h>
+#include <cstring>
 #include <mutex>
 #include <type_traits>
 #include <functional>
@@ -142,12 +148,17 @@ class CompositorImplementation;
         struct {
             struct gbm_bo * _buf;
             int _fd;
+            int _sync_fd;
             EGL::img_t _khr;
 
             bool Valid () const { return _buf != nullptr; }
-            bool DMAComplete () const { return Valid () && _fd > -1; };
-            bool RenderComplete () const { return Valid () && _fd > -1 && _khr != WPEFramework::Plugin::EGL::InvalidImage (); }
+            bool DMAComplete () const { return Valid () && _fd > -1 && _sync_fd > -1; };
+            bool RenderComplete () const { return Valid () && _fd > -1 && _sync_fd > -1 && _khr != WPEFramework::Plugin::EGL::InvalidImage (); }
         } _nativeSurface;
+
+
+
+
 
     public:
 
@@ -164,11 +175,60 @@ class CompositorImplementation;
     public:
         RPC::instance_id Native () const override {
             // Sharing this handle does not imply its contents can be accessed!
-
+// TODO: narrowing
             static_assert ((std::is_convertible < decltype (_nativeSurface._fd), RPC::instance_id > :: value) != false);
             static_assert (sizeof (decltype (_nativeSurface._fd) ) <= sizeof (RPC::instance_id));
 
             return static_cast < RPC::instance_id > ( _nativeSurface._fd );
+        }
+
+        RPC::instance_id SyncPrimitive () const {
+// TODO: narrowing
+            static_assert ((std::is_convertible < decltype (_nativeSurface._sync_fd), RPC::instance_id > :: value) != false);
+            static_assert (sizeof (decltype (_nativeSurface._sync_fd) ) <= sizeof (RPC::instance_id));
+
+            return static_cast < RPC::instance_id > ( _nativeSurface._sync_fd );
+        }
+
+        bool SyncPrimitiveStart () {
+            auto init = [] () -> struct flock {
+                struct flock fl;
+                /* void * */ memset( &fl, 0, sizeof ( fl ) );
+
+                fl.l_type = F_WRLCK;
+                fl.l_whence = SEEK_SET;
+                fl.l_start = 0;
+                fl.l_len = 0;
+
+                return fl;
+            };
+
+            static struct flock fl = init ();
+
+            // Operatore on i-node
+            bool ret = _nativeSurface._sync_fd > -1 && fcntl (_nativeSurface._sync_fd, F_SETLKW,  &fl) != -1;
+            assert (ret != false);
+            return ret;
+        }
+
+        bool SyncPrimitiveEnd () {
+            auto init = [] () -> struct flock {
+                struct flock fl;
+                /* void * */ memset( &fl, 0, sizeof ( fl ) );
+
+                fl.l_type = F_UNLCK;
+                fl.l_whence = SEEK_SET;
+                fl.l_start = 0;
+                fl.l_len = 0;
+
+                return fl;
+            };
+
+            static struct flock fl = init ();
+
+            bool ret = _nativeSurface._sync_fd > -1 && fcntl (_nativeSurface._sync_fd, F_SETLK, &fl) != -1;
+            assert (ret != false);
+            return ret;
         }
 
         string Name() const override
@@ -295,6 +355,10 @@ class CompositorImplementation;
 
             public :
 
+                // Sharing handles (file descriptors)
+                static constexpr int8_t MAX_SHARING_FDS = 2;
+                using fds_t = std::array <int, MAX_SHARING_FDS>;
+
                 DMATransfer () = delete;
                 DMATransfer (CompositorImplementation & compositor) : Core::Thread (/*0, _T ("")*/), _compositor (compositor), _listen { -1 }, _transfer { -1 }, _addr { AF_UNIX, "/tmp/Compositor/DMA" }, _valid { _Initialize () } {}
                 ~DMATransfer () {
@@ -349,12 +413,14 @@ class CompositorImplementation;
                         // Do some processing on the clients
 
                         std::string _msg;
-                        int _fd = -1;
+
+                        // Shared buffer and synchronization primitive
+                        DMATransfer::fds_t handles = {-1, -1};
 
                         std::string _props;
 
                         if (_transfer > 0) {
-                            if (Receive (_msg, _fd) && _compositor.FDFor (_msg, _fd, _props) && Send (_msg + _props, _fd) != false) {
+                            if (Receive (_msg, handles) && _compositor.FDFor (_msg, handles, _props) && Send (_msg + _props, handles) != false) {
                                 // Just wait for the remote peer to close the connection
                                 ssize_t _size = read (_transfer, nullptr, 0);
 
@@ -390,30 +456,30 @@ class CompositorImplementation;
 
                 valid_t Valid () const { return _valid; }
 
-                // Receive file descriptor with additional message
-                valid_t Receive (std::string & msg, int & fd) {
+                // Receive file descriptor(s) with additional message
+                valid_t Receive (std::string & msg, DMATransfer::fds_t & fds) {
                     valid_t _ret = Valid () && Connect (Core::infinite);
 
                     if (_ret != true) {
                         TRACE (Trace::Information, (_T ("Unable to receive (DMA) data.")));
                     }
                     else {
-                        _ret = _Receive (msg, fd);
+                        _ret = _Receive (msg, fds.data (), fds.size () );
                         _ret = Disconnect (Core::infinite) && _ret;
                     }
 
                     return _ret;
                 }
 
-                // Send file descriptor with additional message
-                valid_t Send (std::string const & msg, int fd) {
+                // Send file descriptor(s) with additional message
+                valid_t Send (std::string const & msg, DMATransfer::fds_t const & fds) {
                     valid_t _ret = Valid () && Connect (Core::infinite);
 
                     if (_ret != true) {
                         TRACE (Trace::Information, (_T ("Unable to send (DMA) data.")));
                     }
                     else {
-                        _ret = _Send (msg, fd) && Disconnect (Core::infinite);
+                        _ret = _Send (msg, fds.data (), fds.size ()) && Disconnect (Core::infinite);
                         _ret = Disconnect (Core::infinite) && _ret;
                     }
 
@@ -484,7 +550,9 @@ class CompositorImplementation;
                     return _ret;
                 }
 
-                valid_t _Send (std::string const & msg, int fd) {
+                valid_t _Send (std::string const & msg, int const * fd, uint8_t count) {
+                    using fd_t = _remove_const < std::remove_pointer < decltype (fd) > :: type > :: type;
+
                     valid_t _ret = false;
 
                     // Logical const
@@ -517,9 +585,16 @@ class CompositorImplementation;
 
                         // Ancillary data
                         // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
-                        char _control [CMSG_SPACE (sizeof ( decltype ( fd) ))];
+                        char _control [CMSG_SPACE (sizeof ( fd_t ) * count)];
 
-                        if (fd > -1) {
+                        // Only valid file descriptor (s) can be sent via extra payload
+                        _ret = true;
+                        for (decltype (count) i = 0; i < count && fd != nullptr; i++) {
+                            _ret = fd [i] > -1 && _ret;
+                        }
+
+                        // At least  the first fd should be valid
+                        if (_ret != false) {
                             // Contruct ancillary data to be added to the transfer via the control message
 
                             // Ancillary data, pointer
@@ -548,12 +623,11 @@ class CompositorImplementation;
                                 // Option at the API level, send or receive a set of open file descriptors from another process
                                 _cmsgh->cmsg_type = SCM_RIGHTS;
 
-                                // The value to store in the cmsg_len member of the cmsghdr structure, taking into account any necessary alignmen, eg byte count of control message including header
-                                _cmsgh->cmsg_len = CMSG_LEN (sizeof ( decltype ( fd ) ));
+                                // The value to store in the cmsg_len member of the cmsghdr structure, taking into account any necessary alignment, eg byte count of control message including header
+                                _cmsgh->cmsg_len = CMSG_LEN (sizeof ( fd_t ) * count);
 
                                 // Initialize the payload
-                                // Pointer to the data portion of a cmsghdr, ie unsigned char []
-                                * reinterpret_cast < decltype (fd) * > ( CMSG_DATA ( _cmsgh ) ) = fd;
+                                /* void */ memcpy (CMSG_DATA (_cmsgh ), fd, sizeof ( fd_t ) * count);
 
                                 _ret = true;
                             }
@@ -611,11 +685,10 @@ class CompositorImplementation;
                     return _ret;
                 }
 
-                valid_t _Receive (std::string & msg, int & fd) {
+                valid_t _Receive (std::string & msg, int * fd, uint8_t count) {
                     bool _ret = false;
 
                     msg.clear ();
-                    fd = -1;
 
                     ssize_t _size = -1;
                     socklen_t _len = sizeof (_size);
@@ -633,8 +706,12 @@ class CompositorImplementation;
 
                     size_t const _bufsize = msg.capacity ();
 
-                    if (_bufsize > 0) {
-                        using fd_t = std::remove_reference < decltype (fd) > :: type;
+                    if (_bufsize > 0 && count > 0 && fd != nullptr) {
+                        using fd_t = std::remove_pointer < decltype (fd) > :: type;
+
+                        for (decltype (count) i = 0; i < count; i++) {
+                            fd [i] = -1;
+                        }
 
                         static_assert ((std::is_same <char *, _remove_const  < decltype ( & msg [0] ) > :: type >:: value) != false);
                         char _buf [_bufsize];
@@ -661,7 +738,7 @@ class CompositorImplementation;
 
                         // Ancillary data
                         // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
-                        char _control [CMSG_SPACE (sizeof ( fd_t ))];
+                        char _control [CMSG_SPACE (sizeof ( fd_t ) * count)];
 
                         // Ancillary data, pointer
                         _msgh.msg_control = _control;
@@ -701,7 +778,7 @@ class CompositorImplementation;
                                                 && _cmsgh->cmsg_type == SCM_RIGHTS) {
 
                                                 // The macro returns a pointer to the data portion of a cmsghdr.
-                                                fd = * reinterpret_cast < fd_t * > ( CMSG_DATA ( _cmsgh ) );
+                                                /* void */ memcpy (fd, CMSG_DATA (_cmsgh ), sizeof ( fd_t ) * count);
                                             }
                                             else {
                                                 TRACE (Trace::Information, (_T ("No (valid) ancillary data received.")));
@@ -2080,7 +2157,7 @@ class CompositorImplementation;
                             else {
                                 ClientSurface::surf_t const & _surf = _client->Surface ();
 
-                                _ret = ( _surf.RenderComplete () && _egl.Valid () && _gles.Valid () ) != false;
+                                _ret = ( _surf.RenderComplete () && _egl.Valid () && _gles.Valid () && _client->SyncPrimitiveStart () ) != false;
 
                                 if (_ret != false) {
                                     TRACE (Trace::Information, (_T ("Client has an associated EGL image.")));
@@ -2176,6 +2253,8 @@ class CompositorImplementation;
                                     _ret = (   _gles.UpdateOffset ( _offset )
                                             && _gles.UpdateScale ( _scale ) && _gles.UpdateOpacity ( _opacity )
                                             && _egl.RenderWithoutSwap (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _width, _height)) ) != false;
+
+                                    _ret = _client->SyncPrimitiveEnd () && _ret;
                                 }
 
                             }
@@ -2733,16 +2812,16 @@ class CompositorImplementation;
 
     public:
 
-        bool FDFor (std::string const & name, int & fd) {
+        bool FDFor (std::string const & name, DMATransfer::fds_t & fds) {
 
             std::string _prop;
 
-            bool _ret = FDFor (name, fd, _prop);
+            bool _ret = FDFor (name, fds, _prop);
 
             return _ret;
         }
 
-        bool FDFor (std::string const & name, int & fd, std::string & properties) {
+        bool FDFor (std::string const & name, DMATransfer::fds_t & fds, std::string & properties) {
             std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
 
             bool _ret = false;
@@ -2756,17 +2835,19 @@ class CompositorImplementation;
             }
             else {
                 if (_dma != nullptr) {
-                    using fd_t = std::remove_reference < decltype (fd) > :: type;
+                    using fd_t = DMATransfer::fds_t::value_type;
                     using class_t = decltype (_client);
                     using return_t = decltype ( std::declval < class_t > ().operator-> ()->Native () );
 
                     static_assert ((std::is_convertible < return_t, fd_t > :: value) != false);
                     // Likely to almost always fail
+// TODO: narrowing
 //                    static_assert ((sizeof ( return_t ) <= sizeof ( fd_t )) != false);
 
-                    fd = static_cast < fd_t > ( _client->Native () );
+                    fds [0] = static_cast < fd_t > ( _client->Native () );
+                    fds [1] = static_cast < fd_t > ( _client->SyncPrimitive () );
 
-                    _ret = fd > -1;
+                    _ret = fds  [0] > -1 && fds [1] > -1;
                 }
             }
 
@@ -3188,7 +3269,7 @@ class CompositorImplementation;
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
 
     ClientSurface::ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const uint32_t width, const uint32_t height)
-        : _nativeSurface { nullptr, -1, WPEFramework::Plugin::EGL::InvalidImage () }
+        : _nativeSurface { nullptr, -1, -1, WPEFramework::Plugin::EGL::InvalidImage () }
         , _modeSet(modeSet)
         , _compositor(compositor)
         , _name(name)
@@ -3214,6 +3295,11 @@ class CompositorImplementation;
         else {
             _nativeSurface._fd = gbm_bo_get_fd (_nativeSurface._buf);
 
+// TODO:
+            constexpr char const SYNC_FD_TEMPLATE [] = "/tmp/Compositor/sync_fdXXXXXX";
+
+            _nativeSurface._sync_fd = mkostemp (const_cast <char *> ( SYNC_FD_TEMPLATE ), O_CLOEXEC);
+
             if (_nativeSurface.DMAComplete () != true) {
                 TRACE (Trace::Error, (_T ("The created ClientSurface for %s is not suitable for DMA."), name.c_str ()));
             }
@@ -3230,11 +3316,15 @@ class CompositorImplementation;
             /* int */ close (_nativeSurface._fd);
         }
 
+        if (_nativeSurface._sync_fd != -1) {
+            /* int */ close (_nativeSurface._sync_fd);
+        }
+
         if (_nativeSurface.Valid () != false) {
             _modeSet.DestroyBufferObject (_nativeSurface._buf);
         }
 
-        _nativeSurface = { nullptr, -1 , WPEFramework::Plugin::EGL::InvalidImage () };
+        _nativeSurface = { nullptr, -1, -1 , WPEFramework::Plugin::EGL::InvalidImage () };
 
         _compositor.Release ();
     }
