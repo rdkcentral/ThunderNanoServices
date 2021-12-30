@@ -1323,6 +1323,8 @@ class CompositorImplementation;
                         glBindTexture (_tex_fbo._target, InvalidTex ());
                         GL_ERROR ();
 
+                        glDeleteFramebuffers (1, &_fbo);
+                        GL_ERROR ();
                     }
 
                     _ret = _ret && GL_ERROR_WITH_RETURN ();
@@ -1939,16 +1941,12 @@ class CompositorImplementation;
                         Sync () = delete;
 
                         explicit Sync (dpy_t & dpy) : _dpy {dpy} {
-#ifdef _V3D_FENCE // For now disable, because it's leaking file descriptors part of synchronization fences
                             static bool _supported = EGL::Supported (dpy, "EGL_KHR_fence_sync") != false;
 
                             assert (_supported != false);
-                            assert (dpy != InvalidDpy ());
+                            assert (_dpy != InvalidDpy ());
 
-                            _sync = ( _supported && dpy != InvalidDpy () ) != false ? KHRFIX (eglCreateSync) (dpy, _EGL_SYNC_FENCE, nullptr) : InvalidSync ();
-#else
-                            _sync = InvalidSync ();
-#endif
+                            _sync = ( _supported && _dpy != InvalidDpy () ) != false ? KHRFIX (eglCreateSync) (_dpy, _EGL_SYNC_FENCE, nullptr) : InvalidSync ();
                         }
 
                         ~Sync () {
@@ -1973,10 +1971,13 @@ class CompositorImplementation;
                                     // Assert on error
                                     if (_ret != true) {
                                         TRACE (Trace::Error, (_T ("EGL: synchronization primitive")) );
-#ifndef _V3D_FENCE
-                                        assert (false);
-#endif
                                     }
+                                }
+
+                                /* EGLBoolean */ _val = static_cast <EGLint> ( KHRFIX (eglDestroySync) (_dpy, _sync) );
+
+                                if (_val != EGL_TRUE) {
+                                    // Error
                                 }
 
                                 // Consume the (possible) error(s)
