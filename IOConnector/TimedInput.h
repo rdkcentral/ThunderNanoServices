@@ -54,9 +54,7 @@ namespace GPIO {
             if (index == _markers.end()) {
                 _markers.push_back(marker);
             }
-            else {
-                // Do not set the same marker twice!!!
-                ASSERT (marker != *index);
+            else if (marker != *index) {
                 _markers.insert(index, marker);
             }
         }
@@ -79,21 +77,16 @@ namespace GPIO {
             if (pressed == true) {
                 _pressedTime = now;
             }
-            else if (_markers.size() == 0) {
-                reached = true;
-            } 
-            else if (now > (_pressedTime + BounceThreshold)) {
+            else if ((_markers.size() != 0) && (now > (_pressedTime + BounceThreshold))) {
                 uint32_t elapsedTime = static_cast<uint32_t>( (now - _pressedTime) / Core::Time::TicksPerMillisecond );
 
                 // See which marker we have reached..
                 std::list<uint32_t>::const_iterator index (_markers.cbegin());
                 while ( (index != _markers.cend()) && (elapsedTime > *index)) {
                     marker = *index;
+                    reached = true;
                     index++;
                 }
-
-                // Now we know which marker we have reached, report it.
-                reached = (index != _markers.cend());
             }
 
             return(reached);
