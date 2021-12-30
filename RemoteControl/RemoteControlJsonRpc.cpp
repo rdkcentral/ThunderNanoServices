@@ -361,7 +361,7 @@ namespace Plugin {
                 if (fileName.empty() == false) {
                     // Seems like we have a default mapping file. Load it..
                     PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
-                    result = map.Save(fileName);
+                    result = Save(map, fileName);
                 } else {
                     result = Core::ERROR_GENERAL;
                 }
@@ -385,7 +385,7 @@ namespace Plugin {
                 if (Core::File(fileName).Exists() == true) {
                     // Seems like we have a default mapping file. Load it..
                     PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(params.Device.Value()));
-                    result = map.Load(fileName);
+                    result = Load(map, fileName);
                 } else {
                     result = Core::ERROR_OPENING_FAILED;
                 }

@@ -251,7 +251,7 @@ namespace Plugin {
             , _fps(0)
             , _hidden(false)
             , _dispatcher()
-            , _executor(1, 0, 4, &_dispatcher)
+            , _executor(1, 0, 4, &_dispatcher, nullptr)
             , _sink(*this)
             , _service(nullptr)
             , _engine()

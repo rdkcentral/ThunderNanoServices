@@ -395,10 +395,22 @@ namespace Plugin {
             if (Core::File(keyMapFile).Exists() == true) {
                 PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(name));
 
-                uint32_t result = map.Load(keyMapFile);
-                if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), keyMapFile.c_str()));
+                Core::File mappingFile(keyMapFile);
+                Core::JSON::ArrayType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> mappingTable;
+
+                if (mappingFile.Open(true) == true) {
+                    Core::OptionalType<Core::JSON::Error> error;
+                    mappingTable.IElement::FromFile(mappingFile, error);
+                    if (error.IsSet() == true) {
+                        TRACE(Trace::Error, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+                    } else {
+                        if (map.Import(mappingTable) != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), keyMapFile.c_str()));
+                        }
+                    }
+                    mappingFile.Close();
                 }
+
             } else {
                 TRACE(Trace::Information, (_T("Keymap file [%s] not available"), keyMapFile.c_str()));
             }

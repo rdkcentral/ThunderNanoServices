@@ -251,13 +251,13 @@ static void clock_legacy(const Data::Time& parameters)
 
 static void async_callback(const Data::Response& response)
 {
-    printf("Finally we are triggered. GLOBAL: @ %s\n", Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
+    printf("Finally we are triggered. GLOBAL: @ %s\n", Core::Time(response.Time.Value()).ToRFC1123().c_str());
 }
 
 class Callbacks {
 public:
     void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
-        printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
+        printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value()).ToRFC1123().c_str());
     }
 };
 
