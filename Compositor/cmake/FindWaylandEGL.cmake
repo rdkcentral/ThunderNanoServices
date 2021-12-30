@@ -29,23 +29,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-if(WaylandEGL_FIND_QUIETLY)
-    set(_WAYLAND_EGL_MODE QUIET)
-elseif(WaylandEGL_FIND_REQUIRED)
-    set(_WAYLAND_EGL_MODE REQUIRED)
-endif()
-
 find_package(PkgConfig)
-pkg_check_modules(WAYLAND_EGL ${_WAYLAND_EGL_MODE} wayland-egl)
+pkg_check_modules(WAYLAND_EGL wayland-egl)
 
 find_library(WAYLAND_EGL_LIB NAMES wayland-egl
         HINTS ${WAYLAND_EGL_LIBDIR} ${WAYLAND_EGL_LIBRARY_DIRS})
 
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(WaylandEGL DEFAULT_MSG WAYLAND_EGL_FOUND WAYLAND_EGL_INCLUDE_DIRS WAYLAND_EGL_LIBRARIES WAYLAND_EGL_LIB)
-mark_as_advanced(WAYLAND_EGL_INCLUDE_DIRS WAYLAND_EGL_LIBRARIES)
-
-if(WaylandEGL_FOUND AND NOT TARGET WaylandEGL::WaylandEGL)
+if(WAYLAND_EGL_FOUND AND NOT TARGET WaylandEGL::WaylandEGL)
     add_library(WaylandEGL::WaylandEGL UNKNOWN IMPORTED)
     set_target_properties(WaylandEGL::WaylandEGL PROPERTIES
             IMPORTED_LOCATION "${WAYLAND_EGL_LIB}"
@@ -55,4 +45,6 @@ if(WaylandEGL_FOUND AND NOT TARGET WaylandEGL::WaylandEGL)
             )
 endif()
 
-
+include(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(WAYLAND_EGL DEFAULT_MSG WAYLAND_EGL_FOUND)
+mark_as_advanced(WAYLAND_EGL_INCLUDE_DIRS WAYLAND_EGL_LIBRARIES)

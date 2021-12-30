@@ -27,29 +27,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-if(BCM_HOST_FIND_QUIETLY)
-    set(_BCM_HOST_MODE QUIET)
-elseif(BCM_HOST_FIND_REQUIRED)
-    set(_BCM_HOST_MODE REQUIRED)
-endif()
-
 find_package(PkgConfig)
-pkg_check_modules(PC_BCM_HOST ${_BCM_HOST_MODE} bcm_host)
+pkg_check_modules(PC_BCM_HOST bcm_host)
+
+include(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(PC_BCM_HOST DEFAULT_MSG PC_BCM_HOST_FOUND)
+
+mark_as_advanced(PC_BCM_HOST_INCLUDE_DIRS PC_BCM_HOST_LIBRARIES)
 
 if(${PC_BCM_HOST_FOUND})
     find_library(BCM_HOST_LIBRARY bcm_host
         HINTS ${PC_BCM_LIBDIR} ${PC_BCM_LIBRARY_DIRS}
     )
     set(BCM_LIBRARIES ${PC_BCM_HOST_LIBRARIES})
+    set(BCM_HOST_FOUND ${PC_BCM_HOST_FOUND})
 
-    include(FindPackageHandleStandardArgs)
-    find_package_handle_standard_args(BCM_HOST DEFAULT_MSG PC_BCM_HOST_FOUND PC_BCM_HOST_INCLUDE_DIRS BCM_HOST_LIBRARY PC_BCM_HOST_LIBRARIES)
-    mark_as_advanced(PC_BCM_HOST_INCLUDE_DIRS PC_BCM_HOST_LIBRARIES)
-
-    if(BCM_HOST_FOUND AND NOT TARGET BCM_HOST::BCM_HOST)
+    if(NOT TARGET BCM_HOST::BCM_HOST)
         add_library(BCM_HOST::BCM_HOST UNKNOWN IMPORTED)
 
-        set_target_properties(BCM_HOST::BCM_HOST
+        set_target_properties(BCM_HOST::BCM_HOST 
             PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${BCM_HOST_LIBRARY}"

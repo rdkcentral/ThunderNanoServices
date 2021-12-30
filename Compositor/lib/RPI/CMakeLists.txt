@@ -23,8 +23,50 @@ find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
-add_library(${TARGET}
+find_package(BCM_HOST QUIET)
+
+if (BCM_HOST_FOUND)
+    add_library(${TARGET}
         RPI.cpp)
+else()
+    find_package(GBM REQUIRED)
+    find_package(LibDRM REQUIRED)
+    find_package(EGL REQUIRED)
+    find_package(GLESv2 REQUIRED)
+
+    # A package may set *_FOUND to false to indicate requirements are not met
+
+    if(NOT GBM_FOUND)
+        message(FATAL_ERROR "The GBM library and its headers cannot be found.")
+    endif()
+
+    if(NOT LIBDRM_FOUND)
+        message(FATAL_ERROR "The libDRM library and its headers cannot be found.")
+    endif()
+
+    if(NOT EGL_FOUND)
+        message(FATAL_ERROR "The EGL library and its headers cannot be found.")
+    endif()
+
+    if(NOT GLESV2_FOUND)
+        message(FATAL_ERROR "The GLESv2 library and its headers cannot be found.")
+    endif()
+
+    add_library(${TARGET}
+        ModeSet.cpp
+        RPI.cpp)
+
+    target_compile_definitions(${TARGET} PRIVATE VC6)
+
+    target_link_libraries(${TARGET} 
+        PRIVATE 
+            libdrm::libdrm
+            libgbm::libgbm
+            EGL::EGL
+            GLESV2::GLESV2
+    )
+
+endif()
 
 target_link_libraries(${TARGET}
     PRIVATE

@@ -1,4 +1,4 @@
-# - Try to find Wayland.
+# - Try to find BroadCom nxserver library.
 # Once done this will define
 #  WAYLANDSERVER_FOUND - System has Nexus
 #  WAYLANDSERVER_INCLUDE_DIRS - The Nexus include directories
@@ -29,23 +29,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-if(WaylandServer_FIND_QUIETLY)
-    set(_WAYLAND_SERVER_MODE QUIET)
-elseif(WaylandServer_FIND_REQUIRED)
-    set(_WAYLAND_SERVER_MODE REQUIRED)
-endif()
-
 find_package(PkgConfig)
-pkg_check_modules(WAYLANDSERVER ${_WAYLAND_SERVER_MODE} wayland-server)
+pkg_check_modules(WAYLANDSERVER wayland-server)
 
 find_library(WAYLANDSERVER_LIB NAMES wayland-client
         HINTS ${WAYLANDSERVER_LIBDIR} ${WAYLANDSERVER_LIBRARY_DIRS})
 
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(WaylandServer DEFAULT_MSG WAYLANDSERVER_FOUND WAYLANDSERVER_INCLUDE_DIRS WAYLANDSERVER_LIBRARIES WAYLANDSERVER_LIB)
-mark_as_advanced(WAYLANDSERVER_INCLUDE_DIRS WAYLANDSERVER_LIBRARIES)
-
-if(WaylandServer_FOUND AND NOT TARGET WaylandServer::WaylandServer)
+if(WAYLANDSERVER_FOUND AND NOT TARGET WaylandServer::WaylandServer)
     add_library(WaylandServer::WaylandServer UNKNOWN IMPORTED)
     set_target_properties(WaylandServer::WaylandServer PROPERTIES
             IMPORTED_LOCATION "${WAYLANDSERVER_LIB}"
@@ -54,3 +44,7 @@ if(WaylandServer_FOUND AND NOT TARGET WaylandServer::WaylandServer)
             INTERFACE_INCLUDE_DIRECTORIES "${WAYLANDSERVER_INCLUDE_DIRS}"
             )
 endif()
+
+include(FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(WAYLANDSERVER DEFAULT_MSG WAYLANDSERVER_FOUND)
+mark_as_advanced(WAYLANDSERVER_INCLUDE_DIRS WAYLANDSERVER_LIBRARIES)
