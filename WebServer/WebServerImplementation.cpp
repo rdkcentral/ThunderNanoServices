@@ -817,6 +817,9 @@ namespace Plugin {
                 } else {
                     *fileBody = fileToService;
                     response->ContentType = result;
+                    if (encoding != Web::ENCODING_UNKNOWN) {
+                        response->ContentEncoding = encoding;
+                    }
                     response->Body<Web::FileBody>(fileBody);
                 }
                 Submit(response);

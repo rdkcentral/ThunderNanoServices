@@ -232,7 +232,7 @@ namespace Plugin {
                 MoveState (states::SCANNING);
 
                 _controller->Scan();
-                _job.Schedule(Core::Time::Now().Add(_interval));
+                _job.Reschedule(Core::Time::Now().Add(_interval));
 
                 return Core::ERROR_NONE;
             }
@@ -284,7 +284,7 @@ namespace Plugin {
                 if (_state == states::SCANNING) {
                     // Seems that the Scan did not complete in time. Lets reschedule for later...
                     _state = states::RETRY;
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    _job.Reschedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::SCANNED) {
 
@@ -321,7 +321,7 @@ namespace Plugin {
                         _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
                     }
 
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    _job.Reschedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::CONNECTING) {
                     // If we sre still in the CONNECTING mode, it must mean that previous CONNECT Failed
@@ -336,7 +336,7 @@ namespace Plugin {
                     else {
                         _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
                     }
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    _job.Reschedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::RETRY) {
                     if (_attempts == 0) {
@@ -349,7 +349,7 @@ namespace Plugin {
                         _state = states::SCANNING;
                         _controller->Scan();
 
-                        _job.Schedule(Core::Time::Now().Add(_interval));
+                        _job.Reschedule(Core::Time::Now().Add(_interval));
                     }
                 }
 
@@ -462,7 +462,7 @@ namespace Plugin {
                 if(result == Core::ERROR_NONE) {
                     _ssid = ssid;
                     _state = states::REQUESTED;
-                    _job.Schedule(Core::Time::Now().Add(walkTime * 1000));
+                    _job.Reschedule(Core::Time::Now().Add(walkTime * 1000));
                 }
                 _adminLock.Unlock();
                 return result;
@@ -666,7 +666,7 @@ namespace Plugin {
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
         {
-            net.Bssid = std::to_string(info.BSSID());
+            net.Bssid = WPASupplicant::Controller::BSSID(info.BSSID());
             net.Frequency = info.Frequency();
             net.Signal = info.Signal();
             net.Ssid = info.SSID();

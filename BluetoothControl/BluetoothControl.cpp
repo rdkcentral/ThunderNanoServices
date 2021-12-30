@@ -138,6 +138,12 @@ namespace Plugin {
                 SYSLOG(Logging::Startup, (_T("%s Configuration:     %s"), supported.HasConfiguration() ? _T("[true] ") : _T("[false]"), actuals.HasConfiguration() ? _T("on") : _T("off")));
                 SYSLOG(Logging::Startup, (_T("%s StaticAddress:     %s"), supported.HasStaticAddress() ? _T("[true] ") : _T("[false]"), actuals.HasStaticAddress() ? _T("on") : _T("off")));
 
+                if (_config.ContinuousBackgroundScan.IsSet() == true) {
+                    Connector().ContinuousBackgroundScan(_config.ContinuousBackgroundScan.Value());
+                }
+
+                Connector().BackgroundScan(true); // Maybe enable background scan already
+
                 // Bluetooth is ready!
                 PluginHost::ISubSystem* subSystems(_service->SubSystems());
                 ASSERT(subSystems != nullptr);
@@ -145,12 +151,6 @@ namespace Plugin {
                     subSystems->Set(PluginHost::ISubSystem::BLUETOOTH, nullptr);
                     subSystems->Release();
                 }
-
-                if (_config.ContinuousBackgroundScan.IsSet() == true) {
-                    Connector().ContinuousBackgroundScan(_config.ContinuousBackgroundScan.Value());
-                }
-
-                Connector().BackgroundScan(true); // Maybe enable background scan already
             }
         }
 

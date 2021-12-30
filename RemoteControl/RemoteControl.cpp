@@ -173,7 +173,7 @@ namespace Plugin {
 
                 map.PassThrough(config.PassOn.Value());
             } else {
-                if (map.Load(mappingFile) == Core::ERROR_NONE) {
+                if (Load(map, mappingFile) == Core::ERROR_NONE) {
 
                     map.PassThrough(config.PassOn.Value());
                 } else {
@@ -217,7 +217,7 @@ namespace Plugin {
 
                     // Get our selves a table..
                     PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
-                    map.Load(specific);
+                    Load(map, specific);
                     if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());
                     }
@@ -242,7 +242,7 @@ namespace Plugin {
 
                     // Get our selves a table..de
                     PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(configList.Current().Name.Value()));
-                    map.Load(specific);
+                    Load(map, specific);
                     map.PassThrough(configList.Current().PassOn.Value());
                 }
 
@@ -684,7 +684,7 @@ namespace Plugin {
                             // Seems like we have a default mapping file. Load it..
                             PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
-                            if (map.Save(fileName) == Core::ERROR_NONE) {
+                            if (Save(map, fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = string(_T("File is created: " + fileName));
                             }
@@ -707,7 +707,7 @@ namespace Plugin {
                         if (fileName.empty() == false) {
                             PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
-                            if (map.Load(fileName) == Core::ERROR_NONE) {
+                            if (Load(map, fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = string(_T("File is reloaded: " + deviceName));
                             }
@@ -841,7 +841,7 @@ namespace Plugin {
         if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) != _notificationClients.end())
             return;
 
-        TRACE(Trace::Information , (_T("Registered a client with RemoteControl")));
+        TRACE(Trace::Information, (_T("Registered a client with RemoteControl")));
         _notificationClients.push_back(sink);
         sink->AddRef();
 
@@ -873,6 +873,51 @@ namespace Plugin {
             string keyCode (Core::NumberType<uint32_t>(code).Text());
             event_keypressed(keyCode, (type == IVirtualInput::KeyData::type::PRESSED));
         }
+    }
+
+    uint32_t RemoteControl::Load(PluginHost::VirtualInput::KeyMap& map, const string& keyMap)
+    {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        if ((keyMap.empty() == false) && (Core::File(keyMap).Exists() == true)) {
+            result = Core::ERROR_OPENING_FAILED;
+
+            Core::File mappingFile(keyMap);
+            Core::JSON::ArrayType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> mappingTable;
+
+            if (mappingFile.Open(true) == true) {
+                result = Core::ERROR_ILLEGAL_STATE;
+                Core::OptionalType<Core::JSON::Error> error;
+                mappingTable.IElement::FromFile(mappingFile, error);
+                if (error.IsSet() == true) {
+                    TRACE(Trace::Information, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+                } else {
+                    result = map.Import(mappingTable);
+                }
+                mappingFile.Close();
+            }
+        }
+
+        return (result);
+    }
+
+    uint32_t RemoteControl::Save(PluginHost::VirtualInput::KeyMap& map, const string& keyMap)
+    {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        Core::File mappingFile(keyMap);
+        Core::JSON::ArrayType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> mappingTable;
+
+        if (mappingFile.Create() == true) {
+            mappingFile.SetSize(0);
+
+            result = Core::ERROR_NONE;
+
+            map.Export(mappingTable);
+            mappingTable.IElement::ToFile(mappingFile);
+        }
+
+        return (result);
     }
 }
 }
