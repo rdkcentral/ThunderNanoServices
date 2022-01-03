@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-TimeSync plugin for Thunder framework.
+A TimeSync plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -83,6 +84,13 @@ The table below lists configuration options of the plugin.
 | sources | array | Time sources |
 | sources[#] | string | (a time source entry) |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [TimeSync.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/TimeSync.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -96,7 +104,7 @@ TimeSync interface methods:
 
 
 <a name="method.synchronize"></a>
-## *synchronize <sup>method</sup>*
+## *synchronize [<sup>method</sup>](#head.Methods)*
 
 Synchronizes time.
 
@@ -128,7 +136,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TimeSync.1.synchronize"
 }
 ```
@@ -138,7 +146,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -157,7 +165,7 @@ TimeSync interface properties:
 
 
 <a name="property.synctime"></a>
-## *synctime <sup>property</sup>*
+## *synctime [<sup>property</sup>](#head.Properties)*
 
 Provides access to the most recent synchronized time.
 
@@ -178,7 +186,7 @@ Provides access to the most recent synchronized time.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TimeSync.1.synctime"
 }
 ```
@@ -188,7 +196,7 @@ Provides access to the most recent synchronized time.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "time": "2019-05-07T07:20:26Z",
         "source": "ntp://example.com"
@@ -197,7 +205,7 @@ Provides access to the most recent synchronized time.
 ```
 
 <a name="property.time"></a>
-## *time <sup>property</sup>*
+## *time [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current system time.
 
@@ -224,7 +232,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TimeSync.1.time"
 }
 ```
@@ -234,7 +242,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "2019-05-07T07:20:26Z"
 }
 ```
@@ -244,7 +252,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "TimeSync.1.time",
     "params": "2019-05-07T07:20:26Z"
 }
@@ -255,7 +263,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -275,7 +283,7 @@ TimeSync interface events:
 
 
 <a name="event.timechange"></a>
-## *timechange <sup>event</sup>*
+## *timechange [<sup>event</sup>](#head.Notifications)*
 
 Signals a time change.
 

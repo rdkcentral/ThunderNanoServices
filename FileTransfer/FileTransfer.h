@@ -299,7 +299,7 @@ namespace Plugin
                 Core::FileSystemMonitor::Instance().Unregister(&(*_job), _path);
 
                 // Potentially the Job might still be waiting, let’s kill it
-                Core::IWorkerPool::Instance().Revoke(Core::proxy_cast<Core::IDispatchType<void> >(_job));
+                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatchType<void> >(_job));
 
                 _path = EMPTY_STRING;
                 _position = 0;
@@ -332,7 +332,7 @@ namespace Plugin
             }
             void Updated()
             {
-                Core::IWorkerPool::Instance().Submit(Core::proxy_cast<Core::IDispatchType<void> >(_job));
+                Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_job));
             }
 
         private:

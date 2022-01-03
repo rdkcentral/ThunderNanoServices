@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-Cobalt plugin for Thunder framework.
+A Cobalt plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -88,6 +89,15 @@ The table below lists configuration options of the plugin.
 | configuration?.connection | string | <sup>*(optional)*</sup> The type of connection that is used for internet connectivity (must be one of the following: *cable*, *wireless*) |
 | configuration?.playbackrates | boolean | <sup>*(optional)*</sup> If enabled, Cobalt supports different rates, otherwise, it supports only 0 and 1 (default: true) |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [Cobalt.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Cobalt.json)
+- [Browser.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Browser.json)
+- [StateControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/StateControl.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -101,7 +111,7 @@ Browser interface methods:
 
 
 <a name="method.delete"></a>
-## *delete <sup>method</sup>*
+## *delete [<sup>method</sup>](#head.Methods)*
 
 Removes contents of a directory from the persistent storage.
 
@@ -135,7 +145,7 @@ Use this method to recursively delete contents of a directory
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.delete",
     "params": {
         "path": ".cache/wpe/disk-cache"
@@ -148,7 +158,7 @@ Use this method to recursively delete contents of a directory
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -174,7 +184,7 @@ StateControl interface properties:
 
 
 <a name="property.url"></a>
-## *url <sup>property</sup>*
+## *url [<sup>property</sup>](#head.Properties)*
 
 Provides access to the URL loaded in the browser.
 
@@ -199,7 +209,7 @@ Also see: [urlchange](#event.urlchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.url"
 }
 ```
@@ -209,7 +219,7 @@ Also see: [urlchange](#event.urlchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "https://www.google.com"
 }
 ```
@@ -219,7 +229,7 @@ Also see: [urlchange](#event.urlchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.url",
     "params": "https://www.google.com"
 }
@@ -230,13 +240,13 @@ Also see: [urlchange](#event.urlchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.visibility"></a>
-## *visibility <sup>property</sup>*
+## *visibility [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current browser visibility.
 
@@ -261,7 +271,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.visibility"
 }
 ```
@@ -271,7 +281,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "visible"
 }
 ```
@@ -281,7 +291,7 @@ Also see: [visibilitychange](#event.visibilitychange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.visibility",
     "params": "visible"
 }
@@ -292,13 +302,13 @@ Also see: [visibilitychange](#event.visibilitychange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.fps"></a>
-## *fps <sup>property</sup>*
+## *fps [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current number of frames per second the browser is rendering.
 
@@ -317,7 +327,7 @@ Provides access to the current number of frames per second the browser is render
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.fps"
 }
 ```
@@ -327,13 +337,13 @@ Provides access to the current number of frames per second the browser is render
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 30
 }
 ```
 
 <a name="property.state"></a>
-## *state <sup>property</sup>*
+## *state [<sup>property</sup>](#head.Properties)*
 
 Provides access to the running state of the service.
 
@@ -352,7 +362,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.state"
 }
 ```
@@ -362,7 +372,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "resumed"
 }
 ```
@@ -372,7 +382,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Cobalt.1.state",
     "params": "resumed"
 }
@@ -383,7 +393,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -410,7 +420,7 @@ StateControl interface events:
 
 
 <a name="event.urlchange"></a>
-## *urlchange <sup>event</sup>*
+## *urlchange [<sup>event</sup>](#head.Notifications)*
 
 Signals a URL change in the browser.
 
@@ -436,7 +446,7 @@ Signals a URL change in the browser.
 ```
 
 <a name="event.visibilitychange"></a>
-## *visibilitychange <sup>event</sup>*
+## *visibilitychange [<sup>event</sup>](#head.Notifications)*
 
 Signals a visibility change of the browser.
 
@@ -460,7 +470,7 @@ Signals a visibility change of the browser.
 ```
 
 <a name="event.statechange"></a>
-## *statechange <sup>event</sup>*
+## *statechange [<sup>event</sup>](#head.Notifications)*
 
 Signals a state change of the service.
 

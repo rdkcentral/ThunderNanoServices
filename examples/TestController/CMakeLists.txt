@@ -18,7 +18,13 @@
 set(PLUGIN_NAME TestController)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-set(PLUGIN_TESTCONTROLLER_OUTOFPROCESS "true" CACHE STRING "Controls if the plugin should run in its own process [true, false].")
+set(PLUGIN_TESTCONTROLLER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+
+# deprecated/legacy flags support
+if(PLUGIN_TESTCONTROLLER_OUTOFPROCESS STREQUAL "false")
+    set(PLUGIN_TESTCONTROLLER_MODE "Off" CACHE STRING "Process mode"  FORCE)
+    unset(PLUGIN_TESTCONTROLLER_OUTOFPROCESS CACHE)
+endif()
 
 message("Setting up ${PLUGIN_NAME}")
 

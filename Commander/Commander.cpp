@@ -93,7 +93,7 @@ namespace Plugin {
 
         while (index != _sequencers.end()) {
 
-            Core::ProxyType<Core::IDispatchType<void>> job(Core::proxy_cast<Core::IDispatchType<void>>(index->second));
+            Core::ProxyType<Core::IDispatch> job(index->second);
 
             index->second->Abort();
             Core::IWorkerPool::Instance().Revoke(job);
@@ -159,7 +159,7 @@ namespace Plugin {
 
                         response->ErrorCode = Web::STATUS_OK;
                         response->Message = "OK";
-                        response->Body(Core::proxy_cast<Web::IBody>(data));
+                        response->Body(Core::ProxyType<Web::IBody>(data));
                     }
                 } else {
                     Core::ProxyType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Data>>> data(jsonBodyArrayDataFactory.Element());
@@ -174,7 +174,7 @@ namespace Plugin {
 
                     response->ErrorCode = Web::STATUS_OK;
                     response->Message = "OK";
-                    response->Body(Core::proxy_cast<Web::IBody>(data));
+                    response->Body(Core::ProxyType<Web::IBody>(data));
                 }
             } else if (index.Current() == _T("Commands")) {
 
@@ -193,7 +193,7 @@ namespace Plugin {
 
                 response->ErrorCode = Web::STATUS_OK;
                 response->Message = "OK";
-                response->Body(Core::proxy_cast<Web::IBody>(data));
+                response->Body(Core::ProxyType<Web::IBody>(data));
             }
         } else if (request.Verb == Web::Request::HTTP_DELETE) {
             if ((true != index.Next()) || (_sequencers.find(index.Current().Text()) == _sequencers.end())) {
@@ -203,7 +203,7 @@ namespace Plugin {
             } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatchType<void>> job(Core::proxy_cast<Core::IDispatchType<void>>(sequencer));
+                Core::ProxyType<Core::IDispatch> job(sequencer);
 
                 if (sequencer->Abort() != Core::ERROR_NONE) {
                     response->ErrorCode = Web::STATUS_NO_CONTENT;
@@ -225,7 +225,7 @@ namespace Plugin {
             } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatchType<void>> job(Core::proxy_cast<Core::IDispatchType<void>>(sequencer));
+                Core::ProxyType<Core::IDispatch> job(sequencer);
 
                 if (sequencer->IsActive() == true) {
                     response->ErrorCode = Web::STATUS_TEMPORARY_REDIRECT;

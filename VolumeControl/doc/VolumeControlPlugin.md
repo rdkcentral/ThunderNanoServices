@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-VolumeControl plugin for Thunder framework.
+A VolumeControl plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
 
@@ -76,6 +77,13 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEVolumeControl.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- Exchange::IVolumeControl ([IVolumeControl.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IVolumeControl.h))
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -90,7 +98,7 @@ VolumeControl interface properties:
 
 
 <a name="property.muted"></a>
-## *muted <sup>property</sup>*
+## *muted [<sup>property</sup>](#head.Properties)*
 
 Provides access to the audio mute state.
 
@@ -98,7 +106,7 @@ Provides access to the audio mute state.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | boolean | Mute state (true: muted, false: un-muted) |
+| muted | boolean | Mute state (true: muted, false: un-muted) |
 
 ### Errors
 
@@ -113,7 +121,7 @@ Provides access to the audio mute state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "VolumeControl.1.muted"
 }
 ```
@@ -123,7 +131,7 @@ Provides access to the audio mute state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": false
 }
 ```
@@ -133,7 +141,7 @@ Provides access to the audio mute state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "VolumeControl.1.muted",
     "params": false
 }
@@ -144,13 +152,13 @@ Provides access to the audio mute state.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.volume"></a>
-## *volume <sup>property</sup>*
+## *volume [<sup>property</sup>](#head.Properties)*
 
 Provides access to the audio volume level.
 
@@ -158,7 +166,7 @@ Provides access to the audio volume level.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | integer | Volume level in percent |
+| volume | integer | Volume level in percent |
 
 ### Errors
 
@@ -173,7 +181,7 @@ Provides access to the audio volume level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "VolumeControl.1.volume"
 }
 ```
@@ -183,7 +191,7 @@ Provides access to the audio volume level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 100
 }
 ```
@@ -193,7 +201,7 @@ Provides access to the audio volume level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "VolumeControl.1.volume",
     "params": 100
 }
@@ -204,7 +212,7 @@ Provides access to the audio volume level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -225,7 +233,7 @@ VolumeControl interface events:
 
 
 <a name="event.volume"></a>
-## *volume <sup>event</sup>*
+## *volume [<sup>event</sup>](#head.Notifications)*
 
 Signals volume change.
 
@@ -249,7 +257,7 @@ Signals volume change.
 ```
 
 <a name="event.muted"></a>
-## *muted <sup>event</sup>*
+## *muted [<sup>event</sup>](#head.Notifications)*
 
 Signals mute state change.
 

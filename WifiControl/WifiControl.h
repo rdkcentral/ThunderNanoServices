@@ -79,9 +79,9 @@ namespace Plugin {
                 _connector = connector;
 
                 Core::Process::Options options(application);
+
                 /* interface name *mandatory */
                 options.Add(_T("-i")+ _interfaceName);
-
                 /* ctrl_interface parameter *mandatory */
                 options.Add(_T("-C") + _connector);
 
@@ -129,6 +129,7 @@ namespace Plugin {
             Core::Process _process;
             uint32_t _pid;
         };
+
         class AutoConnect : public WPASupplicant::Controller::IConnectCallback
         {
         private:
@@ -231,7 +232,7 @@ namespace Plugin {
                 MoveState (states::SCANNING);
 
                 _controller->Scan();
-                _job.Schedule(Core::Time::Now().Add(_interval));
+                _job.Reschedule(Core::Time::Now().Add(_interval));
 
                 return Core::ERROR_NONE;
             }
@@ -283,7 +284,7 @@ namespace Plugin {
                 if (_state == states::SCANNING) {
                     // Seems that the Scan did not complete in time. Lets reschedule for later...
                     _state = states::RETRY;
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    _job.Reschedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::SCANNED) {
 
@@ -320,7 +321,7 @@ namespace Plugin {
                         _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
                     }
 
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    _job.Reschedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::CONNECTING) {
                     // If we sre still in the CONNECTING mode, it must mean that previous CONNECT Failed
@@ -335,7 +336,7 @@ namespace Plugin {
                     else {
                         _controller->Connect(this, _ssidList.front().SSID(), _ssidList.front().BSSID());
                     }
-                    _job.Schedule(Core::Time::Now().Add(_interval));
+                    _job.Reschedule(Core::Time::Now().Add(_interval));
                 }
                 else if (_state == states::RETRY) {
                     if (_attempts == 0) {
@@ -348,7 +349,7 @@ namespace Plugin {
                         _state = states::SCANNING;
                         _controller->Scan();
 
-                        _job.Schedule(Core::Time::Now().Add(_interval));
+                        _job.Reschedule(Core::Time::Now().Add(_interval));
                     }
                 }
 
@@ -419,6 +420,201 @@ namespace Plugin {
             string _preferred;
         };
 
+        class WpsConnect {
+        private:
+            enum class states : uint8_t
+            {
+                IDLE,
+                REQUESTED,
+                SUCCESS
+            };
+
+         using Job = Core::WorkerPool::JobType<WpsConnect&>;
+            
+         public:
+            WpsConnect() = delete;
+            WpsConnect(const WpsConnect&) = delete;
+            WpsConnect& operator=(const WpsConnect&) = delete;
+
+            WpsConnect(WifiControl& parent, Core::ProxyType<WPASupplicant::Controller>& controller)
+                : _adminLock()
+                , _parent(parent) 
+                , _controller(controller)
+                , _job(*this)
+                , _state(states::IDLE)
+                , _ssid()
+            {
+            }
+            ~WpsConnect() = default;
+
+            uint32_t Invoke(const string& ssid, const JsonData::WifiControl::ConnectParamsData::AutoconnectType actype, const string& pin, const uint32_t walkTime)
+            {
+                uint32_t result = Core::ERROR_UNKNOWN_KEY;
+
+                _adminLock.Lock();
+
+                if ( actype == JsonData::WifiControl::ConnectParamsData::AutoconnectType::PBC){
+                    result = _controller->StartWpsPbc(ssid);
+                }else if( actype == JsonData::WifiControl::ConnectParamsData::AutoconnectType::PIN){
+                    result = _controller->StartWpsPin(ssid, pin);
+                }
+
+                if(result == Core::ERROR_NONE) {
+                    _ssid = ssid;
+                    _state = states::REQUESTED;
+                    _job.Reschedule(Core::Time::Now().Add(walkTime * 1000));
+                }
+                _adminLock.Unlock();
+                return result;
+            }
+
+            uint32_t Revoke()
+            {
+                uint32_t result = Core::ERROR_NONE;
+                _adminLock.Lock();
+                if(_state != states::IDLE) {
+                    result = _controller->CancelWps();
+                    Reset();
+                }
+                _adminLock.Unlock();
+                return result;
+            }
+
+            void Completed(const uint32_t result)
+            {
+                _adminLock.Lock();
+                if(_state == states::REQUESTED) {
+                    if (result != Core::ERROR_NONE) {
+                         _job.Revoke();
+                        Reset();
+                    }
+                    else {
+                        _state = states::SUCCESS;
+                    }
+                }
+                _adminLock.Unlock();
+            }            
+        
+            void Disconnected()
+            {
+                _adminLock.Lock();
+                if (_state == states::SUCCESS) {
+                    _job.Revoke();
+                    _job.Submit();
+                }
+                _adminLock.Unlock();
+            }
+
+            bool Active() const
+            {
+                bool result = false;
+                _adminLock.Lock();
+                if (_state != states::IDLE) {
+                    result = true;
+                }
+                _adminLock.Unlock();
+                return result;
+            }
+
+            bool Credentials() const
+            {
+                bool result = false;
+                _adminLock.Lock();
+                if (_state == states::SUCCESS) {
+                    result = true;
+                }
+                _adminLock.Unlock();
+                return result;
+            }
+
+            void Dispatch()
+            {
+                _adminLock.Lock();
+                uint32_t result = Core::ERROR_NONE;
+
+                if (_state == states::SUCCESS) {
+                    //Lets get the Credentials
+                    WPASupplicant::Network::wpsauthtypes auth;
+                    string networkKey;
+                    string ssid;
+                    result = _controller->GetWpsCredentials(ssid,networkKey,auth);
+                    if((result == Core::ERROR_NONE) && (networkKey.empty()==false)) {
+
+                        //Create a new ConfigInfo
+                        JsonData::WifiControl::ConfigInfo configInfo;
+                        configInfo.Hidden = false;
+                        configInfo.Ssid = ssid;
+
+
+                        if(auth == WPASupplicant::Network::wpsauthtypes::WPS_AUTH_OPEN) {
+                            configInfo.Type = JsonData::WifiControl::TypeType::UNSECURE;
+                        } else{
+                            uint8_t protocolFlags = 0;
+
+                            switch (auth) {
+                                case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPAPSK:
+                                  protocolFlags = WPASupplicant::Config::wpa_protocol::WPA;
+                               break;
+                               case WPASupplicant::Network::wpsauthtypes::WPS_AUTH_WPA2PSK:
+                                  protocolFlags = WPASupplicant::Config::wpa_protocol::WPA2;
+                               break;
+
+                               default:
+                                  // Handle other Protocol types?
+                                  TRACE_GLOBAL(Trace::Information, (_T("Unknown WPA protocol type. ")));
+                            }
+
+                            configInfo.Type = GetWPAProtocolType(protocolFlags);
+                            configInfo.Psk = networkKey;
+                        }
+
+                        _controller->CancelWps();
+                        Reset();
+                        _adminLock.Unlock();
+
+                        WPASupplicant::Config profile(_controller->Create(ssid));
+                        if (WifiControl::UpdateConfig(profile, configInfo) != true) {
+                            result = Core::ERROR_GENERAL;
+                           _controller->Destroy(ssid);
+                        }else {
+                            result = _parent.Connect(ssid);
+                        }
+                    }
+
+                    if((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS)){
+                        _parent.event_connectionchange(string());
+                    }
+                }
+                else if (_state == states::REQUESTED){
+                    //The WPS Operation didnot complete in time.
+                    _controller->CancelWps();
+                    Reset();
+                    _adminLock.Unlock();
+                    _parent.event_connectionchange(string());
+                }
+                else{
+                    _adminLock.Unlock();
+                }
+            }
+         
+
+         private:
+
+         void Reset()
+         {
+             _state = states::IDLE;
+             _ssid.clear();
+         }
+
+         private:
+           mutable Core::CriticalSection _adminLock;
+           WifiControl& _parent;
+           Core::ProxyType<WPASupplicant::Controller>& _controller;
+           Job _job;
+           states _state;
+           string _ssid;
+        };
+
     public:
         class Config : public Core::JSON::Container {
         public:
@@ -435,6 +631,8 @@ namespace Plugin {
                 , MaxRetries(-1)
                 , WaitTime(15)
                 , LogFile()
+                , WpsWalkTime(125)
+                , WpsDisabled(false)
             {
                 Add(_T("connector"), &ConnectorDirectory);
                 Add(_T("interface"), &Interface);
@@ -445,6 +643,8 @@ namespace Plugin {
                 Add(_T("maxretries"), &MaxRetries);
                 Add(_T("waittime"), &WaitTime);
                 Add(_T("logfile"), &LogFile);
+                Add(_T("wpswalktime"), &WpsWalkTime);
+                Add(_T("wpsdisabled"), &WpsDisabled);
             }
             virtual ~Config()
             {
@@ -460,11 +660,13 @@ namespace Plugin {
             Core::JSON::DecSInt32 MaxRetries;
             Core::JSON::DecUInt8 WaitTime;
             Core::JSON::String LogFile;
+            Core::JSON::DecSInt32 WpsWalkTime;
+            Core::JSON::Boolean WpsDisabled;
         };
 
         static void FillNetworkInfo(const WPASupplicant::Network& info, JsonData::WifiControl::NetworkInfo& net)
         {
-            net.Bssid = std::to_string(info.BSSID());
+            net.Bssid = WPASupplicant::Controller::BSSID(info.BSSID());
             net.Frequency = info.Frequency();
             net.Signal = info.Signal();
             net.Ssid = info.SSID();
@@ -668,8 +870,9 @@ namespace Plugin {
         uint32_t endpoint_delete(const JsonData::WifiControl::DeleteParamsInfo& params);
         uint32_t endpoint_store();
         uint32_t endpoint_scan();
-        uint32_t endpoint_connect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t endpoint_connect(const JsonData::WifiControl::ConnectParamsData& params);
         uint32_t endpoint_disconnect(const JsonData::WifiControl::DeleteParamsInfo& params);
+        uint32_t get_pin(Core::JSON::String& response) const;
         uint32_t get_status(JsonData::WifiControl::StatusData& response) const;
         uint32_t get_networks(Core::JSON::ArrayType<JsonData::WifiControl::NetworkInfo>& response) const;
         uint32_t get_configs(Core::JSON::ArrayType<JsonData::WifiControl::ConfigInfo>& response) const;
@@ -680,19 +883,37 @@ namespace Plugin {
         void event_networkchange();
         void event_connectionchange(const string& ssid);
 
-        inline uint32_t Connect(const string& ssid)
+        inline uint32_t Connect(const string& ssid,
+                                const JsonData::WifiControl::ConnectParamsData::AutoconnectType actype=JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE,
+                                const string& pin=string(""))
         {
             if (_autoConnectEnabled == true) {
                 _autoConnect.Revoke();
             }
 
-            uint32_t result = _controller->Connect(ssid);
+            uint32_t result;
 
-            if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
-                _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? 
-                                                    _T("") : 
-                                                    ssid, _retryInterval, _maxRetries);
-                _autoConnect.UpdateStatus(result);
+            if(_wpsConnect.Active()){
+                _wpsConnect.Revoke();
+            }
+            if ( actype != JsonData::WifiControl::ConnectParamsData::AutoconnectType::NONE)
+            {
+                if(_wpsDisabled == false) {
+                    result = _wpsConnect.Invoke(ssid, actype, pin, _walkTime);
+                }
+                else{
+                    result = Core::ERROR_UNAVAILABLE;
+                }
+
+            } else {
+
+                result = _controller->Connect(ssid);
+                if ((result != Core::ERROR_INPROGRESS) && (_autoConnectEnabled == true)) {
+                    _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ? 
+                                                        _T("") : 
+                                                        ssid, _retryInterval, _maxRetries);
+                    _autoConnect.UpdateStatus(result);
+                }
             }
             return result;
         }
@@ -754,6 +975,7 @@ namespace Plugin {
     private:
         uint8_t _skipURL;
         uint8_t _retryInterval;
+        uint32_t _walkTime;
         uint32_t _maxRetries;
         PluginHost::IShell* _service;
         string _configurationStore;
@@ -762,6 +984,8 @@ namespace Plugin {
         Core::ProxyType<WPASupplicant::Controller> _controller;
         AutoConnect _autoConnect;
         bool _autoConnectEnabled;
+        WpsConnect _wpsConnect;
+        bool _wpsDisabled;
     };
 
 } // namespace Plugin

@@ -44,7 +44,6 @@ namespace Plugin {
     const string OutOfProcessPlugin::Initialize(PluginHost::IShell* service) /* override */
     {
         string message;
-        Config config;
 
         ASSERT(_browser == nullptr);
         ASSERT(_memory == nullptr);
@@ -56,7 +55,6 @@ namespace Plugin {
         _service->EnableWebServer(_T("UI"), EMPTY_STRING);
         _service->Register(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _service->Register(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-        config.FromString(_service->ConfigLine());
 
         _browser = service->Root<Exchange::IBrowser>(_connectionId, Core::infinite, _T("OutOfProcessImplementation"));
 
@@ -271,7 +269,7 @@ namespace Plugin {
                     Core::ProxyType<Data> info(jsonDataFactory.Element());
 
                     info->URL = _T("ws://<My IP>/JSONPop");
-                    _subscriber->Submit(Core::proxy_cast<Core::JSON::IElement>(info));
+                    _subscriber->Submit(Core::ProxyType<Core::JSON::IElement>(info));
                 } else if ((index.Remainder() == _T("URL")) && (request.HasBody() == true) && (request.Body<Web::TextBody>()->empty() == false)) {
                     _browser->SetURL(*(request.Body<Web::TextBody>()));
                 #ifdef __CORE_EXCEPTION_CATCHING__

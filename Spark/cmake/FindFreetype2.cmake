@@ -27,8 +27,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+if(Freetype2_FIND_QUIETLY)
+     set(_FREETYPE2_MODE QUIET)
+elseif(Freetype2_FIND_REQUIRED)
+    set(_FREETYPE2_MODE REQUIRED)
+endif()
+
 find_package(PkgConfig)
-pkg_check_modules(PC_FREETYPE2 QUIET freetype2)
+pkg_check_modules(PC_FREETYPE2 ${_FREETYPE2_MODE} freetype2)
 
 find_path(FREETYPE2_INCLUDE_DIR ft2build.h
            PATHS usr/include
@@ -37,17 +43,15 @@ find_path(FREETYPE2_INCLUDE_DIR ft2build.h
 
 set(FREETYPE2_INCLUDE_DIRS ${FREETYPE2_INCLUDE_DIR})
 
-include(FindPackageHandleStandardArgs)
-
-find_package_handle_standard_args(FREETYPE2 DEFAULT_MSG FREETYPE2_INCLUDE_DIRS)
-
-mark_as_advanced(FREETYPE2_INCLUDE_DIRS)
-
 find_library(FREETYPE2_LIBRARY NAMES ${PC_FREETYPE2_LIBRARIES}
         HINTS ${PC_FREETYPE2_LIBDIR} ${PC_FREETYPE2_LIBRARY_DIRS}
         )
 
-if(FREETYPE2_LIBRARY AND NOT TARGET Freetype2::Freetype2)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Freetype2 DEFAULT_MSG PC_FREETYPE2_FOUND FREETYPE2_INCLUDE_DIRS FREETYPE2_LIBRARY)
+mark_as_advanced(FREETYPE2_INCLUDE_DIRS FREETYPE2_LIBRARY)
+
+if(Freetype2_FOUND AND NOT TARGET Freetype2::Freetype2)
     add_library(Freetype2::Freetype2 UNKNOWN IMPORTED)
     set_target_properties(Freetype2::Freetype2 PROPERTIES
             IMPORTED_LOCATION "${FREETYPE2_LIBRARY}"

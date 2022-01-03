@@ -16,24 +16,34 @@
 # limitations under the License.
 
 set(TARGET ${PLATFORM_COMPOSITOR})
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 message(STATUS "Setup ${TARGET} v${PROJECT_VERSION}...")
 
-if (PLUGIN_COMPOSITOR_NXSERVER)
-if (COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
+if(NOT PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION)
+    set(PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION "Westeros")
+endif()
+
+if((NOT "${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston") AND
+    (NOT "${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros"))
+message( FATAL_ERROR "Invalid Wayland implementation, set PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION (currently: [${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}]) to \"Weston\" or \"Westeros\"" )
+endif()
+
+if(PLUGIN_COMPOSITOR_NXSERVER)
+if(COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
     add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
-else()
+else ()
     include(GetExternalCode)
-    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version")
+    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version: commit_id_or_tag_or_branch_name")
     set(COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor wayland implementation repository")
     GetExternalCode(
         GIT_REPOSITORY ${COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY}
-        GIT_TAG ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
+        GIT_VERSION ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
         SOURCE_DIR "Nexus"
     )
     add_subdirectory (Nexus/NexusServer)
 endif()
-endif ()
+endif()
 
 # add the platformplugin library
 add_library(${TARGET} Wayland.cpp)
@@ -46,19 +56,19 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(EGL REQUIRED)
 find_package(PNG REQUIRED)
 
-if (PLUGIN_COMPOSITOR_NXSERVER)
+if(PLUGIN_COMPOSITOR_NXSERVER)
     target_link_libraries(${TARGET} 
         PRIVATE 
            ${NAMESPACE}nexusserver::${NAMESPACE}nexusserver)
     target_compile_definitions(${TARGET}
         PRIVATE
             ENABLE_NXSERVER=1)
-    if (V3D_DRM_DISABLE)
+    if(V3D_DRM_DISABLE)
         target_compile_definitions(${TARGET}
             PRIVATE
                 V3D_DRM_DISABLE=1)
-    endif ()
-endif ()
+    endif()
+endif()
 
 if(EGL_FOUND)
     add_definitions(${EGL_CFLAGS})
@@ -90,25 +100,36 @@ set_target_properties(${TARGET} PROPERTIES
         DEFINE_SYMBOL WPEFRAMEWORK_PLATFORM_PLUGIN
 )
 
-find_package(WesterosServer)
-if(WESTEROS_SERVER_FOUND)
-    target_sources(${TARGET} 
-        PRIVATE 
-            Westeros.cpp
-    )
-    target_link_libraries(${TARGET} 
+if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
+    find_package(WestonServer REQUIRED)
+    target_sources(${TARGET}
         PRIVATE
-            WesterosServer::WesterosServer
+            Weston.cpp
     )
-
-    find_package(BCM_HOST QUIET)
-    if (NOT BCM_HOST_FOUND)
-        target_compile_definitions(${TARGET}
+    target_link_libraries(${TARGET}
+        PRIVATE
+            WestonServer::WestonServer
+    )
+elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
+    find_package(WesterosServer)
+    if(WESTEROS_SERVER_FOUND)
+        target_sources(${TARGET}
+             PRIVATE
+                Westeros.cpp
+        )
+        target_link_libraries(${TARGET}
             PRIVATE
-                RESOLUTION_SUPPORT=1)
-    endif(NOT BCM_HOST_FOUND)
+                WesterosServer::WesterosServer
+        )
 
-endif(WESTEROS_SERVER_FOUND)
+        find_package(BCM_HOST QUIET)
+        if(NOT BCM_HOST_FOUND)
+            target_compile_definitions(${TARGET}
+                PRIVATE
+                    RESOLUTION_SUPPORT=1)
+        endif(NOT BCM_HOST_FOUND)
+    endif(WESTEROS_SERVER_FOUND)
+endif()
 
 if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
     find_package(${NAMESPACE}VirtualInput REQUIRED)
@@ -121,5 +142,10 @@ endif(PLUGIN_COMPOSITOR_VIRTUALINPUT)
 install(
     TARGETS ${TARGET}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
+)
+
+install(
+    FILES config/weston.ini
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor/weston
 )
 

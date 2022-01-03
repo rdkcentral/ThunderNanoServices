@@ -252,7 +252,7 @@ namespace Plugin {
                 } while (nextSlot < timeSlot);
 
                 if (nextSlot != static_cast<uint64_t>(~0)) {
-                    _job.Schedule(Core::Time(nextSlot));
+                    _job.Reschedule(Core::Time(nextSlot));
                 }
 
                 _adminLock.Unlock();

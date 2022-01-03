@@ -6,13 +6,14 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-WifiControl plugin for Thunder framework.
+A WifiControl plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -83,10 +84,13 @@ The table below lists configuration options of the plugin.
 | configuration?.preferred | string | <sup>*(optional)*</sup> Preferred |
 | configuration?.autoconnect | string | <sup>*(optional)*</sup> Enable autoconnect |
 | configuration?.retryinterval | string | <sup>*(optional)*</sup> Retry interval |
-| configuration?.maxretries | number | <sup>*(optional)*</sup> Maximum retries (-1 for infinite) |
-| configuration?.waittime | number | <sup>*(optional)*</sup> Waiting time for the real wifi app to connect |
-| configuration?.logfile | string | <sup>*(optional)*</sup> File name to save debug info from the wifi app. Will be created in /tmp/WifiControl/ directory. Debug will be turned on if this is set |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [WifiControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/WifiControl.json)
 
 <a name="head.Methods"></a>
 # Methods
@@ -105,7 +109,7 @@ WifiControl interface methods:
 
 
 <a name="method.delete"></a>
-## *delete <sup>method</sup>*
+## *delete [<sup>method</sup>](#head.Methods)*
 
 Forgets the configuration of a network.
 
@@ -122,6 +126,12 @@ Forgets the configuration of a network.
 | :-------- | :-------- | :-------- |
 | result | null | Always null |
 
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 2 | ```ERROR_UNAVAILABLE``` | Returned when unable to update config list stored on disk |
+
 ### Example
 
 #### Request
@@ -129,7 +139,7 @@ Forgets the configuration of a network.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.delete",
     "params": {
         "ssid": "MyCorporateNetwork"
@@ -142,13 +152,13 @@ Forgets the configuration of a network.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.store"></a>
-## *store <sup>method</sup>*
+## *store [<sup>method</sup>](#head.Methods)*
 
 Stores the configurations in persistent storage.
 
@@ -175,7 +185,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.store"
 }
 ```
@@ -185,13 +195,13 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.scan"></a>
-## *scan <sup>method</sup>*
+## *scan [<sup>method</sup>](#head.Methods)*
 
 Searches for available networks.
 
@@ -221,7 +231,7 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.scan"
 }
 ```
@@ -231,13 +241,13 @@ This method takes no parameters.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.connect"></a>
-## *connect <sup>method</sup>*
+## *connect [<sup>method</sup>](#head.Methods)*
 
 Attempts connection to a network.
 
@@ -249,6 +259,7 @@ Also see: [connectionchange](#event.connectionchange)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.ssid | string | Identifier of a network |
+| params?.automode | enum | default:None, For WPS PBC, set to WpsPbc | 
 
 ### Result
 
@@ -260,7 +271,8 @@ Also see: [connectionchange](#event.connectionchange)
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Returned when the network with a the given SSID doesn't exists |
+| 43 | ```ERROR_NOT_EXIST``` | Returned when the network with a the given SSID doesn't exists |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Returned when the network with a the given security type doesn't exists |
 | 2 | ```ERROR_UNAVAILABLE``` | Returned when connection fails if there is no associated bssid to connect and not defined as AccessPoint. Rescan and try to connect |
 | 38 | ```ERROR_INVALID_SIGNATURE``` | Returned when connection is attempted with wrong password |
 | 9 | ```ERROR_ALREADY_CONNECTED``` | Returned when connection already exists |
@@ -273,10 +285,11 @@ Also see: [connectionchange](#event.connectionchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.connect",
     "params": {
-        "ssid": "MyCorporateNetwork"
+        "ssid": "MyCorporateNetwork",
+        "autoconnect": "pbc"
     }
 }
 ```
@@ -286,13 +299,13 @@ Also see: [connectionchange](#event.connectionchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.disconnect"></a>
-## *disconnect <sup>method</sup>*
+## *disconnect [<sup>method</sup>](#head.Methods)*
 
 Disconnects from a network.
 
@@ -325,7 +338,7 @@ Also see: [connectionchange](#event.connectionchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.disconnect",
     "params": {
         "ssid": "MyCorporateNetwork"
@@ -338,7 +351,7 @@ Also see: [connectionchange](#event.connectionchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -360,7 +373,7 @@ WifiControl interface properties:
 
 
 <a name="property.status"></a>
-## *status <sup>property</sup>*
+## *status [<sup>property</sup>](#head.Properties)*
 
 Provides access to the network status.
 
@@ -381,7 +394,7 @@ Provides access to the network status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.status"
 }
 ```
@@ -391,7 +404,7 @@ Provides access to the network status.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "connected": "MyCorporateNetwork",
         "scanning": false
@@ -400,7 +413,7 @@ Provides access to the network status.
 ```
 
 <a name="property.networks"></a>
-## *networks <sup>property</sup>*
+## *networks [<sup>property</sup>](#head.Properties)*
 
 Provides access to the available networks.
 
@@ -429,7 +442,7 @@ Provides access to the available networks.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.networks"
 }
 ```
@@ -439,7 +452,7 @@ Provides access to the available networks.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         {
             "ssid": "MyCorporateNetwork",
@@ -450,6 +463,13 @@ Provides access to the available networks.
                         "psk"
                     ]
                 }
+                {   
+                    "method: "WPS",
+                    "keys": [
+                        "pbc",
+                     ]
+                }
+
             ],
             "bssid": "94:b4:0f:77:cc:71",
             "frequency": 5180,
@@ -460,7 +480,7 @@ Provides access to the available networks.
 ```
 
 <a name="property.configs"></a>
-## *configs <sup>property</sup>*
+## *configs [<sup>property</sup>](#head.Properties)*
 
 Provides access to the all WiFi configurations.
 
@@ -494,7 +514,7 @@ Provides access to the all WiFi configurations.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.configs"
 }
 ```
@@ -504,7 +524,7 @@ Provides access to the all WiFi configurations.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         {
             "ssid": "MyCorporateNetwork",
@@ -521,7 +541,7 @@ Provides access to the all WiFi configurations.
 ```
 
 <a name="property.config"></a>
-## *config <sup>property</sup>*
+## *config [<sup>property</sup>](#head.Properties)*
 
 Provides access to the single WiFi configuration.
 
@@ -539,7 +559,7 @@ Provides access to the single WiFi configuration.
 | (property).identity | string | User credentials (username part) for EAP |
 | (property).password | string | User credentials (password part) for EAP |
 
-> The *ssid* shall be passed as the index to the property, e.g. *WifiControl.1.config@MyCorporateNetwork*. If not specified all configurations are returned.
+> The *ssid* argument shall be passed as the index to the property, e.g. *WifiControl.1.config@MyCorporateNetwork*. If not specified all configurations are returned.
 
 ### Errors
 
@@ -555,7 +575,7 @@ Provides access to the single WiFi configuration.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.config@MyCorporateNetwork"
 }
 ```
@@ -565,7 +585,7 @@ Provides access to the single WiFi configuration.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "ssid": "MyCorporateNetwork",
         "type": "WPA_WPA2",
@@ -584,7 +604,7 @@ Provides access to the single WiFi configuration.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.config@MyCorporateNetwork",
     "params": {
         "ssid": "MyCorporateNetwork",
@@ -604,13 +624,13 @@ Provides access to the single WiFi configuration.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.debug"></a>
-## *debug <sup>property</sup>*
+## *debug [<sup>property</sup>](#head.Properties)*
 
 Provides access to the sets debug level.
 
@@ -635,7 +655,7 @@ Provides access to the sets debug level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "WifiControl.1.debug",
     "params": 0
 }
@@ -646,7 +666,7 @@ Provides access to the sets debug level.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -668,7 +688,7 @@ WifiControl interface events:
 
 
 <a name="event.scanresults"></a>
-## *scanresults <sup>event</sup>*
+## *scanresults [<sup>event</sup>](#head.Notifications)*
 
 Signals that the scan operation has finished.
 
@@ -703,6 +723,13 @@ Signals that the scan operation has finished.
                     "keys": [
                         "psk"
                     ]
+                },
+                {
+                    "method: "WPS",
+                    "keys": [
+                        "pbc",
+                        "pin"
+                     ]
                 }
             ],
             "bssid": "94:b4:0f:77:cc:71",
@@ -714,7 +741,7 @@ Signals that the scan operation has finished.
 ```
 
 <a name="event.networkchange"></a>
-## *networkchange <sup>event</sup>*
+## *networkchange [<sup>event</sup>](#head.Notifications)*
 
 Signals that a network property has changed. e.g. frequency.
 
@@ -732,7 +759,7 @@ This event carries no parameters.
 ```
 
 <a name="event.connectionchange"></a>
-## *connectionchange <sup>event</sup>*
+## *connectionchange [<sup>event</sup>](#head.Notifications)*
 
 Notifies about connection state change. i.e. connected/disconnected.
 

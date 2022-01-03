@@ -29,8 +29,14 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_DISPLAYINFO_AUTOSTART true CACHE STRING "Automatically start DisplayInfo plugin")
-set(PLUGIN_DISPLAYINFO_OUTOFPROCESS false CACHE BOOL "Controls if the plugin should run in its own process [true, false].")
+set(PLUGIN_DISPLAYINFO_AUTOSTART "true" CACHE STRING "Automatically start DisplayInfo plugin")
+set(PLUGIN_DISPLAYINFO_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
+
+# deprecated/legacy flags support
+if(PLUGIN_DISPLAYINFO_OUTOFPROCESS STREQUAL "true")
+    set(PLUGIN_DISPLAYINFO_MODE "Local" CACHE STRING "Process mode"  FORCE)
+    unset(PLUGIN_DISPLAYINFO_OUTOFPROCESS CACHE)
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -80,11 +86,11 @@ elseif (NXCLIENT_FOUND AND NEXUS_FOUND)
                 ${DISPLAYINFO_IMPLEMENTATION_PATH}/PlatformImplementation.cpp)
     else()
         include(GetExternalCode)
-        set(DISPLAYINFO_IMPLEMENTATION_VERSION "master" CACHE STRING "DisplayInfo implementation version")
+        set(DISPLAYINFO_IMPLEMENTATION_VERSION "master" CACHE STRING "DisplayInfo implementation version: commit_id_or_tag_or_branch_name")
         set(DISPLAYINFO_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/DisplayInfo" CACHE STRING "DisplayInfo implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${DISPLAYINFO_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${DISPLAYINFO_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${DISPLAYINFO_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}

@@ -1,18 +1,19 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Process_Containers_Plugin"></a>
-# Process Containers Plugin
+<a name="head.Containers_Plugin"></a>
+# Containers Plugin
 
 **Version: 1.0**
 
 **Status: :white_circle::white_circle::white_circle:**
 
-Containers plugin for Thunder framework.
+A Containers plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 
@@ -22,12 +23,12 @@ Containers plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Containers plugin. It includes detailed specification of its configuration, methods and properties provided.
+This document describes purpose and functionality of the Containers plugin. It includes detailed specification about its configuration, methods and properties provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -74,7 +75,14 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Containers*) |
 | classname | string | Class name: *Containers* |
 | locator | string | Library name: *libWPEContainers.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [Containers.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Containers.json)
 
 <a name="head.Methods"></a>
 # Methods
@@ -88,8 +96,9 @@ Containers interface methods:
 | [start](#method.start) | Starts a new container |
 | [stop](#method.stop) | Stops a container |
 
+
 <a name="method.start"></a>
-## *start <sup>method</sup>*
+## *start [<sup>method</sup>](#head.Methods)*
 
 Starts a new container.
 
@@ -122,29 +131,31 @@ Starts a new container.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Containers.1.start", 
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "Containers.1.start",
     "params": {
-        "name": "ContainerName", 
-        "command": "lsof", 
+        "name": "ContainerName",
+        "command": "lsof",
         "parameters": [
             "-i"
         ]
     }
 }
 ```
+
 #### Response
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "result": null
 }
 ```
+
 <a name="method.stop"></a>
-## *stop <sup>method</sup>*
+## *stop [<sup>method</sup>](#head.Methods)*
 
 Stops a container.
 
@@ -173,23 +184,25 @@ Stops a container.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
-    "method": "Containers.1.stop", 
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "Containers.1.stop",
     "params": {
         "name": "ContainerName"
     }
 }
 ```
+
 #### Response
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "result": null
 }
 ```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -204,8 +217,9 @@ Containers interface properties:
 | [memory](#property.memory) <sup>RO</sup> | Memory taken by container |
 | [cpu](#property.cpu) <sup>RO</sup> | CPU time |
 
+
 <a name="property.containers"></a>
-## *containers <sup>property</sup>*
+## *containers [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of active containers.
 
@@ -224,24 +238,26 @@ Provides access to the list of active containers.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "method": "Containers.1.containers"
 }
 ```
+
 #### Get Response
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "result": [
         "ContainerName"
     ]
 }
 ```
+
 <a name="property.networks"></a>
-## *networks <sup>property</sup>*
+## *networks [<sup>property</sup>](#head.Properties)*
 
 Provides access to the list of network interfaces of the container.
 
@@ -257,7 +273,7 @@ Provides access to the list of network interfaces of the container.
 | (property)[#]?.ips | array | <sup>*(optional)*</sup> List of ip addresses |
 | (property)[#]?.ips[#] | string | <sup>*(optional)*</sup> IP address |
 
-> The *name* shall be passed as the index to the property, e.g. *Containers.1.networks@ContainerName*.
+> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.networks@ContainerName*.
 
 ### Errors
 
@@ -271,20 +287,21 @@ Provides access to the list of network interfaces of the container.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "method": "Containers.1.networks@ContainerName"
 }
 ```
+
 #### Get Response
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "result": [
         {
-            "interface": "veth3NF06K", 
+            "interface": "veth3NF06K",
             "ips": [
                 "192.168.0.12"
             ]
@@ -292,8 +309,9 @@ Provides access to the list of network interfaces of the container.
     ]
 }
 ```
+
 <a name="property.memory"></a>
-## *memory <sup>property</sup>*
+## *memory [<sup>property</sup>](#head.Properties)*
 
 Provides access to the memory taken by container.
 
@@ -308,7 +326,7 @@ Provides access to the memory taken by container.
 | (property)?.resident | number | <sup>*(optional)*</sup> Resident memory of the container |
 | (property)?.shared | number | <sup>*(optional)*</sup> Shared memory in the container |
 
-> The *name* shall be passed as the index to the property, e.g. *Containers.1.memory@ContainerName*.
+> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.memory@ContainerName*.
 
 ### Errors
 
@@ -322,26 +340,28 @@ Provides access to the memory taken by container.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "method": "Containers.1.memory@ContainerName"
 }
 ```
+
 #### Get Response
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "result": {
-        "allocated": 0, 
-        "resident": 0, 
+        "allocated": 0,
+        "resident": 0,
         "shared": 0
     }
 }
 ```
+
 <a name="property.cpu"></a>
-## *cpu <sup>property</sup>*
+## *cpu [<sup>property</sup>](#head.Properties)*
 
 Provides access to the CPU time.
 
@@ -356,7 +376,7 @@ Provides access to the CPU time.
 | (property)?.cores | array | <sup>*(optional)*</sup> Time spent on each cpu core, in nanoseconds |
 | (property)?.cores[#] | number | <sup>*(optional)*</sup>  |
 
-> The *name* shall be passed as the index to the property, e.g. *Containers.1.cpu@ContainerName*.
+> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.cpu@ContainerName*.
 
 ### Errors
 
@@ -370,22 +390,24 @@ Provides access to the CPU time.
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "method": "Containers.1.cpu@ContainerName"
 }
 ```
+
 #### Get Response
 
 ```json
 {
-    "jsonrpc": "2.0", 
-    "id": 1234567890, 
+    "jsonrpc": "2.0",
+    "id": 42,
     "result": {
-        "total": 2871287421, 
+        "total": 2871287421,
         "cores": [
             2871287421
         ]
     }
 }
 ```
+

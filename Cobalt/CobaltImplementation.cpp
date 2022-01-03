@@ -49,6 +49,7 @@ private:
         Config()
             : Core::JSON::Container()
             , Url()
+            , LogLevel()
             , Inspector()
             , Width(1280)
             , Height(720)
@@ -63,6 +64,7 @@ private:
             , PlaybackRates(true)
         {
             Add(_T("url"), &Url);
+            Add(_T("loglevel"), &LogLevel);
             Add(_T("inspector"), &Inspector);
             Add(_T("width"), &Width);
             Add(_T("height"), &Height);
@@ -81,6 +83,7 @@ private:
 
     public:
         Core::JSON::String Url;
+        Core::JSON::String LogLevel;
         Core::JSON::String Inspector;
         Core::JSON::DecUInt16 Width;
         Core::JSON::DecUInt16 Height;
@@ -146,6 +149,7 @@ private:
             : Core::Thread(0, _T("Cobalt"))
             , _parent(parent)
             , _url{"https://www.youtube.com/tv"}
+            , _logLevel("info")
             , _language()
             , _debugListenIp("0.0.0.0")
             , _debugPort()
@@ -154,7 +158,7 @@ private:
         virtual ~CobaltWindow()
         {
             Block();
-            Signal(SIGQUIT);
+            third_party::starboard::wpe::shared::Stop();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
         }
 
@@ -223,6 +227,10 @@ private:
                 _url = config.Url.Value();
             }
 
+            if (config.LogLevel.IsSet() == true) {
+                _logLevel = config.LogLevel.Value();
+            }
+
             if (config.Inspector.Value().empty() == false) {
                 string url(config.Inspector.Value());
                 auto pos = url.find(":");
@@ -271,9 +279,10 @@ private:
             const std::string cmdURL = "--url=" + _url;
             const std::string cmdDebugListenIp = "--dev_servers_listen_ip=" + _debugListenIp;
             const std::string cmdDebugPort = "--remote_debugging_port=" + std::to_string(_debugPort);
-            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str()};
+            const std::string cmdLogLevel = "--min_log_level=" + _logLevel;
+            const char* argv[] = {"Cobalt", cmdURL.c_str(), cmdDebugListenIp.c_str(), cmdDebugPort.c_str(), cmdLogLevel.c_str()};
             if (IsRunning() == true) {
-                StarboardMain(4, const_cast<char**>(argv));
+                StarboardMain(5, const_cast<char**>(argv));
             }
             Block();
             // Do plugin de-activation
@@ -283,6 +292,7 @@ private:
 
         CobaltImplementation &_parent;
         string _url;
+        string _logLevel;
         string _language;
         string _debugListenIp;
         uint16_t _debugPort;
@@ -336,7 +346,7 @@ public:
         return 0;
     }
 
-    virtual void Hide(const bool hidden) {
+    virtual void Hide(VARIABLE_IS_NOT_USED const bool hidden) {
     }
 
     virtual void Register(Exchange::IBrowser::INotification *sink) {
@@ -369,11 +379,11 @@ public:
         _adminLock.Unlock();
     }
 
-    void Register(Exchange::IApplication::INotification* sink) override {
+    void Register(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override {
         // Kept empty since visibility change is not supported
     }
 
-    void Unregister(Exchange::IApplication::INotification* sink) override {
+    void Unregister(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override {
         // Kept empty since visibility change is not supported
     }
 
@@ -428,19 +438,19 @@ public:
         return Core::ERROR_NONE;
     }
 
-    uint32_t LaunchPoint(launchpointtype& point) const override {
+    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED launchpointtype& point) const override {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t LaunchPoint(const launchpointtype&) override {
+    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED const launchpointtype& point) override {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(bool& visiblity) const override {
+    uint32_t Visible(VARIABLE_IS_NOT_USED bool& visiblity) const override {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(const bool& visiblity) override {
+    uint32_t Visible(VARIABLE_IS_NOT_USED const bool& visiblity) override {
         return Core::ERROR_UNAVAILABLE;
     }
 

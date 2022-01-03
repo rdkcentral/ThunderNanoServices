@@ -31,6 +31,10 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         ASSERT(_connectionProperties == nullptr);
+        ASSERT(_connectionId == 0);
+        ASSERT(_graphicsProperties == nullptr);
+        ASSERT(_hdrProperties == nullptr);
+
 
         string message;
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
@@ -46,16 +50,11 @@ namespace Plugin {
 
             _graphicsProperties = _connectionProperties->QueryInterface<Exchange::IGraphicsProperties>();
             if (_graphicsProperties == nullptr) {
-
-                _connectionProperties->Release();
-                _connectionProperties = nullptr;
+                message = _T("DisplayInfo could not be instantiated. Could not acquire GraphicsProperties interface");
             } else {
                 _hdrProperties = _connectionProperties->QueryInterface<Exchange::IHDRProperties>();
                 if (_hdrProperties == nullptr) {
-                    _connectionProperties->Release();
-                    _connectionProperties = nullptr;
-                    _graphicsProperties->Release();
-                    _graphicsProperties = nullptr;
+                    message = _T("DisplayInfo could not be instantiated. Could not acquire HDRProperties interface");
                 } else {
                     _notification.Initialize(_connectionProperties);
                     Exchange::JGraphicsProperties::Register(*this, _graphicsProperties);
@@ -63,40 +62,60 @@ namespace Plugin {
                     Exchange::JHDRProperties::Register(*this, _hdrProperties);
                 }
             }
+        } else {
+            message = _T("DisplayInfo could not be instantiated. Could not acquire ConnectionProperties interface");
         }
 
-        if (_connectionProperties == nullptr) {
-            message = _T("DisplayInfo could not be instantiated.");
+        if (message.length() != 0) {
+            Deinitialize(service);
         }
 
         return message;
     }
 
-    void DisplayInfo::Deinitialize(PluginHost::IShell*) /* override */
+    void DisplayInfo::Deinitialize(PluginHost::IShell* service) /* override */
     {
-        ASSERT(_connectionProperties != nullptr);
+        ASSERT(service != nullptr);
 
-        Exchange::JHDRProperties::Unregister(*this);
-        Exchange::JConnectionProperties::Unregister(*this);
+        if (_hdrProperties != nullptr) {
 
-        _notification.Deinitialize();
+            Exchange::JHDRProperties::Unregister(*this);
+            Exchange::JConnectionProperties::Unregister(*this);
+            Exchange::JGraphicsProperties::Unregister(*this);
+            _notification.Deinitialize();
 
-        ASSERT(_graphicsProperties != nullptr);
+            _hdrProperties->Release();
+            _hdrProperties = nullptr;
+        }
+
         if (_graphicsProperties != nullptr) {
             _graphicsProperties->Release();
             _graphicsProperties = nullptr;
         }
 
-        if (_hdrProperties != nullptr) {
-            _hdrProperties->Release();
-            _hdrProperties = nullptr;
-        }
-        
-        ASSERT(_connectionProperties != nullptr);
-        if (_connectionProperties != nullptr) {
-            _connectionProperties->Release();
+        if(_connectionProperties != nullptr) {
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+
+            VARIABLE_IS_NOT_USED uint32_t result = _connectionProperties->Release();
             _connectionProperties = nullptr;
+
+            // It should have been the last reference we are releasing, 
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            // If this was running in a (container) process...
+            if (connection != nullptr) {
+                // Lets trigger the cleanup sequence for 
+                // out-of-process code. Which will guard 
+                // that unwilling processes, get shot if
+                // not stopped friendly :-)
+                connection->Terminate();
+                connection->Release();
+            }
         }
+
         _connectionId = 0;
     }
 
@@ -132,7 +151,7 @@ namespace Plugin {
 
             Info(*response);
             result->ContentType = Web::MIMETypes::MIME_JSON;
-            result->Body(Core::proxy_cast<Web::IBody>(response));
+            result->Body(Core::ProxyType<Web::IBody>(response));
         } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = _T("Unsupported request for the [DisplayInfo] service.");
