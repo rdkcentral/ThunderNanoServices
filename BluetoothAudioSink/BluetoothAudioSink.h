@@ -563,7 +563,6 @@ namespace Plugin {
                         }
                     } else {
                         TRACE(ProfileFlow, (_T("Device disconnected")));
-                        _audioService = A2DP::ServiceDiscovery::AudioService();
                         Close();
                         _signalling.Disconnect();
                         _discovery.Disconnect();
