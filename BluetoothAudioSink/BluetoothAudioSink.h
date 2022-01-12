@@ -121,7 +121,7 @@ namespace Plugin {
                     if (defer == 0) {
                         JobType::Submit();
                     } else {
-                        JobType::Schedule(Core::Time::Now().Add(defer));
+                        JobType::Reschedule(Core::Time::Now().Add(defer));
                     }
                 } else {
                     TRACE(Trace::Information, (_T("Job in progress, skipping request")));
