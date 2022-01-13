@@ -1060,7 +1060,7 @@ class CompositorImplementation;
                     return _ret;
                 }
 
-                valid_t RenderColor (bool red, bool green, bool blue) {
+                valid_t RenderColor (bool red, bool green, bool blue, bool alpha = true) {
                     static uint16_t _degree = 0;
 
                     constexpr decltype (_degree) const ROTATION = 360;
@@ -1079,7 +1079,7 @@ class CompositorImplementation;
                         constexpr GLfloat _default_color = 0.0f;
 
                         // The function clamps the input to [0.0f, 1.0f]
-                        /* void */ glClearColor (red != false ? _rad : _default_color, green != false ? _rad : _default_color, blue != false ? _rad : _default_color, 1.0);
+                        /* void */ glClearColor (red != false ? _rad : _default_color, green != false ? _rad : _default_color, blue != false ? _rad : _default_color, alpha != false ? _default_color : 1.0);
                         GL_ERROR ();
 
                         /* void */ glClear (GL_COLOR_BUFFER_BIT);
@@ -1453,7 +1453,7 @@ class CompositorImplementation;
 
 
                         // Start with an empty (solid) background
-                        _ret = ( _ret && RenderColor (false, false, false) ) != false;
+                        _ret = ( _ret && RenderColor (false, false, false, false) ) != false;
 
                         // For all textures in map
                         if (_ret != false) {
