@@ -1883,11 +1883,6 @@ protected:
             {
                 uint32_t result = Core::ERROR_GENERAL;
 
-                if (IsBonded() == true) {
-                    AutoConnect(true);
-                    result = Core::ERROR_REQUEST_SUBMITTED;
-                }
-
                 if (SetState(CONNECTING) == Core::ERROR_NONE) {
                     if (IsConnected() == false) {
                         if (IsBonded() == true) {
@@ -1908,15 +1903,12 @@ protected:
                                     Connection(handle);
                                 } else {
                                     TRACE(ControlFlow, (_T("Connect command failed [%d]"), connect.Result()));
-                                    AutoConnect(false);
                                 }
                             } else {
                                 TRACE(Trace::Error, (_T("Failed to connect [%d]"), result));
 
                                 if (result == Core::ERROR_TIMEDOUT) {
                                     result = Core::ERROR_REQUEST_SUBMITTED;
-                                } else {
-                                    AutoConnect(false);
                                 }
                             }
                         } else {
@@ -1926,7 +1918,6 @@ protected:
                     } else {
                         result = Core::ERROR_ALREADY_CONNECTED;
                         TRACE(Trace::Error, (_T("Device already connected!")));
-                        AutoConnect(false);
                     }
 
                     ClearState(CONNECTING);
