@@ -38,9 +38,7 @@ namespace GPIO {
             , _pressedTime(0)
         {
         }
-        ~TimedInput()
-        {
-        }
+        ~TimedInput() = default;
 
     public:
         void Clear() {
@@ -94,7 +92,7 @@ namespace GPIO {
 
     private:
         std::list<uint32_t> _markers;
-	mutable uint64_t _pressedTime;
+	    mutable uint64_t _pressedTime;
     };
 
 } // namespace Plugin
