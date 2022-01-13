@@ -543,16 +543,9 @@ namespace Plugin {
                 ASSERT(_device != nullptr);
                 if (_device->IsBonded() == true) {
                     if (_device->IsConnected() == true) {
-                        if (_audioService.Type() == A2DP::ServiceDiscovery::AudioService::UNKNOWN) {
-                            TRACE(ProfileFlow, (_T("Unknown device connected, attempt audio sink discovery...")));
+                        if (_state == Exchange::IBluetoothAudioSink::DISCONNECTED) {
+                            TRACE(ProfileFlow, (_T("Device disconnected")));
                             DiscoverAudioServices();
-                        } else if (_audioService.Type() == A2DP::ServiceDiscovery::AudioService::SINK) {
-                            TRACE(ProfileFlow, (_T("Audio sink device connected, connect to the sink...")));
-                            DiscoverAudioStreamEndpoints(_audioService);
-                        } else {
-                            // It's not an audio sink device, can't do anything.
-                            TRACE(Trace::Error, (_T("Connected device does is not an audio sink!")));
-                            State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                         }
                     } else {
                         TRACE(ProfileFlow, (_T("Device disconnected")));
