@@ -50,6 +50,8 @@ extern "C" {
 #include <type_traits>
 #include <functional>
 #include <chrono>
+#include <set>
+#include <queue>
 
 template <class T>
 struct remove_pointer {
@@ -2149,7 +2151,7 @@ class CompositorImplementation;
                         timeout_t Worker () override {
                             // 'Lightning speed' frame flipping
                             constexpr timeout_t _ret = 0;
-
+// TODO: frame flipping should litim the rate
                             EGL::valid_t _status = ( Render () && _compositor.FrameFlip () ) != false;
 
                             if (_status != false) {
@@ -2181,19 +2183,40 @@ class CompositorImplementation;
 
                         using surf_t = ClientSurface;
 
-                        // Client
-                        std::string _name;
-                        CompositorImplementation::lock_t & _lock;
-
                         // Local
                         std::mutex _access;
 
                         CompositorImplementation::ClientContainer & _clients;
 
+                        struct element {
+                            public :
+                                std::string const & _name;
+
+                                element () = delete;
+                                explicit element (std::string const & name) : _name { name }  { }
+                                ~element () = default;
+                        };
+
+                        using element_t = struct element;
+
+                        using function_t = std::function < bool (element_t const &, element_t const &) >;
+
+                        // Unique elements, to prevent queue from growing beyond N
+                        std::set < element_t, function_t > set;;
+                        // FIFO
+                        std::queue < element_t > queue;
+
                     public :
 
                         TextureRenderer () = delete;
-                        explicit TextureRenderer (EGL & egl, GLES & gles, CompositorImplementation::lock_t & lock, CompositorImplementation::ClientContainer & clients) : RenderThread (egl, gles), _lock { lock }, _clients { clients } {}
+                        explicit TextureRenderer (EGL & egl, GLES & gles, CompositorImplementation::ClientContainer & clients) :
+                              RenderThread (egl, gles)
+                            , _clients { clients }
+                            , set { [] (element_t const & lhs, element_t const & rhs) -> bool {
+                                bool ret = ! ( ! ( lhs._name < rhs._name ) && ! ( lhs._name > rhs._name ) );
+                                return ret; }
+                              }
+                        {}
 
                         ~TextureRenderer () {
                             Stop ();
@@ -2202,18 +2225,33 @@ class CompositorImplementation;
                         void SetClientName (std::string const & name) {
                             std::lock_guard < decltype (_access) > const lock (_access);
 
-                            _name = name;
+                            auto result = set.insert ( element_t ( name) );
+
+                            if (result.second != true) {
+                                // Probably the element exist
+                            }
+                            else {
+                                // Add element to the queue
+                                queue.push ( element_t ( name ) );
+                            }
                         }
 
                         timeout_t Worker () override {
-                            const timeout_t _ret = WPEFramework::Core::infinite;
+                            timeout_t _ret = WPEFramework::Core::infinite;
 
                             EGL::valid_t _status = Render () != false;
 
                             if (_status != false) {
                                 Block ();
+
+// TODO: do not exceed a single frame time for multiple
+                                std::lock_guard < decltype (_access) > const lock (_access);
+                                if (queue.size () > 0) {
+                                    _ret = 0;
+                                }
                             }
                             else {
+// TODO: Stop () implies no state change possblie anymore.
                                 Stop ();
                             }
 
@@ -2223,15 +2261,21 @@ class CompositorImplementation;
                     private :
 
                         EGL::valid_t Render () {
-                            // Clients should still exist
-                            std::lock_guard < decltype (_lock) > const lock (_lock);
-
                             EGL::valid_t _ret = false;
 
-                            /* ProxyType <> */ auto _client = _clients.Find (_name);
+                            Core::ProxyType <ClientSurface> _client;
 
-                            if (_client.IsValid () != true ||  _name.compare (_client->Name ()) != 0) {
-                                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), _name.c_str ()));
+                            {
+                                std::lock_guard < decltype (_access) > const lock (_access);
+
+                                if (queue.size () > 0) {
+                                    _client = _clients.Find (queue.front ()._name);
+                                }
+                            }
+
+
+                            if (_client.IsValid () != true) {
+                                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), _client->Name ()));
                             }
                             else {
                                 ClientSurface::surf_t const & _surf = _client->Surface ();
@@ -2307,6 +2351,13 @@ class CompositorImplementation;
                                     _ret = _client->SyncPrimitiveEnd () && _ret;
                                 }
 
+                            }
+
+                            {
+                                std::lock_guard < decltype (_access) > const lock (_access);
+
+                                /**/ set.erase (queue.front ());
+                                /* void */ queue.pop ();
                             }
 
                             return _ret;
@@ -2800,7 +2851,7 @@ class CompositorImplementation;
             , _natives (_platform)
             , _egl (_natives)
             , _clientLock ()
-            , _textureRenderer ( _egl, _gles, _clientLock, _clients )
+            , _textureRenderer ( _egl, _gles, _clients )
             , _sceneRenderer ( _egl, _gles, *this)
         {
         }
@@ -2932,15 +2983,17 @@ class CompositorImplementation;
         }
 
         bool CompositeFor (std::string const & name) {
-            bool _ret = _textureRenderer.Wait (WPEFramework::Core::Thread::BLOCKED, WPEFramework::Core::infinite);
+            bool _ret = true;
 
-            {
-                std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
+            // One client at a time
+            std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
 
-                /* void */ _textureRenderer.SetClientName (name);
+            /* void */ _textureRenderer.SetClientName (name);
+
+            // Skip the request to create a frame texture if the rate is too high to be processed
+            if (_textureRenderer.IsRunning () != true) {
+                /* void */ _textureRenderer.Run ();
             }
-
-            /* void */ _textureRenderer.Run ();
 
             return _ret;
         }
