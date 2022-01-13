@@ -37,7 +37,7 @@ namespace A2DP {
 
         static constexpr uint16_t OpenTimeout = 500; // ms
         static constexpr uint16_t CloseTimeout = 5000;
-        static constexpr uint16_t PacketTimeout = 250;
+        static constexpr uint16_t PacketTimeout = 25;
 
     public:
         TransportChannel() = delete;
