@@ -35,7 +35,7 @@ namespace A2DP {
         // Typically 96 is chosen for A2DP implementations.
         static constexpr uint8_t A2DP_PAYLOAD_TYPE = 96;
 
-        static constexpr uint16_t OpenTimeout = 2000; // ms
+        static constexpr uint16_t OpenTimeout = 500; // ms
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t PacketTimeout = 250;
 
