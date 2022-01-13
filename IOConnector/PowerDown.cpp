@@ -36,7 +36,6 @@ namespace Plugin {
 
             Config()
                 : Callsign()
-                , State()
                 , LongPress(~0)
                 , PowerOff(Exchange::IPower::PCState::PowerOff)
             {
@@ -51,7 +50,7 @@ namespace Plugin {
         public:
             Core::JSON::String Callsign;
             Core::JSON::DecUInt8 LongPress;
-            Core::JSON::EnumerateType<Exchange::IPower::PCState> PowerOff;
+            Core::JSON::EnumType<Exchange::IPower::PCState> PowerOff;
         };
 
     public:
@@ -70,7 +69,7 @@ namespace Plugin {
             _marker2 = config.LongPress.Value();
             _powerOff = config.PowerOff.Value();
 
-            _marker2 = start + (_marker2 - _ marker1);
+            _marker2 = start + (_marker2 - _marker1);
             _marker1 = start;
             _state.Add(_marker1);
             if (_marker2 < end) {
@@ -79,9 +78,7 @@ namespace Plugin {
             _state.Add(end);
  
         }
-        ~PowerDown() override
-        {
-        }
+        ~PowerDown() override = default;
 
     public:
         void Trigger(GPIO::Pin& pin) override
@@ -94,7 +91,7 @@ namespace Plugin {
                 Exchange::IPower* handler(_service->QueryInterfaceByCallsign<Exchange::IPower>(_callsign));
 
                 if (handler != nullptr) {
-                    if (marker == marker1) {
+                    if (marker == _marker1) {
                         // Get the current Device Power mode
                         int state = handler->GetState();
 
@@ -111,7 +108,7 @@ namespace Plugin {
                             handler->SetState(Exchange::IPower::ActiveStandby, 0);
                         }
                     }
-                    else if (marker == marker2) {
+                    else if (marker == _marker2) {
                         TRACE(Trace::Information, (_T("The device is requested to go to PowerOff mode")));
                         handler->SetState(_powerOff, 0);
                     }
