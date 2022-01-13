@@ -278,6 +278,9 @@ namespace Plugin {
             {
                 _audioService = A2DP::ServiceDiscovery::AudioService(data);
                 _type = DeviceType(_audioService.Features());
+
+                ASSERT(_device != nullptr);
+                _device->Connect();
             }
             ~A2DPSink()
             {
