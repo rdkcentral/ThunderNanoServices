@@ -69,6 +69,7 @@ namespace Plugin {
             _marker2 = config.LongPress.Value();
             _powerOff = config.PowerOff.Value();
 
+            _marker2 *= 1000;
             _marker2 = start + (_marker2 - _marker1);
             _marker1 = start;
             _state.Add(_marker1);
