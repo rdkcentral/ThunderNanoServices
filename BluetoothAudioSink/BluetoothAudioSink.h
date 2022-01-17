@@ -982,6 +982,7 @@ namespace Plugin {
     public:
         Exchange::IBluetooth* Controller() const
         {
+            ASSERT(_service != nullptr);
             return (_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
         }
 
