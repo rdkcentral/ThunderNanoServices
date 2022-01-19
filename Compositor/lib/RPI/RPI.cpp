@@ -158,10 +158,6 @@ class CompositorImplementation;
             bool RenderComplete () const { return Valid () && _fd > -1 && _sync_fd > -1 && _khr != WPEFramework::Plugin::EGL::InvalidImage (); }
         } _nativeSurface;
 
-
-
-
-
     public:
 
         using surf_t = decltype (_nativeSurface);
@@ -2857,6 +2853,15 @@ class CompositorImplementation;
         }
         ~CompositorImplementation()
         {
+
+            if (_textureRenderer.IsRunning () != false) {
+                _textureRenderer.Stop ();
+            }
+
+            if (_sceneRenderer.IsRunning () != false) {
+                _sceneRenderer.Stop ();
+            }
+
             if (_dma != nullptr) {
                 delete _dma;
             }
@@ -3155,6 +3160,11 @@ class CompositorImplementation;
         void Unregister(Exchange::IComposition::INotification* notification) override
         {
             _adminLock.Lock();
+
+            _clients.Visit([=](const string& name, const Core::ProxyType<ClientSurface>& element){
+                notification->Detached(name);
+            });
+
             std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
             ASSERT(index != _observers.end());
             if (index != _observers.end()) {
@@ -3408,7 +3418,6 @@ class CompositorImplementation;
     }
 
     ClientSurface::~ClientSurface() {
-
         // Part of the client is cleaned up via the detached (hook)
 
         _compositor.Detached(_name);

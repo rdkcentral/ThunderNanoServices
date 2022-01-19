@@ -237,7 +237,7 @@ namespace Plugin {
                 _display = nullptr;
             }
 
-            Block();
+            Stop (); //Block();
 
             if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false) {
                 TRACE(Trace::Information, (_T("Bailed out before the thread signalled completion. %d ms"), _config.Destruct.Value()));
@@ -535,7 +535,7 @@ namespace Plugin {
                     _valid = false;
 
                     if (_surf != nullptr) {
-                        _surf->Release ();
+//                        _surf->Release ();
                         _surf = nullptr;
                     }
 
@@ -983,6 +983,7 @@ namespace Plugin {
                 EGL (Natives const & natives) : _natives { natives }, _valid { Initialize () } {}
                 ~EGL () {
                     _valid = false;
+
                     DeInitialize ();
                 }
 
