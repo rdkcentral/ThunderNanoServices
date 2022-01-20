@@ -386,7 +386,7 @@ namespace Plugin {
             Callback& operator=(const Callback&) = delete;
 
         public:
-            Callback(JSONRPCPlugin* parent, const Core::JSONRPC::Connection& channel)
+            Callback(JSONRPCPlugin* parent, const Core::JSONRPC::Context& channel)
                 : _parent(*parent)
                 , _channel(channel)
             {
@@ -406,7 +406,7 @@ namespace Plugin {
 
         private:
             JSONRPCPlugin& _parent;
-            Core::JSONRPC::Connection _channel;
+            Core::JSONRPC::Context _channel;
         };
 
         // Define a handler for incoming JSONRPC messages. This method does not take any
@@ -562,7 +562,7 @@ namespace Plugin {
             window = JsonObject({ { "x", _window.X }, { "y", _window.Y }, { "width", _window.Width }, { "height", _window.Height } });
             return (Core::ERROR_NONE);
         }
-        void async_callback(const Core::JSONRPC::Connection& connection, const Core::JSON::DecUInt8& seconds)
+        void async_callback(const Core::JSONRPC::Context& connection, const Core::JSON::DecUInt8& seconds)
         {
             Core::ProxyType<Core::IDispatch> job(Core::ProxyType<Callback>::Create(this, connection));
             Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(seconds * 1000), job);
@@ -640,7 +640,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         void PostMessage(const string& recipient, const string& message);
         void SendTime();
-        void SendTime(Core::JSONRPC::Connection& channel);
+        void SendTime(Core::JSONRPC::Context& channel);
 
         //   Exchange::IPerformance methods
         // -------------------------------------------------------------------------------------------------------
@@ -656,7 +656,7 @@ namespace Plugin {
     private:
         void RegisterAll();
         void UnregisterAll();
-        bool Validation(const string& token, const string& method, const string& parameters);
+        PluginHost::JSONRPC::classification Validation(const string& token, const string& method, const string& parameters);
 
 
     private:

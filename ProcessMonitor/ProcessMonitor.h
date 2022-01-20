@@ -226,7 +226,7 @@ public:
 
             if (scheduleTime != 0) {
                 _job.Revoke();
-                _job.Schedule(scheduleTime);
+                _job.Reschedule(scheduleTime);
             }
         }
         void Activated(RPC::IRemoteConnection* connection) override

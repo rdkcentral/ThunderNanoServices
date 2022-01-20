@@ -509,7 +509,9 @@ namespace Plugin
             event_networkchange();
             break;
         }
-
+        case WPASupplicant::Controller::WPS_EVENT_SUCCESS: {
+            break;
+        }
         case WPASupplicant::Controller::WPS_EVENT_CRED_RECEIVED: {
             _wpsConnect.Completed(Core::ERROR_NONE);
             break;

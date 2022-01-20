@@ -55,7 +55,7 @@ class BluetoothControl : public PluginHost::IPlugin
         public:
             void Submit(const Job& job, const uint32_t defer = 0)
             {
-                Core::ProxyType<Core::IDispatch> handler(Aquire());
+                Core::ProxyType<Core::IDispatch> handler(Core::ThreadPool::JobType<DecoupledJob&>::Submit());
 
                _lock.Lock();
 
@@ -75,8 +75,12 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void Revoke()
             {
+                Core::ProxyType<Core::IDispatch> handler(Core::ThreadPool::JobType<DecoupledJob&>::Revoke());
                 _lock.Lock();
-                Core::WorkerPool::Instance().Revoke(Reset());
+                if (handler.IsValid() == true) {
+			Core::WorkerPool::Instance().Revoke(handler);
+			Core::ThreadPool::JobType<DecoupledJob&>::Revoked();
+		}
                 _job = nullptr;
                 _lock.Unlock();
             }

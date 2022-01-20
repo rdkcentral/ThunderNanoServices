@@ -442,12 +442,12 @@ namespace Plugin {
                 _retries = 0;
                 _job.Revoke();
                 if ( (_offers.size() > 0) && (_offers.front().Address() == preferred) ) {
-                    _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
+                    _job.Reschedule(Core::Time::Now().Add(AckWaitTimeout));
                     result = _client.Request(_offers.front());
                 }
                 else {
                     ClearLease();
-                    _job.Schedule(Core::Time::Now().Add(_handleTime));
+                    _job.Reschedule(Core::Time::Now().Add(_handleTime));
                     result = _client.Discover();
                 }
 
@@ -474,12 +474,12 @@ namespace Plugin {
                             _retries = 0;
                             ClearLease();
                             _client.Discover();
-                            _job.Schedule(Core::Time::Now().Add(_handleTime));
+                            _job.Reschedule(Core::Time::Now().Add(_handleTime));
                         }
                         else {
                             // Start refreshing the Lease..
                             _client.Request(_client.Lease());
-                            _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
+                            _job.Reschedule(Core::Time::Now().Add(AckWaitTimeout));
                         }
                     }
                     else {
@@ -491,7 +491,7 @@ namespace Plugin {
                             _client.Close();
                         }
                         _retries = 0;
-                        _job.Schedule(_client.Expired());
+                        _job.Reschedule(_client.Expired());
                     }
                 }
                 else if (_offers.size() == 0) {
@@ -499,7 +499,7 @@ namespace Plugin {
                     if (_retries++ < _maxRetries) {
                         ClearLease();
                         _client.Discover();
-                        _job.Schedule(Core::Time::Now().Add(_handleTime));
+                        _job.Reschedule(Core::Time::Now().Add(_handleTime));
                     }
                     else {
                         _client.Close();
@@ -509,7 +509,7 @@ namespace Plugin {
                 else if ( (_client.Lease() == _offers.front()) && (_retries++ < _maxRetries) ) {
                     // Looks like the acknwledge did not get a reply, should we retry ?
                     _client.Request(_client.Lease());
-                    _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
+                    _job.Reschedule(Core::Time::Now().Add(AckWaitTimeout));
                 }
                 else {
                     // Request retries expired or Request rejected
@@ -521,7 +521,7 @@ namespace Plugin {
                     if (_offers.size() == 0) {
                         // There is no valid offer, so request for new offer
                         _retries = 0;
-                        _job.Schedule(Core::Time::Now().Add(_handleTime));
+                        _job.Reschedule(Core::Time::Now().Add(_handleTime));
                     }
                     else {
                         DHCPClient::Offer& node (_offers.front());
@@ -532,7 +532,7 @@ namespace Plugin {
                         // Seems we have some offers pending and we are not Active yet, request an ACK
                         _client.Request(node);
                         _retries = 0;
-                        _job.Schedule(Core::Time::Now().Add(AckWaitTimeout));
+                        _job.Reschedule(Core::Time::Now().Add(AckWaitTimeout));
                     }
                 }
             }
