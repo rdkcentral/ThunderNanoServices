@@ -33,6 +33,7 @@ option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
 option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" OFF)
 option(EXAMPLE_IOCONNECTOR_TEST "Include IOConnector test suite" OFF)
+option(PLUGIN_SIMPLEEGL "Include SimpleEGL plugin" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -70,4 +71,9 @@ endif()
 
 if(EXAMPLE_IOCONNECTOR_TEST)
     add_subdirectory(IOConnectorTest)
+endif()
+
+if(PLUGIN_SIMPLEEGL)
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+    add_subdirectory(SimpleEGL)
 endif()
