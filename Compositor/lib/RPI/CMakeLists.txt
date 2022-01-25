@@ -33,6 +33,7 @@ else()
     find_package(LibDRM REQUIRED)
     find_package(EGL REQUIRED)
     find_package(GLESv2 REQUIRED)
+    find_package(CompileSettingsDebug CONFIG REQUIRED)
 
     # A package may set *_FOUND to false to indicate requirements are not met
 
@@ -60,6 +61,7 @@ else()
 
     target_link_libraries(${TARGET} 
         PRIVATE 
+            CompileSettingsDebug::CompileSettingsDebug
             libdrm::libdrm
             libgbm::libgbm
             EGL::EGL
