@@ -190,15 +190,20 @@ namespace Plugin {
         _lock.Lock();
 
         if (_sink != nullptr) {
-            Core::File file(_service->PersistentPath() + _sink->Address() + _T(".json"));
-            if (file.Destroy() == true) {
-                TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
-                result = Core::ERROR_NONE;
-                delete _sink;
-                _sink = nullptr;
+            if (_sink->State() == Exchange::IBluetoothAudioSink::DISCONNECTED) {
+                Core::File file(_service->PersistentPath() + _sink->Address() + _T(".json"));
+                if (file.Destroy() == true) {
+                    TRACE(Trace::Information, (_T("Revoked from Bluetooth audio sink assignment from [%s]"), _sink->Address().c_str()));
+                    result = Core::ERROR_NONE;
+                    delete _sink;
+                    _sink = nullptr;
+                } else {
+                    result = Core::ERROR_GENERAL;
+                    TRACE(Trace::Error, (_T("Failed to revoke Bluetooth audio sink assignment from [%s]"), _sink->Address().c_str()));
+                }
             } else {
-                result = Core::ERROR_GENERAL;
-                TRACE(Trace::Error, (_T("Failed to revoke [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
+                result = Core::ERROR_ILLEGAL_STATE;
+                TRACE(Trace::Error, (_T("Sink in use, disconnect first")));
             }
         } else {
             TRACE(Trace::Error, (_T("Sink not assigned")));
