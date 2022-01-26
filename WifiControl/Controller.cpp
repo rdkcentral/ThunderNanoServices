@@ -18,6 +18,7 @@
  */
 
 #include "Controller.h"
+#include <bitset>
 
 namespace WPEFramework {
 
@@ -32,7 +33,14 @@ ENUM_CONVERSION_BEGIN(WPASupplicant::Controller::events)
     { WPASupplicant::Controller::CTRL_EVENT_TERMINATING, _TXT("CTRL-EVENT-TERMINATING") },
     { WPASupplicant::Controller::CTRL_EVENT_NETWORK_NOT_FOUND, _TXT("CTRL-EVENT-NETWORK-NOT-FOUND") },
     { WPASupplicant::Controller::CTRL_EVENT_SSID_TEMP_DISABLED, _TXT("CTRL-EVENT-SSID-TEMP-DISABLED") },
-    { WPASupplicant::Controller::WPS_AP_AVAILABLE, _TXT("WPS-AP-AVAILABLE") },
+    { WPASupplicant::Controller::WPS_EVENT_OVERLAP, _TXT("WPS-OVERLAP-DETECTED") },
+    { WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PBC, _TXT("WPS-AP-AVAILABLE-PBC") },
+    { WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE_PIN, _TXT("WPS-AP-AVAILABLE-PIN") },
+    { WPASupplicant::Controller::WPS_EVENT_AP_AVAILABLE, _TXT("WPS-AP-AVAILABLE") },
+    { WPASupplicant::Controller::WPS_EVENT_CRED_RECEIVED, _TXT("WPS-CRED-RECEIVED") },
+    { WPASupplicant::Controller::WPS_EVENT_SUCCESS, _TXT("WPS-SUCCESS") },
+    { WPASupplicant::Controller::WPS_EVENT_TIMEOUT, _TXT("WPS-TIMEOUT") },
+    { WPASupplicant::Controller::WPS_EVENT_FAIL, _TXT("WPS-FAIL") },
     { WPASupplicant::Controller::AP_ENABLED, _TXT("AP-ENABLED") },
 
     ENUM_CONVERSION_END(WPASupplicant::Controller::events);
@@ -193,6 +201,8 @@ namespace WPASupplicant {
 
         string response = string(reinterpret_cast<const char*>(dataFrame), (dataFrame[receivedSize - 1] == '\n' ? receivedSize - 1 : receivedSize));
 
+        TRACE(Communication, (_T("Controller::ReceiveData - Incoming response: [%s]"), response.c_str()));
+
         if (response[0] == '<') {
 
             uint32_t number = 0;
@@ -251,6 +261,7 @@ namespace WPASupplicant {
                         uint32_t reason = Core::NumberType<uint32_t>(Core::TextFragment(infoLine, begin, (end - begin)));
 
                         _statusRequest.DisconnectReason(static_cast<reasons>(reason));
+
                     }
                     else {
                         TRACE(Trace::Warning, ("There is no reason code in the event"));
@@ -258,10 +269,11 @@ namespace WPASupplicant {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
                 }
-                else if ((event == CTRL_EVENT_CONNECTED) || (event == WPS_AP_AVAILABLE)) {
+                else if (event == CTRL_EVENT_CONNECTED) {
                     _statusRequest.Event(event.Value());
                     Submit(&_statusRequest);
-                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS)) {
+                } else if ((event.Value() == CTRL_EVENT_SCAN_RESULTS) && _wpsRequest.Active()==false) {
+                    //During WPS walk time, Supplicant keeps scanning for WPS enabled APs and scan_results keeps coming
                     _adminLock.Lock();
                     if (_scanRequest.Set() == true) {
                         _scanRequest.Event(event.Value());
@@ -270,6 +282,17 @@ namespace WPASupplicant {
                     } else {
                         _adminLock.Unlock();
                     }
+                } else if ((event == WPS_EVENT_TIMEOUT) || (event == WPS_EVENT_FAIL) || (event == WPS_EVENT_OVERLAP) || (event == WPS_EVENT_SUCCESS)) {
+                    Notify(event.Value());
+                } else if(event == WPS_EVENT_CRED_RECEIVED) {
+
+                    ASSERT(position != string::npos);
+                    Core::TextFragment infoLine(message, position, message.length() - position);
+
+                    // Skip white space
+                    infoLine.TrimBegin(_T(" "));
+                    _wpsRequest.ParseAttributes(infoLine);
+                    Notify(event.Value());
                 } else if ((event == CTRL_EVENT_BSS_ADDED) || (event == CTRL_EVENT_BSS_REMOVED)) {
 
                     ASSERT(position != string::npos);
@@ -413,24 +436,28 @@ namespace WPASupplicant {
     void Controller::Reevaluate()
     {
 
-        NetworkInfoContainer::iterator index(_networks.begin());
+        if(_wpsRequest.Active() == false) { 
+            //When WPS Request is active, a temporary network is enabled by supplicant. We will not add/enable it.
 
-        while ((index != _networks.end()) && (index->second.HasDetail() == true)) {
-            index++;
-        }
-        if (index != _networks.end()) {
-            if (_detailRequest.Set(index->first) == true) {
-                // send out a request for detail.
-                Submit(&_detailRequest);
+            NetworkInfoContainer::iterator index(_networks.begin());
+
+            while ((index != _networks.end()) && (index->second.HasDetail() == true)) {
+                index++;
             }
-        } else if (_enabled.size() == 0) {
-            // send out a request for the network list
-            if (_networkRequest.Set() == true) {
-                // send out a request for detail.
-                Submit(&_networkRequest);
+            if (index != _networks.end()) {
+                if (_detailRequest.Set(index->first) == true) {
+                    // send out a request for detail.
+                    Submit(&_detailRequest);
+                }
+            } else if (_enabled.size() == 0) {
+                // send out a request for the network list
+                if (_networkRequest.Set() == true) {
+                    // send out a request for detail.
+                    Submit(&_networkRequest);
+                }
+            } else {
+                _callback->Dispatch(CTRL_EVENT_NETWORK_CHANGED);
             }
-        } else {
-            _callback->Dispatch(CTRL_EVENT_NETWORK_CHANGED);
         }
     }
 }

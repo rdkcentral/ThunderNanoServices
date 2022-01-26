@@ -259,6 +259,7 @@ Also see: [connectionchange](#event.connectionchange)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.ssid | string | Identifier of a network |
+| params?.automode | enum | default:None, For WPS PBC, set to WpsPbc | 
 
 ### Result
 
@@ -287,7 +288,8 @@ Also see: [connectionchange](#event.connectionchange)
     "id": 42,
     "method": "WifiControl.1.connect",
     "params": {
-        "ssid": "MyCorporateNetwork"
+        "ssid": "MyCorporateNetwork",
+        "autoconnect": "pbc"
     }
 }
 ```
@@ -461,6 +463,13 @@ Provides access to the available networks.
                         "psk"
                     ]
                 }
+                {   
+                    "method: "WPS",
+                    "keys": [
+                        "pbc",
+                     ]
+                }
+
             ],
             "bssid": "94:b4:0f:77:cc:71",
             "frequency": 5180,
@@ -714,6 +723,13 @@ Signals that the scan operation has finished.
                     "keys": [
                         "psk"
                     ]
+                },
+                {
+                    "method: "WPS",
+                    "keys": [
+                        "pbc",
+                        "pin"
+                     ]
                 }
             ],
             "bssid": "94:b4:0f:77:cc:71",

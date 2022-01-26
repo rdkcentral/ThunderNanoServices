@@ -72,7 +72,8 @@ namespace Plugin {
             UNKNOWN
         };
     private:
-        static constexpr const TCHAR* Name = "imageTemp";
+        static constexpr const TCHAR* ImageFileName = "imageTemp";
+        static constexpr const TCHAR* HashContextFileName = "hashTemp";
         static int32_t constexpr WaitTime = Core::infinite;
 
     private:
@@ -284,11 +285,12 @@ namespace Plugin {
 
         inline void RemoveDownloadedFile()
         {
-            Core::File _storage(_destination + Name);
-            if (_storage.Exists()) {
-                _storage.Destroy();
+            Core::File storage(_destination + ImageFileName);
+            if (storage.Exists()) {
+                storage.Destroy();
             }
         }
+
         inline void ResetStatus()
         {
             _adminLock.Lock();

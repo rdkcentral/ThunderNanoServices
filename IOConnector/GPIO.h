@@ -34,7 +34,7 @@ namespace GPIO {
                 public Exchange::IInputPin,
                 public Core::IResource {
     private:
-        typedef Exchange::ExternalBase BaseClass;
+        using BaseClass = Exchange::ExternalBase;
 
         class TimedPin  : public Core::IDispatch {
         private:
@@ -55,9 +55,7 @@ namespace GPIO {
             {
                 ASSERT(parent != nullptr);
             }
-            ~TimedPin() override
-            {
-            }
+            ~TimedPin() override = default;
 
         public:
             inline void AddReference()
@@ -121,7 +119,7 @@ namespace GPIO {
 
                     ASSERT(_marker == static_cast<uint32_t>(~0));
                     _marker = marker;
-                    _parent.Updated();
+                    Core::IWorkerPool::Instance().Submit(_job);
                     _parent.Unlock();
                 }
             }

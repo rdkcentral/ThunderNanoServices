@@ -42,8 +42,8 @@ ENUM_CONVERSION_END(Data::Response::state)
 
 namespace Plugin
 {
-    bool JSONRPCPlugin::Validation(const string& token, const string& method, const string& parameters) {
-        return (method != _T("checkvalidation"));
+    PluginHost::JSONRPC::classification JSONRPCPlugin::Validation(const string& token VARIABLE_IS_NOT_USED, const string& method, const string& parameters VARIABLE_IS_NOT_USED) {
+        return (method != _T("checkvalidation") ? PluginHost::JSONRPC::classification::VALID : PluginHost::JSONRPC::classification::INVALID);
     }
 
     SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
@@ -52,7 +52,7 @@ namespace Plugin
     #pragma warning(disable : 4355)
     #endif
     JSONRPCPlugin::JSONRPCPlugin()
-        : PluginHost::JSONRPC({ 2, 3, 4 }, [&](const string& token, const string& method, const string& parameters) -> bool { return (Validation(token, method, parameters)); }) // version 2, 3 and 4 of the interface, use this as the default :-)
+        : PluginHost::JSONRPC({ 2, 3, 4 }, [&](const string& token, const string& method, const string& parameters) -> PluginHost::JSONRPC::classification { return (Validation(token, method, parameters)); }) // version 2, 3 and 4 of the interface, use this as the default :-)
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
         , _window()
         , _data()
@@ -211,14 +211,14 @@ namespace Plugin
         GetHandler(1)->Notify(_T("clock"), Data::Time(now.Hours(), now.Minutes(), now.Seconds()));
     }
 
-    void JSONRPCPlugin::SendTime(Core::JSONRPC::Connection & channel)
+    void JSONRPCPlugin::SendTime(Core::JSONRPC::Context& channel)
     {
         Response(channel, Data::Response(Core::Time::Now().Ticks(), Data::Response::FAILURE));
     }
 
     //   Exchange::IPerformance methods
     // -------------------------------------------------------------------------------------------------------
-    uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[]) /* override */
+    uint32_t JSONRPCPlugin::Send(const uint16_t sendSize, const uint8_t buffer[] VARIABLE_IS_NOT_USED) /* override */
     {
         uint32_t result = sendSize;
         return (result);
@@ -240,7 +240,7 @@ namespace Plugin
 
         return (result);
     }
-    uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) /* override */ 
+    uint32_t JSONRPCPlugin::Exchange(uint16_t & bufferSize VARIABLE_IS_NOT_USED, uint8_t buffer[], const uint16_t maxBufferSize) /* override */
     {
         uint32_t result = Core::ERROR_NONE;
         static uint8_t pattern[] = { 0x00, 0x77, 0xCC, 0x88 };

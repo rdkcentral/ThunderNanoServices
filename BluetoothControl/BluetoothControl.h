@@ -55,7 +55,7 @@ class BluetoothControl : public PluginHost::IPlugin
         public:
             void Submit(const Job& job, const uint32_t defer = 0)
             {
-                Core::ProxyType<Core::IDispatch> handler(Aquire());
+                Core::ProxyType<Core::IDispatch> handler(Core::ThreadPool::JobType<DecoupledJob&>::Submit());
 
                _lock.Lock();
 
@@ -75,8 +75,12 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             void Revoke()
             {
+                Core::ProxyType<Core::IDispatch> handler(Core::ThreadPool::JobType<DecoupledJob&>::Revoke());
                 _lock.Lock();
-                Core::WorkerPool::Instance().Revoke(Reset());
+                if (handler.IsValid() == true) {
+			Core::WorkerPool::Instance().Revoke(handler);
+			Core::ThreadPool::JobType<DecoupledJob&>::Revoked();
+		}
                 _job = nullptr;
                 _lock.Unlock();
             }
@@ -626,7 +630,7 @@ class BluetoothControl : public PluginHost::IPlugin
                             if ((info.evt_type == CONNECTABLE_DIRECTED) || (info.evt_type == CONNECTABLE_UNDIRECTED))
 #endif
                             {
-                                if ((device->IsAutoConnectable() == true) && (device->IsBonded() == true)) {
+                                if ((device->IsAutoConnectable() == true) && (device->IsBonded() == true) && (device->IsConnected() == false)) {
                                     // The device broadcasts connection requests, let's connect now.
                                     _reconnectJob.Submit([device, this]() {
                                         TRACE(ControlFlow, (_T("Reconnecting to %s..."), device->RemoteId().c_str()));
@@ -635,7 +639,7 @@ class BluetoothControl : public PluginHost::IPlugin
                                         };
                                     });
                                 } else {
-                                    TRACE(ControlFlow, (_T("Won't reconnect to %s - not whitelisted"), device->RemoteId().c_str()));
+                                    TRACE(ControlFlow, (_T("Won't reconnect to %s - not enabled for auto-connection"), device->RemoteId().c_str()));
                                 }
                             }
                         }
@@ -1241,7 +1245,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                     Bluetooth::HCISocket::Command::Disconnect disconnect;
                     disconnect->handle = htobs(ConnectionId());
-                    disconnect->reason = HCI_CONNECTION_TERMINATED;
+                    disconnect->reason = HCI_OE_USER_ENDED_CONNECTION;
 
                     result = _parent->Connector().Exchange(MAX_ACTION_TIMEOUT, disconnect, disconnect);
                     if (result == Core::ERROR_NONE) {
@@ -1899,8 +1903,9 @@ protected:
 
                             result = _parent->Connector().Exchange(MAX_ACTION_TIMEOUT, connect, connect);
                             if (result == Core::ERROR_NONE) {
-                                if (connect.Result() == 0) {
-                                    Connection(btohs(connect.Response().handle));
+                                const uint16_t handle = btohs(connect.Response().handle);
+                                if ((connect.Result() == 0) && (handle != 0)){
+                                    Connection(handle);
                                 } else {
                                     TRACE(ControlFlow, (_T("Connect command failed [%d]"), connect.Result()));
                                     AutoConnect(false);
@@ -1921,6 +1926,7 @@ protected:
                     } else {
                         result = Core::ERROR_ALREADY_CONNECTED;
                         TRACE(Trace::Error, (_T("Device already connected!")));
+                        AutoConnect(false);
                     }
 
                     ClearState(CONNECTING);
@@ -2128,8 +2134,8 @@ protected:
 
                             Bluetooth::HCISocket::Command::ConnectLE connect;
                             connect.Clear();
-                            connect->interval = htobs(0x0004);
-                            connect->window = htobs(0x0004);
+                            connect->interval = htobs(4*0x0010);
+                            connect->window = htobs(0x0010); // Have some back off time, so the connection does not hog the link layer completely.
                             connect->initiator_filter = 0;
                             connect->peer_bdaddr_type = LE_PUBLIC_ADDRESS;
                             connect->peer_bdaddr = *(Locator().Data());
