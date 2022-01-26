@@ -2854,13 +2854,13 @@ class CompositorImplementation;
         ~CompositorImplementation()
         {
 
-            if (_textureRenderer.IsRunning () != false) {
-                _textureRenderer.Stop ();
-            }
+            _textureRenderer.Stop ();
 
-            if (_sceneRenderer.IsRunning () != false) {
-                _sceneRenderer.Stop ();
-            }
+            /* bool */ _textureRenderer.Wait (WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+
+            _sceneRenderer.Stop ();
+
+             /* bool */ _sceneRenderer.Wait (WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
 
             if (_dma != nullptr) {
                 delete _dma;
@@ -2868,17 +2868,7 @@ class CompositorImplementation;
 
             _dma = nullptr;
 
-#ifdef _0 // Only if destructors are not called
-            _clients.Visit (
-                [this] (string const & name, const Core::ProxyType<ClientSurface>& client) {
-                    if ( (client.IsValid () && _egl.Valid () ) != false) {
-                        /* surf_t */ client->Surface ( EGL::DestroyImage ( _egl, client->Surface () ));
-                    }
-                }
-            );
-#else
             _clients.Clear();
-#endif
 
             if (_externalAccess != nullptr) {
                 delete _externalAccess;
@@ -3185,6 +3175,7 @@ class CompositorImplementation;
 
             // Clean up client that leaves prematurely
 
+#ifdef _0
             /* ProxyType <> */ auto _client = _clients.Find (name);
 
             if (_client.IsValid () != false) {
@@ -3194,6 +3185,7 @@ class CompositorImplementation;
 
                 /* surf_t */ _client->Surface ( EGL::DestroyImage ( _egl, _client->Surface () ));
             }
+#endif
 
             for(auto& observer : _observers) {
                 observer->Detached(name);
@@ -3248,6 +3240,7 @@ class CompositorImplementation;
                 if( object.IsValid() == true ) {
                     client = &(*object);
                     Attached (name, client);
+                    client->AddRef();
                 }
 
             if (client == nullptr) {

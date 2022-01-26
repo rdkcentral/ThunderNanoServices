@@ -71,8 +71,12 @@ namespace Plugin {
                     time->Release();
                 }
             }
-            void Deactivated(const string&, PluginHost::IShell*) override
+            void Deactivated(const string & callsign, PluginHost::IShell * plugin) override
             {
+                _parent.Stop ();
+
+                silence (callsign);
+                silence (plugin);
             }
             void Unavailable (const string & callsign, PluginHost::IShell * plugin) override
             {
@@ -231,17 +235,16 @@ namespace Plugin {
         ~SimpleEGLImplementation() override
         {
             TRACE(Trace::Information, (_T("Destructing the SimpleEGLImplementation")));
+            Stop (); //Block();
+
+            if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false) {
+                TRACE(Trace::Information, (_T("Bailed out before the thread signalled completion. %d ms"), _config.Destruct.Value()));
+            }
 
             if (_display != nullptr) {
                 _display->Release ();
 
                 _display = nullptr;
-            }
-
-            Stop (); //Block();
-
-            if (Wait(Core::Thread::STOPPED | Core::Thread::BLOCKED, _config.Destruct.Value()) == false) {
-                TRACE(Trace::Information, (_T("Bailed out before the thread signalled completion. %d ms"), _config.Destruct.Value()));
             }
 
             TRACE(Trace::Information, (_T("Destructed the SimpleEGLImplementation")));
@@ -461,6 +464,14 @@ namespace Plugin {
                 using surf_t = decltype (_surf);
                 using valid_t = decltype (_valid);
 
+                static Natives & Instance (Exchange::IComposition::IDisplay * display ) {
+                    static Natives natives ( display );
+
+                    return natives;
+                }
+
+            private :
+
                 Natives () = delete;
                 Natives (Exchange::IComposition::IDisplay * display ) : _valid { Initialize ( display ) } {}
                 ~Natives () {
@@ -468,6 +479,7 @@ namespace Plugin {
                     DeInitialize ();
                 }
 
+            public :
                 dpy_t Display () const { return _dpy; }
                 surf_t Surface () const { return _surf; }
 
@@ -532,11 +544,13 @@ namespace Plugin {
                     return _ret;
                 }
 
+            public :
+
                 void DeInitialize () {
                     _valid = false;
 
                     if (_surf != nullptr) {
-//                        _surf->Release ();
+                        _surf->Release ();
                         _surf = nullptr;
                     }
 
@@ -591,11 +605,24 @@ namespace Plugin {
 
                 using valid_t = decltype (_valid);
 
+
+            public :
+
+                static GLES & Instance () {
+                    static GLES gles;
+                    return gles;
+                }
+
+            private :
+
+
                 GLES () : _tgt {}, _tex { InvalidTex () }, _offset { InitialOffset () }, _valid { Initialize () } {}
                 ~GLES () {
                     _valid = false;
                     /* valid_t */ Deinitialize ();
                 }
+
+            public :
 
                 static constexpr tex_t InvalidTex () { return 0; }
 
@@ -980,6 +1007,14 @@ namespace Plugin {
                 using width_t = decltype (_width);
                 using valid_t = decltype (_valid);
 
+                static EGL & Instance ( Natives & natives ) {
+                    static EGL egl ( natives);
+
+                    return egl;
+                }
+
+            private :
+
                 EGL () = delete;
                 EGL (Natives const & natives) : _natives { natives }, _valid { Initialize () } {}
                 ~EGL () {
@@ -987,6 +1022,8 @@ namespace Plugin {
 
                     DeInitialize ();
                 }
+
+            public :
 
                 dpy_t Display () const { return _dpy; }
                 surf_t Surface () const { return _surf; }
@@ -1110,10 +1147,9 @@ namespace Plugin {
 
         virtual uint32_t Worker()
         {
-            // Do not re-create
-            static Natives _natives ( _display );
+            Natives & _natives = Natives::Instance ( _display );
 
-            static EGL _egl (_natives);
+            EGL & _egl = EGL::Instance (_natives);
 
             using timeout_t = decltype (WPEFramework::Core::infinite);
 
@@ -1121,10 +1157,10 @@ namespace Plugin {
 // TODO: match display refresh rate
             constexpr timeout_t ret = 0;
 
-            EGL::valid_t status = _egl.Valid () != false;
+            EGL::valid_t status = _natives.Valid () != false && _egl.Valid () != false;
 
             if (status != false) {
-                static GLES _gles;
+                GLES & _gles = GLES::Instance ();
 
                 status = _egl.Render (_gles) != false && _natives.Display ()->Process (0) == 0 && _egl.Render () != false;
             }
@@ -1134,6 +1170,8 @@ namespace Plugin {
             }
             else {
                 Stop ();
+
+                _natives.DeInitialize ();
             }
 
             return ret;
