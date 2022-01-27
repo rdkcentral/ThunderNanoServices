@@ -1273,6 +1273,30 @@ namespace Plugin {
             return (_deprecatedAPI);
         }
 
+        string DeviceId() const
+        {
+            string deviceId;
+            PluginHost::ISubSystem* subSystem = _service->SubSystems();
+            if ((subSystem != nullptr) &&
+                (subSystem->IsActive(PluginHost::ISubSystem::IDENTIFIER) == true)) {
+
+                const PluginHost::ISubSystem::IIdentifier* identifier(subSystem->Get<PluginHost::ISubSystem::IIdentifier>());
+                if (identifier != nullptr) {
+                    uint8_t buffer[64];
+
+                    buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
+                                ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
+
+                    if (buffer[0] != 0) {
+                        deviceId = Core::SystemInfo::Instance().Id(buffer, ~0);
+                    }
+
+                    identifier->Release();
+                }
+            }
+            return deviceId;
+        }
+
     private:
         Core::CriticalSection _adminLock;
         uint32_t _skipURL;
