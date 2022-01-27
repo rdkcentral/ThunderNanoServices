@@ -57,6 +57,7 @@ option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_DTV "Include DTV plugin" OFF)
+option(PLUGIN_DEVICEPROVISIONING "Include DeviceProvisioning plugin" OFF)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -220,6 +221,10 @@ endif()
 
 if(PLUGIN_DTV)
     add_subdirectory(DTV)
+endif()
+
+if(PLUGIN_DEVICEPROVISIONING)
+    add_subdirectory(DeviceProvisioning)
 endif()
 
 add_subdirectory(examples)

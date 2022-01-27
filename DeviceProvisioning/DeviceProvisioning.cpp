@@ -49,7 +49,7 @@ namespace Plugin {
             }
         }
         if (_deviceprovisioning == nullptr) {
-            message = _T("WebKitBrowser could not be instantiated.");
+            message = _T("DeviceProvisioning could not be instantiated.");
             _service->Unregister(&_notification);
             _service = nullptr;
             ConnectionTerminate(_connectionId);

@@ -173,7 +173,7 @@ namespace Plugin {
 
             _state = newState;
 
-            std::list<PluginHost::IStateControl::INotification*>::iterator index(_stateControlClients.begin());
+            auto index(_stateControlClients.begin());
             while (index != _stateControlClients.end()) {
                 (*index)->StateChange(newState);
                 index++;
