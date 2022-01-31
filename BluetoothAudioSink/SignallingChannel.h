@@ -31,7 +31,7 @@ namespace A2DP {
     class SignallingChannel : public Bluetooth::AVDTPSocket {
     private:
         static constexpr uint16_t DefaultMTU = 672;
-        static constexpr uint16_t OpenTimeout = 2000; // ms
+        static constexpr uint16_t OpenTimeout = 500; // ms
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t DiscoverTimeout = 2000;
 

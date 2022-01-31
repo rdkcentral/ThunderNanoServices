@@ -28,7 +28,7 @@ namespace A2DP {
 
     class ServiceDiscovery : public Bluetooth::SDP::ClientSocket {
     private:
-        static constexpr uint16_t OpenTimeout = 2000; // ms
+        static constexpr uint16_t OpenTimeout = 500; // ms
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t DiscoverTimeout = 5000;
 
@@ -234,7 +234,7 @@ namespace A2DP {
 
         void Operational(const bool upAndRunning) override
         {
-            TRACE(DiscoveryFlow, (_T("Bluetooth A2DP/SDP connection is %ioperational"), upAndRunning? "" : "in"));
+            TRACE(DiscoveryFlow, (_T("Bluetooth A2DP/SDP connection is now %s"), upAndRunning? "open" : "closed"));
         }
 
     public:
