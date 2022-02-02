@@ -33,6 +33,7 @@ option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
 option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" OFF)
 option(EXAMPLE_IOCONNECTOR_TEST "Include IOConnector test suite" OFF)
+option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message control" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -70,4 +71,8 @@ endif()
 
 if(EXAMPLE_IOCONNECTOR_TEST)
     add_subdirectory(IOConnectorTest)
+endif()
+
+if(EXAMPLE_MESSAGECONTROL_UDP_CLIENT)
+    add_subdirectory(MessageControlUDPClient)
 endif()
