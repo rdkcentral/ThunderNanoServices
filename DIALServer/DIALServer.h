@@ -1277,8 +1277,7 @@ namespace Plugin {
         {
             string deviceId;
             PluginHost::ISubSystem* subSystem = _service->SubSystems();
-            if ((subSystem != nullptr) &&
-                (subSystem->IsActive(PluginHost::ISubSystem::IDENTIFIER) == true)) {
+            if (subSystem != nullptr) {
 
                 const PluginHost::ISubSystem::IIdentifier* identifier(subSystem->Get<PluginHost::ISubSystem::IIdentifier>());
                 if (identifier != nullptr) {
