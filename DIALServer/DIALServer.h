@@ -1293,6 +1293,7 @@ namespace Plugin {
 
                     identifier->Release();
                 }
+                subSystem->Release();
             }
             return deviceId;
         }
