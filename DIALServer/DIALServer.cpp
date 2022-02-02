@@ -311,8 +311,6 @@ namespace Plugin {
             // Oops no way we can operate...
             result = _T("No DIALInterface available.");
         } else {
-            const uint8_t* rawId(Core::SystemInfo::Instance().RawDeviceId());
-            const string deviceId(Core::SystemInfo::Instance().Id(rawId, ~0));
 
             _service = service;
             _dialURL = Core::URL(service->Accessor());
@@ -321,6 +319,7 @@ namespace Plugin {
                 _dialURL.Port(80);
             }
 
+            const string deviceId = DeviceId();
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
             _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL, _DefaultAppInfoPath, selectedNode.IsAnyInterface());
