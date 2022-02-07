@@ -53,44 +53,55 @@ extern "C" {
 #include <set>
 #include <queue>
 
-template <class T>
+
+template < class T >
+struct remove_reference {
+    typedef T type;
+};
+
+template < class T >
+struct remove_reference < T & > {
+    typedef T type;
+};
+
+template < class T >
 struct remove_pointer {
     typedef T type;
 };
 
-template <class T>
-struct remove_pointer <T*> {
+template < class T >
+struct remove_pointer < T * > {
     typedef T type;
 };
 
-template <class T>
-struct remove_pointer <T const *>  {
+template < class T >
+struct remove_pointer < T const * >  {
     typedef T type;
 };
 
-template <class T>
-struct _remove_const {
+template < class T >
+struct remove_const {
     typedef T type;
 };
 
-template <class T>
-struct _remove_const <T const> {
+template < class T >
+struct remove_const < T const > {
     typedef T type;
 };
 
-template <class T>
-struct _remove_const <T *> {
+template < class T >
+struct remove_const < T * > {
     typedef T * type;
 };
 
-template <class T>
-struct _remove_const <T const *> {
+template < class T >
+struct remove_const < T const * > {
     typedef T * type;
 };
 
-template <class FROM, class TO, bool ENABLE>
-struct _narrowing {
-    static_assert (( std::is_arithmetic < FROM > :: value && std::is_arithmetic < TO > :: value ) != false);
+template < class FROM , class TO , bool ENABLE >
+struct narrowing {
+    static_assert ( ( std::is_arithmetic < FROM > :: value && std::is_arithmetic < TO > :: value ) != false );
 
     // Not complete, assume zero is minimum for unsigned
     // Common type of signed and unsigned typically is unsigned
@@ -98,35 +109,38 @@ struct _narrowing {
     static constexpr bool value =   ENABLE
                                     && (
                                         ( std::is_signed < FROM > :: value && std::is_unsigned < TO > :: value )
-                                        || static_cast < common_t > ( std::numeric_limits < FROM >::max () ) >= static_cast < common_t > ( std::numeric_limits < TO >::max () )
+                                        || static_cast < common_t > ( std::numeric_limits < FROM > :: max () ) >= static_cast < common_t > ( std::numeric_limits < TO > :: max () )
                                     )
                                     ;
 };
 
 // Suppress compiler warnings of unused (parameters)
 // Omitting the name is sufficient but a search on this keyword provides easy access to the location
-template <typename T>
-void silence (T &&) {}
+template < typename T >
+void silence ( T && ) {}
 
 // Show logging in blue to make it distinct from TRACE
-#define TRACE_WITHOUT_THIS(level, ...) do {             \
-    fprintf (stderr, "\033[1;34m");                     \
-    fprintf (stderr, "[%s:%d] : ", __FILE__, __LINE__); \
-    fprintf (stderr, ##__VA_ARGS__);                    \
-    fprintf (stderr, "\n");                             \
-    fprintf (stderr, "\033[0m");                        \
-    fflush (stderr);                                    \
-} while (0)
+#define TRACE_WITHOUT_THIS(level, ...) do {               \
+    fprintf ( stderr, "\033[1;34m" );                     \
+    fprintf ( stderr, "[%s:%d] : ", __FILE__, __LINE__ ); \
+    fprintf ( stderr, ##__VA_ARGS__ );                    \
+    fprintf ( stderr, "\n" );                             \
+    fprintf ( stderr, "\033[0m" );                        \
+    fflush ( stderr );                                    \
+} while ( 0 )
 
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE)
+MODULE_NAME_DECLARATION ( BUILD_REFERENCE )
 
 namespace WPEFramework {
 namespace Plugin {
 
-class CompositorImplementation;
+    // Forward declaration
+    class CompositorImplementation;
 
-    // Some compilers might struggle with identical names for class and namespace, but for now it simplifies a lot
+
+
+    // Different namespace and scope than CompositorImplementation::EGL
     namespace EGL {
 #ifdef EGL_VERSION_1_5
         using img_t = EGLImage;
@@ -143,8 +157,10 @@ class CompositorImplementation;
 #endif
     }
 
-    class ClientSurface : public Exchange::IComposition::IClient, Exchange::IComposition::IRender {
-    private:
+
+
+    class ClientSurface : public Exchange::IComposition::IClient , Exchange::IComposition::IRender {
+    private :
 
         // The buffer acts as a surface for the remote site
         struct {
@@ -158,1821 +174,388 @@ class CompositorImplementation;
             bool RenderComplete () const { return Valid () && _fd > -1 && _sync_fd > -1 && _khr != WPEFramework::Plugin::EGL::InvalidImage (); }
         } _nativeSurface;
 
-    public:
+    private :
 
-        using surf_t = decltype (_nativeSurface);
-
-    public:
-        ClientSurface() = delete;
-        ClientSurface(const ClientSurface&) = delete;
-        ClientSurface& operator= (const ClientSurface&) = delete;
-
-        ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const uint32_t width, const uint32_t height);
-        ~ClientSurface() override;
-
-    public:
-        RPC::instance_id Native () const override {
-            // Sharing this handle does not imply its contents can be accessed!
-// TODO: narrowing
-            static_assert ((std::is_convertible < decltype (_nativeSurface._fd), RPC::instance_id > :: value) != false);
-            static_assert (sizeof (decltype (_nativeSurface._fd) ) <= sizeof (RPC::instance_id));
-
-            return static_cast < RPC::instance_id > ( _nativeSurface._fd );
-        }
-
-        RPC::instance_id SyncPrimitive () const {
-// TODO: narrowing
-            static_assert ((std::is_convertible < decltype (_nativeSurface._sync_fd), RPC::instance_id > :: value) != false);
-            static_assert (sizeof (decltype (_nativeSurface._sync_fd) ) <= sizeof (RPC::instance_id));
-
-            return static_cast < RPC::instance_id > ( _nativeSurface._sync_fd );
-        }
-
-        bool SyncPrimitiveStart () {
-            auto init = [] () -> struct flock {
-                struct flock fl;
-                /* void * */ memset( &fl, 0, sizeof ( fl ) );
-
-                fl.l_type = F_WRLCK;
-                fl.l_whence = SEEK_SET;
-                fl.l_start = 0;
-                fl.l_len = 0;
-
-                return fl;
-            };
-
-            static struct flock fl = init ();
-
-            // Operatore on i-node
-            bool ret = _nativeSurface._sync_fd > -1 && fcntl (_nativeSurface._sync_fd, F_SETLKW,  &fl) != -1;
-            assert (ret != false);
-            return ret;
-        }
-
-        bool SyncPrimitiveEnd () {
-            auto init = [] () -> struct flock {
-                struct flock fl;
-                /* void * */ memset( &fl, 0, sizeof ( fl ) );
-
-                fl.l_type = F_UNLCK;
-                fl.l_whence = SEEK_SET;
-                fl.l_start = 0;
-                fl.l_len = 0;
-
-                return fl;
-            };
-
-            static struct flock fl = init ();
-
-            bool ret = _nativeSurface._sync_fd > -1 && fcntl (_nativeSurface._sync_fd, F_SETLK, &fl) != -1;
-            assert (ret != false);
-            return ret;
-        }
-
-        string Name() const override
-        {
-                return _name;
-        }
-        void Opacity(const uint32_t value) override {
-            _opacity = value;
-        }
-        uint32_t Opacity () const override {
-            return _opacity;
-        }
-        uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override {
-            _destination = rectangle;
-            return Core::ERROR_NONE;
-        }
-        Exchange::IComposition::Rectangle Geometry() const override {
-            return _destination;
-        }
-        uint32_t ZOrder(const uint16_t zorder) override {
-            _layer = zorder;
-            return Core::ERROR_NONE;
-        }
-        uint32_t ZOrder() const override {
-            return _layer;
-        }
-
-        void ScanOut () override;
-
-        surf_t const & Surface ( EGL::img_t const & khr = EGL::InvalidImage () ) {
-            if (khr != EGL::InvalidImage ()) {
-                _nativeSurface._khr = khr;
-            }
-
-            return _nativeSurface;
-        }
-
-        BEGIN_INTERFACE_MAP (ClientSurface)
-            INTERFACE_ENTRY (Exchange::IComposition::IClient)
-            INTERFACE_ENTRY (Exchange::IComposition::IRender)
-        END_INTERFACE_MAP
-
-    private:
-        ModeSet& _modeSet;
-        CompositorImplementation& _compositor; 
+        ModeSet & _modeSet;
+        CompositorImplementation & _compositor;
         const std::string _name;
 
         uint32_t _opacity;
         uint32_t _layer;
 
         Exchange::IComposition::Rectangle _destination;
+
+    public :
+
+        using surf_t = decltype ( _nativeSurface );
+
+        ClientSurface () = delete;
+        ClientSurface ( const ClientSurface & ) = delete;
+        ClientSurface & operator= ( const ClientSurface & ) = delete;
+
+        ClientSurface ( ModeSet & , CompositorImplementation & , const string & , const uint32_t , const uint32_t );
+        ~ClientSurface () override;
+
+        // Underlying native surface handle
+        RPC::instance_id Native () const override;
+
+        // Inter-process synchronization
+        RPC::instance_id SyncPrimitive () const;
+        bool SyncPrimitiveStart () const;
+        bool SyncPrimitiveEnd () const;
+
+        // Just me
+        string Name () const override { return _name; }
+
+        // Opacity
+        void Opacity ( const uint32_t value ) override { _opacity = value; }
+        uint32_t Opacity () const override { return _opacity; }
+
+        // Geometry
+        uint32_t Geometry ( const Exchange::IComposition::Rectangle & rectangle ) override { _destination = rectangle; return Core::ERROR_NONE ; }
+        Exchange::IComposition::Rectangle Geometry () const override { return _destination; }
+
+        // Z-ordering within multiple surfaces
+        uint32_t ZOrder ( const uint16_t zorder ) override { _layer = zorder; return Core::ERROR_NONE; }
+        uint32_t ZOrder () const override { return _layer; }
+
+        // Buffer to display flipping
+        void ScanOut () override;
+
+        surf_t const & Surface ( EGL::img_t const & khr = EGL::InvalidImage () );
+
+        BEGIN_INTERFACE_MAP ( ClientSurface )
+            INTERFACE_ENTRY ( Exchange::IComposition::IClient )
+            INTERFACE_ENTRY ( Exchange::IComposition::IRender )
+        END_INTERFACE_MAP
     };
 
+
+
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
-        public:
+    public :
 
+        // The (preferred) type of lock
         using lock_t = std::mutex;
-        using ClientContainer = Core::ProxyMapType<string, ClientSurface>;
 
-        using platform_w_t =  decltype (std::declval < ModeSet >().Width ());
-        using platform_h_t =  decltype (std::declval < ModeSet >().Height ());
+        using ClientContainer = Core::ProxyMapType < string , ClientSurface >;
 
-    private:
-        CompositorImplementation(const CompositorImplementation&) = delete;
-        CompositorImplementation& operator=(const CompositorImplementation&) = delete;
+        // Underlying display 'true' dimensions
+        using platform_w_t =  decltype ( std::declval < ModeSet > () . Width () );
+        using platform_h_t =  decltype ( std::declval < ModeSet > () . Height () );
 
+        CompositorImplementation ( CompositorImplementation const & ) = delete;
+        CompositorImplementation & operator= ( CompositorImplementation const & ) = delete;
+
+    private :
+
+
+
+        // The communication channel with the (remote) other site
         class ExternalAccess : public RPC::Communicator {
-        private:
-            ExternalAccess() = delete;
-            ExternalAccess(const ExternalAccess&) = delete;
-            ExternalAccess& operator=(const ExternalAccess&) = delete;
+        public :
 
-        public:
-            ExternalAccess(
-                CompositorImplementation& parent, 
-                const Core::NodeId& source, 
-                const string& proxyStubPath, 
-                const Core::ProxyType<RPC::InvokeServer>& handler)
-                : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
-                , _parent(parent)
-            {
-                uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
+            ExternalAccess () = delete;
+            ExternalAccess ( ExternalAccess const & ) = delete;
+            ExternalAccess & operator= ( ExternalAccess const & ) = delete;
 
-                handler->Announcements(Announcement());
+            ExternalAccess ( CompositorImplementation & , Core::NodeId const & , string const & , Core::ProxyType < RPC::InvokeServer > const & );
+            ~ExternalAccess () override = default;
 
-                if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Could not open RPI Compositor RPCLink server. Error: %s"), Core::NumberType<uint32_t>(result).Text()));
-                } else {
-                    // We need to pass the communication channel NodeId via an environment variable, for process,
-                    // not being started by the rpcprocess...
-                    Core::SystemInfo::SetEnvironment(_T("COMPOSITOR"), RPC::Communicator::Connector(), true);
-                }
-            }
+        private :
 
-            ~ExternalAccess() override = default;
+            void * Aquire ( string const & , uint32_t const, uint32_t const ) override;
 
-        private:
-            void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t version) override
-            {
-                // Use the className to check for multiple HDMI's. 
-                return (_parent.QueryInterface(interfaceId));
-            }
-
-        private:
-            CompositorImplementation& _parent;
+            CompositorImplementation & _parent;
         };
 
-        class DMATransfer : public Core::Thread {
 
-            private :
 
-                CompositorImplementation & _compositor;
+        class DMATransfer final : public Core::Thread {
+        private :
 
-                // Waiting for connection requests
-                int _listen;
-                // Actual socket for communication
-                int _transfer;
+            CompositorImplementation & _compositor;
 
-                struct sockaddr_un const _addr;
+            // Waiting for connection requests
+            int _listen;
+            // Actual socket for communication
+            int _transfer;
 
-                bool _valid;
+            struct sockaddr_un const _addr;
 
-                using valid_t = decltype (_valid);
+            bool _valid;
 
-            public :
+        public :
 
-                // Sharing handles (file descriptors)
-                static constexpr int8_t MAX_SHARING_FDS = 2;
-                using fds_t = std::array <int, MAX_SHARING_FDS>;
+            using valid_t = decltype ( _valid );
 
-                DMATransfer () = delete;
-                DMATransfer (CompositorImplementation & compositor) : Core::Thread (/*0, _T ("")*/), _compositor (compositor), _listen { -1 }, _transfer { -1 }, _addr { AF_UNIX, "/tmp/Compositor/DMA" }, _valid { _Initialize () } {}
-                ~DMATransfer () {
-                    /* bool */ Wait (WPEFramework::Core::Thread::BLOCKED | WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+            using timeout_t = remove_const < decltype ( Core::infinite ) > :: type;
 
-                    Stop ();
+            using socket_t = decltype ( _listen );
+// TODO: see other parts of the code
+            using fd_t = int;
 
-                    /* valid_t */ _Deinitialize ();
-                }
+            DMATransfer () = delete;
+            DMATransfer ( DMATransfer const & ) = delete;
+            DMATransfer & operator= ( DMATransfer const & ) = delete;
 
-                DMATransfer (DMATransfer const &) = delete;
-                DMATransfer & operator = (DMATransfer const &) = delete;
+// TODO:
+            // Sharing handles (file descriptors)
+            static constexpr int8_t MAX_SHARING_FDS = 2;
+            using fds_t = std::array < fd_t , MAX_SHARING_FDS >;
 
-            private :
+            explicit DMATransfer ( CompositorImplementation & );
+            ~DMATransfer ();
 
-                using timeout_t = _remove_const < decltype (Core::infinite) > :: type;
+            valid_t Valid () const { return _valid; }
 
-            public :
+            // Receive file descriptor(s) with additional message
+            valid_t Receive ( std::string & , DMATransfer::fds_t & );
 
-                timeout_t Worker () override {
-                    // The actual time (schedule) resolution
-// TODO:: arbitrary value
-                    // Approximately 1 Hz
-                    constexpr timeout_t _ret = 1000;
+            // Send file descriptor(s) with additional message
+            valid_t Send ( std::string const & , DMATransfer::fds_t const & );
 
-                    Block ();
+        private :
 
-                    fd_set fds;
+            timeout_t Worker () override;
 
-                    FD_ZERO (&fds);
-                    FD_SET (_listen, &fds);
+            valid_t _Initialize ();
+            valid_t _Deinitialize ();
 
-                    // Just use 'polling'
-                    constexpr struct timespec timeout = { .tv_sec = 0, .tv_nsec = 0 };
+            static constexpr socket_t InvalidSocket () { return static_cast < socket_t > ( -1 ) ; }
+// TODO: also see other parts for FDS
+            static constexpr fd_t InvalidFD () { return static_cast < fd_t > ( -1  ) ; }
 
-                    int err = pselect(_listen + 1, &fds, nullptr, nullptr, &timeout, nullptr);
+            valid_t Connect ( timeout_t );
+            valid_t Disconnect ( timeout_t );
 
-                    if (err < 0) {
-                        // Error
-                        TRACE (Trace::Error, (_T ("Unable to accept DMA connections")));
-
-                        Stop ();
-                    }
-                    else if (err == 0) {
-                        // Timeout, no (new) connection available
-                    }
-                    else if (FD_ISSET (_listen, &fds) != 0) {
-
-// TODO: set flags on _transfer ?
-                        _transfer = accept (_listen, nullptr, nullptr);
-
-                        // Do some processing on the clients
-
-                        std::string _msg;
-
-                        // Shared buffer and synchronization primitive
-                        DMATransfer::fds_t handles = {-1, -1};
-
-                        std::string _props;
-
-                        if (_transfer > 0) {
-                            if (Receive (_msg, handles) && _compositor.FDFor (_msg, handles, _props) && Send (_msg + _props, handles) != false) {
-                                // Just wait for the remote peer to close the connection
-                                ssize_t _size = read (_transfer, nullptr, 0);
-
-                                decltype (errno) _err = errno;
-
-                                switch (_size) {
-                                    case -1 :   // Error
-                                                TRACE (Trace::Error, (_T ("Error after DMA transfer : %d."), _err));
-                                                break;
-                                    case 0  :   // remote has closed the connection
-                                                 TRACE (Trace::Information, (_T ("Remote has closed the DMA connection.")));
-                                                break;
-                                    default :   // Unexpected data available
-                                                TRACE (Trace::Error, (_T ("Unexpected data read after DMA transfer.")));
-                                }
-
-                                /* int */ close (_transfer);
-
-                                _transfer = -1;
-                            }
-                            else {
-                                TRACE (Trace::Error, (_T ("Failed to exchange DMA information for %s."),  _msg.length () > 0 ? _msg.c_str () : "'<no name provided>'"));
-                            }
-                        }
-                        else {
-                            // Not necessarily an error
-                            TRACE (Trace::Information, ( _T ("Premature incoming connection loss.") ));
-                        }
-                    }
-
-                    return _ret;
-                }
-
-                valid_t Valid () const { return _valid; }
-
-                // Receive file descriptor(s) with additional message
-                valid_t Receive (std::string & msg, DMATransfer::fds_t & fds) {
-                    valid_t _ret = Valid () && Connect (Core::infinite);
-
-                    if (_ret != true) {
-                        TRACE (Trace::Information, (_T ("Unable to receive (DMA) data.")));
-                    }
-                    else {
-                        _ret = _Receive (msg, fds.data (), fds.size () );
-                        _ret = Disconnect (Core::infinite) && _ret;
-                    }
-
-                    return _ret;
-                }
-
-                // Send file descriptor(s) with additional message
-                valid_t Send (std::string const & msg, DMATransfer::fds_t const & fds) {
-                    valid_t _ret = Valid () && Connect (Core::infinite);
-
-                    if (_ret != true) {
-                        TRACE (Trace::Information, (_T ("Unable to send (DMA) data.")));
-                    }
-                    else {
-                        _ret = _Send (msg, fds.data (), fds.size ()) && Disconnect (Core::infinite);
-                        _ret = Disconnect (Core::infinite) && _ret;
-                    }
-
-                    return _ret;
-                }
-
-            private :
-
-                valid_t _Initialize () {
-                    valid_t _ret = false;
-
-                    // Just a precaution
-                    /* int */ unlink (_addr.sun_path);
-
-                    _listen = socket (_addr.sun_family /* domain */, SOCK_STREAM /* type */, 0 /* protocol */);
-                    _ret = _listen != -1;
-
-                    if (_ret != false) {
-                        _ret = bind (_listen, reinterpret_cast < struct sockaddr const * > (&_addr), sizeof (_addr)) == 0;
-                    }
-
-                    if (_ret != false) {
-// TODO: Derive it from maximum number of supported clients
-                        // Number of pending requests for accept to handle
-                        constexpr int queue_size = 1;
-                        _ret = listen (_listen, queue_size) == 0;
-                    }
-
-                    if (_ret != false) {
-                        _ret = fcntl (_listen, F_SETFL, O_NONBLOCK) == 0;
-                    }
-
-                    return _ret;
-                }
-
-                valid_t _Deinitialize () {
-                    valid_t _ret = false;
-
-                    _ret = _listen > 0 && close (_listen) == 0 && _transfer > 0 && close (_transfer) == 0;
-
-                    // Delete the (bind) socket in the file system if no reference exist (anymore)
-                    _ret = unlink (_addr.sun_path) == 0 && _ret;
-
-                    return _ret;
-                }
-
-                valid_t Connect (timeout_t timeout) {
-                    silence (timeout);
-
-                    valid_t _ret = false;
-
-                    decltype (errno) _err = errno;
-
-                    _ret = _transfer > -1 && _err == 0;
-
-                    return _ret;
-                }
-
-                valid_t Disconnect (timeout_t timeout) {
-                    silence (timeout);
-
-                    valid_t _ret = false;
-
-                    decltype (errno) _err = errno;
-
-                    _ret = _transfer > -1 && _err == 0;
-
-                    return _ret;
-                }
-
-                valid_t _Send (std::string const & msg, int const * fd, uint8_t count) {
-                    using fd_t = _remove_const < std::remove_pointer < decltype (fd) > :: type > :: type;
-
-                    valid_t _ret = false;
-
-                    // Logical const
-                    static_assert ((std::is_same <char *, _remove_const  < decltype ( & msg [0] ) > :: type >:: value) != false);
-                    char * _buf  = const_cast <char *> ( & msg [0] );
-
-                    size_t const _bufsize = msg.size ();
-
-                    if (_bufsize > 0) {
-
-                        // Scatter array for vector I/O
-                        struct iovec _iov;
-
-                        // Starting address
-                        _iov.iov_base = reinterpret_cast <void *> (_buf);
-                        // Number of bytes to transfer
-                        _iov.iov_len = _bufsize;
-
-                        // Actual message
-                        struct msghdr _msgh {};
-
-                        // Optional address
-                        _msgh.msg_name = nullptr;
-                        // Size of address
-                        _msgh.msg_namelen = 0;
-                        // Scatter array
-                        _msgh.msg_iov = &_iov;
-                        // Elements in msg_iov
-                        _msgh.msg_iovlen = 1;
-
-                        // Ancillary data
-                        // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
-                        char _control [CMSG_SPACE (sizeof ( fd_t ) * count)];
-
-                        // Only valid file descriptor (s) can be sent via extra payload
-                        _ret = true;
-                        for (decltype (count) i = 0; i < count && fd != nullptr; i++) {
-                            _ret = fd [i] > -1 && _ret;
-                        }
-
-                        // At least  the first fd should be valid
-                        if (_ret != false) {
-                            // Contruct ancillary data to be added to the transfer via the control message
-
-                            // Ancillary data, pointer
-                            _msgh.msg_control = _control;
-
-                            // Ancillary data buffer length
-                            _msgh.msg_controllen = sizeof ( _control );
-
-                            // Ancillary data should be access via cmsg macros
-                            // https://linux.die.net/man/2/recvmsg
-                            // https://linux.die.net/man/3/cmsg
-                            // https://linux.die.net/man/2/setsockopt
-                            // https://www.man7.org/linux/man-pages/man7/unix.7.html
-
-                            // Control message
-
-                            // Pointer to the first cmsghdr in the ancillary data buffer associated with the passed msgh
-                            struct cmsghdr * _cmsgh = CMSG_FIRSTHDR ( &_msgh );
-
-                            if (_cmsgh != nullptr) {
-                                // Originating protocol
-                                // To manipulate options at the sockets API level
-                                _cmsgh->cmsg_level = SOL_SOCKET;
-
-                                // Protocol specific type
-                                // Option at the API level, send or receive a set of open file descriptors from another process
-                                _cmsgh->cmsg_type = SCM_RIGHTS;
-
-                                // The value to store in the cmsg_len member of the cmsghdr structure, taking into account any necessary alignment, eg byte count of control message including header
-                                _cmsgh->cmsg_len = CMSG_LEN (sizeof ( fd_t ) * count);
-
-                                // Initialize the payload
-                                /* void */ memcpy (CMSG_DATA (_cmsgh ), fd, sizeof ( fd_t ) * count);
-
-                                _ret = true;
-                            }
-                            else {
-                                // Error
-                            }
-                        }
-                        else {
-                            // No extra payload, ie  file descriptor(s), to include
-                            _msgh.msg_control = nullptr;
-                            _msgh.msg_controllen = 0;
-
-                            _ret = true;
-                        }
-
-                        if (_ret != false) {
-                            // Configuration succeeded
-
-                            // https://linux.die.net/man/2/sendmsg
-                            // https://linux.die.net/man/2/write
-                            // Zero flags is equivalent to write
-
-                            ssize_t _size = -1;
-                            socklen_t _len = sizeof (_size);
-
-                            // Only send data if the buffer is large enough to contain all data
-                            if (getsockopt (_transfer, SOL_SOCKET, SO_SNDBUF, &_size, &_len) == 0) {
-                                // Most options use type int, ssize_t was just a placeholder
-                                static_assert (sizeof (int) <= sizeof (ssize_t));
-                                TRACE (Trace::Information, (_T ("The sending buffer capacity equals %d bytes."), _size));
-
-// TODO: do not send if the sending buffer is too small
-                                _size = sendmsg (_transfer, &_msgh, 0);
-                            }
-                            else {
-                                // Unable to determine buffer capacity
-                            }
-
-                            _ret = _size != -1;
-
-                            if (_ret != false) {
-                                // Ancillary data is not included
-                                TRACE (Trace::Information, (_T ("Send %d bytes out of %d."), _size, _bufsize));
-                            }
-                            else {
-                                TRACE (Trace::Error, (_T ("Failed to send data.")));
-                            }
-                        }
-
-                    }
-                    else {
-                        TRACE (Trace::Error, (_T ("A data message to be send cannot be empty!")));
-                    }
-
-                    return _ret;
-                }
-
-                valid_t _Receive (std::string & msg, int * fd, uint8_t count) {
-                    bool _ret = false;
-
-                    msg.clear ();
-
-                    ssize_t _size = -1;
-                    socklen_t _len = sizeof (_size);
-
-                    if (getsockopt (_transfer, SOL_SOCKET, SO_RCVBUF, &_size, &_len) == 0) {
-                        TRACE (Trace::Information, (_T ("The receiving buffer maximum capacity equals %d bytes."), _size));
-
-                        // Most options use type int, ssize_t was just a placeholder
-                        static_assert (sizeof (int) <= sizeof (ssize_t));
-                        msg.reserve (static_cast < int > (_size));
-                    }
-                    else {
-                        TRACE (Trace::Information, (_T ("Unable to determine buffer maximum cpacity. Using %d bytes instead."), msg.capacity ()));
-                    }
-
-                    size_t const _bufsize = msg.capacity ();
-
-                    if (_bufsize > 0 && count > 0 && fd != nullptr) {
-                        using fd_t = std::remove_pointer < decltype (fd) > :: type;
-
-                        for (decltype (count) i = 0; i < count; i++) {
-                            fd [i] = -1;
-                        }
-
-                        static_assert ((std::is_same <char *, _remove_const  < decltype ( & msg [0] ) > :: type >:: value) != false);
-                        char _buf [_bufsize];
-
-                        // Scatter array for vector I/O
-                        struct iovec _iov;
-
-                        // Starting address
-                        _iov.iov_base = reinterpret_cast <void *> (&_buf [0]);
-                        // Number of bytes to transfer
-                        _iov.iov_len = _bufsize;
-
-                        // Actual message
-                        struct msghdr _msgh {};
-
-                        // Optional address
-                        _msgh.msg_name = nullptr;
-                        // Size of address
-                        _msgh.msg_namelen = 0;
-                        // Elements in msg_iov
-                        _msgh.msg_iovlen = 1;
-                        // Scatter array
-                        _msgh.msg_iov = &_iov;
-
-                        // Ancillary data
-                        // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
-                        char _control [CMSG_SPACE (sizeof ( fd_t ) * count)];
-
-                        // Ancillary data, pointer
-                        _msgh.msg_control = _control;
-
-                        // Ancillery data buffer length
-                        _msgh.msg_controllen = sizeof (_control);
-
-// TODO: do not receive if the receiving buffer is too small
-                        // No flags set
-                        _size = recvmsg (_transfer, &_msgh, 0);
-
-                        _ret = _size > 0;
-
-                        switch (_size) {
-                            case -1 :   // Error
-                                        {
-                                           TRACE (Trace::Error, (_T ("Error receiving remote (DMA) data.")));
-                                           break;
-                                        }
-                            case 0  :   // Peer has done an orderly shutdown, before any data was received
-                                        {
-                                            TRACE (Trace::Error, (_T ("Error receiving remote (DMA) data. Compositorclient may have become unavailable.")));
-                                            break;
-                                        }
-                            default :   // Data
-                                        {
-                                            // Extract the file descriptor information
-                                            TRACE (Trace::Information, (_T ("Received %d bytes."), _size));
-
-                                            // Pointer to the first cmsghdr in the ancillary data buffer associated with the passed msgh
-                                            // Assume a single cmsgh was sent
-                                            struct cmsghdr * _cmsgh = CMSG_FIRSTHDR ( &_msgh );
-
-                                            // Check for the expected properties the client should have set
-                                            if (_cmsgh != nullptr
-                                                && _cmsgh->cmsg_level == SOL_SOCKET
-                                                && _cmsgh->cmsg_type == SCM_RIGHTS) {
-
-                                                // The macro returns a pointer to the data portion of a cmsghdr.
-                                                /* void */ memcpy (fd, CMSG_DATA (_cmsgh ), sizeof ( fd_t ) * count);
-                                            }
-                                            else {
-                                                TRACE (Trace::Information, (_T ("No (valid) ancillary data received.")));
-                                            }
-
-                                            msg.assign (_buf, _size);
-                                        }
-                        }
-                    }
-                    else {
-                        // Error
-                        TRACE (Trace::Error, (_T ("A receiving data buffer (message) cannot be empty!")));
-                    }
-
-                    return _ret;
-                }
+            valid_t _Send ( std::string const & , int const * , uint8_t );
+            valid_t _Receive ( std::string & , int * , uint8_t );
         };
 
-        class Natives {
-            private :
 
-                ModeSet & _set;
 
-                using dpy_return_t = decltype ( std::declval < ModeSet > ().UnderlyingHandle () );
-                using surf_return_t = decltype ( std::declval < ModeSet > ().CreateRenderTarget (0, 0) );
+        class Natives final {
+        private :
 
-                static_assert (std::is_pointer < surf_return_t > :: value != false);
-                surf_return_t _surf = nullptr;
+            ModeSet & _set;
 
-                bool _valid = false;
+            using dpy_return_t = decltype ( std::declval < ModeSet > () . UnderlyingHandle () );
+            using surf_return_t = decltype ( std::declval < ModeSet > () . CreateRenderTarget (0, 0) );
 
-            public :
+            static_assert ( std::is_pointer < surf_return_t > :: value != false );
+            surf_return_t _surf = nullptr;
 
-                using dpy_t = dpy_return_t;
-                using surf_t = decltype (_surf);
-                using valid_t = decltype (_valid);
+            bool _valid = false;
 
-                Natives () = delete;
-                Natives (ModeSet & set) : _set { set }, _valid { Initialize () } {}
-                ~Natives () {
-                    _valid = false;
-                    DeInitialize ();
-                }
+        public :
 
-                dpy_t Display () const { return _set.UnderlyingHandle (); }
-                surf_t Surface () const { return _surf; }
+            Natives () = delete;
+            Natives ( Natives const & ) = delete;
+            Natives & operator= ( Natives const & ) = delete;
 
-                valid_t Valid () const { return _valid; }
+            using dpy_t = dpy_return_t;
+            using surf_t = decltype ( _surf );
+            using valid_t = decltype ( _valid );
 
-            private :
+            explicit Natives ( ModeSet & );
+            ~Natives ();
 
-                valid_t Initialize () {
-                    valid_t _ret = false;
+            dpy_t Display () const { return _set . UnderlyingHandle () ; }
+            surf_t Surface () const { return _surf ; }
 
-                    // The argument to Open is unused, an empty string suffices
-                    static_assert (std::is_pointer < dpy_t > ::value != false);
-                    _ret =_set.Open ("") == Core::ERROR_NONE && Display () != nullptr;
+            valid_t Valid () const { return _valid ; }
 
-                    using width_t = decltype ( std::declval < ModeSet > ().Width () );
-                    using height_t = decltype ( std::declval < ModeSet > ().Height () );
+        private :
 
-                    width_t _width = _set.Width ();
-                    height_t _height = _set.Height ();
-
-                    if (_ret != false) {
-                        _surf = _set.CreateRenderTarget (_width, _height);
-                        _ret = _surf != nullptr;
-                    }
-
-                    if (_ret != true) {
-                        static_assert (( std::is_integral < width_t >::value && std::is_integral < height_t >::value ) != false);
-                        TRACE (Trace::Error, (_T ("Unable to create a compositor surface of dimensions: %d x %d [width, height]))."), _width, _height));
-                    }
-
-                    return _ret;
-                }
-
-                void DeInitialize () {
-                    _valid = false;
-
-                    if (_surf != nullptr) {
-                        _set.DestroyRenderTarget (_surf);
-                    }
-                }
+            valid_t Initialize ();
+            void DeInitialize ();
         };
 
-        class GLES {
-#define GL_ERROR_WITH_RETURN() ( glGetError () == GL_NO_ERROR )
-#ifdef NDEBUG
-#define GL_ERROR() do {} while (0)
-#else
-#define GL_ERROR() assert (GL_ERROR_WITH_RETURN ())
-#endif
 
-            private :
 
-                // x, y, z
-                static constexpr uint8_t VerticeDimensions = 3;
+        class GLES final {
+        private :
 
-                struct offset {
-                    using coordinate_t = GLfloat;
+            // x, y, z
+            static constexpr uint8_t VerticeDimensions = 3;
 
-                    static_assert (_narrowing <float, coordinate_t, true> :: value != false);
+            struct offset {
+                using coordinate_t = GLfloat;
 
-                    // Each coorrdinate in the range [-1.0f, 1.0f]
-                    static constexpr coordinate_t _left = static_cast <coordinate_t> (-1.0f);
-                    static constexpr coordinate_t _right = static_cast <coordinate_t> (1.0f);
-                    static constexpr coordinate_t _bottom = static_cast <coordinate_t> (-1.0f);
-                    static constexpr coordinate_t _top = static_cast <coordinate_t> (1.0f);
-                    static constexpr coordinate_t _near = static_cast <coordinate_t> (-1.0f);
-                    static constexpr coordinate_t _far = static_cast <coordinate_t> (1.0f);
+                static_assert ( narrowing < float , coordinate_t , true > :: value != false );
 
-                    coordinate_t _x;
-                    coordinate_t _y;
-                    coordinate_t _z;
+                // Each coorrdinate in the range [-1.0f, 1.0f]
+                static constexpr coordinate_t const _left = static_cast < coordinate_t > ( -1.0f );
+                static constexpr coordinate_t const _right = static_cast < coordinate_t > ( 1.0f );
+                static constexpr coordinate_t const _bottom = static_cast < coordinate_t > ( -1.0f );
+                static constexpr coordinate_t const _top = static_cast < coordinate_t > ( 1.0f );
+                static constexpr coordinate_t const _near = static_cast < coordinate_t > ( -1.0f );
+                static constexpr coordinate_t const _far = static_cast < coordinate_t > ( 1.0f );
 
-                    offset () : offset ( (_right - _left) / static_cast <coordinate_t> (2.0f) + _left, (_top - _bottom) / static_cast <coordinate_t> (2.0f) + _bottom, (_far - _near) / static_cast <coordinate_t> (2.0f) + _near ) {}
-                    offset (coordinate_t x, coordinate_t y, coordinate_t z) : _x {x}, _y {y}, _z {z} {}
-                } _offset;
+                coordinate_t _x;
+                coordinate_t _y;
+                coordinate_t _z;
 
-                struct scale {
-                    using fraction_t = GLclampf;
+                offset ();
+                explicit offset ( coordinate_t const & , coordinate_t const & , coordinate_t const & );
+            } _offset;
 
-                    static_assert (_narrowing <float, fraction_t, true> :: value != false);
 
-                    static constexpr fraction_t _identity = static_cast <fraction_t> (1.0f);
-                    static constexpr fraction_t _min  = static_cast <fraction_t> (0.0f);
-                    static constexpr fraction_t _max  = static_cast <fraction_t> (1.0f);
 
-                    fraction_t _horiz;
-                    fraction_t _vert;
+            struct scale {
+                using fraction_t = GLclampf;
 
-                    scale () : scale (_identity, _identity) {}
-                    scale (fraction_t horiz, fraction_t vert) : _horiz {horiz}, _vert {vert} {}
-                } _scale;
+                static_assert ( narrowing < float , fraction_t , true > :: value != false );
 
-                struct opacity {
-                    using alpha_t = GLfloat;
+                static constexpr fraction_t const _identity = static_cast < fraction_t > ( 1.0f );
+                static constexpr fraction_t const _min  = static_cast < fraction_t > ( 0.0f );
+                static constexpr fraction_t const _max  = static_cast < fraction_t > ( 1.0f );
 
-                    static_assert (_narrowing <float, alpha_t, true> :: value != false);
+                fraction_t _horiz;
+                fraction_t _vert;
 
-                    static constexpr alpha_t _min = static_cast <alpha_t> (0.0f);
-                    static constexpr alpha_t _max = static_cast <alpha_t> (1.0f);
+                scale ();
+                explicit scale ( fraction_t const & , fraction_t const & );
+            } _scale;
 
-                    alpha_t _alpha;;
 
-                    opacity () : opacity {_max} {}
-                    opacity (alpha_t alpha) : _alpha {alpha} {}
-                } _opacity;
 
-                bool _valid;
+            struct opacity {
+                using alpha_t = GLfloat;
 
-                using prog_t = GLuint;
+                static_assert ( narrowing < float , alpha_t , true > :: value != false);
 
-                static constexpr prog_t InvalidProg () { return 0; }
+                static constexpr alpha_t const _min = static_cast < alpha_t > ( 0.0f );
+                static constexpr alpha_t const _max = static_cast < alpha_t > ( 1.0f );
 
-            public :
+                alpha_t _alpha;
 
-                using tgt_t = GLuint;
-                using tex_t = GLuint;
-                using offset_t = decltype (_offset);
-                using scale_t = decltype (_scale);
-                using opacity_t = decltype (_opacity);
+                opacity ();
+                explicit opacity ( alpha_t const & );
+                explicit opacity ( opacity const & );
 
-                using x_t = GLuint;
-                using y_t = GLuint;
-                using z_t = GLuint;
-                using width_t = GLuint;
-                using height_t = GLuint;
-
-                using version_t = GLuint;
-
-                using valid_t = decltype (_valid);
-
-            private :
-
-                struct texture {
-                    tex_t _tex;
-                    tgt_t _target;
-
-                    opacity_t _opacity;
-
-                    x_t _x;
-                    y_t _y;
-                    z_t _z;
-                    width_t _width;
-                    height_t _height;
-
-                    texture () : texture { GL_INVALID_ENUM, GLES::InitialOpacity () } {}
-                    texture (tgt_t target, opacity_t opacity) : _tex {0}, _target {target}, _opacity {opacity}, _x {0}, _y {0}, _z {0}, _width {0}, _height {0} {}
-                    texture (texture const & other) : _tex { other._tex },_target { other._target }, _opacity { other._opacity }, _x { other._x }, _y { other._y }, _z {other._z }, _width { other._width }, _height  { other._height } {}
-                };
-
-            public :
-
-                using texture_t = struct texture;
-
-            private :
-
-                std::map <EGL::img_t, texture_t> _scene;
-                std::mutex _token;
-
-            public :
-
-                GLES () : _offset { InitialOffset () }, _scale {InitialScale () }, _opacity { InitialOpacity () },  _valid { Initialize () } {}
-                ~GLES () {
-                    _valid = false;
-
-                    /* valid_t */ Deinitialize ();
+                opacity & operator= ( alpha_t const & alpha ) {
+                    _alpha = alpha;
+                    return * this;
                 }
 
-                static offset_t InitialOffset () { return offset (); }
-
-                valid_t UpdateOffset (offset_t const & off) {
-                    valid_t _ret = false;
-
-                    // Ramge check without taking into account rounding errors
-                    if (   off._x >= offset_t::_left
-                        && off._x <= offset_t::_right
-                        && off._y >= offset_t::_bottom
-                        && off._y <= offset_t::_top
-                        && off._z >= offset_t::_near
-                        && off._z <= offset_t::_far
-                    )
-                    {
-                        _offset = off;
-                        _ret = true;
-                    }
-
-                    return _ret;
+                static opacity const & InitialOpacity () {
+                    static opacity const op ( _max );
+                    return op;
                 }
+            } _opacity;
 
-                static scale_t InitialScale () { return scale (); }
 
-                valid_t UpdateScale (scale_t const & scale) {
-                    valid_t _ret = false;
+            bool _valid;
 
-                    // Ramge check without taking into account rounding errors
-                    if (   scale._horiz >= scale_t::_min
-                        && scale._horiz <= scale_t::_max
-                        && scale._vert >= scale_t::_min
-                        && scale._vert <= scale_t::_max
-                    )
-                    {
-                        _scale = scale;
-                        _ret = true;
-                    }
+            using prog_t = GLuint;
 
-                    return _ret;
-                }
+            static constexpr prog_t InvalidProg () { return 0 ; }
 
-                static opacity_t InitialOpacity () { return opacity (); }
+        public :
 
-                valid_t UpdateOpacity (opacity_t const & opacity) {
-                    valid_t _ret = false;
+            using tgt_t = GLuint;
+            using tex_t = GLuint;
+            using offset_t = decltype ( _offset );
+            using scale_t = decltype ( _scale );
+            using opacity_t = decltype ( _opacity );
 
-                    if (   opacity._alpha >= opacity_t::_min
-                        && _opacity._alpha <= opacity_t::_max
-                    )
-                    {
-                        _opacity = opacity;
-                        _ret = true;
-                    }
+            using x_t = GLuint;
+            using y_t = GLuint;
+            using z_t = GLuint;
+            using width_t = GLuint;
+            using height_t = GLuint;
 
-                    return _ret;
-                }
+            using version_t = GLuint;
 
-                static constexpr tex_t InvalidTex () { return 0; }
+            using valid_t = decltype ( _valid );
 
-                static constexpr version_t MajorVersion () { return static_cast <version_t> (2); }
-                static constexpr version_t MinorVersion () { return static_cast <version_t> (0); }
+        private :
 
-                valid_t Valid () const { return _valid; }
+        public :
+            struct texture {
+                tex_t _tex;
+                tgt_t _target;
 
-                valid_t Render () {
-                    bool _ret = Valid ();
-                    return _ret;
-                }
+                opacity_t _opacity;
 
-                valid_t RenderColor (bool red, bool green, bool blue, bool alpha = true) {
-                    static uint16_t _degree = 0;
+                x_t _x;
+                y_t _y;
+                z_t _z;
 
-                    constexpr decltype (_degree) const ROTATION = 360;
+                width_t _width;
+                height_t _height;
 
-                    constexpr float const OMEGA = 3.14159265 / 180;
+                texture ();
+                explicit texture ( tgt_t , opacity_t const & );
+                explicit texture ( texture const & );
+            };
 
-                    valid_t  _ret = Valid ();
+        public :
 
-                    if (_ret != false) {
-                        // Here, for C(++) these type should be identical
-                        // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
-                        static_assert (std::is_same <float, GLfloat>::value);
+            using texture_t = texture;
 
-                        GLfloat _rad = static_cast <GLfloat> (cos (_degree * OMEGA));
+        private :
 
-                        constexpr GLfloat _default_color = 0.0f;
+            std::map < EGL::img_t , texture_t > _scene;
+            std::mutex _token;
 
-                        // The function clamps the input to [0.0f, 1.0f]
-                        /* void */ glClearColor (red != false ? _rad : _default_color, green != false ? _rad : _default_color, blue != false ? _rad : _default_color, alpha != false ? _default_color : 1.0);
-                        GL_ERROR ();
+        public :
 
-                        /* void */ glClear (GL_COLOR_BUFFER_BIT);
-                        GL_ERROR ();
+            GLES ( GLES const & ) = delete;
+            GLES & operator= ( GLES const & ) = delete;
 
-                        _degree = (_degree + 1) % ROTATION;
-                    }
+            GLES ();
+            ~GLES ();
 
-                    _ret = _ret && GL_ERROR_WITH_RETURN ();
+            static offset_t const InitialOffset () { return offset (); }
+            valid_t UpdateOffset ( offset_t const & );
 
-                    return _ret;
-                }
+            static scale_t const InitialScale () { return scale (); }
+            valid_t UpdateScale ( scale_t const & );
 
-                valid_t SkipEGLImageFromScene (EGL::img_t const & img) {
-                    valid_t _ret = false;
+            static opacity_t const & InitialOpacity () { return CompositorImplementation::GLES::opacity::InitialOpacity (); }
+            valid_t UpdateOpacity (opacity_t const & );
 
-                    std::lock_guard < decltype (_token) > const lock (_token);
+            static constexpr tex_t InvalidTex () { return 0; }
 
-                    auto _it = _scene.find (img);
+            static constexpr version_t MajorVersion () { return static_cast < version_t > ( 2 ) ; }
+            static constexpr version_t MinorVersion () { return static_cast < version_t > ( 0 ) ; }
 
-                    _ret = _it != _scene.end ();
+            valid_t Valid () const { return _valid; }
 
-                    if (_ret != false) {
-                        using scene_t = decltype (_scene);
+            valid_t Render () { return Valid (); }
+            valid_t RenderColor ( bool , bool , bool , bool alpha = true );
+            valid_t RenderEGLImage ( EGL::img_t const & , EGLint , EGLint , EGL::width_t , EGL::height_t , EGLint , EGLint );
+            valid_t RenderScene ( width_t , height_t , std::function < valid_t ( texture_t const & , texture_t const & ) > );
 
-                        scene_t::size_type _size = _scene.size ();
+            valid_t SkipEGLImageFromScene ( EGL::img_t const & );
 
-                        _scene.erase (_it);
+        private :
 
-                        _ret = ( _size - _scene.size () ) == static_cast < scene_t::size_type > (1);
-                    }
-
-                    return _ret;
-                }
-
-                valid_t RenderEGLImage (EGL::img_t const & img, EGLint x, EGLint y, EGL::width_t width, EGL::height_t height, EGLint zorder, EGLint opacity) {
-                    EGLDisplay _dpy = EGL::InvalidDpy ();
-                    EGLDisplay _ctx = EGL::InvalidCtx ();
-
-                    auto DestroyTexture = [this] (texture_t & tex) -> valid_t {
-                        tex_t & _tex = tex._tex;
-
-                        valid_t _ret = _tex != InvalidTex ();
-
-                        // Delete the previously created texture
-                        glDeleteTextures (1, &_tex);
-
-                        _tex = InvalidTex ();
-
-                        _ret = _ret && GL_ERROR_WITH_RETURN ();
-
-                        return _ret;
-                    };
-
-                    auto SetupTexture = [this, &_dpy, &_ctx] (texture_t & tex, EGL::img_t const & img, EGL::width_t width, EGL::height_t height, bool _quick) -> valid_t {
-                        valid_t _ret = GL_ERROR_WITH_RETURN ();
-
-                        tex_t & _tex = tex._tex;
-                        tgt_t & _tgt = tex._target;
-
-                        if (_quick != true) {
-                            glGenTextures (1, &_tex);
-                            GL_ERROR ();
-                        }
-
-                            glBindTexture (_tgt, _tex);
-                            GL_ERROR ();
-
-                        if (_quick != true) {
-                            glTexParameteri (_tgt, GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
-                            GL_ERROR ();
-
-                            glTexParameteri (_tgt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                            GL_ERROR ();
-
-                            glTexParameteri (_tgt, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                            GL_ERROR ();
-
-                            glTexParameteri (_tgt, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                            GL_ERROR ();
-                        }
-
-                        tex._width = width;
-                        tex._height = height;
-
-                        switch (_tgt) {
-                            case GL_TEXTURE_EXTERNAL_OES :
-                                    {
-                                    // A valid GL context should exist for GLES::Supported ()
-
-                                    _ret = _dpy != EGL::InvalidDpy () && _ctx != EGL::InvalidCtx ();
-
-                                        static valid_t _supported = ( GLES::Supported ("GL_OES_EGL_image") && ( EGL::Supported (_dpy, "EGL_KHR_image") || EGL::Supported (_dpy, "EGL_KHR_image_base") ) ) != false;
-
-                                        if ( _ret && _supported != false) {
-                                            // Take storage for the texture from the EGLImage; Pixel data becomes undefined
-                                            static void (* _EGLImageTargetTexture2DOES) (GLenum, GLeglImageOES) = reinterpret_cast < void (*) (GLenum, GLeglImageOES) > (eglGetProcAddress ("glEGLImageTargetTexture2DOES"));
-
-                                            _ret = _EGLImageTargetTexture2DOES != nullptr;
-
-                                            if (_ret != false) {
-                                                // Logical const
-                                                using no_const_img_t = _remove_const < decltype (img) > :: type;
-
-                                                _EGLImageTargetTexture2DOES (_tgt, reinterpret_cast <GLeglImageOES> (const_cast < no_const_img_t  >(img)));
-                                                GL_ERROR ();
-                                            }
-                                        }
-                                    }; break;
-
-                            case GL_TEXTURE_2D :
-                                    {
-                                        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, tex._width, tex._height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); 
-                                        GL_ERROR ();
-                                    }; break;
-
-                            default :
-                                    {
-                                        _ret = false;
-                                    }
-                        }
-
-
-                        glBindTexture (_tgt, InvalidTex ());
-
-
-                        _ret = _ret && GL_ERROR_WITH_RETURN ();
-
-                        return _ret;
-                    };
-
-
-                    valid_t _ret = GL_ERROR_WITH_RETURN () && img != EGL::InvalidImage () && width > 0 && height > 0;
-
-                    // A valid GL context should exist for GLES::Supported ()
-                    /* EGL::ctx_t */ _ctx = eglGetCurrentContext ();
-                    /* EGL::dpy_t */ _dpy = _ctx != EGL::InvalidCtx () ? eglGetCurrentDisplay () : EGL::InvalidDpy ();
-
-
-                    // OES dimensions should match the underlying buffer dimensions
-                    // Estimate using the EGL surface
-
-                    EGLSurface _surf = EGL::InvalidSurf ();
-
-                    if (_ret != false) {
-                        _surf = eglGetCurrentSurface (EGL_DRAW);
-                        _ret  = eglGetError () == EGL_SUCCESS
-                                && _surf != EGL::InvalidSurf ();
-                    }
-
-                    EGLint _width = 0, _height = 0;
-
-                    if (_ret != false) {
-                        _ret = eglQuerySurface (_dpy, _surf, EGL_WIDTH, &_width) != EGL_FALSE
-                               && eglQuerySurface (_dpy, _surf, EGL_HEIGHT, &_height) != EGL_FALSE
-                               && eglGetError () == EGL_SUCCESS;
-                    }
-
-                    _ret = _ret && eglGetError () == EGL_SUCCESS && _ctx != EGL::InvalidCtx ();
-
-                    // Set up the required textures
-
-                    // The  'shared' texture
-// TODO: clean up / destroy
-                    static texture_t _tex_oes (GL_TEXTURE_EXTERNAL_OES, GLES::InitialOpacity ());
-
-                    static bool _reuse = false;
-
-                    // The 'scene' texture
-                    texture_t _tex_fbo (GL_TEXTURE_2D, GLES::InitialOpacity ());
-
-
-                    if (_ret != false) {
-                        // Just an arbitrarily selected texture unit
-                        glActiveTexture (GL_TEXTURE0);
-                        GL_ERROR ();
-
-                        // Using the EGL surface dimensions
-
-#ifdef _RESIZE_TEXTURE
-                        // Did dimensions change ?
-
-                        using common_w_t = std::common_type < decltype( _tex_oes._width), decltype (_width) > :: type;
-                        using common_h_t = std::common_type < decltype( _tex_oes._height), decltype (_height) > :: type;
-
-                        if ( static_cast <common_w_t> (_tex_oes._width) != static_cast <common_w_t> (_width) || static_cast <common_h_t> (_tex_oes._height) != static_cast <common_h_t> (_height)) {
-                            _reuse = false;
-
-                            if (_tex_oes._width > 0 && _tex_oes._height > 0 ) {
-                                _reuse = DestroyTexture (_tex_oes) != true;
-                            }
-                        }
-#endif
-
-                        _ret = SetupTexture (_tex_oes, img, _width, _height, _reuse) != false;
-                        _reuse = _ret;
-
-                        {
-                            std::lock_guard < decltype (_token) > const lock (_token);
-
-                            auto _it = _scene.find (img);
-
-                            _ret = _it != _scene.end ();
-
-                            if (_ret != false) {
-                                // Found, just update values
-                                _tex_fbo = _it->second;
-
-#ifdef _RESIZE_TEXTURE
-                                // Did dimensions change ?
-
-                                using common_w_t = std::common_type < decltype (width), decltype (_it->second._width) > :: type;
-                                using common_h_t = std::common_type < decltype (height), decltype (_it->second._height) > :: type;
-
-                                if ( static_cast <common_w_t > (width) != static_cast < common_w_t > (_it->second._width) || static_cast < common_h_t > (height) != static_cast < common_h_t > (_it->second._height)) {
-
-                                    TRACE_WITHOUT_THIS (Trace::Information, (_T ("Texture dimensions change detected!")));
-
-                                    _ret = DestroyTexture (_tex_fbo) && _scene.erase (img) == 1 && SetupTexture (_tex_fbo, img, width, height, false) != false;
-
-                                    if (_ret != false) {
-// TODO:: triggers copy constructor
-                                        auto _it = _scene.insert ( std::pair <EGL::img_t, texture_t> (img, _tex_fbo));
-
-                                        _ret = _it.second != false;
-                                    }
-                                }
-#endif
-                            }
-                            else {
-                                _ret = SetupTexture (_tex_fbo, img, width, height, false) != false;
-
-                                if (_ret != false) {
-// TODO:: triggers copy constructor
-                                    auto _it = _scene.insert ( std::pair <EGL::img_t, texture_t> (img, _tex_fbo));
-
-                                    _ret = _it.second != false;
-                                }
-                            }
-
-                            // Update
-                            if (_ret != false) {
-                                using opacity_a_t = decltype (GLES::opacity_t::_alpha);
-
-                                using common_opacity_t = std::common_type <decltype (opacity), opacity_a_t, decltype (WPEFramework::Exchange::IComposition::minOpacity), decltype (WPEFramework::Exchange::IComposition::maxOpacity)> :: type;
-
-                                    // Narrowing is not allowed
-//                                    static_assert (_narrowing <common_opacity_t, opacity_a_t, true> :: value != false);
-
-                                _tex_fbo._opacity = static_cast <opacity_a_t> ( static_cast <common_opacity_t> (opacity) / ( static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::maxOpacity) - static_cast <common_opacity_t> (WPEFramework::Exchange::IComposition::minOpacity) ) );
-                                _tex_fbo._x = x;
-                                _tex_fbo._y = y;
-                                _tex_fbo._z = zorder;
-
-                                _scene [img] = _tex_fbo;
-                            }
-                        }
-
-                        GLuint _fbo;
-
-                        glGenFramebuffers (1, &_fbo);
-                        GL_ERROR ();
-
-                        glBindFramebuffer (GL_FRAMEBUFFER, _fbo);
-                        GL_ERROR ();
-
-                        glBindTexture (_tex_oes._target, _tex_oes._tex);
-                        GL_ERROR ();
-
-                        glBindTexture (_tex_fbo._target, _tex_fbo._tex);
-                        GL_ERROR ();
-
-
-                        glFramebufferTexture2D (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _tex_fbo._tex, 0);;
-                        GL_ERROR ();
-
-                        GLenum _status = glCheckFramebufferStatus (GL_FRAMEBUFFER);
-                        _ret = _ret && GL_ERROR_WITH_RETURN () && _status == GL_FRAMEBUFFER_COMPLETE;;
-
-
-                        glDisable (GL_DEPTH_TEST);
-                        GL_ERROR ();
-
-                        glDisable (GL_BLEND);
-                        GL_ERROR ();
-
-
-                        _ret = ( _ret && UpdateScale (GLES::InitialScale ()) && UpdateOffset (GLES::InitialOffset ()) && UpdateOpacity (_tex_fbo._opacity) && SetupViewport (0, 0, width, height) && RenderTileOES () ) != false;
-
-
-                        glBindTexture (_tex_oes._target, InvalidTex ());
-                        GL_ERROR ();
-
-                        glBindTexture (_tex_fbo._target, InvalidTex ());
-                        GL_ERROR ();
-
-                        glDeleteFramebuffers (1, &_fbo);
-                        GL_ERROR ();
-                    }
-
-                    _ret = _ret && GL_ERROR_WITH_RETURN ();
-
-
-                    // Do not destroy tex-fbo and _tex_oes !
-
-
-                    return _ret;
-                }
-
-                valid_t RenderScene (GLES::width_t width, GLES::height_t height, std::function < GLES::valid_t (texture_t left,  texture_t right) > sortfunc) {
-                    valid_t _ret = GL_ERROR_WITH_RETURN ();
-
-                    if (_ret != false) {
-
-// TODO: very inefficient way to get z-order sorted textures
-                        std::list <texture_t> _sorted;
-
-                        {
-                            std::lock_guard < decltype (_token) > const lock (_token);
-
-                            for (auto _begin = _scene.begin (), _it = _begin, _end = _scene.end (); _it != _end; _it ++) {
-                                _sorted.push_back (_it->second);
-                            }
-                        }
-
-                        _sorted.sort (sortfunc);
-
-
-                        glBindFramebuffer (GL_FRAMEBUFFER, 0);
-                        GL_ERROR ();
-
-                        GLenum _status = glCheckFramebufferStatus (GL_FRAMEBUFFER);
-                        _ret = _ret && GL_ERROR_WITH_RETURN () && _status == GL_FRAMEBUFFER_COMPLETE;;
-
-                        // Blend pixels with pixels already present in the frame buffer
-                        glEnable (GL_BLEND);
-                        GL_ERROR ();
-
-                        glBlendEquationSeparate (GL_FUNC_ADD, GL_FUNC_ADD);
-                        GL_ERROR ();
-
-                        glBlendFuncSeparate (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                        GL_ERROR ();
-
-
-                        GLint _bits = 0;
-
-                        glGetIntegerv (GL_DEPTH_BITS, &_bits);
-
-                        _ret = _ret && GL_ERROR_WITH_RETURN () && _bits > static_cast <GLint> (0);
-
-                        glEnable (GL_DEPTH_TEST);
-                        GL_ERROR ();
-
-                        glDepthMask (GL_TRUE);
-                        GL_ERROR ();
-
-                        glDepthFunc (GL_LESS);
-                        GL_ERROR ();
-
-                        // Fully utilize the depth buffer range
-                        glDepthRangef (GLES::offset_t::_near, GLES::offset_t::_far);
-                        GL_ERROR ();
-
-// TODO: magic number
-                        glClearDepthf (1.0f);
-                        GL_ERROR ();
-
-                        glClear (GL_DEPTH_BUFFER_BIT);
-                        GL_ERROR ();
-
-
-                        // Start with an empty (solid) background
-                        _ret = ( _ret && RenderColor (false, false, false, false) ) != false;
-
-                        // For all textures in map
-                        if (_ret != false) {
-                            offset_t _off = _offset;
-                            scale_t _scl = _scale;
-                            opacity_t _op = _opacity;
-
-                            for (auto _begin = _sorted.begin (), _it = _begin, _end = _sorted.end (); _it != _end; _it ++) {
-                                texture_t &_texture = *_it;
-
-                                assert (_texture._target == GL_TEXTURE_2D);
-
-                                glBindTexture (_texture._target, _texture._tex);
-                                GL_ERROR ();
-
-                                using offset_x_t = decltype (GLES::offset_t::_x);
-                                using offset_y_t = decltype (GLES::offset_t::_y);
-                                using offset_z_t = decltype (GLES::offset_t::_z);
-
-                                using scale_h_t = decltype (GLES::scale_t::_horiz);
-                                using scale_v_t = decltype (GLES::scale_t::_vert);
-
-                                using common_scale_h_t = std::common_type <scale_h_t, GLES::x_t, decltype (width)> :: type;
-                                using common_scale_v_t = std::common_type <scale_v_t, GLES::y_t, decltype (height)> :: type;
-
-
-                                // Narrowing is not allowed
-                                static_assert (_narrowing <common_scale_h_t, scale_h_t, true> :: value != false);
-                                static_assert (_narrowing <common_scale_v_t, scale_v_t, true> :: value != false);
-
-
-                                GLES::scale_t _scale = { static_cast <scale_h_t> ( static_cast <common_scale_h_t> (_texture._width) / static_cast <common_scale_h_t> (width) ), static_cast <scale_v_t> ( static_cast <common_scale_v_t> (_texture._height) / static_cast <common_scale_v_t> (height) ) };
-
-
-                                using offset_x_t = decltype (GLES::offset_t::_x);
-                                using offset_y_t = decltype (GLES::offset_t::_y);
-                                using offset_z_t = decltype (GLES::offset_t::_z);
-
-                                using zorder_t = GLES::z_t;
-
-                                using common_offset_x_t = std::common_type <scale_h_t, GLES::x_t, offset_x_t> :: type;
-                                using common_offset_y_t = std::common_type <scale_v_t, GLES::y_t, offset_y_t> :: type;
-                                using common_offset_z_t = std::common_type <zorder_t, decltype (WPEFramework::Exchange::IComposition::minZOrder), decltype (WPEFramework::Exchange::IComposition::maxZOrder), offset_z_t> :: type;
-
-
-                                // Narrowing is not allowed
-                                static_assert (_narrowing <common_offset_x_t, offset_x_t, true> :: value != false);
-                                static_assert (_narrowing <common_offset_y_t, offset_y_t, true> :: value != false);
-                                static_assert (_narrowing <common_offset_z_t, offset_z_t, true> :: value != false);
-
-
-                                GLES::offset_t _offset = { static_cast <offset_x_t> ( static_cast <common_offset_x_t> (_scale._horiz) * static_cast <common_offset_x_t> (_texture._x) / static_cast <common_offset_x_t> (_texture._width) ), static_cast <offset_y_t> ( static_cast <common_offset_y_t> (_scale._vert) * static_cast <common_offset_y_t> (_texture._y) / static_cast <common_offset_y_t> (_texture._height)), static_cast <offset_z_t> (static_cast <common_offset_z_t> (_texture._z) / ( static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::maxZOrder) - static_cast <common_offset_z_t> (WPEFramework::Exchange::IComposition::minZOrder) )) };
-
-                                // Width and height are screen dimensions, eg the geomtery values are in this space
-                                _ret = ( _ret && UpdateScale (_scale) && UpdateOffset (_offset) && UpdateOpacity (_texture._opacity) && SetupViewport (0, 0, width, height) && RenderTile () ) != false;
-
-                                if (_ret != true) {
-                                    break;
-                                }
-                            }
-
-                            _ret = ( _ret && UpdateScale (_scl) && UpdateOffset (_off) && UpdateOpacity (_op) ) != false;
-                        }
-
-
-                        glBindTexture (GL_TEXTURE_2D, InvalidTex ());
-                        GL_ERROR ();
-
-                        // Unconditionally
-                        glDisable (GL_DEPTH_TEST);
-                        GL_ERROR ();
-
-                        glDisable (GL_BLEND);
-                        GL_ERROR ();
-
-
-                        _ret = _ret && GL_ERROR_WITH_RETURN ();
-
-                    }
-
-                    return _ret;
-                }
-
-            private :
-
-                valid_t Initialize () {
-                    valid_t _ret = GL_ERROR_WITH_RETURN ();
-                    return _ret;
-                }
-
-                valid_t Deinitialize () {
-                    valid_t _ret = GL_ERROR_WITH_RETURN ();
-
-                    glBindTexture (GL_TEXTURE_2D, InvalidTex ());
-                    GL_ERROR ();
-
-                    glBindTexture (GL_TEXTURE_EXTERNAL_OES, InvalidTex ());
-                    GL_ERROR ();
-
-                    std::lock_guard < decltype (_token) > const lock (_token);
-
-                    for (auto _begin = _scene.begin (), _it = _begin, _end = _scene.end (); _it != _end; _it++) {
-                        tex_t & _tex = _it->second._tex;
-                        glDeleteTextures (1, &_tex);
-                        GL_ERROR ();
-                    }
-
-                    _ret = _ret && GL_ERROR_WITH_RETURN ();
-
-                    return _ret;
-                }
+            valid_t Initialize ();
+            valid_t Deinitialize ();
 
 // TODO: precompile programs at initialization stage
 
-                valid_t SetupProgram (char const vtx_src [], char const frag_src [], prog_t & prog) {
-                    auto LoadShader = [] (GLuint type, GLchar const code []) -> GLuint {
-                        GLuint _shader = glCreateShader (type);
-                        GL_ERROR ();
+            valid_t SetupProgram ( char const [] , char const [] , prog_t & );
 
-                        valid_t _ret = ( GL_ERROR_WITH_RETURN () && _shader != 0 ) != false;
+            valid_t RenderTileOES ();
+            valid_t RenderTile ();
 
-                        if (_ret != false) {
-                            glShaderSource (_shader, 1, &code, nullptr);
-                            GL_ERROR ();
+            template < size_t N >
+            valid_t RenderPolygon ( std::array < GLfloat , N > const & );
 
-                            glCompileShader (_shader);
-                            GL_ERROR ();
+            valid_t Supported ( std::string const & );
 
-                            GLint _status = GL_FALSE;
-
-                            glGetShaderiv (_shader, GL_COMPILE_STATUS, &_status);
-                            GL_ERROR ();
-
-                            _ret = ( GL_ERROR_WITH_RETURN () && _status != GL_FALSE ) != false;
-
-#ifndef NDEBUG
-                            if (_ret != true) {
-                                GLint _size = 0;
-
-                                glGetShaderiv (_shader, GL_INFO_LOG_LENGTH, &_size);
-                                GL_ERROR ();
-
-                                if (GL_ERROR_WITH_RETURN () != false) {
-                                    GLchar _info [_size];
-                                    GLsizei _length = 0;
-
-                                    glGetShaderInfoLog (_shader, static_cast <GLsizei> (_size), &_length, &_info [0]);
-                                    GL_ERROR ();
-
-                                    _info [_size] = '\0';
-
-                                    TRACE_WITHOUT_THIS (Trace::Error, _T ("Error: shader log: %s"), static_cast <char *> (&_info [0]));
-                                }
-                            }
-#endif
-
-                            _ret = _ret && GL_ERROR_WITH_RETURN ();
-                        }
-
-                        return _shader;
-                    };
-
-                    auto ShadersToProgram = [] (GLuint vertex, GLuint fragment, prog_t & prog) -> valid_t {
-                        prog = glCreateProgram ();
-                        GL_ERROR ();
-
-                        valid_t _ret = ( GL_ERROR_WITH_RETURN () && prog != 0 ) != false;
-
-                        if (_ret != false) {
-                            glAttachShader (prog, vertex);
-                            GL_ERROR ();
-
-                             glAttachShader (prog, fragment);
-                            GL_ERROR ();
-
-                            glBindAttribLocation (prog, 0, "position");
-                            GL_ERROR ();
-
-                            glLinkProgram (prog);
-                            GL_ERROR ();
-
-                            GLint _status = GL_FALSE;
-
-                            glGetProgramiv (prog, GL_LINK_STATUS, &_status);
-                            GL_ERROR ();
-
-                            _ret = ( GL_ERROR_WITH_RETURN () && _status != GL_FALSE ) != false;
-
-#ifndef NDEBUG
-                            if (_ret != true) {
-                                GLint _size = 0;
-
-                                glGetProgramiv (prog, GL_INFO_LOG_LENGTH, &_size);
-                                GL_ERROR ();
-
-                                if (GL_ERROR_WITH_RETURN () != false) {
-                                    GLchar _info [_size];
-                                    GLsizei _length = 0;
-
-                                    glGetProgramInfoLog (prog, static_cast <GLsizei> (_size), &_length, &_info [0]);
-                                    GL_ERROR ();
-
-                                    _info [_size] = '\0';
-
-                                    TRACE_WITHOUT_THIS (Trace::Error, _T ("Error: program log: %s"), static_cast <char *> (&_info [0]));
-                                }
-                            }
-#endif
-
-                            _ret = _ret && GL_ERROR_WITH_RETURN ();
-                        }
-
-                        return _ret;
-                    };
-
-                    auto DeleteCurrentProgram = [] () -> valid_t {
-                        GLuint _prog = 0;
-
-                        glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
-                        GL_ERROR ();
-
-                        valid_t _ret = ( GL_ERROR_WITH_RETURN () && _prog != 0 ) != false;;
-
-                        if (_ret != false) {
-                            GLint _count = 0;
-
-                            glGetProgramiv (_prog, GL_ATTACHED_SHADERS, &_count);
-                            GL_ERROR ();
-
-                            _ret = ( GL_ERROR_WITH_RETURN () && _count > 0 ) != false;
-
-                            if (_ret != false) {
-                                GLuint _shaders [_count];
-
-                                glGetAttachedShaders (_prog, _count, static_cast <GLsizei *> (&_count), &_shaders [0]);
-
-                                if (GL_ERROR_WITH_RETURN () != false) {
-                                    for (_count--; _count >= 0; _count--) {
-                                        glDetachShader (_prog, _shaders [_count]);
-                                        GL_ERROR ();
-
-                                        glDeleteShader (_shaders [_count]);
-                                        GL_ERROR ();
-                                    }
-
-                                    glDeleteProgram (_prog);
-                                    GL_ERROR ();
-                                }
-                            }
-
-                            _ret = _ret && GL_ERROR_WITH_RETURN ();
-                        }
-
-                        return _ret;
-                    };
-
-
-                    bool _ret = GL_ERROR_WITH_RETURN ();
-
-                    if (_ret != false && prog == InvalidProg ()) {
-                        GLuint _vtxShader = LoadShader (GL_VERTEX_SHADER, vtx_src);
-                        GLuint _fragShader = LoadShader (GL_FRAGMENT_SHADER, frag_src);
-
-                        _ret = ShadersToProgram(_vtxShader, _fragShader, prog);
-                    }
-
-                    if (_ret != false) {
-                        glUseProgram (prog);
-                        GL_ERROR ();
-
-                        _ret = GL_ERROR_WITH_RETURN ();
-
-                        if (_ret != true) {
-                            /* valid_t */ DeleteCurrentProgram ();
-                            GL_ERROR ();
-
-                            prog = InvalidProg ();
-
-                            // Color on error
-                            glClearColor (1.0f, 0.0f, 0.0f, 0.5f);
-                            GL_ERROR ();
-                        }
-                    }
-
-                    _ret = _ret && GL_ERROR_WITH_RETURN ();
-
-                    return _ret;
-                }
-
-                valid_t RenderTileOES () {
-                    valid_t _ret = GL_ERROR_WITH_RETURN ();
-
-                    constexpr char const _vtx_src [] =
-                        "#version 100                              \n"
-                        "attribute vec3 position;                  \n"
-                        "varying vec2 coordinates;                 \n"
-                        "void main () {                            \n"
-                            "gl_Position = vec4 (position.xyz, 1); \n"
-                            "coordinates = position.xy;            \n"
-                        "}                                         \n"
-                        ;
-
-                    constexpr char  const _frag_src [] =
-                        "#version 100                                                             \n"
-                        "#extension GL_OES_EGL_image_external : require                           \n"
-                        "precision mediump float;                                                 \n"
-                        "uniform samplerExternalOES sampler;                                      \n"
-                        "uniform float opacity;                                                   \n"
-                        "varying vec2 coordinates;                                                \n"
-                        "void main () {                                                           \n"
-                            "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgb, opacity); \n"
-                        "}                                                                        \n"
-                        ;
-
-                    static_assert (std::is_same <GLfloat, GLES::offset::coordinate_t>:: value != false);
-                    std::array <GLfloat, 4 * VerticeDimensions> const _vert = {
-                        0.0f, 0.0f, 0.0f /* v0 */,
-                        1.0f, 0.0f, 0.0f /* v1 */,
-                        0.0f, 1.0f, 0.0f /* v2 */,
-                        1.0f, 1.0f, 0.0f /* v3 */
-                    };
-
-                    if (_ret != false) {
-                         glDisable (GL_BLEND);
-                         GL_ERROR ();
-
-                        static prog_t _prog = InvalidProg ();;
-
-                        static valid_t _supported = Supported ("GL_OES_EGL_image_external") != false;
-
-                        _ret = ( _ret
-                               && RenderColor (false, false, false)
-                               && _supported
-                               && SetupProgram (_vtx_src, _frag_src, _prog)
-                               && RenderPolygon (_vert) ) != false;
-                    }
-
-                    return _ret;
-                }
-
-                valid_t RenderTile () {
-                    valid_t _ret = GL_ERROR_WITH_RETURN ();
-
-                    constexpr char const _vtx_src [] =
-                        "#version 100                              \n"
-                        "attribute vec3 position;                  \n"
-                        "varying vec2 coordinates;                 \n"
-                        "void main () {                            \n"
-                            "gl_Position = vec4 (position.xyz, 1); \n"
-                            "coordinates = position.xy;            \n"
-                        "}                                         \n"
-                        ;
-
-                    constexpr char  const _frag_src [] =
-                        "#version 100                                                             \n"
-                        "precision mediump float;                                                 \n"
-                        "uniform sampler2D sampler;                                               \n"
-                        // Required by RenderPolygon
-                        "uniform float opacity;                                                   \n"
-                        "varying vec2 coordinates;                                                \n"
-                        "void main () {                                                           \n"
-                            "gl_FragColor = vec4 (texture2D (sampler, coordinates).rgba);         \n"
-                        "}                                                                        \n"
-                        ;
-
-                    static_assert (std::is_same <GLfloat, GLES::offset::coordinate_t>:: value != false);
-                    std::array <GLfloat, 4 * VerticeDimensions> const _vert = {
-                        0.0f, 0.0f, _offset._z /* v0 */,
-                        1.0f, 0.0f, _offset._z /* v1 */,
-                        0.0f, 1.0f, _offset._z /* v2 */,
-                        1.0f, 1.0f, _offset._z /* v3 */
-                    };
-
-
-                    if (_ret != false) {
-// TODO: version match
-#ifdef _0
-                        using string_t = std::string::value_type;
-                        string_t const * _ext = reinterpret_cast <string_t const *> ( glGetString (GL_SHADING_LANGUAGE_VERSION) );
-
-                        valid_t _ret = GL_ERROR_WITH_RETURN ();
-
-                        if (_ret != false) {
-#endif
-
-                        static prog_t _prog = InvalidProg ();;
-
-                        _ret = ( _ret
-                               && SetupProgram (_vtx_src, _frag_src, _prog)
-                               && RenderPolygon (_vert) ) != false;
-                    }
-
-                    return _ret;
-                }
-
-
-                template <size_t N>
-                valid_t RenderPolygon (std::array <GLfloat, N> const & vert) {
-                    GLuint _prog = 0;
-
-                    glGetIntegerv (GL_CURRENT_PROGRAM, reinterpret_cast <GLint *> (&_prog));
-                    GL_ERROR ();
-
-                    valid_t _ret = ( GL_ERROR_WITH_RETURN () && _prog > 0 ) != false;
-
-                    if (_ret != false) {
-                        GLint _loc_vert = 0, _loc_op = 0;
-
-                        _loc_op = glGetUniformLocation (_prog, "opacity");
-                        GL_ERROR ();
-
-                        glUniform1f (_loc_op, _opacity._alpha);
-                        GL_ERROR ();
-
-                        _loc_vert = glGetAttribLocation (_prog, "position");
-                        GL_ERROR ();
-
-                        glVertexAttribPointer (_loc_vert, VerticeDimensions, GL_FLOAT, GL_FALSE, 0, vert.data ());
-                        GL_ERROR ();
-
-                        glEnableVertexAttribArray (_loc_vert);
-                        GL_ERROR ();
-
-                        glDrawArrays (GL_TRIANGLE_STRIP, 0, vert.size () / VerticeDimensions);
-                        GL_ERROR ();
-
-                        glDisableVertexAttribArray (_loc_vert);
-                        GL_ERROR ();
-
-                        _ret = _ret && GL_ERROR_WITH_RETURN ();
-                    }
-
-                    return _ret;
-                }
-
-                valid_t Supported (std::string const & name) {
-                    valid_t _ret = false;
-
-                    using string_t = std::string::value_type;
-                    using ustring_t = std::make_unsigned < string_t > :: type;
-
-                    // Identical underlying types except for signedness
-                    static_assert (std::is_same < ustring_t, GLubyte > :: value != false);
-
-                    string_t const * _ext = reinterpret_cast <string_t const *> ( glGetString (GL_EXTENSIONS) );
-                    GL_ERROR ();
-
-                    _ret = ( GL_ERROR_WITH_RETURN () != false
-                           && _ext != nullptr
-                           && name.size () > 0
-                           && ( std::string (_ext).find (name)
-                                != std::string::npos ) ) != false;
-
-                    return _ret;
-                }
-
-                valid_t SetupViewport (__attribute__ ((unused)) EGLint x, __attribute__ ((unused)) EGLint y, EGL::width_t _width, EGL::height_t _height) {
-                    valid_t _ret = GL_ERROR_WITH_RETURN ();
-
-                    GLint _dims [2] = {0, 0};
-
-                    glGetIntegerv (GL_MAX_VIEWPORT_DIMS, &_dims [0]);
-                    GL_ERROR ();
-
-#define _QUIRKS
-#ifdef _QUIRKS
-                    // glViewport (x, y, width, height)
-                    //
-                    // Applied width = width / 2
-                    // Applied height = height / 2
-                    // Applied origin's x = width / 2 + x
-                    // Applied origin's y = height / 2 + y
-                    //
-                    // Compensate to origin bottom left and true size by
-                    // glViewport (-width, -height, width * 2, height * 2)
-                    //
-                    // _offset is in the range -1..1 wrt to origin, so the effective value maps to -width to width, -height to height
-
-
-
-                    constexpr uint8_t _mult = 2;
-
-                    using common_t = std::common_type < decltype (_width), decltype (_height), decltype (_mult), decltype (_scale._horiz), decltype (_scale._vert), decltype (_offset._x), decltype (_offset._y), remove_pointer < std::decay < decltype (_dims) > :: type > :: type > :: type;
-
-                    common_t _quirk_width = static_cast <common_t> (_width) * static_cast <common_t> (_mult) * static_cast <common_t> (_scale._horiz);
-                    common_t _quirk_height = static_cast <common_t> (_height) * static_cast <common_t> (_mult) * static_cast <common_t> (_scale._vert);
-
-                    common_t _quirk_x = ( static_cast <common_t> (-_width) * static_cast <common_t> (_scale._horiz) ) + ( static_cast <common_t> (_offset._x) * static_cast <common_t> (_width) );
-                    common_t _quirk_y = ( static_cast <common_t> (-_height) * static_cast <common_t> (_scale._vert) ) + ( static_cast <common_t> (_offset._y) * static_cast <common_t> (_height) );
-
-                    if ( _quirk_x < ( -_quirk_width / static_cast <common_t> (_mult) )
-                         || _quirk_y < ( -_quirk_height / static_cast <common_t> (_mult) )
-                         || _quirk_x  > static_cast <common_t> (0)
-                         || _quirk_y  > static_cast <common_t> (0)
-                         || _quirk_width > ( static_cast <common_t> (_width) * static_cast <common_t> (_mult) )
-                         || _quirk_height > ( static_cast <common_t> (_height) * static_cast <common_t> (_mult) )
-                         || static_cast <common_t> (_width) > static_cast <common_t> (_dims [0])
-                         || static_cast <common_t> (_height) > static_cast <common_t> (_dims [1])
-                    ) {
-                        // Clipping, or undefined / unknown behavior
-                        std::cout << "Warning: possible clipping or unknown behavior detected. [" << _quirk_x << ", " << _quirk_y << ", " << _quirk_width << ", " << _quirk_height << ", " << _width << ", " << _height << ", " << _dims [0] << ", " << _dims [1] << "]" << std::endl;
-                    }
-
-                    glViewport (static_cast <GLint> (_quirk_x), static_cast <GLint> (_quirk_y), static_cast <GLsizei> (_quirk_width), static_cast <GLsizei> (_quirk_height));
-#else
-                    glViewport (0, 0, _width, _height);
-#endif
-                    GL_ERROR ();
-
-                    _ret = ( _ret && GL_ERROR_WITH_RETURN () ) != false;
-
-                    return _ret;
-                }
-
-#undef GL_ERROR_WITH_RETURN
-#undef GL_ERROR
+            valid_t SetupViewport ( EGLint , EGLint , EGL::width_t , EGL::height_t );
        };
 
-//                static_assert ( (std::is_convertible < decltype (_dpy->Native ()), EGLNativeDisplayType > :: value) != false);
-//                static_assert ( (std::is_convertible < decltype (_surf->Native ()), EGLNativeWindowType > :: value) != false);
 
-       class EGL  {
 
+        class EGL {
+        private :
 #define XSTRINGIFY(X) STRINGIFY(X)
 #define STRINGIFY(X) #X
 
@@ -2000,823 +583,252 @@ class CompositorImplementation;
 #define _EGL_SIGNALED EGL_SIGNALED_KHR
 #define _EGL_SYNC_FLUSH_COMMANDS_BIT EGL_SYNC_FLUSH_COMMANDS_BIT_KHR
 
-                using EGLAttrib = EGLint;
+            using EGLAttrib = EGLint;
 #endif
-                using EGLuint64KHR = khronos_uint64_t;
+            using EGLuint64KHR = khronos_uint64_t;
 
-                EGLContext _ctx = EGL_NO_CONTEXT;
+            EGLContext _ctx = EGL_NO_CONTEXT;
 
-                using valid_t = bool;
+            using valid_t = bool;
 
+        public :
+
+            using ctx_t = decltype ( _ctx );
+
+
+
+            class Sync final {
             public :
 
-                using ctx_t = decltype (_ctx);
-
-                class Sync final {
-
-                    public :
-
-                        using dpy_t = EGLDisplay;
-                        using sync_t = KHRFIX (EGLSync);
-
-                    private :
-
-                        sync_t _sync;
-                        dpy_t & _dpy;
-
-                    public :
-                        Sync () = delete;
-
-                        explicit Sync (dpy_t & dpy) : _dpy {dpy} {
-                            static bool _supported = EGL::Supported (dpy, "EGL_KHR_fence_sync") != false;
-
-                            assert (_supported != false);
-                            assert (_dpy != InvalidDpy ());
-
-                            _sync = ( _supported && _dpy != InvalidDpy () ) != false ? KHRFIX (eglCreateSync) (_dpy, _EGL_SYNC_FENCE, nullptr) : InvalidSync ();
-                        }
-
-                        ~Sync () {
-                            if (_sync == InvalidSync ()) {
-                                // Error creating sync object or unable to create one
-                                glFinish ();
-                            }
-                            else {
-                                // Mandatory
-                                glFlush ();
-
-                                // .. but still execute, when needed, an additional flush to be on the safe sidei, and avoid a dreaded  deadlock
-                                EGLint _val = static_cast <EGLint> ( KHRFIX (eglClientWaitSync) (_dpy, _sync, _EGL_SYNC_FLUSH_COMMANDS_BIT, _EGL_FOREVER) );
-
-                                if (_val == static_cast <EGLint> (EGL_FALSE) || _val != static_cast <EGLint> (_EGL_CONDITION_SATISFIED)) {
-                                    EGLAttrib _status;
-
-                                    bool _ret = KHRFIX (eglGetSyncAttrib) (_dpy, _sync, _EGL_SYNC_STATUS, &_status) != EGL_FALSE;
-
-                                    _ret = _ret && _status == _EGL_SIGNALED;
-
-                                    // Assert on error
-                                    if (_ret != true) {
-                                        TRACE (Trace::Error, (_T ("EGL: synchronization primitive")) );
-                                    }
-                                }
-
-                                /* EGLBoolean */ _val = static_cast <EGLint> ( KHRFIX (eglDestroySync) (_dpy, _sync) );
-
-                                if (_val != EGL_TRUE) {
-                                    // Error
-                                }
-
-                                // Consume the (possible) error(s)
-                                /* ELGint */ glGetError ();
-                                /* ELGint */ eglGetError ();
-                            }
-                        }
-
-                        static constexpr dpy_t InvalidDpy () { return EGL_NO_DISPLAY; }
-                        static constexpr sync_t InvalidSync () { return _EGL_NO_SYNC; }
-
-                    private :
-
-                        void * operator new (size_t) = delete;
-                        void * operator new [] (size_t) = delete;
-                        void operator delete (void *) = delete;
-                        void operator delete [] (void *) = delete;
-
-                };
-
-                class RenderThread : public Core::Thread {
-
-                    protected :
-
-                        using timeout_t = _remove_const < decltype (WPEFramework::Core::infinite) > :: type;
-                        using lock_t = std::mutex;
-
-                        // Shared texture access
-                        lock_t & _sharing;
-
-                        EGL & _egl;
-                        GLES & _gles;
-
-                        explicit RenderThread (EGL & egl, GLES & gles) : Core::Thread  (), _sharing { Instance () }, _egl { egl }, _gles { gles } {}
-
-                    public :
-
-                        virtual ~RenderThread () {
-                            /* EGLBoolean */ eglMakeCurrent (_egl.Display (), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-
-                            // Consume any error
-                            /* EGLint */ eglGetError();
-
-                            /* bool */ Wait (WPEFramework::Core::Thread::STOPPED | WPEFramework::Core::Thread::BLOCKED, WPEFramework::Core::infinite);
-
-                            Stop ();
-                        }
-
-                        uint32_t Worker () { return Core::infinite; }
-
-                    private :
-
-                        lock_t & Instance () {
-                            static lock_t _lock;
-
-                            return _lock;
-                        }
-
-                };
-
-                class SceneRenderer final : public RenderThread {
-                    private :
-
-                        using surf_t = ClientSurface;
-
-                        CompositorImplementation & _compositor;
-
-                        // Local
-                        std::mutex _access;
-
-                    public :
-
-                        SceneRenderer () = delete;
-                        explicit SceneRenderer (EGL & egl, GLES & gles, CompositorImplementation & compositor) : RenderThread (egl, gles), _compositor { compositor } {}
-
-                        ~SceneRenderer () {
-                            Stop ();
-                        }
-
-                        timeout_t Worker () override {
-                            // 'Lightning speed' frame flipping
-                            constexpr timeout_t _ret = 0;
-// TODO: frame flipping should litim the rate
-                            EGL::valid_t _status = ( Render () && _compositor.FrameFlip () ) != false;
-
-                            if (_status != false) {
-                                Block ();
-                            }
-                            else {
-                                Stop ();
-                            }
-
-                            return _ret;
-                        }
-
-
-                    private :
-
-                        EGL::valid_t Render () {
-                            // No resize supported
-                            static Exchange::IComposition::ScreenResolution _resolution = _compositor.Resolution ();
-
-                            std::lock_guard < decltype (_sharing) > const sharing (_sharing);
-                            EGL::valid_t _ret = _egl.Render (std::bind (&GLES::RenderScene, &_gles, WidthFromResolution (_resolution), HeightFromResolution (_resolution), [] (GLES::texture_t left, GLES::texture_t right) -> GLES::valid_t { GLES::valid_t _ret = left._z > right._z; return _ret; } ), true ) != false;
-
-                            return _ret;
-                        }
-                };
-
-                class TextureRenderer final : public RenderThread {
-                    private :
-
-                        using surf_t = ClientSurface;
-
-                        // Local
-                        std::mutex _access;
-
-                        CompositorImplementation::ClientContainer & _clients;
-
-                        struct element {
-                            public :
-                                std::string const & _name;
-
-                                element () = delete;
-                                explicit element (std::string const & name) : _name { name }  { }
-                                ~element () = default;
-                        };
-
-                        using element_t = struct element;
-
-                        using function_t = std::function < bool (element_t const &, element_t const &) >;
-
-                        // Unique elements, to prevent queue from growing beyond N
-                        std::set < element_t, function_t > set;;
-                        // FIFO
-                        std::queue < element_t > queue;
-
-                    public :
-
-                        TextureRenderer () = delete;
-                        explicit TextureRenderer (EGL & egl, GLES & gles, CompositorImplementation::ClientContainer & clients) :
-                              RenderThread (egl, gles)
-                            , _clients { clients }
-                            , set { [] (element_t const & lhs, element_t const & rhs) -> bool {
-                                bool ret = ! ( ! ( lhs._name < rhs._name ) && ! ( lhs._name > rhs._name ) );
-                                return ret; }
-                              }
-                        {}
-
-                        ~TextureRenderer () {
-                            Stop ();
-                        }
-
-                        void SetClientName (std::string const & name) {
-                            std::lock_guard < decltype (_access) > const lock (_access);
-
-                            auto result = set.insert ( element_t ( name) );
-
-                            if (result.second != true) {
-                                // Probably the element exist
-                            }
-                            else {
-                                // Add element to the queue
-                                queue.push ( element_t ( name ) );
-                            }
-                        }
-
-                        timeout_t Worker () override {
-                            timeout_t _ret = WPEFramework::Core::infinite;
-
-                            EGL::valid_t _status = Render () != false;
-
-                            if (_status != false) {
-                                Block ();
-
-// TODO: do not exceed a single frame time for multiple
-                                std::lock_guard < decltype (_access) > const lock (_access);
-                                if (queue.size () > 0) {
-                                    _ret = 0;
-                                }
-                            }
-                            else {
-// TODO: Stop () implies no state change possblie anymore.
-                                Stop ();
-                            }
-
-                            return _ret; 
-                        }
-
-                    private :
-
-                        EGL::valid_t Render () {
-                            EGL::valid_t _ret = false;
-
-                            Core::ProxyType <ClientSurface> _client;
-
-                            {
-                                std::lock_guard < decltype (_access) > const lock (_access);
-
-                                if (queue.size () > 0) {
-                                    _client = _clients.Find (queue.front ()._name);
-                                }
-                            }
-
-
-                            if (_client.IsValid () != true) {
-                                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), _client->Name ()));
-                            }
-                            else {
-                                ClientSurface::surf_t const & _surf = _client->Surface ();
-
-                                _ret = ( _surf.RenderComplete () && _egl.Valid () && _gles.Valid () && _client->SyncPrimitiveStart () ) != false;
-
-                                if (_ret != false) {
-                                    TRACE (Trace::Information, (_T ("Client has an associated EGL image.")));
-
-                                    using geom_t = decltype (std::declval < WPEFramework::Exchange::IComposition::IClient >().Geometry ());
-                                    geom_t _geom = _client->Geometry ();
-
-                                    //  Geom values should not exceed buf dimensions
-                                    auto _width = gbm_bo_get_width (_surf._buf);
-                                    auto _height = gbm_bo_get_height (_surf._buf);
-
-
-                                    using buf_w_t = decltype (_width);
-                                    using buf_h_t = decltype (_height);
-                                    using geom_w_t = decltype (_geom.width);
-                                    using geom_h_t = decltype (_geom.height);
-
-// TODO:
-                                    constexpr bool _enable = true;
-
-                                    if (   _narrowing < buf_w_t, geom_w_t, _enable > :: value != false
-                                        && _narrowing < buf_h_t, geom_h_t, _enable > :: value != false ){
-                                        // Narrowing, but not necessarily a problem
-// TODO minimum value
-                                        using common_w_t = std::common_type < buf_w_t, geom_w_t > :: type;
-                                        assert ( static_cast < common_w_t > ( _geom.width ) <= static_cast < common_w_t > ( _width ) );
-
-                                        using common_h_t = std::common_type < buf_h_t, geom_h_t > :: type;
-                                        assert ( static_cast < common_h_t > ( _geom.height ) <= static_cast < common_h_t > ( _height ) );
-                                    }
-                                    else {
-                                        // No narrowing
-//                                        assert (false);
-                                    }
-
-
-                                    // Opacity value should be within expected ranges
-                                    auto _opa = _client->Opacity ();
-
-                                    using opacity_t = decltype (_opa);
-
-                                    if (_narrowing <opacity_t, EGLint, _enable> :: value != false) {
-                                        // Narrowing detected
-
-                                        using common_opacity_t = std::common_type <opacity_t, EGLint, decltype (WPEFramework::Exchange::IComposition::minOpacity), decltype (WPEFramework::Exchange::IComposition::maxOpacity) > :: type;
-
-                                        assert ( static_cast < common_opacity_t > ( _opa ) >= static_cast < common_opacity_t > ( std::numeric_limits < EGLint > :: min () ) || static_cast < common_opacity_t > ( _opa ) <= static_cast < common_opacity_t > ( std::numeric_limits <EGLint > :: max () ) );
-                                    }
-
-
-                                    auto _zorder = _client->ZOrder ();
-
-                                    using zorder_t = decltype (_zorder);
-
-                                    if (_narrowing <zorder_t, EGLint, _enable> :: value != false) {
-                                        // Narrowing detected
-
-                                        using common_zorder_t = std::common_type <zorder_t, EGLint> :: type;
-
-                                        assert ( static_cast < common_zorder_t > ( _zorder ) >= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: min () ) || static_cast < common_zorder_t > ( _zorder ) <= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: max () ) );
-                                    }
-
-
-                                    std::lock_guard < decltype (_sharing) > const sharing (_sharing);
-
-                                    _ret = (_egl.RenderWithoutSwap (std::bind (&GLES::RenderEGLImage, &_gles, std::cref (_surf._khr), _geom.x, _geom.y, _geom.width, _geom.height, static_cast <EGLint> (_zorder), static_cast <EGLint> (_opa)) ) ) != false;
-
-                                    _ret = _client->SyncPrimitiveEnd () && _ret;
-                                }
-
-                            }
-
-                            {
-                                std::lock_guard < decltype (_access) > const lock (_access);
-
-                                /**/ set.erase (queue.front ());
-                                /* void */ queue.pop ();
-                            }
-
-                            return _ret;
-                        }
-                };
+                using dpy_t = EGLDisplay;
+                using sync_t = KHRFIX (EGLSync);
 
             private :
 
-                // Define the 'invalid' value
-                static_assert (std::is_pointer <EGLConfig>::value != false);
-                static constexpr void * const EGL_NO_CONFIG = nullptr;
-
-                Sync::dpy_t _dpy = Sync::InvalidDpy ();
-                EGLConfig _conf = EGL_NO_CONFIG;
-                EGLSurface _surf = EGL_NO_SURFACE;
-
-                WPEFramework::Plugin::EGL::width_t  _width = 0;
-                WPEFramework::Plugin::EGL::height_t _height = 0;
-
-                Natives const & _natives;
-
-                valid_t _valid = false;
+                sync_t _sync;
+                dpy_t & _dpy;
 
             public :
 
-                using dpy_t = decltype (_dpy);
-                using surf_t = decltype (_surf);
-                using height_t = decltype (_height);
-                using width_t = decltype (_width);
+                Sync () = delete;
+                Sync ( Sync const & ) = delete;
 
-                using size_t = EGLint;
+                void * operator new ( size_t ) = delete;
+                void * operator new [] ( size_t ) = delete;
+                void operator delete ( void * ) = delete;
+                void operator delete [] ( void * ) = delete;
 
-                using img_t = WPEFramework::Plugin::EGL::img_t;
+                explicit Sync ( dpy_t & );
+                ~Sync ();
 
-                EGL () = delete;
-                EGL (Natives const & natives) : _natives { natives }, _valid { Initialize () } {}
-                ~EGL () {
-                    _valid = false;
-                    DeInitialize ();
-                }
-
-                static constexpr img_t InvalidImage () { return WPEFramework::Plugin::EGL::InvalidImage (); }
-                static constexpr dpy_t InvalidDpy () { return Sync::InvalidDpy (); }
-                static constexpr ctx_t InvalidCtx () { return EGL_NO_CONTEXT; }
-                static constexpr surf_t InvalidSurf () { return EGL_NO_SURFACE; }
-
-                static constexpr EGL::size_t RedBufferSize () { return static_cast <EGL::size_t> (8); }
-                static constexpr EGL::size_t GreenBufferSize () { return static_cast <EGL::size_t> (8); }
-                static constexpr EGL::size_t BlueBufferSize () { return static_cast <EGL::size_t> (8); }
-                static constexpr EGL::size_t AlphaBufferSize () { return static_cast <EGL::size_t> (8); }
-                // For OpenGL ES 2.0 the only possible value is 16
-                static constexpr EGL::size_t DepthBufferSize () { return static_cast <EGL::size_t> (GLES::MajorVersion () == static_cast <GLES::version_t> (2) ? 16 : 0); }
-
-                dpy_t Display () const { return _dpy; }
-                surf_t Surface () const { return _surf; }
-                ctx_t Context () const { return _ctx; }
-
-                height_t Height () const { return _height; }
-                width_t Width () const { return _width; }
-
-                static img_t CreateImage (EGL const & egl, ClientSurface::surf_t const & surf) {
-                    img_t _ret = InvalidImage ();
-
-                    static valid_t _supported = ( Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import") && Supported (egl.Display (), "EGL_EXT_image_dma_buf_import_modifiers") ) != false;
-
-                    if ( (egl.Valid () && _supported ) != false) {
-                        static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, KHRFIX (EGLImage)> :: value ) != false);
-
-                        constexpr char _methodName [] = XSTRINGIFY ( KHRFIX (eglCreateImage) );
-
-                        static KHRFIX (EGLImage) (* _eglCreateImage) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const *) = reinterpret_cast < KHRFIX (EGLImage) (*) (EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const * ) > (eglGetProcAddress ( _methodName ));
-
-                        if (_eglCreateImage != nullptr) {
-
-                            auto _width = gbm_bo_get_width (surf._buf);
-                            auto _height = gbm_bo_get_height (surf._buf);
-                            auto _stride = gbm_bo_get_stride (surf._buf);
-                            auto _format = gbm_bo_get_format (surf._buf);
-                            auto _modifier = gbm_bo_get_modifier (surf._buf);
-
-                            using width_t =  decltype (_width);
-                            using height_t = decltype (_height);
-                            using stride_t = decltype (_stride);
-                            using format_t = decltype (_format);
-                            using fd_t = decltype (surf._fd);
-                            using modifier_t = decltype (_modifier);
-
-                            // Does it already exist ?
-                            assert (surf._fd > -1);
-
-                            // Test our initial assumption
-                            assert (_format == ModeSet::SupportedBufferType ());
-                            assert (_modifier == ModeSet::FormatModifier ());
-
-                            // Narrowing detection
-
-                            // Enable narrowing detecttion
-// TODO:
-                            constexpr bool _enable = false;
-
-                            // (Almost) all will fail!
-                            if (_narrowing < width_t, EGLAttrib, _enable > :: value != false
-                                && _narrowing < height_t, EGLAttrib, _enable > :: value != false
-                                && _narrowing < stride_t, EGLAttrib, _enable > :: value != false
-                                && _narrowing < format_t, EGLAttrib, _enable > :: value != false
-                                && _narrowing < fd_t, EGLAttrib, _enable > :: value != false
-                                && _narrowing < modifier_t, EGLuint64KHR, true> :: value) {
-                                TRACE_WITHOUT_THIS (Trace::Information, (_T ("Possible narrowing detected!")));
-                            }
-
-                            // EGL may report differently than DRM
-                            ModeSet::GBM::dev_t _dev = gbm_bo_get_device (surf._buf);
-                            ModeSet::GBM::fd_t _fd = gbm_device_get_fd (_dev);
-
-                            // EGL may report differently than DRM
-                            auto _list_d_for = ModeSet::AvailableFormats (static_cast <ModeSet::DRM::fd_t> (_fd));
-                            auto _it_d_for = std::find (_list_d_for.begin (), _list_d_for.end (), _format);
-
-                            bool _valid = _it_d_for != _list_d_for.end ();
-
-                            // Query EGL
-                            static EGLBoolean (* _eglQueryDmaBufFormatsEXT) (EGLDisplay, EGLint, EGLint *, EGLint *) = reinterpret_cast < EGLBoolean (*) (EGLDisplay, EGLint, EGLint *, EGLint *) > (eglGetProcAddress ("eglQueryDmaBufFormatsEXT"));
-                            static EGLBoolean (* _eglQueryDmaBufModifiersEXT) (EGLDisplay,EGLint, EGLint, EGLuint64KHR *, EGLBoolean *, EGLint *) = reinterpret_cast < EGLBoolean (*) (EGLDisplay,EGLint, EGLint, EGLuint64KHR *, EGLBoolean *, EGLint *) > (eglGetProcAddress ("eglQueryDmaBufModifiersEXT"));
-
-                            _valid = _valid && _eglQueryDmaBufFormatsEXT != nullptr && _eglQueryDmaBufModifiersEXT != nullptr;
-
-                            EGLint _count = 0;
-
-                            _valid = _valid && _eglQueryDmaBufFormatsEXT (egl.Display (), 0, nullptr, &_count) != EGL_FALSE;
-
-                            _valid = _valid && _eglQueryDmaBufFormatsEXT (egl.Display (), 0, nullptr, &_count) != EGL_FALSE;
-
-                            EGLint _formats [_count];
-
-                            _valid = _valid && _eglQueryDmaBufFormatsEXT (egl.Display (), _count, &_formats [0], &_count) != EGL_FALSE;
-
-                            // _format should be listed as supported
-                            if (_valid != false) {
-                                std::list <EGLint> _list_e_for (&_formats [0], &_formats [_count]);
-
-                                auto _it_e_for = std::find (_list_e_for.begin (), _list_e_for.end (), _format);
-
-                                _valid = _it_e_for != _list_e_for.end ();
-                            }
-
-                            _valid = _valid && _eglQueryDmaBufModifiersEXT (egl.Display (), _format, 0, nullptr, nullptr, &_count) != EGL_FALSE;
-
-                            EGLuint64KHR _modifiers [_count];
-                            EGLBoolean _external [_count];
-
-                            // External is required to exclusive use withGL_TEXTURE_EXTERNAL_OES
-                            _valid = _valid && _eglQueryDmaBufModifiersEXT (egl.Display (), _format, _count, &_modifiers [0], &_external [0], &_count) != FALSE;
-
-                            // _modifier should be listed as supported, and _external should be true
-                            if (_valid != false) {
-                                std::list <EGLuint64KHR> _list_e_mod (&_modifiers [0], &_modifiers [_count]);
-
-                                auto _it_e_mod = std::find (_list_e_mod.begin (), _list_e_mod.end (), static_cast <EGLuint64KHR> (_modifier));
-
-                                _valid = _it_e_mod != _list_e_mod.end ();
-                            }
-
-                            if (_valid != false) {
-                                EGLAttrib const _attrs [] = {
-                                    EGL_WIDTH, static_cast <EGLAttrib> (_width),
-                                    EGL_HEIGHT, static_cast <EGLAttrib> (_height),
-                                    EGL_LINUX_DRM_FOURCC_EXT, static_cast <EGLAttrib> (_format),
-                                    EGL_DMA_BUF_PLANE0_FD_EXT, static_cast <EGLAttrib> (surf._fd),
-// TODO: magic constant
-                                    EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0,
-                                    EGL_DMA_BUF_PLANE0_PITCH_EXT, static_cast <EGLAttrib> (_stride),
-                                    EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, static_cast <EGLAttrib> (static_cast <EGLuint64KHR> (_modifier) & 0xFFFFFFFF),
-                                    EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, static_cast <EGLAttrib> (static_cast <EGLuint64KHR> (_modifier) >> 32),
-                                    EGL_IMAGE_PRESERVED_KHR, EGL_TRUE,
-                                    EGL_NONE
-                                };
-
-                                static_assert (std::is_convertible < decltype (surf._buf), EGLClientBuffer > :: value != false);
-                                _ret = _eglCreateImage (egl.Display (), EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, _attrs);
-                            }
-                        }
-                        else {
-                            // Error
-                            TRACE_WITHOUT_THIS (Trace::Error, _T ("%s is unavailable or invalid parameters."), _methodName);
-                        }
-                    }
-                    else {
-                        TRACE_WITHOUT_THIS (Trace::Error, _T ("EGL is not properly initialized."));
-                    }
-
-                    return _ret;
-                }
-
-                static img_t DestroyImage (EGL const & egl, ClientSurface::surf_t const & surf) {
-                    img_t _ret = surf._khr;
-
-                    static valid_t _supported = (Supported (egl.Display (), "EGL_KHR_image") && Supported (egl.Display (), "EGL_KHR_image_base") ) != false;
+                static constexpr dpy_t InvalidDpy () { return EGL_NO_DISPLAY ; }
+                static constexpr sync_t InvalidSync () { return _EGL_NO_SYNC ; }
+            };
 
 
-                    if ( (egl.Valid () && _supported) != false ) {
 
-                        static_assert ((std::is_same <dpy_t, EGLDisplay> :: value && std::is_same <ctx_t, EGLContext> :: value && std::is_same <img_t, KHRFIX (EGLImage)> :: value ) != false);
+            class RenderThread : public Core::Thread {
+            protected :
 
-                        constexpr char _methodName [] = XSTRINGIFY ( KHRFIX (eglDestroyImage) );
+                using timeout_t = remove_const < decltype ( WPEFramework::Core::infinite ) > :: type;
+                using lock_t = std::mutex;
 
-                        static EGLBoolean (* _eglDestroyImage) (EGLDisplay, KHRFIX (EGLImage)) = reinterpret_cast < EGLBoolean (*) (EGLDisplay, KHRFIX (EGLImage)) > (eglGetProcAddress ( KHRFIX ("eglDestroyImage") ));
+                // Shared texture access
+                lock_t & _sharing;
 
-                        if (_eglDestroyImage != nullptr && surf.RenderComplete () != false) {
-// TODO: Leak?
-                            _ret = _eglDestroyImage (egl.Display (), surf._khr) != EGL_FALSE ? EGL::InvalidImage () : _ret;
-                        }
-                        else {
-                            // Error
-                            TRACE_WITHOUT_THIS (Trace::Error, _T ("%s is unavailable or invalid parameters are provided."), _methodName);
-                        }
-                    }
-                    else {
-                        TRACE_WITHOUT_THIS (Trace::Error, _T ("EGL is not properly initialized."));
-                    }
+                EGL & _egl;
+                GLES & _gles;
 
-                    return _ret;
-                }
+                explicit RenderThread ( EGL & , GLES & );
 
-                valid_t Valid () const { return _valid; }
+            public :
+
+                RenderThread ( RenderThread const & ) = delete;
+
+                virtual ~RenderThread ();
+
+                uint32_t Worker () override;
 
             private :
 
-                valid_t Initialize () {
-                    valid_t _ret = _natives.Valid ();
-
-                    if (_ret != false) {
-
-                        if (_dpy != EGL_NO_DISPLAY) {
-                            _ret = false;
-
-                            if (eglTerminate (_dpy) != EGL_FALSE) {
-                                _ret = true;
-                            }
-                        }
-                    }
-
-                    if (_ret != false) {
-                        using native_dpy_no_const =  _remove_const < Natives::dpy_t > :: type;
-
-                        // Again. EGL does use const sparsely
-                        _dpy = eglGetDisplay (const_cast < native_dpy_no_const > (_natives.Display ()) );
-                        _ret = _dpy != EGL_NO_DISPLAY;
-                    }
-
-                    if (_ret != false) {
-                        EGLint _major = 0, _minor = 0;
-                        _ret = eglInitialize (_dpy, &_major, &_minor) != EGL_FALSE;
-
-                        // Just take the easy approach (for now)
-                        static_assert ((std::is_integral <decltype (_major)> :: value) != false);
-                        static_assert ((std::is_integral <decltype (_minor)> :: value) != false);
-                        TRACE (Trace::Information, (_T ("EGL version : %d.%d"), static_cast <int> (_major), static_cast <int> (_minor)));
-                    }
-
-                    if (_ret != false) {
-                        static_assert (GLES::MajorVersion () == static_cast < GLES::version_t > (2));
-
-                        constexpr EGLint const _attr [] = {
-                            EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-                            EGL_RED_SIZE    , RedBufferSize (),
-                            EGL_GREEN_SIZE  , GreenBufferSize (),
-                            EGL_BLUE_SIZE   , BlueBufferSize (),
-                            EGL_ALPHA_SIZE  , AlphaBufferSize (),
-                            EGL_BUFFER_SIZE , RedBufferSize () + GreenBufferSize () + BlueBufferSize () + AlphaBufferSize (),
-                            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-                            EGL_DEPTH_SIZE  , DepthBufferSize (),
-                            EGL_NONE
-                        };
-
-                        EGLint _count = 0;
-
-                        if (eglGetConfigs (_dpy, nullptr, 0, &_count) != EGL_TRUE) {
-                            _count = 1;
-                        }
-
-                        std::vector <EGLConfig> _confs (_count, EGL_NO_CONFIG);
-
-                        /* EGLBoolean */ eglChooseConfig (_dpy, &_attr [0], _confs.data (), _confs.size (), &_count);
-
-                        _conf = _confs [0];
-
-                        _ret = _conf != EGL_NO_CONFIG;
-                    }
+                lock_t & Instance ();
+            };
 
 
-                    if (_ret != false) {
-                        EGLenum _api = eglQueryAPI ();
 
-                        _ret = _api == EGL_OPENGL_ES_API;
+            class SceneRenderer final : public RenderThread {
+            private :
 
-                        if (_ret != true) {
-                            /* EGLBoolean */ eglBindAPI (EGL_OPENGL_ES_API);
-                            _ret = eglGetError () == EGL_SUCCESS;
-                        }
-                    }
+                using surf_t = ClientSurface;
 
+                CompositorImplementation & _compositor;
 
-                    if (_ret != false) {
-                        static_assert (_narrowing <GLES::version_t, EGLint, true> :: value != false);
-
-                        constexpr EGLint const _attr [] = {
-                            EGL_CONTEXT_CLIENT_VERSION, static_cast <GLES::version_t> (GLES::MajorVersion ()),
-                            EGL_NONE
-                        };
-
-                        _ctx = eglCreateContext (_dpy, _conf, EGL_NO_CONTEXT, _attr);
-                        _ret = _ctx != EGL_NO_CONTEXT;
-                    }
-
-                    if (_ret != false) {
-                        constexpr EGLint const _attr [] = {
-                            EGL_NONE
-                        };
-
-                        _surf = eglCreateWindowSurface (_dpy, _conf, _natives.Surface (), &_attr [0]);
-                        _ret = _surf != EGL_NO_SURFACE;
-                    }
-
-                    if (_ret != true) {
-                        DeInitialize ();
-                    }
-
-                    return _ret;
-                }
-
-                void DeInitialize () {
-                    _valid = false;
-                    /* EGLBoolean */ eglTerminate (_dpy);
-                }
+                // Local
+                std::mutex _access;
 
             public :
 
-                // Although compile / build time may succeed, runtime checks are also mandatory
-                static bool Supported (dpy_t const dpy, std::string const & name) {
-                    bool _ret = false;
+                SceneRenderer () = delete;
+                SceneRenderer ( SceneRenderer const & ) = delete;
 
-                    static_assert ((std::is_same <dpy_t, EGLDisplay> :: value) != false);
+                explicit SceneRenderer ( EGL & , GLES & , CompositorImplementation & );
+                ~SceneRenderer () override;
 
-#ifdef EGL_VERSION_1_5
-                    // KHR extentions that have become part of the standard
+                timeout_t Worker () override;
 
-                    // Sync capability
-                    _ret = name.find ("EGL_KHR_fence_sync") != std::string::npos
-                           /* CreateImage / DestroyImage */
-                           || name.find ("EGL_KHR_image") != std::string::npos
-                           || name.find ("EGL_KHR_image_base") != std::string::npos;
-#endif
+            private :
 
-                    if (_ret != true) {
-                        static_assert (std::is_same <std::string::value_type, char> :: value != false);
-                        char const * _ext = eglQueryString (dpy, EGL_EXTENSIONS);
+                EGL::valid_t Render ();
+            };
 
-                        _ret =  _ext != nullptr
-                                && name.size () > 0
-                                && ( std::string (_ext).find (name)
-                                     != std::string::npos );
-                    }
 
-                    return _ret;
-                }
 
-                bool Render (GLES & gles) {
-                    // Ensure the client API is set per thread basis
-                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+            class TextureRenderer final : public RenderThread {
+            private :
 
-                    if (_ret != false) {
-                        _ret = eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
+                using surf_t = ClientSurface;
 
-                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
-                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+                // Local
+                std::mutex _access;
 
-                        // Avoid any memory leak if the local thread is stopped (by another thread)
-                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
-                    }
+                CompositorImplementation::ClientContainer & _clients;
 
-                    if (_ret != true) {
-                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
-                    }
+                struct element {
+                public :
 
-                    return _ret;
-                }
+                    std::string const & _name;
 
-                bool Render (std::function < GLES::valid_t () > func, bool post) {
-                    // Ensure the client API is set per thread basis
-                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+                    element () = delete;
 
-                    if (_ret != false) {
-                        if (post != false) {
-                            _ret = func () != false;
+                    explicit element (std::string const & name) : _name { name } { }
+                    ~element () = default;
+                };
 
-                            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+                using element_t = struct element;
 
-                           _ret = _ret && eglSwapBuffers (_dpy, _surf) != EGL_FALSE;
-                        }
-                        else {
-                            _ret = eglSwapBuffers (_dpy, _surf) != EGL_FALSE && func () != false;
-                        }
+                using function_t = std::function < bool ( element_t const & , element_t const & ) >;
 
-                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
-                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+                // Unique elements, to prevent queue from growing beyond N
+                std::set < element_t , function_t > set;
+                // FIFO
+                std::queue < element_t > queue;
 
-                        // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
-                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
-                    }
+            public :
 
-                    if (_ret != true) {
-                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
-                    }
+                TextureRenderer () = delete;
+                TextureRenderer ( TextureRenderer const & ) = delete;
 
-                    return _ret;
-                }
+                explicit TextureRenderer (EGL & , GLES & , CompositorImplementation::ClientContainer & );
+                ~TextureRenderer ();
 
-                bool Render (std::function < GLES::valid_t () > prefunc, std::function < GLES::valid_t () > postfunc) {
-                    // Ensure the client API is set per thread basis
-                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+                void SetClientName ( std::string const & );
 
-                    if (_ret != false) {
-                        _ret = prefunc () != false;
+                timeout_t Worker () override;
 
-                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
-                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+            private :
 
-                        _ret = _ret && eglSwapBuffers (_dpy, _surf) != EGL_FALSE && postfunc () != false;
+                EGL::valid_t Render ();
+        };
 
-                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
-                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
 
-                        // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
-                    }
 
-                    if (_ret != true) {
-                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
-                    }
+        private :
 
-                    return _ret;
-                }
+            // Define the 'invalid' value
+            static_assert ( std::is_pointer < EGLConfig > :: value != false );
+            static constexpr void * const EGL_NO_CONFIG = nullptr;
 
-                bool RenderWithoutSwap (std::function < GLES::valid_t () > func) {
-                    // Ensure the client API is set per thread basis
-                    bool _ret = Valid () != false && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+            Sync::dpy_t _dpy = Sync::InvalidDpy ();
+            EGLConfig _conf = EGL_NO_CONFIG;
+            EGLSurface _surf = EGL_NO_SURFACE;
 
-                    if (_ret != false) {
-                        _ret = func () != false;
+            WPEFramework::Plugin::EGL::width_t  _width = 0;
+            WPEFramework::Plugin::EGL::height_t _height = 0;
 
-                        // Guarantuee all (previous) effects of client API and frame buffer state are realized
-                        { WPEFramework::Plugin::CompositorImplementation::EGL::Sync _sync (_dpy); }
+            Natives const & _natives;
 
-                        // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-                        _ret = eglMakeCurrent (_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) != EGL_FALSE && _ret;
-                    }
+            valid_t _valid = false;
 
-                    if (_ret != true) {
-                        TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
-                    }
+        public :
 
-                    return _ret;
-                }
+            using dpy_t = decltype ( _dpy );
+            using surf_t = decltype ( _surf );
+            using height_t = decltype ( _height );
+            using width_t = decltype ( _width );
+
+            using size_t = EGLint;
+
+            using img_t = WPEFramework::Plugin::EGL::img_t;
+
+            EGL () = delete;
+            EGL ( EGL const & ) = delete;
+
+            EGL ( Natives const & natives );
+            ~EGL ();
+
+            static constexpr img_t InvalidImage () { return WPEFramework::Plugin::EGL::InvalidImage () ; }
+            static constexpr dpy_t InvalidDpy () { return Sync::InvalidDpy () ; }
+            static constexpr ctx_t InvalidCtx () { return EGL_NO_CONTEXT ; }
+            static constexpr surf_t InvalidSurf () { return EGL_NO_SURFACE ; }
+
+            static constexpr EGL::size_t RedBufferSize () { return static_cast < EGL::size_t > ( 8 ) ; }
+            static constexpr EGL::size_t GreenBufferSize () { return static_cast < EGL::size_t > ( 8)  ; }
+            static constexpr EGL::size_t BlueBufferSize () { return static_cast < EGL::size_t > ( 8 ) ; }
+            static constexpr EGL::size_t AlphaBufferSize () { return static_cast < EGL::size_t > ( 8 ) ; }
+            // For OpenGL ES 2.0 the only possible value is 16
+            static constexpr EGL::size_t DepthBufferSize () { return static_cast < EGL::size_t > ( GLES::MajorVersion () == static_cast < GLES::version_t > ( 2 ) ? 16 : 0 ) ; }
+
+            dpy_t Display () const { return _dpy ; }
+            surf_t Surface () const { return _surf ; }
+            ctx_t Context () const { return _ctx ; }
+
+            height_t Height () const { return _height ; }
+            width_t Width () const { return _width ; }
+
+            static img_t CreateImage ( EGL const & , ClientSurface::surf_t const & );
+            static img_t DestroyImage ( EGL const & , ClientSurface::surf_t const & );
+
+            valid_t Valid () const { return _valid ; }
+
+        private :
+
+            valid_t Initialize ();
+            void DeInitialize ();
+
+            template < typename FUNC , typename... ARG >
+            valid_t Render ( std::false_type , FUNC && , bool , ARG &&... );
+
+            template < typename FUNC , typename ARG0 , typename... ARG >
+            valid_t Render ( std::true_type , FUNC && , bool , ARG0 && , ARG &&... );
+
+ //TODO: two different signatures for callables
+            template < typename FUNC , typename... ARG >
+            valid_t Render ( std::false_type , FUNC && , FUNC && , ARG &&... );
+
+            template < typename FUNC , typename ARG0 , typename... ARG >
+            valid_t Render ( std::true_type , FUNC && , FUNC && , ARG0 && , ARG &&... );
+
+            template < typename FUNC , typename... ARG >
+            valid_t RenderWithoutSwap ( std::false_type , FUNC && , ARG &&... );
+
+            template < typename FUNC , typename ARG0 , typename... ARG >
+            valid_t RenderWithoutSwap ( std::true_type , FUNC && , ARG0 && , ARG &&... );
+
+        public :
+
+            // Although compile / build time may succeed, runtime checks are also mandatory
+            static valid_t Supported ( dpy_t const , std::string const & );
+
+            valid_t Render ( GLES & );
+
+            template < typename FUNC , typename... ARG >
+            valid_t Render ( FUNC && , bool , ARG &&... );
+
+            template < typename FUNC , typename... ARG >
+            valid_t Render ( FUNC && , FUNC  && , ARG &&... );
+
+            template < typename FUNC , typename... ARG >
+            valid_t RenderWithoutSwap ( FUNC && , ARG &&... );
 
 #undef STRINGIFY
 #ifdef _KHRFIX
@@ -2834,524 +846,35 @@ class CompositorImplementation;
 #undef _EGL_SYNC_FLUSH_COMMANDS_BIT
         };
 
-    public:
-        CompositorImplementation()
-            : _adminLock()
-            , _service(nullptr)
-            , _engine()
-            , _externalAccess(nullptr)
-            , _observers()
-            , _clients()
-            , _platform()
-            , _dma { nullptr }
-            , _natives (_platform)
-            , _egl (_natives)
-            , _clientLock ()
-            , _textureRenderer ( _egl, _gles, _clients )
-            , _sceneRenderer ( _egl, _gles, *this)
-        {
-        }
-        ~CompositorImplementation()
-        {
 
-            _textureRenderer.Stop ();
 
-            /* bool */ _textureRenderer.Wait (WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+    private :
 
-            _sceneRenderer.Stop ();
 
-             /* bool */ _sceneRenderer.Wait (WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
 
-            if (_dma != nullptr) {
-                delete _dma;
-            }
-
-            _dma = nullptr;
-
-            _clients.Clear();
-
-            if (_externalAccess != nullptr) {
-                delete _externalAccess;
-                _engine.Release();
-            }
-        }
-
-        BEGIN_INTERFACE_MAP(CompositorImplementation)
-        INTERFACE_ENTRY(Exchange::IComposition)
-        INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
-        END_INTERFACE_MAP
-
-    private:
         class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
+        public :
 
-        public:
-            Config()
-                : Core::JSON::Container()
-                , Connector(_T("/tmp/compositor"))
-                , Port(_T("HDMI0"))
-            {
-                Add(_T("connector"), &Connector);
-                Add(_T("port"), &Port);
-            }
+            Config ( Config const & ) = delete;
+            Config & operator= ( Config const & ) = delete;
 
-            ~Config()
-            {
-            }
+            Config ();
+            ~Config ();
 
-        public:
             Core::JSON::String Connector;
             Core::JSON::String Port;
+
         };
 
-    public:
 
-        bool FDFor (std::string const & name, DMATransfer::fds_t & fds) {
 
-            std::string _prop;
-
-            bool _ret = FDFor (name, fds, _prop);
-
-            return _ret;
-        }
-
-        bool FDFor (std::string const & name, DMATransfer::fds_t & fds, std::string & properties) {
-            std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
-
-            bool _ret = false;
-
-            TRACE (Trace::Information, (_T ("%s requested a DMA transfer."), name.c_str ()));
-
-            /* ProxyType <> */ auto _client = _clients.Find (name);
-
-            if (_client.IsValid () != true ||  name.compare (_client->Name ()) != 0) {
-                TRACE (Trace::Error, (_T ("%s does not appear to be a valid client."), name.length () > 0 ? name.c_str () : "'<no name provided>'"));
-            }
-            else {
-                if (_dma != nullptr) {
-                    using fd_t = DMATransfer::fds_t::value_type;
-                    using class_t = decltype (_client);
-                    using return_t = decltype ( std::declval < class_t > ().operator-> ()->Native () );
-
-                    static_assert ((std::is_convertible < return_t, fd_t > :: value) != false);
-                    // Likely to almost always fail
-// TODO: narrowing
-//                    static_assert ((sizeof ( return_t ) <= sizeof ( fd_t )) != false);
-
-                    fds [0] = static_cast < fd_t > ( _client->Native () );
-                    fds [1] = static_cast < fd_t > ( _client->SyncPrimitive () );
-
-                    _ret = fds  [0] > -1 && fds [1] > -1;
-                }
-            }
-
-            ClientSurface::surf_t _surf;
-
-            if (_ret != false) {
-                _surf = _client->Surface ( EGL::CreateImage (_egl, _client->Surface () ));
-
-                _ret = (_surf.Valid () != false);
-            }
-
-            if (_ret != false) {
-                    properties.clear ();
-
-                    auto _width = gbm_bo_get_width (_surf._buf);
-                    auto _height = gbm_bo_get_height (_surf._buf);
-                    auto _stride = gbm_bo_get_stride (_surf._buf);
-                    auto _format = gbm_bo_get_format (_surf._buf);
-                    auto _modifier = gbm_bo_get_modifier (_surf._buf);
-
-                    constexpr char _spacer [] = ":";
-
-                    properties = std::string (_spacer)
-                                + std::to_string (_width).append (_spacer)
-                                + std::to_string (_height).append (_spacer)
-                                + std::to_string (_stride).append (_spacer)
-                                + std::to_string (_format).append (_spacer)
-                                + std::to_string (_modifier);
-            }
-
-            return _ret;
-        }
-
-        bool CompositeFor (std::string const & name) {
-            bool _ret = true;
-
-            // One client at a time
-            std::lock_guard < decltype (_clientLock) > const lock (_clientLock);
-
-            /* void */ _textureRenderer.SetClientName (name);
-
-            // Skip the request to create a frame texture if the rate is too high to be processed
-            if (_textureRenderer.IsRunning () != true) {
-                /* void */ _textureRenderer.Run ();
-            }
-
-            return _ret;
-        }
-
-        bool FrameFlip () {
-            using milli_t = int64_t;
-
-            auto RefreshRateFromResolution = [] (Exchange::IComposition::ScreenResolution const resolution) -> milli_t {
-                // Assume 'unknown' rate equals 60 Hz
-                milli_t _rate = 60;
-
-                switch (resolution) {
-                    case Exchange::IComposition::ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
-                                                                                _rate = 24; break;
-                    case Exchange::IComposition::ScreenResolution_720p50Hz  : // 1280x720 progressive @ 50 Hz
-                    case Exchange::IComposition::ScreenResolution_1080i50Hz : // 1920x1080 interlaced @ 50 Hz
-                    case Exchange::IComposition::ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
-                    case Exchange::IComposition::ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
-                                                                                _rate = 50; break;
-                    case Exchange::IComposition::ScreenResolution_480i      : // 720x480
-                    case Exchange::IComposition::ScreenResolution_480p      : // 720x480 progressive
-                    case Exchange::IComposition::ScreenResolution_720p      : // 1280x720 progressive
-                    case Exchange::IComposition::ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
-                    case Exchange::IComposition::ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
-                    case Exchange::IComposition::ScreenResolution_Unknown   :   _rate = 60;
-                }
-
-                return _rate;
-            };
-
-            constexpr milli_t _milli = 1000;
-
-            // No resize supported
-            static decltype (_milli) _rate = RefreshRateFromResolution ( Resolution () );
-
-            static std::chrono::milliseconds _delay (_milli / _rate);
-
-            static std::chrono::milliseconds _duration (_delay);
-
-            static auto _start = std::chrono::steady_clock::now ();
-
-
-            ModeSet::BufferInfo _bufferInfo = { _natives.Surface (), nullptr, 0 };
-            /* void */ _platform.Swap (_bufferInfo);
-
-
-            auto _finish = std::chrono::steady_clock::now ();
-
-            _duration = std::chrono::duration_cast < std::chrono::milliseconds > (_finish - _start);
-
-            // Do not overstress the system
-// TODO: allow delta
-            if (_duration.count () < _delay.count ()) {
-                SleepMs (_delay.count () - _duration.count ());
-            }
-
-            _start = _finish;
-
-
-            bool _ret = true;
-
-            return _ret;
-        };
-
-        //
-        // Echange::IComposition
-        // ==================================================================================================================
-
-        static uint32_t WidthFromResolution(const ScreenResolution resolution) {
-            // Asumme an invalid width equals 0
-            uint32_t _width = 0;
-
-            switch (resolution) {
-                case ScreenResolution_480p      : // 720x480
-                                                    _width = 720; break;
-                case ScreenResolution_720p      : // 1280x720 progressive
-                case ScreenResolution_720p50Hz  : // 1280x720 @ 50 Hz
-                                                    _width = 1280; break;
-                case ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
-                case ScreenResolution_1080i50Hz : // 1920x1080 interlaced  @ 50 Hz
-                case ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
-                case ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
-                                                    _width = 1920; break;
-                case ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
-                case ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
-                                                    _width = 2160; break;
-                case ScreenResolution_480i      : // Unknown according to the standards (?)
-                case ScreenResolution_Unknown   :
-                default                         : _width = 0;
-            }
-
-            return _width;
-        }
-
-        static uint32_t HeightFromResolution(const ScreenResolution resolution) {
-            // Asumme an invalid height equals 0
-            uint32_t _height = 0;
-
-            switch (resolution) {
-                case ScreenResolution_480i      :
-                case ScreenResolution_480p      : _height = 480; break;
-                case ScreenResolution_720p      :
-                case ScreenResolution_720p50Hz  : _height =720; break;
-                case ScreenResolution_1080p24Hz :
-                case ScreenResolution_1080i50Hz :
-                case ScreenResolution_1080p50Hz :
-                case ScreenResolution_1080p60Hz : _height = 1080; break;
-                case ScreenResolution_2160p50Hz :
-                case ScreenResolution_2160p60Hz : _height = 2160; break;
-                case ScreenResolution_Unknown   :
-                default                         : _height = 0;
-            }
-
-            return _height;
-        }
-
-        static ScreenResolution ResolutionFromHeightWidth(const uint32_t height, const uint32_t width) {
-            // Given the options, the refresh rate is also important so the only sensible value is 'unknown'
-            return Exchange::IComposition::ScreenResolution_Unknown;
-        }
-
-        uint32_t Configure(PluginHost::IShell* service) override
-        {
-            uint32_t result = Core::ERROR_NONE;
-            _service = service;
-
-            string configuration(service->ConfigLine());
-            Config config;
-            config.FromString(service->ConfigLine());
-
-            _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
-            _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine);
-
-            if ((_externalAccess->IsListening() == true)) {
-                _port = config.Port.Value();
-                PlatformReady();
-            } else {
-                delete _externalAccess;
-                _externalAccess = nullptr;
-                _engine.Release();
-                TRACE(Trace::Error, (_T("Could not report PlatformReady as there was a problem starting the Compositor RPC %s"), _T("server")));
-                result = Core::ERROR_OPENING_FAILED;
-            }
-            return result;
-        }
-        void Register(Exchange::IComposition::INotification* notification) override
-        {
-            _adminLock.Lock();
-            ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
-            notification->AddRef();
-            _observers.push_back(notification);
-
-            _clients.Visit([=](const string& name, const Core::ProxyType<ClientSurface>& element){
-                notification->Attached(name, &(*element));
-            });
-
-            _adminLock.Unlock();
-        }
-        void Unregister(Exchange::IComposition::INotification* notification) override
-        {
-            _adminLock.Lock();
-
-            _clients.Visit([=](const string& name, const Core::ProxyType<ClientSurface>& element){
-                notification->Detached(name);
-            });
-
-            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
-            ASSERT(index != _observers.end());
-            if (index != _observers.end()) {
-                _observers.erase(index);
-                notification->Release();
-            }
-            _adminLock.Unlock();
-        }
-        void Attached(const string& name, IClient* client) {
-            _adminLock.Lock();
-            for(auto& observer : _observers) {
-                observer->Attached(name, client);
-            }
-            _adminLock.Unlock();
-        }
-        void Detached(const string& name) {
-            _adminLock.Lock();
-
-            // Clean up client that leaves prematurely
-
-#ifdef _0
-            /* ProxyType <> */ auto _client = _clients.Find (name);
-
-            if (_client.IsValid () != false) {
-                EGL::img_t const _img = _client->Surface ()._khr;
-
-                /* valid_t */ _gles.SkipEGLImageFromScene (_img);
-
-                /* surf_t */ _client->Surface ( EGL::DestroyImage ( _egl, _client->Surface () ));
-            }
-#endif
-
-            for(auto& observer : _observers) {
-                observer->Detached(name);
-            }
-            _adminLock.Unlock();
-        }
-
-        //
-        // Echange::IComposition::IDisplay
-        // ==================================================================================================================
-        RPC::instance_id Native () const override {
-            using class_t = std::remove_reference < decltype (_natives) > ::type;
-            using return_t = decltype ( std::declval < class_t > ().Display () );
-
-            // The EGL API uses const very sparsely, and here, a const is also not expected
-            using return_no_const_t  = _remove_const < return_t > :: type;
-
-            static_assert ( (std::is_convertible < return_no_const_t, EGLNativeDisplayType > :: value) != false);
-            static_assert ( (std::is_convertible < decltype (EGL_DEFAULT_DISPLAY), EGLNativeDisplayType > :: value) != false);
-            // Likely to almost always fail
-//            static_assert ( (std::is_convertible < return_no_const_t, RPC::instance_id > :: value) != false);
-
-            EGLNativeDisplayType result ( static_cast < EGLNativeDisplayType > ( EGL_DEFAULT_DISPLAY ) );
-
-            if (_natives.Valid () != false) {
-                // Just remove the unexpected const if it exist
-                result = static_cast < EGLNativeDisplayType > (const_cast < return_no_const_t > ( _natives.Display () ));
-            }
-            else {
-                TRACE (Trace::Error, (_T ("The native display (id) might be invalid / unsupported. Using the EGL default display instead!")));
-            }
-
-            return reinterpret_cast < RPC::instance_id > ( result );
-        }
-
-        string Port() const override {
-            return (_port);
-        }
-        IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override {
-            IClient* client = nullptr;
-
-                Core::ProxyType<ClientSurface> object = _clients.Instance <ClientSurface> (
-                             name,
-                             _platform,
-                             *this,
-                             name,
-                             width,
-                             height);
-
-                ASSERT(object.IsValid() == true);
-
-                if( object.IsValid() == true ) {
-                    client = &(*object);
-                    Attached (name, client);
-                    client->AddRef();
-                }
-
-            if (client == nullptr) {
-                TRACE(Trace::Error, (_T("Unable to create the ClientSurface with name %s"), name.c_str()));
-            }
-            else {
-                _dma = new DMATransfer (* this);
-
-                if (_dma == nullptr || _dma->Valid () != true) {
-                    TRACE (Trace::Error, (_T ("DMA transfers are not supported.")));
-
-                    delete _dma;
-                    _dma = nullptr;
-                }
-                else {
-                    /* void */ _dma->Run ();
-                    /* void */ _sceneRenderer.Run ();
-                }
-            }
-
-            return (client);
-        }
-
-        Exchange::IComposition::ScreenResolution Resolution() const override
-        {
-            Exchange::IComposition::ScreenResolution _resolution = WPEFramework::Exchange::IComposition::ScreenResolution_Unknown;
-
-            decltype ( std::declval <ModeSet> ().Width () ) _width = _platform.Width (); silence (_width);
-            decltype ( std::declval <ModeSet> ().Height () ) _height = _platform.Height ();
-
-// TODO: This might not be the whole story to determine progressive versus interlaced
-
-            decltype ( std::declval <ModeSet> ().RefreshRate () ) _vrefresh = _platform.RefreshRate ();
-            decltype ( std::declval <ModeSet> ().Interlaced () ) _interlaced = _platform.Interlaced ();
-
-            if (_interlaced != true) {
-                switch (_height) {
-                    case 480    :   {
-                                        _resolution = ScreenResolution_480p;
-                                        break;
-                                    }
-                    case 720    :   {
-                                        _resolution = _vrefresh != 50 ? ScreenResolution_720p : ScreenResolution_720p50Hz;
-                                        break;
-                                    }
-                    case 1080   :   {
-                                        switch (_vrefresh) {
-                                            case 24 : _resolution = ScreenResolution_1080p24Hz; break;
-                                            case 50 : _resolution = ScreenResolution_1080p50Hz; break;
-                                            case 60 : _resolution = ScreenResolution_1080p60Hz; break;
-                                            default : _resolution = ScreenResolution_Unknown;
-                                        }
-                                        break;
-                                    }
-                    case 2160   :   {
-                                        switch (_vrefresh) {
-                                            case 50 : _resolution = ScreenResolution_2160p50Hz; break;
-                                            case 60 : _resolution = ScreenResolution_2160p60Hz; break;
-                                            default : _resolution = ScreenResolution_Unknown;
-                                        }
-                                        break;
-                                    }
-                    default     :   {
-                                        _resolution = ScreenResolution_Unknown;
-                                    }
-                }
-            }
-            else {
-                switch (_height) {
-                    case 480    :   {
-                                        _resolution = ScreenResolution_480i;
-                                        break;
-                                    }
-                    case 1080   :   {
-                                        _resolution = _vrefresh != 50 ? ScreenResolution_Unknown : ScreenResolution_1080i50Hz;
-                                        break;
-                                    }
-                    default     :   {
-                                        _resolution = ScreenResolution_Unknown;
-                                    }
-                }
-            }
-
-            return _resolution;
-
-        }
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
-        {
-            TRACE(Trace::Error, (_T("Could not set screenresolution to %s. Not supported for Rapberry Pi compositor"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
-            return (Core::ERROR_UNAVAILABLE);
-        }
-
-    private:
-        void PlatformReady()
-        {
-            PluginHost::ISubSystem* subSystems(_service->SubSystems());
-            ASSERT(subSystems != nullptr);
-            if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                subSystems->Release();
-            }
-        }
-
-    private:
+        void PlatformReady ();
 
         mutable Core::CriticalSection _adminLock;
-        PluginHost::IShell* _service;
-        Core::ProxyType<RPC::InvokeServer> _engine;
-        ExternalAccess* _externalAccess;
-        std::list<Exchange::IComposition::INotification*> _observers;
+        PluginHost::IShell * _service;
+        Core::ProxyType < RPC::InvokeServer > _engine;
+        ExternalAccess * _externalAccess;
+        std::list < Exchange::IComposition::INotification * > _observers;
         ClientContainer _clients;
         string _port;
         ModeSet _platform;
@@ -3365,76 +888,3046 @@ class CompositorImplementation;
 
         EGL::TextureRenderer _textureRenderer;
         EGL::SceneRenderer _sceneRenderer;
+
+    public :
+
+        CompositorImplementation ();
+        ~CompositorImplementation ();
+
+        bool FDFor ( std::string const & , DMATransfer::fds_t & );
+        bool FDFor ( std::string const & , DMATransfer::fds_t & , std::string & );
+
+        bool CompositeFor ( std::string const & );
+
+        bool FrameFlip ();
+
+        //
+        // Echange::IComposition
+        // ==================================================================================================================
+
+        static uint32_t WidthFromResolution ( ScreenResolution const );
+        static uint32_t HeightFromResolution ( ScreenResolution const );
+        static ScreenResolution ResolutionFromHeightWidth ( uint32_t const , uint32_t const );
+
+        uint32_t Configure(PluginHost::IShell* service) override;
+
+        void Register ( Exchange::IComposition::INotification * ) override;
+        void Unregister ( Exchange::IComposition::INotification * ) override;
+
+        void Attached ( string const & , IClient * );
+        void Detached ( string const & );
+
+        //
+        // Echange::IComposition::IDisplay
+        // ==================================================================================================================
+        RPC::instance_id Native () const override;
+
+        string Port () const override;
+
+        IClient * CreateClient ( string const & , uint32_t const , uint32_t const ) override;
+
+        Exchange::IComposition::ScreenResolution Resolution () const override;
+        uint32_t Resolution ( Exchange::IComposition::ScreenResolution const ) override;
+
+
+        BEGIN_INTERFACE_MAP ( CompositorImplementation )
+        INTERFACE_ENTRY ( Exchange::IComposition )
+        INTERFACE_ENTRY ( Exchange::IComposition::IDisplay )
+        END_INTERFACE_MAP
     };
 
-    // ODR-use
-    /* static */ constexpr void * const CompositorImplementation::EGL::EGL_NO_CONFIG;
 
-    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
 
-    ClientSurface::ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const uint32_t width, const uint32_t height)
-        : _nativeSurface { nullptr, -1, -1, WPEFramework::Plugin::EGL::InvalidImage () }
-        , _modeSet(modeSet)
-        , _compositor(compositor)
-        , _name(name)
-        , _opacity(Exchange::IComposition::maxOpacity)
-        , _layer(0)
-        , _destination( { 0, 0, width, height } ) {
+    ClientSurface::ClientSurface ( ModeSet & modeSet , CompositorImplementation & compositor , const string & name , const uint32_t width , const uint32_t height )
+        : _nativeSurface { nullptr , -1 , -1 , WPEFramework::Plugin::EGL::InvalidImage () }
+        , _modeSet { modeSet }
+        , _compositor { compositor }
+        , _name { name }
+        , _opacity { Exchange::IComposition::maxOpacity }
+        , _layer { 0 }
+        , _destination ( { 0 , 0 , width , height } ) {
 
         // The compositor should not be destroyed before any existing client surface
         _compositor.AddRef ();
 
-        using surface_t = decltype (_nativeSurface._buf);
-        using class_t = std::remove_reference < decltype (_modeSet) > ::type;
-        using return_t = decltype ( std::declval < class_t > ().CreateBufferObject (width, height) );
+        using surface_t = decltype ( _nativeSurface._buf );
+        using class_t = std::remove_reference < decltype ( _modeSet ) > :: type;
+        using return_t = decltype ( std::declval < class_t > () . CreateBufferObject ( width, height ) );
 
-        static_assert (std::is_same < surface_t, return_t> :: value != false);
+        static_assert ( std::is_same < surface_t, return_t > :: value != false );
 
 // TODO: The internal scan out flag might not be appropriate
-        _nativeSurface._buf = _modeSet.CreateBufferObject (width, height);
+        _nativeSurface . _buf = _modeSet . CreateBufferObject ( width, height );
 
-        if (_nativeSurface.Valid () != true) {
-            TRACE (Trace::Error, (_T ("A ClientSurface cannot be created for %s"), name.c_str ()));
+        if (  _nativeSurface . Valid () != true ) {
+            TRACE ( Trace::Error , ( _T ( "A ClientSurface cannot be created for %s" ), name . c_str () ) );
         }
         else {
-            _nativeSurface._fd = gbm_bo_get_fd (_nativeSurface._buf);
+            _nativeSurface . _fd = gbm_bo_get_fd ( _nativeSurface ._buf );
 
 // TODO:
             constexpr char const SYNC_FD_TEMPLATE [] = "/tmp/Compositor/sync_fdXXXXXX";
 
-            _nativeSurface._sync_fd = mkostemp (const_cast <char *> ( SYNC_FD_TEMPLATE ), O_CLOEXEC);
+            _nativeSurface . _sync_fd = mkostemp ( const_cast < char * > ( SYNC_FD_TEMPLATE ) , O_CLOEXEC );
 
-            if (_nativeSurface.DMAComplete () != true) {
-                TRACE (Trace::Error, (_T ("The created ClientSurface for %s is not suitable for DMA."), name.c_str ()));
+            if ( _nativeSurface . DMAComplete () != true ) {
+                TRACE ( Trace::Error , ( _T ( "The created ClientSurface for %s is not suitable for DMA." ) , name . c_str () ) );
             }
         }
     }
 
-    ClientSurface::~ClientSurface() {
+    ClientSurface::~ClientSurface () {
         // Part of the client is cleaned up via the detached (hook)
 
-        _compositor.Detached(_name);
+        _compositor . Detached ( _name );
 
-        if (_nativeSurface._fd != -1) {
-            /* int */ close (_nativeSurface._fd);
+        if ( _nativeSurface._fd != -1 ) {
+            /* int */ close ( _nativeSurface . _fd );
         }
 
-        if (_nativeSurface._sync_fd != -1) {
-            /* int */ close (_nativeSurface._sync_fd);
+        if ( _nativeSurface . _sync_fd != -1 ) {
+            /* int */ close ( _nativeSurface . _sync_fd );
         }
 
-        if (_nativeSurface.Valid () != false) {
-            _modeSet.DestroyBufferObject (_nativeSurface._buf);
+        if ( _nativeSurface . Valid () != false ) {
+            _modeSet . DestroyBufferObject ( _nativeSurface . _buf );
         }
 
-        _nativeSurface = { nullptr, -1, -1 , WPEFramework::Plugin::EGL::InvalidImage () };
+        _nativeSurface = { nullptr , -1 , -1 , WPEFramework::Plugin::EGL::InvalidImage () };
 
-        _compositor.Release ();
+        _compositor . Release ();
+    }
+
+    RPC::instance_id ClientSurface::Native () const {
+        // Sharing this handle does not imply its contents can be accessed!
+// TODO: narrowing
+        static_assert ( ( std::is_convertible < decltype ( _nativeSurface . _fd ) , RPC::instance_id > :: value ) != false );
+        static_assert ( sizeof ( decltype ( _nativeSurface . _fd ) ) <= sizeof ( RPC::instance_id ) );
+
+        return static_cast < RPC::instance_id > ( _nativeSurface . _fd );
+    }
+
+    RPC::instance_id ClientSurface::SyncPrimitive () const {
+// TODO: narrowing
+        static_assert ( ( std::is_convertible < decltype ( _nativeSurface . _sync_fd ) , RPC::instance_id > :: value ) != false );
+        static_assert ( sizeof ( decltype ( _nativeSurface . _sync_fd ) ) <= sizeof ( RPC::instance_id ) );
+
+        return static_cast < RPC::instance_id > ( _nativeSurface . _sync_fd );
+    }
+
+    bool ClientSurface::SyncPrimitiveStart () const {
+        auto init = [] () -> struct flock {
+            struct flock fl;
+            /* void * */ memset ( & fl , 0 , sizeof ( fl ) );
+
+            fl . l_type = F_WRLCK;
+            fl . l_whence = SEEK_SET;
+            fl . l_start = 0;
+            fl . l_len = 0;
+
+            return fl;
+        };
+
+        static struct flock fl = init ();
+
+        // Operates on i-node
+        bool ret = _nativeSurface . _sync_fd > -1 && fcntl ( _nativeSurface . _sync_fd , F_SETLKW ,  & fl ) != -1;
+
+        assert ( ret != false );
+
+        return ret;
+    }
+
+    bool ClientSurface::SyncPrimitiveEnd () const {
+        auto init = [] () -> struct flock {
+            struct flock fl;
+            /* void * */ memset ( &fl , 0 , sizeof ( fl ) );
+
+            fl . l_type = F_UNLCK;
+            fl . l_whence = SEEK_SET;
+            fl . l_start = 0;
+            fl . l_len = 0;
+
+            return fl;
+        };
+
+        static struct flock fl = init ();
+
+        bool ret = _nativeSurface . _sync_fd > -1 && fcntl ( _nativeSurface . _sync_fd , F_SETLK , & fl ) != -1;
+
+        assert ( ret != false );
+
+        return ret;
     }
 
     void ClientSurface::ScanOut () {
-        /* bool */ _compositor.CompositeFor (_name);
+        /* bool */ _compositor . CompositeFor (_name);
     }
+
+    ClientSurface::surf_t const & ClientSurface::Surface ( EGL::img_t const & khr ) {
+        if ( khr != EGL::InvalidImage () ) {
+            _nativeSurface . _khr = khr;
+        }
+
+        return _nativeSurface;
+    }
+
+
+
+    CompositorImplementation::ExternalAccess::ExternalAccess ( CompositorImplementation & parent , const Core::NodeId & source , const string & proxyStubPath, const Core::ProxyType < RPC::InvokeServer > & handler )
+        : RPC::Communicator ( source,  proxyStubPath.empty () == false ? Core::Directory::Normalize ( proxyStubPath ) : proxyStubPath , Core::ProxyType < Core::IIPCServer > ( handler ) )
+        , _parent ( parent ) {
+
+        uint32_t result = RPC::Communicator::Open ( RPC::CommunicationTimeOut );
+
+        handler->Announcements ( Announcement() );
+
+        if ( result != Core::ERROR_NONE ) {
+            TRACE ( Trace::Error , ( _T ( "Could not open RPI Compositor RPCLink server. Error: %s" ) , Core::NumberType < uint32_t > ( result ) . Text () ) );
+        } else {
+            // We need to pass the communication channel NodeId via an environment variable, for process,
+            // not being started by the rpcprocess...
+            Core::SystemInfo::SetEnvironment ( _T ( "COMPOSITOR" ) , RPC::Communicator::Connector () , true );
+        }
+    }
+
+
+
+    void * CompositorImplementation::ExternalAccess::Aquire ( const string & className, const uint32_t interfaceId, const uint32_t version ) {
+        silence ( className );
+        silence ( version );
+
+        // Use the className to check for multiple HDMI's. 
+        return ( _parent . QueryInterface ( interfaceId ) );
+    }
+
+
+
+
+    CompositorImplementation::DMATransfer::DMATransfer ( CompositorImplementation & compositor ) : Core::Thread ( /* 0 , _T ( "" ) */ ) , _compositor { compositor } , _listen { -1 } , _transfer { -1 } , _addr { AF_UNIX , "/tmp/Compositor/DMA" } , _valid { _Initialize () } {
+    }
+
+    CompositorImplementation::DMATransfer::~DMATransfer () {
+        Stop ();
+
+        /* bool */ Wait ( WPEFramework::Core::Thread::BLOCKED | WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
+
+        /* valid_t */ _Deinitialize ();
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Receive ( std::string & msg , DMATransfer::fds_t & fds ) {
+        valid_t ret = Valid () && Connect ( Core::infinite );
+
+        if ( ret != true ) {
+            TRACE ( Trace::Information , ( _T ( "Unable to receive (DMA) data." ) ) );
+        }
+        else {
+            ret = _Receive ( msg , fds . data (), fds . size () );
+            ret = Disconnect ( Core::infinite ) && ret;
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Send ( std::string const & msg, DMATransfer::fds_t const & fds ) {
+        valid_t ret = Valid () && Connect ( Core::infinite );
+
+        if ( ret != true ) {
+            TRACE ( Trace::Information , ( _T ( "Unable to send (DMA) data." ) ) );
+        }
+        else {
+            ret = _Send ( msg, fds . data () , fds . size () ) && Disconnect ( Core::infinite );
+            ret = Disconnect ( Core::infinite ) && ret;
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::DMATransfer::timeout_t CompositorImplementation::DMATransfer::Worker () {
+        // The actual time (schedule) resolution
+// TODO:: arbitrary value
+        // Approximately 1 Hz
+        constexpr CompositorImplementation::DMATransfer::timeout_t const ret = 1000;
+
+        // Default behavior
+        Block ();
+
+        fd_set fds;
+
+        FD_ZERO ( & fds );
+        FD_SET ( _listen , & fds );
+
+        // Just use 'polling'
+        constexpr struct timespec const timeout = { . tv_sec = 0, . tv_nsec = 0 };
+
+        int err = pselect ( _listen + 1 , & fds , nullptr , nullptr , & timeout , nullptr);
+
+        if ( err < 0) {
+            // Error
+            TRACE ( Trace::Error , ( _T ( "Unable to accept DMA connections" ) ) );
+
+            // 'Kill' (future) thread's operation
+            Stop ();
+        }
+        else {
+            if ( err == 0 ) {
+                // Timeout, no (new) connection available
+            }
+            else {
+                if ( FD_ISSET ( _listen , & fds ) != 0 ) {
+
+// TODO: set flags on _transfer ?
+                    _transfer = accept (_listen, nullptr, nullptr);
+
+                    // Do some processing on the clients
+
+                    std::string msg;
+
+                    // Shared buffer and synchronization primitive
+                    DMATransfer::fds_t handles = { -1 , -1 };
+
+                    std::string props;
+
+                    if ( _transfer > 0 ) {
+                        if ( ( Receive ( msg , handles ) && _compositor . FDFor ( msg , handles , props ) && Send ( msg + props, handles) ) != false ) {
+                            // Just wait for the remote peer to close the connection
+                            ssize_t size = read ( _transfer , nullptr , 0 );
+
+                            decltype ( errno ) err = errno;
+
+                            switch (size) {
+                                case -1 :   // Error
+                                            TRACE ( Trace::Error , ( _T ( "Error after DMA transfer : %d." ) , err ) );
+                                            break;
+                                case 0  :   // remote has closed the connection
+                                            TRACE ( Trace::Information , ( _T  ( "Remote has closed the DMA connection." ) ) );
+                                            break;
+                                default :   // Unexpected data available
+                                            TRACE ( Trace::Error , ( _T ( "Unexpected data read after DMA transfer." ) ) );
+                            }
+
+                            /* int */ close ( _transfer );
+
+                            _transfer = -1;
+                        }
+                        else {
+                            TRACE ( Trace::Error , ( _T ( "Failed to exchange DMA information for %s." ) ,  msg.length () > 0 ? msg . c_str () : "'<no name provided>'" ) );
+                        }
+                    }
+                    else {
+                        // Not necessarily an error
+                        TRACE ( Trace::Information , ( _T ( "Premature incoming connection loss." ) ) );
+                    }
+                }
+            }
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Initialize () {
+        valid_t ret = false;
+
+        // Just a precaution
+        /* int */ unlink ( _addr.sun_path );
+
+        _listen = socket ( _addr . sun_family /* domain */ , SOCK_STREAM /* type */ , 0 /* protocol */ );
+
+// TODO: Derive it from maximum number of supported clients
+        // Number of pending requests for accept to handle
+        constexpr int queue_size = 1;
+
+        ret =      _listen != -1
+                && bind ( _listen, reinterpret_cast < struct sockaddr const * > ( & _addr ) , sizeof ( _addr ) ) == 0
+                && listen ( _listen, queue_size ) == 0
+                && fcntl ( _listen, F_SETFL, O_NONBLOCK ) == 0
+                ;
+
+         return ret;
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Deinitialize () {
+        valid_t ret = false;
+
+        ret =      _listen > 0
+                && close ( _listen ) == 0
+                && _transfer != InvalidSocket ()
+                && close ( _transfer ) == 0
+                ;
+
+        // (always) delete the (bind) socket in the file system if no reference exist (anymore)
+        ret = unlink ( _addr.sun_path ) == 0 && ret;
+
+        return ret;
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Connect ( CompositorImplementation::DMATransfer::timeout_t timeout ) {
+        silence ( timeout );
+
+        using err_t = remove_reference < decltype ( errno ) > :: type;
+
+        err_t err = errno;
+
+        valid_t ret = _transfer != InvalidSocket () && err == static_cast < err_t > ( 0 );
+
+        return ret;
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Disconnect ( CompositorImplementation::DMATransfer::timeout_t timeout ) {
+        silence ( timeout );
+
+        using err_t = remove_reference < decltype ( errno ) > :: type;
+
+        err_t err = errno;
+
+        valid_t ret = _transfer != InvalidSocket () && err == static_cast < err_t > ( 0 );
+
+        return ret;
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Send ( std::string const & msg , int const * fd , uint8_t count ) {
+        using fd_t = remove_const < std::remove_pointer < decltype (fd) > :: type > :: type;
+
+        valid_t ret = false;
+
+        // Logical const
+        static_assert ( ( std::is_same < char * , remove_const < decltype ( & msg [ 0 ] ) > :: type > :: value ) != false );
+        char * buf  = const_cast < char * > ( & msg [ 0 ] );
+
+        size_t const bufsize = msg . size ();
+
+        constexpr decltype ( bufsize ) minimum_buf_size = 0;
+
+        if ( bufsize > minimum_buf_size ) {
+
+            // Scatter array for vector I/O
+            struct iovec iov;
+
+            // Starting address
+            iov . iov_base = reinterpret_cast < void * > ( buf );
+            // Number of bytes to transfer
+            iov . iov_len = bufsize;
+
+            // Actual message
+            struct msghdr msgh {};
+
+            // Optional address
+            msgh . msg_name = nullptr;
+            // Size of address
+            msgh . msg_namelen = 0;
+            // Scatter array
+            msgh . msg_iov = & iov;
+            // Elements in msg_iov
+            msgh . msg_iovlen = 1;
+
+            // Ancillary data
+            // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
+            char control [ CMSG_SPACE ( sizeof ( fd_t ) * count ) ];
+
+            // Only valid file descriptor (s) can be sent via extra payload
+            ret = true;
+            for ( decltype ( count ) i = 0 ; i < count && fd != nullptr ; i++ ) {
+                ret = fd [ i ] != InvalidFD () && ret;
+            }
+
+            // At least  the first fd should be valid
+            if ( ret != false ) {
+                // Contruct ancillary data to be added to the transfer via the control message
+
+                // Ancillary data, pointer
+                msgh . msg_control = control;
+
+                // Ancillary data buffer length
+                msgh . msg_controllen = sizeof ( control );
+
+                // Ancillary data should be access via cmsg macros
+                // https://linux.die.net/man/2/recvmsg
+                // https://linux.die.net/man/3/cmsg
+                // https://linux.die.net/man/2/setsockopt
+                // https://www.man7.org/linux/man-pages/man7/unix.7.html
+
+                // Control message
+
+                // Pointer to the first cmsghdr in the ancillary data buffer associated with the passed msgh
+                struct cmsghdr * cmsgh = CMSG_FIRSTHDR ( & msgh );
+
+                if ( cmsgh != nullptr ) {
+                    // Originating protocol
+                    // To manipulate options at the sockets API level
+                    cmsgh -> cmsg_level = SOL_SOCKET;
+
+                    // Protocol specific type
+                    // Option at the API level, send or receive a set of open file descriptors from another process
+                    cmsgh -> cmsg_type = SCM_RIGHTS;
+
+                    // The value to store in the cmsg_len member of the cmsghdr structure, taking into account any necessary alignment, eg byte count of control message including header
+                    cmsgh -> cmsg_len = CMSG_LEN ( sizeof ( fd_t ) * count );
+
+                    // Initialize the payload
+                    /* void */ memcpy ( CMSG_DATA ( cmsgh ) , fd , sizeof ( fd_t ) * count );
+
+                    ret = true;
+                }
+                else {
+                    // Error
+                }
+            }
+            else {
+                // No extra payload, ie  file descriptor(s), to include
+                msgh . msg_control = nullptr;
+                msgh . msg_controllen = 0;
+
+                ret = true;
+            }
+
+            if ( ret != false ) {
+                // Configuration succeeded
+
+                // https://linux.die.net/man/2/sendmsg
+                // https://linux.die.net/man/2/write
+                // Zero flags is equivalent to write
+
+                constexpr ssize_t data_invalid_size = 0;
+
+                remove_const < decltype (data_invalid_size) > :: type  size = data_invalid_size;
+
+                socklen_t len = sizeof ( size );
+
+                // Only send data if the buffer is large enough to contain all data
+                if ( getsockopt ( _transfer , SOL_SOCKET , SO_SNDBUF , & size , & len ) == 0 ) {
+                    // Most options use type int, ssize_t was just a placeholder
+                    static_assert ( sizeof ( int ) <= sizeof ( ssize_t ) );
+                    TRACE ( Trace::Information , ( _T ( "The sending buffer capacity equals %d bytes." ) , size ) );
+
+// TODO: do not send if the sending buffer is too small
+                    size = sendmsg ( _transfer , & msgh , 0);
+                }
+                else {
+                    // Unable to determine buffer capacity
+                }
+
+                ret = size != data_invalid_size;
+
+                if ( ret != false ) {
+                    // Ancillary data is not included
+                    TRACE ( Trace::Information , ( _T ( "Send %d bytes out of %d." ) , size , bufsize ) );
+                }
+                else {
+                    TRACE ( Trace::Error , ( _T ( "Failed to send data." ) ) );
+                }
+            }
+
+        }
+        else {
+            TRACE ( Trace::Error , ( _T ( "A data message to be send cannot be empty!" ) ) );
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Receive ( std::string & msg , int * fd , uint8_t count ) {
+        bool ret = false;
+
+        msg . clear ();
+
+        ssize_t size = -1;
+        socklen_t len = sizeof ( size );
+
+        if ( getsockopt ( _transfer , SOL_SOCKET , SO_RCVBUF , & size , & len ) == 0 ) {
+            TRACE (Trace::Information, ( _T ( "The receiving buffer maximum capacity equals %d bytes." ) , size ) );
+
+            // Most options use type int, ssize_t was just a placeholder
+            static_assert ( sizeof ( int ) <= sizeof ( ssize_t ) );
+             msg . reserve ( static_cast < int > ( size ) );
+        }
+        else {
+            TRACE ( Trace::Information , ( _T ( "Unable to determine buffer maximum cpacity. Using %d bytes instead." ) , msg . capacity () ) );
+        }
+
+        size_t const bufsize = msg . capacity ();
+
+        if ( bufsize > 0 && count > 0 && fd != nullptr ) {
+            using fd_t = std::remove_pointer < decltype ( fd ) > :: type;
+
+            for ( decltype ( count ) i = 0 ; i < count ; i++ ) {
+                fd [ i ] = -1;
+            }
+
+            static_assert ( ( std::is_same < char * , remove_const  < decltype ( & msg [ 0 ] ) > :: type > :: value ) != false );
+            char buf [ bufsize ];
+
+            // Scatter array for vector I/O
+            struct iovec iov;
+
+            // Starting address
+            iov . iov_base = reinterpret_cast < void * > ( &buf [ 0 ] );
+            // Number of bytes to transfer
+            iov . iov_len = bufsize;
+
+            // Actual message
+            struct msghdr msgh {};
+
+            // Optional address
+            msgh . msg_name = nullptr;
+            // Size of address
+            msgh . msg_namelen = 0;
+            // Elements in msg_iov
+            msgh . msg_iovlen = 1;
+            // Scatter array
+            msgh . msg_iov = &iov;
+
+            // Ancillary data
+            // The macro returns the number of bytes an ancillary element with payload of the passed in data length, eg size of ancillary data to be sent
+            char control [ CMSG_SPACE ( sizeof ( fd_t ) * count  ) ];
+
+            // Ancillary data, pointer
+            msgh . msg_control = control;
+
+            // Ancillery data buffer length
+            msgh . msg_controllen = sizeof ( control );
+
+// TODO: do not receive if the receiving buffer is too small
+            // No flags set
+            size = recvmsg ( _transfer, & msgh , 0 );
+
+            ret = size > 0;
+
+            switch ( size ) {
+                case -1 :   // Error
+                            {
+                                TRACE ( Trace::Error , ( _T ( "Error receiving remote (DMA) data." ) ) );
+                                break;
+                            }
+                case 0  :   // Peer has done an orderly shutdown, before any data was received
+                            {
+                                TRACE ( Trace::Error , ( _T ( "Error receiving remote (DMA) data. Compositorclient may have become unavailable. " ) ) );
+                                break;
+                            }
+                default :   // Data
+                            {
+                                // Extract the file descriptor information
+                                TRACE ( Trace::Information , ( _T ( "Received %d bytes." ) , size ) );
+
+                                // Pointer to the first cmsghdr in the ancillary data buffer associated with the passed msgh
+                                // Assume a single cmsgh was sent
+                                struct cmsghdr * cmsgh = CMSG_FIRSTHDR ( & msgh );
+
+                                // Check for the expected properties the client should have set
+                                if (     cmsgh != nullptr
+                                      && cmsgh -> cmsg_level == SOL_SOCKET
+                                      && cmsgh -> cmsg_type == SCM_RIGHTS
+                                    ) {
+                                    // The macro returns a pointer to the data portion of a cmsghdr.
+                                    /* void */ memcpy ( fd , CMSG_DATA ( cmsgh ) , sizeof ( fd_t ) * count );
+                                }
+                                else {
+                                    TRACE ( Trace::Information , ( _T ( "No (valid) ancillary data received." ) ) );
+                                }
+
+                                msg . assign ( buf, size );
+                            }
+            }
+        }
+        else {
+            // Error
+            TRACE ( Trace::Error , ( _T ( "A receiving data buffer (message) cannot be empty!" ) ) );
+        }
+
+        return ret;
+    }
+
+
+
+    CompositorImplementation::Natives::Natives ( ModeSet & set) : _set { set } , _valid { Initialize () } {
+    }
+
+    CompositorImplementation::Natives::~Natives () {
+        _valid = false;
+        DeInitialize ();
+    }
+
+    CompositorImplementation::Natives::valid_t CompositorImplementation::Natives::Initialize () {
+        valid_t ret = false;
+
+        // The argument to Open is unused, an empty string suffices
+         static_assert ( std::is_pointer < dpy_t > :: value != false );
+        ret = _set . Open ("") == Core::ERROR_NONE && Display () != nullptr;
+
+        using width_t = decltype ( std::declval < ModeSet > () . Width () );
+        using height_t = decltype ( std::declval < ModeSet > () . Height () );
+
+        width_t width = _set . Width ();
+        height_t height = _set . Height ();
+
+        if ( ret != false ) {
+            _surf = _set . CreateRenderTarget ( width , height );
+            ret = _surf != nullptr;
+        }
+
+        if ( ret != true ) {
+            static_assert ( ( std::is_integral < width_t > :: value && std::is_integral < height_t > :: value ) != false);
+            TRACE ( Trace::Error , ( _T ( "Unable to create a compositor surface of dimensions: %d x %d [width, height]))." ) , width , height ) );
+        }
+
+        return ret;
+    }
+
+    void CompositorImplementation::Natives::DeInitialize () {
+        _valid = false;
+
+        if ( _surf != nullptr ) {
+            _set . DestroyRenderTarget ( _surf );
+        }
+    }
+
+
+#define GL_ERROR_WITH_RETURN() ( glGetError () == GL_NO_ERROR )
+#ifdef NDEBUG
+#define GL_ERROR() do {} while (0)
+#else
+#define GL_ERROR() assert (GL_ERROR_WITH_RETURN ())
+#endif
+
+    CompositorImplementation::GLES::offset::offset () : offset ( ( _right - _left ) / static_cast < coordinate_t > ( 2.0f ) + _left , ( _top - _bottom ) / static_cast < coordinate_t > ( 2.0f ) + _bottom , ( _far - _near ) / static_cast < coordinate_t > ( 2.0f ) + _near ) {
+    }
+
+    CompositorImplementation::GLES::offset::offset ( coordinate_t const & x , coordinate_t const & y , coordinate_t const & z ) : _x { x } , _y { y } , _z{ z } {
+    }
+
+
+
+    // ODR use
+
+    /* static */ constexpr CompositorImplementation::GLES::offset::coordinate_t const CompositorImplementation::GLES::offset::_left;
+    /* static */ constexpr CompositorImplementation::GLES::offset::coordinate_t const CompositorImplementation::GLES::offset::_right;
+    /* static */ constexpr CompositorImplementation::GLES::offset::coordinate_t const CompositorImplementation::GLES::offset::_bottom;
+    /* static */ constexpr CompositorImplementation::GLES::offset::coordinate_t const CompositorImplementation::GLES::offset::_top;
+    /* static */ constexpr CompositorImplementation::GLES::offset::coordinate_t const CompositorImplementation::GLES::offset::_near;
+    /* static */ constexpr CompositorImplementation::GLES::offset::coordinate_t const CompositorImplementation::GLES::offset::_far;
+
+
+
+    /* static */ constexpr CompositorImplementation::GLES::scale::fraction_t const CompositorImplementation::GLES::scale::_identity;
+    /* static */ constexpr CompositorImplementation::GLES::scale::fraction_t const CompositorImplementation::GLES::scale::_min;
+    /* static */ constexpr CompositorImplementation::GLES::scale::fraction_t const CompositorImplementation::GLES::scale::_max;
+
+    CompositorImplementation::GLES::scale::scale () : scale ( CompositorImplementation::GLES::scale::_identity , CompositorImplementation::GLES::scale::_identity ) {
+    }
+
+    CompositorImplementation::GLES::scale::scale ( CompositorImplementation::GLES::scale::fraction_t const & horiz , CompositorImplementation::GLES::scale::fraction_t const & vert ) : _horiz { horiz } , _vert { vert } {
+    }
+
+
+
+    /* static */ constexpr CompositorImplementation::GLES::opacity::alpha_t const CompositorImplementation::GLES::opacity::_min;
+    /* static */ constexpr CompositorImplementation::GLES::opacity::alpha_t const CompositorImplementation::GLES::opacity::_max;
+
+    CompositorImplementation::GLES::opacity::opacity () : opacity { _max } {
+    }
+
+    CompositorImplementation::GLES::opacity::opacity ( CompositorImplementation::GLES::opacity::alpha_t const & alpha ) : _alpha { alpha } {
+    }
+
+    CompositorImplementation::GLES::opacity::opacity ( CompositorImplementation::GLES::opacity const & other ) : _alpha { other . _alpha } {
+    }
+
+
+
+    CompositorImplementation::GLES::texture::texture () : texture { GL_INVALID_ENUM, CompositorImplementation::GLES::opacity::InitialOpacity () } {
+    }
+
+    CompositorImplementation::GLES::texture::texture ( CompositorImplementation::GLES::tgt_t target , CompositorImplementation::GLES::opacity_t const & opacity ) : _tex { 0 } , _target { target } , _opacity { opacity } , _x { 0 } , _y { 0 } , _z { 0 } , _width { 0 } , _height { 0 } {
+    }
+
+    CompositorImplementation::GLES::texture::texture ( CompositorImplementation::GLES::texture const & other ) : _tex { other . _tex } , _target { other . _target } , _opacity { other . _opacity } , _x { other . _x } , _y { other . _y } , _z { other . _z } , _width { other . _width } , _height  { other . _height } {
+    }
+
+
+
+    CompositorImplementation::GLES::GLES () : _offset { InitialOffset () } , _scale { InitialScale () } , _opacity { InitialOpacity () } ,  _valid { Initialize () } {
+    }
+
+    CompositorImplementation::GLES::~GLES () {
+        _valid = false;
+
+         /* valid_t */ Deinitialize ();
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::UpdateOffset ( CompositorImplementation::GLES::offset_t const & off ) {
+        valid_t ret = false;
+
+        // Ramge check without taking into account rounding errors
+        if (     off . _x >= offset_t::_left
+              && off . _x <= offset_t::_right
+              && off . _y >= offset_t::_bottom
+              && off . _y <= offset_t::_top
+              && off . _z >= offset_t::_near
+              && off . _z <= offset_t::_far
+            ) {
+            _offset = off;
+            ret = true;
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::UpdateScale ( CompositorImplementation::GLES::scale_t const & scale ) {
+        valid_t ret = false;
+
+        // Ramge check without taking into account rounding errors
+        if (    scale . _horiz >= scale_t::_min
+             && scale . _horiz <= scale_t::_max
+             && scale . _vert >= scale_t::_min
+             && scale . _vert <= scale_t::_max
+        ) {
+            _scale = scale;
+            ret = true;
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::UpdateOpacity ( CompositorImplementation::GLES::opacity_t const & opacity ) {
+        valid_t ret = false;
+
+        if (     opacity . _alpha >= opacity_t::_min
+             && _opacity . _alpha <= opacity_t::_max
+        ) {
+            _opacity = opacity;
+            ret = true;
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderColor ( bool red , bool green , bool blue , bool alpha ) {
+        static uint16_t degree = 0;
+
+        constexpr decltype ( degree ) const ROTATION = 360;
+
+        constexpr float const OMEGA = 3.14159265 / 180;
+
+        valid_t  ret = Valid ();
+
+        if ( ret != false ) {
+            // Here, for C(++) these type should be identical
+            // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
+            static_assert ( std::is_same < float , GLfloat > :: value );
+
+            GLfloat rad = static_cast < GLfloat > ( cos ( degree * OMEGA ) );
+
+            constexpr GLfloat default_color = 0.0f;
+
+            // The function clamps the input to [0.0f, 1.0f]
+            /* void */ glClearColor ( red != false ? rad : default_color , green != false ? rad : default_color , blue != false ? rad : default_color , alpha != false ? default_color : 1.0f );
+            GL_ERROR ();
+
+            /* void */ glClear ( GL_COLOR_BUFFER_BIT );
+            GL_ERROR ();
+
+            degree = ( degree + 1 ) % ROTATION;
+        }
+
+        ret = ret && GL_ERROR_WITH_RETURN ();
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderEGLImage ( EGL::img_t const & img , EGLint x , EGLint y , EGL::width_t width , EGL::height_t height , EGLint zorder , EGLint opacity ) {
+        EGLDisplay dpy = EGL::InvalidDpy ();
+        EGLDisplay ctx = EGL::InvalidCtx ();
+
+        auto DestroyTexture = [ this ] ( texture_t & tex ) -> valid_t {
+            valid_t ret = tex . _tex != InvalidTex ();
+
+            // Delete the previously created texture
+            glDeleteTextures ( 1 , & ( tex . _tex ) );
+
+            tex . _tex = InvalidTex ();
+
+            ret = ret && GL_ERROR_WITH_RETURN ();
+
+            return ret;
+        };
+
+        auto SetupTexture = [ this , & dpy , & ctx ] ( texture_t & tex , EGL::img_t const & img , EGL::width_t width , EGL::height_t height , bool quick ) -> valid_t {
+            valid_t ret = GL_ERROR_WITH_RETURN ();
+
+            if ( quick != true ) {
+                glGenTextures ( 1 , & ( tex . _tex ) );
+                GL_ERROR ();
+            }
+
+            glBindTexture ( tex . _target , ( tex . _tex ) );
+            GL_ERROR ();
+
+            if ( quick != true ) {
+                glTexParameteri ( tex . _target , GL_TEXTURE_WRAP_S , GL_CLAMP_TO_EDGE );
+                GL_ERROR ();
+
+                glTexParameteri ( tex . _target , GL_TEXTURE_WRAP_T , GL_CLAMP_TO_EDGE );
+                GL_ERROR ();
+
+                glTexParameteri ( tex . _target , GL_TEXTURE_MIN_FILTER , GL_LINEAR );
+                GL_ERROR ();
+
+                glTexParameteri ( tex . _target , GL_TEXTURE_MAG_FILTER , GL_LINEAR );
+                GL_ERROR ();
+            }
+
+            tex . _width = width;
+            tex . _height = height;
+
+            switch ( tex . _target ) {
+                case GL_TEXTURE_EXTERNAL_OES :
+                    {
+                        // A valid GL context should exist for GLES::Supported ()
+
+                        ret = dpy != EGL::InvalidDpy () && ctx != EGL::InvalidCtx ();
+
+                        static valid_t supported = ( GLES::Supported ( "GL_OES_EGL_image" ) && ( EGL::Supported ( dpy , "EGL_KHR_image" ) || EGL::Supported ( dpy, "EGL_KHR_image_base" ) ) ) != false;
+
+                        if ( ( ret && supported ) != false ) {
+                            // Take storage for the texture from the EGLImage; Pixel data becomes undefined
+                            static void ( * pEGLImageTargetTexture2DOES ) ( GLenum , GLeglImageOES ) = reinterpret_cast < void ( * ) ( GLenum , GLeglImageOES ) > ( eglGetProcAddress ( "glEGLImageTargetTexture2DOES" ) );
+
+                            // Assume nullptr represents invalid / not found
+                            ret = pEGLImageTargetTexture2DOES != nullptr;
+
+                            if ( ret != false ) {
+                                // Logical const
+                                using no_const_img_t = remove_const < decltype ( img ) > :: type;
+
+                                pEGLImageTargetTexture2DOES ( tex . _target , reinterpret_cast < GLeglImageOES > ( const_cast < no_const_img_t  > ( img ) ) );
+                                GL_ERROR ();
+                            }
+                        }
+                    }; break;
+
+                case GL_TEXTURE_2D :
+                    {
+                        glTexImage2D ( GL_TEXTURE_2D , 0 , GL_RGBA , tex . _width , tex . _height , 0 , GL_RGBA , GL_UNSIGNED_BYTE , nullptr);
+                        GL_ERROR ();
+                    }; break;
+
+                default :
+                    {
+                        ret = false;
+                    }
+            }
+
+
+            glBindTexture ( tex . _target , InvalidTex () );
+
+
+            ret = ret && GL_ERROR_WITH_RETURN ();
+
+                return ret;
+        };
+
+
+        silence ( DestroyTexture );
+
+        valid_t ret = GL_ERROR_WITH_RETURN () && img != EGL::InvalidImage () && width > 0 && height > 0;
+
+        // A valid GL context should exist for GLES::Supported ()
+        /* EGL::ctx_t */ ctx = eglGetCurrentContext ();
+        /* EGL::dpy_t */ dpy = ctx != EGL::InvalidCtx () ? eglGetCurrentDisplay () : EGL::InvalidDpy ();
+
+
+        // OES dimensions should match the underlying buffer dimensions
+        // Estimate using the EGL surface
+
+        EGLSurface surf = EGL::InvalidSurf ();
+
+        if ( ret != false ) {
+            surf = eglGetCurrentSurface ( EGL_DRAW );
+            ret  =     eglGetError () == EGL_SUCCESS
+                    && surf != EGL::InvalidSurf ();
+        }
+
+        EGLint e_width = 0, e_height = 0;
+
+        if ( ret != false ) {
+            ret =      eglQuerySurface ( dpy , surf , EGL_WIDTH, & e_width ) != EGL_FALSE
+                    && eglQuerySurface ( dpy , surf , EGL_HEIGHT , & e_height) != EGL_FALSE
+                    && eglGetError () == EGL_SUCCESS;
+        }
+
+        ret = ret && eglGetError () == EGL_SUCCESS && ctx != EGL::InvalidCtx ();
+
+        // Set up the required textures
+
+        // The  'shared' texture
+        static texture_t tex_oes ( GL_TEXTURE_EXTERNAL_OES , CompositorImplementation::GLES::opacity::InitialOpacity () );
+
+        static bool reuse = false;
+
+        // The 'scene' texture
+        texture_t tex_fbo ( GL_TEXTURE_2D , CompositorImplementation::GLES::opacity::InitialOpacity () );
+
+
+        if ( ret != false ) {
+            // Just an arbitrarily selected texture unit
+            glActiveTexture ( GL_TEXTURE0 );
+            GL_ERROR ();
+
+            // Using the EGL surface dimensions
+
+#ifdef _RESIZE_TEXTURE
+            // Did dimensions change ?
+
+            using common_w_t = std::common_type < decltype ( tex_oes . _width ) , decltype ( e_width ) > :: type;
+            using common_h_t = std::common_type < decltype ( tex_oes . _height ) , decltype ( e_height ) > :: type;
+
+            if ( static_cast < common_w_t > ( tex_oes . _width ) != static_cast < common_w_t > ( e_width ) || static_cast < common_h_t > ( tex_oes . _height ) != static_cast < common_h_t > ( e_height ) ) {
+                reuse = false;
+
+                if ( tex_oes . _width > 0 && tex_oes . _height > 0 ) {
+                    reuse = DestroyTexture ( tex_oes ) != true;
+                }
+            }
+#endif
+
+            ret = SetupTexture ( tex_oes , img , e_width , e_height , reuse) != false;
+            reuse = ret;
+
+            {
+                std::lock_guard < decltype ( _token ) > const lock ( _token );
+
+                auto it = _scene . find ( img );
+
+                ret = it != _scene . end ();
+
+                if ( ret != false ) {
+                    // Found, just update values
+                    tex_fbo = it -> second;
+
+#ifdef _RESIZE_TEXTURE
+                    // Did dimensions change ?
+
+                    using common_w_t = std::common_type < decltype ( width ) , decltype ( it -> second . _width ) > :: type;
+                    using common_h_t = std::common_type < decltype ( height ) , decltype ( it -> second . _height ) > :: type;
+
+                    if ( static_cast < common_w_t > ( width ) != static_cast < common_w_t > ( it -> second . _width) || static_cast < common_h_t > ( height ) != static_cast < common_h_t > (it -> second . _height ) ) {
+
+                        TRACE_WITHOUT_THIS ( Trace::Information , ( _T ( "Texture dimensions change detected!" ) ) );
+
+                        ret = DestroyTexture ( tex_fbo ) && _scene . erase ( img ) == 1 && SetupTexture ( tex_fbo , img , width , height , false ) != false;
+
+                        if ( ret != false ) {
+                            auto it = _scene . insert ( std::pair < EGL::img_t , texture_t > ( img , tex_fbo ) );
+
+                            ret = it . second != false;
+                        }
+                    }
+#endif
+                }
+                else {
+                    ret = SetupTexture ( tex_fbo , img , width , height , false ) != false;
+
+                    if ( ret != false ) {
+                        auto it = _scene . insert ( std::pair < EGL::img_t , texture_t > ( img , tex_fbo ) );
+                        ret = it . second != false;
+                    }
+                }
+
+                // Update
+                if ( ret != false ) {
+                    using opacity_a_t = GLES::opacity_t::alpha_t;
+
+                    using common_opacity_t = std::common_type < decltype ( opacity ) , opacity_a_t , decltype ( WPEFramework::Exchange::IComposition::minOpacity ) , decltype ( WPEFramework::Exchange::IComposition::maxOpacity ) > :: type;
+
+                    // Narrowing is not allowed
+//                    static_assert ( narrowing < common_opacity_t , opacity_a_t , true> :: value != false );
+
+                    tex_fbo . _opacity = ( static_cast < opacity_a_t > ( static_cast < common_opacity_t > ( opacity ) / ( static_cast < common_opacity_t > ( WPEFramework::Exchange::IComposition::maxOpacity ) - static_cast < common_opacity_t > ( WPEFramework::Exchange::IComposition::minOpacity ) ) ) );
+                    tex_fbo . _x = x;
+                    tex_fbo . _y = y;
+                    tex_fbo . _z = zorder;
+
+                    _scene [img] = tex_fbo;
+                }
+            }
+
+             GLuint fbo;
+
+            glGenFramebuffers ( 1 , & fbo );
+            GL_ERROR ();
+
+            glBindFramebuffer ( GL_FRAMEBUFFER , fbo);
+            GL_ERROR ();
+
+            glBindTexture ( tex_oes . _target , tex_oes . _tex);
+            GL_ERROR ();
+
+            glBindTexture ( tex_fbo . _target , tex_fbo . _tex);
+            GL_ERROR ();
+
+
+            glFramebufferTexture2D ( GL_FRAMEBUFFER , GL_COLOR_ATTACHMENT0 , GL_TEXTURE_2D , tex_fbo . _tex , 0 );
+            GL_ERROR ();
+
+            GLenum status = glCheckFramebufferStatus ( GL_FRAMEBUFFER );
+            ret = ret && GL_ERROR_WITH_RETURN () && status == GL_FRAMEBUFFER_COMPLETE;;
+
+
+            glDisable ( GL_DEPTH_TEST );
+            GL_ERROR ();
+
+            glDisable ( GL_BLEND );
+            GL_ERROR ();
+
+
+            ret = ( ret && UpdateScale ( GLES::InitialScale () ) && UpdateOffset ( GLES::InitialOffset () ) && UpdateOpacity ( tex_fbo . _opacity) && SetupViewport ( 0 , 0 , width , height ) && RenderTileOES () ) != false;
+
+
+            glBindTexture ( tex_oes . _target , InvalidTex () );
+            GL_ERROR ();
+
+            glBindTexture (tex_fbo . _target, InvalidTex () );
+            GL_ERROR ();
+
+            glDeleteFramebuffers ( 1 , & fbo );
+            GL_ERROR ();
+        }
+
+        ret = ret && GL_ERROR_WITH_RETURN ();
+
+
+        // Do not destroy tex-fbo and _tex_oes !
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderScene ( CompositorImplementation::GLES::width_t width , CompositorImplementation::GLES::height_t height , std::function < CompositorImplementation::GLES::valid_t ( CompositorImplementation::GLES::texture_t const & left , CompositorImplementation::GLES::texture_t const & right ) > sortfunc ) {
+        valid_t ret = GL_ERROR_WITH_RETURN ();
+
+        if ( ret != false ) {
+
+// TODO: very inefficient way to get z-order sorted textures
+            std::list < texture_t > sorted;
+
+            {
+                std::lock_guard < decltype ( _token ) > const lock ( _token );
+
+                for ( auto begin = _scene . begin () , it = begin , end = _scene . end () ; it != end ; it ++ ) {
+                    sorted . push_back ( it -> second );
+                }
+            }
+
+            sorted . sort ( sortfunc );
+
+
+            glBindFramebuffer ( GL_FRAMEBUFFER , 0 );
+            GL_ERROR ();
+
+            GLenum status = glCheckFramebufferStatus ( GL_FRAMEBUFFER );
+            ret = ret && GL_ERROR_WITH_RETURN () && status == GL_FRAMEBUFFER_COMPLETE;
+
+            // Blend pixels with pixels already present in the frame buffer
+            glEnable ( GL_BLEND );
+            GL_ERROR ();
+
+            glBlendEquationSeparate ( GL_FUNC_ADD , GL_FUNC_ADD );
+            GL_ERROR ();
+
+            glBlendFuncSeparate ( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA , GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
+            GL_ERROR ();
+
+
+            GLint bits = 0;
+
+            glGetIntegerv ( GL_DEPTH_BITS , & bits );
+
+            ret = ret && GL_ERROR_WITH_RETURN () && bits > static_cast < GLint > ( 0 );
+
+            glEnable ( GL_DEPTH_TEST );
+            GL_ERROR ();
+
+            glDepthMask ( GL_TRUE );
+            GL_ERROR ();
+
+            glDepthFunc ( GL_LESS );
+            GL_ERROR ();
+
+            // Fully utilize the depth buffer range
+            glDepthRangef ( GLES::offset_t::_near , GLES::offset_t::_far );
+            GL_ERROR ();
+
+// TODO: magic number
+            glClearDepthf ( 1.0f );
+            GL_ERROR ();
+
+            glClear ( GL_DEPTH_BUFFER_BIT );
+            GL_ERROR ();
+
+
+            // Start with an empty (solid) background
+            ret = ( ret && RenderColor ( false , false , false , false ) ) != false;
+
+            // For all textures in map
+            if ( ret != false ) {
+                offset_t off ( _offset );
+                scale_t scl ( _scale );
+                opacity_t op ( _opacity );
+
+
+                for ( auto begin = sorted . begin () , it = begin , end = sorted . end () ; it != end ; it ++ ) {
+                    texture_t & tex = * it;
+
+                    assert ( tex . _target == GL_TEXTURE_2D );
+
+                    glBindTexture ( tex . _target , tex . _tex );
+                    GL_ERROR ();
+
+                    using offset_x_t = decltype ( GLES::offset_t::_x );
+                    using offset_y_t = decltype ( GLES::offset_t::_y );
+                    using offset_z_t = decltype ( GLES::offset_t::_z );
+
+                    using scale_h_t = decltype ( GLES::scale_t::_horiz );
+                    using scale_v_t = decltype ( GLES::scale_t::_vert );
+
+                    using common_scale_h_t = std::common_type < scale_h_t , GLES::x_t , decltype ( width ) > :: type;
+                    using common_scale_v_t = std::common_type < scale_v_t , GLES::y_t , decltype ( height ) > :: type;
+
+
+                    // Narrowing is not allowed
+                    static_assert ( narrowing < common_scale_h_t , scale_h_t , true > :: value != false );
+                    static_assert ( narrowing < common_scale_v_t , scale_v_t , true > :: value != false );
+
+                    GLES::scale_t g_scale ( static_cast < GLES::scale::fraction_t > ( static_cast < common_scale_h_t > ( tex . _width ) / static_cast < common_scale_h_t > ( width ) ) , static_cast < GLES::scale::fraction_t > ( static_cast < common_scale_v_t > ( tex . _height ) / static_cast < common_scale_v_t > ( height ) ) );
+
+
+                    using offset_x_t = decltype ( GLES::offset_t::_x );
+                    using offset_y_t = decltype ( GLES::offset_t::_y );
+                    using offset_z_t = decltype ( GLES::offset_t::_z );
+
+                    using zorder_t = GLES::z_t;
+
+                    using common_offset_x_t = std::common_type < scale_h_t , GLES::x_t , offset_x_t > :: type;
+                    using common_offset_y_t = std::common_type < scale_v_t , GLES::y_t , offset_y_t > :: type;
+                    using common_offset_z_t = std::common_type < zorder_t , decltype ( WPEFramework::Exchange::IComposition::minZOrder ) , decltype ( WPEFramework::Exchange::IComposition::maxZOrder ) , offset_z_t > :: type;
+
+
+                    // Narrowing is not allowed
+                    static_assert ( narrowing < common_offset_x_t, offset_x_t , true > :: value != false );
+                    static_assert ( narrowing < common_offset_y_t, offset_y_t , true > :: value != false );
+                    static_assert ( narrowing < common_offset_z_t, offset_z_t , true > :: value != false );
+
+
+                    GLES::offset_t g_offset ( static_cast < offset_x_t > ( static_cast < common_offset_x_t > ( g_scale . _horiz ) * static_cast < common_offset_x_t > ( tex . _x ) / static_cast < common_offset_x_t > ( tex . _width ) ) , static_cast < offset_y_t > ( static_cast < common_offset_y_t > ( g_scale . _vert ) * static_cast < common_offset_y_t > ( tex . _y ) / static_cast < common_offset_y_t > ( tex . _height ) ) , static_cast < offset_z_t > ( static_cast < common_offset_z_t > ( tex . _z ) / ( static_cast < common_offset_z_t > ( WPEFramework::Exchange::IComposition::maxZOrder ) - static_cast < common_offset_z_t > ( WPEFramework::Exchange::IComposition::minZOrder ) ) ) );
+
+                    // Width and height are screen dimensions, eg the geomtery values are in this space
+                    ret = ( ret && UpdateScale ( g_scale ) && UpdateOffset ( g_offset ) && UpdateOpacity (tex . _opacity ) && SetupViewport (0 , 0 , width , height ) && RenderTile () ) != false;
+
+                    if ( ret != true ) {
+                        break;
+                    }
+                }
+
+                ret = ( ret && UpdateScale ( scl ) && UpdateOffset ( off ) && UpdateOpacity ( op ) ) != false;
+            }
+
+
+            glBindTexture ( GL_TEXTURE_2D , InvalidTex () );
+            GL_ERROR ();
+
+            // Unconditionally
+            glDisable ( GL_DEPTH_TEST );
+            GL_ERROR ();
+
+            glDisable ( GL_BLEND );
+            GL_ERROR ();
+
+
+            ret = ret && GL_ERROR_WITH_RETURN ();
+
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SkipEGLImageFromScene ( EGL::img_t const & img ) {
+        valid_t ret = false;
+
+        std::lock_guard < decltype ( _token ) > const lock ( _token );
+
+        auto it = _scene . find ( img );
+
+        ret = it != _scene . end ();
+
+        if ( ret != false ) {
+            using scene_t = decltype ( _scene );
+
+            scene_t::size_type size = _scene . size ();
+
+            _scene . erase ( it );
+
+            ret = ( size - _scene . size () ) == static_cast < scene_t::size_type >  ( 1 );
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::Initialize () {
+        valid_t ret = GL_ERROR_WITH_RETURN ();
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::Deinitialize () {
+        valid_t ret = GL_ERROR_WITH_RETURN ();
+
+        glBindTexture ( GL_TEXTURE_2D , InvalidTex () );
+        GL_ERROR ();
+
+        glBindTexture ( GL_TEXTURE_EXTERNAL_OES , InvalidTex () );
+        GL_ERROR ();
+
+        std::lock_guard < decltype ( _token ) > const lock ( _token );
+
+        for ( auto begin = _scene . begin () , it = begin , end = _scene . end () ; it != end ; it++ ) {
+            tex_t & tex = it -> second . _tex;
+            glDeleteTextures ( 1 , & tex );
+            GL_ERROR ();
+        }
+
+        ret = ret && GL_ERROR_WITH_RETURN ();
+
+        return ret;
+    }
+
+// TODO: precompile programs at initialization stage
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SetupProgram ( char const vtx_src [] , char const frag_src [] , prog_t & prog ) {
+        auto LoadShader = [] ( GLuint type , GLchar const code [] ) -> GLuint {
+            GLuint shader = glCreateShader ( type );
+            GL_ERROR ();
+
+            valid_t ret = ( GL_ERROR_WITH_RETURN () && shader != 0 ) != false;
+
+            if ( ret != false ) {
+                glShaderSource ( shader , 1 , & code , nullptr );
+                GL_ERROR ();
+
+                glCompileShader ( shader );
+                GL_ERROR ();
+
+                GLint status = GL_FALSE;
+
+                glGetShaderiv ( shader , GL_COMPILE_STATUS , & status );
+                GL_ERROR ();
+
+                ret = ( GL_ERROR_WITH_RETURN () && status != GL_FALSE ) != false;
+
+#ifndef NDEBUG
+                if ( ret != true ) {
+                    GLint size = 0;
+
+                    glGetShaderiv ( shader , GL_INFO_LOG_LENGTH , & size );
+                    GL_ERROR ();
+
+                    if ( GL_ERROR_WITH_RETURN () != false ) {
+                        GLchar info [ size ];
+                        GLsizei length = 0;
+
+                        glGetShaderInfoLog ( shader , static_cast < GLsizei > ( size ) , & length , & info [ 0 ] );
+                        GL_ERROR ();
+
+                        info [ size ] = '\0';
+
+                        TRACE_WITHOUT_THIS ( Trace::Error , _T ( "Error: shader log: %s" ) , static_cast < char * > ( & info [ 0 ] ) );
+                    }
+                }
+#endif
+
+                ret = ret && GL_ERROR_WITH_RETURN ();
+            }
+
+            return shader;
+        };
+
+        auto ShadersToProgram = [] ( GLuint vertex , GLuint fragment , prog_t & prog ) -> valid_t {
+            prog = glCreateProgram ();
+            GL_ERROR ();
+
+            valid_t ret = ( GL_ERROR_WITH_RETURN () && prog != 0 ) != false;
+
+            if ( ret != false ) {
+                glAttachShader ( prog , vertex );
+                GL_ERROR ();
+
+                glAttachShader ( prog , fragment );
+                GL_ERROR ();
+
+                glBindAttribLocation ( prog , 0 , "position" );
+                GL_ERROR ();
+
+                glLinkProgram ( prog );
+                GL_ERROR ();
+
+                GLint status = GL_FALSE;
+
+                glGetProgramiv ( prog , GL_LINK_STATUS , & status );
+                GL_ERROR ();
+
+                ret = ( GL_ERROR_WITH_RETURN () && status != GL_FALSE ) != false;
+
+#ifndef NDEBUG
+                if ( ret != true ) {
+                    GLint size = 0;
+
+                    glGetProgramiv ( prog , GL_INFO_LOG_LENGTH , & size );
+                    GL_ERROR ();
+
+                    if ( GL_ERROR_WITH_RETURN () != false ) {
+                        GLchar info [ size ];
+                        GLsizei length = 0;
+
+                        glGetProgramInfoLog ( prog , static_cast < GLsizei > ( size ) , & length , & info [ 0 ] );
+                        GL_ERROR ();
+
+                        info [ size ] = '\0';
+
+                        TRACE_WITHOUT_THIS ( Trace::Error , _T ( "Error: program log: %s" ) , static_cast < char * > ( & info [ 0 ] ) );
+                    }
+                }
+#endif
+
+                ret = ret && GL_ERROR_WITH_RETURN ();
+            }
+
+            return ret;
+        };
+
+        auto DeleteCurrentProgram = [] () -> valid_t {
+            GLuint prog = 0;
+
+            glGetIntegerv ( GL_CURRENT_PROGRAM , reinterpret_cast < GLint * > ( & prog ) );
+            GL_ERROR ();
+
+            valid_t ret = ( GL_ERROR_WITH_RETURN () && prog != 0 ) != false;
+
+            if ( ret != false ) {
+                GLint count = 0;
+
+                glGetProgramiv ( prog , GL_ATTACHED_SHADERS , & count );
+                GL_ERROR ();
+
+                ret = ( GL_ERROR_WITH_RETURN () && count > 0 ) != false;
+
+                if ( ret != false ) {
+                    GLuint shaders [ count ];
+
+                    glGetAttachedShaders ( prog , count , static_cast < GLsizei * > ( & count ) , & shaders [ 0 ] );
+
+                    if ( GL_ERROR_WITH_RETURN () != false ) {
+                        for ( count-- ; count >= 0 ; count-- ) {
+                            glDetachShader ( prog , shaders [ count ] );
+                            GL_ERROR ();
+
+                            glDeleteShader ( shaders [ count ] );
+                            GL_ERROR ();
+                        }
+
+                        glDeleteProgram ( prog );
+                        GL_ERROR ();
+                    }
+                }
+
+                ret = ret && GL_ERROR_WITH_RETURN ();
+            }
+
+            return ret;
+        };
+
+
+        bool ret = GL_ERROR_WITH_RETURN ();
+
+        if ( ret != false && prog == InvalidProg () ) {
+            GLuint vtxShader = LoadShader ( GL_VERTEX_SHADER , vtx_src );
+            GLuint fragShader = LoadShader ( GL_FRAGMENT_SHADER , frag_src );
+
+            ret = ShadersToProgram ( vtxShader , fragShader , prog);
+        }
+
+        if ( ret != false ) {
+            glUseProgram ( prog );
+            GL_ERROR ();
+
+            ret = GL_ERROR_WITH_RETURN ();
+
+            if ( ret != true ) {
+                /* valid_t */ DeleteCurrentProgram ();
+                GL_ERROR ();
+
+                prog = InvalidProg ();
+
+                // Color on error
+                glClearColor ( 1.0f , 0.0f , 0.0f , 0.5f );
+                GL_ERROR ();
+            }
+        }
+
+        ret = ret && GL_ERROR_WITH_RETURN ();
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderTileOES () {
+        valid_t ret = GL_ERROR_WITH_RETURN ();
+
+        constexpr char const vtx_src [] =
+            "#version 100                                  \n"
+            "attribute vec3 position;                      \n"
+            "varying vec2 coordinates;                     \n"
+            "void main () {                                \n"
+                "gl_Position = vec4 ( position . xyz , 1); \n"
+                "coordinates = position . xy;              \n"
+            "}                                             \n"
+        ;
+
+        constexpr char  const frag_src [] =
+            "#version 100                                                                     \n"
+            "#extension GL_OES_EGL_image_external : require                                   \n"
+            "precision mediump float;                                                         \n"
+            "uniform samplerExternalOES sampler;                                              \n"
+            "uniform float opacity;                                                           \n"
+            "varying vec2 coordinates;                                                        \n"
+            "void main () {                                                                   \n"
+                "gl_FragColor = vec4 ( texture2D ( sampler , coordinates ) . rgb , opacity ); \n"
+            "}                                                                                \n"
+        ;
+
+        static_assert ( std::is_same < GLfloat , GLES::offset::coordinate_t > :: value != false );
+        std::array < GLfloat , 4 * VerticeDimensions > const vert = {
+            0.0f , 0.0f , 0.0f /* v0 */,
+            1.0f , 0.0f , 0.0f /* v1 */,
+            0.0f , 1.0f , 0.0f /* v2 */,
+            1.0f , 1.0f , 0.0f /* v3 */
+        };
+
+        if ( ret != false ) {
+            glDisable (GL_BLEND);
+            GL_ERROR ();
+
+            static prog_t prog = InvalidProg ();
+
+            static valid_t supported = Supported ( "GL_OES_EGL_image_external" ) != false;
+
+            ret = (    ret
+                    && RenderColor ( false , false , false )
+                    && supported
+                    && SetupProgram ( vtx_src , frag_src , prog )
+                    && RenderPolygon ( vert ) ) != false
+            ;
+        }
+
+        return ret;
+     }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderTile () {
+        valid_t ret = GL_ERROR_WITH_RETURN ();
+
+        constexpr char const vtx_src [] =
+            "#version 100                                   \n"
+            "attribute vec3 position;                       \n"
+            "varying vec2 coordinates;                      \n"
+            "void main () {                                 \n"
+                "gl_Position = vec4 ( position . xyz , 1 ); \n"
+                "coordinates = position . xy;               \n"
+            "}                                              \n"
+        ;
+
+        constexpr char const frag_src [] =
+            "#version 100                                                            \n"
+            "precision mediump float;                                                \n"
+            "uniform sampler2D sampler;                                              \n"
+            // Required by RenderPolygon
+            "uniform float opacity;                                                  \n"
+            "varying vec2 coordinates;                                               \n"
+            "void main () {                                                          \n"
+                "gl_FragColor = vec4 ( texture2D ( sampler , coordinates ) . rgba ); \n"
+            "}                                                                       \n"
+        ;
+
+        static_assert ( std::is_same < GLfloat , GLES::offset::coordinate_t > :: value != false );
+        std::array < GLfloat , 4 * VerticeDimensions > const vert = {
+            0.0f , 0.0f , _offset . _z /* v0 */,
+            1.0f , 0.0f , _offset . _z /* v1 */,
+            0.0f , 1.0f , _offset . _z /* v2 */,
+            1.0f , 1.0f , _offset . _z /* v3 */
+        };
+
+
+        if ( ret != false ) {
+// TODO: version match
+#ifdef _0
+            using string_t = std::string::value_type;
+            string_t const * ext = reinterpret_cast < string_t const * > ( glGetString ( GL_SHADING_LANGUAGE_VERSION ) );
+
+            valid_t ret = GL_ERROR_WITH_RETURN ();
+#endif
+
+            static prog_t prog = InvalidProg ();
+
+            ret = (    ret
+                    && SetupProgram ( vtx_src , frag_src , prog )
+                    && RenderPolygon ( vert ) ) != false;
+        }
+
+        return ret;
+    }
+
+    template < size_t N >
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderPolygon ( std::array < GLfloat , N > const & vert ) {
+        GLuint prog = 0;
+
+        glGetIntegerv ( GL_CURRENT_PROGRAM , reinterpret_cast < GLint * > ( & prog ) );
+        GL_ERROR ();
+
+        valid_t ret = ( GL_ERROR_WITH_RETURN () && prog > 0 ) != false;
+
+        if ( ret != false ) {
+            GLint loc_vert = 0 , loc_op = 0;
+
+            loc_op = glGetUniformLocation ( prog , "opacity" );
+            GL_ERROR ();
+
+            glUniform1f ( loc_op, _opacity . _alpha );
+            GL_ERROR ();
+
+            loc_vert = glGetAttribLocation ( prog , "position" );
+            GL_ERROR ();
+
+            glVertexAttribPointer ( loc_vert , VerticeDimensions , GL_FLOAT , GL_FALSE , 0 , vert . data () );
+            GL_ERROR ();
+
+            glEnableVertexAttribArray ( loc_vert );
+            GL_ERROR ();
+
+            glDrawArrays ( GL_TRIANGLE_STRIP , 0 , vert . size () / VerticeDimensions );
+            GL_ERROR ();
+
+            glDisableVertexAttribArray ( loc_vert );
+            GL_ERROR ();
+
+            ret = ret && GL_ERROR_WITH_RETURN ();
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::Supported ( std::string const & name ) {
+        valid_t ret = false;
+
+        using string_t = std::string::value_type;
+        using ustring_t = std::make_unsigned < string_t > :: type;
+
+        // Identical underlying types except for signedness
+        static_assert ( std::is_same < ustring_t , GLubyte > :: value != false );
+
+        string_t const * ext = reinterpret_cast < string_t const * > ( glGetString ( GL_EXTENSIONS ) );
+        GL_ERROR ();
+
+        ret = (    GL_ERROR_WITH_RETURN () != false
+                && ext != nullptr
+                && name . size () > 0
+                && ( std::string ( ext ) . find ( name ) != std::string::npos )
+              ) != false;
+
+        return ret;
+    }
+
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SetupViewport ( EGLint x , EGLint y , EGL::width_t width , EGL::height_t height ) {
+        silence ( x );
+        silence ( y );
+
+        valid_t ret = GL_ERROR_WITH_RETURN ();
+
+        GLint dims [ 2 ] = { 0 , 0 };
+
+        glGetIntegerv ( GL_MAX_VIEWPORT_DIMS , & dims [ 0 ] );
+        GL_ERROR ();
+
+#define _QUIRKS
+#ifdef _QUIRKS
+        // glViewport (x, y, width, height)
+        //
+        // Applied width = width / 2
+        // Applied height = height / 2
+        // Applied origin's x = width / 2 + x
+        // Applied origin's y = height / 2 + y
+        //
+        // Compensate to origin bottom left and true size by
+        // glViewport (-width, -height, width * 2, height * 2)
+        //
+        // _offset is in the range -1..1 wrt to origin, so the effective value maps to -width to width, -height to height
+
+
+        constexpr uint8_t mult = 2;
+
+        using common_t = std::common_type < decltype ( width ) , decltype ( height ) , decltype ( mult ) , decltype ( _scale . _horiz ) , decltype ( _scale . _vert ) , decltype ( _offset . _x ) , decltype ( _offset . _y ) , remove_pointer < std::decay < decltype ( dims ) > :: type > :: type > :: type;
+
+        common_t quirk_width = static_cast < common_t > ( width ) * static_cast < common_t > ( mult ) * static_cast < common_t > ( _scale . _horiz );
+        common_t quirk_height = static_cast < common_t > ( height ) * static_cast < common_t > ( mult ) * static_cast < common_t > ( _scale . _vert );
+
+        common_t quirk_x = ( static_cast < common_t > ( - width ) * static_cast < common_t > ( _scale . _horiz ) ) + ( static_cast < common_t > ( _offset . _x ) * static_cast < common_t > ( width ) );
+        common_t quirk_y = ( static_cast < common_t > ( - height ) * static_cast < common_t > ( _scale . _vert ) ) + ( static_cast < common_t > ( _offset . _y ) * static_cast < common_t > ( height ) );
+
+        if (    quirk_x < ( - quirk_width / static_cast < common_t > ( mult ) )
+             || quirk_y < ( - quirk_height / static_cast < common_t > ( mult ) )
+             || quirk_x  > static_cast < common_t > ( 0 )
+             || quirk_y  > static_cast < common_t > ( 0 )
+             || quirk_width > ( static_cast < common_t > ( width ) * static_cast < common_t > ( mult ) )
+             || quirk_height > ( static_cast < common_t > ( height ) * static_cast < common_t > ( mult ) )
+             || static_cast < common_t > ( width ) > static_cast < common_t > ( dims [ 0 ] )
+             || static_cast < common_t > ( height ) > static_cast < common_t > ( dims [ 1 ] )
+        ) {
+            // Clipping, or undefined / unknown behavior
+            std::cout << "Warning: possible clipping or unknown behavior detected. [" << quirk_x << ", " << quirk_y << ", " << quirk_width << ", " << quirk_height << ", " << width << ", " << height << ", " << dims [ 0 ] << ", " << dims [ 1 ] << "]" << std::endl;
+        }
+
+        glViewport ( static_cast < GLint > ( quirk_x ) , static_cast < GLint > ( quirk_y ) , static_cast < GLsizei > ( quirk_width ) , static_cast < GLsizei > ( quirk_height ) );
+#else
+        glViewport ( 0 , 0 , width , height );
+#endif
+        GL_ERROR ();
+
+        ret = ( ret && GL_ERROR_WITH_RETURN () ) != false;
+
+        return ret;
+    }
+
+#undef GL_ERROR_WITH_RETURN
+#undef GL_ERROR
+
+
+
+// These ate just a copy of the previously defined macros
+#define XSTRINGIFY(X) STRINGIFY(X)
+#define STRINGIFY(X) #X
+
+#ifdef EGL_VERSION_1_5
+#define KHRFIX(name) name
+#define _EGL_SYNC_FENCE EGL_SYNC_FENCE
+#define _EGL_NO_SYNC EGL_NO_SYNC
+#define _EGL_FOREVER EGL_FOREVER
+#define _EGL_NO_IMAGE EGL_NO_IMAGE
+#define _EGL_NATIVE_PIXMAP EGL_NATIVE_PIXMAP_KHR
+#define _EGL_CONDITION_SATISFIED EGL_CONDITION_SATISFIED
+#define _EGL_SYNC_STATUS EGL_SYNC_STATUS
+#define _EGL_SIGNALED EGL_SIGNALED
+#define _EGL_SYNC_FLUSH_COMMANDS_BIT EGL_SYNC_FLUSH_COMMANDS_BIT
+#else
+#define _KHRFIX(left, right) left ## right
+#define KHRFIX(name) _KHRFIX(name, KHR)
+#define _EGL_SYNC_FENCE EGL_SYNC_FENCE_KHR
+#define _EGL_NO_SYNC EGL_NO_SYNC_KHR
+#define _EGL_FOREVER EGL_FOREVER_KHR
+#define _EGL_NO_IMAGE EGL_NO_IMAGE_KHR
+#define _EGL_NATIVE_PIXMAP EGL_NATIVE_PIXMAP_KHR
+#define _EGL_CONDITION_SATISFIED EGL_CONDITION_SATISFIED_KHR
+#define _EGL_SYNC_STATUS EGL_SYNC_STATUS_KHR
+#define _EGL_SIGNALED EGL_SIGNALED_KHR
+#define _EGL_SYNC_FLUSH_COMMANDS_BIT EGL_SYNC_FLUSH_COMMANDS_BIT_KHR
+#endif
+
+    // ODR use
+    /* static */ constexpr void * const CompositorImplementation::EGL::EGL_NO_CONFIG;
+
+    CompositorImplementation::EGL::Sync::Sync ( dpy_t & dpy ) : _dpy { dpy } {
+        static bool supported = EGL::Supported ( dpy , "EGL_KHR_fence_sync" ) != false;
+
+        assert ( supported != false );
+        assert ( _dpy != InvalidDpy () );
+
+        _sync = ( supported && _dpy != InvalidDpy () ) != false ? KHRFIX ( eglCreateSync ) ( _dpy , _EGL_SYNC_FENCE , nullptr ) : InvalidSync ();
+    }
+
+    CompositorImplementation::EGL::Sync::~Sync () {
+        if ( _sync == InvalidSync () ) {
+            // Error creating sync object or unable to create one
+            glFinish ();
+        }
+        else {
+            // Mandatory
+            glFlush ();
+
+            // .. but still execute, when needed, an additional flush to be on the safe sidei, and avoid a dreaded  deadlock
+            EGLint val = static_cast < EGLint > ( KHRFIX ( eglClientWaitSync ) ( _dpy , _sync , _EGL_SYNC_FLUSH_COMMANDS_BIT , _EGL_FOREVER ) );
+
+            if ( val == static_cast < EGLint > ( EGL_FALSE ) || val != static_cast < EGLint > ( _EGL_CONDITION_SATISFIED ) ) {
+                EGLAttrib status;
+
+                bool ret = KHRFIX ( eglGetSyncAttrib ) ( _dpy , _sync , _EGL_SYNC_STATUS , & status ) != EGL_FALSE;
+
+                ret = ret && status == _EGL_SIGNALED;
+
+                    // Assert on error
+                if ( ret != true ) {
+                    TRACE ( Trace::Error , ( _T ( "EGL: synchronization primitive" ) ) );
+                }
+            }
+
+            /* EGLBoolean */ val = static_cast < EGLint > ( KHRFIX ( eglDestroySync ) ( _dpy , _sync ) );
+
+            if ( val != EGL_TRUE ) {
+                // Error
+            }
+
+            // Consume the (possible) error(s)
+            /* EGLint */ glGetError ();
+            /* EGLint */ eglGetError ();
+        }
+    }
+
+
+
+    CompositorImplementation::EGL::RenderThread::RenderThread ( EGL & egl , GLES & gles ) : Core::Thread () , _sharing { Instance () } , _egl { egl } , _gles { gles } {
+    }
+
+    CompositorImplementation::EGL::RenderThread::~RenderThread () {
+        /* EGLBoolean */ eglMakeCurrent ( _egl . Display () , EGL_NO_SURFACE , EGL_NO_SURFACE, EGL_NO_CONTEXT );
+
+        // Consume any error
+        /* EGLint */ eglGetError ();
+
+        /* bool */ Wait ( WPEFramework::Core::Thread::STOPPED | WPEFramework::Core::Thread::BLOCKED , WPEFramework::Core::infinite );
+
+        Stop ();
+    }
+
+    uint32_t CompositorImplementation::EGL::RenderThread::Worker () {
+        return Core::infinite ;
+    }
+
+    CompositorImplementation::EGL::RenderThread::lock_t & CompositorImplementation::EGL::RenderThread::Instance () {
+        static lock_t lock;
+
+        return lock;
+    }
+
+
+
+
+    CompositorImplementation::EGL::SceneRenderer::SceneRenderer ( EGL & egl , GLES & gles , CompositorImplementation & compositor ) : RenderThread ( egl , gles ) , _compositor { compositor } {
+    }
+
+    CompositorImplementation::EGL::SceneRenderer::~SceneRenderer () {
+        Stop ();
+    }
+
+    CompositorImplementation::EGL::SceneRenderer::timeout_t CompositorImplementation::EGL::SceneRenderer::Worker ()  {
+        // 'Lightning speed' frame flipping
+        constexpr timeout_t ret = 0;
+// TODO: frame flipping should limitthe rate
+        EGL::valid_t status = ( Render () && _compositor . FrameFlip () ) != false;
+
+        if ( status != false ) {
+            Block ();
+        }
+        else {
+            Stop ();
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::SceneRenderer::Render () {
+        // No resize supported
+        static Exchange::IComposition::ScreenResolution resolution = _compositor . Resolution ();
+
+        std::lock_guard < decltype ( _sharing ) > const sharing ( _sharing );
+
+        EGL::valid_t ret = _egl . Render ( std::bind ( & GLES::RenderScene , & _gles , static_cast < GLES::width_t > ( WidthFromResolution ( resolution ) ) , static_cast < GLES::height_t > ( HeightFromResolution ( resolution ) ) , [] ( GLES::texture_t const & left , GLES::texture_t const & right ) -> GLES::valid_t { GLES::valid_t ret = left . _z > right . _z ; return ret ; } ) , true ) != false;
+
+        return ret;
+    }
+
+    CompositorImplementation::EGL::TextureRenderer::TextureRenderer ( EGL & egl , GLES & gles , CompositorImplementation::ClientContainer & clients ) :
+        RenderThread ( egl , gles)
+        , _clients { clients }
+        , set   {   [ ] ( element_t const & lhs , element_t const & rhs ) -> bool {
+                        bool ret = ! ( ! ( lhs . _name < rhs . _name ) && ! ( lhs . _name > rhs . _name ) );
+                        return ret;
+                    }
+                }
+    {}
+
+    CompositorImplementation::EGL::TextureRenderer::~TextureRenderer () {
+        Stop ();
+    }
+
+    void CompositorImplementation::EGL::TextureRenderer::SetClientName ( std::string const & name ) {
+        std::lock_guard < decltype ( _access ) > const lock ( _access );
+
+        auto result = set . insert ( element_t ( name) );
+
+        if ( result . second != true ) {
+            // Probably the element exist
+        }
+        else {
+             // Add element to the queue
+            queue . push ( element_t ( name ) );
+        }
+    }
+
+    CompositorImplementation::EGL::TextureRenderer::timeout_t CompositorImplementation::EGL::TextureRenderer::Worker () {
+        timeout_t ret = WPEFramework::Core::infinite;
+
+        EGL::valid_t status = Render () != false;
+
+        if ( status != false ) {
+            Block ();
+
+// TODO: do not exceed a single frame time for multiple
+            std::lock_guard < decltype ( _access ) > const lock ( _access );
+            if ( queue . size () > 0) {
+                ret = 0;
+            }
+        }
+        else {
+// TODO: Stop () implies no state change possblie anymore.
+            Stop ();
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::TextureRenderer::Render () {
+        EGL::valid_t ret = false;
+
+        Core::ProxyType < ClientSurface > client;
+
+        {
+            std::lock_guard < decltype ( _access ) > const lock ( _access );
+
+            if ( queue . size () > 0 ) {
+                client = _clients . Find ( queue . front () . _name);
+            }
+        }
+
+
+        if ( client . IsValid () != true) {
+            TRACE ( Trace::Error , ( _T ( "%s does not appear to be a valid client." ) , client -> Name () ) );
+        }
+        else {
+            ClientSurface::surf_t const & surf = client -> Surface ();
+
+            ret = ( surf . RenderComplete () && _egl . Valid () && _gles . Valid () && client -> SyncPrimitiveStart () ) != false;
+
+            if ( ret != false ) {
+                TRACE ( Trace::Information , ( _T ( "Client has an associated EGL image." ) ) );
+
+                using geom_t = decltype ( std::declval < WPEFramework::Exchange::IComposition::IClient > () . Geometry () );
+                geom_t geom = client -> Geometry ();
+
+                //  Geom values should not exceed buf dimensions
+                auto width = gbm_bo_get_width ( surf . _buf );
+                auto height = gbm_bo_get_height ( surf . _buf );
+
+
+                using buf_w_t = decltype ( width );
+                using buf_h_t = decltype ( height );
+                using geom_w_t = decltype ( geom . width );
+                using geom_h_t = decltype ( geom . height );
+
+// TODO:
+                constexpr bool enable = true;
+
+                if (    narrowing < buf_w_t , geom_w_t , enable > :: value != false
+                     && narrowing < buf_h_t , geom_h_t , enable > :: value != false
+                   )
+                {
+                    // Narrowing, but not necessarily a problem
+// TODO minimum value
+                    using common_w_t = std::common_type < buf_w_t , geom_w_t > :: type;
+                    assert ( static_cast < common_w_t > ( geom . width ) <= static_cast < common_w_t > ( width ) );
+
+                    using common_h_t = std::common_type < buf_h_t , geom_h_t > :: type;
+                    assert ( static_cast < common_h_t > ( geom . height ) <= static_cast < common_h_t > ( height ) );
+                }
+                else {
+                  // No narrowing
+//                assert (false);
+                }
+
+
+                // Opacity value should be within expected ranges
+                auto opa = client -> Opacity ();
+
+                using opacity_t = decltype ( opa );
+
+                if ( narrowing < opacity_t , EGLint , enable > :: value != false) {
+                    // Narrowing detected
+
+                    using common_opacity_t = std::common_type < opacity_t , EGLint , decltype ( WPEFramework::Exchange::IComposition::minOpacity ) , decltype ( WPEFramework::Exchange::IComposition::maxOpacity ) > :: type;
+
+                    assert ( static_cast < common_opacity_t > ( opa ) >= static_cast < common_opacity_t > ( std::numeric_limits < EGLint > :: min () ) || static_cast < common_opacity_t > ( opa ) <= static_cast < common_opacity_t > ( std::numeric_limits < EGLint > :: max () ) );
+                }
+
+
+                auto zorder = client -> ZOrder ();
+
+                using zorder_t = decltype ( zorder );
+
+                if ( narrowing < zorder_t , EGLint , enable > :: value != false ) {
+                    // Narrowing detected
+
+                    using common_zorder_t = std::common_type <zorder_t, EGLint> :: type;
+
+                    assert ( static_cast < common_zorder_t > ( zorder ) >= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: min () ) || static_cast < common_zorder_t > ( zorder ) <= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: max () ) );
+                }
+
+
+                std::lock_guard < decltype ( _sharing ) > const sharing ( _sharing );
+
+                ret = ( _egl . RenderWithoutSwap ( std::bind ( & GLES::RenderEGLImage , & _gles , std::cref ( surf . _khr) , geom . x , geom . y , geom . width , geom . height , static_cast < EGLint > ( zorder ) , static_cast < EGLint > ( opa )) ) ) != false;
+
+                ret = client -> SyncPrimitiveEnd () && ret;
+            }
+
+        }
+
+        {
+            std::lock_guard < decltype ( _access ) > const lock ( _access );
+
+            /**/ set . erase ( queue . front () );
+            /* void */ queue . pop ();
+        }
+
+        return ret;
+    }
+
+
+
+    CompositorImplementation::EGL::EGL ( Natives const & natives ) : _natives { natives }, _valid { Initialize () } {
+    }
+
+    CompositorImplementation::EGL::~EGL () {
+        _valid = false;
+        DeInitialize ();
+    }
+
+    EGL::img_t CompositorImplementation::EGL::CreateImage ( EGL const & egl , ClientSurface::surf_t const & surf ) {
+        img_t ret = InvalidImage ();
+
+        static valid_t supported = ( Supported ( egl . Display () , "EGL_KHR_image" ) && Supported ( egl . Display () , "EGL_KHR_image_base" ) && Supported ( egl . Display () , "EGL_EXT_image_dma_buf_import" ) && Supported ( egl . Display () , "EGL_EXT_image_dma_buf_import_modifiers" ) ) != false;
+
+        if ( ( egl . Valid () && supported ) != false ) {
+            static_assert ( ( std::is_same < dpy_t , EGLDisplay > :: value && std::is_same < ctx_t , EGLContext > :: value && std::is_same < img_t , KHRFIX ( EGLImage ) > :: value ) != false );
+
+            constexpr char methodName [] = XSTRINGIFY ( KHRFIX ( eglCreateImage ) );
+
+            static KHRFIX ( EGLImage ) ( * peglCreateImage ) ( EGLDisplay , EGLContext , EGLenum , EGLClientBuffer , EGLAttrib const * ) = reinterpret_cast < KHRFIX ( EGLImage ) ( * ) ( EGLDisplay , EGLContext , EGLenum , EGLClientBuffer , EGLAttrib const * ) > ( eglGetProcAddress ( methodName ) );
+
+            if ( peglCreateImage != nullptr ) {
+
+                auto width = gbm_bo_get_width ( surf . _buf );
+                auto height = gbm_bo_get_height ( surf . _buf );
+                auto stride = gbm_bo_get_stride ( surf . _buf );
+                auto format = gbm_bo_get_format ( surf . _buf );
+                auto modifier = gbm_bo_get_modifier ( surf . _buf );
+
+                using width_t =  decltype ( width );
+                using height_t = decltype ( height );
+                using stride_t = decltype ( stride );
+                using format_t = decltype ( format );
+                using fd_t = decltype ( surf . _fd );
+                using modifier_t = decltype ( modifier );
+
+                // Does it already exist ?
+                assert ( surf . _fd > -1 );
+
+                // Test our initial assumption
+                assert ( format == ModeSet::SupportedBufferType () );
+                assert ( modifier == ModeSet::FormatModifier () );
+
+                // Narrowing detection
+
+                // Enable narrowing detecttion
+// TODO:
+                 constexpr bool enable = false;
+
+                // (Almost) all will fail!
+                if (    narrowing < width_t , EGLAttrib , enable > :: value != false
+                     && narrowing < height_t , EGLAttrib , enable > :: value != false
+                     && narrowing < stride_t , EGLAttrib , enable > :: value != false
+                     && narrowing < format_t , EGLAttrib , enable > :: value != false
+                     && narrowing < fd_t , EGLAttrib , enable > :: value != false
+                     && narrowing < modifier_t , EGLuint64KHR , true > :: value != false
+                   )
+                {
+                    TRACE_WITHOUT_THIS ( Trace::Information , ( _T ( "Possible narrowing detected!" ) ) );
+                }
+
+                // EGL may report differently than DRM
+                ModeSet::GBM::dev_t dev = gbm_bo_get_device ( surf . _buf );
+                ModeSet::GBM::fd_t fd = gbm_device_get_fd ( dev );
+
+                // EGL may report differently than DRM
+                auto list_d_for = ModeSet::AvailableFormats ( static_cast < ModeSet::DRM::fd_t > ( fd ) );
+                auto it_d_for = std::find ( list_d_for . begin () , list_d_for . end () , format );
+
+                bool valid = it_d_for != list_d_for . end ();
+
+                // Query EGL
+                static EGLBoolean ( * peglQueryDmaBufFormatsEXT ) ( EGLDisplay , EGLint , EGLint * , EGLint * ) = reinterpret_cast < EGLBoolean ( * ) ( EGLDisplay , EGLint , EGLint * , EGLint * ) > ( eglGetProcAddress ( "eglQueryDmaBufFormatsEXT" ) );
+                static EGLBoolean ( * peglQueryDmaBufModifiersEXT ) ( EGLDisplay , EGLint , EGLint , EGLuint64KHR * , EGLBoolean * , EGLint * ) = reinterpret_cast < EGLBoolean ( * ) ( EGLDisplay , EGLint , EGLint , EGLuint64KHR * , EGLBoolean * , EGLint * ) > ( eglGetProcAddress ( "eglQueryDmaBufModifiersEXT" ) );
+
+                valid = valid && peglQueryDmaBufFormatsEXT != nullptr && peglQueryDmaBufModifiersEXT != nullptr;
+
+                EGLint count = 0;
+
+                valid = valid && peglQueryDmaBufFormatsEXT ( egl . Display () , 0 , nullptr , & count ) != EGL_FALSE;
+
+                valid = valid && peglQueryDmaBufFormatsEXT ( egl . Display () , 0 , nullptr , & count ) != EGL_FALSE;
+
+                EGLint formats [ count ];
+
+                valid = valid && peglQueryDmaBufFormatsEXT ( egl . Display () , count , & formats [ 0 ] , & count ) != EGL_FALSE;
+
+                // format should be listed as supported
+                if ( valid != false ) {
+                    std::list < EGLint > list_e_for ( & formats [ 0 ] , & formats [ count ] );
+
+                    auto it_e_for = std::find ( list_e_for . begin () , list_e_for . end () , format);
+
+                    valid = it_e_for != list_e_for.end ();
+                }
+
+                valid = valid && peglQueryDmaBufModifiersEXT ( egl . Display () , format , 0 , nullptr , nullptr , & count ) != EGL_FALSE;
+
+                EGLuint64KHR modifiers [ count ];
+                EGLBoolean external [ count ];
+
+                // External is required to exclusive use withGL_TEXTURE_EXTERNAL_OES
+                valid = valid && peglQueryDmaBufModifiersEXT ( egl . Display () , format , count , & modifiers [ 0 ] , & external [ 0 ] , & count ) != FALSE;
+
+                // _modifier should be listed as supported, and _external should be true
+                if ( valid != false ) {
+                    std::list < EGLuint64KHR > list_e_mod ( & modifiers [ 0 ] , & modifiers [ count ] );
+
+                    auto it_e_mod = std::find ( list_e_mod . begin () , list_e_mod . end () , static_cast < EGLuint64KHR > ( modifier ) );
+
+                    valid = it_e_mod != list_e_mod . end ();
+                }
+
+                if ( valid != false ) {
+                    EGLAttrib const _attrs [] = {
+                        EGL_WIDTH , static_cast < EGLAttrib > ( width ) ,
+                        EGL_HEIGHT , static_cast < EGLAttrib > ( height ) ,
+                        EGL_LINUX_DRM_FOURCC_EXT , static_cast < EGLAttrib > ( format ) ,
+                        EGL_DMA_BUF_PLANE0_FD_EXT , static_cast < EGLAttrib > ( surf . _fd ) ,
+// TODO: magic constant
+                        EGL_DMA_BUF_PLANE0_OFFSET_EXT , 0 ,
+                        EGL_DMA_BUF_PLANE0_PITCH_EXT , static_cast < EGLAttrib > ( stride ) ,
+                        EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT , static_cast < EGLAttrib > ( static_cast < EGLuint64KHR > ( modifier ) & 0xFFFFFFFF ) ,
+                        EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT , static_cast < EGLAttrib > ( static_cast < EGLuint64KHR > ( modifier ) >> 32 ) ,
+                        EGL_IMAGE_PRESERVED_KHR, EGL_TRUE ,
+                        EGL_NONE
+                    };
+
+                    static_assert ( std::is_convertible < decltype ( surf . _buf ) , EGLClientBuffer > :: value != false );
+                    ret = peglCreateImage ( egl . Display () , EGL_NO_CONTEXT , EGL_LINUX_DMA_BUF_EXT , nullptr , _attrs );
+                }
+            }
+            else {
+                // Error
+                TRACE_WITHOUT_THIS ( Trace::Error , _T ( "%s is unavailable or invalid parameters." ) , methodName );
+            }
+        }
+        else {
+            TRACE_WITHOUT_THIS ( Trace::Error , _T ( "EGL is not properly initialized." ) );
+        }
+
+        return ret;
+    }
+
+    EGL::img_t CompositorImplementation::EGL::DestroyImage (EGL const & egl , ClientSurface::surf_t const & surf ) {
+        img_t ret = surf . _khr;
+
+        static valid_t supported = ( Supported ( egl . Display () , "EGL_KHR_image" ) && Supported ( egl . Display () , "EGL_KHR_image_base" ) ) != false;
+
+        if ( ( egl . Valid () && supported ) != false ) {
+
+            static_assert ( ( std::is_same < dpy_t , EGLDisplay > :: value && std::is_same < ctx_t , EGLContext > :: value && std::is_same < img_t , KHRFIX ( EGLImage ) > :: value ) != false );
+
+            constexpr char methodName [] = XSTRINGIFY ( KHRFIX ( eglDestroyImage ) );
+
+            static EGLBoolean ( * peglDestroyImage ) ( EGLDisplay , KHRFIX ( EGLImage ) ) = reinterpret_cast < EGLBoolean ( * ) ( EGLDisplay , KHRFIX ( EGLImage ) ) > ( eglGetProcAddress ( KHRFIX ( "eglDestroyImage" ) ) );
+
+            if ( peglDestroyImage != nullptr && surf . RenderComplete () != false ) {
+                ret = peglDestroyImage ( egl . Display () , surf . _khr ) != EGL_FALSE ? EGL::InvalidImage () : ret;
+            }
+            else {
+                // Error
+                TRACE_WITHOUT_THIS ( Trace::Error , _T ( "%s is unavailable or invalid parameters are provided." ) , methodName );
+            }
+        }
+        else {
+            TRACE_WITHOUT_THIS ( Trace::Error , _T ( "EGL is not properly initialized." ) );
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Initialize () {
+        valid_t ret = _natives . Valid ();
+
+        if ( ret != false ) {
+            if ( _dpy != EGL_NO_DISPLAY ) {
+                ret = false;
+
+                if ( eglTerminate ( _dpy ) != EGL_FALSE ) {
+                    ret = true;
+                }
+            }
+        }
+
+        if ( ret != false ) {
+             using native_dpy_no_const = remove_const < Natives::dpy_t > :: type;
+
+            // Again. EGL does use const sparsely
+            _dpy = eglGetDisplay ( const_cast < native_dpy_no_const > ( _natives . Display () ) );
+            ret = _dpy != EGL_NO_DISPLAY;
+        }
+
+        if ( ret != false ) {
+            EGLint major = 0, minor = 0;
+            ret = eglInitialize ( _dpy , & major , & minor ) != EGL_FALSE;
+
+            // Just take the easy approach (for now)
+            static_assert ( ( std::is_integral < decltype ( major ) > :: value ) != false );
+             static_assert ( ( std::is_integral < decltype ( minor ) > :: value ) != false );
+            TRACE ( Trace::Information , ( _T ( "EGL version : %d.%d" ) , static_cast < int > ( major ) , static_cast < int > ( minor ) ) );
+        }
+
+        if ( ret != false ) {
+             static_assert ( GLES::MajorVersion () == static_cast < GLES::version_t > ( 2 ) );
+
+            constexpr EGLint const attr [] = {
+                EGL_SURFACE_TYPE, EGL_WINDOW_BIT ,
+                EGL_RED_SIZE    , RedBufferSize () ,
+                EGL_GREEN_SIZE  , GreenBufferSize () ,
+                EGL_BLUE_SIZE   , BlueBufferSize () ,
+                EGL_ALPHA_SIZE  , AlphaBufferSize () ,
+                EGL_BUFFER_SIZE , RedBufferSize () + GreenBufferSize () + BlueBufferSize () + AlphaBufferSize () ,
+                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT ,
+                EGL_DEPTH_SIZE  , DepthBufferSize () ,
+                EGL_NONE
+            };
+
+            EGLint count = 0;
+
+            if ( eglGetConfigs ( _dpy , nullptr , 0 , & count ) != EGL_TRUE) {
+                count = 1;
+            }
+
+            std::vector < EGLConfig > confs ( count , EGL_NO_CONFIG );
+
+            /* EGLBoolean */ eglChooseConfig ( _dpy , & attr [ 0 ] , confs . data () , confs . size () , & count );
+
+            _conf = confs [ 0 ];
+
+            ret = _conf != EGL_NO_CONFIG;
+        }
+
+
+        if ( ret != false ) {
+            EGLenum api = eglQueryAPI ();
+
+            ret = api == EGL_OPENGL_ES_API;
+
+            if ( ret != true ) {
+                /* EGLBoolean */ eglBindAPI ( EGL_OPENGL_ES_API );
+                ret = eglGetError () == EGL_SUCCESS;
+            }
+        }
+
+
+        if ( ret != false ) {
+            static_assert ( narrowing < GLES::version_t , EGLint , true > :: value != false );
+
+            constexpr EGLint const attr [] = {
+                EGL_CONTEXT_CLIENT_VERSION , static_cast < GLES::version_t > ( GLES::MajorVersion () ) ,
+                EGL_NONE
+            };
+
+            _ctx = eglCreateContext ( _dpy , _conf , EGL_NO_CONTEXT , attr );
+            ret = _ctx != EGL_NO_CONTEXT;
+        }
+
+        if ( ret != false ) {
+             constexpr EGLint const attr [] = {
+                EGL_NONE
+            };
+
+            _surf = eglCreateWindowSurface ( _dpy , _conf , _natives . Surface () , & attr [ 0 ] );
+            ret = _surf != EGL_NO_SURFACE;
+        }
+
+        if ( ret != true ) {
+            DeInitialize ();
+        }
+
+        return ret;
+    }
+
+    void CompositorImplementation::EGL::DeInitialize () {
+        _valid = false;
+        /* EGLBoolean */ eglTerminate (_dpy);
+    }
+
+    // Although compile / build time may succeed, runtime checks are also mandatory
+    bool CompositorImplementation::EGL::Supported ( dpy_t const dpy , std::string const & name ) {
+        bool ret = false;
+
+        static_assert ( ( std::is_same < dpy_t , EGLDisplay > :: value ) != false);
+
+#ifdef EGL_VERSION_1_5
+        // KHR extentions that have become part of the standard
+
+        // Sync capability
+        ret =      name . find ( "EGL_KHR_fence_sync" ) != std::string::npos
+                /* CreateImage / DestroyImage */
+                || name . find ( "EGL_KHR_image" ) != std::string::npos
+                || name . find ( "EGL_KHR_image_base" ) != std::string::npos;
+#endif
+
+        if ( ret != true ) {
+            static_assert ( std::is_same < std::string::value_type , char > :: value != false);
+            char const * ext = eglQueryString ( dpy, EGL_EXTENSIONS );
+
+            ret =      ext != nullptr
+                    && name . size () > 0
+                    && (    std::string ( ext ) . find (name)
+                         != std::string::npos
+                       )
+                    ;
+        }
+
+        return ret;
+    }
+
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( CompositorImplementation::GLES & gles ) {
+        silence ( gles );
+
+        // Ensure the client API is set per thread basis
+        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+
+        if ( ret != false ) {
+            ret = eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE;
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+             // Avoid any memory leak if the local thread is stopped (by another thread)
+            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+        }
+
+        if ( ret != true ) {
+            TRACE ( Trace::Error , ( _T ( "Failed to complete rendering content." ) ) );
+        }
+
+        return ret;
+    }
+
+    template < typename FUNC , typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::false_type , FUNC && func , bool post , ARG &&... arg ) {
+        // Ensure the client API is set per thread basis
+        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+
+        if ( ret != false ) {
+            if ( post != false ) {
+                ret = func ( std::forward < ARG > ( arg )... ) != false;
+
+                { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+                ret = ret && eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE;
+            }
+            else {
+                ret = eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE && func ( std::forward < ARG > ( arg )... ) != false;
+            }
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
+            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+        }
+
+        if ( ret != true ) {
+            TRACE ( Trace::Error , ( _T ( "Failed to complete rendering content." ) ) );
+        }
+
+        return ret;
+    }
+
+    template < typename FUNC , typename ARG0 , typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::true_type  , FUNC && func , bool post , ARG0 && arg0 , ARG &&... arg ) {
+        // Ensure the client API is set per thread basis
+        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+
+        if ( ret != false ) {
+            if ( post != false ) {
+                ret = ( std::forward < ARG0 > ( arg0 ) .* func ) ( std::forward < ARG > ( arg )... ) != false;
+
+                { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ); }
+
+                ret = ret && eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE;
+            }
+            else {
+                ret = eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE && ( std::forward < ARG0 > ( arg0 ) .* func ) ( std::forward < ARG > ( arg )... ) != false;
+            }
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
+            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT) != EGL_FALSE && ret;
+        }
+
+        if ( ret != true ) {
+            TRACE ( Trace::Error , ( _T ( "Failed to complete rendering content." ) ) );
+        }
+
+        return ret;
+    }
+
+    template < typename FUNC, typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( FUNC && func, bool post , ARG &&... arg ) {
+        valid_t ret = Render ( typename std::is_member_pointer < FUNC > :: type () , func , post , std::forward < ARG > ( arg )... );
+        return ret;
+    }
+
+    template < typename FUNC , typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::false_type, FUNC && prefunc , FUNC && postfunc , ARG &&... arg ) {
+        // Ensure the client API is set per thread basis
+        valid_t  ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+
+        if ( ret != false ) {
+            ret = prefunc ( std::forward < ARG > ( arg )... ) != false;
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            ret = ret && eglSwapBuffers ( _dpy, _surf ) != EGL_FALSE && postfunc ( std::forward < ARG > ( arg )... ) != false;
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
+            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+        }
+
+        if ( ret != true ) {
+            TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
+        }
+
+        return ret;
+    }
+
+    template < typename FUNC , typename ARG0 , typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::true_type, FUNC && prefunc , FUNC && postfunc , ARG0 && arg0 , ARG &&... arg ) {
+        // Ensure the client API is set per thread basis
+        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+
+        if ( ret != false ) {
+            ret =  ( std::forward < ARG0 > ( arg0 ) .* prefunc ) ( std::forward < ARG > ( arg )... ) != false;
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            ret = ret && eglSwapBuffers ( _dpy, _surf ) != EGL_FALSE && ( std::forward < ARG0 > ( arg0 ) .* postfunc ) ( std::forward < ARG > ( arg )... ) != false;
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
+            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+        }
+
+        if ( ret != true ) {
+            TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
+        }
+
+        return ret;
+    }
+
+    template < typename FUNC, typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( FUNC && prefunc, FUNC && postfunc, ARG &&... arg ) {
+        valid_t ret = Render ( typename std::is_member_pointer < FUNC > :: type () , prefunc , postfunc, std::forward < ARG > ( arg )... );
+        return ret;
+    }
+
+    template < typename FUNC , typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap ( std::false_type , FUNC && func , ARG &&... arg ) {
+        // Ensure the client API is set per thread basis
+        CompositorImplementation::EGL::valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+
+        if ( ret != false ) {
+            ret = func ( std::forward < ARG > ( arg )... ) != false;
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
+            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+        }
+
+        if ( ret != true ) {
+            TRACE ( Trace::Error , ( _T ( "Failed to complete rendering content." ) ) );
+        }
+
+        return ret;
+    }
+
+    template < typename FUNC , typename ARG0 , typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap ( std::true_type , FUNC && func, ARG0 && arg0 , ARG &&... arg ) {
+        // Ensure the client API is set per thread basis
+        CompositorImplementation::EGL::valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+
+        if ( ret != false ) {
+            ret = ( std::forward < ARG0 > ( arg0 ) .* func ) ( std::forward < ARG > ( arg )... ) != false;
+
+            // Guarantuee all (previous) effects of client API and frame buffer state are realized
+            { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
+
+            // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
+            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+        }
+
+        if ( ret != true ) {
+            TRACE ( Trace::Error , ( _T ( "Failed to complete rendering content." ) ) );
+        }
+
+        return ret;
+    }
+
+    template < typename FUNC , typename... ARG >
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap ( FUNC && func , ARG &&... arg ) {
+        valid_t ret = RenderWithoutSwap ( typename std::is_member_pointer < FUNC > :: type () , func, std::forward < ARG > ( arg )... );
+        return ret;
+    }
+
+#undef STRINGIFY
+#ifdef _KHRFIX
+#undef _KHRFIX
+#endif
+#undef KHRFIX
+#undef _EGL_SYNC_FENCE
+#undef _EGL_NO_SYNC
+#undef _EGL_FOREVER
+#undef _EGL_NO_IMAGE
+#undef _EGL_NATIVE_PIXMAP
+#undef _EGL_CONDITION_SATISFIED
+#undef _EGL_SYNC_STATUS
+#undef _EGL_SIGNALED
+#undef _EGL_SYNC_FLUSH_COMMANDS_BIT
+
+
+
+    CompositorImplementation::Config::Config ()
+        : Core::JSON::Container ()
+        , Connector ( _T ( "/tmp/compositor" ) )
+        , Port ( _T ( "HDMI0" ) ) {
+
+        Add ( _T ( "connector" ) , & Connector );
+          Add ( _T ( "port" ) , & Port );
+    }
+
+    CompositorImplementation::Config::~Config () {
+    }
+
+    void CompositorImplementation::PlatformReady () {
+        PluginHost::ISubSystem* subSystems ( _service -> SubSystems () );
+
+        ASSERT ( subSystems != nullptr );
+
+        if ( subSystems != nullptr ) {
+            subSystems -> Set ( PluginHost::ISubSystem::PLATFORM , nullptr );
+            subSystems -> Set ( PluginHost::ISubSystem::GRAPHICS , nullptr );
+
+            subSystems -> Release();
+        }
+    }
+
+    CompositorImplementation::CompositorImplementation ()
+        : _adminLock ()
+        , _service ( nullptr )
+        , _engine ()
+        , _externalAccess ( nullptr )
+        , _observers ()
+        , _clients ()
+        , _platform ()
+        , _dma { nullptr }
+        , _natives ( _platform )
+        , _egl ( _natives )
+        , _clientLock ()
+        , _textureRenderer ( _egl , _gles , _clients )
+        , _sceneRenderer ( _egl , _gles , * this ) {
+    }
+
+    CompositorImplementation::~CompositorImplementation () {
+        _textureRenderer . Stop ();
+
+        /* bool */ _textureRenderer . Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
+
+        _sceneRenderer . Stop ();
+
+        /* bool */ _sceneRenderer . Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
+
+        if ( _dma != nullptr ) {
+            delete _dma;
+        }
+
+        _dma = nullptr;
+
+        _clients . Clear ();
+
+        if ( _externalAccess != nullptr ) {
+            delete _externalAccess;
+            _engine . Release();
+        }
+    }
+
+    bool CompositorImplementation::FDFor ( std::string const & name , CompositorImplementation::DMATransfer::fds_t & fds ) {
+        std::string prop;
+
+        bool ret = FDFor ( name , fds , prop );
+
+         return ret;
+    }
+
+    bool CompositorImplementation::FDFor ( std::string const & name , CompositorImplementation::DMATransfer::fds_t & fds , std::string & properties ) {
+        std::lock_guard < decltype ( _clientLock ) > const lock ( _clientLock );
+
+        bool ret = false;
+
+        TRACE ( Trace::Information , ( _T ( "%s requested a DMA transfer." ) , name . c_str () ) );
+
+        /* ProxyType <> */ auto client = _clients . Find ( name );
+
+        if ( client . IsValid () != true || name . compare ( client -> Name () ) != 0 ) {
+               TRACE ( Trace::Error , ( _T ( "%s does not appear to be a valid client." ) , name . length () > 0 ? name . c_str () : "'<no name provided>'") );
+        }
+        else {
+            if ( _dma != nullptr ) {
+                using fd_t = DMATransfer::fds_t::value_type;
+                using class_t = decltype ( client );
+                using return_t = decltype ( std::declval < class_t > () . operator-> () -> Native () );
+
+                static_assert ( ( std::is_convertible < return_t , fd_t > :: value ) != false );
+                    // Likely to almost always fail
+// TODO: narrowing
+//                    static_assert ((sizeof ( return_t ) <= sizeof ( fd_t )) != false);
+
+                fds [ 0 ] = static_cast < fd_t > ( client -> Native () );
+                fds [ 1 ] = static_cast < fd_t > ( client -> SyncPrimitive () );
+
+                ret = fds  [ 0 ] > -1 && fds [ 1 ] > -1;
+            }
+        }
+
+        ClientSurface::surf_t surf;
+
+        if ( ret != false ) {
+            surf = client -> Surface ( EGL::CreateImage ( _egl , client -> Surface () ) );
+
+            ret = ( surf . Valid () != false );
+        }
+
+        if ( ret != false ) {
+            properties . clear ();
+
+            auto width = gbm_bo_get_width ( surf . _buf );
+            auto height = gbm_bo_get_height ( surf . _buf );
+            auto stride = gbm_bo_get_stride ( surf . _buf );
+            auto format = gbm_bo_get_format ( surf . _buf );
+            auto modifier = gbm_bo_get_modifier ( surf . _buf );
+
+            constexpr char spacer [] = ":" ;
+
+            properties =   std::string ( spacer )
+                         + std::to_string ( width ) . append ( spacer )
+                         + std::to_string ( height ) . append ( spacer )
+                         + std::to_string ( stride ) . append ( spacer )
+                         + std::to_string ( format ) . append ( spacer )
+                         + std::to_string ( modifier );
+        }
+
+        return ret;
+    }
+
+    bool CompositorImplementation::CompositeFor ( std::string const & name ) {
+        bool ret = true;
+
+        // One client at a time
+        std::lock_guard < decltype ( _clientLock ) > const lock ( _clientLock );
+
+        /* void */ _textureRenderer . SetClientName ( name );
+
+        // Skip the request to create a frame texture if the rate is too high to be processed
+        if ( _textureRenderer . IsRunning () != true ) {
+            /* void */ _textureRenderer . Run ();
+        }
+
+        return ret;
+    }
+
+     bool CompositorImplementation::FrameFlip () {
+        using milli_t = int64_t;
+
+        auto RefreshRateFromResolution = [] ( Exchange::IComposition::ScreenResolution const resolution ) -> milli_t {
+            // Assume 'unknown' rate equals 60 Hz
+            milli_t rate = 60;
+
+            switch ( resolution ) {
+                case Exchange::IComposition::ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
+                                                                            rate = 24; break;
+                case Exchange::IComposition::ScreenResolution_720p50Hz  : // 1280x720 progressive @ 50 Hz
+                case Exchange::IComposition::ScreenResolution_1080i50Hz : // 1920x1080 interlaced @ 50 Hz
+                case Exchange::IComposition::ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
+                case Exchange::IComposition::ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
+                                                                            rate = 50; break;
+                case Exchange::IComposition::ScreenResolution_480i      : // 720x480
+                case Exchange::IComposition::ScreenResolution_480p      : // 720x480 progressive
+                case Exchange::IComposition::ScreenResolution_720p      : // 1280x720 progressive
+                case Exchange::IComposition::ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
+                case Exchange::IComposition::ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
+                case Exchange::IComposition::ScreenResolution_Unknown   :   rate = 60;
+            }
+
+            return rate;
+        };
+
+        constexpr milli_t milli = 1000;
+
+        // No resize supported
+        static decltype ( milli ) rate = RefreshRateFromResolution ( Resolution () );
+
+        static std::chrono::milliseconds delay ( milli / rate );
+
+        static std::chrono::milliseconds duration ( delay );
+
+        static auto start = std::chrono::steady_clock::now ();
+
+
+        ModeSet::BufferInfo bufferInfo = { _natives . Surface () , nullptr , 0 };
+        /* void */ _platform . Swap ( bufferInfo );
+
+
+        auto finish = std::chrono::steady_clock::now ();
+
+        duration = std::chrono::duration_cast < std::chrono::milliseconds > ( finish - start );
+
+        // Do not overstress the system
+// TODO: allow delta
+        if ( duration . count () < delay . count ()) {
+            SleepMs ( delay . count () - duration . count () );
+        }
+
+        start = finish;
+
+
+        bool ret = true;
+
+        return ret;
+    }
+
+    uint32_t CompositorImplementation::WidthFromResolution ( ScreenResolution const resolution ) {
+        // Asumme an invalid width equals 0
+        uint32_t width = 0;
+
+        switch ( resolution ) {
+            case ScreenResolution_480p      : // 720x480
+                                                width = 720; break;
+            case ScreenResolution_720p      : // 1280x720 progressive
+            case ScreenResolution_720p50Hz  : // 1280x720 @ 50 Hz
+                                                width = 1280; break;
+            case ScreenResolution_1080p24Hz : // 1920x1080 progressive @ 24 Hz
+            case ScreenResolution_1080i50Hz : // 1920x1080 interlaced  @ 50 Hz
+            case ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
+            case ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
+                                                width = 1920; break;
+            case ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
+            case ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
+                                                width = 2160; break;
+            case ScreenResolution_480i      : // Unknown according to the standards (?)
+            case ScreenResolution_Unknown   :
+            default                         :   width = 0;
+        }
+
+        return width;
+    }
+
+    uint32_t CompositorImplementation::HeightFromResolution ( ScreenResolution const resolution ) {
+        // Asumme an invalid height equals 0
+        uint32_t height = 0;
+
+         switch ( resolution ) {
+            case ScreenResolution_480i      :
+            case ScreenResolution_480p      : height = 480; break;
+            case ScreenResolution_720p      :
+            case ScreenResolution_720p50Hz  : height =720; break;
+            case ScreenResolution_1080p24Hz :
+            case ScreenResolution_1080i50Hz :
+            case ScreenResolution_1080p50Hz :
+            case ScreenResolution_1080p60Hz : height = 1080; break;
+            case ScreenResolution_2160p50Hz :
+            case ScreenResolution_2160p60Hz : height = 2160; break;
+            case ScreenResolution_Unknown   :
+            default                         : height = 0;
+        }
+
+        return height;
+    }
+
+    Exchange::IComposition::ScreenResolution CompositorImplementation::ResolutionFromHeightWidth ( uint32_t const height , uint32_t const width ) {
+        silence ( height );
+        silence ( width );
+
+        // Given the options, the refresh rate is also important so the only sensible value is 'unknown'
+        return Exchange::IComposition::ScreenResolution_Unknown;
+    }
+
+    uint32_t CompositorImplementation::Configure ( PluginHost::IShell * service ) {
+        uint32_t result = Core::ERROR_NONE;
+
+        _service = service;
+
+        string configuration ( service -> ConfigLine () );
+
+        Config config;
+        config . FromString ( service -> ConfigLine () );
+
+        _engine = Core::ProxyType < RPC::InvokeServer > :: Create ( & Core::IWorkerPool::Instance () );
+
+        _externalAccess = new ExternalAccess ( * this , Core::NodeId ( config . Connector . Value () . c_str () ) , service -> ProxyStubPath () , _engine );
+
+        if ( _externalAccess -> IsListening () == true) {
+            _port = config . Port . Value ();
+            PlatformReady ();
+        } else {
+            delete _externalAccess;
+            _externalAccess = nullptr;
+
+            _engine . Release ();
+
+            TRACE ( Trace::Error , ( _T ( "Could not report PlatformReady as there was a problem starting the Compositor RPC %s" ) , _T ( "server" ) ) );
+
+            result = Core::ERROR_OPENING_FAILED;
+        }
+
+        return result;
+    }
+
+    void CompositorImplementation::Register ( Exchange::IComposition::INotification * notification ) {
+        _adminLock . Lock ();
+
+        ASSERT ( std::find ( _observers . begin () , _observers . end () , notification ) == _observers . end () );
+
+        notification -> AddRef ();
+
+        _observers . push_back ( notification );
+
+        _clients . Visit (
+            [ = ] ( string const & name , Core::ProxyType < ClientSurface > const & element ) { notification -> Attached ( name , & ( * element ) ); }
+        );
+
+        _adminLock . Unlock ();
+    }
+
+    void CompositorImplementation::Unregister ( Exchange::IComposition::INotification * notification ) {
+        _adminLock . Lock ();
+
+        _clients.Visit (
+            [ = ] ( string const & name , Core::ProxyType < ClientSurface > & element ) { silence ( element ); notification -> Detached ( name ); }
+        );
+
+        std::list < Exchange::IComposition::INotification * > :: iterator index ( std::find ( _observers . begin () , _observers . end () , notification ) );
+
+        ASSERT ( index != _observers . end () );
+
+        if ( index != _observers . end() ) {
+            _observers . erase ( index );
+            notification -> Release ();
+        }
+
+        _adminLock . Unlock ();
+    }
+
+    void CompositorImplementation::Attached ( string const & name , IClient * client ) {
+        _adminLock . Lock ();
+
+        for ( auto & observer : _observers) {
+                observer -> Attached ( name , client );
+        }
+
+        _adminLock . Unlock ();
+    }
+
+    void CompositorImplementation::Detached ( string const & name ) {
+        _adminLock . Lock ();
+
+        // Clean up client that leaves prematurely
+
+#ifdef _0
+        /* ProxyType <> */ auto client = _clients . Find ( name );
+
+        if ( client . IsValid () != false ) {
+            EGL::img_t const img = client -> Surface () . _khr;
+
+            /* valid_t */ _gles . SkipEGLImageFromScene ( img );
+
+            /* surf_t */ client -> Surface ( EGL::DestroyImage ( _egl , client -> Surface () ) );
+        }
+#endif
+
+        for ( auto & observer : _observers ) {
+            observer -> Detached ( name );
+        }
+
+        _adminLock . Unlock ();
+    }
+
+    RPC::instance_id CompositorImplementation::Native () const {
+        using class_t = std::remove_reference < decltype ( _natives ) > ::type;
+        using return_t = decltype ( std::declval < class_t > () . Display () );
+
+        // The EGL API uses const very sparsely, and here, a const is also not expected
+        using return_no_const_t = remove_const < return_t > :: type;
+
+        static_assert ( ( std::is_convertible < return_no_const_t , EGLNativeDisplayType > :: value ) != false ) ;
+        static_assert ( ( std::is_convertible < decltype ( EGL_DEFAULT_DISPLAY ) , EGLNativeDisplayType > :: value ) != false );
+        // Likely to almost always fail
+//        static_assert ( (std::is_convertible < return_no_const_t , RPC::instance_id > :: value) != false );
+
+        EGLNativeDisplayType result ( static_cast < EGLNativeDisplayType > ( EGL_DEFAULT_DISPLAY ) );
+
+        if ( _natives . Valid () != false ) {
+            // Just remove the unexpected const if it exist
+            result = static_cast < EGLNativeDisplayType > ( const_cast < return_no_const_t > ( _natives.Display () ) );
+        }
+        else {
+            TRACE ( Trace::Error , ( _T ( "The native display (id) might be invalid / unsupported. Using the EGL default display instead!" ) ) );
+        }
+
+        return reinterpret_cast < RPC::instance_id > ( result );
+    }
+
+    string CompositorImplementation::Port () const {
+        return ( _port );
+    }
+
+    WPEFramework::Exchange::IComposition::IClient * CompositorImplementation::CreateClient ( string const & name , uint32_t const width , uint32_t const height ) {
+        IClient * client = nullptr;
+
+        Core::ProxyType < ClientSurface > object = _clients .Instance < ClientSurface > ( name , _platform , * this , name , width , height );
+
+        ASSERT ( object . IsValid () == true );
+
+        if ( object . IsValid () == true ) {
+            client = & ( * object );
+
+            Attached ( name , client );
+
+            client -> AddRef ();
+        }
+
+        if ( client == nullptr ) {
+            TRACE ( Trace::Error , ( _T ( "Unable to create the ClientSurface with name %s" ) , name . c_str () ) );
+        }
+        else {
+            _dma = new DMATransfer ( * this );
+
+            if ( _dma == nullptr || _dma -> Valid () != true ) {
+                TRACE ( Trace::Error , ( _T ( "DMA transfers are not supported." ) ) );
+
+                delete _dma;
+                _dma = nullptr;
+            }
+            else {
+                /* void */ _dma -> Run ();
+                /* void */ _sceneRenderer . Run ();
+            }
+        }
+
+        return client;
+    }
+
+    Exchange::IComposition::ScreenResolution CompositorImplementation::Resolution () const {
+        Exchange::IComposition::ScreenResolution resolution = WPEFramework::Exchange::IComposition::ScreenResolution_Unknown;
+
+        decltype ( std::declval < ModeSet > () . Width () ) width = _platform .Width ();
+        silence ( width );
+
+        decltype ( std::declval < ModeSet > () . Height () ) height = _platform . Height ();
+
+// TODO: This might not be the whole story to determine progressive versus interlaced
+
+        decltype ( std::declval < ModeSet > () . RefreshRate () ) vrefresh = _platform . RefreshRate ();
+        decltype ( std::declval < ModeSet > () . Interlaced () ) interlaced = _platform . Interlaced ();
+
+        if ( interlaced != true ) {
+            switch ( height ) {
+                case 480    :   {
+                                    resolution = ScreenResolution_480p;
+                                    break;
+                                }
+                case 720    :   {
+                                    resolution = vrefresh != 50 ? ScreenResolution_720p : ScreenResolution_720p50Hz;
+                                    break;
+                                }
+                case 1080   :   {
+                                    switch ( vrefresh ) {
+                                        case 24 : resolution = ScreenResolution_1080p24Hz; break;
+                                        case 50 : resolution = ScreenResolution_1080p50Hz; break;
+                                        case 60 : resolution = ScreenResolution_1080p60Hz; break;
+                                        default : resolution = ScreenResolution_Unknown;
+                                    }
+                                    break;
+                                }
+                case 2160   :   {
+                                    switch ( vrefresh ) {
+                                        case 50 : resolution = ScreenResolution_2160p50Hz; break;
+                                        case 60 : resolution = ScreenResolution_2160p60Hz; break;
+                                        default : resolution = ScreenResolution_Unknown;
+                                    }
+                                    break;
+                                }
+                default     :   {
+                                    resolution = ScreenResolution_Unknown;
+                                }
+            }
+        }
+        else {
+            switch ( height ) {
+                case 480    :   {
+                                    resolution = ScreenResolution_480i;
+                                    break;
+                                }
+                case 1080   :   {
+                                    resolution = vrefresh != 50 ? ScreenResolution_Unknown : ScreenResolution_1080i50Hz;
+                                    break;
+                                }
+                default     :   {
+                                    resolution = ScreenResolution_Unknown;
+                                }
+            }
+         }
+
+        return resolution;
+     }
+
+    uint32_t CompositorImplementation::Resolution ( Exchange::IComposition::ScreenResolution const format ) {
+        TRACE ( Trace::Error , ( _T ( "Could not set screenresolution to %s. Not supported for Rapberry Pi compositor" ) , Core::EnumerateType < Exchange::IComposition::ScreenResolution > ( format ) . Data () ) );
+        return Core::ERROR_UNAVAILABLE;
+    }
+
+    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
 
 } // namespace Plugin
 } // namespace WPEFramework
