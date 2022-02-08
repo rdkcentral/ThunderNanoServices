@@ -360,12 +360,12 @@ namespace Plugin {
                 return (IsValid());
             }
 
-            uint32_t Index() const override
+            uint32_t Index() const
             {
                 return (_index);
             }
 
-            uint32_t Count() const override
+            uint32_t Count() const
             {
                 return (_container == NULL ? 0 : static_cast<uint32_t>(_container->size()));
             }
