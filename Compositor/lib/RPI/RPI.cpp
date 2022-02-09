@@ -3615,7 +3615,7 @@ namespace Plugin {
         static auto start = std::chrono::steady_clock::now ();
 
 
-        ModeSet::BufferInfo bufferInfo = { _natives . Surface () , nullptr , 0 };
+        ModeSet::BufferInfo bufferInfo ( _natives . Surface () , ModeSet::GBM::InvalidBuf () , ModeSet::DRM::InvalidFb () );
         /* void */ _platform . Swap ( bufferInfo );
 
 
