@@ -175,7 +175,8 @@ namespace Plugin {
                     PluginHost::IStateControl* control = _shell->QueryInterface<PluginHost::IStateControl>();
 
                     if (control != nullptr) {
-                        running = (control->State() == PluginHost::IStateControl::RESUMED);
+                        running = ((control->State() == PluginHost::IStateControl::RESUMED) ||
+                                   (control->State() == PluginHost::IStateControl::UNINITIALIZED));
                         control->Release();
                     }
                 }
@@ -208,9 +209,7 @@ namespace Plugin {
                             result = control->Request(PluginHost::IStateControl::RESUME);
                             TRACE(Switching, (_T("Resumed plugin [%s], result [%d]"), _shell->Callsign().c_str(), result));
                         }
-
                         control->Release();
-
                     }
                 }
 

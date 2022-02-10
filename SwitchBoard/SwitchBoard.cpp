@@ -105,6 +105,7 @@ namespace Plugin {
         ASSERT(_service == service);
         ASSERT(_switches.size() > 1);
 
+        Deinitialize();
         _switches.clear();
 
         _service->Unregister(&_sink);
