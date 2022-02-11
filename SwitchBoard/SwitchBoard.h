@@ -168,7 +168,8 @@ namespace Plugin {
             }
             bool IsActive() const
             {
-                bool running(_shell->State() == PluginHost::IShell::ACTIVATED);
+                bool running((_shell->State() == PluginHost::IShell::ACTIVATED) ||
+                             (_shell->State() == PluginHost::IShell::PRECONDITION));
 
                 if (running == true) {
 
@@ -209,11 +210,13 @@ namespace Plugin {
                             result = control->Request(PluginHost::IStateControl::RESUME);
                             TRACE(Switching, (_T("Resumed plugin [%s], result [%d]"), _shell->Callsign().c_str(), result));
                         }
+
                         control->Release();
+
                     }
                 }
 
-                return (result);
+                return ((result == Core::ERROR_PENDING_CONDITIONS) ? Core::ERROR_NONE : result);
             }
 
             uint32_t Deactivate() {
