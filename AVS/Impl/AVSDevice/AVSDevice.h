@@ -47,9 +47,7 @@ namespace Plugin {
 
         AVSDevice(const AVSDevice&) = delete;
         AVSDevice& operator=(const AVSDevice&) = delete;
-        ~AVSDevice() {
-            ResetSDKLogger();
-        }
+        virtual ~AVSDevice() = default;
 
     private:
         class Config : public Core::JSON::Container {
@@ -97,7 +95,6 @@ namespace Plugin {
         bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder);
         bool InitSDKLogs(const string& logLevel);
         bool JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile);
-        void ResetSDKLogger();
 
     private:
         PluginHost::IShell* _service;

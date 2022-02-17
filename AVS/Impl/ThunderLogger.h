@@ -30,7 +30,7 @@ namespace Plugin {
     /**
      * Handles AVS SDK logs through Thunder Tracing
     */
-    class ThunderLogger : public alexaClientSDK::avsCommon::utils::logger::Logger {
+    class ThunderLogger : public alexaClientSDK::avsCommon::utils::logger::Logger, private std::ios_base::Init {
     public:
         ThunderLogger(const ThunderLogger&) = delete;
         ThunderLogger& operator=(const ThunderLogger&) = delete;

@@ -561,11 +561,6 @@ namespace Plugin {
         return status;
     }
 
-    void AVSDevice::ResetSDKLogger()
-    {
-        alexaClientSDK::avsCommon::utils::logger::LoggerSinkManager::instance().initialize(alexaClientSDK::avsCommon::utils::logger::ConsoleLogger::instance());
-    }
-
     bool AVSDevice::JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile)
     {
         if (configFile.empty()) {
