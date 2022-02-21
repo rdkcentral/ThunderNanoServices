@@ -188,6 +188,9 @@ namespace WPEFramework
          _dtv = service->Root<Core::IUnknown>(_connectionId, 2000, _T("DTV"));
          if (_dtv != nullptr)
          {
+
+            RegisterAll();
+
             E_DVB_INIT_SUBS_TTXT subs_ttxt = DVB_INIT_NO_TELETEXT_OR_SUBTITLES;
 
             if (config.SubtitleProcessing && config.TeletextProcessing)
@@ -216,6 +219,7 @@ namespace WPEFramework
 
                ACFG_SetCountryConfig(COUNTRY_CODE_USERDEFINED, &country_config);
                ACFG_SetCountry(COUNTRY_CODE_USERDEFINED);
+
             }
             else
             {
@@ -243,6 +247,9 @@ namespace WPEFramework
          _service->Unregister(&_notification);
 
          if(_dtv != nullptr) {
+
+               UnregisterAll();
+
                // Stop processing:
                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
 

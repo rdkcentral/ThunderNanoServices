@@ -32,12 +32,10 @@ namespace Plugin {
     class DisplayInfo : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
         class Notification : public Exchange::IConnectionProperties::INotification, public RPC::IRemoteConnection::INotification {
-        private:
-            Notification() = delete;
+        public:
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
 
-        public:
             explicit Notification(DisplayInfo* parent)
                 : _parent(*parent)
             {
@@ -96,14 +94,14 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
 
