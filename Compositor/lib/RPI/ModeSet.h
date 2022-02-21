@@ -31,7 +31,7 @@ struct gbm_bo;
 namespace WPEFramework {
 
     class ModeSet {
-    private :
+    public :
 
         template < typename  T >
         struct remove_pointer {
@@ -50,13 +50,43 @@ namespace WPEFramework {
             // Not complete, assume zero is minimum for unsigned
             // Common type of signed and unsigned typically is unsigned
             using common_t = typename std::common_type < FROM , TO > :: type;
-            static constexpr bool value = ENABLE
-                                          && (
-                                                  ( std::is_signed < FROM > :: value && std::is_unsigned < TO > :: value )
-                                               || static_cast < common_t > ( std::numeric_limits < FROM >::max () ) >= static_cast < common_t > ( std::numeric_limits < TO > :: max () )
+            static constexpr bool value =    ENABLE
+                                          && (    (    std::is_signed < FROM > :: value
+                                                    && std::is_unsigned < TO > :: value
+                                                  )
+                                               || (
+                                                       std::is_same < FROM , TO > :: value != true
+                                                    && static_cast < common_t > ( std::numeric_limits < FROM >::max () ) > static_cast < common_t > ( std::numeric_limits < TO > :: max () )
+                                                  )
                                              )
                                           ;
         };
+
+        template < typename TYPE , intmax_t VAL >
+        struct in_signed_range {
+            static_assert ( (    std::is_integral < TYPE > :: value
+                              && std::is_signed < TYPE > :: value
+                            )
+                            != false
+                          );
+            using common_t = typename std::common_type < TYPE , decltype ( VAL ) > :: type;
+            static constexpr bool value =    static_cast < common_t > ( VAL ) >= static_cast < common_t > ( std::numeric_limits < TYPE > :: min () )
+                                      && static_cast < common_t > ( VAL ) <= static_cast < common_t > ( std::numeric_limits < TYPE > :: max () );
+        };
+
+        template < typename TYPE , uintmax_t VAL >
+        struct in_unsigned_range {
+            static_assert ( (    std::is_integral < TYPE > :: value
+                              && std::is_unsigned < TYPE > :: value
+                            )
+                            != false
+                          );
+            using common_t = typename std::common_type < TYPE , decltype ( VAL ) > :: type;
+            static constexpr bool value =    static_cast < common_t > ( VAL ) >= static_cast < common_t > ( std::numeric_limits < TYPE > :: min () )
+                                          && static_cast < common_t > ( VAL ) <= static_cast < common_t > ( std::numeric_limits < TYPE > :: max () );
+        };
+
+
 
     public :
 
@@ -65,12 +95,16 @@ namespace WPEFramework {
         class DRM {
         public :
 
+            DRM () = delete;
+            DRM ( DRM const & ) = delete;
+            DRM & operator= ( DRM const & ) = delete;
+
             using fd_t = int;
 
-            using fb_id_t = remove_pointer < decltype ( drmModeFB :: fb_id ) > :: type;
-            using crtc_id_t = remove_pointer < decltype ( drmModeCrtc :: crtc_id ) > :: type;
-            using enc_id_t = remove_pointer < decltype ( drmModeEncoder :: encoder_id ) > :: type;
-            using conn_id_t = remove_pointer < decltype ( drmModeConnector :: connector_id ) > :: type;
+            using fb_id_t = remove_pointer < decltype ( drmModeFB::fb_id ) > :: type;
+            using crtc_id_t = remove_pointer < decltype ( drmModeCrtc::crtc_id ) > :: type;
+            using enc_id_t = remove_pointer < decltype ( drmModeEncoder::encoder_id ) > :: type;
+            using conn_id_t = remove_pointer < decltype ( drmModeConnector::connector_id ) > :: type;
 
             using width_t = remove_pointer < decltype ( drmModeFB2 :: width) > :: type;
             using height_t = remove_pointer < decltype ( drmModeFB2 :: height) > :: type;
@@ -84,9 +118,11 @@ namespace WPEFramework {
             using x_t = remove_pointer < decltype ( drmModeCrtc::x ) >::type;
             using y_t = remove_pointer < decltype ( drmModeCrtc::y ) >::type;
 
-            using duration_t = remove_pointer < decltype (timespec::tv_sec) >::type;
+            using duration_t = remove_pointer < decltype ( timespec::tv_sec ) >::type;
 
+            static_assert ( narrowing < decltype ( -1 ) , fd_t , true > :: value != true );
             static constexpr fd_t InvalidFd () { return static_cast < fd_t > ( -1 ) ; }
+
             static constexpr fb_id_t InvalidFb () { return static_cast < fb_id_t > ( 0 ) ; }
             static constexpr crtc_id_t InvalidCrtc () { return static_cast < crtc_id_t > ( 0 ) ; }
             static constexpr enc_id_t InvalidEncoder () { return static_cast < enc_id_t > ( 0 ) ; }
@@ -94,7 +130,16 @@ namespace WPEFramework {
 
             static constexpr width_t InvalidWidth () { return static_cast < width_t > ( 0 ); }
             static constexpr height_t InvalidHeight () { return static_cast < height_t > ( 0 ); }
+
+            // Probably signed to unsigned
+            static_assert (    narrowing <  decltype ( DRM_FORMAT_INVALID ) , frmt_t , true > :: value != true
+                            || (    DRM_FORMAT_INVALID >= static_cast < decltype ( DRM_FORMAT_INVALID ) > ( 0 )
+                                 && in_unsigned_range < frmt_t , DRM_FORMAT_INVALID > :: value != false
+                               )
+                          );
             static constexpr frmt_t InvalidFrmt () { return static_cast < frmt_t > ( DRM_FORMAT_INVALID ) ; }
+
+            static_assert ( narrowing < decltype ( DRM_FORMAT_MOD_INVALID ) , modifier_t , true > :: value != true );
             static constexpr modifier_t InvalidModifier () { return static_cast < modifier_t > ( DRM_FORMAT_MOD_INVALID ) ; }
         };
 
@@ -103,18 +148,22 @@ namespace WPEFramework {
         class GBM {
         public :
 
+            GBM () = delete;
+            GBM ( GBM const & ) = delete;
+            GBM & operator= ( GBM const & ) = delete;
+
             // See xf86drmMode.h for magic constant
-            using plane_t = decltype (GBM_MAX_PLANES );
+            using plane_t = decltype ( GBM_MAX_PLANES );
             static_assert ( static_cast < plane_t > ( GBM_MAX_PLANES ) == static_cast < plane_t > ( 4 ) );
 
-            using width_t = remove_pointer < decltype ( gbm_import_fd_modifier_data :: width ) > :: type;
+            using width_t = remove_pointer < decltype ( gbm_import_fd_modifier_data::width ) > :: type;
             using height_t = remove_pointer < decltype ( gbm_import_fd_modifier_data::height ) > :: type;
             using frmt_t = remove_pointer < decltype ( gbm_import_fd_modifier_data::format ) > :: type;
 
-            using fd_t = remove_pointer < std::decay < decltype ( gbm_import_fd_modifier_data :: fds ) > :: type > :: type;
-            using stride_t = remove_pointer < std :: decay < decltype ( gbm_import_fd_modifier_data :: strides) > :: type > :: type;
-            using offset_t = remove_pointer < std :: decay < decltype ( gbm_import_fd_modifier_data :: offsets) > :: type > :: type;
-            using modifier_t = remove_pointer < decltype ( gbm_import_fd_modifier_data :: modifier ) > :: type;
+            using fd_t = remove_pointer < std::decay < decltype ( gbm_import_fd_modifier_data::fds ) > :: type > :: type;
+            using stride_t = remove_pointer < std :: decay < decltype ( gbm_import_fd_modifier_data::strides) > :: type > :: type;
+            using offset_t = remove_pointer < std :: decay < decltype ( gbm_import_fd_modifier_data::offsets) > :: type > :: type;
+            using modifier_t = remove_pointer < decltype ( gbm_import_fd_modifier_data::modifier ) > :: type;
 
             using dev_t = struct gbm_device *;
             using surf_t = struct  gbm_surface *;
@@ -141,12 +190,11 @@ namespace WPEFramework {
             BufferInfo & operator= ( BufferInfo const & ) = delete;
 
             BufferInfo ();
-            explicit BufferInfo ( GBM::surf_t , GBM::buf_t , DRM::fb_id_t );
+            explicit BufferInfo ( GBM::surf_t const , GBM::buf_t const , DRM::fb_id_t const );
 // TODO: clean up members
             ~BufferInfo () = default;
 
             BufferInfo ( BufferInfo && );
-
             BufferInfo & operator= ( BufferInfo && );
 
             GBM::surf_t _surface;
@@ -169,10 +217,10 @@ namespace WPEFramework {
 
         static std::list < DRM::frmt_t > AvailableFormats ( DRM::fd_t );
 
-        static_assert ( narrowing < decltype ( DRM_FORMAT_ARGB8888 ) , GBM::frmt_t , true > :: value != false );
+        static_assert ( narrowing < decltype ( DRM_FORMAT_ARGB8888 ) , GBM::frmt_t , true > :: value != true );
         static constexpr GBM::frmt_t SupportedBufferType () { return static_cast < GBM::frmt_t > ( DRM_FORMAT_ARGB8888 ) ; }
 
-        static_assert ( narrowing < decltype ( DRM_FORMAT_MOD_LINEAR ) , GBM::modifier_t , true > :: value != false );
+        static_assert ( narrowing < decltype ( DRM_FORMAT_MOD_LINEAR ) , GBM::modifier_t , true > :: value != true );
         static constexpr GBM::modifier_t FormatModifier () { return static_cast < GBM::modifier_t > ( DRM_FORMAT_MOD_LINEAR ) ; }
 
         DRM::fd_t Descriptor () const;
@@ -188,10 +236,10 @@ namespace WPEFramework {
         void DestroyRenderTarget ( struct BufferInfo & );
 
         // For objects not included in Swap ()
-        void DestroyRenderTarget ( GBM::surf_t ) const;
+        void DestroyRenderTarget ( GBM::surf_t & ) const;
 
         GBM::buf_t CreateBufferObject ( uint32_t const , uint32_t const );
-        void DestroyBufferObject ( GBM::buf_t );
+        void DestroyBufferObject ( GBM::buf_t & );
 
         void Swap ( struct BufferInfo & );
 

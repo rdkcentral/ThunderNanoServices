@@ -29,15 +29,13 @@ extern "C" {
 // TODO: match return type to class types
 
 namespace WPEFramework {
-    static void GetNodes ( uint32_t type , std::vector < std::string > & list ) {
+    static void GetNodes ( uint32_t const type , std::vector < std::string > & list ) {
         // Arbitrary value
-        /* static */ constexpr uint8_t DrmMaxDevices = 16;
+        /* static */ constexpr uint8_t const DrmMaxDevices = 16;
 
         drmDevicePtr devices [ DrmMaxDevices ];
 
-        static_assert( sizeof ( DrmMaxDevices ) <= sizeof ( int ) );
-        static_assert( std::numeric_limits < decltype ( DrmMaxDevices ) > :: max () <= std::numeric_limits < int > :: max () );
-
+        static_assert( ModeSet::narrowing < decltype ( DrmMaxDevices ) , int, true > :: value != true );
         int device_count = drmGetDevices2 ( 0 /* flags */ , & devices [ 0 ] , static_cast < int > ( DrmMaxDevices ) );
 
         if ( device_count > 0 ) {
@@ -47,6 +45,10 @@ namespace WPEFramework {
                     case DRM_NODE_CONTROL   :   // ControlD<num>, currently unused
                     case DRM_NODE_RENDER    :   // Solely for render clients, unprivileged
                                                 {
+                                                    static_assert ( ModeSet::narrowing < decltype ( DRM_NODE_PRIMARY ) , decltype ( type ) , true > :: value != false );
+                                                    static_assert ( ModeSet::narrowing < decltype ( DRM_NODE_CONTROL ) , decltype ( type ) , true > :: value != false );
+                                                    static_assert ( ModeSet::narrowing < decltype ( DRM_NODE_RENDER ) , decltype ( type ) , true > :: value != false );
+
                                                     if ( ( 1 << type ) == ( devices [ i ] -> available_nodes & ( 1 << type ) ) ) {
                                                         list . push_back ( std::string ( devices [ i ] -> nodes [ type ] ) );
                                                     }
@@ -54,6 +56,7 @@ namespace WPEFramework {
                                                 }
                     case DRM_NODE_MAX       :
                     default                 :   // Unknown (new) node type
+                                                    static_assert ( ModeSet::narrowing < decltype ( DRM_NODE_MAX ) , decltype ( type ) , true > :: value != false );
                                             ;
                 }
             }
@@ -62,7 +65,7 @@ namespace WPEFramework {
         }
     }
 
-    static uint32_t GetConnectors ( WPEFramework::ModeSet::DRM::fd_t fd , uint32_t type ) {
+    static uint32_t GetConnectors ( WPEFramework::ModeSet::DRM::fd_t const fd , uint32_t const type ) {
         uint32_t bitmask = 0;
 
         drmModeResPtr resources = drmModeGetResources ( fd );
@@ -89,7 +92,7 @@ namespace WPEFramework {
         return bitmask;
     }
 
-    static uint32_t GetCRTCS ( WPEFramework::ModeSet::DRM::fd_t fd , bool valid ) {
+    static uint32_t GetCRTCS ( WPEFramework::ModeSet::DRM::fd_t const fd , bool const valid ) {
         uint32_t bitmask = 0;
 
         drmModeResPtr resources = drmModeGetResources ( fd );
@@ -114,12 +117,13 @@ namespace WPEFramework {
         return bitmask;
     }
 
-    static bool FindProperDisplay ( WPEFramework::ModeSet::DRM::fd_t fd , WPEFramework::ModeSet::DRM::crtc_id_t & crtc , WPEFramework::ModeSet::DRM::enc_id_t & encoder , WPEFramework::ModeSet::DRM::conn_id_t & connector , WPEFramework::ModeSet::DRM::fb_id_t & fb ) {
+    static bool FindProperDisplay ( WPEFramework::ModeSet::DRM::fd_t const fd , WPEFramework::ModeSet::DRM::crtc_id_t & crtc , WPEFramework::ModeSet::DRM::enc_id_t & encoder , WPEFramework::ModeSet::DRM::conn_id_t & connector , WPEFramework::ModeSet::DRM::fb_id_t & fb ) {
         bool found = false;
 
         assert ( fd != WPEFramework::ModeSet::DRM::InvalidFd () );
 
         // Only connected connectors are considered
+        static_assert ( ModeSet::narrowing < decltype ( DRM_MODE_CONNECTOR_HDMIA ) , uint32_t , true > :: value != false );
         uint32_t connectorMask = GetConnectors ( fd , DRM_MODE_CONNECTOR_HDMIA );
 
         // All CRTCs are considered for the given mode (valid / not valid)
@@ -137,14 +141,20 @@ namespace WPEFramework {
                     if ( nullptr != connectors ) {
                         int32_t encoderIndex = 0;
 
-                        while ( ( found == false ) && ( encoderIndex < connectors -> count_encoders ) ) {
+                        while ( (    found == false )
+                                  && ( encoderIndex < connectors -> count_encoders )
+                              ) {
+
                             drmModeEncoderPtr encoders = drmModeGetEncoder ( fd , connectors -> encoders [ encoderIndex ] );
 
                             if ( nullptr != encoders ) {
                                 uint32_t matches = ( encoders -> possible_crtcs & crtcs );
                                 WPEFramework::ModeSet::DRM::crtc_id_t * pcrtc = resources -> crtcs;
 
-                                while ( ( found == false ) && ( matches > 0 ) ) {
+                                while ( ( found == false )
+                                        && ( matches > 0 )
+                                      ) {
+
                                     if ( ( matches & 1 ) != 0 ) {
                                         drmModeCrtcPtr modePtr = drmModeGetCrtc ( fd , * pcrtc );
 
@@ -178,7 +188,7 @@ namespace WPEFramework {
         return found;
     }
 
-    static bool CreateBuffer ( WPEFramework::ModeSet::DRM::fd_t fd , const WPEFramework::ModeSet::DRM::conn_id_t connector , WPEFramework::ModeSet::GBM::dev_t & device , uint32_t & modeIndex , WPEFramework::ModeSet::DRM::fb_id_t & id , WPEFramework::ModeSet::GBM::buf_t & buffer , uint32_t & vrefresh ) {
+    static bool CreateBuffer ( WPEFramework::ModeSet::DRM::fd_t const fd , WPEFramework::ModeSet::DRM::conn_id_t const connector , WPEFramework::ModeSet::GBM::dev_t & device , uint32_t & modeIndex , WPEFramework::ModeSet::DRM::fb_id_t & id , WPEFramework::ModeSet::GBM::buf_t & buffer , uint32_t & vrefresh ) {
         assert ( fd != WPEFramework::ModeSet::DRM::InvalidFd () );
 
         bool created = false;
@@ -195,8 +205,20 @@ namespace WPEFramework {
                 uint32_t index = 0;
                 uint64_t area = 0;
 
-                while ( ( found == false ) && ( index < static_cast < uint32_t > ( pconnector -> count_modes ) ) ) {
+                while ( (    found == false )
+                          && ( index < static_cast < uint32_t > ( pconnector -> count_modes )
+                        )
+                      ) {
+
                     uint32_t type = pconnector -> modes [ index ] . type;
+
+
+                    // Possibly signed to unsigned
+                    static_assert (    ModeSet::narrowing < decltype ( DRM_MODE_TYPE_PREFERRED ) , decltype ( type ), true > :: value != true
+                                    || (    DRM_MODE_TYPE_PREFERRED >= static_cast < decltype ( DRM_MODE_TYPE_PREFERRED ) > ( 0 )
+                                         && ModeSet::in_unsigned_range < decltype ( type ) , DRM_MODE_TYPE_PREFERRED > :: value != false
+                                       )
+                                  );
 
                     // At least one preferred mode should be set by the driver, but dodgy EDID parsing might not provide it
                     if ( DRM_MODE_TYPE_PREFERRED == ( DRM_MODE_TYPE_PREFERRED & type ) ) {
@@ -206,7 +228,13 @@ namespace WPEFramework {
                         // Found a suitable mode; break the loop
                         found = true;
                     }
-                    else
+                    else {
+                        static_assert (    ModeSet::narrowing < decltype ( DRM_MODE_TYPE_DRIVER ) , decltype ( type ), true > :: value != true 
+                                        || (    DRM_MODE_TYPE_DRIVER >= static_cast < decltype ( DRM_MODE_TYPE_DRIVER ) > ( 0 )
+                                             && ModeSet::in_unsigned_range < decltype ( type ) , DRM_MODE_TYPE_DRIVER > :: value != false
+                                           )
+                                      );
+
                         if ( DRM_MODE_TYPE_DRIVER == ( DRM_MODE_TYPE_DRIVER & type ) ) {
                             // Calculate screen area
                             uint64_t size = pconnector -> modes [ index ] . hdisplay * pconnector -> modes [ index ] . vdisplay;
@@ -228,6 +256,7 @@ namespace WPEFramework {
                                 }
                             }
                         }
+                    }
 
                     index ++;
                 }
@@ -269,13 +298,22 @@ namespace WPEFramework {
 
 
 
-    ModeSet::BufferInfo::BufferInfo () : _surface { ModeSet::GBM::InvalidSurf () } , _bo { ModeSet::GBM::InvalidBuf () } , _id { ModeSet::DRM::InvalidFb () } {
+    ModeSet::BufferInfo::BufferInfo ()
+        : _surface { ModeSet::GBM::InvalidSurf () }
+        , _bo { ModeSet::GBM::InvalidBuf () }
+        , _id { ModeSet::DRM::InvalidFb () } {
     }
 
-    ModeSet::BufferInfo::BufferInfo ( ModeSet::GBM::surf_t surface , ModeSet::GBM::buf_t buffer , ModeSet::DRM::fb_id_t id ) : _surface { surface } , _bo { buffer } , _id { id } {
+    ModeSet::BufferInfo::BufferInfo ( ModeSet::GBM::surf_t const surface , ModeSet::GBM::buf_t const buffer , ModeSet::DRM::fb_id_t const id )
+        : _surface { surface }
+        , _bo { buffer } , _id { id } {
     }
 
-    ModeSet::BufferInfo::BufferInfo ( ModeSet::BufferInfo && other ) : _surface { other . _surface } , _bo { other . _bo } , _id { other . _id } {
+    ModeSet::BufferInfo::BufferInfo ( ModeSet::BufferInfo && other )
+        : _surface { other . _surface }
+        , _bo { other . _bo }
+        , _id { other . _id } {
+
         if ( this != & other ) {
             other . _surface = GBM::InvalidSurf ();
             other. _bo = GBM::InvalidBuf ();
@@ -303,8 +341,8 @@ namespace WPEFramework {
         : _crtc { DRM::InvalidCrtc () }
         , _encoder { DRM::InvalidEncoder () }
         , _connector { DRM::InvalidConnector () }
-        , _mode ( 0 )
-        , _vrefresh ( 0 )
+        , _mode { 0 }
+        , _vrefresh { 0 }
         , _device { GBM::InvalidDev () }
         , _buffer { GBM::InvalidBuf () }
         , _fd { DRM::InvalidFd () } {
@@ -318,6 +356,14 @@ namespace WPEFramework {
 
     uint32_t ModeSet::Open ( string const & ) {
         uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        static_assert ( std::is_enum < decltype ( Core::ERROR_UNAVAILABLE ) > :: value != false );
+        // Possible signed to unsigned
+        static_assert (    narrowing < std::underlying_type < decltype ( Core::ERROR_UNAVAILABLE ) > :: type , decltype ( result ) , true > :: value != true 
+                        || (    Core::ERROR_UNAVAILABLE >= static_cast < std::underlying_type < decltype ( Core::ERROR_UNAVAILABLE ) > :: type > ( 0 )
+                             && ModeSet::in_unsigned_range < decltype ( result ) , Core::ERROR_UNAVAILABLE > :: value != false
+                           )
+                      );
 
         if ( drmAvailable () > 0 ) {
 
@@ -365,13 +411,32 @@ namespace WPEFramework {
                 index ++;
             }
 
-            result = ( _fd != DRM::InvalidFd () ? Core::ERROR_NONE : Core::ERROR_GENERAL );
+            static_assert ( std::is_enum < decltype ( Core::ERROR_NONE ) > :: value != false );
+            // Possible signed to unsigned
+            static_assert (    narrowing < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type , decltype ( result ) , true > :: value != true 
+                            || (    Core::ERROR_NONE >= static_cast < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type > ( 0 )
+                                 && ModeSet::in_unsigned_range < decltype ( result ) , Core::ERROR_NONE > :: value != false
+                           )
+                          );
+
+            static_assert ( std::is_enum < decltype ( Core::ERROR_GENERAL ) > :: value != false );
+            // Possible signed to unsigned
+            static_assert (    narrowing < std::underlying_type < decltype ( Core::ERROR_GENERAL ) > :: type , decltype ( result ) , true > :: value != true 
+                            || (    Core::ERROR_GENERAL >= static_cast < std::underlying_type < decltype ( Core::ERROR_GENERAL ) > :: type > ( 0 )
+                                 && ModeSet::in_unsigned_range < decltype ( result ) , Core::ERROR_GENERAL > :: value != false
+                           )
+                          );
+
+            result = ( _fd != DRM::InvalidFd () ? static_cast < decltype ( result ) > ( Core::ERROR_NONE ) : static_cast < decltype ( result )> ( Core::ERROR_GENERAL ) );
         }
 
         return result;
     }
 
     uint32_t ModeSet::Close () {
+        static_assert ( std::is_enum < decltype ( Core::ERROR_NONE ) > :: value != false );
+        static_assert ( WPEFramework::ModeSet::narrowing < uint32_t , std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type , true > :: value != true );
+
         // Destroy the initial buffer if one exists
         if ( _buffer != GBM::InvalidBuf () ) {
             gbm_bo_destroy ( _buffer );
@@ -392,7 +457,15 @@ namespace WPEFramework {
         _encoder = DRM::InvalidEncoder ();
         _connector = DRM::InvalidConnector ();
 
-        return Core::ERROR_NONE;
+        static_assert ( std::is_enum < decltype ( Core::ERROR_NONE ) > :: value != false );
+        // Possible signed to unsigned
+        static_assert (    narrowing < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type , uint32_t , true > :: value != true 
+                        || (    Core::ERROR_NONE >= static_cast < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type > ( 0 )
+                                 && ModeSet::in_unsigned_range < uint32_t , Core::ERROR_NONE > :: value != false
+                           )
+                      );
+
+        return static_cast < uint32_t > ( Core::ERROR_NONE );
     }
 
     ModeSet::GBM::dev_t /* const */ ModeSet::UnderlyingHandle () const {
@@ -485,7 +558,7 @@ namespace WPEFramework {
     }
 
     // These created resources are automatically destroyed if gbm_device is destroyed
-    ModeSet::GBM::surf_t ModeSet::CreateRenderTarget ( const uint32_t width , const uint32_t height ) const {
+    ModeSet::GBM::surf_t ModeSet::CreateRenderTarget ( uint32_t const width , uint32_t const height ) const {
         GBM::surf_t result = GBM::InvalidSurf ();
 
         if ( GBM::InvalidDev () != _device ) {
@@ -511,7 +584,7 @@ namespace WPEFramework {
         }
     }
 
-    void ModeSet::DestroyRenderTarget ( ModeSet::GBM::surf_t surface ) const {
+    void ModeSet::DestroyRenderTarget ( ModeSet::GBM::surf_t & surface ) const {
         if ( surface != GBM::InvalidSurf () ) {
             /* void */ gbm_surface_destroy ( surface );
         }
@@ -523,15 +596,18 @@ namespace WPEFramework {
         return _device != GBM::InvalidDev () ? gbm_bo_create ( _device , width , height , SupportedBufferType () , GBM_BO_USE_SCANOUT /* presented on a screen */ | GBM_BO_USE_RENDERING /* used for rendering */ ) : GBM::InvalidBuf ();
     }
 
-    void ModeSet::DestroyBufferObject ( ModeSet::GBM::buf_t bo ) {
+    void ModeSet::DestroyBufferObject ( ModeSet::GBM::buf_t & bo ) {
         if ( bo != GBM::InvalidBuf () ) {
             /* void */ gbm_bo_destroy ( bo );
         }
+
+        bo = GBM::InvalidBuf ();
     }
 
     using data_t = std::atomic < bool >;
 
-    static void PageFlip ( int , unsigned int , unsigned int , unsigned int , void * data ) {
+    // GBM library signature of page_flip_handler
+    static void PageFlip ( int /* const */ , unsigned int /* const */ , unsigned int /* const */ , unsigned int /* const */ , void * data ) {
         assert ( data != nullptr );
 
         if ( data != nullptr ) {
@@ -588,6 +664,7 @@ namespace WPEFramework {
                     // Asynchronous, but never called more than once, waiting in scope
                     // Use the magic constant here because the struct is versioned!
 
+                    static_assert ( std::is_integral < decltype ( DRM_EVENT_CONTEXT_VERSION ) > :: value != false );
                     static_assert ( DRM_EVENT_CONTEXT_VERSION >= static_cast < decltype ( DRM_EVENT_CONTEXT_VERSION ) > ( 2 ) && DRM_EVENT_CONTEXT_VERSION <= static_cast < decltype ( DRM_EVENT_CONTEXT_VERSION ) > ( 4 ) );
 
                     drmEventContext context = {
@@ -611,7 +688,7 @@ namespace WPEFramework {
 
                     while ( waiting != false ) {
                         FD_ZERO ( & fds );
-                        FD_SET(  _fd , & fds );
+                        FD_SET ( _fd , & fds );
 
                         // Race free
                         if ( ( err = pselect ( _fd + 1 , & fds , nullptr , nullptr , & timeout , nullptr ) ) < 0 ) {
@@ -653,17 +730,22 @@ namespace WPEFramework {
                      TRACE ( Trace::Error , ( _T ( "Unable to execute a page flip." ) ) );
                 }
 
-                if ( _fd != DRM::InvalidFd () && buffer . _id == DRM::InvalidFb () && drmModeRmFB ( _fd , buffer . _id ) != 0) {
+                if (    _fd != DRM::InvalidFd ()
+                     && buffer . _id == DRM::InvalidFb ()
+                     && drmModeRmFB ( _fd , buffer . _id ) != 0
+                   ) {
                     TRACE ( Trace::Error , ( _T ( "Unable to remove (old) frame buffer." ) ) );
                 }
             }
 
-            if ( buffer . _surface != GBM::InvalidSurf () && buffer . _bo != GBM::InvalidBuf () ) {
-                    gbm_surface_release_buffer ( buffer . _surface, buffer . _bo );
-                    buffer . _bo = GBM::InvalidBuf () ;
+            if (    buffer . _surface != GBM::InvalidSurf ()
+                 && buffer . _bo != GBM::InvalidBuf ()
+               ) {
+                gbm_surface_release_buffer ( buffer . _surface, buffer . _bo );
+                buffer . _bo = GBM::InvalidBuf () ;
             }
             else {
-                    TRACE ( Trace::Error , ( _T ( "Unable to release (old) buffer." ) ) );
+                TRACE ( Trace::Error , ( _T ( "Unable to release (old) buffer." ) ) );
             }
 
         }

@@ -107,12 +107,40 @@ struct narrowing {
     // Common type of signed and unsigned typically is unsigned
     using common_t = typename std::common_type < FROM, TO > :: type;
     static constexpr bool value =   ENABLE
-                                    && (
-                                        ( std::is_signed < FROM > :: value && std::is_unsigned < TO > :: value )
-                                        || static_cast < common_t > ( std::numeric_limits < FROM > :: max () ) >= static_cast < common_t > ( std::numeric_limits < TO > :: max () )
-                                    )
+                                    && ( (    std::is_signed < FROM > :: value
+                                           && std::is_unsigned < TO > :: value
+                                         )
+                                         || (    std::is_same < FROM , TO > :: value != true
+                                              && static_cast < common_t > (  std::numeric_limits < FROM > :: max () ) > static_cast < common_t > ( std::numeric_limits < TO > :: max () )
+                                            )
+                                       )
                                     ;
 };
+
+template < typename TYPE , intmax_t VAL >
+struct in_signed_range {
+    static_assert ( (    std::is_integral < TYPE > :: value
+                      && std::is_signed < TYPE > :: value
+                    )
+                    != false
+                  );
+    using common_t = typename std::common_type < TYPE , decltype ( VAL ) > :: type;
+    static constexpr bool value =    static_cast < common_t > ( VAL ) >= static_cast < common_t > ( std::numeric_limits < TYPE > :: min () )
+                                  && static_cast < common_t > ( VAL ) <= static_cast < common_t > ( std::numeric_limits < TYPE > :: max () );
+};
+
+template < typename TYPE , uintmax_t VAL >
+struct in_unsigned_range {
+   static_assert ( (    std::is_integral < TYPE > :: value
+                     && std::is_unsigned < TYPE > :: value
+                   )
+                   != false
+                 );
+    using common_t = typename std::common_type < TYPE , decltype ( VAL ) > :: type;
+    static constexpr bool value =    static_cast < common_t > ( VAL ) >= static_cast < common_t > ( std::numeric_limits < TYPE > :: min () )
+                                  && static_cast < common_t > ( VAL ) <= static_cast < common_t > ( std::numeric_limits < TYPE > :: max () );
+};
+
 
 // Suppress compiler warnings of unused (parameters)
 // Omitting the name is sufficient but a search on this keyword provides easy access to the location
@@ -151,9 +179,11 @@ namespace Plugin {
         using height_t = EGLint;
 
 #ifdef EGL_VERSION_1_5
-        static constexpr img_t InvalidImage () { return EGL_NO_IMAGE; }
+        static_assert ( std::is_convertible < img_t , decltype ( EGL_NO_IMAGE ) > :: value != false );
+        static constexpr img_t InvalidImage () { return static_cast < img_t > ( EGL_NO_IMAGE ) ; }
 #else
-        static constexpr img_t InvalidImage () { return EGL_NO_IMAGE_KHR; }
+        static_assert ( std::is_convertible < img_t , decltype ( EGL_NO_IMAGE_KHR ) > :: value != false );
+        static constexpr img_t InvalidImage () { return static_cast < img_t > ( EGL_NO_IMAGE_KHR ); }
 #endif
     }
 
@@ -169,16 +199,21 @@ namespace Plugin {
             int _sync_fd;
             EGL::img_t _khr;
 
-            bool Valid () const { return _buf != nullptr; }
-            bool DMAComplete () const { return Valid () && _fd > -1 && _sync_fd > -1; };
-            bool RenderComplete () const { return Valid () && _fd > -1 && _sync_fd > -1 && _khr != WPEFramework::Plugin::EGL::InvalidImage (); }
+            bool Valid () const { return _buf != nullptr ; }
+            bool DMAComplete () const { return Valid () && _fd != ModeSet::GBM::InvalidFd () && _sync_fd != ModeSet::GBM::InvalidFd (); };
+            bool RenderComplete () const { return    Valid ()
+                                                  && _fd != ModeSet::GBM::InvalidFd ()
+                                                  && _sync_fd != ModeSet::GBM::InvalidFd ()
+                                                  && _khr != WPEFramework::Plugin::EGL::InvalidImage ()
+                                                  ;
+                                         }
         } _nativeSurface;
 
     private :
 
         ModeSet & _modeSet;
         CompositorImplementation & _compositor;
-        const std::string _name;
+        std::string const _name;
 
         uint32_t _opacity;
         uint32_t _layer;
@@ -190,10 +225,10 @@ namespace Plugin {
         using surf_t = decltype ( _nativeSurface );
 
         ClientSurface () = delete;
-        ClientSurface ( const ClientSurface & ) = delete;
-        ClientSurface & operator= ( const ClientSurface & ) = delete;
+        ClientSurface ( ClientSurface const & ) = delete;
+        ClientSurface & operator= ( ClientSurface const & ) = delete;
 
-        ClientSurface ( ModeSet & , CompositorImplementation & , const string & , const uint32_t , const uint32_t );
+        ClientSurface ( ModeSet & , CompositorImplementation & , const string & , uint32_t const , uint32_t const );
         ~ClientSurface () override;
 
         // Underlying native surface handle
@@ -208,16 +243,20 @@ namespace Plugin {
         string Name () const override { return _name; }
 
         // Opacity
-        void Opacity ( const uint32_t value ) override { _opacity = value; }
+        void Opacity ( uint32_t const value ) override { _opacity = value; }
         uint32_t Opacity () const override { return _opacity; }
 
         // Geometry
-        uint32_t Geometry ( const Exchange::IComposition::Rectangle & rectangle ) override { _destination = rectangle; return Core::ERROR_NONE ; }
+        static_assert ( std::is_enum < decltype ( Core::ERROR_NONE ) > :: value != false );
+        static_assert ( narrowing < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type , uint32_t , true > :: value != true );
+        uint32_t Geometry ( Exchange::IComposition::Rectangle const & rectangle ) override { _destination = rectangle; return static_cast < uint32_t > ( Core::ERROR_NONE ); }
         Exchange::IComposition::Rectangle Geometry () const override { return _destination; }
 
         // Z-ordering within multiple surfaces
-        uint32_t ZOrder ( const uint16_t zorder ) override { _layer = zorder; return Core::ERROR_NONE; }
-        uint32_t ZOrder () const override { return _layer; }
+        static_assert ( std::is_enum < decltype ( Core::ERROR_NONE ) > :: value != false );
+        static_assert ( narrowing < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type , uint32_t , true > :: value != true );
+        uint32_t ZOrder ( uint16_t const zorder ) override { _layer = zorder; return static_cast < uint32_t > ( Core::ERROR_NONE ); }
+        uint32_t ZOrder () const override { return _layer ; }
 
         // Buffer to display flipping
         void ScanOut () override;
@@ -264,7 +303,7 @@ namespace Plugin {
 
         private :
 
-            void * Aquire ( string const & , uint32_t const, uint32_t const ) override;
+            void * Aquire ( string const & , uint32_t const , uint32_t const ) override;
 
             CompositorImplementation & _parent;
         };
@@ -315,22 +354,24 @@ namespace Plugin {
             // Send file descriptor(s) with additional message
             valid_t Send ( std::string const & , DMATransfer::fds_t const & );
 
+            static_assert ( narrowing < decltype ( -1 ) , fd_t , true > :: value != true );
+            static constexpr fd_t InvalidFD () { return static_cast < fd_t > ( -1 ) ; }
+
         private :
 
             timeout_t Worker () override;
 
-            valid_t _Initialize ();
-            valid_t _Deinitialize ();
+            valid_t Init ();
+            valid_t Deinit ();
 
+            static_assert ( narrowing < decltype ( -1 ) , socket_t , true > :: value != true );
             static constexpr socket_t InvalidSocket () { return static_cast < socket_t > ( -1 ) ; }
-// TODO: also see other parts for FDS
-            static constexpr fd_t InvalidFD () { return static_cast < fd_t > ( -1  ) ; }
 
-            valid_t Connect ( timeout_t );
-            valid_t Disconnect ( timeout_t );
+            valid_t Connect ( timeout_t const );
+            valid_t Disconnect ( timeout_t const );
 
-            valid_t _Send ( std::string const & , int const * , uint8_t );
-            valid_t _Receive ( std::string & , int * , uint8_t );
+            valid_t Send ( std::string const & , int const * , uint8_t const );
+            valid_t Receive ( std::string & , int * , uint8_t const );
         };
 
 
@@ -341,7 +382,7 @@ namespace Plugin {
             ModeSet & _set;
 
             using dpy_return_t = decltype ( std::declval < ModeSet > () . UnderlyingHandle () );
-            using surf_return_t = decltype ( std::declval < ModeSet > () . CreateRenderTarget (0, 0) );
+            using surf_return_t = decltype ( std::declval < ModeSet > () . CreateRenderTarget ( 0 , 0 ) );
 
             static_assert ( std::is_pointer < surf_return_t > :: value != false );
             surf_return_t _surf = nullptr;
@@ -378,12 +419,12 @@ namespace Plugin {
         private :
 
             // x, y, z
-            static constexpr uint8_t VerticeDimensions = 3;
+            static constexpr uint8_t const VerticeDimensions = 3;
 
             struct offset {
                 using coordinate_t = GLfloat;
 
-                static_assert ( narrowing < float , coordinate_t , true > :: value != false );
+                static_assert ( std::is_same < GLfloat , float > :: value != false );
 
                 // Each coorrdinate in the range [-1.0f, 1.0f]
                 static constexpr coordinate_t const _left = static_cast < coordinate_t > ( -1.0f );
@@ -406,7 +447,7 @@ namespace Plugin {
             struct scale {
                 using fraction_t = GLclampf;
 
-                static_assert ( narrowing < float , fraction_t , true > :: value != false );
+                static_assert ( std::is_same < float , fraction_t > :: value != false );
 
                 static constexpr fraction_t const _identity = static_cast < fraction_t > ( 1.0f );
                 static constexpr fraction_t const _min  = static_cast < fraction_t > ( 0.0f );
@@ -424,7 +465,7 @@ namespace Plugin {
             struct opacity {
                 using alpha_t = GLfloat;
 
-                static_assert ( narrowing < float , alpha_t , true > :: value != false);
+                static_assert ( std::is_same < float , alpha_t > :: value != false);
 
                 static constexpr alpha_t const _min = static_cast < alpha_t > ( 0.0f );
                 static constexpr alpha_t const _max = static_cast < alpha_t > ( 1.0f );
@@ -451,7 +492,9 @@ namespace Plugin {
 
             using prog_t = GLuint;
 
-            static constexpr prog_t InvalidProg () { return 0 ; }
+            // Possibly signed to unsigned
+            static_assert ( std::is_integral < prog_t > :: value != false );
+            static constexpr prog_t InvalidProg () { return static_cast < prog_t > ( 0 ) ; }
 
         public :
 
@@ -471,9 +514,10 @@ namespace Plugin {
 
             using valid_t = decltype ( _valid );
 
-        private :
+
 
         public :
+
             struct texture {
                 tex_t _tex;
                 tgt_t _target;
@@ -488,7 +532,7 @@ namespace Plugin {
                 height_t _height;
 
                 texture ();
-                explicit texture ( tgt_t , opacity_t const & );
+                explicit texture ( tgt_t const , opacity_t const & );
                 explicit texture ( texture const & );
             };
 
@@ -509,26 +553,34 @@ namespace Plugin {
             GLES ();
             ~GLES ();
 
-            static offset_t const InitialOffset () { return offset (); }
+            static offset_t const InitialOffset () { return offset () ; }
             valid_t UpdateOffset ( offset_t const & );
 
-            static scale_t const InitialScale () { return scale (); }
+            static scale_t const InitialScale () { return scale () ; }
             valid_t UpdateScale ( scale_t const & );
 
-            static opacity_t const & InitialOpacity () { return CompositorImplementation::GLES::opacity::InitialOpacity (); }
-            valid_t UpdateOpacity (opacity_t const & );
+            static opacity_t const & InitialOpacity () { return CompositorImplementation::GLES::opacity::InitialOpacity () ; }
+            valid_t UpdateOpacity ( opacity_t const & );
 
-            static constexpr tex_t InvalidTex () { return 0; }
+            static_assert ( std::is_integral < tex_t > :: value != false );
+            static constexpr tex_t InvalidTex () { return static_cast < tex_t > ( 0 ) ; }
 
+            // Possibly signed to unsiged
+            static_assert (    narrowing < decltype ( 2 ) , version_t , true > :: value != true
+                                    // Trivial
+                            || (    2 >= 0
+                                 && in_unsigned_range < version_t , 2 > :: value != false
+                               )
+                          );
             static constexpr version_t MajorVersion () { return static_cast < version_t > ( 2 ) ; }
             static constexpr version_t MinorVersion () { return static_cast < version_t > ( 0 ) ; }
 
-            valid_t Valid () const { return _valid; }
+            valid_t Valid () const { return _valid ; }
 
-            valid_t Render () { return Valid (); }
-            valid_t RenderColor ( bool , bool , bool , bool alpha = true );
-            valid_t RenderEGLImage ( EGL::img_t const & , EGLint , EGLint , EGL::width_t , EGL::height_t , EGLint , EGLint );
-            valid_t RenderScene ( width_t , height_t , std::function < valid_t ( texture_t const & , texture_t const & ) > );
+            valid_t Render () { return Valid () ; }
+            valid_t RenderColor ( bool const , bool const , bool const , bool const alpha = true );
+            valid_t RenderEGLImage ( EGL::img_t const & , EGLint const , EGLint const , EGL::width_t const , EGL::height_t const , EGLint , EGLint const );
+            valid_t RenderScene ( width_t const , height_t const , std::function < valid_t ( texture_t const & , texture_t const & ) > );
 
             valid_t SkipEGLImageFromScene ( EGL::img_t const & );
 
@@ -545,11 +597,11 @@ namespace Plugin {
             valid_t RenderTile ();
 
             template < size_t N >
-            valid_t RenderPolygon ( std::array < GLfloat , N > const & );
+            valid_t RenderPolygon ( std::array < GLfloat const , N > const & );
 
             valid_t Supported ( std::string const & );
 
-            valid_t SetupViewport ( EGLint , EGLint , EGL::width_t , EGL::height_t );
+            valid_t SetupViewport ( EGLint const , EGLint const , EGL::width_t const , EGL::height_t const );
        };
 
 
@@ -601,17 +653,15 @@ namespace Plugin {
             public :
 
                 using dpy_t = EGLDisplay;
-                using sync_t = KHRFIX (EGLSync);
-
-            private :
-
-                sync_t _sync;
-                dpy_t & _dpy;
 
             public :
 
                 Sync () = delete;
                 Sync ( Sync const & ) = delete;
+                Sync ( Sync && ) = delete;
+
+                Sync & operator= ( Sync const & ) = delete;
+                Sync & operator= ( Sync && ) = delete;
 
                 void * operator new ( size_t ) = delete;
                 void * operator new [] ( size_t ) = delete;
@@ -621,8 +671,17 @@ namespace Plugin {
                 explicit Sync ( dpy_t & );
                 ~Sync ();
 
-                static constexpr dpy_t InvalidDpy () { return EGL_NO_DISPLAY ; }
-                static constexpr sync_t InvalidSync () { return _EGL_NO_SYNC ; }
+            private :
+
+                using sync_t = KHRFIX ( EGLSync );
+
+                static constexpr dpy_t InvalidDpy () { return static_cast < dpy_t > ( EGL::InvalidDpy () ) ; }
+
+                static_assert ( std::is_convertible < sync_t , decltype ( _EGL_NO_SYNC ) > :: value );
+                static constexpr sync_t InvalidSync () { return static_cast < sync_t > ( _EGL_NO_SYNC ) ; }
+
+                sync_t _sync;
+                dpy_t & _dpy;
             };
 
 
@@ -644,6 +703,7 @@ namespace Plugin {
             public :
 
                 RenderThread ( RenderThread const & ) = delete;
+                RenderThread & operator= ( RenderThread const & ) = delete;
 
                 virtual ~RenderThread ();
 
@@ -670,6 +730,7 @@ namespace Plugin {
 
                 SceneRenderer () = delete;
                 SceneRenderer ( SceneRenderer const & ) = delete;
+                SceneRenderer & operator= ( SceneRenderer const & ) = delete;
 
                 explicit SceneRenderer ( EGL & , GLES & , CompositorImplementation & );
                 ~SceneRenderer () override;
@@ -717,6 +778,7 @@ namespace Plugin {
 
                 TextureRenderer () = delete;
                 TextureRenderer ( TextureRenderer const & ) = delete;
+                TextureRenderer & operator= ( TextureRenderer const & ) = delete;
 
                 explicit TextureRenderer (EGL & , GLES & , CompositorImplementation::ClientContainer & );
                 ~TextureRenderer ();
@@ -732,29 +794,13 @@ namespace Plugin {
 
 
 
-        private :
-
-            // Define the 'invalid' value
-            static_assert ( std::is_pointer < EGLConfig > :: value != false );
-            static constexpr void * const EGL_NO_CONFIG = nullptr;
-
-            Sync::dpy_t _dpy = Sync::InvalidDpy ();
-            EGLConfig _conf = EGL_NO_CONFIG;
-            EGLSurface _surf = EGL_NO_SURFACE;
-
-            WPEFramework::Plugin::EGL::width_t  _width = 0;
-            WPEFramework::Plugin::EGL::height_t _height = 0;
-
-            Natives const & _natives;
-
-            valid_t _valid = false;
-
         public :
 
-            using dpy_t = decltype ( _dpy );
-            using surf_t = decltype ( _surf );
-            using height_t = decltype ( _height );
-            using width_t = decltype ( _width );
+            using dpy_t = Sync::dpy_t;
+            using surf_t = EGLSurface;
+
+            using height_t = WPEFramework::Plugin::EGL::height_t;
+            using width_t = WPEFramework::Plugin::EGL::width_t;
 
             using size_t = EGLint;
 
@@ -762,21 +808,32 @@ namespace Plugin {
 
             EGL () = delete;
             EGL ( EGL const & ) = delete;
+            EGL & operator= ( EGL const & ) = delete;
 
             EGL ( Natives const & natives );
             ~EGL ();
 
             static constexpr img_t InvalidImage () { return WPEFramework::Plugin::EGL::InvalidImage () ; }
-            static constexpr dpy_t InvalidDpy () { return Sync::InvalidDpy () ; }
+
+            static_assert ( std::is_convertible < dpy_t , decltype ( EGL_NO_DISPLAY ) > :: value );
+            static constexpr dpy_t InvalidDpy () { return EGL_NO_DISPLAY ; }
+            static_assert ( std::is_convertible < ctx_t , decltype ( EGL_NO_CONTEXT ) > :: value );
             static constexpr ctx_t InvalidCtx () { return EGL_NO_CONTEXT ; }
+            static_assert ( std::is_convertible < surf_t , decltype ( EGL_NO_SURFACE ) > :: value );
             static constexpr surf_t InvalidSurf () { return EGL_NO_SURFACE ; }
 
+            static_assert ( std::is_integral < EGL::size_t > :: value != false );
             static constexpr EGL::size_t RedBufferSize () { return static_cast < EGL::size_t > ( 8 ) ; }
             static constexpr EGL::size_t GreenBufferSize () { return static_cast < EGL::size_t > ( 8)  ; }
             static constexpr EGL::size_t BlueBufferSize () { return static_cast < EGL::size_t > ( 8 ) ; }
             static constexpr EGL::size_t AlphaBufferSize () { return static_cast < EGL::size_t > ( 8 ) ; }
             // For OpenGL ES 2.0 the only possible value is 16
             static constexpr EGL::size_t DepthBufferSize () { return static_cast < EGL::size_t > ( GLES::MajorVersion () == static_cast < GLES::version_t > ( 2 ) ? 16 : 0 ) ; }
+
+            static_assert ( std::is_integral < width_t > :: value != false );
+            static constexpr width_t InvalidWidth () { return static_cast < width_t > ( 0 ) ; }
+            static_assert ( std::is_integral < height_t > :: value != false );
+            static constexpr height_t InvalidHeight () { return static_cast < height_t > ( 0 ) ; }
 
             dpy_t Display () const { return _dpy ; }
             surf_t Surface () const { return _surf ; }
@@ -792,27 +849,43 @@ namespace Plugin {
 
         private :
 
+            // Define the 'invalid' value
+            static_assert ( std::is_pointer < EGLConfig > :: value != false );
+            static constexpr void * const EGL_NO_CONFIG = nullptr;
+
+            dpy_t _dpy = InvalidDpy ();
+            EGLConfig _conf = EGL_NO_CONFIG;
+            surf_t _surf = InvalidSurf ();
+
+            width_t  _width = InvalidWidth ();
+            height_t _height = InvalidHeight ();
+
+            Natives const & _natives;
+
+            valid_t _valid = false;
+
+
             valid_t Initialize ();
             void DeInitialize ();
 
             template < typename FUNC , typename... ARG >
-            valid_t Render ( std::false_type , FUNC && , bool , ARG &&... );
+            valid_t Render ( std::false_type const , FUNC && , bool const , ARG &&... );
 
             template < typename FUNC , typename ARG0 , typename... ARG >
-            valid_t Render ( std::true_type , FUNC && , bool , ARG0 && , ARG &&... );
+            valid_t Render ( std::true_type const , FUNC && , bool const , ARG0 && , ARG &&... );
 
  //TODO: two different signatures for callables
             template < typename FUNC , typename... ARG >
-            valid_t Render ( std::false_type , FUNC && , FUNC && , ARG &&... );
+            valid_t Render ( std::false_type const , FUNC && , FUNC && , ARG &&... );
 
             template < typename FUNC , typename ARG0 , typename... ARG >
-            valid_t Render ( std::true_type , FUNC && , FUNC && , ARG0 && , ARG &&... );
+            valid_t Render ( std::true_type const , FUNC && , FUNC && , ARG0 && , ARG &&... );
 
             template < typename FUNC , typename... ARG >
-            valid_t RenderWithoutSwap ( std::false_type , FUNC && , ARG &&... );
+            valid_t RenderWithoutSwap ( std::false_type const , FUNC && , ARG &&... );
 
             template < typename FUNC , typename ARG0 , typename... ARG >
-            valid_t RenderWithoutSwap ( std::true_type , FUNC && , ARG0 && , ARG &&... );
+            valid_t RenderWithoutSwap ( std::true_type const , FUNC && , ARG0 && , ARG &&... );
 
         public :
 
@@ -822,7 +895,7 @@ namespace Plugin {
             valid_t Render ( GLES & );
 
             template < typename FUNC , typename... ARG >
-            valid_t Render ( FUNC && , bool , ARG &&... );
+            valid_t Render ( FUNC && , bool const , ARG &&... );
 
             template < typename FUNC , typename... ARG >
             valid_t Render ( FUNC && , FUNC  && , ARG &&... );
@@ -861,9 +934,8 @@ namespace Plugin {
             Config ();
             ~Config ();
 
-            Core::JSON::String Connector;
-            Core::JSON::String Port;
-
+            Core::JSON::String _connector;
+            Core::JSON::String _port;
         };
 
 
@@ -909,7 +981,7 @@ namespace Plugin {
         static uint32_t HeightFromResolution ( ScreenResolution const );
         static ScreenResolution ResolutionFromHeightWidth ( uint32_t const , uint32_t const );
 
-        uint32_t Configure(PluginHost::IShell* service) override;
+        uint32_t Configure ( PluginHost::IShell * service) override;
 
         void Register ( Exchange::IComposition::INotification * ) override;
         void Unregister ( Exchange::IComposition::INotification * ) override;
@@ -938,8 +1010,8 @@ namespace Plugin {
 
 
 
-    ClientSurface::ClientSurface ( ModeSet & modeSet , CompositorImplementation & compositor , const string & name , const uint32_t width , const uint32_t height )
-        : _nativeSurface { nullptr , -1 , -1 , WPEFramework::Plugin::EGL::InvalidImage () }
+    ClientSurface::ClientSurface ( ModeSet & modeSet , CompositorImplementation & compositor , string const & name , uint32_t const width , uint32_t const height )
+        : _nativeSurface { ModeSet::GBM::InvalidBuf () , ModeSet::GBM::InvalidFd ()  , ModeSet::GBM::InvalidFd () , WPEFramework::Plugin::EGL::InvalidImage () }
         , _modeSet { modeSet }
         , _compositor { compositor }
         , _name { name }
@@ -948,19 +1020,19 @@ namespace Plugin {
         , _destination ( { 0 , 0 , width , height } ) {
 
         // The compositor should not be destroyed before any existing client surface
-        _compositor.AddRef ();
+        _compositor . AddRef ();
 
-        using surface_t = decltype ( _nativeSurface._buf );
+        using surface_t = decltype ( _nativeSurface . _buf );
         using class_t = std::remove_reference < decltype ( _modeSet ) > :: type;
-        using return_t = decltype ( std::declval < class_t > () . CreateBufferObject ( width, height ) );
+        using return_t = decltype ( std::declval < class_t > () . CreateBufferObject ( width , height ) );
 
-        static_assert ( std::is_same < surface_t, return_t > :: value != false );
+        static_assert ( std::is_same < surface_t , return_t > :: value != false );
 
 // TODO: The internal scan out flag might not be appropriate
         _nativeSurface . _buf = _modeSet . CreateBufferObject ( width, height );
 
         if (  _nativeSurface . Valid () != true ) {
-            TRACE ( Trace::Error , ( _T ( "A ClientSurface cannot be created for %s" ), name . c_str () ) );
+            TRACE ( Trace::Error , ( _T ( "A ClientSurface cannot be created for %s" ) , name . c_str () ) );
         }
         else {
             _nativeSurface . _fd = gbm_bo_get_fd ( _nativeSurface ._buf );
@@ -981,11 +1053,11 @@ namespace Plugin {
 
         _compositor . Detached ( _name );
 
-        if ( _nativeSurface._fd != -1 ) {
+        if ( _nativeSurface . _fd != ModeSet::GBM::InvalidFd () ) {
             /* int */ close ( _nativeSurface . _fd );
         }
 
-        if ( _nativeSurface . _sync_fd != -1 ) {
+        if ( _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd () ) {
             /* int */ close ( _nativeSurface . _sync_fd );
         }
 
@@ -993,7 +1065,7 @@ namespace Plugin {
             _modeSet . DestroyBufferObject ( _nativeSurface . _buf );
         }
 
-        _nativeSurface = { nullptr , -1 , -1 , WPEFramework::Plugin::EGL::InvalidImage () };
+        _nativeSurface = { ModeSet::GBM::InvalidBuf () , ModeSet::GBM::InvalidFd () , ModeSet::GBM::InvalidFd () , WPEFramework::Plugin::EGL::InvalidImage () };
 
         _compositor . Release ();
     }
@@ -1031,7 +1103,7 @@ namespace Plugin {
         static struct flock fl = init ();
 
         // Operates on i-node
-        bool ret = _nativeSurface . _sync_fd > -1 && fcntl ( _nativeSurface . _sync_fd , F_SETLKW ,  & fl ) != -1;
+        bool ret = _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd () && fcntl ( _nativeSurface . _sync_fd , F_SETLKW ,  & fl ) != -1;
 
         assert ( ret != false );
 
@@ -1041,7 +1113,7 @@ namespace Plugin {
     bool ClientSurface::SyncPrimitiveEnd () const {
         auto init = [] () -> struct flock {
             struct flock fl;
-            /* void * */ memset ( &fl , 0 , sizeof ( fl ) );
+            /* void * */ memset ( & fl , 0 , sizeof ( fl ) );
 
             fl . l_type = F_UNLCK;
             fl . l_whence = SEEK_SET;
@@ -1053,7 +1125,7 @@ namespace Plugin {
 
         static struct flock fl = init ();
 
-        bool ret = _nativeSurface . _sync_fd > -1 && fcntl ( _nativeSurface . _sync_fd , F_SETLK , & fl ) != -1;
+        bool ret = _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd ()  && fcntl ( _nativeSurface . _sync_fd , F_SETLK , & fl ) != -1;
 
         assert ( ret != false );
 
@@ -1061,7 +1133,7 @@ namespace Plugin {
     }
 
     void ClientSurface::ScanOut () {
-        /* bool */ _compositor . CompositeFor (_name);
+        /* bool */ _compositor . CompositeFor ( _name );
     }
 
     ClientSurface::surf_t const & ClientSurface::Surface ( EGL::img_t const & khr ) {
@@ -1074,13 +1146,20 @@ namespace Plugin {
 
 
 
-    CompositorImplementation::ExternalAccess::ExternalAccess ( CompositorImplementation & parent , const Core::NodeId & source , const string & proxyStubPath, const Core::ProxyType < RPC::InvokeServer > & handler )
-        : RPC::Communicator ( source,  proxyStubPath.empty () == false ? Core::Directory::Normalize ( proxyStubPath ) : proxyStubPath , Core::ProxyType < Core::IIPCServer > ( handler ) )
+    CompositorImplementation::ExternalAccess::ExternalAccess ( CompositorImplementation & parent , Core::NodeId const & source , string const & proxyStubPath , Core::ProxyType < RPC::InvokeServer > const & handler )
+        : RPC::Communicator ( source , proxyStubPath.empty () == false ? Core::Directory::Normalize ( proxyStubPath ) : proxyStubPath , Core::ProxyType < Core::IIPCServer > ( handler ) )
         , _parent ( parent ) {
 
         uint32_t result = RPC::Communicator::Open ( RPC::CommunicationTimeOut );
 
-        handler->Announcements ( Announcement() );
+        handler -> Announcements ( Announcement() );
+
+        static_assert ( std::is_enum < decltype ( Core::ERROR_NONE ) > :: value != false );
+        static_assert (    narrowing < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type , decltype ( result ) , true > :: value != false
+                        || (    Core::ERROR_NONE >= static_cast < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type > ( 0 )
+                             && in_unsigned_range < decltype ( result ) , Core::ERROR_NONE > :: value != false
+                           )
+                      );
 
         if ( result != Core::ERROR_NONE ) {
             TRACE ( Trace::Error , ( _T ( "Could not open RPI Compositor RPCLink server. Error: %s" ) , Core::NumberType < uint32_t > ( result ) . Text () ) );
@@ -1093,7 +1172,7 @@ namespace Plugin {
 
 
 
-    void * CompositorImplementation::ExternalAccess::Aquire ( const string & className, const uint32_t interfaceId, const uint32_t version ) {
+    void * CompositorImplementation::ExternalAccess::Aquire ( string const & className , uint32_t const interfaceId , uint32_t const version ) {
         silence ( className );
         silence ( version );
 
@@ -1104,7 +1183,13 @@ namespace Plugin {
 
 
 
-    CompositorImplementation::DMATransfer::DMATransfer ( CompositorImplementation & compositor ) : Core::Thread ( /* 0 , _T ( "" ) */ ) , _compositor { compositor } , _listen { -1 } , _transfer { -1 } , _addr { AF_UNIX , "/tmp/Compositor/DMA" } , _valid { _Initialize () } {
+    CompositorImplementation::DMATransfer::DMATransfer ( CompositorImplementation & compositor )
+        : Core::Thread ( /* 0 , _T ( "" ) */ )
+        , _compositor { compositor }
+        , _listen { InvalidSocket () }
+        , _transfer { InvalidSocket () }
+        , _addr { AF_UNIX , "/tmp/Compositor/DMA" }
+        , _valid { Init () } {
     }
 
     CompositorImplementation::DMATransfer::~DMATransfer () {
@@ -1112,17 +1197,18 @@ namespace Plugin {
 
         /* bool */ Wait ( WPEFramework::Core::Thread::BLOCKED | WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
 
-        /* valid_t */ _Deinitialize ();
+        /* valid_t */ Deinit ();
     }
 
     CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Receive ( std::string & msg , DMATransfer::fds_t & fds ) {
-        valid_t ret = Valid () && Connect ( Core::infinite );
+        valid_t ret =    Valid ()
+                      && Connect ( Core::infinite );
 
         if ( ret != true ) {
             TRACE ( Trace::Information , ( _T ( "Unable to receive (DMA) data." ) ) );
         }
         else {
-            ret = _Receive ( msg , fds . data (), fds . size () );
+            ret = Receive ( msg , fds . data () , fds . size () );
             ret = Disconnect ( Core::infinite ) && ret;
         }
 
@@ -1130,14 +1216,18 @@ namespace Plugin {
     }
 
     CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Send ( std::string const & msg, DMATransfer::fds_t const & fds ) {
-        valid_t ret = Valid () && Connect ( Core::infinite );
+        valid_t ret =    Valid ()
+                      && Connect ( Core::infinite );
 
         if ( ret != true ) {
             TRACE ( Trace::Information , ( _T ( "Unable to send (DMA) data." ) ) );
         }
         else {
-            ret = _Send ( msg, fds . data () , fds . size () ) && Disconnect ( Core::infinite );
-            ret = Disconnect ( Core::infinite ) && ret;
+            ret =    Send ( msg , fds . data () , fds . size () )
+                  && Disconnect ( Core::infinite );
+
+            ret =    Disconnect ( Core::infinite )
+                  && ret;
         }
 
         return ret;
@@ -1147,6 +1237,12 @@ namespace Plugin {
         // The actual time (schedule) resolution
 // TODO:: arbitrary value
         // Approximately 1 Hz
+        static_assert ( narrowing < decltype ( 1000 ) , CompositorImplementation::DMATransfer::timeout_t , true > :: value != true
+                                // Trivial
+                        || (    1000 >= 0
+                             && in_unsigned_range < timeout_t , 1000 > :: value != false
+                           )
+                      );
         constexpr CompositorImplementation::DMATransfer::timeout_t const ret = 1000;
 
         // Default behavior
@@ -1160,7 +1256,7 @@ namespace Plugin {
         // Just use 'polling'
         constexpr struct timespec const timeout = { . tv_sec = 0, . tv_nsec = 0 };
 
-        int err = pselect ( _listen + 1 , & fds , nullptr , nullptr , & timeout , nullptr);
+        int err = pselect ( _listen + 1 , & fds , nullptr , nullptr , & timeout , nullptr );
 
         if ( err < 0) {
             // Error
@@ -1177,26 +1273,32 @@ namespace Plugin {
                 if ( FD_ISSET ( _listen , & fds ) != 0 ) {
 
 // TODO: set flags on _transfer ?
-                    _transfer = accept (_listen, nullptr, nullptr);
+                    _transfer = accept ( _listen , nullptr , nullptr );
 
                     // Do some processing on the clients
 
                     std::string msg;
 
                     // Shared buffer and synchronization primitive
-                    DMATransfer::fds_t handles = { -1 , -1 };
+                    DMATransfer::fds_t handles = { InvalidFD () , InvalidFD () };
 
                     std::string props;
 
-                    if ( _transfer > 0 ) {
-                        if ( ( Receive ( msg , handles ) && _compositor . FDFor ( msg , handles , props ) && Send ( msg + props, handles) ) != false ) {
+                    if ( _transfer != InvalidSocket () ) {
+                        if ( (    Receive ( msg , handles )
+                               && _compositor . FDFor ( msg , handles , props )
+                               && Send ( msg + props, handles )
+                             ) != false
+                           ) {
+
                             // Just wait for the remote peer to close the connection
                             ssize_t size = read ( _transfer , nullptr , 0 );
 
                             decltype ( errno ) err = errno;
 
-                            switch (size) {
+                            switch ( size ) {
                                 case -1 :   // Error
+                                            static_assert ( narrowing < std::remove_reference < decltype ( err ) > :: type , int , true > :: value != true );
                                             TRACE ( Trace::Error , ( _T ( "Error after DMA transfer : %d." ) , err ) );
                                             break;
                                 case 0  :   // remote has closed the connection
@@ -1208,10 +1310,10 @@ namespace Plugin {
 
                             /* int */ close ( _transfer );
 
-                            _transfer = -1;
+                            _transfer = InvalidSocket ();
                         }
                         else {
-                            TRACE ( Trace::Error , ( _T ( "Failed to exchange DMA information for %s." ) ,  msg.length () > 0 ? msg . c_str () : "'<no name provided>'" ) );
+                            TRACE ( Trace::Error , ( _T ( "Failed to exchange DMA information for %s." ) ,  msg . length () > 0 ? msg . c_str () : "'<no name provided>'" ) );
                         }
                     }
                     else {
@@ -1225,7 +1327,7 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Initialize () {
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Init () {
         valid_t ret = false;
 
         // Just a precaution
@@ -1237,56 +1339,59 @@ namespace Plugin {
         // Number of pending requests for accept to handle
         constexpr int queue_size = 1;
 
-        ret =      _listen != -1
-                && bind ( _listen, reinterpret_cast < struct sockaddr const * > ( & _addr ) , sizeof ( _addr ) ) == 0
-                && listen ( _listen, queue_size ) == 0
-                && fcntl ( _listen, F_SETFL, O_NONBLOCK ) == 0
-                ;
+        ret =    _listen != InvalidSocket ()
+              && bind ( _listen , reinterpret_cast < struct sockaddr const * > ( & _addr ) , sizeof ( _addr ) ) == 0
+              && listen ( _listen , queue_size ) == 0
+              && fcntl ( _listen , F_SETFL , O_NONBLOCK ) == 0
+              ;
 
          return ret;
     }
 
-    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Deinitialize () {
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Deinit () {
         valid_t ret = false;
 
-        ret =      _listen > 0
-                && close ( _listen ) == 0
-                && _transfer != InvalidSocket ()
-                && close ( _transfer ) == 0
-                ;
+        ret =    _listen != InvalidSocket ()
+              && close ( _listen ) == 0
+              && _transfer != InvalidSocket ()
+              && close ( _transfer ) == 0
+              ;
 
         // (always) delete the (bind) socket in the file system if no reference exist (anymore)
-        ret = unlink ( _addr.sun_path ) == 0 && ret;
+        ret =    unlink ( _addr . sun_path ) == 0
+              && ret;
 
         return ret;
     }
 
-    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Connect ( CompositorImplementation::DMATransfer::timeout_t timeout ) {
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Connect ( CompositorImplementation::DMATransfer::timeout_t const timeout ) {
         silence ( timeout );
 
         using err_t = remove_reference < decltype ( errno ) > :: type;
 
         err_t err = errno;
 
-        valid_t ret = _transfer != InvalidSocket () && err == static_cast < err_t > ( 0 );
+        valid_t ret =    _transfer != InvalidSocket ()
+                      && err == static_cast < err_t > ( 0 );
 
         return ret;
     }
 
-    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Disconnect ( CompositorImplementation::DMATransfer::timeout_t timeout ) {
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Disconnect ( CompositorImplementation::DMATransfer::timeout_t const timeout ) {
         silence ( timeout );
 
         using err_t = remove_reference < decltype ( errno ) > :: type;
 
         err_t err = errno;
 
-        valid_t ret = _transfer != InvalidSocket () && err == static_cast < err_t > ( 0 );
+        valid_t ret =    _transfer != InvalidSocket ()
+                      && err == static_cast < err_t > ( 0 );
 
         return ret;
     }
 
-    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Send ( std::string const & msg , int const * fd , uint8_t count ) {
-        using fd_t = remove_const < std::remove_pointer < decltype (fd) > :: type > :: type;
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Send ( std::string const & msg , int const * fd , uint8_t const count ) {
+        using fd_t = remove_const < std::remove_pointer < decltype ( fd ) > :: type > :: type;
 
         valid_t ret = false;
 
@@ -1326,7 +1431,7 @@ namespace Plugin {
 
             // Only valid file descriptor (s) can be sent via extra payload
             ret = true;
-            for ( decltype ( count ) i = 0 ; i < count && fd != nullptr ; i++ ) {
+            for ( remove_const < decltype ( count ) > :: type i = 0 ; i < count && fd != nullptr ; i++ ) {
                 ret = fd [ i ] != InvalidFD () && ret;
             }
 
@@ -1387,17 +1492,17 @@ namespace Plugin {
                 // https://linux.die.net/man/2/write
                 // Zero flags is equivalent to write
 
-                constexpr ssize_t data_invalid_size = 0;
+                constexpr ssize_t const data_invalid_size = 0;
 
-                remove_const < decltype (data_invalid_size) > :: type  size = data_invalid_size;
+                remove_const < decltype ( data_invalid_size ) > :: type  size = data_invalid_size;
 
                 socklen_t len = sizeof ( size );
 
                 // Only send data if the buffer is large enough to contain all data
                 if ( getsockopt ( _transfer , SOL_SOCKET , SO_SNDBUF , & size , & len ) == 0 ) {
                     // Most options use type int, ssize_t was just a placeholder
-                    static_assert ( sizeof ( int ) <= sizeof ( ssize_t ) );
-                    TRACE ( Trace::Information , ( _T ( "The sending buffer capacity equals %d bytes." ) , size ) );
+                    static_assert ( narrowing < decltype ( size ) , long , true > :: value != true );
+                    TRACE ( Trace::Information , ( _T ( "The sending buffer capacity equals %ld bytes." ) , size ) );
 
 // TODO: do not send if the sending buffer is too small
                     size = sendmsg ( _transfer , & msgh , 0);
@@ -1410,7 +1515,9 @@ namespace Plugin {
 
                 if ( ret != false ) {
                     // Ancillary data is not included
-                    TRACE ( Trace::Information , ( _T ( "Send %d bytes out of %d." ) , size , bufsize ) );
+                    static_assert ( narrowing < decltype ( size ) , long , true > :: value != true );
+                    static_assert ( narrowing < decltype ( bufsize ) , unsigned long , true > :: value != true );
+                    TRACE ( Trace::Information , ( _T ( "Send %ld bytes out of %lu." ) , size , bufsize ) );
                 }
                 else {
                     TRACE ( Trace::Error , ( _T ( "Failed to send data." ) ) );
@@ -1425,7 +1532,7 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::_Receive ( std::string & msg , int * fd , uint8_t count ) {
+    CompositorImplementation::DMATransfer::valid_t CompositorImplementation::DMATransfer::Receive ( std::string & msg , int * fd , uint8_t const count ) {
         bool ret = false;
 
         msg . clear ();
@@ -1446,11 +1553,14 @@ namespace Plugin {
 
         size_t const bufsize = msg . capacity ();
 
-        if ( bufsize > 0 && count > 0 && fd != nullptr ) {
+        if (    bufsize > 0
+             && count > 0
+             && fd != nullptr
+           ) {
             using fd_t = std::remove_pointer < decltype ( fd ) > :: type;
 
-            for ( decltype ( count ) i = 0 ; i < count ; i++ ) {
-                fd [ i ] = -1;
+            for ( remove_const < decltype ( count ) > :: type i = 0 ; i < count ; i++ ) {
+                fd [ i ] = InvalidFD ();
             }
 
             static_assert ( ( std::is_same < char * , remove_const  < decltype ( & msg [ 0 ] ) > :: type > :: value ) != false );
@@ -1460,7 +1570,7 @@ namespace Plugin {
             struct iovec iov;
 
             // Starting address
-            iov . iov_base = reinterpret_cast < void * > ( &buf [ 0 ] );
+            iov . iov_base = reinterpret_cast < void * > ( & buf [ 0 ] );
             // Number of bytes to transfer
             iov . iov_len = bufsize;
 
@@ -1506,7 +1616,8 @@ namespace Plugin {
                 default :   // Data
                             {
                                 // Extract the file descriptor information
-                                TRACE ( Trace::Information , ( _T ( "Received %d bytes." ) , size ) );
+                                static_assert ( narrowing < decltype ( size ) , long , true > :: value != true );
+                                TRACE ( Trace::Information , ( _T ( "Received %ld bytes." ) , size ) );
 
                                 // Pointer to the first cmsghdr in the ancillary data buffer associated with the passed msgh
                                 // Assume a single cmsgh was sent
@@ -1538,7 +1649,9 @@ namespace Plugin {
 
 
 
-    CompositorImplementation::Natives::Natives ( ModeSet & set) : _set { set } , _valid { Initialize () } {
+    CompositorImplementation::Natives::Natives ( ModeSet & set)
+        : _set { set }
+        , _valid { Initialize () } {
     }
 
     CompositorImplementation::Natives::~Natives () {
@@ -1550,8 +1663,10 @@ namespace Plugin {
         valid_t ret = false;
 
         // The argument to Open is unused, an empty string suffices
-         static_assert ( std::is_pointer < dpy_t > :: value != false );
-        ret = _set . Open ("") == Core::ERROR_NONE && Display () != nullptr;
+        static_assert ( std::is_pointer < dpy_t > :: value != false );
+// TODO: return type Open
+        ret =    _set . Open ("") == Core::ERROR_NONE
+              && Display () != nullptr;
 
         using width_t = decltype ( std::declval < ModeSet > () . Width () );
         using height_t = decltype ( std::declval < ModeSet > () . Height () );
@@ -1565,8 +1680,10 @@ namespace Plugin {
         }
 
         if ( ret != true ) {
-            static_assert ( ( std::is_integral < width_t > :: value && std::is_integral < height_t > :: value ) != false);
-            TRACE ( Trace::Error , ( _T ( "Unable to create a compositor surface of dimensions: %d x %d [width, height]))." ) , width , height ) );
+            static_assert (    narrowing < width_t , unsigned int , true > :: value != true
+                            && narrowing < height_t , unsigned int , true > :: value != true
+                          );
+            TRACE ( Trace::Error , ( _T ( "Unable to create a compositor surface of dimensions: %u x %u [width, height]))." ) , width , height ) );
         }
 
         return ret;
@@ -1588,10 +1705,16 @@ namespace Plugin {
 #define GL_ERROR() assert (GL_ERROR_WITH_RETURN ())
 #endif
 
-    CompositorImplementation::GLES::offset::offset () : offset ( ( _right - _left ) / static_cast < coordinate_t > ( 2.0f ) + _left , ( _top - _bottom ) / static_cast < coordinate_t > ( 2.0f ) + _bottom , ( _far - _near ) / static_cast < coordinate_t > ( 2.0f ) + _near ) {
+    CompositorImplementation::GLES::offset::offset ()
+        : offset ( ( _right - _left ) / static_cast < coordinate_t > ( 2.0f ) + _left , ( _top - _bottom ) / static_cast < coordinate_t > ( 2.0f ) + _bottom , ( _far - _near ) / static_cast < coordinate_t > ( 2.0f ) + _near ) {
+        // Repeated test
+        static_assert ( narrowing < float , coordinate_t , true > :: value != true );
     }
 
-    CompositorImplementation::GLES::offset::offset ( coordinate_t const & x , coordinate_t const & y , coordinate_t const & z ) : _x { x } , _y { y } , _z{ z } {
+    CompositorImplementation::GLES::offset::offset ( coordinate_t const & x , coordinate_t const & y , coordinate_t const & z )
+        : _x { x }
+        , _y { y }
+        , _z{ z } {
     }
 
 
@@ -1611,10 +1734,13 @@ namespace Plugin {
     /* static */ constexpr CompositorImplementation::GLES::scale::fraction_t const CompositorImplementation::GLES::scale::_min;
     /* static */ constexpr CompositorImplementation::GLES::scale::fraction_t const CompositorImplementation::GLES::scale::_max;
 
-    CompositorImplementation::GLES::scale::scale () : scale ( CompositorImplementation::GLES::scale::_identity , CompositorImplementation::GLES::scale::_identity ) {
+    CompositorImplementation::GLES::scale::scale ()
+        : scale ( CompositorImplementation::GLES::scale::_identity , CompositorImplementation::GLES::scale::_identity ) {
     }
 
-    CompositorImplementation::GLES::scale::scale ( CompositorImplementation::GLES::scale::fraction_t const & horiz , CompositorImplementation::GLES::scale::fraction_t const & vert ) : _horiz { horiz } , _vert { vert } {
+    CompositorImplementation::GLES::scale::scale ( CompositorImplementation::GLES::scale::fraction_t const & horiz , CompositorImplementation::GLES::scale::fraction_t const & vert )
+        : _horiz { horiz }
+        , _vert { vert } {
     }
 
 
@@ -1622,29 +1748,66 @@ namespace Plugin {
     /* static */ constexpr CompositorImplementation::GLES::opacity::alpha_t const CompositorImplementation::GLES::opacity::_min;
     /* static */ constexpr CompositorImplementation::GLES::opacity::alpha_t const CompositorImplementation::GLES::opacity::_max;
 
-    CompositorImplementation::GLES::opacity::opacity () : opacity { _max } {
+    CompositorImplementation::GLES::opacity::opacity ()
+        : opacity { _max } {
     }
 
-    CompositorImplementation::GLES::opacity::opacity ( CompositorImplementation::GLES::opacity::alpha_t const & alpha ) : _alpha { alpha } {
+    CompositorImplementation::GLES::opacity::opacity ( CompositorImplementation::GLES::opacity::alpha_t const & alpha )
+        : _alpha { alpha } {
     }
 
-    CompositorImplementation::GLES::opacity::opacity ( CompositorImplementation::GLES::opacity const & other ) : _alpha { other . _alpha } {
-    }
-
-
-
-    CompositorImplementation::GLES::texture::texture () : texture { GL_INVALID_ENUM, CompositorImplementation::GLES::opacity::InitialOpacity () } {
-    }
-
-    CompositorImplementation::GLES::texture::texture ( CompositorImplementation::GLES::tgt_t target , CompositorImplementation::GLES::opacity_t const & opacity ) : _tex { 0 } , _target { target } , _opacity { opacity } , _x { 0 } , _y { 0 } , _z { 0 } , _width { 0 } , _height { 0 } {
-    }
-
-    CompositorImplementation::GLES::texture::texture ( CompositorImplementation::GLES::texture const & other ) : _tex { other . _tex } , _target { other . _target } , _opacity { other . _opacity } , _x { other . _x } , _y { other . _y } , _z { other . _z } , _width { other . _width } , _height  { other . _height } {
+    CompositorImplementation::GLES::opacity::opacity ( CompositorImplementation::GLES::opacity const & other )
+        : _alpha { other . _alpha } {
     }
 
 
 
-    CompositorImplementation::GLES::GLES () : _offset { InitialOffset () } , _scale { InitialScale () } , _opacity { InitialOpacity () } ,  _valid { Initialize () } {
+    CompositorImplementation::GLES::texture::texture ()
+        : texture { static_cast < tgt_t > ( GL_INVALID_ENUM )
+        , CompositorImplementation::GLES::opacity::InitialOpacity () } {
+        // Possibly signed tp unsigned
+        static_assert (    narrowing < decltype ( GL_INVALID_ENUM ) , tgt_t , true > :: value != true
+                        || (    GL_INVALID_ENUM >= 0
+                             && in_unsigned_range < tgt_t , GL_INVALID_ENUM > :: value != false
+                           )
+                      );
+    }
+
+    CompositorImplementation::GLES::texture::texture ( CompositorImplementation::GLES::tgt_t const target , CompositorImplementation::GLES::opacity_t const & opacity )
+        : _tex { 0 }
+        , _target { target }
+        , _opacity { opacity }
+        , _x { 0 }
+        , _y { 0 }
+        , _z { 0 }
+        , _width { 0 }
+        , _height { 0 } {
+        static_assert ( std::is_integral < tex_t > :: value != false );
+        static_assert ( std::is_integral < x_t > :: value != false );
+        static_assert ( std::is_integral < y_t > :: value != false );
+        static_assert ( std::is_integral < z_t > :: value != false );
+        static_assert ( std::is_integral < width_t > :: value != false );
+        static_assert ( std::is_integral < height_t > :: value != false );
+    }
+
+    CompositorImplementation::GLES::texture::texture ( CompositorImplementation::GLES::texture const & other )
+        : _tex { other . _tex }
+        , _target { other . _target }
+        , _opacity { other . _opacity }
+        , _x { other . _x }
+        , _y { other . _y }
+        , _z { other . _z }
+        , _width { other . _width }
+        , _height  { other . _height } {
+    }
+
+
+
+    CompositorImplementation::GLES::GLES ()
+        : _offset { InitialOffset () }
+        , _scale { InitialScale () }
+        , _opacity { InitialOpacity () }
+        , _valid { Initialize () } {
     }
 
     CompositorImplementation::GLES::~GLES () {
@@ -1700,21 +1863,21 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderColor ( bool red , bool green , bool blue , bool alpha ) {
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderColor ( bool const red , bool const green , bool const blue , bool const alpha ) {
         static uint16_t degree = 0;
 
         constexpr decltype ( degree ) const ROTATION = 360;
 
         constexpr float const OMEGA = 3.14159265 / 180;
 
-        valid_t  ret = Valid ();
+        valid_t ret = Valid ();
 
         if ( ret != false ) {
             // Here, for C(++) these type should be identical
             // Type information: https://www.khronos.org/opengl/wiki/OpenGL_Type
             static_assert ( std::is_same < float , GLfloat > :: value );
 
-            GLfloat rad = static_cast < GLfloat > ( cos ( degree * OMEGA ) );
+            GLfloat rad = static_cast < GLfloat > ( cos ( static_cast < float > ( degree ) * OMEGA ) );
 
             constexpr GLfloat default_color = 0.0f;
 
@@ -1728,12 +1891,13 @@ namespace Plugin {
             degree = ( degree + 1 ) % ROTATION;
         }
 
-        ret = ret && GL_ERROR_WITH_RETURN ();
+        ret =    ret
+              && GL_ERROR_WITH_RETURN ();
 
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderEGLImage ( EGL::img_t const & img , EGLint x , EGLint y , EGL::width_t width , EGL::height_t height , EGLint zorder , EGLint opacity ) {
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderEGLImage ( EGL::img_t const & img , EGLint const x , EGLint const y , EGL::width_t const width , EGL::height_t const height , EGLint const zorder , EGLint const opacity ) {
         EGLDisplay dpy = EGL::InvalidDpy ();
         EGLDisplay ctx = EGL::InvalidCtx ();
 
@@ -1745,12 +1909,13 @@ namespace Plugin {
 
             tex . _tex = InvalidTex ();
 
-            ret = ret && GL_ERROR_WITH_RETURN ();
+            ret =    ret
+                  && GL_ERROR_WITH_RETURN ();
 
             return ret;
         };
 
-        auto SetupTexture = [ this , & dpy , & ctx ] ( texture_t & tex , EGL::img_t const & img , EGL::width_t width , EGL::height_t height , bool quick ) -> valid_t {
+        auto SetupTexture = [ this , & dpy , & ctx ] ( texture_t & tex , EGL::img_t const & img , EGL::width_t const width , EGL::height_t const height , bool const quick ) -> valid_t {
             valid_t ret = GL_ERROR_WITH_RETURN ();
 
             if ( quick != true ) {
@@ -1778,14 +1943,22 @@ namespace Plugin {
             tex . _width = width;
             tex . _height = height;
 
+            static_assert ( std::is_convertible < decltype ( tex . _target ) , decltype ( GL_TEXTURE_EXTERNAL_OES ) > :: value != false );
+            static_assert ( std::is_convertible < decltype ( tex . _target ) , decltype ( GL_TEXTURE_2D ) > :: value != false );
+
             switch ( tex . _target ) {
                 case GL_TEXTURE_EXTERNAL_OES :
                     {
                         // A valid GL context should exist for GLES::Supported ()
 
-                        ret = dpy != EGL::InvalidDpy () && ctx != EGL::InvalidCtx ();
+                        ret =    dpy != EGL::InvalidDpy ()
+                              && ctx != EGL::InvalidCtx ();
 
-                        static valid_t supported = ( GLES::Supported ( "GL_OES_EGL_image" ) && ( EGL::Supported ( dpy , "EGL_KHR_image" ) || EGL::Supported ( dpy, "EGL_KHR_image_base" ) ) ) != false;
+                        static valid_t supported = (    GLES::Supported ( "GL_OES_EGL_image" )
+                                                     && (    EGL::Supported ( dpy , "EGL_KHR_image" )
+                                                          || EGL::Supported ( dpy, "EGL_KHR_image_base" )
+                                                        )
+                                                   ) != false;
 
                         if ( ( ret && supported ) != false ) {
                             // Take storage for the texture from the EGLImage; Pixel data becomes undefined
@@ -1798,7 +1971,7 @@ namespace Plugin {
                                 // Logical const
                                 using no_const_img_t = remove_const < decltype ( img ) > :: type;
 
-                                pEGLImageTargetTexture2DOES ( tex . _target , reinterpret_cast < GLeglImageOES > ( const_cast < no_const_img_t  > ( img ) ) );
+                                pEGLImageTargetTexture2DOES ( tex . _target , reinterpret_cast < GLeglImageOES > ( const_cast < no_const_img_t > ( img ) ) );
                                 GL_ERROR ();
                             }
                         }
@@ -1806,7 +1979,7 @@ namespace Plugin {
 
                 case GL_TEXTURE_2D :
                     {
-                        glTexImage2D ( GL_TEXTURE_2D , 0 , GL_RGBA , tex . _width , tex . _height , 0 , GL_RGBA , GL_UNSIGNED_BYTE , nullptr);
+                        glTexImage2D ( GL_TEXTURE_2D , 0 , GL_RGBA , tex . _width , tex . _height , 0 , GL_RGBA , GL_UNSIGNED_BYTE , nullptr );
                         GL_ERROR ();
                     }; break;
 
@@ -1820,15 +1993,19 @@ namespace Plugin {
             glBindTexture ( tex . _target , InvalidTex () );
 
 
-            ret = ret && GL_ERROR_WITH_RETURN ();
+            ret =    ret
+                  && GL_ERROR_WITH_RETURN ();
 
-                return ret;
+            return ret;
         };
 
 
         silence ( DestroyTexture );
 
-        valid_t ret = GL_ERROR_WITH_RETURN () && img != EGL::InvalidImage () && width > 0 && height > 0;
+        valid_t ret =    GL_ERROR_WITH_RETURN ()
+                      && img != EGL::InvalidImage ()
+                      && width > 0
+                      && height > 0;
 
         // A valid GL context should exist for GLES::Supported ()
         /* EGL::ctx_t */ ctx = eglGetCurrentContext ();
@@ -1842,6 +2019,7 @@ namespace Plugin {
 
         if ( ret != false ) {
             surf = eglGetCurrentSurface ( EGL_DRAW );
+
             ret  =     eglGetError () == EGL_SUCCESS
                     && surf != EGL::InvalidSurf ();
         }
@@ -1854,7 +2032,9 @@ namespace Plugin {
                     && eglGetError () == EGL_SUCCESS;
         }
 
-        ret = ret && eglGetError () == EGL_SUCCESS && ctx != EGL::InvalidCtx ();
+        ret =    ret
+              && eglGetError () == EGL_SUCCESS
+              && ctx != EGL::InvalidCtx ();
 
         // Set up the required textures
 
@@ -1880,16 +2060,21 @@ namespace Plugin {
             using common_w_t = std::common_type < decltype ( tex_oes . _width ) , decltype ( e_width ) > :: type;
             using common_h_t = std::common_type < decltype ( tex_oes . _height ) , decltype ( e_height ) > :: type;
 
-            if ( static_cast < common_w_t > ( tex_oes . _width ) != static_cast < common_w_t > ( e_width ) || static_cast < common_h_t > ( tex_oes . _height ) != static_cast < common_h_t > ( e_height ) ) {
+            if (    static_cast < common_w_t > ( tex_oes . _width ) != static_cast < common_w_t > ( e_width )
+                 || static_cast < common_h_t > ( tex_oes . _height ) != static_cast < common_h_t > ( e_height )
+               ) {
+
                 reuse = false;
 
-                if ( tex_oes . _width > 0 && tex_oes . _height > 0 ) {
+                if (    tex_oes . _width > 0
+                     && tex_oes . _height > 0
+                   ) {
                     reuse = DestroyTexture ( tex_oes ) != true;
                 }
             }
 #endif
 
-            ret = SetupTexture ( tex_oes , img , e_width , e_height , reuse) != false;
+            ret = SetupTexture ( tex_oes , img , e_width , e_height , reuse ) != false;
             reuse = ret;
 
             {
@@ -1909,11 +2094,15 @@ namespace Plugin {
                     using common_w_t = std::common_type < decltype ( width ) , decltype ( it -> second . _width ) > :: type;
                     using common_h_t = std::common_type < decltype ( height ) , decltype ( it -> second . _height ) > :: type;
 
-                    if ( static_cast < common_w_t > ( width ) != static_cast < common_w_t > ( it -> second . _width) || static_cast < common_h_t > ( height ) != static_cast < common_h_t > (it -> second . _height ) ) {
+                    if (    static_cast < common_w_t > ( width ) != static_cast < common_w_t > ( it -> second . _width)
+                         || static_cast < common_h_t > ( height ) != static_cast < common_h_t > (it -> second . _height )
+                       ) {
 
                         TRACE_WITHOUT_THIS ( Trace::Information , ( _T ( "Texture dimensions change detected!" ) ) );
 
-                        ret = DestroyTexture ( tex_fbo ) && _scene . erase ( img ) == 1 && SetupTexture ( tex_fbo , img , width , height , false ) != false;
+                        ret =    DestroyTexture ( tex_fbo )
+                              && _scene . erase ( img ) == 1
+                              && SetupTexture ( tex_fbo , img , width , height , false ) != false;
 
                         if ( ret != false ) {
                             auto it = _scene . insert ( std::pair < EGL::img_t , texture_t > ( img , tex_fbo ) );
@@ -1939,29 +2128,29 @@ namespace Plugin {
                     using common_opacity_t = std::common_type < decltype ( opacity ) , opacity_a_t , decltype ( WPEFramework::Exchange::IComposition::minOpacity ) , decltype ( WPEFramework::Exchange::IComposition::maxOpacity ) > :: type;
 
                     // Narrowing is not allowed
-//                    static_assert ( narrowing < common_opacity_t , opacity_a_t , true> :: value != false );
+//                    static_assert ( narrowing < opacity_a_t , common_opacity_t , true > :: value != true );
 
                     tex_fbo . _opacity = ( static_cast < opacity_a_t > ( static_cast < common_opacity_t > ( opacity ) / ( static_cast < common_opacity_t > ( WPEFramework::Exchange::IComposition::maxOpacity ) - static_cast < common_opacity_t > ( WPEFramework::Exchange::IComposition::minOpacity ) ) ) );
                     tex_fbo . _x = x;
                     tex_fbo . _y = y;
                     tex_fbo . _z = zorder;
 
-                    _scene [img] = tex_fbo;
+                    _scene [ img ] = tex_fbo;
                 }
             }
 
-             GLuint fbo;
+            GLuint fbo;
 
             glGenFramebuffers ( 1 , & fbo );
             GL_ERROR ();
 
-            glBindFramebuffer ( GL_FRAMEBUFFER , fbo);
+            glBindFramebuffer ( GL_FRAMEBUFFER , fbo );
             GL_ERROR ();
 
-            glBindTexture ( tex_oes . _target , tex_oes . _tex);
+            glBindTexture ( tex_oes . _target , tex_oes . _tex );
             GL_ERROR ();
 
-            glBindTexture ( tex_fbo . _target , tex_fbo . _tex);
+            glBindTexture ( tex_fbo . _target , tex_fbo . _tex );
             GL_ERROR ();
 
 
@@ -1969,7 +2158,9 @@ namespace Plugin {
             GL_ERROR ();
 
             GLenum status = glCheckFramebufferStatus ( GL_FRAMEBUFFER );
-            ret = ret && GL_ERROR_WITH_RETURN () && status == GL_FRAMEBUFFER_COMPLETE;;
+            ret =    ret
+                  && GL_ERROR_WITH_RETURN ()
+                  && status == GL_FRAMEBUFFER_COMPLETE;;
 
 
             glDisable ( GL_DEPTH_TEST );
@@ -1979,20 +2170,27 @@ namespace Plugin {
             GL_ERROR ();
 
 
-            ret = ( ret && UpdateScale ( GLES::InitialScale () ) && UpdateOffset ( GLES::InitialOffset () ) && UpdateOpacity ( tex_fbo . _opacity) && SetupViewport ( 0 , 0 , width , height ) && RenderTileOES () ) != false;
+            ret = (    ret
+                    && UpdateScale ( GLES::InitialScale () )
+                    && UpdateOffset ( GLES::InitialOffset () )
+                    && UpdateOpacity ( tex_fbo . _opacity )
+                    && SetupViewport ( 0 , 0 , width , height )
+                    && RenderTileOES ()
+                  ) != false;
 
 
             glBindTexture ( tex_oes . _target , InvalidTex () );
             GL_ERROR ();
 
-            glBindTexture (tex_fbo . _target, InvalidTex () );
+            glBindTexture ( tex_fbo . _target , InvalidTex () );
             GL_ERROR ();
 
             glDeleteFramebuffers ( 1 , & fbo );
             GL_ERROR ();
         }
 
-        ret = ret && GL_ERROR_WITH_RETURN ();
+        ret =    ret
+              && GL_ERROR_WITH_RETURN ();
 
 
         // Do not destroy tex-fbo and _tex_oes !
@@ -2000,7 +2198,7 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderScene ( CompositorImplementation::GLES::width_t width , CompositorImplementation::GLES::height_t height , std::function < CompositorImplementation::GLES::valid_t ( CompositorImplementation::GLES::texture_t const & left , CompositorImplementation::GLES::texture_t const & right ) > sortfunc ) {
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderScene ( CompositorImplementation::GLES::width_t const width , CompositorImplementation::GLES::height_t const height , std::function < CompositorImplementation::GLES::valid_t ( CompositorImplementation::GLES::texture_t const & left , CompositorImplementation::GLES::texture_t const & right ) > sortfunc ) {
         valid_t ret = GL_ERROR_WITH_RETURN ();
 
         if ( ret != false ) {
@@ -2023,7 +2221,10 @@ namespace Plugin {
             GL_ERROR ();
 
             GLenum status = glCheckFramebufferStatus ( GL_FRAMEBUFFER );
-            ret = ret && GL_ERROR_WITH_RETURN () && status == GL_FRAMEBUFFER_COMPLETE;
+
+            ret =    ret
+                  && GL_ERROR_WITH_RETURN ()
+                  && status == GL_FRAMEBUFFER_COMPLETE;
 
             // Blend pixels with pixels already present in the frame buffer
             glEnable ( GL_BLEND );
@@ -2040,7 +2241,9 @@ namespace Plugin {
 
             glGetIntegerv ( GL_DEPTH_BITS , & bits );
 
-            ret = ret && GL_ERROR_WITH_RETURN () && bits > static_cast < GLint > ( 0 );
+            ret =    ret
+                  && GL_ERROR_WITH_RETURN ()
+                  && bits > static_cast < GLint > ( 0 );
 
             glEnable ( GL_DEPTH_TEST );
             GL_ERROR ();
@@ -2064,7 +2267,9 @@ namespace Plugin {
 
 
             // Start with an empty (solid) background
-            ret = ( ret && RenderColor ( false , false , false , false ) ) != false;
+            ret = (    ret
+                    && RenderColor ( false , false , false , false )
+                  ) != false;
 
             // For all textures in map
             if ( ret != false ) {
@@ -2076,7 +2281,7 @@ namespace Plugin {
                 for ( auto begin = sorted . begin () , it = begin , end = sorted . end () ; it != end ; it ++ ) {
                     texture_t & tex = * it;
 
-                    assert ( tex . _target == GL_TEXTURE_2D );
+                    assert ( tex . _target == static_cast < tgt_t > ( GL_TEXTURE_2D ) );
 
                     glBindTexture ( tex . _target , tex . _tex );
                     GL_ERROR ();
@@ -2093,8 +2298,8 @@ namespace Plugin {
 
 
                     // Narrowing is not allowed
-                    static_assert ( narrowing < common_scale_h_t , scale_h_t , true > :: value != false );
-                    static_assert ( narrowing < common_scale_v_t , scale_v_t , true > :: value != false );
+                    static_assert ( narrowing < scale_h_t , common_scale_h_t , true > :: value != true );
+                    static_assert ( narrowing < scale_v_t , common_scale_v_t , true > :: value != true );
 
                     GLES::scale_t g_scale ( static_cast < GLES::scale::fraction_t > ( static_cast < common_scale_h_t > ( tex . _width ) / static_cast < common_scale_h_t > ( width ) ) , static_cast < GLES::scale::fraction_t > ( static_cast < common_scale_v_t > ( tex . _height ) / static_cast < common_scale_v_t > ( height ) ) );
 
@@ -2111,22 +2316,32 @@ namespace Plugin {
 
 
                     // Narrowing is not allowed
-                    static_assert ( narrowing < common_offset_x_t, offset_x_t , true > :: value != false );
-                    static_assert ( narrowing < common_offset_y_t, offset_y_t , true > :: value != false );
-                    static_assert ( narrowing < common_offset_z_t, offset_z_t , true > :: value != false );
+                    static_assert ( narrowing < offset_x_t , common_offset_x_t , true > :: value != true );
+                    static_assert ( narrowing < offset_y_t , common_offset_y_t , true > :: value != true );
+                    static_assert ( narrowing < offset_z_t , common_offset_z_t , true > :: value != true );
 
 
                     GLES::offset_t g_offset ( static_cast < offset_x_t > ( static_cast < common_offset_x_t > ( g_scale . _horiz ) * static_cast < common_offset_x_t > ( tex . _x ) / static_cast < common_offset_x_t > ( tex . _width ) ) , static_cast < offset_y_t > ( static_cast < common_offset_y_t > ( g_scale . _vert ) * static_cast < common_offset_y_t > ( tex . _y ) / static_cast < common_offset_y_t > ( tex . _height ) ) , static_cast < offset_z_t > ( static_cast < common_offset_z_t > ( tex . _z ) / ( static_cast < common_offset_z_t > ( WPEFramework::Exchange::IComposition::maxZOrder ) - static_cast < common_offset_z_t > ( WPEFramework::Exchange::IComposition::minZOrder ) ) ) );
 
                     // Width and height are screen dimensions, eg the geomtery values are in this space
-                    ret = ( ret && UpdateScale ( g_scale ) && UpdateOffset ( g_offset ) && UpdateOpacity (tex . _opacity ) && SetupViewport (0 , 0 , width , height ) && RenderTile () ) != false;
+                    ret = (    ret
+                            && UpdateScale ( g_scale )
+                            && UpdateOffset ( g_offset )
+                            && UpdateOpacity (tex . _opacity )
+                            && SetupViewport ( 0 , 0 , width , height )
+                            && RenderTile ()
+                          ) != false;
 
                     if ( ret != true ) {
                         break;
                     }
                 }
 
-                ret = ( ret && UpdateScale ( scl ) && UpdateOffset ( off ) && UpdateOpacity ( op ) ) != false;
+                ret = (    ret
+                        && UpdateScale ( scl )
+                        && UpdateOffset ( off )
+                        && UpdateOpacity ( op )
+                      ) != false;
             }
 
 
@@ -2141,7 +2356,8 @@ namespace Plugin {
             GL_ERROR ();
 
 
-            ret = ret && GL_ERROR_WITH_RETURN ();
+            ret =    ret
+                  && GL_ERROR_WITH_RETURN ();
 
         }
 
@@ -2164,7 +2380,7 @@ namespace Plugin {
 
             _scene . erase ( it );
 
-            ret = ( size - _scene . size () ) == static_cast < scene_t::size_type >  ( 1 );
+            ret = ( size - _scene . size () ) == static_cast < scene_t::size_type > ( 1 );
         }
 
         return ret;
@@ -2192,7 +2408,8 @@ namespace Plugin {
             GL_ERROR ();
         }
 
-        ret = ret && GL_ERROR_WITH_RETURN ();
+        ret =    ret
+              && GL_ERROR_WITH_RETURN ();
 
         return ret;
     }
@@ -2200,11 +2417,15 @@ namespace Plugin {
 // TODO: precompile programs at initialization stage
 
     CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SetupProgram ( char const vtx_src [] , char const frag_src [] , prog_t & prog ) {
-        auto LoadShader = [] ( GLuint type , GLchar const code [] ) -> GLuint {
+        auto LoadShader = [] ( GLuint const type , GLchar const code [] ) -> GLuint {
             GLuint shader = glCreateShader ( type );
             GL_ERROR ();
 
-            valid_t ret = ( GL_ERROR_WITH_RETURN () && shader != 0 ) != false;
+            static_assert ( std::is_integral < decltype ( shader ) > :: value != false );
+
+            valid_t ret = (    GL_ERROR_WITH_RETURN ()
+                            && shader != 0
+                          ) != false;
 
             if ( ret != false ) {
                 glShaderSource ( shader , 1 , & code , nullptr );
@@ -2218,7 +2439,9 @@ namespace Plugin {
                 glGetShaderiv ( shader , GL_COMPILE_STATUS , & status );
                 GL_ERROR ();
 
-                ret = ( GL_ERROR_WITH_RETURN () && status != GL_FALSE ) != false;
+                ret = (    GL_ERROR_WITH_RETURN ()
+                        && status != GL_FALSE
+                      ) != false;
 
 #ifndef NDEBUG
                 if ( ret != true ) {
@@ -2241,17 +2464,20 @@ namespace Plugin {
                 }
 #endif
 
-                ret = ret && GL_ERROR_WITH_RETURN ();
+                ret =    ret
+                      && GL_ERROR_WITH_RETURN ();
             }
 
             return shader;
         };
 
-        auto ShadersToProgram = [] ( GLuint vertex , GLuint fragment , prog_t & prog ) -> valid_t {
+        auto ShadersToProgram = [] ( GLuint const vertex , GLuint const fragment , prog_t & prog ) -> valid_t {
             prog = glCreateProgram ();
             GL_ERROR ();
 
-            valid_t ret = ( GL_ERROR_WITH_RETURN () && prog != 0 ) != false;
+            valid_t ret = (    GL_ERROR_WITH_RETURN ()
+                            && prog != InvalidProg ()
+                          ) != false;
 
             if ( ret != false ) {
                 glAttachShader ( prog , vertex );
@@ -2271,7 +2497,9 @@ namespace Plugin {
                 glGetProgramiv ( prog , GL_LINK_STATUS , & status );
                 GL_ERROR ();
 
-                ret = ( GL_ERROR_WITH_RETURN () && status != GL_FALSE ) != false;
+                ret = (    GL_ERROR_WITH_RETURN ()
+                        && status != GL_FALSE
+                      ) != false;
 
 #ifndef NDEBUG
                 if ( ret != true ) {
@@ -2294,19 +2522,22 @@ namespace Plugin {
                 }
 #endif
 
-                ret = ret && GL_ERROR_WITH_RETURN ();
+                ret =    ret
+                      && GL_ERROR_WITH_RETURN ();
             }
 
             return ret;
         };
 
         auto DeleteCurrentProgram = [] () -> valid_t {
-            GLuint prog = 0;
+            GLuint prog = InvalidProg ();
 
             glGetIntegerv ( GL_CURRENT_PROGRAM , reinterpret_cast < GLint * > ( & prog ) );
             GL_ERROR ();
 
-            valid_t ret = ( GL_ERROR_WITH_RETURN () && prog != 0 ) != false;
+            valid_t ret = (    GL_ERROR_WITH_RETURN ()
+                            && prog != InvalidProg ()
+                          ) != false;
 
             if ( ret != false ) {
                 GLint count = 0;
@@ -2314,7 +2545,9 @@ namespace Plugin {
                 glGetProgramiv ( prog , GL_ATTACHED_SHADERS , & count );
                 GL_ERROR ();
 
-                ret = ( GL_ERROR_WITH_RETURN () && count > 0 ) != false;
+                ret = (    GL_ERROR_WITH_RETURN ()
+                        && count > 0
+                      ) != false;
 
                 if ( ret != false ) {
                     GLuint shaders [ count ];
@@ -2335,7 +2568,8 @@ namespace Plugin {
                     }
                 }
 
-                ret = ret && GL_ERROR_WITH_RETURN ();
+                ret =    ret
+                      && GL_ERROR_WITH_RETURN ();
             }
 
             return ret;
@@ -2344,11 +2578,14 @@ namespace Plugin {
 
         bool ret = GL_ERROR_WITH_RETURN ();
 
-        if ( ret != false && prog == InvalidProg () ) {
+        if (    ret != false
+             && prog == InvalidProg ()
+           ) {
+
             GLuint vtxShader = LoadShader ( GL_VERTEX_SHADER , vtx_src );
             GLuint fragShader = LoadShader ( GL_FRAGMENT_SHADER , frag_src );
 
-            ret = ShadersToProgram ( vtxShader , fragShader , prog);
+            ret = ShadersToProgram ( vtxShader , fragShader , prog );
         }
 
         if ( ret != false ) {
@@ -2369,7 +2606,8 @@ namespace Plugin {
             }
         }
 
-        ret = ret && GL_ERROR_WITH_RETURN ();
+        ret =    ret
+              && GL_ERROR_WITH_RETURN ();
 
         return ret;
     }
@@ -2387,7 +2625,7 @@ namespace Plugin {
             "}                                             \n"
         ;
 
-        constexpr char  const frag_src [] =
+        constexpr char const frag_src [] =
             "#version 100                                                                     \n"
             "#extension GL_OES_EGL_image_external : require                                   \n"
             "precision mediump float;                                                         \n"
@@ -2400,7 +2638,7 @@ namespace Plugin {
         ;
 
         static_assert ( std::is_same < GLfloat , GLES::offset::coordinate_t > :: value != false );
-        std::array < GLfloat , 4 * VerticeDimensions > const vert = {
+        std::array < GLfloat const , 4 * VerticeDimensions > const vert = {
             0.0f , 0.0f , 0.0f /* v0 */,
             1.0f , 0.0f , 0.0f /* v1 */,
             0.0f , 1.0f , 0.0f /* v2 */,
@@ -2408,7 +2646,7 @@ namespace Plugin {
         };
 
         if ( ret != false ) {
-            glDisable (GL_BLEND);
+            glDisable ( GL_BLEND );
             GL_ERROR ();
 
             static prog_t prog = InvalidProg ();
@@ -2419,7 +2657,8 @@ namespace Plugin {
                     && RenderColor ( false , false , false )
                     && supported
                     && SetupProgram ( vtx_src , frag_src , prog )
-                    && RenderPolygon ( vert ) ) != false
+                    && RenderPolygon ( vert )
+                  ) != false
             ;
         }
 
@@ -2452,7 +2691,7 @@ namespace Plugin {
         ;
 
         static_assert ( std::is_same < GLfloat , GLES::offset::coordinate_t > :: value != false );
-        std::array < GLfloat , 4 * VerticeDimensions > const vert = {
+        std::array < GLfloat const , 4 * VerticeDimensions > const vert = {
             0.0f , 0.0f , _offset . _z /* v0 */,
             1.0f , 0.0f , _offset . _z /* v1 */,
             0.0f , 1.0f , _offset . _z /* v2 */,
@@ -2463,6 +2702,7 @@ namespace Plugin {
         if ( ret != false ) {
 // TODO: version match
 #ifdef _0
+// TODO: type check GL_SHADING_LANGUAGE_VERSION
             using string_t = std::string::value_type;
             string_t const * ext = reinterpret_cast < string_t const * > ( glGetString ( GL_SHADING_LANGUAGE_VERSION ) );
 
@@ -2473,20 +2713,23 @@ namespace Plugin {
 
             ret = (    ret
                     && SetupProgram ( vtx_src , frag_src , prog )
-                    && RenderPolygon ( vert ) ) != false;
+                    && RenderPolygon ( vert )
+                  ) != false;
         }
 
         return ret;
     }
 
     template < size_t N >
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderPolygon ( std::array < GLfloat , N > const & vert ) {
-        GLuint prog = 0;
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderPolygon ( std::array < GLfloat const , N > const & vert ) {
+        GLuint prog = InvalidProg ();
 
         glGetIntegerv ( GL_CURRENT_PROGRAM , reinterpret_cast < GLint * > ( & prog ) );
         GL_ERROR ();
 
-        valid_t ret = ( GL_ERROR_WITH_RETURN () && prog > 0 ) != false;
+        valid_t ret = (    GL_ERROR_WITH_RETURN ()
+                        && prog != InvalidProg ()
+                      ) != false;
 
         if ( ret != false ) {
             GLint loc_vert = 0 , loc_op = 0;
@@ -2512,7 +2755,8 @@ namespace Plugin {
             glDisableVertexAttribArray ( loc_vert );
             GL_ERROR ();
 
-            ret = ret && GL_ERROR_WITH_RETURN ();
+            ret =    ret
+                  && GL_ERROR_WITH_RETURN ();
         }
 
         return ret;
@@ -2539,7 +2783,7 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SetupViewport ( EGLint x , EGLint y , EGL::width_t width , EGL::height_t height ) {
+    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SetupViewport ( EGLint const x , EGLint const y , EGL::width_t const width , EGL::height_t const height ) {
         silence ( x );
         silence ( y );
 
@@ -2565,7 +2809,7 @@ namespace Plugin {
         // _offset is in the range -1..1 wrt to origin, so the effective value maps to -width to width, -height to height
 
 
-        constexpr uint8_t mult = 2;
+        constexpr uint8_t const mult = 2;
 
         using common_t = std::common_type < decltype ( width ) , decltype ( height ) , decltype ( mult ) , decltype ( _scale . _horiz ) , decltype ( _scale . _vert ) , decltype ( _offset . _x ) , decltype ( _offset . _y ) , remove_pointer < std::decay < decltype ( dims ) > :: type > :: type > :: type;
 
@@ -2588,13 +2832,32 @@ namespace Plugin {
             std::cout << "Warning: possible clipping or unknown behavior detected. [" << quirk_x << ", " << quirk_y << ", " << quirk_width << ", " << quirk_height << ", " << width << ", " << height << ", " << dims [ 0 ] << ", " << dims [ 1 ] << "]" << std::endl;
         }
 
+
+        // Static asserts fail due to common type
+//        static_assert ( narrowing < common_t , GLint , true > :: value != true );
+//        static_assert ( narrowing < common_t , GLsizei , true > :: value != true );
+//      If common type typically is unsigned then checking mimm values is only allowed on unsigned
+//        assert ( static_cast < common_t > ( quirk_x ) >= static_cast < common_t > ( std::numeric_limits < GLint > :: min () ) );
+        assert ( static_cast < common_t > ( quirk_x ) <= static_cast < common_t > ( std::numeric_limits < GLint > :: max () ) );
+//        assert ( static_cast < common_t > ( quirk_y ) >= static_cast < common_t > ( std::numeric_limits < GLint > :: min () ) );
+        assert ( static_cast < common_t > ( quirk_y ) <= static_cast < common_t > ( std::numeric_limits < GLint > :: max () ) );
+//        assert ( static_cast < common_t > ( quirk_width ) >= static_cast < common_t > ( std::numeric_limits < GLint > :: min () ) );
+        assert ( static_cast < common_t > ( quirk_width ) <= static_cast < common_t > ( std::numeric_limits < GLint > :: max () ) );
+//        assert ( static_cast < common_t > ( quirk_height ) >= static_cast < common_t > ( std::numeric_limits < GLint > :: min () ) );
+        assert ( static_cast < common_t > ( quirk_height ) <= static_cast < common_t > ( std::numeric_limits < GLint > :: max () ) );
+
         glViewport ( static_cast < GLint > ( quirk_x ) , static_cast < GLint > ( quirk_y ) , static_cast < GLsizei > ( quirk_width ) , static_cast < GLsizei > ( quirk_height ) );
 #else
-        glViewport ( 0 , 0 , width , height );
+        static_assert ( narrowing < decltype ( width ) , Glsizei , true > :: value != true );
+        static_assert ( narrowing < decltype ( height ) , Glsizei , true > :: value != true );
+
+        glViewport ( 0 , 0 , static_cast < GLsizei > ( width ) , static_cast < GLsizei > ( height ) );
 #endif
         GL_ERROR ();
 
-        ret = ( ret && GL_ERROR_WITH_RETURN () ) != false;
+        ret = (    ret
+                && GL_ERROR_WITH_RETURN ()
+              ) != false;
 
         return ret;
     }
@@ -2657,12 +2920,22 @@ namespace Plugin {
             // .. but still execute, when needed, an additional flush to be on the safe sidei, and avoid a dreaded  deadlock
             EGLint val = static_cast < EGLint > ( KHRFIX ( eglClientWaitSync ) ( _dpy , _sync , _EGL_SYNC_FLUSH_COMMANDS_BIT , _EGL_FOREVER ) );
 
-            if ( val == static_cast < EGLint > ( EGL_FALSE ) || val != static_cast < EGLint > ( _EGL_CONDITION_SATISFIED ) ) {
+            static_assert ( std::is_convertible < decltype ( EGL_FALSE ) , decltype ( val ) > :: value != false );
+            static_assert ( narrowing < decltype ( EGL_FALSE ), EGLint , true > :: value != true );
+            static_assert ( narrowing < decltype ( _EGL_CONDITION_SATISFIED ), EGLint , true > :: value != true );
+
+            if (    val == static_cast < EGLint > ( EGL_FALSE )
+                 || val != static_cast < EGLint > ( _EGL_CONDITION_SATISFIED )
+               ) {
+
                 EGLAttrib status;
 
                 bool ret = KHRFIX ( eglGetSyncAttrib ) ( _dpy , _sync , _EGL_SYNC_STATUS , & status ) != EGL_FALSE;
 
-                ret = ret && status == _EGL_SIGNALED;
+                static_assert ( std::is_convertible < decltype ( _EGL_SIGNALED ) , decltype ( status) > :: value != false );
+
+                ret = ret
+                      && status == _EGL_SIGNALED;
 
                     // Assert on error
                 if ( ret != true ) {
@@ -2684,7 +2957,11 @@ namespace Plugin {
 
 
 
-    CompositorImplementation::EGL::RenderThread::RenderThread ( EGL & egl , GLES & gles ) : Core::Thread () , _sharing { Instance () } , _egl { egl } , _gles { gles } {
+    CompositorImplementation::EGL::RenderThread::RenderThread ( EGL & egl , GLES & gles )
+        : Core::Thread ()
+        , _sharing { Instance () }
+        , _egl { egl }
+        , _gles { gles } {
     }
 
     CompositorImplementation::EGL::RenderThread::~RenderThread () {
@@ -2699,19 +2976,20 @@ namespace Plugin {
     }
 
     uint32_t CompositorImplementation::EGL::RenderThread::Worker () {
-        return Core::infinite ;
+        static_assert ( narrowing < decltype ( Core::infinite ) , uint32_t , true > :: value != true );
+        return static_cast < uint32_t > ( Core::infinite );
     }
 
     CompositorImplementation::EGL::RenderThread::lock_t & CompositorImplementation::EGL::RenderThread::Instance () {
         static lock_t lock;
-
         return lock;
     }
 
 
 
-
-    CompositorImplementation::EGL::SceneRenderer::SceneRenderer ( EGL & egl , GLES & gles , CompositorImplementation & compositor ) : RenderThread ( egl , gles ) , _compositor { compositor } {
+    CompositorImplementation::EGL::SceneRenderer::SceneRenderer ( EGL & egl , GLES & gles , CompositorImplementation & compositor )
+        : RenderThread ( egl , gles )
+        , _compositor { compositor } {
     }
 
     CompositorImplementation::EGL::SceneRenderer::~SceneRenderer () {
@@ -2720,9 +2998,12 @@ namespace Plugin {
 
     CompositorImplementation::EGL::SceneRenderer::timeout_t CompositorImplementation::EGL::SceneRenderer::Worker ()  {
         // 'Lightning speed' frame flipping
-        constexpr timeout_t ret = 0;
-// TODO: frame flipping should limitthe rate
-        EGL::valid_t status = ( Render () && _compositor . FrameFlip () ) != false;
+        constexpr timeout_t const ret = 0;
+// TODO: frame flipping should limit the rate
+
+        EGL::valid_t status = (    Render ()
+                                && _compositor . FrameFlip ()
+                              ) != false;
 
         if ( status != false ) {
             Block ();
@@ -2762,7 +3043,7 @@ namespace Plugin {
     void CompositorImplementation::EGL::TextureRenderer::SetClientName ( std::string const & name ) {
         std::lock_guard < decltype ( _access ) > const lock ( _access );
 
-        auto result = set . insert ( element_t ( name) );
+        auto result = set . insert ( element_t ( name ) );
 
         if ( result . second != true ) {
             // Probably the element exist
@@ -2783,7 +3064,8 @@ namespace Plugin {
 
 // TODO: do not exceed a single frame time for multiple
             std::lock_guard < decltype ( _access ) > const lock ( _access );
-            if ( queue . size () > 0) {
+            if ( queue . size () > 0 ) {
+                static_assert ( std::is_integral < decltype ( ret ) > :: value != false );
                 ret = 0;
             }
         }
@@ -2815,7 +3097,11 @@ namespace Plugin {
         else {
             ClientSurface::surf_t const & surf = client -> Surface ();
 
-            ret = ( surf . RenderComplete () && _egl . Valid () && _gles . Valid () && client -> SyncPrimitiveStart () ) != false;
+            ret = (    surf . RenderComplete ()
+                    && _egl . Valid ()
+                    && _gles . Valid ()
+                    && client -> SyncPrimitiveStart ()
+                  ) != false;
 
             if ( ret != false ) {
                 TRACE ( Trace::Information , ( _T ( "Client has an associated EGL image." ) ) );
@@ -2834,12 +3120,11 @@ namespace Plugin {
                 using geom_h_t = decltype ( geom . height );
 
 // TODO:
-                constexpr bool enable = true;
+                constexpr bool const enable = true;
 
                 if (    narrowing < buf_w_t , geom_w_t , enable > :: value != false
-                     && narrowing < buf_h_t , geom_h_t , enable > :: value != false
-                   )
-                {
+                     || narrowing < buf_h_t , geom_h_t , enable > :: value != false
+                   ) {
                     // Narrowing, but not necessarily a problem
 // TODO minimum value
                     using common_w_t = std::common_type < buf_w_t , geom_w_t > :: type;
@@ -2859,12 +3144,14 @@ namespace Plugin {
 
                 using opacity_t = decltype ( opa );
 
-                if ( narrowing < opacity_t , EGLint , enable > :: value != false) {
+                if ( narrowing < opacity_t , EGLint , enable > :: value != false ) {
                     // Narrowing detected
 
                     using common_opacity_t = std::common_type < opacity_t , EGLint , decltype ( WPEFramework::Exchange::IComposition::minOpacity ) , decltype ( WPEFramework::Exchange::IComposition::maxOpacity ) > :: type;
 
-                    assert ( static_cast < common_opacity_t > ( opa ) >= static_cast < common_opacity_t > ( std::numeric_limits < EGLint > :: min () ) || static_cast < common_opacity_t > ( opa ) <= static_cast < common_opacity_t > ( std::numeric_limits < EGLint > :: max () ) );
+                    assert (    static_cast < common_opacity_t > ( opa ) >= static_cast < common_opacity_t > ( std::numeric_limits < EGLint > :: min () )
+                             || static_cast < common_opacity_t > ( opa ) <= static_cast < common_opacity_t > ( std::numeric_limits < EGLint > :: max () )
+                           );
                 }
 
 
@@ -2877,7 +3164,9 @@ namespace Plugin {
 
                     using common_zorder_t = std::common_type <zorder_t, EGLint> :: type;
 
-                    assert ( static_cast < common_zorder_t > ( zorder ) >= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: min () ) || static_cast < common_zorder_t > ( zorder ) <= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: max () ) );
+                    assert (    static_cast < common_zorder_t > ( zorder ) >= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: min () )
+                             || static_cast < common_zorder_t > ( zorder ) <= static_cast < common_zorder_t > ( std::numeric_limits < EGLint > :: max () )
+                           );
                 }
 
 
@@ -2885,7 +3174,8 @@ namespace Plugin {
 
                 ret = ( _egl . RenderWithoutSwap ( std::bind ( & GLES::RenderEGLImage , & _gles , std::cref ( surf . _khr) , geom . x , geom . y , geom . width , geom . height , static_cast < EGLint > ( zorder ) , static_cast < EGLint > ( opa )) ) ) != false;
 
-                ret = client -> SyncPrimitiveEnd () && ret;
+                ret =    client -> SyncPrimitiveEnd ()
+                      && ret;
             }
 
         }
@@ -2902,8 +3192,10 @@ namespace Plugin {
 
 
 
-    CompositorImplementation::EGL::EGL ( Natives const & natives ) : _natives { natives }, _valid { Initialize () } {
-    }
+    CompositorImplementation::EGL::EGL ( Natives const & natives )
+        : _natives { natives }
+        , _valid { Initialize () }
+    {}
 
     CompositorImplementation::EGL::~EGL () {
         _valid = false;
@@ -2913,10 +3205,21 @@ namespace Plugin {
     EGL::img_t CompositorImplementation::EGL::CreateImage ( EGL const & egl , ClientSurface::surf_t const & surf ) {
         img_t ret = InvalidImage ();
 
-        static valid_t supported = ( Supported ( egl . Display () , "EGL_KHR_image" ) && Supported ( egl . Display () , "EGL_KHR_image_base" ) && Supported ( egl . Display () , "EGL_EXT_image_dma_buf_import" ) && Supported ( egl . Display () , "EGL_EXT_image_dma_buf_import_modifiers" ) ) != false;
+        static valid_t supported = (    Supported ( egl . Display () , "EGL_KHR_image" )
+                                     && Supported ( egl . Display () , "EGL_KHR_image_base" )
+                                     && Supported ( egl . Display () , "EGL_EXT_image_dma_buf_import" )
+                                     && Supported ( egl . Display () , "EGL_EXT_image_dma_buf_import_modifiers" )
+                                   ) != false;
 
-        if ( ( egl . Valid () && supported ) != false ) {
-            static_assert ( ( std::is_same < dpy_t , EGLDisplay > :: value && std::is_same < ctx_t , EGLContext > :: value && std::is_same < img_t , KHRFIX ( EGLImage ) > :: value ) != false );
+        if ( (    egl . Valid ()
+               && supported
+            ) != false ) {
+
+            static_assert ( (    std::is_same < dpy_t , EGLDisplay > :: value
+                              && std::is_same < ctx_t , EGLContext > :: value
+                              && std::is_same < img_t , KHRFIX ( EGLImage ) > :: value
+                            ) != false
+                          );
 
             constexpr char methodName [] = XSTRINGIFY ( KHRFIX ( eglCreateImage ) );
 
@@ -2938,7 +3241,7 @@ namespace Plugin {
                 using modifier_t = decltype ( modifier );
 
                 // Does it already exist ?
-                assert ( surf . _fd > -1 );
+                assert ( surf . _fd != ModeSet::GBM::InvalidFd () );
 
                 // Test our initial assumption
                 assert ( format == ModeSet::SupportedBufferType () );
@@ -2948,17 +3251,17 @@ namespace Plugin {
 
                 // Enable narrowing detecttion
 // TODO:
-                 constexpr bool enable = false;
+                 constexpr bool const enable = false;
 
                 // (Almost) all will fail!
                 if (    narrowing < width_t , EGLAttrib , enable > :: value != false
-                     && narrowing < height_t , EGLAttrib , enable > :: value != false
-                     && narrowing < stride_t , EGLAttrib , enable > :: value != false
-                     && narrowing < format_t , EGLAttrib , enable > :: value != false
-                     && narrowing < fd_t , EGLAttrib , enable > :: value != false
-                     && narrowing < modifier_t , EGLuint64KHR , true > :: value != false
-                   )
-                {
+                     || narrowing < height_t , EGLAttrib , enable > :: value != false
+                     || narrowing < stride_t , EGLAttrib , enable > :: value != false
+                     || narrowing < format_t , EGLAttrib , enable > :: value != false
+                     || narrowing < fd_t , EGLAttrib , enable > :: value != false
+                     || narrowing < modifier_t , EGLuint64KHR , enable > :: value != false
+                   ) {
+
                     TRACE_WITHOUT_THIS ( Trace::Information , ( _T ( "Possible narrowing detected!" ) ) );
                 }
 
@@ -2976,17 +3279,26 @@ namespace Plugin {
                 static EGLBoolean ( * peglQueryDmaBufFormatsEXT ) ( EGLDisplay , EGLint , EGLint * , EGLint * ) = reinterpret_cast < EGLBoolean ( * ) ( EGLDisplay , EGLint , EGLint * , EGLint * ) > ( eglGetProcAddress ( "eglQueryDmaBufFormatsEXT" ) );
                 static EGLBoolean ( * peglQueryDmaBufModifiersEXT ) ( EGLDisplay , EGLint , EGLint , EGLuint64KHR * , EGLBoolean * , EGLint * ) = reinterpret_cast < EGLBoolean ( * ) ( EGLDisplay , EGLint , EGLint , EGLuint64KHR * , EGLBoolean * , EGLint * ) > ( eglGetProcAddress ( "eglQueryDmaBufModifiersEXT" ) );
 
-                valid = valid && peglQueryDmaBufFormatsEXT != nullptr && peglQueryDmaBufModifiersEXT != nullptr;
+                valid =    valid
+                        && peglQueryDmaBufFormatsEXT != nullptr
+                        && peglQueryDmaBufModifiersEXT != nullptr
+                        ;
 
                 EGLint count = 0;
 
-                valid = valid && peglQueryDmaBufFormatsEXT ( egl . Display () , 0 , nullptr , & count ) != EGL_FALSE;
+                valid =    valid
+                        && peglQueryDmaBufFormatsEXT ( egl . Display () , 0 , nullptr , & count ) != EGL_FALSE
+                        ;
 
-                valid = valid && peglQueryDmaBufFormatsEXT ( egl . Display () , 0 , nullptr , & count ) != EGL_FALSE;
+                valid = valid
+                        && peglQueryDmaBufFormatsEXT ( egl . Display () , 0 , nullptr , & count ) != EGL_FALSE
+                        ;
 
                 EGLint formats [ count ];
 
-                valid = valid && peglQueryDmaBufFormatsEXT ( egl . Display () , count , & formats [ 0 ] , & count ) != EGL_FALSE;
+                valid = valid
+                        && peglQueryDmaBufFormatsEXT ( egl . Display () , count , & formats [ 0 ] , & count ) != EGL_FALSE
+                        ;
 
                 // format should be listed as supported
                 if ( valid != false ) {
@@ -2997,13 +3309,17 @@ namespace Plugin {
                     valid = it_e_for != list_e_for.end ();
                 }
 
-                valid = valid && peglQueryDmaBufModifiersEXT ( egl . Display () , format , 0 , nullptr , nullptr , & count ) != EGL_FALSE;
+                valid =    valid
+                        && peglQueryDmaBufModifiersEXT ( egl . Display () , format , 0 , nullptr , nullptr , & count ) != EGL_FALSE
+                        ;
 
                 EGLuint64KHR modifiers [ count ];
                 EGLBoolean external [ count ];
 
                 // External is required to exclusive use withGL_TEXTURE_EXTERNAL_OES
-                valid = valid && peglQueryDmaBufModifiersEXT ( egl . Display () , format , count , & modifiers [ 0 ] , & external [ 0 ] , & count ) != FALSE;
+                valid =    valid
+                        && peglQueryDmaBufModifiersEXT ( egl . Display () , format , count , & modifiers [ 0 ] , & external [ 0 ] , & count ) != FALSE
+                        ;
 
                 // _modifier should be listed as supported, and _external should be true
                 if ( valid != false ) {
@@ -3014,6 +3330,22 @@ namespace Plugin {
                     valid = it_e_mod != list_e_mod . end ();
                 }
 
+                static_assert ( std::is_integral < EGLAttrib > :: value != false );
+                static_assert ( std::is_signed < EGLAttrib > :: value != false );
+
+                static_assert ( in_signed_range < EGLAttrib , EGL_WIDTH > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_HEIGHT > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_LINUX_DRM_FOURCC_EXT > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_DMA_BUF_PLANE0_FD_EXT > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_DMA_BUF_PLANE0_OFFSET_EXT > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_DMA_BUF_PLANE0_PITCH_EXT > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_IMAGE_PRESERVED_KHR > :: value != false );
+                static_assert ( in_signed_range < EGLAttrib , EGL_NONE > :: value != false );
+
+                static_assert ( sizeof ( EGLuint64KHR ) == static_cast < size_t > ( 8 ) );
+
                 if ( valid != false ) {
                     EGLAttrib const _attrs [] = {
                         EGL_WIDTH , static_cast < EGLAttrib > ( width ) ,
@@ -3021,11 +3353,11 @@ namespace Plugin {
                         EGL_LINUX_DRM_FOURCC_EXT , static_cast < EGLAttrib > ( format ) ,
                         EGL_DMA_BUF_PLANE0_FD_EXT , static_cast < EGLAttrib > ( surf . _fd ) ,
 // TODO: magic constant
-                        EGL_DMA_BUF_PLANE0_OFFSET_EXT , 0 ,
+                        EGL_DMA_BUF_PLANE0_OFFSET_EXT , static_cast < EGLAttrib > ( 0 ) ,
                         EGL_DMA_BUF_PLANE0_PITCH_EXT , static_cast < EGLAttrib > ( stride ) ,
                         EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT , static_cast < EGLAttrib > ( static_cast < EGLuint64KHR > ( modifier ) & 0xFFFFFFFF ) ,
                         EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT , static_cast < EGLAttrib > ( static_cast < EGLuint64KHR > ( modifier ) >> 32 ) ,
-                        EGL_IMAGE_PRESERVED_KHR, EGL_TRUE ,
+                        EGL_IMAGE_PRESERVED_KHR, static_cast < EGLAttrib > ( EGL_TRUE ) ,
                         EGL_NONE
                     };
 
@@ -3048,17 +3380,29 @@ namespace Plugin {
     EGL::img_t CompositorImplementation::EGL::DestroyImage (EGL const & egl , ClientSurface::surf_t const & surf ) {
         img_t ret = surf . _khr;
 
-        static valid_t supported = ( Supported ( egl . Display () , "EGL_KHR_image" ) && Supported ( egl . Display () , "EGL_KHR_image_base" ) ) != false;
+        static valid_t supported = (    Supported ( egl . Display () , "EGL_KHR_image" )
+                                     && Supported ( egl . Display () , "EGL_KHR_image_base" )
+                                   ) != false;
 
-        if ( ( egl . Valid () && supported ) != false ) {
+        if ( (    egl . Valid ()
+               && supported
+             ) != false
+           ) {
 
-            static_assert ( ( std::is_same < dpy_t , EGLDisplay > :: value && std::is_same < ctx_t , EGLContext > :: value && std::is_same < img_t , KHRFIX ( EGLImage ) > :: value ) != false );
+            static_assert ( (    std::is_same < dpy_t , EGLDisplay > :: value
+                              && std::is_same < ctx_t , EGLContext > :: value
+                              && std::is_same < img_t , KHRFIX ( EGLImage ) > :: value
+                            ) != false
+                          );
 
-            constexpr char methodName [] = XSTRINGIFY ( KHRFIX ( eglDestroyImage ) );
+            constexpr char const methodName [] = XSTRINGIFY ( KHRFIX ( eglDestroyImage ) );
 
             static EGLBoolean ( * peglDestroyImage ) ( EGLDisplay , KHRFIX ( EGLImage ) ) = reinterpret_cast < EGLBoolean ( * ) ( EGLDisplay , KHRFIX ( EGLImage ) ) > ( eglGetProcAddress ( KHRFIX ( "eglDestroyImage" ) ) );
 
-            if ( peglDestroyImage != nullptr && surf . RenderComplete () != false ) {
+            if (    peglDestroyImage != nullptr
+                 && surf . RenderComplete () != false
+               ) {
+
                 ret = peglDestroyImage ( egl . Display () , surf . _khr ) != EGL_FALSE ? EGL::InvalidImage () : ret;
             }
             else {
@@ -3077,7 +3421,7 @@ namespace Plugin {
         valid_t ret = _natives . Valid ();
 
         if ( ret != false ) {
-            if ( _dpy != EGL_NO_DISPLAY ) {
+            if ( _dpy != InvalidDpy () ) {
                 ret = false;
 
                 if ( eglTerminate ( _dpy ) != EGL_FALSE ) {
@@ -3091,7 +3435,7 @@ namespace Plugin {
 
             // Again. EGL does use const sparsely
             _dpy = eglGetDisplay ( const_cast < native_dpy_no_const > ( _natives . Display () ) );
-            ret = _dpy != EGL_NO_DISPLAY;
+            ret = _dpy != InvalidDpy ();
         }
 
         if ( ret != false ) {
@@ -3099,22 +3443,35 @@ namespace Plugin {
             ret = eglInitialize ( _dpy , & major , & minor ) != EGL_FALSE;
 
             // Just take the easy approach (for now)
-            static_assert ( ( std::is_integral < decltype ( major ) > :: value ) != false );
-             static_assert ( ( std::is_integral < decltype ( minor ) > :: value ) != false );
+            static_assert ( ( narrowing < decltype ( major ) , int , true > :: value ) != true );
+            static_assert ( ( narrowing < decltype ( minor ) , int , true > :: value ) != true );
             TRACE ( Trace::Information , ( _T ( "EGL version : %d.%d" ) , static_cast < int > ( major ) , static_cast < int > ( minor ) ) );
         }
 
         if ( ret != false ) {
-             static_assert ( GLES::MajorVersion () == static_cast < GLES::version_t > ( 2 ) );
+            static_assert ( GLES::MajorVersion () == static_cast < GLES::version_t > ( 2 ) );
+
+            static_assert ( in_signed_range < EGLint , EGL_WINDOW_BIT > :: value != false );
+            static_assert ( in_signed_range < EGLint , EGL_OPENGL_ES2_BIT > :: value != false );
+
+            static_assert ( in_signed_range < EGLint , EGL_SURFACE_TYPE > :: value != false );
+            static_assert ( in_signed_range < EGLint , EGL_RED_SIZE > :: value != false );
+            static_assert ( in_signed_range < EGLint , EGL_GREEN_SIZE > :: value != false );
+            static_assert ( in_signed_range < EGLint , EGL_BLUE_SIZE > :: value != false );
+            static_assert ( in_signed_range < EGLint , EGL_ALPHA_SIZE > :: value != false );
+            static_assert ( in_signed_range < EGLint , EGL_DEPTH_SIZE > :: value != false );
+
+            static_assert ( in_signed_range < EGLint , DepthBufferSize () > :: value != false );
+            static_assert ( in_signed_range < EGLint , RedBufferSize () + GreenBufferSize () + BlueBufferSize () + DepthBufferSize () > :: value != false );
 
             constexpr EGLint const attr [] = {
-                EGL_SURFACE_TYPE, EGL_WINDOW_BIT ,
+                EGL_SURFACE_TYPE, static_cast < EGLint > ( EGL_WINDOW_BIT ) ,
                 EGL_RED_SIZE    , RedBufferSize () ,
                 EGL_GREEN_SIZE  , GreenBufferSize () ,
                 EGL_BLUE_SIZE   , BlueBufferSize () ,
                 EGL_ALPHA_SIZE  , AlphaBufferSize () ,
                 EGL_BUFFER_SIZE , RedBufferSize () + GreenBufferSize () + BlueBufferSize () + AlphaBufferSize () ,
-                EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT ,
+                EGL_RENDERABLE_TYPE , static_cast < EGLint > ( EGL_OPENGL_ES2_BIT ) ,
                 EGL_DEPTH_SIZE  , DepthBufferSize () ,
                 EGL_NONE
             };
@@ -3124,6 +3481,7 @@ namespace Plugin {
             if ( eglGetConfigs ( _dpy , nullptr , 0 , & count ) != EGL_TRUE) {
                 count = 1;
             }
+
 
             std::vector < EGLConfig > confs ( count , EGL_NO_CONFIG );
 
@@ -3146,12 +3504,15 @@ namespace Plugin {
             }
         }
 
+        static_assert ( in_signed_range < EGLint , GLES::MajorVersion () > :: value != false );
 
         if ( ret != false ) {
-            static_assert ( narrowing < GLES::version_t , EGLint , true > :: value != false );
+            // Possibly unsigned to signed
+            static_assert ( narrowing < GLES::version_t , intmax_t , true > :: value != true );
+            static_assert ( in_signed_range < EGLint , GLES::MajorVersion () > :: value != false );
 
             constexpr EGLint const attr [] = {
-                EGL_CONTEXT_CLIENT_VERSION , static_cast < GLES::version_t > ( GLES::MajorVersion () ) ,
+                EGL_CONTEXT_CLIENT_VERSION , static_cast < EGLint > ( static_cast < GLES::version_t > ( GLES::MajorVersion () ) ) ,
                 EGL_NONE
             };
 
@@ -3177,7 +3538,7 @@ namespace Plugin {
 
     void CompositorImplementation::EGL::DeInitialize () {
         _valid = false;
-        /* EGLBoolean */ eglTerminate (_dpy);
+        /* EGLBoolean */ eglTerminate ( _dpy );
     }
 
     // Although compile / build time may succeed, runtime checks are also mandatory
@@ -3190,22 +3551,22 @@ namespace Plugin {
         // KHR extentions that have become part of the standard
 
         // Sync capability
-        ret =      name . find ( "EGL_KHR_fence_sync" ) != std::string::npos
-                /* CreateImage / DestroyImage */
-                || name . find ( "EGL_KHR_image" ) != std::string::npos
-                || name . find ( "EGL_KHR_image_base" ) != std::string::npos;
+        ret =    name . find ( "EGL_KHR_fence_sync" ) != std::string::npos
+              /* CreateImage / DestroyImage */
+              || name . find ( "EGL_KHR_image" ) != std::string::npos
+              || name . find ( "EGL_KHR_image_base" ) != std::string::npos;
 #endif
 
         if ( ret != true ) {
-            static_assert ( std::is_same < std::string::value_type , char > :: value != false);
+            static_assert ( std::is_same < std::string::value_type , char > :: value != false );
             char const * ext = eglQueryString ( dpy, EGL_EXTENSIONS );
 
-            ret =      ext != nullptr
-                    && name . size () > 0
-                    && (    std::string ( ext ) . find (name)
-                         != std::string::npos
-                       )
-                    ;
+            ret =    ext != nullptr
+                  && name . size () > 0
+                  && (    std::string ( ext ) . find (name)
+                       != std::string::npos
+                     )
+                  ;
         }
 
         return ret;
@@ -3215,7 +3576,10 @@ namespace Plugin {
         silence ( gles );
 
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI (EGL_OPENGL_ES_API) != EGL_FALSE;
+        valid_t ret =    Valid () != false
+                      && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE
+                      && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE
+                      ;
 
         if ( ret != false ) {
             ret = eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE;
@@ -3224,7 +3588,9 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
              // Avoid any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+                  && ret
+                  ;
         }
 
         if ( ret != true ) {
@@ -3235,9 +3601,12 @@ namespace Plugin {
     }
 
     template < typename FUNC , typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::false_type , FUNC && func , bool post , ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::false_type const , FUNC && func , bool const post , ARG &&... arg ) {
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+        valid_t ret =    Valid () != false
+                      && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE
+                      && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE
+                      ;
 
         if ( ret != false ) {
             if ( post != false ) {
@@ -3245,17 +3614,23 @@ namespace Plugin {
 
                 { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
-                ret = ret && eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE;
+                ret =    ret
+                      && eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE
+                      ;
             }
             else {
-                ret = eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE && func ( std::forward < ARG > ( arg )... ) != false;
+                ret =    eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE
+                      && func ( std::forward < ARG > ( arg )... ) != false
+                      ;
             }
 
             // Guarantuee all (previous) effects of client API and frame buffer state are realized
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+                  && ret
+                  ;
         }
 
         if ( ret != true ) {
@@ -3266,9 +3641,12 @@ namespace Plugin {
     }
 
     template < typename FUNC , typename ARG0 , typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::true_type  , FUNC && func , bool post , ARG0 && arg0 , ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::true_type const , FUNC && func , bool const post , ARG0 && arg0 , ARG &&... arg ) {
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+        valid_t ret = Valid () != false
+                      && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE
+                      && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE
+                      ;
 
         if ( ret != false ) {
             if ( post != false ) {
@@ -3276,17 +3654,23 @@ namespace Plugin {
 
                 { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ); }
 
-                ret = ret && eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE;
+                ret =    ret
+                      && eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE
+                      ;
             }
             else {
-                ret = eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE && ( std::forward < ARG0 > ( arg0 ) .* func ) ( std::forward < ARG > ( arg )... ) != false;
+                ret =    eglSwapBuffers ( _dpy , _surf ) != EGL_FALSE
+                      && ( std::forward < ARG0 > ( arg0 ) .* func ) ( std::forward < ARG > ( arg )... ) != false
+                      ;
             }
 
             // Guarantuee all (previous) effects of client API and frame buffer state are realized
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT) != EGL_FALSE && ret;
+            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+                  && ret
+                  ;
         }
 
         if ( ret != true ) {
@@ -3297,15 +3681,18 @@ namespace Plugin {
     }
 
     template < typename FUNC, typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( FUNC && func, bool post , ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( FUNC && func , bool const post , ARG &&... arg ) {
         valid_t ret = Render ( typename std::is_member_pointer < FUNC > :: type () , func , post , std::forward < ARG > ( arg )... );
         return ret;
     }
 
     template < typename FUNC , typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::false_type, FUNC && prefunc , FUNC && postfunc , ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::false_type const , FUNC && prefunc , FUNC && postfunc , ARG &&... arg ) {
         // Ensure the client API is set per thread basis
-        valid_t  ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+        valid_t ret = Valid () != false
+                       && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE
+                       && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE
+                       ;
 
         if ( ret != false ) {
             ret = prefunc ( std::forward < ARG > ( arg )... ) != false;
@@ -3313,26 +3700,34 @@ namespace Plugin {
             // Guarantuee all (previous) effects of client API and frame buffer state are realized
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
-            ret = ret && eglSwapBuffers ( _dpy, _surf ) != EGL_FALSE && postfunc ( std::forward < ARG > ( arg )... ) != false;
+            ret =    ret
+                  && eglSwapBuffers ( _dpy, _surf ) != EGL_FALSE
+                  && postfunc ( std::forward < ARG > ( arg )... ) != false
+                  ;
 
             // Guarantuee all (previous) effects of client API and frame buffer state are realized
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+                  && ret
+                  ;
         }
 
         if ( ret != true ) {
-            TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
+            TRACE ( Trace::Error , ( _T ( "Failed to complete rendering content." ) ) );
         }
 
         return ret;
     }
 
     template < typename FUNC , typename ARG0 , typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::true_type, FUNC && prefunc , FUNC && postfunc , ARG0 && arg0 , ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( std::true_type const , FUNC && prefunc , FUNC && postfunc , ARG0 && arg0 , ARG &&... arg ) {
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+        valid_t ret =    Valid () != false
+                      && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE
+                      && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE
+                      ;
 
         if ( ret != false ) {
             ret =  ( std::forward < ARG0 > ( arg0 ) .* prefunc ) ( std::forward < ARG > ( arg )... ) != false;
@@ -3340,32 +3735,40 @@ namespace Plugin {
             // Guarantuee all (previous) effects of client API and frame buffer state are realized
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
-            ret = ret && eglSwapBuffers ( _dpy, _surf ) != EGL_FALSE && ( std::forward < ARG0 > ( arg0 ) .* postfunc ) ( std::forward < ARG > ( arg )... ) != false;
+            ret =    ret
+                  && eglSwapBuffers ( _dpy, _surf ) != EGL_FALSE
+                  && ( std::forward < ARG0 > ( arg0 ) .* postfunc ) ( std::forward < ARG > ( arg )... ) != false
+                  ;
 
             // Guarantuee all (previous) effects of client API and frame buffer state are realized
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+                  && ret
+                  ;
         }
 
         if ( ret != true ) {
-            TRACE (Trace::Error, (_T ("Failed to complete rendering content.")));
+            TRACE ( Trace::Error , ( _T ( "Failed to complete rendering content." ) ) );
         }
 
         return ret;
     }
 
     template < typename FUNC, typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( FUNC && prefunc, FUNC && postfunc, ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render ( FUNC && prefunc , FUNC && postfunc , ARG &&... arg ) {
         valid_t ret = Render ( typename std::is_member_pointer < FUNC > :: type () , prefunc , postfunc, std::forward < ARG > ( arg )... );
         return ret;
     }
 
     template < typename FUNC , typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap ( std::false_type , FUNC && func , ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap ( std::false_type const , FUNC && func , ARG &&... arg ) {
         // Ensure the client API is set per thread basis
-        CompositorImplementation::EGL::valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+        CompositorImplementation::EGL::valid_t ret =    Valid () != false
+                                                     && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE
+                                                     && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE
+                                                     ;
 
         if ( ret != false ) {
             ret = func ( std::forward < ARG > ( arg )... ) != false;
@@ -3374,7 +3777,9 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+                  && ret
+                  ;
         }
 
         if ( ret != true ) {
@@ -3385,9 +3790,12 @@ namespace Plugin {
     }
 
     template < typename FUNC , typename ARG0 , typename... ARG >
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap ( std::true_type , FUNC && func, ARG0 && arg0 , ARG &&... arg ) {
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap ( std::true_type const , FUNC && func, ARG0 && arg0 , ARG &&... arg ) {
         // Ensure the client API is set per thread basis
-        CompositorImplementation::EGL::valid_t ret = Valid () != false && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE;
+        CompositorImplementation::EGL::valid_t ret =    Valid () != false
+                                                     && eglMakeCurrent ( _dpy , _surf , _surf , _ctx ) != EGL_FALSE
+                                                     && eglBindAPI ( EGL_OPENGL_ES_API ) != EGL_FALSE
+                                                     ;
 
         if ( ret != false ) {
             ret = ( std::forward < ARG0 > ( arg0 ) .* func ) ( std::forward < ARG > ( arg )... ) != false;
@@ -3396,7 +3804,9 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE && ret;
+            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+                  && ret
+                  ;
         }
 
         if ( ret != true ) {
@@ -3431,11 +3841,11 @@ namespace Plugin {
 
     CompositorImplementation::Config::Config ()
         : Core::JSON::Container ()
-        , Connector ( _T ( "/tmp/compositor" ) )
-        , Port ( _T ( "HDMI0" ) ) {
+        , _connector ( _T ( "/tmp/compositor" ) )
+        , _port ( _T ( "HDMI0" ) ) {
 
-        Add ( _T ( "connector" ) , & Connector );
-          Add ( _T ( "port" ) , & Port );
+        Add ( _T ( "connector" ) , & _connector );
+        Add ( _T ( "port" ) , & _port );
     }
 
     CompositorImplementation::Config::~Config () {
@@ -3450,7 +3860,7 @@ namespace Plugin {
             subSystems -> Set ( PluginHost::ISubSystem::PLATFORM , nullptr );
             subSystems -> Set ( PluginHost::ISubSystem::GRAPHICS , nullptr );
 
-            subSystems -> Release();
+            subSystems -> Release ();
         }
     }
 
@@ -3498,7 +3908,7 @@ namespace Plugin {
 
         bool ret = FDFor ( name , fds , prop );
 
-         return ret;
+        return ret;
     }
 
     bool CompositorImplementation::FDFor ( std::string const & name , CompositorImplementation::DMATransfer::fds_t & fds , std::string & properties ) {
@@ -3510,7 +3920,10 @@ namespace Plugin {
 
         /* ProxyType <> */ auto client = _clients . Find ( name );
 
-        if ( client . IsValid () != true || name . compare ( client -> Name () ) != 0 ) {
+        if (    client . IsValid () != true
+             || name . compare ( client -> Name () ) != 0
+           ) {
+
                TRACE ( Trace::Error , ( _T ( "%s does not appear to be a valid client." ) , name . length () > 0 ? name . c_str () : "'<no name provided>'") );
         }
         else {
@@ -3520,14 +3933,11 @@ namespace Plugin {
                 using return_t = decltype ( std::declval < class_t > () . operator-> () -> Native () );
 
                 static_assert ( ( std::is_convertible < return_t , fd_t > :: value ) != false );
-                    // Likely to almost always fail
-// TODO: narrowing
-//                    static_assert ((sizeof ( return_t ) <= sizeof ( fd_t )) != false);
 
                 fds [ 0 ] = static_cast < fd_t > ( client -> Native () );
                 fds [ 1 ] = static_cast < fd_t > ( client -> SyncPrimitive () );
 
-                ret = fds  [ 0 ] > -1 && fds [ 1 ] > -1;
+                ret = fds  [ 0 ] != DMATransfer::InvalidFD () && fds [ 1 ] != DMATransfer::InvalidFD ();
             }
         }
 
@@ -3555,7 +3965,8 @@ namespace Plugin {
                          + std::to_string ( height ) . append ( spacer )
                          + std::to_string ( stride ) . append ( spacer )
                          + std::to_string ( format ) . append ( spacer )
-                         + std::to_string ( modifier );
+                         + std::to_string ( modifier )
+                         ;
         }
 
         return ret;
@@ -3694,6 +4105,9 @@ namespace Plugin {
     }
 
     uint32_t CompositorImplementation::Configure ( PluginHost::IShell * service ) {
+        static_assert ( std::is_enum < decltype ( Core::ERROR_NONE ) > :: value != false );
+        static_assert ( narrowing < std::underlying_type < decltype ( Core::ERROR_NONE ) > :: type , uint32_t , true > :: value != true );
+
         uint32_t result = Core::ERROR_NONE;
 
         _service = service;
@@ -3705,10 +4119,10 @@ namespace Plugin {
 
         _engine = Core::ProxyType < RPC::InvokeServer > :: Create ( & Core::IWorkerPool::Instance () );
 
-        _externalAccess = new ExternalAccess ( * this , Core::NodeId ( config . Connector . Value () . c_str () ) , service -> ProxyStubPath () , _engine );
+        _externalAccess = new ExternalAccess ( * this , Core::NodeId ( config . _connector . Value () . c_str () ) , service -> ProxyStubPath () , _engine );
 
-        if ( _externalAccess -> IsListening () == true) {
-            _port = config . Port . Value ();
+        if ( _externalAccess -> IsListening () == true ) {
+            _port = config . _port . Value ();
             PlatformReady ();
         } else {
             delete _externalAccess;
@@ -3717,6 +4131,9 @@ namespace Plugin {
             _engine . Release ();
 
             TRACE ( Trace::Error , ( _T ( "Could not report PlatformReady as there was a problem starting the Compositor RPC %s" ) , _T ( "server" ) ) );
+
+            static_assert ( std::is_enum < decltype ( Core::ERROR_OPENING_FAILED ) > :: value != false );
+            static_assert ( narrowing < std::underlying_type < decltype ( Core::ERROR_OPENING_FAILED ) > :: type , uint32_t , true > :: value != true );
 
             result = Core::ERROR_OPENING_FAILED;
         }
@@ -3734,7 +4151,7 @@ namespace Plugin {
         _observers . push_back ( notification );
 
         _clients . Visit (
-            [ = ] ( string const & name , Core::ProxyType < ClientSurface > const & element ) { notification -> Attached ( name , & ( * element ) ); }
+            [ = ] ( string const & name , Core::ProxyType < ClientSurface > const & element ) { notification -> Attached ( name , & ( * element ) ) ; }
         );
 
         _adminLock . Unlock ();
@@ -3744,7 +4161,7 @@ namespace Plugin {
         _adminLock . Lock ();
 
         _clients.Visit (
-            [ = ] ( string const & name , Core::ProxyType < ClientSurface > & element ) { silence ( element ); notification -> Detached ( name ); }
+            [ = ] ( string const & name , Core::ProxyType < ClientSurface > & element ) { silence ( element ); notification -> Detached ( name ) ; }
         );
 
         std::list < Exchange::IComposition::INotification * > :: iterator index ( std::find ( _observers . begin () , _observers . end () , notification ) );
@@ -3763,7 +4180,7 @@ namespace Plugin {
         _adminLock . Lock ();
 
         for ( auto & observer : _observers) {
-                observer -> Attached ( name , client );
+            observer -> Attached ( name , client );
         }
 
         _adminLock . Unlock ();
@@ -3794,7 +4211,7 @@ namespace Plugin {
     }
 
     RPC::instance_id CompositorImplementation::Native () const {
-        using class_t = std::remove_reference < decltype ( _natives ) > ::type;
+        using class_t = std::remove_reference < decltype ( _natives ) > :: type;
         using return_t = decltype ( std::declval < class_t > () . Display () );
 
         // The EGL API uses const very sparsely, and here, a const is also not expected
@@ -3802,8 +4219,6 @@ namespace Plugin {
 
         static_assert ( ( std::is_convertible < return_no_const_t , EGLNativeDisplayType > :: value ) != false ) ;
         static_assert ( ( std::is_convertible < decltype ( EGL_DEFAULT_DISPLAY ) , EGLNativeDisplayType > :: value ) != false );
-        // Likely to almost always fail
-//        static_assert ( (std::is_convertible < return_no_const_t , RPC::instance_id > :: value) != false );
 
         EGLNativeDisplayType result ( static_cast < EGLNativeDisplayType > ( EGL_DEFAULT_DISPLAY ) );
 
@@ -3825,7 +4240,7 @@ namespace Plugin {
     WPEFramework::Exchange::IComposition::IClient * CompositorImplementation::CreateClient ( string const & name , uint32_t const width , uint32_t const height ) {
         IClient * client = nullptr;
 
-        Core::ProxyType < ClientSurface > object = _clients .Instance < ClientSurface > ( name , _platform , * this , name , width , height );
+        Core::ProxyType < ClientSurface > object = _clients . Instance < ClientSurface > ( name , _platform , * this , name , width , height );
 
         ASSERT ( object . IsValid () == true );
 
@@ -3843,7 +4258,10 @@ namespace Plugin {
         else {
             _dma = new DMATransfer ( * this );
 
-            if ( _dma == nullptr || _dma -> Valid () != true ) {
+            if (    _dma == nullptr
+                 || _dma -> Valid () != true
+               ) {
+
                 TRACE ( Trace::Error , ( _T ( "DMA transfers are not supported." ) ) );
 
                 delete _dma;
@@ -3861,7 +4279,7 @@ namespace Plugin {
     Exchange::IComposition::ScreenResolution CompositorImplementation::Resolution () const {
         Exchange::IComposition::ScreenResolution resolution = WPEFramework::Exchange::IComposition::ScreenResolution_Unknown;
 
-        decltype ( std::declval < ModeSet > () . Width () ) width = _platform .Width ();
+        decltype ( std::declval < ModeSet > () . Width () ) width = _platform . Width ();
         silence ( width );
 
         decltype ( std::declval < ModeSet > () . Height () ) height = _platform . Height ();
@@ -3870,6 +4288,8 @@ namespace Plugin {
 
         decltype ( std::declval < ModeSet > () . RefreshRate () ) vrefresh = _platform . RefreshRate ();
         decltype ( std::declval < ModeSet > () . Interlaced () ) interlaced = _platform . Interlaced ();
+
+        static_assert ( std::is_integral < decltype ( height ) > :: value != false );
 
         if ( interlaced != true ) {
             switch ( height ) {
@@ -3923,11 +4343,11 @@ namespace Plugin {
      }
 
     uint32_t CompositorImplementation::Resolution ( Exchange::IComposition::ScreenResolution const format ) {
-        TRACE ( Trace::Error , ( _T ( "Could not set screenresolution to %s. Not supported for Rapberry Pi compositor" ) , Core::EnumerateType < Exchange::IComposition::ScreenResolution > ( format ) . Data () ) );
+        TRACE ( Trace::Error , ( _T ( "Could not set screenresolution to %s. Not supported for Raspberry Pi compositor" ) , Core::EnumerateType < Exchange::IComposition::ScreenResolution > ( format ) . Data () ) );
         return Core::ERROR_UNAVAILABLE;
     }
 
-    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
+    SERVICE_REGISTRATION ( CompositorImplementation , 1 , 0 );
 
 } // namespace Plugin
 } // namespace WPEFramework
