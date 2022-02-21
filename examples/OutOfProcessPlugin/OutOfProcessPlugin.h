@@ -157,6 +157,7 @@ namespace Plugin {
         OutOfProcessPlugin()
             : _adminLock()
             , _skipURL(0)
+            , _connectionId(0)
             , _webPath("")
             , _service(nullptr)
             , _browser(nullptr)
@@ -223,7 +224,6 @@ namespace Plugin {
         void URLChanged(const string& URL);
         void Hidden(const bool hidden);
         void StateChange(const PluginHost::IStateControl::state value);
-        void ConnectionTermination(uint32_t connection);
         void Deactivated(RPC::IRemoteConnection* connection);
 
         static const char* PluginStateStr(const PluginHost::IShell::state state);
