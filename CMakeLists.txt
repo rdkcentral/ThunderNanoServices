@@ -18,7 +18,7 @@
 cmake_minimum_required(VERSION 3.3)
 project(NanoServices)
 
-
+option(PLUGIN_AVS "Include AVS plugin" OFF)
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
 option(PLUGIN_BLUETOOTHAUDIOSINK "Include Bluetooth Audio Sink plugin" OFF)
@@ -61,6 +61,10 @@ option(PLUGIN_DTV "Include DTV plugin" OFF)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
+if(PLUGIN_AVS)
+    add_subdirectory(AVS)
 endif()
 
 if(PLUGIN_BLUETOOTH)
