@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <AVS/AVSCommon/Utils/Logger/Logger.h>
+#include <AVSCommon/Utils/Logger/Logger.h>
 
 #include <mutex>
 #include <string>

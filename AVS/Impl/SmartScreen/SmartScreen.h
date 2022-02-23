@@ -19,15 +19,15 @@
 
 #pragma once
 
-#include "ThunderVoiceHandler.h"
-
-#include <WPEFramework/interfaces/IAVSClient.h>
-
-#include <AVS/KWD/AbstractKeywordDetector.h>
-
-#include <SmartScreen/SampleApp/SampleApplication.h>
-
 #include <vector>
+#if defined(KWD_PRYON)
+#include <acsdkKWDImplementations/AbstractKeywordDetector.h>
+#endif
+#include <AVSSDK/SampleApp/SampleApplication.h>
+
+#include "ThunderVoiceHandler.h"
+#include <interfaces/IAVSClient.h>
+
 
 namespace WPEFramework {
 namespace Plugin {
@@ -100,7 +100,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         std::shared_ptr<ThunderVoiceHandler<alexaSmartScreenSDK::sampleApp::gui::GUIManager>> m_thunderVoiceHandler;
 #if defined(KWD_PRYON)
-        std::unique_ptr<alexaClientSDK::kwd::AbstractKeywordDetector> m_keywordDetector;
+        std::unique_ptr<alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector> m_keywordDetector;
 #endif
     };
 

@@ -21,7 +21,7 @@
 
 #include "TraceCategories.h"
 
-#include <SampleApp/InteractionManager.h>
+#include <AVS/SampleApp/InteractionManager.h>
 #include <interfaces/IAVSClient.h>
 
 #include <atomic>
@@ -32,7 +32,7 @@ namespace Plugin {
     /// Observes user input from the console and notifies the interaction manager of the user's intentions.
     class ThunderInputManager
         : public alexaClientSDK::avsCommon::sdkInterfaces::AuthObserverInterface,
-          public alexaClientSDK::avsCommon::sdkInterfaces::CapabilitiesObserverInterface,
+          public alexaClientSDK::avsCommon::sdkInterfaces::CapabilitiesDelegateObserverInterface,
           public alexaClientSDK::registrationManager::RegistrationObserverInterface,
           public alexaClientSDK::avsCommon::sdkInterfaces::DialogUXStateObserverInterface {
     public:
@@ -64,7 +64,10 @@ namespace Plugin {
 
         void onLogout() override;
         void onDialogUXStateChanged(DialogUXState newState) override;
-
+        bool isStreaming()
+        {
+            return m_isStreaming;
+        }
         Exchange::IAVSController* Controller();
 
     private:
@@ -72,13 +75,16 @@ namespace Plugin {
 
         void onAuthStateChange(AuthObserverInterface::State newState, AuthObserverInterface::Error newError) override;
         void onCapabilitiesStateChange(
-                CapabilitiesObserverInterface::State newState,
-                CapabilitiesObserverInterface::Error newError) override;
+                CapabilitiesDelegateObserverInterface::State newState,
+                CapabilitiesDelegateObserverInterface::Error newError,
+                const std::vector<std::string>& addedOrUpdatedEndpointIds,
+                const std::vector<std::string>& deletedEndpointIds) override;
 
 
         std::atomic_bool m_limitedInteraction;
         std::shared_ptr<alexaClientSDK::sampleApp::InteractionManager> m_interactionManager;
         Core::ProxyType<AVSController> m_controller;
+        bool m_isStreaming;
     };
 
 } // namespace Plugin
