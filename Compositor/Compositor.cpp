@@ -152,12 +152,6 @@ namespace Plugin {
         , _inputSwitchCallsign()
 
     {
-        RegisterAll();
-    }
-
-    Compositor::~Compositor()
-    {
-        UnregisterAll();
     }
 
     /* virtual */ const string Compositor::Initialize(PluginHost::IShell* service)
@@ -166,6 +160,13 @@ namespace Plugin {
         string result;
 
         ASSERT(service != nullptr);
+        ASSERT(_service == nullptr);
+        ASSERT(_composition == nullptr);
+        ASSERT(_connectionId == 0);
+
+        _service = service;
+        _service->AddRef();
+        _service->Register(&_notification);
 
         Compositor::Config config;
         config.FromString(service->ConfigLine());
@@ -187,10 +188,9 @@ namespace Plugin {
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: CompositorImplementation";
         } else {
-            _service = service;
 
-            _notification.Initialize(service, _composition);
-
+            RegisterAll();
+            _composition->Register(&_notification);
             _composition->Configure(_service);
 
             _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
@@ -199,12 +199,18 @@ namespace Plugin {
             _brightness = _composition->QueryInterface<Exchange::IBrightness>();
         }
 
+        if (message.length() != 0) {
+            Deinitialize(service);
+        }
+
         // On succes return empty, to indicate there is no error text.
         return message;
     }
     /* virtual */ void Compositor::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(service == _service);
+
+        _service->Unregister(&_notification);
 
         // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
         PluginHost::ISubSystem* subSystems = _service->SubSystems();
@@ -217,20 +223,41 @@ namespace Plugin {
             subSystems->Release();
         }
 
-        if (_inputSwitch != nullptr) {
-            _inputSwitch->Release();
-            _inputSwitch = nullptr;
-        }
-        if (_brightness != nullptr) {
-            _brightness->Release();
-            _brightness = nullptr;
-        }
-        if (_composition != nullptr) {
-            _composition->Release();
+        if (_connectionId != 0) {
+
+            UnregisterAll();
+            _composition->Unregister(&_notification);
+
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+            if (_inputSwitch != nullptr) {
+                _inputSwitch->Release();
+                _inputSwitch = nullptr;
+            }
+            if (_brightness != nullptr) {
+                _brightness->Release();
+                _brightness = nullptr;
+            }
+            VARIABLE_IS_NOT_USED uint32_t result = _composition->Release();
             _composition = nullptr;
+            // It should have been the last reference we are releasing,
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            // If this was running in a (container) process...
+            if (connection != nullptr) {
+                // Lets trigger the cleanup sequence for
+                // out-of-process code. Which will guard
+                // that unwilling processes, get shot if
+                // not stopped friendly :-)
+                connection->Terminate();
+                connection->Release();
+            }
         }
 
-        _notification.Deinitialize();
+        _connectionId = 0;
+        _service->Release();
+        _service = nullptr;
     }
     /* virtual */ string Compositor::Information() const
     {
@@ -454,6 +481,15 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 
+
+    void Compositor::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        if (_connectionId == connection->Id()) {
+
+            ASSERT(_service != nullptr);
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+        }
+    }
     uint32_t Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
