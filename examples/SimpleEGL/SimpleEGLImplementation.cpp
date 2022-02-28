@@ -204,9 +204,9 @@ namespace Plugin {
             dpy_t Display () const { return _dpy ; }
             surf_t Surface () const { return _surf ; }
 
-            valid_t Valid () const;
+            valid_t DeInitialize ();
 
-            void DeInitialize ();
+            valid_t Valid () const;
 
         private :
 
@@ -330,6 +330,8 @@ namespace Plugin {
             static_assert ( std::is_convertible < decltype ( EGL_NO_SURFACE ) , surf_t > :: value != false );
             static constexpr surf_t InvalidSurface () { return static_cast < surf_t > ( EGL_NO_SURFACE ) ; }
 
+            valid_t DeInitialize ();
+
             valid_t Valid () const { return _valid ; }
 
         private :
@@ -339,7 +341,6 @@ namespace Plugin {
             ~EGL ();
 
             valid_t Initialize ();
-            void DeInitialize ();
 
             // Define the 'invalid' value
             static_assert ( std::is_pointer < EGLConfig > :: value != false );
@@ -379,6 +380,10 @@ namespace Plugin {
         Core::Sink < PluginMonitor > _sink;
         PluginHost::IShell * _service;
         Exchange::IComposition::IDisplay * _display;
+
+        Natives * _natives;
+        EGL * _egl;
+
     };
 
     // As a result of ODR use
@@ -479,6 +484,16 @@ namespace Plugin {
             TRACE ( Trace::Information , ( _T ( "Bailed out before the thread signalled completion. %d ms" ) , _config . _destruct . Value () ) );
         }
 
+        if ( _egl != nullptr ) {
+            /* valid_t */ _egl -> DeInitialize ();
+            _egl = nullptr;
+        }
+
+        if ( _natives != nullptr ) {
+            /* valid_t */ _natives -> DeInitialize ();
+            _natives = nullptr;
+        }
+
         if ( _display != nullptr ) {
             _display -> Release ();
 
@@ -529,6 +544,17 @@ namespace Plugin {
                     _display = composition -> QueryInterface < Exchange::IComposition::IDisplay > ();
 
                     TRACE( Trace::Information , ( _T ( "Using non-COM-RPC path %p" ) , _display ) );
+
+                    if ( _display != nullptr ) {
+                        _natives = & Natives::Instance ( _display );
+                    }
+
+                    if  (    _natives != nullptr
+                          && _natives -> Valid ()
+                        ) {
+
+                        _egl = & EGL::Instance ( * _natives );
+                    }
 
                     composition -> Release ();
                 }
@@ -724,12 +750,10 @@ namespace Plugin {
         return natives;
     }
 
-    WPEFramework::Plugin::SimpleEGLImplementation::Natives::valid_t WPEFramework::Plugin::SimpleEGLImplementation::Natives::Valid () const {
-        return _valid;
-    }
-
-    void WPEFramework::Plugin::SimpleEGLImplementation::Natives::DeInitialize () {
+    WPEFramework::Plugin::SimpleEGLImplementation::Natives::valid_t WPEFramework::Plugin::SimpleEGLImplementation::Natives::DeInitialize () {
         _valid = false;
+
+        valid_t ret = false;
 
         if ( _surf != InvalidSurface () ) {
             _surf -> Release ();
@@ -740,6 +764,14 @@ namespace Plugin {
             _dpy -> Release ();
             _dpy = InvalidDisplay ();
         }
+
+        ret = true;
+
+        return ret;
+    }
+
+    WPEFramework::Plugin::SimpleEGLImplementation::Natives::valid_t WPEFramework::Plugin::SimpleEGLImplementation::Natives::Valid () const {
+        return _valid;
     }
 
     WPEFramework::Plugin::SimpleEGLImplementation::Natives::Natives ( Exchange::IComposition::IDisplay * display )
@@ -1257,6 +1289,14 @@ namespace Plugin {
         return ret;
     }
 
+    WPEFramework::Plugin::SimpleEGLImplementation::EGL::valid_t WPEFramework::Plugin::SimpleEGLImplementation::EGL::DeInitialize () {
+        _valid = false;
+
+        valid_t ret =    eglTerminate ( _dpy ) != EGL_FALSE
+                      && eglGetError () == EGL_SUCCESS;;
+        return ret;
+    }
+
     WPEFramework::Plugin::SimpleEGLImplementation::EGL::EGL ( Natives const & natives )
         : _natives { natives }
         , _valid { Initialize () }
@@ -1352,34 +1392,28 @@ namespace Plugin {
         return ret;
     }
 
-    void WPEFramework::Plugin::SimpleEGLImplementation::EGL::DeInitialize () {
-        _valid = false;
-        /* EGLBoolean */ eglTerminate ( _dpy );
-    }
-
 
 
     uint32_t WPEFramework::Plugin::SimpleEGLImplementation::Worker () {
-        Natives & natives = Natives::Instance ( _display );
-
-        EGL & egl = EGL::Instance ( natives );
-
         using timeout_t = decltype ( WPEFramework::Core::infinite );
 
         // Maximum rate
 // TODO: match display refresh rate
+        static_assert ( std::is_integral < timeout_t > :: value != false );
         constexpr timeout_t const ret = 0;
 
-        EGL::valid_t status =    natives . Valid () != false
-                              && egl . Valid () != false
+        EGL::valid_t status =   _natives != nullptr
+                              && _natives -> Valid () != false
+                              && _egl != nullptr
+                              && _egl -> Valid () != false
                               ;
 
         if ( status != false ) {
             GLES & gles = GLES::Instance ();
 
-            status =    egl . Render ( gles ) != false
-                     && natives . Display () -> Process ( 0 ) == 0
-                     && egl .Render () != false
+            status =    _egl -> Render ( gles ) != false
+                     && _natives -> Display () -> Process ( 0 ) == 0
+                     && _egl -> Render () != false
                      ;
         }
 
@@ -1388,8 +1422,6 @@ namespace Plugin {
         }
         else {
             Stop ();
-
-            natives . DeInitialize ();
         }
 
         return ret;
