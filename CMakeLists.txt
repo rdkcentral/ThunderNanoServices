@@ -18,9 +18,10 @@
 cmake_minimum_required(VERSION 3.3)
 project(NanoServices)
 
-
+option(PLUGIN_AVS "Include AVS plugin" OFF)
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
+option(PLUGIN_BLUETOOTHAUDIOSINK "Include Bluetooth Audio Sink plugin" OFF)
 option(PLUGIN_COBALT "Include Cobalt plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
@@ -47,6 +48,7 @@ option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
 option(PLUGIN_SUBSYSTEMCONTROLLER "Include SubsystemController plugin" OFF)
 option(PLUGIN_SVALBARD "Include Svalbard plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
+option(PLUGIN_SWITCHBOARD "Include SwitchBoard plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_VOLUMECONTROL "Include VolumeControl plugin" OFF)
 option(PLUGIN_WEBPA "Include WebPA plugin" OFF)
@@ -61,12 +63,20 @@ if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
+if(PLUGIN_AVS)
+    add_subdirectory(AVS)
+endif()
+
 if(PLUGIN_BLUETOOTH)
     add_subdirectory(BluetoothControl)
 endif()
 
 if(PLUGIN_BLUETOOTHREMOTECONTROL)
     add_subdirectory(BluetoothRemoteControl)
+endif()
+
+if(PLUGIN_BLUETOOTHAUDIOSINK)
+    add_subdirectory(BluetoothAudioSink)
 endif()
 
 if(PLUGIN_COBALT)
@@ -179,6 +189,10 @@ endif()
 
 if(PLUGIN_SYSTEMDCONNECTOR)
     add_subdirectory(SystemdConnector)
+endif()
+
+if(PLUGIN_SWITCHBOARD)
+    add_subdirectory(SwitchBoard)
 endif()
 
 if(PLUGIN_TIMESYNC)

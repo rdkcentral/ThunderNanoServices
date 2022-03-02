@@ -33,6 +33,8 @@ ENUM_CONVERSION_BEGIN(WPASupplicant::Network::key)
     { WPASupplicant::Network::KEY_CCMP, _TXT("CCMP") },
     { WPASupplicant::Network::KEY_TKIP, _TXT("TKIP") },
     { WPASupplicant::Network::KEY_PREAUTH, _TXT("preauth") },
+    { WPASupplicant::Network::KEY_WPS_PBC, _TXT("PBC") },
+    { WPASupplicant::Network::KEY_WPS_PIN, _TXT("PIN") },
 
     ENUM_CONVERSION_END(WPASupplicant::Network::key);
 

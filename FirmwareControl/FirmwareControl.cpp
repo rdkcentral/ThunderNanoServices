@@ -80,9 +80,9 @@ namespace Plugin {
         if (path.empty() != true) {
             _source = path + "/" + name;
         }
-        Core::File _storage(_destination + Name);
+        Core::File _storage(_destination + ImageFileName);
         if ((resume == true) && (_storage.Exists() == true)) {
-            _position = _storage.Core::File::Size() - 1;
+            _position = _storage.Core::File::Size();
         } else {
             _position = 0;
         }
@@ -128,7 +128,7 @@ namespace Plugin {
         mfrNotifier.cb = Callback;
 
         // Initiate image install
-        mfrError_t mfrStatus = mfrWriteImage(Name, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
+        mfrError_t mfrStatus = mfrWriteImage(ImageFileName, _destination.c_str(), static_cast<mfrImageType_t>(_type), mfrNotifier);
         if (mfrERR_NONE != mfrStatus) {
             Status(UpgradeStatus::INSTALL_ABORTED, ConvertMfrStatusToCore(mfrStatus), 0);
         } else {
@@ -170,7 +170,8 @@ namespace Plugin {
 
         TRACE(Trace::Information, (string(__FUNCTION__)));
 
-        uint32_t status = engine.Start(_source, _destination + Name, _hash, _position);
+        uint32_t status = engine.Start(_source, _destination + ImageFileName,
+                                       _destination + HashContextFileName, _hash, _position);
         if ((status == Core::ERROR_NONE) || (status == Core::ERROR_INPROGRESS)) {
 
             Status(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, 0);

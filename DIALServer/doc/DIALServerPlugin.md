@@ -6,13 +6,15 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-DIALServer plugin for Thunder framework.
+A DIALServer plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
+- [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
@@ -21,7 +23,7 @@ DIALServer plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the DIALServer plugin. It includes detailed specification about its configuration and notifications sent.
+This document describes purpose and functionality of the DIALServer plugin. It includes detailed specification about its configuration, properties provided and notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -100,6 +102,92 @@ The table below lists configuration options of the plugin.
 | configuration.apps[#]?.url | string | <sup>*(optional)*</sup> A URL related to the application |
 | configuration.apps[#]?.allowstop | boolean | <sup>*(optional)*</sup> Denotes if the application can be stopped *(true)* or not *(false, default)* |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [DIALServer.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/DIALServer.json)
+
+<a name="head.Properties"></a>
+# Properties
+
+The following properties are provided by the DIALServer plugin:
+
+DIALServer interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [state](#property.state) | Current application running state |
+
+
+<a name="property.state"></a>
+## *state [<sup>property</sup>](#head.Properties)*
+
+Provides access to the current application running state.
+
+### Description
+
+This property can be used to update the running status of an un-managed application (i.e. running in *passive mode*). For DIALServer-managed applications this property shall be considered *read-only*.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | string | Current application running state (must be one of the following: *Stopped*, *Started*, *Hidden*) |
+
+> The *application name* argument shall be passed as the index to the property, e.g. *DIALServer.1.state@YouTube*.
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Specified application does not exist |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Specified application is running in *active mode* |
+
+### Example
+
+#### Get Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DIALServer.1.state@YouTube"
+}
+```
+
+#### Get Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "Stopped"
+}
+```
+
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "DIALServer.1.state@YouTube",
+    "params": "Stopped"
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
 <a name="head.Notifications"></a>
 # Notifications
 
@@ -111,15 +199,21 @@ DIALServer interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [start](#event.start) | Signals that application start was requested over DIAL *(passive mode only)* |
-| [stop](#event.stop) | Signals that application stop was requested over DIAL *(passive mode only)* |
-| [hide](#event.hide) | Signals that application hide was requested over DIAL *(passive mode only)* |
+| [start](#event.start) | Signals that application launch (or show if previously hidden) was requested over DIAL |
+| [stop](#event.stop) | Signals that application stop was requested over DIAL |
+| [hide](#event.hide) | Signals that application hide was requested over DIAL |
+| [show](#event.show) | Signals that application show was requested over DIAL |
+| [change](#event.change) | Signals that application URL change was requested over DIAL |
 
 
 <a name="event.start"></a>
-## *start <sup>event</sup>*
+## *start [<sup>event</sup>](#head.Notifications)*
 
-Signals that application start was requested over DIAL *(passive mode only)*.
+Signals that application launch (or show if previously hidden) was requested over DIAL.
+
+### Description
+
+This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
 ### Parameters
 
@@ -139,15 +233,19 @@ Signals that application start was requested over DIAL *(passive mode only)*.
     "params": {
         "application": "YouTube",
         "parameters": "watch?v=zpp045FBbQY",
-        "payload": ""
+        "payload": "..."
     }
 }
 ```
 
 <a name="event.stop"></a>
-## *stop <sup>event</sup>*
+## *stop [<sup>event</sup>](#head.Notifications)*
 
-Signals that application stop was requested over DIAL *(passive mode only)*.
+Signals that application stop was requested over DIAL.
+
+### Description
+
+This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
 ### Parameters
 
@@ -171,9 +269,13 @@ Signals that application stop was requested over DIAL *(passive mode only)*.
 ```
 
 <a name="event.hide"></a>
-## *hide <sup>event</sup>*
+## *hide [<sup>event</sup>](#head.Notifications)*
 
-Signals that application hide was requested over DIAL *(passive mode only)*.
+Signals that application hide was requested over DIAL.
+
+### Description
+
+This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
 ### Parameters
 
@@ -188,6 +290,66 @@ Signals that application hide was requested over DIAL *(passive mode only)*.
 {
     "jsonrpc": "2.0",
     "method": "client.events.1.hide",
+    "params": {
+        "application": "YouTube"
+    }
+}
+```
+
+<a name="event.show"></a>
+## *show [<sup>event</sup>](#head.Notifications)*
+
+Signals that application show was requested over DIAL.
+
+> This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
+
+### Description
+
+This event is sent out only for un-managed applications (i.e. in *passive mode*).
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.application | string | Application name |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.show",
+    "params": {
+        "application": "YouTube"
+    }
+}
+```
+
+<a name="event.change"></a>
+## *change [<sup>event</sup>](#head.Notifications)*
+
+Signals that application URL change was requested over DIAL.
+
+> This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
+
+### Description
+
+This event is sent out only for un-managed applications (i.e. in *passive mode*).
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.application | string | Application name |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.change",
     "params": {
         "application": "YouTube"
     }

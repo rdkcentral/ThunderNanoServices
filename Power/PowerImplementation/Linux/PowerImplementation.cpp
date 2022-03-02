@@ -156,7 +156,7 @@ public:
         bool result = (_triggerFile > 0);
 
         if (result == true) {
-            Core::ProxyType<Core::IDispatch> job(_job.Aquire());
+            Core::ProxyType<Core::IDispatch> job(_job.Submit());
 
             if (job.IsValid() == false) {
                 result = false;
