@@ -1051,8 +1051,6 @@ namespace Plugin {
     ClientSurface::~ClientSurface () {
         // Part of the client is cleaned up via the detached (hook)
 
-        _compositor . Detached ( _name );
-
         if ( _nativeSurface . _fd != ModeSet::GBM::InvalidFd () ) {
             /* int */ close ( _nativeSurface . _fd );
         }
@@ -1068,6 +1066,8 @@ namespace Plugin {
         _nativeSurface = { ModeSet::GBM::InvalidBuf () , ModeSet::GBM::InvalidFd () , ModeSet::GBM::InvalidFd () , WPEFramework::Plugin::EGL::InvalidImage () };
 
         _compositor . Release ();
+
+        _compositor . Detached ( _name );
     }
 
     RPC::instance_id ClientSurface::Native () const {
@@ -3893,9 +3893,9 @@ namespace Plugin {
             delete _dma;
         }
 
-        _dma = nullptr;
-
         _clients . Clear ();
+
+        _dma = nullptr;
 
         if ( _externalAccess != nullptr ) {
             delete _externalAccess;
@@ -4160,16 +4160,18 @@ namespace Plugin {
     void CompositorImplementation::Unregister ( Exchange::IComposition::INotification * notification ) {
         _adminLock . Lock ();
 
-        _clients.Visit (
-            [ = ] ( string const & name , Core::ProxyType < ClientSurface > & element ) { silence ( element ); notification -> Detached ( name ) ; }
-        );
-
         std::list < Exchange::IComposition::INotification * > :: iterator index ( std::find ( _observers . begin () , _observers . end () , notification ) );
 
         ASSERT ( index != _observers . end () );
 
-        if ( index != _observers . end() ) {
+        if ( index != _observers . end () ) {
+
+            _clients . Visit (
+                [ = ] ( string const & name , Core::ProxyType < ClientSurface > const & element ) { notification -> Attached ( name , & ( * element ) ) ;  }
+            );
+
             _observers . erase ( index );
+
             notification -> Release ();
         }
 
@@ -4188,20 +4190,6 @@ namespace Plugin {
 
     void CompositorImplementation::Detached ( string const & name ) {
         _adminLock . Lock ();
-
-        // Clean up client that leaves prematurely
-
-#ifdef _0
-        /* ProxyType <> */ auto client = _clients . Find ( name );
-
-        if ( client . IsValid () != false ) {
-            EGL::img_t const img = client -> Surface () . _khr;
-
-            /* valid_t */ _gles . SkipEGLImageFromScene ( img );
-
-            /* surf_t */ client -> Surface ( EGL::DestroyImage ( _egl , client -> Surface () ) );
-        }
-#endif
 
         for ( auto & observer : _observers ) {
             observer -> Detached ( name );
