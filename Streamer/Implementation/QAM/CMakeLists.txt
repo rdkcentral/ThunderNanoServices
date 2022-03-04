@@ -23,7 +23,7 @@ find_package(NXCLIENT REQUIRED)
 
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
 
-add_library(${LIB_NAME} STATIC
+add_library(${LIB_NAME}
      PlayerImplementation.cpp)
 
 set_target_properties(${LIB_NAME} PROPERTIES

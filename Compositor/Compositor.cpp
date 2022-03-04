@@ -224,7 +224,7 @@ namespace Plugin {
         }
 
         if (_connectionId != 0) {
-
+            ASSERT(_composition != nullptr);
             UnregisterAll();
             _composition->Unregister(&_notification);
 

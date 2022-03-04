@@ -31,8 +31,12 @@ namespace Plugin {
 
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
+        ASSERT(_connectionId == 0);
         _service = service;
         _service->AddRef();
+
+        service->Register(&_audiosourceNotification);
+        service->Register(&_connectionNotification);
 
         ASSERT(service->PersistentPath() != _T(""));
         Core::Directory directory((service->PersistentPath() + _T("/db")).c_str());
@@ -66,9 +70,8 @@ namespace Plugin {
             }
         }
 
-        if (message.empty() == true) {
-            service->Register(&_audiosourceNotification);
-            service->Register(&_connectionNotification);
+        if(message.length() != 0) {
+            Deinitialize(service);
         }
 
         return message;
@@ -78,25 +81,40 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        TerminateConnection(_connectionId);
+        service->Unregister(&_audiosourceNotification);
+        service->Unregister(&_connectionNotification);
 
-        if (_AVSClient != nullptr) {
+        if (_connectionId != 0) {
+            ASSERT(_AVSClient != nullptr);
             TRACE_L1(_T("Deinitializing AVSClient..."));
 
             if (_controller != nullptr) {
                 _controller->Unregister(&_dialogueNotification);
                 _controller->Release();
                 Exchange::JAVSController::Unregister(*this);
+                _controller = nullptr;
             }
 
             if (_AVSClient->Deinitialize() == false) {
                 TRACE_L1(_T("AVSClient deinitialize failed!"));
             }
-            _AVSClient->Release();
+
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+            VARIABLE_IS_NOT_USED uint32_t result = _AVSClient->Release();
+            _AVSClient = nullptr;
+            // It should have been the last reference we are releasing,
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            // The process can disappear in the meantime...
+            if (connection != nullptr) {
+                connection->Terminate();
+                connection->Release();
+            }
+            _connectionId = 0;
         }
 
-        _service->Unregister(&_audiosourceNotification);
-        _service->Unregister(&_connectionNotification);
         _service->Release();
         _service = nullptr;
     }
@@ -134,11 +152,6 @@ namespace Plugin {
                 message = _T("Failed to create the AVSClient - " + name);
             } else {
                 if (_AVSClient->Initialize(_service, configStr) != true) {
-
-                    TerminateConnection(_connectionId);
-                    _AVSClient->Release();
-                    _AVSClient = nullptr;
-
                     message = _T("Failed to initialize the AVSClient - " + name);
                 }
             }

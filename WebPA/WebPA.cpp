@@ -26,14 +26,17 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
 
 /* virtual */ const string WebPA::Initialize(PluginHost::IShell* service)
 {
-    string message;
+    string message(EMPTY_STRING);
 
+    ASSERT(service != nullptr);
     ASSERT(_webpa == nullptr);
     ASSERT(_service == nullptr);
+    ASSERT(_connectionId == 0);
 
     // Setup skip URL for right offset.
-    _connectionId = 0;
+
     _service = service;
+    _service->AddRef();
     _skipURL = _service->WebPrefix().length();
 
     // Register the Process::Notification stuff. The Remote connection might die before we get a
@@ -47,8 +50,6 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
         if (_webpa->Initialize(_service) == Core::ERROR_NONE) {
             TRACE(Trace::Information, (_T("Successfully instantiated WebPA Service")));
         } else {
-            _webpa->Release();
-            _webpa = nullptr;
             TRACE(Trace::Error, (_T("WebPA Service could not be launched.")));
             message = _T("WebPA Service could not be launched.");
         }
@@ -57,26 +58,28 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
         message = _T("WebPA Service could not be instantiated.");
     }
 
-    if (_webpa == nullptr) {
-        _service->Unregister(&_notification);
-        _service = nullptr;
+    if(message.length() != 0) {
+        Deinitialize(service);
     }
+
 
     return message;
 }
 
 /* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service)
 {
-    ASSERT(_webpa != nullptr);
     ASSERT(_service == service);
 
     _service->Unregister(&_notification);
 
-    _webpa->Deinitialize(_service);
-    _webpa->Release();
-
     if(_connectionId != 0){
         RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
+        ASSERT(_webpa != nullptr);
+        _webpa->Deinitialize(_service);
+        _webpa->Release();
+        VARIABLE_IS_NOT_USED uint32_t result = _webpa->Release();
+        _webpa = nullptr;
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
         // The connection can disappear in the meantime...
         if (nullptr != serviceConnection) {
@@ -85,7 +88,8 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
             serviceConnection->Release();
         }
     }
-    _webpa = nullptr;
+    _connectionId = 0;
+    _service->Release()
     _service = nullptr;
 }
 

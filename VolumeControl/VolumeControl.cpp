@@ -26,38 +26,51 @@ namespace Plugin {
 
     const string VolumeControl::Initialize(PluginHost::IShell* service)
     {
+        string message(EMPTY_STRING);
+
         ASSERT (_service == nullptr);
         ASSERT (service != nullptr);
+        ASSERT (_implementation == nullptr);
+        ASSERT (_connectionId == 0);
 
         _service = service;
+        _service->AddRef();
         _service->Register(&_connectionNotification);
 
-        string result;
         _implementation = _service->Root<Exchange::IVolumeControl>(_connectionId, 2000, _T("VolumeControlImplementation"));
         if (_implementation == nullptr) {
-            result = _T("Couldn't create volume control instance");
+            message = _T("Couldn't create volume control instance");
         } else {
           _implementation->Register(&_volumeNotification);
           Exchange::JVolumeControl::Register(*this, _implementation);
         }
 
-        return (result);
+        if(message.length() != 0) {
+            Deinitialize(service);
+        }
+        return (message);
     }
 
     void VolumeControl::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
 
-        Exchange::JVolumeControl::Unregister(*this);
-
         _service->Unregister(&_connectionNotification);
-        _implementation->Unregister(&_volumeNotification);
-
-        _implementation->Release();
 
         if(_connectionId != 0){
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+             ASSERT(_implementation != nullptr);
 
+            Exchange::JVolumeControl::Unregister(*this);
+
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+            _implementation->Unregister(&_volumeNotification);
+
+            VARIABLE_IS_NOT_USED uint32_t result = _implementation->Release();
+            _implementation = nullptr;
+            // It should have been the last reference we are releasing,
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
             // The process can disappear in the meantime...
             if (connection != nullptr) {
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
@@ -66,8 +79,9 @@ namespace Plugin {
             }
         }
 
+        _service->Release();
         _service = nullptr;
-        _implementation = nullptr;
+        _connectionId = 0;
     }
 
     string VolumeControl::Information() const

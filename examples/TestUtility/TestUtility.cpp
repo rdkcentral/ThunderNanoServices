@@ -76,6 +76,7 @@ namespace Plugin {
         ASSERT(_connection == 0);
 
         _service = service;
+        _service->AddRef();
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
 
         config.FromString(_service->ConfigLine());
@@ -85,23 +86,22 @@ namespace Plugin {
 
         if (_testUtilityImp != nullptr) {
             RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
-
+            RegisterAll();
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
                 remoteConnection->Release();
             } else {
-                _memory = nullptr;
+                message = _T("Colud not create MemoryObserver in TestUtility.");
                 TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestUtility")));
             }
 
         } else {
-            ProcessTermination(_connection);
-
-            _service->Unregister(&_notification);
-            _service = nullptr;
-
             TRACE(Trace::Fatal, (_T("*** TestUtility could not be instantiated ***")))
             message = _T("TestUtility could not be instantiated.");
+        }
+
+        if(message.length() != 0){
+            Deinitialize(service);
         }
 
         return message;
@@ -110,25 +110,35 @@ namespace Plugin {
     /* virtual */ void TestUtility::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
-        ASSERT(_testUtilityImp != nullptr);
-        ASSERT(_memory != nullptr);
 
         _service->Unregister(&_notification);
 
-        if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-            TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+        if(_connection != 0) {
+            ASSERT(_testUtilityImp != nullptr);
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+            UnregisterAll()
+            if(_memory != nullptr){
+                if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                    TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+                }
+                _memory = nullptr;
+            }
+
+            VARIABLE_IS_NOT_USED uint32_t result = _testUtilityImp->Release();
+            _testUtilityImp = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            // The connection can disappear in the meantime...
+            if (connection != nullptr) {
+                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                connection->Terminate();
+                connection->Release();
+            }           
         }
-        _memory = nullptr;
 
-        _testUtilityImp->Release();
-
-        if (_connection != 0) {
-            ProcessTermination(_connection);
-        }
-
-        _testUtilityImp = nullptr;
         _skipURL = 0;
         _connection = 0;
+        _service->Release();
         _service = nullptr;
     }
 
@@ -175,15 +185,6 @@ namespace Plugin {
             result->Message = (_T("Test controller does not exist"));
         }
         return result;
-    }
-
-    void TestUtility::ProcessTermination(uint32_t _connection)
-    {
-        RPC::IRemoteConnection* process(_service->RemoteConnection(_connection));
-        if (process != nullptr) {
-            process->Terminate();
-            process->Release();
-        }
     }
 
     void TestUtility::Deactivated(RPC::IRemoteConnection* process)

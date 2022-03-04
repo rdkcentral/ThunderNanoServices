@@ -33,15 +33,17 @@ namespace Plugin {
 
     /* virtual */ const string WebServer::Initialize(PluginHost::IShell* service)
     {
-        string message;
+        string message(EMPTY_STRING);
 
         ASSERT(_server == nullptr);
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
+        ASSERT(service != nullptr);
+        ASSERT(_connectionId == 0);
 
         // Setup skip URL for right offset.
-        _connectionId = 0;
         _service = service;
+        _service->AddRef();
         _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
@@ -56,17 +58,13 @@ namespace Plugin {
             // We see that sometimes the implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
             if (stateControl == nullptr) {
-                _server->Release();
-                _server = nullptr;
+                message = _T("WebServer Couldnt get StateControl.");
 
             } else {
                 uint32_t result = stateControl->Configure(_service);
                 stateControl->Release();
-
                 if (result != Core::ERROR_NONE) {
                     message = _T("WebServer could not be configured.");
-                    _server->Release();
-                    _server = nullptr;
                 }
                 else {
                     RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
@@ -94,9 +92,11 @@ namespace Plugin {
         }
 
         if (_server == nullptr) {
-            _service->Unregister(&_notification);
-            _service = nullptr;
             message = _T("WebServer could not be instantiated.");
+        }
+
+        if(message.length() != 0) {
+            Deinitialize(service);
         }
 
         return message;
@@ -105,19 +105,24 @@ namespace Plugin {
     /* virtual */ void WebServer::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == _service);
-        ASSERT(_server != nullptr);
 
         _service->Unregister(&_notification);
-        if (_memory != nullptr) {
-            _memory->Release();
-        }
-
-        // Stop processing of the browser:
-        _server->Release();
 
         if(_connectionId != 0){
+            ASSERT(_server != nullptr);
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
+            if (_memory != nullptr) {
+                _memory->Release();
+                _memory = nullptr;
+            }
+            // Stop processing of the browser:
+            VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
+            _server = nullptr;
+            // It should have been the last reference we are releasing,
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
             // The process can disappear in the meantime...
             if (connection != nullptr) {
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
@@ -134,9 +139,9 @@ namespace Plugin {
             subSystem->Release();
         }
 
-        _memory = nullptr;
-        _server = nullptr;
+        _service->Release();
         _service = nullptr;
+        _connectionId = 0;
     }
 
     /* virtual */ string WebServer::Information() const

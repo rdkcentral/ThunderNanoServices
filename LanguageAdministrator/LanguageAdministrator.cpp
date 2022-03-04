@@ -28,8 +28,13 @@ namespace Plugin {
     {
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
+        ASSERT(_connectionId == 0);
+        ASSERT(_impl == nullptr);
+
+        string message(EMPTY_STRING);
 
         _service = service;
+        _service->AddRef();
 
         if (Core::Directory(_service->PersistentPath().c_str()).CreatePath())
             _langSettingsFileName = _service->PersistentPath() + "LanguageSettings.json";
@@ -41,21 +46,17 @@ namespace Plugin {
         _service->Register(static_cast<RPC::IRemoteConnection::INotification*>(&_sink));
         _service->Register(static_cast<PluginHost::IPlugin::INotification*>(&_sink));
 
-        string result;
-
         _impl = _service->Root<Exchange::ILanguageTag>(_connectionId, 2000, _T("LanguageAdministratorImpl"));
         if (_impl == nullptr) {
-            _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(&_sink));
-            _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(&_sink));
-            _service = nullptr;
-            TerminateConnection(_connectionId);
-
-            result = _T("Couldn't create instance of LanguageAdministratorImpl");
-
+            message = _T("Couldn't create instance of LanguageAdministratorImpl");
         } else {
             _impl->Register(&_LanguageTagNotification);
             Exchange::JLanguageTag::Register(*this, _impl);
             _impl->Language((const string)(_language));
+        }
+
+        if(message.length() != 0) {
+            Deinitialize(service);
         }
 
         return result;
@@ -64,19 +65,39 @@ namespace Plugin {
     /* virtual */ void LanguageAdministrator::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
+        service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(&_sink));
+        service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(&_sink));
 
         UpdateLanguageUsed(_language);
-        Exchange::JLanguageTag::Unregister(*this);
 
-        service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(&_sink));
-        _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(&_sink));
-        _impl->Unregister(&_LanguageTagNotification);
+        if(_connectionId != 0) {
 
-        _impl->Release();
-        TerminateConnection(_connectionId);
+            ASSERT(_impl != nullptr);
 
+            Exchange::JLanguageTag::Unregister(*this);
+            _impl->Unregister(&_LanguageTagNotification);
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+
+            VARIABLE_IS_NOT_USED uint32_t result = _impl->Release();
+            _impl = nullptr;
+            // It should have been the last reference we are releasing,
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            // If this was running in a (container) process...
+            if (connection != nullptr) {
+                // Lets trigger the cleanup sequence for
+                // out-of-process code. Which will guard
+                // that unwilling processes, get shot if
+                // not stopped friendly :-)
+                connection->Terminate();
+                connection->Release();
+            }
+        }
+        _service->Release();
         _service = nullptr;
-        _impl = nullptr;
+        _connectionId = 0;
     }
 
     /* virtual */ string LanguageAdministrator::Information() const

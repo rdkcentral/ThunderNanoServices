@@ -69,6 +69,7 @@ namespace WPEFramework
 
             if (_connectionId != 0)
             {
+                ASSERT(_monitor != nullptr);
                 RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
                 VARIABLE_IS_NOT_USED uint32_t result = _monitor->Release();
                 _monitor = nullptr;

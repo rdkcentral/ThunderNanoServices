@@ -31,12 +31,20 @@ namespace Plugin {
     /* virtual */ const string PlayerInfo::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
+        ASSERT(_service == nullptr);
+        ASSERT(_connectionId == 0);
         ASSERT(_player == nullptr);
 
-        string message;
+        string message(EMPTY_STRING);
         Config config;
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
+
+        _service = service;
+        _service->AddRef();
+        // Register the Process::Notification stuff. The Remote process might die before we get a
+        // change to "register" the sink for these events !!! So do it ahead of instantiation.
+        _service->Register(&_notification);
 
         _player = service->Root<Exchange::IPlayerProperties>(_connectionId, 2000, _T("PlayerInfoImplementation"));
 
@@ -55,51 +63,69 @@ namespace Plugin {
                     if(_dolbyOut == nullptr){
                         SYSLOG(Logging::Startup, (_T("Dolby output switching service is unavailable.")));
                     } else {
-                        _notification.Initialize(_dolbyOut);
+                        _dolbyNotification.Initialize(_dolbyOut);
                         Exchange::Dolby::JOutput::Register(*this, _dolbyOut);
                     }
 #endif
                 } else {
-                     _audioCodecs->Release();
-                     _audioCodecs = nullptr;
-
-                     _player->Release();
-                     _player = nullptr;
+                    message = _T("PlayerInfo Video Codecs not be Loaded.");
                 }
             } else {
-                _player->Release();
-                _player = nullptr;
+                message = _T("PlayerInfo Audio Codecs not be Loaded.");
             }
         }
-
-        if (_player == nullptr) {
+        else {
             message = _T("PlayerInfo could not be instantiated.");
+        }
+
+        if(message.length() != 0){
+            Deinitialize(service);
         }
         return message;
     }
 
-    /* virtual */ void PlayerInfo::Deinitialize(PluginHost::IShell*)
+    /* virtual */ void PlayerInfo::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_player != nullptr);
-        if (_player != nullptr) {
+        ASSERT(service == _service);
+
+        _service->Unregister(&_notification);
+
+        if (_connectionId != 0) {
+            ASSERT(_player != nullptr);
+            if (_audioCodecs != nullptr) {
+                _audioCodecs->Release();
+                _audioCodecs = nullptr;
+            }
+            if (_videoCodecs != nullptr) {
+                _videoCodecs->Release();
+                _videoCodecs = nullptr;
+            }
             Exchange::JPlayerProperties::Unregister(*this);
-            _player->Release();
+
+            #if DOLBY_SUPPORT
+                if (_dolbyOut != nullptr) {
+                    _dolbyNotification.Deinitialize();
+                    Exchange::Dolby::JOutput::Unregister(*this);
+                    _dolbyOut->Release();
+                    _dolbyOut = nullptr;
+                }
+            #endif
+
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+            VARIABLE_IS_NOT_USED uint32_t result = _player->Release();
+            _player = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            // The connection can disappear in the meantime...
+            if (connection != nullptr) {
+                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                connection->Terminate();
+                connection->Release();
+            }
         }
 
-        if (_audioCodecs != nullptr) {
-            _audioCodecs->Release();
-        }
-
-        if (_videoCodecs != nullptr) {
-            _videoCodecs->Release();
-        }
-
-#if DOLBY_SUPPORT
-        if (_dolbyOut != nullptr) {
-            _notification.Deinitialize();
-            Exchange::Dolby::JOutput::Unregister(*this);
-        }
-#endif
+        _service->Release();
+        _service = nullptr;
         _connectionId = 0;
     }
 
@@ -161,5 +187,14 @@ namespace Plugin {
         }
     }
 
+    void PlayerInfo::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
+        // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
+        if (_connectionId == connection->Id()) {
+            ASSERT(_service != nullptr);
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+        }
+    }
 } // namespace Plugin
 } // namespace WPEFramework

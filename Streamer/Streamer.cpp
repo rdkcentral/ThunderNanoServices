@@ -29,13 +29,16 @@ namespace Plugin {
 
     /* virtual */ const string Streamer::Initialize(PluginHost::IShell* service)
     {
-        string message;
+        string message(EMPTY_STRING);
 
         ASSERT(_service == nullptr);
+        ASSERT(service != nullptr);
+        ASSERT(_player == nullptr);
+        ASSERT(_connectionId == 0);
 
         // Setup skip URL for right offset.
-        _connectionId = 0;
         _service = service;
+        _service->AddRef();
         _skipURL = _service->WebPrefix().length();
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
@@ -44,7 +47,7 @@ namespace Plugin {
 
         _player = _service->Root<Exchange::IPlayer>(_connectionId, 2000, _T("StreamerImplementation"));
 
-        if ((_player != nullptr) && (_service != nullptr)) {
+        if (_player != nullptr) {
             TRACE(Trace::Information, (_T("Successfully instantiated Streamer")));
             _player->Configure(_service);
 
@@ -61,7 +64,10 @@ namespace Plugin {
         } else {
             TRACE(Trace::Error, (_T("Streamer could not be initialized.")));
             message = _T("Streamer could not be initialized.");
-            _service->Unregister(&_notification);
+        }
+
+        if(message.length() != 0){
+            Deinitialize(service);
         }
 
         return message;
@@ -70,14 +76,15 @@ namespace Plugin {
     /* virtual */ void Streamer::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
-        ASSERT(_player != nullptr);
 
         service->Unregister(&_notification);
 
-        _player->Release();
-
         if(_connectionId != 0){
+            ASSERT(_player != nullptr);
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+            VARIABLE_IS_NOT_USED uint32_t result = _player->Release();
+            _player = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
             // The connection can disappear in the meantime...
             if (connection != nullptr) {
@@ -93,8 +100,9 @@ namespace Plugin {
             subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
             subSystem->Release();
         }
-        _player = nullptr;
+        _service->Release();
         _service = nullptr;
+        _connectionId = 0;
     }
 
     /* virtual */ string Streamer::Information() const

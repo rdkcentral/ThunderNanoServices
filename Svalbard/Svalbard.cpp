@@ -61,7 +61,7 @@ namespace Plugin {
         if (_connectionId != 0) {
 
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-
+            ASSERT(_svalbard != nullptr);
             VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
             _svalbard = nullptr;
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);

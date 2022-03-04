@@ -35,9 +35,11 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
 /* encapsulated class Thread  */
 /* virtual */const string Cobalt::Initialize(PluginHost::IShell *service) {
     Config config;
-    string message;
+    string message(EMPTY_STRING);
 
+    ASSERT(service != nullptr);
     ASSERT(_service == nullptr);
+    ASSERT(_connectionId == 0);
     ASSERT(_cobalt == nullptr);
     ASSERT(_application == nullptr);
     ASSERT(_memory == nullptr);
@@ -45,8 +47,8 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     config.FromString(service->ConfigLine());
     _persistentStoragePath = service->PersistentPath();
 
-    _connectionId = 0;
     _service = service;
+    _service->AddRef();
     _skipURL = _service->WebPrefix().length();
 
     // Register the Connection::Notification stuff. The Remote process might die
@@ -62,8 +64,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         PluginHost::IStateControl *stateControl(
                 _cobalt->QueryInterface<PluginHost::IStateControl>());
         if (stateControl == nullptr) {
-            _cobalt->Release();
-            _cobalt = nullptr;
+            message = _T("Cobalt StateControl could not be Obtained.");
         } else {
             _application = _cobalt->QueryInterface<Exchange::IApplication>();
             if (_application != nullptr) {
@@ -81,61 +82,73 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
                 RegisterAll();
                 Exchange::JApplication::Register(*this, _application);
             } else {
-                stateControl->Release();
-                _cobalt->Release();
-                _cobalt = nullptr;
+                message = _T("Cobalt IApplication could not be Obtained.");
             }
         }
+    } else {
+        message = _T("Cobalt could not be instantiated.");
     }
 
-    if (_cobalt == nullptr) {
-        message = _T("Cobalt could not be instantiated.");
-        _service->Unregister(&_notification);
-        _service = nullptr;
-        ConnectionTermination(_connectionId);
+
+    if (message.length() != 0) {
+       Deinitialize(service);
     }
 
     return message;
 }
 
 /* virtual */void Cobalt::Deinitialize(PluginHost::IShell *service) {
+
     ASSERT(_service == service);
-    ASSERT(_cobalt != nullptr);
-    ASSERT(_application != nullptr);
-    ASSERT(_memory != nullptr);
 
-    Exchange::JApplication::Unregister(*this);
-    UnregisterAll();
-
-    PluginHost::IStateControl *stateControl(
-            _cobalt->QueryInterface<PluginHost::IStateControl>());
-
-    // Make sure the Activated and Deactivated are no longer called before we
-    // start cleaning up..
     _service->Unregister(&_notification);
-    _cobalt->Unregister(&_notification);
-    _memory->Release();
-    _application->Release();
 
-    // In case Cobalt crashed, there is no access to the statecontrol interface,
-    // check it !!
-    if (stateControl != nullptr) {
-        stateControl->Unregister(&_notification);
-        stateControl->Release();
-    } else {
-        // On behalf of the crashed process, we will release the notification sink.
-        _notification.Release();
+    if(_connectionId != 0){
+        ASSERT(_cobalt != nullptr);
+        Exchange::JApplication::Unregister(*this);
+        UnregisterAll();
+
+        PluginHost::IStateControl *stateControl(
+        _cobalt->QueryInterface<PluginHost::IStateControl>());
+
+        // Make sure the Activated and Deactivated are no longer called before we
+        // start cleaning up..
+
+        if(_memory != nullptr) {
+            _memory->Release();
+            _memory = nullptr;
+        }
+        if(_application != nullptr) {
+            _application->Release();
+            _application = nullptr;
+        }
+
+        // In case Cobalt crashed, there is no access to the statecontrol interface,
+        // check it !!
+        if (stateControl != nullptr) {
+            stateControl->Unregister(&_notification);
+            stateControl->Release();
+        } else {
+            // On behalf of the crashed process, we will release the notification sink.
+            _notification.Release();
+        }
+
+        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+        VARIABLE_IS_NOT_USED uint32_t result = _cobalt->Release();
+        _cobalt = nullptr;
+        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+        // The connection can disappear in the meantime...
+        if (connection != nullptr) {
+            // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+            connection->Terminate();
+            connection->Release();
+        }
     }
 
-    _cobalt->Release();
-
-    ConnectionTermination(_connectionId);
-
-    // Deinitialize what we initialized..
-    _memory = nullptr;
-    _application = nullptr;
-    _cobalt = nullptr;
+    _service->Release();
     _service = nullptr;
+    _connectionId = 0;
 }
 
 /* virtual */string Cobalt::Information() const {
