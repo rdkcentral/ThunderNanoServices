@@ -82,7 +82,7 @@ namespace Plugin {
 
         if (_testControllerImp != nullptr) {
             RegisterAll();
-            
+
             const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connection);
 
             if (connection != nullptr) {
@@ -91,7 +91,7 @@ namespace Plugin {
                 if(_memory == nullptr) {
                     message = _T("Colud not create MemoryObserver in TestController");
                 }
-                testControllerImp->Setup();
+                _testControllerImp->Setup();
                 connection->Release();
                
             } else {

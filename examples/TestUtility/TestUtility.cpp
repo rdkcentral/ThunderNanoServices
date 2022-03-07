@@ -116,7 +116,7 @@ namespace Plugin {
         if(_connection != 0) {
             ASSERT(_testUtilityImp != nullptr);
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
-            UnregisterAll()
+            UnregisterAll();
             if(_memory != nullptr){
                 if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
                     TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
