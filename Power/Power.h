@@ -130,7 +130,7 @@ namespace Plugin {
             {
                 Add(_T("powerkey"), &PowerKey);
                 Add(_T("offmode"), &OffMode);
-                Add(_T("control"), &ControlClients);
+                Add(_T("controlclients"), &ControlClients);
             }
             ~Config()
             {
