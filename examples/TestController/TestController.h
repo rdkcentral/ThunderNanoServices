@@ -49,9 +49,9 @@ namespace Plugin {
             ~Notification() override = default;
 
         public:
-            virtual void Activated(RPC::IRemoteConnection* process) { _parent.Activated(process); }
+            void Activated(RPC::IRemoteConnection* process) override { _parent.Activated(process); }
 
-            virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
+            void Deactivated(RPC::IRemoteConnection* process) override { _parent.Deactivated(process); }
 
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
@@ -121,14 +121,14 @@ namespace Plugin {
 
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override ;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         TestController(const TestController&) = delete;
         TestController& operator=(const TestController&) = delete;
