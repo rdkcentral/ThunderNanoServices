@@ -45,7 +45,7 @@ public:
 
 public:
     // ICommand methods
-    string Execute(const string& params) final
+    string Execute(const string& params VARIABLE_IS_NOT_USED) final
     {
         TestCore::TestResult jsonResult;
         string result;
