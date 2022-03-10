@@ -30,8 +30,6 @@
 #include <acsdkEqualizerImplementations/MiscDBEqualizerStorage.h>
 #include <acsdkEqualizerImplementations/SDKConfigEqualizerConfiguration.h>
 #include <acsdkNotifications/SQLiteNotificationsStorage.h>
-#include <cctype>
-#include <fstream>
 #include <Audio/AudioFactory.h>
 #include <ACL/Transport/HTTP2TransportFactory.h>
 #include <ACL/Transport/PostConnectSequencerFactory.h>
@@ -62,6 +60,9 @@
 #include <SQLiteStorage/SQLiteMiscStorage.h>
 #include <Settings/Storage/SQLiteDeviceSettingStorage.h>
 #include <SynchronizeStateSender/SynchronizeStateSenderFactory.h>
+
+#include <cctype>
+#include <fstream>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -136,7 +137,7 @@ namespace Plugin {
 #endif
         }
 
-        auto configJsonStreams = std::make_shared<std::vector<std::shared_ptr<std::istream>>>();
+        std::vector<std::shared_ptr<std::istream>> configJsonStreams;
         if ((status == true) && (JsonConfigToStream(configJsonStreams, alexaClientConfig) == false)) {
             TRACE(AVSClient, (_T("Failed to load alexaClientConfig")));
             status = false;
@@ -158,7 +159,7 @@ namespace Plugin {
         return status;
     }
 
-    bool AVSDevice::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, std::shared_ptr<std::vector<std::shared_ptr<std::istream>>> configJsonStreams)
+    bool AVSDevice::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, std::vector<std::shared_ptr<std::istream>>& configJsonStreams)
     {
         auto builder = avsCommon::avs::initialization::InitializationParametersBuilder::create();
         if (!builder) {
@@ -166,9 +167,13 @@ namespace Plugin {
             return false;
         }
 
-        builder->withJsonStreams(configJsonStreams);
+        builder->withJsonStreams(std::make_shared<std::vector<std::shared_ptr<std::istream>>>(configJsonStreams));
 
         auto initParams = builder->build();
+        if (!initParams) {
+            TRACE(AVSClient,(_T("Failed to get initParams")));
+            return false;
+        }
 
         acsdkSampleApplication::SampleApplicationComponent sampleAppComponent =
             acsdkSampleApplication::getComponent(std::move(initParams), m_shutdownRequiredList);
@@ -601,10 +606,10 @@ namespace Plugin {
             }
 
             m_thunderVoiceHandler = ThunderVoiceHandler<alexaClientSDK::sampleApp::InteractionManager>::create(sharedDataStream, _service, audiosource, aspInputInteractionHandler, *compatibleAudioFormat);
-	    if (!m_thunderVoiceHandler) {
+            if (!m_thunderVoiceHandler) {
                 TRACE(AVSClient, (_T("Failed to create m_thunderVoiceHandler")));
                 return false;
-	    }
+            }
 
             aspInput = m_thunderVoiceHandler;
             if (aspInput) {
@@ -612,7 +617,7 @@ namespace Plugin {
             }
         }
 
-	if (!aspInput) {
+        if (!aspInput) {
             TRACE(AVSClient, (_T("Failed to create aspInput")));
             return false;
         }
@@ -719,7 +724,7 @@ namespace Plugin {
         return status;
     }
 
-    bool AVSDevice::JsonConfigToStream(std::shared_ptr<std::vector<std::shared_ptr<std::istream>>> streams, const std::string& configFile)
+    bool AVSDevice::JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile)
     {
         if (configFile.empty()) {
             TRACE(AVSClient, (_T("Config filename is empty!")));
@@ -732,7 +737,7 @@ namespace Plugin {
             return false;
         }
 
-        streams->push_back(configStream);
+        streams.push_back(configStream);
         return true;
     }
 

@@ -30,7 +30,6 @@
 
 #include <ACL/Transport/HTTP2TransportFactory.h>
 #include <ACL/Transport/PostConnectSequencerFactory.h>
-//#include <APLClient/Extensions/AplCoreExtensionInterface.h>
 #include <APLClient/AplCoreEngineLogBridge.h>
 #include <AVSCommon/AVS/Initialization/AlexaClientSDKInit.h>
 #include <AVSCommon/AVS/Initialization/InitializationParametersBuilder.h>
@@ -65,9 +64,6 @@
 #include <AVSSDK/SampleApp/SampleEqualizerModeController.h>
 #include <AVSSDK/SampleApp/SmartScreenCaptionPresenter.h>
 
-#include <cctype>
-#include <fstream>
-
 #if defined(KWD_PRYON)
 #include "PryonKeywordDetector.h"
 #endif
@@ -75,6 +71,8 @@
 #include "ThunderVoiceHandler.h"
 #include "TraceCategories.h"
 
+#include <cctype>
+#include <fstream>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -186,19 +184,14 @@ namespace Plugin {
             }
         }
 #endif
-        if ((status == true) && (avsCommon::avs::initialization::AlexaClientSDKInit::initialize(configJsonStreams) == false)) {
-            TRACE(AVSClient, (_T("Failed to initialize SDK!")));
-            return false;
-        }
-
         if (status == true) {
-            status = Init(audiosource, enableKWD, pathToInputFolder);
+            status = Init(audiosource, enableKWD, pathToInputFolder, configJsonStreams);
         }
 
         return status;
     }
 
-    bool SmartScreen::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder)
+    bool SmartScreen::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, std::vector<std::shared_ptr<std::istream>>& configJsonStreams)
     {
         auto builder = avsCommon::avs::initialization::InitializationParametersBuilder::create();
         if (!builder) {
@@ -206,8 +199,13 @@ namespace Plugin {
             return false;
         }
 
-        //builder->withJsonStreams(configJsonStreams);
+        builder->withJsonStreams(std::make_shared<std::vector<std::shared_ptr<std::istream>>>(configJsonStreams));
         auto initParams = builder->build();
+        if (!initParams) {
+            TRACE(AVSClient,(_T("Failed to get initParams")));
+            return false;
+        }
+
         auto sampleAppComponent = alexaSmartScreenSDK::sampleApp::getComponent(std::move(initParams), m_shutdownRequiredList);
         auto manufactory = acsdkManufactory::Manufactory<
             std::shared_ptr<avsCommon::avs::initialization::AlexaClientSDKInit>,
@@ -670,10 +668,10 @@ namespace Plugin {
             }
 
             m_thunderVoiceHandler = ThunderVoiceHandler<alexaSmartScreenSDK::sampleApp::gui::GUIManager>::create(sharedDataStream, _service, audiosource, aspInputInteractionHandler, *compatibleAudioFormat);
-	    if (!m_thunderVoiceHandler) {
+            if (!m_thunderVoiceHandler) {
                 TRACE(AVSClient, (_T("Failed to create m_thunderVoiceHandler")));
                 return false;
-	    }
+            }
             aspInput = m_thunderVoiceHandler;
             aspInput->startStreamingMicrophoneData();
         }

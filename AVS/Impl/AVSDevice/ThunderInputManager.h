@@ -64,10 +64,6 @@ namespace Plugin {
 
         void onLogout() override;
         void onDialogUXStateChanged(DialogUXState newState) override;
-        bool isStreaming()
-        {
-            return m_isStreaming;
-        }
         Exchange::IAVSController* Controller();
 
     private:
@@ -84,7 +80,6 @@ namespace Plugin {
         std::atomic_bool m_limitedInteraction;
         std::shared_ptr<alexaClientSDK::sampleApp::InteractionManager> m_interactionManager;
         Core::ProxyType<AVSController> m_controller;
-        bool m_isStreaming;
     };
 
 } // namespace Plugin

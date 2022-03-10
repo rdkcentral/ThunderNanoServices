@@ -97,9 +97,9 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, std::shared_ptr<std::vector<std::shared_ptr<std::istream>>> configJsonStreams);
+        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, std::vector<std::shared_ptr<std::istream>>& configJsonStreams);
         bool InitSDKLogs(const string& logLevel);
-        bool JsonConfigToStream(std::shared_ptr<std::vector<std::shared_ptr<std::istream>>> streams, const std::string& configFile);
+        bool JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile);
 
     private:
         PluginHost::IShell* _service;

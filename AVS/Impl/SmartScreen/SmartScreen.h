@@ -19,15 +19,14 @@
 
 #pragma once
 
-#include <vector>
 #if defined(KWD_PRYON)
 #include <acsdkKWDImplementations/AbstractKeywordDetector.h>
 #endif
 #include <AVSSDK/SampleApp/SampleApplication.h>
-
 #include "ThunderVoiceHandler.h"
 #include <interfaces/IAVSClient.h>
 
+#include <vector>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -92,7 +91,7 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder);
+        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, std::vector<std::shared_ptr<std::istream>>& configJsonStreams);
         bool InitSDKLogs(const string& logLevel);
         bool JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile);
 

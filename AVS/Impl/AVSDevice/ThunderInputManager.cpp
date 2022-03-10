@@ -38,7 +38,6 @@ namespace Plugin {
         : m_limitedInteraction{ false }
         , m_interactionManager{ interactionManager }
         , m_controller{ Core::ProxyType<AVSController>::Create(this) }
-        , m_isStreaming(false)
     {
     }
 
