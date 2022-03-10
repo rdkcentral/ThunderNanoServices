@@ -606,7 +606,7 @@ namespace Plugin {
 
             Exchange::IBluetoothAudioSink::devicetype DeviceType(const A2DP::ServiceDiscovery::AudioService::features features) const
             {
-                Exchange::IBluetoothAudioSink::devicetype type;
+                Exchange::IBluetoothAudioSink::devicetype type = Exchange::IBluetoothAudioSink::UNKNOWN;
                 if (features & A2DP::ServiceDiscovery::AudioService::features::HEADPHONE) {
                     type = Exchange::IBluetoothAudioSink::HEADPHONE;
                 } else if (features & A2DP::ServiceDiscovery::AudioService::features::SPEAKER) {
@@ -615,8 +615,6 @@ namespace Plugin {
                     type = Exchange::IBluetoothAudioSink::RECORDER;
                 } else if (features & A2DP::ServiceDiscovery::AudioService::features::AMPLIFIER) {
                     type = Exchange::IBluetoothAudioSink::AMPLIFIER;
-                } else {
-                    type = Exchange::IBluetoothAudioSink::UNKNOWN;
                 }
                 return (type);
             }
