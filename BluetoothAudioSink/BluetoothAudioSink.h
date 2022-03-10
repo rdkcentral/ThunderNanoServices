@@ -615,6 +615,8 @@ namespace Plugin {
                     type = Exchange::IBluetoothAudioSink::RECORDER;
                 } else if (features & A2DP::ServiceDiscovery::AudioService::features::AMPLIFIER) {
                     type = Exchange::IBluetoothAudioSink::AMPLIFIER;
+                } else {
+                    type = Exchange::IBluetoothAudioSink::UNKNOWN;
                 }
                 return (type);
             }
