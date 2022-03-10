@@ -53,7 +53,7 @@ namespace Plugin {
             virtual ~Notification() = default;
 
         public:
-            virtual void Activated(RPC::IRemoteConnection* process) { /*_parent.Activated(process);*/ }
+            virtual void Activated(RPC::IRemoteConnection* process VARIABLE_IS_NOT_USED) { /*_parent.Activated(process);*/ }
 
             virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
 
