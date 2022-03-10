@@ -46,7 +46,7 @@ public:
 
 public:
     // ICommand methods
-    string Execute(const string& params) final
+    string Execute(const string& params VARIABLE_IS_NOT_USED) final
     {
         bool status = _memoryAdmin.Free();
         return (status == true ? _memoryAdmin.CreateResponse() : EMPTY_STRING);
