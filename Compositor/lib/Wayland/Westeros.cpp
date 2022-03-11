@@ -291,7 +291,7 @@ namespace Westeros {
         }
 
     private:
-        static void callback(bool ready)
+        static void callback(bool ready VARIABLE_IS_NOT_USED)
         {
         }
 
