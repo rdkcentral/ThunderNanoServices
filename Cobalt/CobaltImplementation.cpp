@@ -270,16 +270,6 @@ private:
         }
 
     private:
-        uint32_t Initialize() override
-        {
-            sigset_t mask;
-            sigemptyset(&mask);
-            sigaddset(&mask, SIGQUIT);
-            sigaddset(&mask, SIGUSR1);
-            sigaddset(&mask, SIGCONT);
-            pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
-            return Core::ERROR_NONE;
-        }
         uint32_t Worker() override
         {
             const std::string cmdURL = "--url=" + _url;
