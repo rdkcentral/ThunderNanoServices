@@ -53,8 +53,7 @@ namespace Plugin {
             ~Notification() = default;
 
         public:
-            void Activated(RPC::IRemoteConnection* process) override { /*_parent.Activated(process);*/ }
-
+            void Activated(RPC::IRemoteConnection* process VARIABLE_IS_NOT_USED) override { /*_parent.Activated(process);*/ }
             void Deactivated(RPC::IRemoteConnection* process) override { _parent.Deactivated(process); }
 
             BEGIN_INTERFACE_MAP(Notification)
