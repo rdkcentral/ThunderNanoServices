@@ -124,6 +124,7 @@ public:
     Cobalt& operator=(const Cobalt&);
     Cobalt()
         : _skipURL(0)
+        , _connectionId(0)
         , _hidden(false)
         , _cobalt(nullptr)
         , _application(nullptr)

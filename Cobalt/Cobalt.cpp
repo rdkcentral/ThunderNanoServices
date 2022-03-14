@@ -107,9 +107,6 @@ void Cobalt::Deinitialize(PluginHost::IShell *service)
     ASSERT(_application != nullptr);
     ASSERT(_memory != nullptr);
 
-    Exchange::JApplication::Unregister(*this);
-    UnregisterAll();
-
     ASSERT(_service == service);
     _service->Unregister(&_notification);
 
