@@ -134,9 +134,10 @@ namespace Plugin {
         PluginHost::ISubSystem* subSystem = service->SubSystems();
 
         if (subSystem != nullptr) {
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true);
-            subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
-            subSystem->Release();
+            if(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
+                subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
+                subSystem->Release();
+            }
         }
 
         _service->Release();

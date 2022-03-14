@@ -59,33 +59,29 @@ namespace Plugin {
         _service->Register(&_notification);
 
         _spark = _service->Root<Exchange::IBrowser>(_connectionId, 3000, _T("SparkImplementation"));
-
-
         if (_spark == nullptr) {
             message = _T("Spark could not be instantiated. Could not load SparkImplementation");
         } else {
             RegisterAll();
+            _spark->Register(&_notification);
             PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
-
             if (stateControl == nullptr) {
                 message = _T("Spark could not be instantiated.");
             } else {
-
-                const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
-
-                if (connection== nullptr) {
-                    message = _T("Spark could not be instantiated. Couldnt get Remote Connection");
-                }
-                    _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
-                    ASSERT(_memory != nullptr);
-
-                    connection->Release();
-                }
-                _spark->Register(&_notification);
                 stateControl->Register(&_notification);
                 stateControl->Configure(_service);
-
                 stateControl->Release();
+
+                const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
+                if (connection== nullptr) {
+                    message = _T("Spark could not be instantiated. Couldnt get Remote Connection");
+                } else {
+                    _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
+                    if(_memory == nullptr){
+                        message = _T("Spark Memory couldnt be observed");
+                    }
+                    connection->Release();
+                }
             }
         }
 

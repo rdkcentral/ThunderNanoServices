@@ -48,6 +48,7 @@ namespace Plugin {
         _player = _service->Root<Exchange::IPlayer>(_connectionId, 2000, _T("StreamerImplementation"));
 
         if (_player != nullptr) {
+            RegisterAll();
             TRACE(Trace::Information, (_T("Successfully instantiated Streamer")));
             _player->Configure(_service);
 
@@ -81,6 +82,7 @@ namespace Plugin {
 
         if(_connectionId != 0){
             ASSERT(_player != nullptr);
+            UnregisterAll();
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
             VARIABLE_IS_NOT_USED uint32_t result = _player->Release();
             _player = nullptr;
@@ -96,9 +98,10 @@ namespace Plugin {
 
         PluginHost::ISubSystem* subSystem = service->SubSystems();
         if (subSystem != nullptr) {
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true);
-            subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
-            subSystem->Release();
+            if(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
+                subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
+                subSystem->Release();
+            }
         }
         _service->Release();
         _service = nullptr;

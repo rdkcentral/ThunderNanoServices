@@ -76,7 +76,6 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
         RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
         ASSERT(_webpa != nullptr);
         _webpa->Deinitialize(_service);
-        _webpa->Release();
         VARIABLE_IS_NOT_USED uint32_t result = _webpa->Release();
         _webpa = nullptr;
         ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);

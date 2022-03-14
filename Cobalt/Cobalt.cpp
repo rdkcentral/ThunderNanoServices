@@ -60,7 +60,6 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             > (_connectionId, 2000, _T("CobaltImplementation"));
 
     if (_cobalt != nullptr) {
-
         PluginHost::IStateControl *stateControl(
                 _cobalt->QueryInterface<PluginHost::IStateControl>());
         if (stateControl == nullptr) {
@@ -68,27 +67,31 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         } else {
             _application = _cobalt->QueryInterface<Exchange::IApplication>();
             if (_application != nullptr) {
-
-                RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
-                _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
-                ASSERT(_memory != nullptr);
-                remoteConnection->Release();
-
-                _cobalt->Register(&_notification);
-                stateControl->Register(&_notification);
-                stateControl->Configure(_service);
-                stateControl->Release();
-
                 RegisterAll();
                 Exchange::JApplication::Register(*this, _application);
+                RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+                if(remoteConnection != nullptr) {
+                    _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
+                    if(_memory != nullptr) {
+                        _cobalt->Register(&_notification);
+                        stateControl->Register(&_notification);
+                        stateControl->Configure(_service);
+                    } else {
+                        message = _T("Cobalt Memory Obesever could not be Obtained.");
+                    }
+                    remoteConnection->Release();
+                } else {
+                    message = _T("Cobalt Remote Connection could not be Obtained.");
+                }
             } else {
                 message = _T("Cobalt IApplication could not be Obtained.");
             }
+            stateControl->Release();
+
         }
     } else {
         message = _T("Cobalt could not be instantiated.");
     }
-
 
     if (message.length() != 0) {
        Deinitialize(service);
@@ -100,29 +103,14 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
 /* virtual */void Cobalt::Deinitialize(PluginHost::IShell *service) {
 
     ASSERT(_service == service);
-
     _service->Unregister(&_notification);
 
-    if(_connectionId != 0){
+    if(_connectionId != 0) {
         ASSERT(_cobalt != nullptr);
-        Exchange::JApplication::Unregister(*this);
-        UnregisterAll();
 
-        PluginHost::IStateControl *stateControl(
-        _cobalt->QueryInterface<PluginHost::IStateControl>());
-
+        PluginHost::IStateControl *stateControl(_cobalt->QueryInterface<PluginHost::IStateControl>());
         // Make sure the Activated and Deactivated are no longer called before we
         // start cleaning up..
-
-        if(_memory != nullptr) {
-            _memory->Release();
-            _memory = nullptr;
-        }
-        if(_application != nullptr) {
-            _application->Release();
-            _application = nullptr;
-        }
-
         // In case Cobalt crashed, there is no access to the statecontrol interface,
         // check it !!
         if (stateControl != nullptr) {
@@ -131,6 +119,17 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
         } else {
             // On behalf of the crashed process, we will release the notification sink.
             _notification.Release();
+        }
+        if(_memory != nullptr) {
+            _cobalt->Unregister(&_notification);
+            _memory->Release();
+            _memory = nullptr;
+        }
+        if(_application != nullptr) {
+            Exchange::JApplication::Unregister(*this);
+            UnregisterAll();
+            _application->Release();
+            _application = nullptr;
         }
 
         RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
@@ -145,7 +144,6 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
             connection->Release();
         }
     }
-
     _service->Release();
     _service = nullptr;
     _connectionId = 0;
@@ -242,11 +240,10 @@ void Cobalt::Hidden(const bool hidden) {
 uint32_t Cobalt::DeleteDir(const string& path)
 {
     uint32_t result = Core::ERROR_NONE;
-
     if (path.empty() == false) {
         string fullPath = _persistentStoragePath + path;
         Core::Directory dir(fullPath.c_str());
-        if (!dir.Destroy(true)) {
+        if (!dir.Destroy()) {
             TRACE(Trace::Error, (_T("Failed to delete %s\n"), fullPath.c_str()));
             result = Core::ERROR_UNKNOWN_KEY;
         }

@@ -54,7 +54,8 @@ private:
         BEGIN_INTERFACE_MAP (Notification)
         INTERFACE_ENTRY (PluginHost::IStateControl::INotification)
         INTERFACE_ENTRY (Exchange::IBrowser::INotification)
-        INTERFACE_ENTRY (RPC::IRemoteConnection::INotification)END_INTERFACE_MAP
+        INTERFACE_ENTRY (RPC::IRemoteConnection::INotification)
+        END_INTERFACE_MAP
 
     private:
         void StateChange(

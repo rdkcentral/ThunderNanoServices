@@ -35,8 +35,8 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
-        service->Register(&_audiosourceNotification);
-        service->Register(&_connectionNotification);
+        _service->Register(&_audiosourceNotification);
+        _service->Register(&_connectionNotification);
 
         ASSERT(service->PersistentPath() != _T(""));
         Core::Directory directory((service->PersistentPath() + _T("/db")).c_str());
@@ -81,8 +81,8 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        service->Unregister(&_audiosourceNotification);
-        service->Unregister(&_connectionNotification);
+        _service->Unregister(&_audiosourceNotification);
+        _service->Unregister(&_connectionNotification);
 
         if (_connectionId != 0) {
             ASSERT(_AVSClient != nullptr);
@@ -112,11 +112,11 @@ namespace Plugin {
                 connection->Terminate();
                 connection->Release();
             }
-            _connectionId = 0;
         }
 
         _service->Release();
         _service = nullptr;
+        _connectionId = 0;
     }
 
     string AVS::Information() const
