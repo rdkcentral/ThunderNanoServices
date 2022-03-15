@@ -461,14 +461,16 @@ public:
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(VARIABLE_IS_NOT_USED bool& visiblity) const override
+    uint32_t Visible(bool& visiblity) const override
     {
-        return Core::ERROR_UNAVAILABLE;
+        visiblity = third_party::starboard::wpe::shared::Visibility();
+        return Core::ERROR_NONE;
     }
 
-    uint32_t Visible(VARIABLE_IS_NOT_USED const bool& visiblity) override
+    uint32_t Visible(const bool& visiblity) override
     {
-        return Core::ERROR_UNAVAILABLE;
+        third_party::starboard::wpe::shared::Visibility(visiblity);
+        return Core::ERROR_NONE;
     }
 
     uint32_t Language(string& language) const override

@@ -34,9 +34,6 @@ void Cobalt::RegisterAll()
 {
     Property < Core::JSON::String
             > (_T("url"), &Cobalt::get_url, &Cobalt::set_url, this); /* Browser */
-    Property < Core::JSON::EnumType
-            < VisibilityType
-                    >> (_T("visibility"), &Cobalt::get_visibility, &Cobalt::set_visibility, this); /* Browser */
     Property < Core::JSON::DecUInt32
             > (_T("fps"), &Cobalt::get_fps, nullptr, this); /* Browser */
     Property < Core::JSON::EnumType
@@ -51,7 +48,6 @@ void Cobalt::UnregisterAll()
 {
     Unregister(_T("state"));
     Unregister(_T("fps"));
-    Unregister(_T("visibility"));
     Unregister(_T("url"));
     Unregister(_T("delete"));
     Unregister(_T("deeplink"));
@@ -83,41 +79,6 @@ uint32_t Cobalt::set_url(const Core::JSON::String &param) /* Browser */
         result = Core::ERROR_NONE;
     }
     return result;
-}
-
-// Property: visibility - Current browser visibility
-// Return codes:
-//  - ERROR_NONE: Success
-uint32_t Cobalt::get_visibility(
-        VARIABLE_IS_NOT_USED Core::JSON::EnumType<VisibilityType> &response) const /* Browser */
-{
-    /*
-    response = (_hidden ? VisibilityType::HIDDEN : VisibilityType::VISIBLE);
-    return Core::ERROR_NONE;
-    */
-    return Core::ERROR_UNAVAILABLE;
-}
-
-// Property: visibility - Current browser visibility
-// Return codes:
-//  - ERROR_NONE: Success
-uint32_t Cobalt::set_visibility(
-        VARIABLE_IS_NOT_USED const Core::JSON::EnumType<VisibilityType> &param) /* Browser */
-{
-    /*
-    ASSERT(_cobalt != nullptr);
-    uint32_t result = Core::ERROR_BAD_REQUEST;
-    if (param.IsSet()) {
-        if (param == VisibilityType::VISIBLE) {
-            _cobalt->Hide(true);
-        } else {
-            _cobalt->Hide(false);
-        }
-        result = Core::ERROR_NONE;
-    }
-    return result;
-    */
-    return Core::ERROR_UNAVAILABLE;
 }
 
 // Property: fps - Current number of frames per second the browser is rendering
