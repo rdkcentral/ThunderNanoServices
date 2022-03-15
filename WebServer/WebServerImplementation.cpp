@@ -20,13 +20,14 @@
 #include "Module.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/IWebServer.h>
+#include <interfaces/IConfiguration.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(5);
 
-    class WebServerImplementation : public Exchange::IWebServer, public PluginHost::IStateControl {
+    class WebServerImplementation : public Exchange::IWebServer, public Exchange::IConfiguration {
     private:
         enum enumState {
             UNINITIALIZED,
@@ -672,7 +673,6 @@ namespace Plugin {
 
         WebServerImplementation()
             : _channelServer()
-            , _observers()
         {
         }
 
@@ -694,41 +694,6 @@ namespace Plugin {
 
             return (result);
         }
-        PluginHost::IStateControl::state State() const override
-        {
-            return (PluginHost::IStateControl::RESUMED);
-        }
-        uint32_t Request(const PluginHost::IStateControl::command) override
-        {
-            // No state can be set, we can only move from ININITIALIZED to RUN...
-            return (Core::ERROR_NONE);
-        }
-
-        void Register(PluginHost::IStateControl::INotification* notification) override
-        {
-
-            // Only subscribe an interface once.
-            ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
-
-            // We will keep a reference to this observer, reference it..
-            notification->AddRef();
-            _observers.push_back(notification);
-        }
-        void Unregister(PluginHost::IStateControl::INotification* notification) override
-        {
-            // Only subscribe an interface once.
-            std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
-
-            // Unregister only once :-)
-            ASSERT(index != _observers.end());
-
-            if (index != _observers.end()) {
-
-                // We will keep a reference to this observer, reference it..
-                (*index)->Release();
-                _observers.erase(index);
-            }
-        }
         void AddProxy(const string& path, const string& subst, const string& address) override
         {
             _channelServer.AddProxy(path, subst, address);
@@ -744,12 +709,11 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(WebServerImplementation)
             INTERFACE_ENTRY(Exchange::IWebServer)
-            INTERFACE_ENTRY(PluginHost::IStateControl)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
         END_INTERFACE_MAP
 
     private:
         ChannelMap _channelServer;
-        std::list<PluginHost::IStateControl::INotification*> _observers;
     };
 
     SERVICE_REGISTRATION(WebServerImplementation, 1, 0);

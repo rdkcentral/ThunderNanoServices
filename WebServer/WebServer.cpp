@@ -18,6 +18,7 @@
  */
  
 #include "WebServer.h"
+#include <interfaces/IConfiguration.h>
 
 namespace WPEFramework {
 
@@ -51,17 +52,18 @@ namespace Plugin {
         _server = _service->Root<Exchange::IWebServer>(_connectionId, 2000, _T("WebServerImplementation"));
 
         if (_server != nullptr) {
-            PluginHost::IStateControl* stateControl(_server->QueryInterface<PluginHost::IStateControl>());
+
+            Exchange::IConfiguration* configure(_server->QueryInterface<Exchange::IConfiguration>());
 
             // We see that sometimes the implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
-            if (stateControl == nullptr) {
+            if (configure == nullptr) {
                 _server->Release();
                 _server = nullptr;
 
             } else {
-                uint32_t result = stateControl->Configure(_service);
-                stateControl->Release();
+                uint32_t result = configure->Configure(_service);
+                configure->Release();
 
                 if (result != Core::ERROR_NONE) {
                     message = _T("WebServer could not be configured.");
@@ -106,7 +108,7 @@ namespace Plugin {
     {
         ASSERT(_service == _service);
         ASSERT(_server != nullptr);
-
+        
         _service->Unregister(&_notification);
         if (_memory != nullptr) {
             _memory->Release();
