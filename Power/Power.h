@@ -180,9 +180,7 @@ namespace Plugin {
         Power(const Power&) = delete;
         Power& operator=(const Power&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         Power()
             : _adminLock()
             , _skipURL(0)
@@ -196,9 +194,7 @@ namespace Plugin {
         {
             RegisterAll();
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
         virtual ~Power()
         {
             UnregisterAll();

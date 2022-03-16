@@ -28,18 +28,14 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data>> jsonDataFactory(1);
     static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data::Server>> jsonServerDataFactory(1);
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     DHCPServer::DHCPServer()
         : _skipURL(0)
         , _servers()
     {
         RegisterAll();
     }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
 
     /* virtual */ DHCPServer::~DHCPServer()
     {
