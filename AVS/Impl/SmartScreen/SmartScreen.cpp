@@ -164,7 +164,7 @@ namespace Plugin {
         return status;
     }
 
-    bool SmartScreen::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder)
+    bool SmartScreen::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder VARIABLE_IS_NOT_USED)
     {
         auto config = avsCommon::utils::configuration::ConfigurationNode::getRoot();
 
