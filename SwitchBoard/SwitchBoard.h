@@ -216,7 +216,7 @@ namespace Plugin {
                     }
                 }
 
-                return ((result == Core::ERROR_PENDING_CONDITIONS) ? Core::ERROR_NONE : result);
+                return ((result == Core::ERROR_PENDING_CONDITIONS) ? static_cast<uint32_t>(Core::ERROR_NONE) : result);
             }
 
             uint32_t Deactivate() {

@@ -94,7 +94,7 @@ namespace Plugin
                 connectorFullDirectory = service->VolatilePath() + config.ConnectorDirectory.Value();
                 if(Core::File(connectorFullDirectory).IsDirectory()){
                     //if directory exists remove it to clear data (eg. sockets) that can remain after previous plugin run
-                    Core::Directory(connectorFullDirectory.c_str()).Destroy(false);
+                    Core::Directory(connectorFullDirectory.c_str()).Destroy();
                 }
 
                 if (Core::Directory(connectorFullDirectory.c_str()).CreatePath()) {
