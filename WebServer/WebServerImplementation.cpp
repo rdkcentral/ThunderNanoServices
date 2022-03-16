@@ -541,7 +541,7 @@ namespace Plugin {
                 Core::JSON::ArrayType<Config::Proxy>::ConstIterator index(configuration.Proxies.Elements());
 
                 if (configuration.Path.IsSet() == false) {
-                    _prefixPath = prefixPath;
+                    _prefixPath.clear();
                 }
                 else if (configuration.Path.Value()[0] == '/') {
                         _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
@@ -745,7 +745,13 @@ namespace Plugin {
             Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
             Core::ProxyType<Web::FileBody> fileBody(PluginHost::IFactories::Instance().FileBody());
 
-            if (_parent.IsFileServerEnabled() == true) {
+            if (_parent.IsFileServerEnabled() == false) {
+                Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
+                response->ErrorCode = Web::STATUS_BAD_REQUEST;
+                response->Message = "Invalid Request";
+                Submit(response);
+            }
+            else {
 
                 // If so, don't deal with it ourselves.
                 Web::MIMETypes result;

@@ -108,7 +108,7 @@ namespace PluginHost {
 
                     if (((result == Core::ERROR_NONE) || (result == Core::ERROR_INPROGRESS)) && (_interval != 0)) {
                         _activity.Revoke();
-                        _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
+                        _activity.Reschedule(Core::Time::Now().Add(ProgressInterval));
                     }
                 }
             }
@@ -266,7 +266,7 @@ namespace PluginHost {
                     } else {
                         _progressInterval++;
                     }
-                    _activity.Schedule(Core::Time::Now().Add(ProgressInterval));
+                    _activity.Reschedule(Core::Time::Now().Add(ProgressInterval));
                     _adminLock.Unlock();
                 }
             } else {
