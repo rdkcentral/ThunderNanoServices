@@ -41,16 +41,12 @@ namespace Plugin {
             PluginMonitor(const PluginMonitor&) = delete;
             PluginMonitor& operator=(const PluginMonitor&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             PluginMonitor(OutOfProcessImplementation& parent)
                 : _parent(parent)
             {
             }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
             ~PluginMonitor() override = default;
 
         public:
@@ -241,9 +237,7 @@ namespace Plugin {
             }
         };
 
-        #ifdef __WINDOWS__
-        #pragma warning(disable : 4355)
-        #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         OutOfProcessImplementation()
             : Core::Thread(0, _T("OutOfProcessImplementation"))
             , _requestedURL()
@@ -259,9 +253,7 @@ namespace Plugin {
         {
             TRACE(Trace::Information, (_T("Constructed the OutOfProcessImplementation")));
         }
-        #ifdef __WINDOWS__
-        #pragma warning(default : 4355)
-        #endif
+POP_WARNING()
         ~OutOfProcessImplementation() override
         {
             TRACE(Trace::Information, (_T("Destructing the OutOfProcessImplementation")));

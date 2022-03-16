@@ -62,7 +62,7 @@ namespace Plugin {
             virtual ~ExternalAccess() override = default;
 
         private:
-            void Offer(Core::IUnknown* element, const uint32_t interfaceID) override
+            void Offer(Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
                 Exchange::IComposition::IClient* result = element->QueryInterface<Exchange::IComposition::IClient>();
 
@@ -72,7 +72,7 @@ namespace Plugin {
                 }
             }
 
-            void Revoke(const Core::IUnknown* element, const uint32_t interfaceID) override
+            void Revoke(const Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
                 _parent.ClientRevoked(element);
             }
