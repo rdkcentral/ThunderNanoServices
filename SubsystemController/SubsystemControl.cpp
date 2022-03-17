@@ -381,9 +381,7 @@ namespace Plugin {
         string _current;
     };
 
-    #ifdef __WINDOWS__
-    #pragma warning(disable: 4355)
-    #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     SubsystemControl::SubsystemControl()
         : _subsystemFactory()
         , _service(nullptr)
@@ -402,10 +400,7 @@ namespace Plugin {
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::STREAMING, PluginHost::ISubSystem::subsystem::STREAMING);
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::WEBSOURCE, PluginHost::ISubSystem::subsystem::WEBSOURCE);
     }
-    #ifdef __WINDOWS__
-    #pragma warning(default: 4355)
-    #endif
-
+POP_WARNING()
 
     const string SubsystemControl::Initialize(PluginHost::IShell* service) /* override */
     {

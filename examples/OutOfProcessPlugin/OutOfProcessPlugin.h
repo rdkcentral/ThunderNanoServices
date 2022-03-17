@@ -146,9 +146,7 @@ namespace Plugin {
         };
 
     public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         OutOfProcessPlugin(const OutOfProcessPlugin&) = delete;
         OutOfProcessPlugin& operator=(const OutOfProcessPlugin&) = delete;
 
@@ -166,9 +164,7 @@ namespace Plugin {
             , _hidden(false)
         {
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
         ~OutOfProcessPlugin() override
         {
             _notification->Release();

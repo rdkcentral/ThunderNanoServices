@@ -191,16 +191,12 @@ namespace TestSystem {
 
             // prevent singing around, only sockets created in a serve context should reply!!
             if (_serverSocket == true) {
-#ifdef __WIN32__
-#pragma warning(disable : 4996)
-#endif
+PUSH_WARNING(DISABLE_WARNING_DEPRECATED_USE)
 
                 TCHAR buffer[128];
                 sprintf(buffer, _T("Handled [%d] bytes."), static_cast<uint32_t>(text.size()));
 
-#ifdef __WIN32__
-#pragma warning(default : 4996)
-#endif
+POP_WARNING()
 
                 //Submit(string(buffer));
                 Submit(text);

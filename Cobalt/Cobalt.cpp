@@ -32,8 +32,8 @@ SERVICE_REGISTRATION(Cobalt, 1, 0);
 static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
 static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(2);
 
-/* encapsulated class Thread  */
-/* virtual */const string Cobalt::Initialize(PluginHost::IShell *service) {
+const string Cobalt::Initialize(PluginHost::IShell *service)
+{
     Config config;
     string message;
 
@@ -98,7 +98,8 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     return message;
 }
 
-/* virtual */void Cobalt::Deinitialize(PluginHost::IShell *service) {
+void Cobalt::Deinitialize(PluginHost::IShell *service)
+{
     ASSERT(_service == service);
     ASSERT(_cobalt != nullptr);
     ASSERT(_application != nullptr);
@@ -138,12 +139,14 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     _service = nullptr;
 }
 
-/* virtual */string Cobalt::Information() const {
+string Cobalt::Information() const
+{
     // No additional info to report.
     return (string());
 }
 
-/* virtual */void Cobalt::Inbound(Web::Request &request) {
+void Cobalt::Inbound(Web::Request &request)
+{
     if (request.Verb == Web::Request::HTTP_POST) {
         // This might be a "launch" application thingy, make sure we receive the
         // proper info.
@@ -152,8 +155,8 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     }
 }
 
-/* virtual */Core::ProxyType<Web::Response> Cobalt::Process(
-        const Web::Request &request) {
+Core::ProxyType<Web::Response> Cobalt::Process(const Web::Request &request)
+{
     ASSERT(_skipURL <= request.Path.length());
     TRACE(Trace::Information, (string(_T("Received cobalt request"))));
 
@@ -197,7 +200,8 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
     return result;
 }
 
-void Cobalt::LoadFinished(const string &URL) {
+void Cobalt::LoadFinished(const string &URL)
+{
     string message(
             string("{ \"url\": \"") + URL + string("\", \"loaded\":true }"));
     TRACE(Trace::Information, (_T("LoadFinished: %s"), message.c_str()));
@@ -206,7 +210,8 @@ void Cobalt::LoadFinished(const string &URL) {
     event_urlchange(URL, true);
 }
 
-void Cobalt::URLChanged(const string &URL) {
+void Cobalt::URLChanged(const string &URL)
+{
     string message(string("{ \"url\": \"") + URL + string("\" }"));
     TRACE(Trace::Information, (_T("URLChanged: %s"), message.c_str()));
     _service->Notify(message);
@@ -214,7 +219,8 @@ void Cobalt::URLChanged(const string &URL) {
     event_urlchange(URL, false);
 }
 
-void Cobalt::Hidden(const bool hidden) {
+void Cobalt::Hidden(const bool hidden)
+{
     TRACE(Trace::Information,
             (_T("Hidden: %s }"), (hidden ? "true" : "false")));
     string message(
@@ -233,7 +239,7 @@ uint32_t Cobalt::DeleteDir(const string& path)
     if (path.empty() == false) {
         string fullPath = _persistentStoragePath + path;
         Core::Directory dir(fullPath.c_str());
-        if (!dir.Destroy(true)) {
+        if (!dir.Destroy()) {
             TRACE(Trace::Error, (_T("Failed to delete %s\n"), fullPath.c_str()));
             result = Core::ERROR_UNKNOWN_KEY;
         }
@@ -242,7 +248,8 @@ uint32_t Cobalt::DeleteDir(const string& path)
     return result;
 }
 
-void Cobalt::StateChange(const PluginHost::IStateControl::state state) {
+void Cobalt::StateChange(const PluginHost::IStateControl::state state)
+{
     switch (state) {
     case PluginHost::IStateControl::RESUMED:
         TRACE(Trace::Information,
@@ -271,7 +278,8 @@ void Cobalt::StateChange(const PluginHost::IStateControl::state state) {
     }
 }
 
-void Cobalt::Deactivated(RPC::IRemoteConnection *connection) {
+void Cobalt::Deactivated(RPC::IRemoteConnection *connection)
+{
     if (connection->Id() == _connectionId) {
 
         ASSERT(_service != nullptr);

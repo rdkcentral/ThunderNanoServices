@@ -174,9 +174,7 @@ namespace Plugin {
         ConnectorWrapper<STREAMTYPE>& operator=(const ConnectorWrapper<STREAMTYPE>&) = delete;
 
     public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         inline ConnectorWrapper(PluginHost::Channel& channel, const uint32_t bufferSize)
             : WebProxy::Connector(channel, &_streamType)
             , _streamType(*this, bufferSize)
@@ -200,9 +198,7 @@ namespace Plugin {
             , _streamType(*this, bufferSize, deviceName, baudrate, parityE, dataBits, stopBits, flowControl)
         {
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
         virtual ~ConnectorWrapper()
         {
         }

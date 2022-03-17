@@ -281,9 +281,7 @@ namespace Plugin {
             AdapterObserver(const AdapterObserver&) = delete;
             AdapterObserver& operator=(const AdapterObserver&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             AdapterObserver(NetworkControl& parent)
                 : _parent(parent)
                 , _adminLock()
@@ -292,9 +290,7 @@ namespace Plugin {
                 , _job(*this)
             {
             }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
             ~AdapterObserver() override = default;
 
         public:
@@ -395,9 +391,7 @@ namespace Plugin {
             DHCPEngine(const DHCPEngine&) = delete;
             DHCPEngine& operator=(const DHCPEngine&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
              DHCPEngine(NetworkControl& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries, const Entry& info)
                 : _parent(parent)
                 , _retries(0)
@@ -430,9 +424,7 @@ namespace Plugin {
                     }
                 }
             }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
            ~DHCPEngine() = default;
 
         public:
