@@ -159,7 +159,7 @@ namespace Plugin {
         return status;
     }
 
-    bool AVSDevice::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, std::vector<std::shared_ptr<std::istream>>& configJsonStreams)
+    bool AVSDevice::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder VARIABLE_IS_NOT_USED, std::vector<std::shared_ptr<std::istream>>& configJsonStreams)
     {
         auto builder = avsCommon::avs::initialization::InitializationParametersBuilder::create();
         if (!builder) {
