@@ -475,6 +475,7 @@ namespace Plugin {
         };
 
         struct ICallback {
+            virtual ~ICallback() = default;
             virtual void Offered(const Offer&) = 0;
             virtual void Approved(const Offer&) = 0;
             virtual void Rejected(const Offer&) = 0;
