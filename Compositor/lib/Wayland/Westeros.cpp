@@ -93,7 +93,7 @@ namespace Westeros {
             return (_instance);
         }
 
-        virtual ~Compositor()
+        ~Compositor() override
         {
             TRACE(Trace::Information, (_T("Destructing the compositor")));
 

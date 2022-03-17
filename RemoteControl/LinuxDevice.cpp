@@ -46,7 +46,7 @@ namespace Plugin {
         LinuxDevice& operator=(const LinuxDevice&) = delete;
 
         struct IDevInputDevice {
-            virtual ~IDevInputDevice() { }
+            virtual ~IDevInputDevice() = default;
             virtual type Type() const { return (type::NONE); }
             virtual bool Setup() { return true; }
             virtual bool Teardown() { return true; }
@@ -66,7 +66,7 @@ namespace Plugin {
                 ASSERT(_parent != nullptr);
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
-            virtual ~KeyDevice()
+            ~KeyDevice() override
             {
                 Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
@@ -161,7 +161,7 @@ namespace Plugin {
             {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
-            virtual ~WheelDevice()
+            ~WheelDevice() override
             {
                 Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
@@ -223,7 +223,7 @@ namespace Plugin {
             {
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
-            virtual ~PointerDevice()
+            ~PointerDevice() override
             {
                 Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
@@ -301,7 +301,7 @@ namespace Plugin {
                 _abs_latch.fill(AbsInfo());
                 Remotes::RemoteAdministrator::Instance().Announce(*this);
             }
-            virtual ~TouchDevice()
+            ~TouchDevice() override
             {
                 Remotes::RemoteAdministrator::Instance().Revoke(*this);
             }
@@ -554,7 +554,7 @@ namespace Plugin {
                 Pair();
             }
         }
-        virtual ~LinuxDevice()
+        ~LinuxDevice() override
         {
             Block();
 
@@ -659,7 +659,7 @@ namespace Plugin {
             write(_pipe[1], " ", 1);
             Wait(Core::Thread::INITIALIZED | Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
         }
-        virtual uint32_t Worker()
+        uint32_t Worker() override
         {
             while (IsRunning() == true) {
                 fd_set readset;

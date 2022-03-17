@@ -54,7 +54,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            virtual ~ConnectionNotification() = default;
+            ~ConnectionNotification() override = default;
 
             BEGIN_INTERFACE_MAP(ConnectionNotification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
@@ -88,7 +88,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            ~AudiosourceNotification() = default;
+            ~AudiosourceNotification() override = default;
 
             BEGIN_INTERFACE_MAP(AudiosourceNotification)
             INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
@@ -143,7 +143,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            ~DialogueNotification() = default;
+            ~DialogueNotification() override = default;
 
             BEGIN_INTERFACE_MAP(DialogueNotification)
             INTERFACE_ENTRY(Exchange::IAVSController::INotification)
@@ -184,7 +184,7 @@ namespace Plugin {
                 Add(_T("enablekwd"), &EnableKWD);
             }
 
-            ~Config() = default;
+            ~Config() override = default;
 
         public:
             Core::JSON::String Audiosource;
@@ -211,9 +211,7 @@ namespace Plugin {
         {
         }
 
-        virtual ~AVS()
-        {
-        }
+        ~AVS() override = default;
 
         BEGIN_INTERFACE_MAP(AVS)
         INTERFACE_ENTRY(PluginHost::IPlugin)

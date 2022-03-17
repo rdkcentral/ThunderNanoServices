@@ -125,7 +125,7 @@ namespace WPASupplicant {
             WLAN_REASON_MESH_CHANNEL_SWITCH_UNSPECIFIED,
         };
         struct IConnectCallback {
-            virtual ~IConnectCallback() {}
+            virtual ~IConnectCallback() = default;
 
             virtual void Completed(const uint32_t result) = 0;
         };
@@ -336,9 +336,7 @@ namespace WPASupplicant {
                 , _settable(true)
             {
             }
-            virtual ~Request()
-            {
-            }
+            virtual ~Request() = default;
 
         public:
             bool Set(const string& message)
@@ -399,9 +397,7 @@ namespace WPASupplicant {
                 , _eventReporting(~0)
             {
             }
-            virtual ~ScanRequest()
-            {
-            }
+            ~ScanRequest() override = default;
 
         public:
             inline bool Activated()
@@ -428,7 +424,7 @@ namespace WPASupplicant {
             {
                 _eventReporting = value;
             }
-            virtual void Completed(const string& response, const bool abort) override
+            void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -509,9 +505,7 @@ namespace WPASupplicant {
                 , _disconnectReason(reasons::WLAN_REASON_NOINFO_GIVEN)
             {
             }
-            virtual ~StatusRequest()
-            {
-            }
+            ~StatusRequest() override = default;
 
         public:
             inline void Clear() const
@@ -560,7 +554,7 @@ namespace WPASupplicant {
             }
 
         private:
-            virtual void Completed(const string& response, const bool abort) override
+            void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -632,9 +626,7 @@ namespace WPASupplicant {
                 , _parent(parent)
             {
             }
-            virtual ~DetailRequest()
-            {
-            }
+            ~DetailRequest() override = default;
 
         public:
             bool Set(const uint64_t& bssid)
@@ -645,7 +637,7 @@ namespace WPASupplicant {
                 }
                 return (false);
             }
-            virtual void Completed(const string& response, const bool abort) override
+            void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response);
@@ -708,16 +700,14 @@ namespace WPASupplicant {
                 , _parent(parent)
             {
             }
-            virtual ~NetworkRequest()
-            {
-            }
+            ~NetworkRequest() override = default;
 
         public:
             bool Set()
             {
                 return (Request::Set(string(_TXT("LIST_NETWORKS"))));
             }
-            virtual void Completed(const string& response, const bool abort) override
+            void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
                     Core::TextFragment data(response.c_str(), response.length());
@@ -819,7 +809,7 @@ namespace WPASupplicant {
                 , _state(states::IDLE)
             {
             }
-            ~WpsRequest() = default;
+            virtual ~WpsRequest() = default;
 
             /*100e003d1026000131104500094e4554474541523236100300020020100f0002000810280001011027000c756e6576656e73656138313210200006b827ebf393af*/
             /*
@@ -1260,9 +1250,7 @@ namespace WPASupplicant {
                 , _result(Core::ERROR_NONE)
             {
             }
-            virtual ~CustomRequest()
-            {
-            }
+            ~CustomRequest() override = default;
 
         public:
             CustomRequest& operator=(const string& newCommand)
@@ -1274,7 +1262,7 @@ namespace WPASupplicant {
 
                 return (*this);
             }
-            virtual void Completed(const string& response, const bool abort) override
+            void Completed(const string& response, const bool abort) override
             {
 
                 _result = (abort == false ? Core::ERROR_NONE : Core::ERROR_ASYNC_ABORTED);
@@ -1365,7 +1353,7 @@ namespace WPASupplicant {
         {
             return (Core::ProxyType<Controller>::Create(supplicantBase, interfaceName, waitTime));
         }
-        virtual ~Controller()
+        ~Controller() override
         {
 
             if (IsClosed() == false) {
@@ -1833,7 +1821,7 @@ namespace WPASupplicant {
                 ConnectSink(const ConnectSink&) = delete;
                 ConnectSink& operator= (const ConnectSink&) = delete;
                 ConnectSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
-                ~ConnectSink() override {};
+                ~ConnectSink() override = default;;
 
             public:
                 uint32_t Wait(const uint32_t waitTime) {
@@ -2250,7 +2238,7 @@ namespace WPASupplicant {
             }
         }
 
-        virtual void StateChange()
+        void StateChange() override
         {
             TRACE(Trace::Information, (_T("StateChange: %s\n"), IsOpen() ? _T("true") : _T("false")));
         }

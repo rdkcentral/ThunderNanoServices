@@ -60,27 +60,27 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            virtual void StateChange(const PluginHost::IStateControl::state state) override
+            void StateChange(const PluginHost::IStateControl::state state) override
             {
                 _parent.StateChange(state);
             }
             // Signal changes on the subscribed namespace..
-            virtual void LoadFinished(const string& URL) override {
+            void LoadFinished(const string& URL) override {
                 _parent.LoadFinished(URL);
             }
-            virtual void URLChanged(const string& URL) override {
+            void URLChanged(const string& URL) override {
                 _parent.URLChanged(URL);
             }
-            virtual void Hidden(const bool hidden) override {
+            void Hidden(const bool hidden) override {
                 _parent.Hidden(hidden);
             }
-            virtual void Closure() override
+            void Closure() override
             {
             }
-            virtual void Activated(RPC::IRemoteConnection*) override
+            void Activated(RPC::IRemoteConnection*) override
             {
             }
-            virtual void Deactivated(RPC::IRemoteConnection* connection) override
+            void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
             }
@@ -130,7 +130,7 @@ namespace Plugin {
         {
             RegisterAll();
         }
-        virtual ~Spark()
+        ~Spark() override
         {
             UnregisterAll();
         }
@@ -148,14 +148,14 @@ namespace Plugin {
     public:
         //  IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service);
-        virtual void Deinitialize(PluginHost::IShell* service);
-        virtual string Information() const;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Deactivated(RPC::IRemoteConnection* connection);

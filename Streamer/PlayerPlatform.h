@@ -37,7 +37,7 @@ namespace Player {
         using DeinitializerType = std::function<void()>;
 
         struct ICallback {
-            virtual ~ICallback() { }
+            virtual ~ICallback() = default;
 
             virtual void TimeUpdate(uint64_t position) = 0;
             virtual void StateChange(Exchange::IStream::state newState) = 0;
@@ -47,7 +47,7 @@ namespace Player {
         };
 
         struct IPlayerPlatform {
-            virtual ~IPlayerPlatform() { }
+            virtual ~IPlayerPlatform() = default;
 
             virtual uint32_t Setup() = 0;
             virtual uint32_t Teardown() = 0;
@@ -85,7 +85,7 @@ namespace Player {
         };
 
         struct IPlayerPlatformFactory {
-            virtual ~IPlayerPlatformFactory() { }
+            virtual ~IPlayerPlatformFactory() = default;
 
             virtual uint32_t Initialize(const string& configuration) = 0;
             virtual void Deinitialize() = 0;

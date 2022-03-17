@@ -61,7 +61,7 @@ public:
     {
     }
 
-    virtual ~TestBase() = default;
+    ~TestBase() override = default;
 
     // ICommand methods
     string Description() const final

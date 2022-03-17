@@ -131,10 +131,8 @@ namespace TestSystem {
         }
         JSONObjectFactory(const JSONObjectFactory&);
         JSONObjectFactory& operator=(const JSONObjectFactory&);
+        ~JSONObjectFactory() override = default;
 
-        virtual ~JSONObjectFactory()
-        {
-        }
     public:
         static JSONObjectFactory& Instance()
         {
@@ -178,7 +176,7 @@ namespace TestSystem {
             , _dataPending(false, false)
         {
         }
-        virtual ~TextConnector()
+        ~TextConnector() override
         {
             Close(WPEFramework::Core::infinite);
         }
@@ -270,7 +268,7 @@ POP_WARNING()
             , _dataPending(false, false)
         {
         }
-        virtual ~JSONConnector()
+        ~JSONConnector() override
         {
             this->Close(WPEFramework::Core::infinite);
         }
@@ -372,7 +370,7 @@ POP_WARNING()
             : BaseClass(5, false, connector, remoteId, 2048, 2048)
         {
         }
-        virtual ~WebServer()
+        ~WebServer() override
         {
             Close(WPEFramework::Core::infinite);
         }
@@ -442,7 +440,7 @@ POP_WARNING()
             : BaseClass(5, _responseFactory, false, remoteNode.AnyInterface(), remoteNode, 2048, 208)
         {
         }
-        virtual ~WebClient()
+        ~WebClient() override
         {
             Close(WPEFramework::Core::infinite);
         }
@@ -506,7 +504,7 @@ POP_WARNING()
             : BaseClass(5, _requestFactory, false, connector, remoteId, 2048, 2048)
         {
         }
-        virtual ~JSONWebServer()
+        ~JSONWebServer() override
         {
             Close(WPEFramework::Core::infinite);
         }
@@ -560,7 +558,7 @@ POP_WARNING()
             : BaseClass(5, _responseFactory, false, remoteNode.AnyInterface(), remoteNode, 2048, 208)
         {
         }
-        virtual ~JSONWebClient()
+        ~JSONWebClient() override
         {
             Close(WPEFramework::Core::infinite);
         }
@@ -614,9 +612,7 @@ POP_WARNING()
             : BaseClass(false, true, false, socket, remoteNode, 1024, 1024)
         {
         }
-        virtual ~EchoWebSocketServer()
-        {
-        }
+        ~EchoWebSocketServer() override = default;
 
     private:
         virtual void Received(string& text)
@@ -654,9 +650,7 @@ POP_WARNING()
             : BaseClass(_T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode.AnyInterface(), remoteNode, 1024, 1024)
         {
         }
-        virtual ~EchoWebSocketClient()
-        {
-        }
+        ~EchoWebSocketClient() override = default;
 
     private:
         virtual void Received(string& text)
@@ -698,9 +692,7 @@ POP_WARNING()
             : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), false, true, false, socket, remoteNode, 256, 256)
         {
         }
-        virtual ~JSONWebSocketServer()
-        {
-        }
+        ~JSONWebSocketServer() override = default;
 
     public:
         virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
@@ -761,9 +753,7 @@ POP_WARNING()
             : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), _T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode.AnyInterface(), remoteNode, 256, 256)
         {
         }
-        virtual ~JSONWebSocketClient()
-        {
-        }
+        ~JSONWebSocketClient() override = default;
 
     public:
         virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
@@ -847,7 +837,7 @@ POP_WARNING()
             , _messagesSend(0)
         {
         }
-        virtual ~StressTextConnector()
+        ~StressTextConnector() override
         {
             Close(WPEFramework::Core::infinite);
         }
@@ -974,9 +964,7 @@ POP_WARNING()
             : BaseClass(false, Core::NodeId(_T("0.0.0.0")), Core::NodeId(), 1024, 1024) //TODO: Check this!
         {
         }
-        virtual ~FileClientConnector()
-        {
-        }
+        ~FileClientConnector() override = default;
 
     private:
         bool Setup(const Core::URL& remote) override
@@ -1034,9 +1022,7 @@ POP_WARNING()
             : Web::ServerTransferType<Core::SocketStream, Web::SignedFileBodyType<Crypto::SHA256> >(PathPrefix(), false, connector, remoteId, 1024, 1024)
         {
         }
-        virtual ~FileServerConnector()
-        {
-        }
+        ~FileServerConnector() override = default;
 
     public:
         virtual string Authorize(const Web::Request& request)

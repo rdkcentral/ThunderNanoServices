@@ -45,21 +45,19 @@ namespace Plugin {
             , _parent(parent)
         {
         }
-        virtual ~StreamChannel()
-        {
-        }
+        ~StreamChannel() override = default;
 
     public:
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
 
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
         }
-        virtual void StateChange()
+        void StateChange() override
         {
             return (_parent.StateChange());
         }
@@ -82,12 +80,10 @@ namespace Plugin {
             , _parent(parent)
         {
         }
-        virtual ~DatagramChannel()
-        {
-        }
+        ~DatagramChannel() override = default;
 
     public:
-        virtual uint32_t Open(const uint32_t waitTime)
+        uint32_t Open(const uint32_t waitTime) override
         {
             uint32_t result = BaseClass::Open(waitTime);
 
@@ -97,7 +93,7 @@ namespace Plugin {
 
             return (result);
         }
-        virtual uint32_t Close(const uint32_t waitTime)
+        uint32_t Close(const uint32_t waitTime) override
         {
             if (BaseClass::RemoteNode().IsMulticast() == true) {
                 BaseClass::Leave(BaseClass::RemoteNode());
@@ -105,16 +101,16 @@ namespace Plugin {
 
             return (BaseClass::Close(waitTime));
         }
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
 
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
         }
-        virtual void StateChange()
+        void StateChange() override
         {
             return (_parent.StateChange());
         }
@@ -143,21 +139,19 @@ namespace Plugin {
             , _parent(parent)
         {
         }
-        virtual ~DeviceChannel()
-        {
-        }
+        ~DeviceChannel() override = default;
 
     public:
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
 
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
         }
-        virtual void StateChange()
+        void StateChange() override
         {
             return (_parent.StateChange());
         }
@@ -199,9 +193,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         {
         }
 POP_WARNING()
-        virtual ~ConnectorWrapper()
-        {
-        }
+        ~ConnectorWrapper() override = default;
 
     public:
         inline STREAMTYPE& Stream()

@@ -28,10 +28,10 @@ namespace WPEFramework {
 namespace Decoders {
 
     struct IDecoder {
-        virtual ~IDecoder() {}
+        virtual ~IDecoder() = default;
 
         struct IFactory {
-            virtual ~IFactory() {}
+            virtual ~IFactory() = default;
             virtual IDecoder* Factory(const string& configuration) = 0;
         };
 
@@ -55,10 +55,9 @@ namespace Decoders {
             IDecoder::Announce(DECODER::Name, DECODER::DecoderType, this);
         }
 
-        virtual ~DecoderFactory() {
-        }
+        ~DecoderFactory() override = default;
 
-        virtual IDecoder* Factory(const string& configuration) override
+        IDecoder* Factory(const string& configuration) override
         {
             return (new DECODER(configuration));
         }

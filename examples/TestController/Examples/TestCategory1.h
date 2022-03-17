@@ -39,7 +39,7 @@ namespace TestCore {
     public:
         TestCategory1(const TestCategory1&) = delete;
         TestCategory1& operator=(const TestCategory1&) = delete;
-        virtual ~TestCategory1() = default;
+        ~TestCategory1() override = default;
 
         static Exchange::ITestController::ICategory& Instance()
         {
@@ -53,11 +53,13 @@ namespace TestCore {
             return _name;
         };
 
-        void Setup() override{
+        void Setup() override
+        {
             /*ToDo: Implement Setup for selected category */
         };
 
-        void TearDown() override{
+        void TearDown() override
+        {
             /*ToDo: Implement TearDown for selected category */
         };
 

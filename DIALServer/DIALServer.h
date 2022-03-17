@@ -163,7 +163,7 @@ namespace Plugin {
 
             using AdditionalDataType = std::unordered_map<string, string>;
 
-            virtual ~IApplication() {}
+            ~IApplication() override = default;
 
             virtual bool IsRunning() const = 0;
 
@@ -755,7 +755,7 @@ namespace Plugin {
 
         public:
             DIALServerImpl(const string& MACAddress, const Core::URL& baseURL, const string& appPath, const bool dynamicInterface);
-            virtual ~DIALServerImpl();
+            ~DIALServerImpl() override;
 
         public:
             // Notification of a Partial Request received, time to attach a body..
@@ -1192,9 +1192,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         {
         }
 POP_WARNING()
-        virtual ~DIALServer()
-        {
-        }
+        ~DIALServer() override = default;
 
         BEGIN_INTERFACE_MAP(DIALServer)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -1213,29 +1211,29 @@ POP_WARNING()
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from the framework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //      IWeb methods
         // -------------------------------------------------------------------------------------------------------
         // Whenever a request is received, it might carry some additional data in the body. This method allows
         // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
         // in the body of the request.
-        virtual void Inbound(Web::Request& request);
+        void Inbound(Web::Request& request) override;
 
         // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
         // do our thing and to return the result in the response object. Here the actual specific module work,
         // based on a a request is handled.
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     public:
         // IDIALServer methods

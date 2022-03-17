@@ -39,7 +39,7 @@ namespace TestCore {
         {
         }
 
-        virtual ~TestCategoryBase()
+        ~TestCategoryBase() override
         {
             ASSERT((_tests.empty() == true) && "Something went wrong");
 

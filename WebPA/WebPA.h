@@ -42,16 +42,16 @@ private:
         {
             ASSERT(nullptr != parent);
         }
-        virtual ~Notification()
+        ~Notification() override
         {
             TRACE(Trace::Information, (_T("WebPA::Notification destructed. Line: %d"), __LINE__));
         }
 
     public:
-        virtual void Activated(RPC::IRemoteConnection* /* connection */)
+        void Activated(RPC::IRemoteConnection* /* connection */) override
         {
         }
-        virtual void Deactivated(RPC::IRemoteConnection* connection)
+        void Deactivated(RPC::IRemoteConnection* connection) override
         {
             _parent.Deactivated(connection);
         }
@@ -79,9 +79,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
 
     }
 POP_WARNING()
-    virtual ~WebPA()
-    {
-    }
+    ~WebPA() override = default;
 
 public:
     BEGIN_INTERFACE_MAP(WebPA)
@@ -99,22 +97,22 @@ public:
     // If there is an error, return a string describing the issue why the initialisation failed.
     // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
     // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-    virtual const string Initialize(PluginHost::IShell* service);
+    const string Initialize(PluginHost::IShell* service) override;
 
     // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
     // or to persist information if needed. After this call the plugin will unlink from the service path
     // and be deactivated. The Service object is the same as passed in during the Initialize.
     // After theis call, the lifetime of the Service object ends.
-    virtual void Deinitialize(PluginHost::IShell* service);
+    void Deinitialize(PluginHost::IShell* service) override;
 
     // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
     // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-    virtual string Information() const;
+    string Information() const override;
 
     //  IWeb methods
     // -------------------------------------------------------------------------------------------------------
-    virtual void Inbound(Web::Request& request);
-    virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+    void Inbound(Web::Request& request) override;
+    Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
     PluginHost::IShell* GetService() { return _service; }
 
 private:
