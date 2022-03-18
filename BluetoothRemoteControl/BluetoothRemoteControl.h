@@ -229,8 +229,7 @@ namespace Plugin {
                     , _sampleRate(sampleRate)
                     , _resolution(resolution) {
                 }
-                virtual ~AudioProfile() {
-                }
+                ~AudioProfile() override = default;
 
             public:
                 Exchange::IVoiceProducer::IProfile::codec Codec() const override {
@@ -549,7 +548,7 @@ namespace Plugin {
                 Constructor(config);
             }
 
-            virtual ~GATTRemote()
+            ~GATTRemote() override
             {
                 if (_device != nullptr) {
                     if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
@@ -1325,14 +1324,14 @@ namespace Plugin {
 
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)

@@ -65,7 +65,7 @@ public:
         , _provisionRequest(Core::ProxyType<Web::Request>::Create())
     {
     }
-    virtual ~ProvisioningClient()
+    ~ProvisioningClient() override
     {
         Close(Core::infinite);
     }

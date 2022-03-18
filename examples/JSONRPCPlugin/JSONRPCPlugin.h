@@ -131,10 +131,8 @@ namespace Plugin {
             }
             JSONObjectFactory(const JSONObjectFactory&);
             JSONObjectFactory& operator=(const JSONObjectFactory&);
+            ~JSONObjectFactory() override = default;
 
-            virtual ~JSONObjectFactory()
-            {
-            }
        public:
             static JSONObjectFactory& Instance()
             {
@@ -171,9 +169,7 @@ namespace Plugin {
                 , _parent(static_cast<JSONRPCChannel<INTERFACE>&>(*parent))
             {
             }
-            virtual ~JSONRPCServer()
-            {
-            }
+            ~JSONRPCServer() override = default;
 
         public:
             virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)

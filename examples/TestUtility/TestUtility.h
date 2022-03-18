@@ -50,7 +50,7 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification() = default;
+            ~Notification() override = default;
 
         public:
             virtual void Activated(RPC::IRemoteConnection* process VARIABLE_IS_NOT_USED) { /*_parent.Activated(process);*/ }
@@ -95,7 +95,7 @@ namespace Plugin {
             RegisterAll();
         }
 
-        virtual ~TestUtility()
+        ~TestUtility() override
         {
             UnregisterAll();
         }
@@ -110,14 +110,14 @@ namespace Plugin {
 
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Deactivated(RPC::IRemoteConnection* process);

@@ -136,9 +136,7 @@ namespace Plugin {
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("GreenPeak"))
             {
             }
-            virtual ~Activity()
-            {
-            }
+            ~Activity() override = default;
 
         public:
             void Dispose()
@@ -153,7 +151,7 @@ namespace Plugin {
             }
 
         private:
-            virtual uint32_t Worker() override
+            uint32_t Worker() override
             {
                 GP_UTILS_INIT_STACK();
                 HAL_INITIALIZE_GLOBAL_INT();
@@ -224,7 +222,7 @@ namespace Plugin {
         {
             Remotes::RemoteAdministrator::Instance().Announce(*this);
         }
-        virtual ~GreenPeak()
+        ~GreenPeak() override
         {
             Remotes::RemoteAdministrator::Instance().Revoke(*this);
         }
@@ -238,11 +236,11 @@ namespace Plugin {
         {
             return (_resourceName.c_str());
         }
-        virtual uint32_t Error() const override
+        uint32_t Error() const override
         {
             return (_error);
         }
-        virtual bool Pair() override
+        bool Pair() override
         {
             bool activated = false;
 
@@ -263,7 +261,7 @@ namespace Plugin {
 
             return (activated);
         }
-        virtual bool Unpair(string bindingId) override
+        bool Unpair(string bindingId) override
         {
             bool unpaired = false;
 
@@ -279,7 +277,7 @@ namespace Plugin {
 
             return (unpaired);
         }
-        virtual uint32_t Callback(Exchange::IKeyHandler* callback) override
+        uint32_t Callback(Exchange::IKeyHandler* callback) override
         {
             _adminLock.Lock();
 
@@ -306,7 +304,7 @@ namespace Plugin {
 
             return (Core::ERROR_NONE);
         }
-        virtual string MetaData() const override
+        string MetaData() const override
         {
             string result;
 
@@ -318,7 +316,7 @@ namespace Plugin {
 
             return (result);
         }
-        virtual void Configure(const string& configure) override
+        void Configure(const string& configure) override
         {
             Config config;
             config.FromString(configure);

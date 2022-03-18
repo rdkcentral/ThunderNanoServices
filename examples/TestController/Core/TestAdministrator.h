@@ -43,7 +43,7 @@ namespace TestCore {
         {
         }
 
-        virtual ~TestIterator() = default;
+        ~TestIterator() override = default;
 
         BEGIN_INTERFACE_MAP(TestIterator)
         INTERFACE_ENTRY(Exchange::ITestController::ITest::IIterator)
@@ -88,7 +88,7 @@ namespace TestCore {
         {
         }
 
-        virtual ~CategoryIterator() = default;
+        ~CategoryIterator() override = default;
 
         BEGIN_INTERFACE_MAP(CategoryIterator)
         INTERFACE_ENTRY(Exchange::ITestController::ICategory::IIterator)

@@ -451,7 +451,7 @@ namespace Weston {
 
                 RegisterSurfaceDestroyListener(surface);
             }
-            virtual ~SurfaceData()
+            ~SurfaceData() override
             {
                 RemoveTimer();
             }

@@ -39,7 +39,7 @@ public:
         TestCore::TestCommandController::Instance().Announce(this);
     }
 
-    virtual ~Statm()
+    ~Statm() override
     {
         TestCore::TestCommandController::Instance().Revoke(this);
     }

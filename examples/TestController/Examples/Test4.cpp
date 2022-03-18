@@ -38,7 +38,7 @@ public:
         ;
     }
 
-    virtual ~Test4()
+    ~Test4() override
     {
         TestCore::TestCategory2::Instance().Unregister(this);
     }

@@ -30,7 +30,7 @@ namespace Core {
         public:
             struct ICallback
             {
-                virtual ~ICallback() {}
+                virtual ~ICallback() = default;
                 virtual void Updated() = 0;
             };
 
@@ -96,7 +96,7 @@ namespace Core {
                 static FileSystemMonitor _singleton;
                 return (_singleton);
             }
-            virtual ~FileSystemMonitor()
+            ~FileSystemMonitor() override
             {
                 if (_notifyFd != -1) {
                     ::close(_notifyFd);
@@ -252,7 +252,7 @@ namespace Plugin
         public:
             struct ICallback
             {
-                virtual ~ICallback() {}
+                virtual ~ICallback() = default;
                 virtual void NewLine(const string &) = 0;
             };
 
@@ -348,8 +348,7 @@ namespace Plugin
             static constexpr uint16_t MAX_BUFFER_LENGHT = 1024;
             static constexpr uint16_t TIMEOUT_MS = 0;
 
-            class TextChannel : public Core::SocketDatagram
-            {
+            class TextChannel : public Core::SocketDatagram {
                 public:
                     TextChannel()
                         : Core::SocketDatagram(false, Core::NodeId().Origin(), Core::NodeId(), MAX_BUFFER_LENGHT, 0)
@@ -357,7 +356,7 @@ namespace Plugin
                         , _offset(0)
                     {
                     }
-                    virtual ~TextChannel()
+                    ~TextChannel() override
                     {
                         _sendQueue.clear();
                         _offset = 0;

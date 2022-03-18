@@ -43,15 +43,13 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification()
-            {
-            }
+            ~Notification() override = default;
 
         public:
-            virtual void Activated(RPC::IRemoteConnection*)
+            void Activated(RPC::IRemoteConnection*) override
             {
             }
-            virtual void Deactivated(RPC::IRemoteConnection* connection)
+            void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
             }

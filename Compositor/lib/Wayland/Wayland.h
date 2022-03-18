@@ -48,7 +48,7 @@ namespace WPEFramework {
             virtual void Get(const uint32_t, Wayland::Display::Surface&) = 0;
             virtual void Process(Wayland::Display::IProcess*) = 0;
             virtual bool StartController(const string&, Wayland::Display::ICallback*)  = 0;
-            virtual ~IServer() {}
+            virtual ~IServer() = default;
         };
         IServer* Create(PluginHost::IShell* service);
     }

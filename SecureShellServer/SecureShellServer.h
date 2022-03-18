@@ -36,22 +36,20 @@ namespace Plugin {
             Data()
                 : Core::JSON::Container()
                 , SessionInfo()
-		, ActiveCount()
+                , ActiveCount()
             {
                 Add(_T("sessioninfo"), &SessionInfo);
                 Add(_T("activecount"), &ActiveCount);
             }
 
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData> SessionInfo;
-	    Core::JSON::DecUInt32 ActiveCount;
+            Core::JSON::DecUInt32 ActiveCount;
         };
 
-	class Config : public Core::JSON::Container {
+        class Config : public Core::JSON::Container {
         private:
             Config(const Config&);
             Config& operator=(const Config&);
@@ -71,13 +69,13 @@ namespace Plugin {
             Core::JSON::String InputParameters;
         };
 
-	class ClientImpl : public ISecureShellServer::IClient {
+        class ClientImpl : public ISecureShellServer::IClient {
         private:
             ClientImpl() = delete;
             ClientImpl(const ClientImpl&) = delete;
             ClientImpl& operator=(const ClientImpl&) = delete;
 
-	public:
+        public:
             class IteratorImpl : public Exchange::ISecureShellServer::IClient::IIterator {
             private:
                 IteratorImpl() = delete;
@@ -96,7 +94,7 @@ namespace Plugin {
                         index++;
                     }
                 }
-                virtual ~IteratorImpl()
+                ~IteratorImpl() override
                 {
                     while (_list.size() != 0) {
                         _list.front()->Release();
@@ -105,19 +103,19 @@ namespace Plugin {
                 }
 
             public:
-		virtual uint32_t Count()
+                uint32_t Count() override
                 {
                    return (static_cast<uint32_t>(_list.size()));
                 }
-                virtual void Reset() override
+                void Reset() override
                 {
                     _index = 0;
                 }
-                virtual bool IsValid() const override
+                bool IsValid() const override
                 {
                     return ((_index != 0) && (_index <= _list.size()));
                 }
-                virtual bool Next() override
+                bool Next() override
                 {
                     if (_index == 0) {
                         _index = 1;
@@ -128,7 +126,7 @@ namespace Plugin {
                     }
                     return (IsValid());
                 }
-                virtual ISecureShellServer::IClient* Current()
+                ISecureShellServer::IClient* Current() override
                 {
                     ASSERT(IsValid() == true);
                     ISecureShellServer::IClient* result = nullptr;
@@ -159,19 +157,19 @@ namespace Plugin {
             }
 
         public:
-            virtual string IpAddress() const
+            string IpAddress() const override
             {
                 return (_ipaddress);
             }
-            virtual string TimeStamp() const
+            string TimeStamp() const override
             {
                 return (_timestamp);
             }
-            virtual string RemoteId() const
+            string RemoteId() const override
             {
                 return (_remoteid);
             }
-            virtual void Close()
+            void Close() override
             {
                 TRACE(Trace::Information, (_T("closing client session with _remoteid: %s"), _remoteid.c_str()));
                 close_client_session(std::stoi(_remoteid));
@@ -217,7 +215,7 @@ namespace Plugin {
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         //  ISecureShellServer methods
-        virtual ISecureShellServer::IClient::IIterator* Clients() override;
+        ISecureShellServer::IClient::IIterator* Clients() override;
 
         // SecureShellServer methods
         uint32_t GetSessionsCount(ISecureShellServer::IClient::IIterator* iter);

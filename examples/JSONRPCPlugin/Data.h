@@ -120,9 +120,7 @@ namespace Data {
             Minutes = minutes;
             Seconds = seconds;
         }
-        virtual ~Time()
-        {
-        }
+        ~Time() override = default;
 
     public:
         Core::JSON::DecUInt8 Hours;
@@ -153,9 +151,7 @@ namespace Data {
             Location = location;
             UTC = utc;
         }
-        virtual ~Parameters()
-        {
-        }
+        ~Parameters() override = default;
 
     public:
         Core::JSON::String Location;
@@ -185,9 +181,7 @@ namespace Data {
             Recipient = recipient;
             Message = message;
         }
-        virtual ~MessageParameters()
-        {
-        }
+        ~MessageParameters() override = default;
 
     public:
         Core::JSON::String Recipient;
@@ -226,9 +220,7 @@ namespace Data {
 			Time = time;
             State = value;
         }
-        virtual ~Response()
-        {
-        }
+        ~Response() override = default;
 
     public:
         Core::JSON::EnumType<state> State;

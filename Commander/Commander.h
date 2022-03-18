@@ -390,7 +390,7 @@ namespace Plugin {
             }
 
         private:
-            virtual void Dispatch()
+            void Dispatch() override
             {
                 _adminLock.Lock();
 
@@ -460,7 +460,7 @@ namespace Plugin {
 
     public:
         Commander();
-        virtual ~Commander();
+        ~Commander() override;
 
         BEGIN_INTERFACE_MAP(Commander)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -470,14 +470,14 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service);
-        virtual void Deinitialize(PluginHost::IShell* service);
-        virtual string Information() const;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //	IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         //	IExchange::ICommand::IRegistration methods
         // -------------------------------------------------------------------------------------------------------
@@ -496,11 +496,11 @@ namespace Plugin {
                 delete result;
             }
         }
-        virtual void Register(const string& className, Exchange::ICommand::IFactory* factory)
+        void Register(const string& className, Exchange::ICommand::IFactory* factory) override
         {
             _commandAdministrator.Register(className, factory);
         }
-        virtual Exchange::ICommand::IFactory* Unregister(const string& className)
+        Exchange::ICommand::IFactory* Unregister(const string& className) override
         {
             return (_commandAdministrator.Unregister(className));
         }
