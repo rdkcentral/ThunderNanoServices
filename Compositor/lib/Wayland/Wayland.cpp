@@ -55,9 +55,7 @@ namespace Plugin {
                 : _parent(parent)
             {
             }
-            virtual ~Job()
-            {
-            }
+            ~Job() override = default;
 
         public:
             uint32_t Worker()
@@ -104,9 +102,7 @@ namespace Plugin {
 
                 return (result);
             }
-            virtual ~Entry()
-            {
-            }
+            ~Entry() override = default;
 
         public:
             inline uint32_t Id() const
@@ -206,17 +202,17 @@ namespace Plugin {
             }
 
             // ICalllback methods
-            virtual void Attached(const uint32_t id)
+            void Attached(const uint32_t id) override
             {
                 _parent.Add(id);
             }
 
-            virtual void Detached(const uint32_t id)
+            void Detached(const uint32_t id) override
             {
                 _parent.Remove(id);
             }
 #ifdef ENABLE_NXSERVER
-            virtual void StateChange(Broadcom::Platform::server_state state)
+            void StateChange(Broadcom::Platform::server_state state) override
             {
                 if (state == Broadcom::Platform::OPERATIONAL) {
                     _parent.StartImplementation();
@@ -290,7 +286,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         //   IComposition methods
         // -------------------------------------------------------------------------------------------------------
-        /* virtual */ uint32_t Configure(PluginHost::IShell* service)
+        /* virtual */ uint32_t Configure(PluginHost::IShell* service) override
         {
             _service = service;
             _service->AddRef();
@@ -335,7 +331,7 @@ namespace Plugin {
             return ((_server != nullptr) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #endif
         }
-        /* virtual */ void Register(Exchange::IComposition::INotification* notification)
+        /* virtual */ void Register(Exchange::IComposition::INotification* notification) override
         {
             // Do not double register a notification sink.
             g_implementationLock.Lock();
@@ -356,7 +352,7 @@ namespace Plugin {
             }
             g_implementationLock.Unlock();
         }
-        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification)
+        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification) override
         {
             g_implementationLock.Lock();
             std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
@@ -389,7 +385,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         //   IProcess methods
         // -------------------------------------------------------------------------------------------------------
-        /* virtual */ bool Dispatch()
+        /* virtual */ bool Dispatch() override
         {
             return true;
         }

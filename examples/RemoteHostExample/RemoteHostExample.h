@@ -58,7 +58,7 @@ namespace Plugin {
             RegisterAll();
         }
 
-        virtual ~RemoteHostExample()
+        ~RemoteHostExample() override
         {
             if (_shell) {
                 _shell->Release();
@@ -79,9 +79,9 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IRemoteHostExample::ITimeListener methods
         // -------------------------------------------------------------------------------------------------------

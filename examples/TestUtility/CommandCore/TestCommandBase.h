@@ -116,7 +116,7 @@ public:
     {
     }
 
-    virtual ~TestCommandBase() = default;
+    ~TestCommandBase() override = default;
 
 public:
     // ICommand methods

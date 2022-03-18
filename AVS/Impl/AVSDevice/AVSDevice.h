@@ -52,7 +52,7 @@ namespace Plugin {
 
         AVSDevice(const AVSDevice&) = delete;
         AVSDevice& operator=(const AVSDevice&) = delete;
-        virtual ~AVSDevice() = default;
+        ~AVSDevice() override = default;
 
     private:
         class Config : public Core::JSON::Container {
@@ -76,7 +76,7 @@ namespace Plugin {
                 Add(_T("enablekwd"), &EnableKWD);
             }
 
-            ~Config() = default;
+            ~Config() override = default;
 
         public:
             Core::JSON::String Audiosource;

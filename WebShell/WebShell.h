@@ -144,9 +144,7 @@ namespace Plugin {
             , _sessionMonitor(nullptr)
         {
         }
-        virtual ~WebShell()
-        {
-        }
+        ~WebShell() override = default;
 
         BEGIN_INTERFACE_MAP(WebShell)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -164,32 +162,32 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Whenever a Channel (WebSocket connection) is created to the plugin that will be reported via the Attach.
         // Whenever the channel is closed, it is reported via the detach method.
-        virtual bool Attach(PluginHost::Channel& channel);
-        virtual void Detach(PluginHost::Channel& channel);
+        bool Attach(PluginHost::Channel& channel) override;
+        void Detach(PluginHost::Channel& channel) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //	IChannel methods
         // -------------------------------------------------------------------------------------------------------
         // Whenever a WebSocket is opened with a locator (URL) pointing to this plugin, it is capable of receiving
         // raw data for the plugin. Raw data received on this link will be exposed to the plugin via this interface.
-        virtual uint32_t Inbound(const uint32_t ID, const uint8_t data[], const uint16_t length);
+        uint32_t Inbound(const uint32_t ID, const uint8_t data[], const uint16_t length) override;
 
         // Whenever a WebSocket is opened with a locator (URL) pointing to this plugin, it is capable of sending
         // raw data to the initiator of the websocket.
-        virtual uint32_t Outbound(const uint32_t ID, uint8_t data[], const uint16_t length) const;
+        uint32_t Outbound(const uint32_t ID, uint8_t data[], const uint16_t length) const override;
 
     private:
         void Input(Core::ProxyType<Core::Process>& process);

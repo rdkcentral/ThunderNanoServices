@@ -42,9 +42,7 @@ namespace Plugin {
                 , _service()
             {
             }
-            virtual ~Notification()
-            {
-            }
+            ~Notification() override = default;
 
             void Initialize(PluginHost::IShell* service, Exchange::IComposition* client)
             {
@@ -80,11 +78,11 @@ namespace Plugin {
 
             //   IComposition INotification methods
             // -------------------------------------------------------------------------------------------------------
-            virtual void Attached(const string& name, Exchange::IComposition::IClient* client) override
+            void Attached(const string& name, Exchange::IComposition::IClient* client) override
             {
                 _parent.Attached(name, client);
             }
-            virtual void Detached(const string& name) override
+            void Detached(const string& name) override
             {
                 _parent.Detached(name);
             }
@@ -146,9 +144,7 @@ namespace Plugin {
                 Add(_T("height"), &Height);
             }
 
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::ArrayType<Core::JSON::String> Clients;
@@ -164,7 +160,7 @@ namespace Plugin {
         Compositor& operator=(const Compositor&) = delete;
         
         Compositor();
-        virtual ~Compositor();
+        ~Compositor() override;
 
     public:
         BEGIN_INTERFACE_MAP(Compositor)
@@ -178,14 +174,14 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //	IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Attached(const string& name, Exchange::IComposition::IClient* client);

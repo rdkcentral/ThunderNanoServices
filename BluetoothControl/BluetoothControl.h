@@ -2104,7 +2104,7 @@ protected:
             {
                 return ( (_ltks.Entries() >= 1) && (_irk.IsValid()) );
             }
-            virtual uint32_t Connect() override
+            uint32_t Connect() override
             {
                 uint32_t result = Core::ERROR_GENERAL;
 
@@ -2357,7 +2357,7 @@ protected:
         {
             RegisterAll();
         }
-        virtual ~BluetoothControl()
+        ~BluetoothControl() override
         {
             UnregisterAll();
         }
@@ -2380,34 +2380,34 @@ protected:
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from the webbridge. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After this call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetaData plugin to publish this information to the outside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         //  IBluetooth methods
         // -------------------------------------------------------------------------------------------------------
-        virtual uint32_t Register(IBluetooth::INotification* notification) override;
-        virtual uint32_t Unregister(IBluetooth::INotification* notification) override;
+        uint32_t Register(IBluetooth::INotification* notification) override;
+        uint32_t Unregister(IBluetooth::INotification* notification) override;
 
-        virtual bool IsScanning() const override;
-        virtual uint32_t Scan(const bool lowEnergy, const uint16_t duration) override;
-        virtual uint32_t StopScanning() override;
+        bool IsScanning() const override;
+        uint32_t Scan(const bool lowEnergy, const uint16_t duration) override;
+        uint32_t StopScanning() override;
 
-        virtual IBluetooth::IDevice* Device(const string&) override;
-        virtual IBluetooth::IDevice::IIterator* Devices() override;
+        IBluetooth::IDevice* Device(const string&) override;
+        IBluetooth::IDevice::IIterator* Devices() override;
 
     public:
         inline ControlSocket& Connector() {

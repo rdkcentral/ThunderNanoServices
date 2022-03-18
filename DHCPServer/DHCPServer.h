@@ -64,9 +64,7 @@ namespace Plugin {
                         Add(_T("ip"), &IPAddress);
                         Add(_T("expires"), &Expires);
                     }
-                    virtual ~Lease()
-                    {
-                    }
+                    ~Lease() override = default;
 
                 public:
                     void Set(const DHCPServerImplementation::Lease& lease)
@@ -129,9 +127,7 @@ namespace Plugin {
                     Add(_T("active"), &Active);
                     Add(_T("leases"), &Leases);
                 }
-                virtual ~Server()
-                {
-                }
+                ~Server() override = default;
 
             public:
                 void Set(const DHCPServerImplementation& server)
@@ -163,9 +159,7 @@ namespace Plugin {
             {
                 Add(_T("servers"), &Servers);
             }
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::ArrayType<Server> Servers;
@@ -211,9 +205,7 @@ namespace Plugin {
                     Add(_T("router"), &Router);
                     Add(_T("active"), &Active);
                 }
-                virtual ~Server()
-                {
-                }
+                ~Server() override = default;
 
             public:
                 Core::JSON::String Interface;
@@ -250,7 +242,7 @@ namespace Plugin {
 
     public:
         DHCPServer();
-        virtual ~DHCPServer();
+        ~DHCPServer() override;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(DHCPServer)
@@ -262,14 +254,14 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         // JsonRpc
         void RegisterAll();

@@ -41,9 +41,7 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification()
-            {
-            }
+            virtual ~Notification() = default;
 
             void Initialize(Exchange::Dolby::IOutput* client)
             {
@@ -90,9 +88,7 @@ namespace Plugin {
         {
         }
 
-        virtual ~PlayerInfo()
-        {
-        }
+        virtual ~PlayerInfo() = default;
 
         BEGIN_INTERFACE_MAP(PlayerInfo)
         INTERFACE_ENTRY(PluginHost::IPlugin)

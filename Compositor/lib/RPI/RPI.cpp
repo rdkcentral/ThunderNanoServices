@@ -59,7 +59,7 @@ namespace Plugin {
                 }
             }
 
-            virtual ~ExternalAccess() override = default;
+            ~ExternalAccess() override = default;
 
         private:
             void Offer(Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
@@ -92,7 +92,7 @@ namespace Plugin {
         {
         }
 
-        ~CompositorImplementation()
+        ~CompositorImplementation() override
         {
             if (_externalAccess != nullptr) {
                 delete _externalAccess;
@@ -118,9 +118,7 @@ namespace Plugin {
                 Add(_T("connector"), &Connector);
             }
 
-            ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::String Connector;

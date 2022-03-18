@@ -35,7 +35,8 @@ namespace TestCore {
         : _shutdownTimeout(0) {
         }
 
-        virtual ~TestUtilityImp() {
+        ~TestUtilityImp() override
+        {
             ::SleepMs(_shutdownTimeout);
             TestCore::TestCommandController::Instance().Release();
         };

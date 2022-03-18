@@ -134,12 +134,12 @@ namespace Plugin {
             }
             // IUnknown implementation
             // -----------------------------------------------
-            virtual void AddRef() const
+            void AddRef() const override
             {
                 ASSERT(_lifeTime != nullptr);
                 _lifeTime->AddRef();
             }
-            virtual uint32_t Release() const
+            uint32_t Release() const override
             {
                 ASSERT(_lifeTime != nullptr);
                 return (_lifeTime->Release());
@@ -150,25 +150,25 @@ namespace Plugin {
 
             // Exchange::IDictionary::IIterator implementation
             // -----------------------------------------------
-            virtual void Reset()
+            void Reset() override
             {
                 _iterator.Reset(0);
             }
-            virtual bool IsValid() const
+            bool IsValid() const override
             {
                 return (_iterator.IsValid());
             }
-            virtual bool Next()
+            bool Next() override
             {
                 return (_iterator.Next());
             }
 
             // Signal changes on the subscribed namespace..
-            virtual const string Key() const
+            const string Key() const override
             {
                 return ((*_iterator).Key());
             }
-            virtual const string Value() const
+            const string Value() const override
             {
                 return ((*_iterator).Value());
             }
@@ -224,9 +224,7 @@ namespace Plugin {
                         Type = type;
                     }
                 }
-                virtual ~Entry()
-                {
-                }
+                ~Entry() override = default;
 
                 Entry& operator=(const Entry& RHS)
                 {
@@ -273,9 +271,7 @@ namespace Plugin {
                 Add(_T("spaces"), &Spaces);
                 Add(_T("dictionary"), &Dictionary);
             }
-            virtual ~NameSpace()
-            {
-            }
+            ~NameSpace() override = default;
 
         public:
             // Only the rootnamspace should be empty. Allnested namespace MUST have a namespace..
@@ -349,9 +345,7 @@ namespace Plugin {
             , _dictionary()
         {
         }
-        virtual ~Dictionary()
-        {
-        }
+        ~Dictionary() override = default;
 
         BEGIN_INTERFACE_MAP(Dictionary)
         INTERFACE_ENTRY(IPlugin)
@@ -369,42 +363,42 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
         // Whenever a request is received, it might carry some additional data in the body. This method allows
         // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
         // in the body of the request.
-        virtual void Inbound(WPEFramework::Web::Request& request);
+        void Inbound(WPEFramework::Web::Request& request) override;
 
         // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
         // do our thing and to return the result in the response object. Here the actual specific module work,
         // based on a a request is handled.
-        virtual Core::ProxyType<Web::Response> Process(const WPEFramework::Web::Request& request);
+        Core::ProxyType<Web::Response> Process(const WPEFramework::Web::Request& request) override;
 
         //  IDictionary methods
         // -------------------------------------------------------------------------------------------------------
         // Direct method to Get a value from a key in a certain namespace from the dictionary.
         // NameSpace and key MUST be filled.
-        virtual bool Get(const string& nameSpace, const string& key, string& value) const;
-        virtual IDictionary::IIterator* Get(const string& nameSpace) const;
+        bool Get(const string& nameSpace, const string& key, string& value) const override;
+        IDictionary::IIterator* Get(const string& nameSpace) const override;
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
         // NameSpace and key MUST be filled.
-        virtual bool Set(const string& nameSpace, const string& key, const string& value);
-        virtual void Register(const string& nameSpace, struct Exchange::IDictionary::INotification* sink);
-        virtual void Unregister(const string& nameSpace, struct Exchange::IDictionary::INotification* sink);
+        bool Set(const string& nameSpace, const string& key, const string& value) override;
+        void Register(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
+        void Unregister(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
 
     private:
         bool CreateInternalDictionary(const string& currentSpace, const NameSpace& data);
