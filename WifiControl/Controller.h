@@ -1049,7 +1049,7 @@ namespace WPASupplicant {
                 return ssid;
             }
 
-            const WPASupplicant::Network::wpsauthtypes AuthType() const
+            WPASupplicant::Network::wpsauthtypes AuthType() const
             {
                 _adminLock.Lock();
                 const WPASupplicant::Network::wpsauthtypes auth =  _authType;
