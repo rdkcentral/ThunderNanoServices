@@ -80,7 +80,7 @@ namespace WPEFramework
 
                Config() : Core::JSON::Container(),
                   SubtitleProcessing(false),
-                  TeletextProcessing(false),
+                  TeletextProcessing(false)
                {
                    Add(_T("subtitleprocessing"), &SubtitleProcessing);
                    Add(_T("teletextprocessing"), &TeletextProcessing);
