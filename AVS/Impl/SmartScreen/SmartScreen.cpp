@@ -167,7 +167,7 @@ namespace Plugin {
 #endif
         }
 
-        std::vector<std::shared_ptr<std::istream>> configJsonStreams;
+        auto configJsonStreams = std::make_shared<std::vector<std::shared_ptr<std::istream>>>();
         if ((status == true) && (JsonConfigToStream(configJsonStreams, alexaClientConfig) == false)) {
             TRACE(AVSClient, (_T("Failed to load alexaClientConfig")));
             status = false;
@@ -190,7 +190,8 @@ namespace Plugin {
 
         return status;
     }
-    bool SmartScreen::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder VARIABLE_IS_NOT_USED, std::vector<std::shared_ptr<std::istream>>& configJsonStreams)
+
+    bool SmartScreen::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder VARIABLE_IS_NOT_USED, const std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& configJsonStreams)
     {
         auto builder = avsCommon::avs::initialization::InitializationParametersBuilder::create();
         if (!builder) {
@@ -198,7 +199,7 @@ namespace Plugin {
             return false;
         }
 
-        builder->withJsonStreams(std::make_shared<std::vector<std::shared_ptr<std::istream>>>(configJsonStreams));
+        builder->withJsonStreams(configJsonStreams);
         auto initParams = builder->build();
         if (!initParams) {
             TRACE(AVSClient,(_T("Failed to get initParams")));
@@ -832,7 +833,7 @@ namespace Plugin {
         return status;
     }
 
-    bool SmartScreen::JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile)
+    bool SmartScreen::JsonConfigToStream(std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& streams, const std::string& configFile)
     {
         if (configFile.empty()) {
             TRACE(AVSClient, (_T("Config filename is empty!")));
@@ -845,7 +846,7 @@ namespace Plugin {
             return false;
         }
 
-        streams.push_back(configStream);
+        streams->push_back(configStream);
         return true;
     }
 
