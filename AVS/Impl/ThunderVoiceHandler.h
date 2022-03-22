@@ -244,6 +244,11 @@ namespace Plugin {
             return true;
         }
 
+        bool isStreaming() override
+        {
+            return m_voiceHandler->IsStreaming();
+        }
+
     private:
         ///  Responsible for getting audio data from Thunder
         class VoiceHandler : public Exchange::IVoiceHandler {
@@ -307,9 +312,10 @@ namespace Plugin {
                     }
                 }
             }
-	    bool IsStreaming() {
-		return (m_isStarted);
-	    }
+            bool IsStreaming()
+            {
+                return (m_isStarted);
+            }
 
             BEGIN_INTERFACE_MAP(VoiceHandler)
             INTERFACE_ENTRY(Exchange::IVoiceHandler)

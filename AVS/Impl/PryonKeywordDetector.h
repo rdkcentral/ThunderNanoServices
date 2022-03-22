@@ -23,7 +23,7 @@
 #include <AVSCommon/SDKInterfaces/KeyWordDetectorStateObserverInterface.h>
 #include <AVSCommon/SDKInterfaces/KeyWordObserverInterface.h>
 #include <AVSCommon/Utils/AudioFormat.h>
-#include <KWD/AbstractKeywordDetector.h>
+#include <acsdkKWDImplementations/AbstractKeywordDetector.h>
 
 #include "pryon_lite.h"
 
@@ -35,7 +35,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class PryonKeywordDetector : public alexaClientSDK::kwd::AbstractKeywordDetector {
+    class PryonKeywordDetector : public alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector {
     public:
         static std::unique_ptr<PryonKeywordDetector> create(
             std::shared_ptr<alexaClientSDK::avsCommon::avs::AudioInputStream> stream,

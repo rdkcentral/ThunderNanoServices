@@ -15,6 +15,16 @@
     // "websocketCertificate":"server.chain"
     // The private key file the websocket server should use when SSL is enabled
     // "websocketPrivateKey":"server.key"
+    // The cache reuse period when downloading content packages
+    // "contentCacheReusePeriodInSeconds": "600",
+    // The maximum cache size when caching content packages
+    // "contentCacheMaxSize": "50"
+  },
+  "alexaPresentationCapabilityAgent": {
+    // The minimum state reporting interval in milliseconds for the AlexaPresentation CA
+    // "minStateReportIntervalMs": 600
+    // The interval between checks for context changes
+    // "stateReportCheckIntervalMs": 2000
   },
   "gui": {
     "appConfig": {
@@ -28,14 +38,20 @@
           "id": "tvFullscreen",
           "templateId": "tvFullscreen",
           "sizeConfigurationId": "fullscreen",
-          "interactionMode": "tv"
+          "interactionMode": "tv",
+          "supportedExtensions": [
+            "aplext:backstack:10"
+          ]
         },
         {
           "id": "tvOverlayLandscape",
           "templateId": "tvOverlayLandscape",
           "windowPosition": "bottom",
           "sizeConfigurationId": "landscapePanel",
-          "interactionMode": "tv_overlay"
+          "interactionMode": "tv_overlay",
+          "supportedExtensions": [
+            "aplext:backstack:10"
+          ]
         }
       ],
       "defaultWindowId": "tvFullscreen",
@@ -54,6 +70,16 @@
           "code": "Escape",
           "keyCode": 27,
           "key": "Escape"
+        },
+        "toggleCaptionsKey": {
+          "code": "KeyC",
+          "keyCode": 67,
+          "key": "c"
+        },
+        "toggleDoNotDisturbKey": {
+          "code": "KeyD",
+          "keyCode": 68,
+          "key": "d"
         }
       }
     },
@@ -61,7 +87,7 @@
       {
         "type": "AlexaInterface",
         "interface": "Alexa.InteractionMode",
-        "version": "1.0",
+        "version": "1.1",
         "configurations": {
           "interactionModes": [
             {
@@ -73,7 +99,8 @@
               },
               "touch": "UNSUPPORTED",
               "keyboard": "SUPPORTED",
-              "video": "SUPPORTED"
+              "video": "SUPPORTED",
+              "dialog": "SUPPORTED"
             },
             {
               "id": "tv_overlay",
@@ -84,7 +111,8 @@
               },
               "touch": "UNSUPPORTED",
               "keyboard": "SUPPORTED",
-              "video": "UNSUPPORTED"
+              "video": "UNSUPPORTED",
+              "dialog": "SUPPORTED"
             }
           ]
         }
@@ -196,6 +224,13 @@
           }
         }
       }
-    ]
+    ],
+    "liveViewControllerOptions": {
+      "physicalMicButtonHint": {
+        "micButtonHintType": "Text",
+        "micButtonHintSource": "A"
+      },
+      "viewingDeviceMicUnsupported": false
+    }
   }
 }

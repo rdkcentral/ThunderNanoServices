@@ -19,13 +19,12 @@
 
 #pragma once
 
+#if defined(KWD_PRYON)
+#include <acsdkKWDImplementations/AbstractKeywordDetector.h>
+#endif
+#include <AVSSDK/SampleApp/SampleApplication.h>
 #include "ThunderVoiceHandler.h"
-
-#include <WPEFramework/interfaces/IAVSClient.h>
-
-#include <AVS/KWD/AbstractKeywordDetector.h>
-
-#include <SmartScreen/SampleApp/SampleApplication.h>
+#include <interfaces/IAVSClient.h>
 
 #include <vector>
 
@@ -92,15 +91,15 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder);
+        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, const std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& configJsonStreams);
         bool InitSDKLogs(const string& logLevel);
-        bool JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile);
+        bool JsonConfigToStream(std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& streams, const std::string& configFile);
 
     private:
         PluginHost::IShell* _service;
         std::shared_ptr<ThunderVoiceHandler<alexaSmartScreenSDK::sampleApp::gui::GUIManager>> m_thunderVoiceHandler;
 #if defined(KWD_PRYON)
-        std::unique_ptr<alexaClientSDK::kwd::AbstractKeywordDetector> m_keywordDetector;
+        std::unique_ptr<alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector> m_keywordDetector;
 #endif
     };
 
