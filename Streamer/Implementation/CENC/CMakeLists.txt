@@ -31,7 +31,7 @@ pkg_check_modules(GST
 
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
 
-add_library(${LIB_NAME}
+add_library(${LIB_NAME} STATIC
      PlayerImplementation.cpp)
 
 set_target_properties(${LIB_NAME} PROPERTIES
