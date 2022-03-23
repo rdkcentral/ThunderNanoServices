@@ -53,6 +53,7 @@ option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
+option(PLUGIN_SWITCHBOARD "Include SwitchBoard plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
 option(PLUGIN_VOLUMECONTROL "Include VolumeControl plugin" OFF)
 option(PLUGIN_WEBPA "Include WebPA plugin" OFF)
@@ -203,6 +204,10 @@ endif()
 
 if(PLUGIN_SYSTEMDCONNECTOR)
     add_subdirectory(SystemdConnector)
+endif()
+
+if(PLUGIN_SWITCHBOARD)
+    add_subdirectory(SwitchBoard)
 endif()
 
 if(PLUGIN_TIMESYNC)
