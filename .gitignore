@@ -12,3 +12,5 @@ output/
 /.vs
 /artifacts
 */*.so
+*/*/*/*.so
+*/*.json
