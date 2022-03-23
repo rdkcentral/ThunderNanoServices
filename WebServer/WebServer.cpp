@@ -68,16 +68,12 @@ namespace Plugin {
                 }
                 else {
                     RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
-
                     if (connection != nullptr) {
                         _memory = WPEFramework::WebServer::MemoryObserver(connection);
                         connection->Release();
-
-                        ASSERT(_memory != nullptr);
                     }
 
                     PluginHost::ISubSystem* subSystem = service->SubSystems();
-
                     if (subSystem != nullptr) {
                         if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
                             SYSLOG(Logging::Startup, (_T("WebSource is not defined as External !!")));
@@ -89,9 +85,7 @@ namespace Plugin {
                     }
                 }
             }
-        }
-
-        if (_server == nullptr) {
+        } else {
             message = _T("WebServer could not be instantiated.");
         }
 
@@ -108,14 +102,13 @@ namespace Plugin {
 
         _service->Unregister(&_notification);
 
-        if(_connectionId != 0){
-            ASSERT(_server != nullptr);
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+        if(_server != nullptr){
 
             if (_memory != nullptr) {
                 _memory->Release();
                 _memory = nullptr;
             }
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
             // Stop processing of the browser:
             VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
             _server = nullptr;
@@ -129,14 +122,13 @@ namespace Plugin {
                 connection->Terminate();
                 connection->Release();
             }
-        }
 
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-        if (subSystem != nullptr) {
-            if(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
-                subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
-                subSystem->Release();
+            PluginHost::ISubSystem* subSystem = service->SubSystems();
+            if (subSystem != nullptr) {
+                if(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
+                    subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
+                    subSystem->Release();
+                }
             }
         }
 

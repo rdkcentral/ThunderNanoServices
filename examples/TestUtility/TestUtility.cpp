@@ -85,14 +85,12 @@ namespace Plugin {
         _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
-            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
             RegisterAll();
+
+            RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
                 remoteConnection->Release();
-            } else {
-                message = _T("Colud not create MemoryObserver in TestUtility.");
-                TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestUtility")));
             }
 
         } else {
@@ -113,9 +111,8 @@ namespace Plugin {
 
         _service->Unregister(&_notification);
 
-        if(_connection != 0) {
-            ASSERT(_testUtilityImp != nullptr);
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+        if(_testUtilityImp != nullptr) {
+
             UnregisterAll();
             if(_memory != nullptr){
                 if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
@@ -124,6 +121,7 @@ namespace Plugin {
                 _memory = nullptr;
             }
 
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
             VARIABLE_IS_NOT_USED uint32_t result = _testUtilityImp->Release();
             _testUtilityImp = nullptr;
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);

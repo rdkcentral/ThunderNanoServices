@@ -82,16 +82,11 @@ namespace Plugin {
 
         if (_testControllerImp != nullptr) {
             RegisterAll();
-
+            _testControllerImp->Setup();
             const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connection);
 
             if (connection != nullptr) {
                 _memory = WPEFramework::TestController::MemoryObserver(connection);
-
-                if(_memory == nullptr) {
-                    message = _T("Colud not create MemoryObserver in TestController");
-                }
-                _testControllerImp->Setup();
                 connection->Release();
                
             } else {
@@ -116,12 +111,8 @@ namespace Plugin {
 
         _service->Unregister(&_notification);
  
-        if(_connection != 0) {
-            ASSERT(_testControllerImp != nullptr);
-
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+        if(_testControllerImp != nullptr) {
             UnregisterAll();
-
             _testControllerImp->TearDown();
 
             if(_memory != nullptr){
@@ -131,6 +122,7 @@ namespace Plugin {
                 _memory = nullptr;
             }
 
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
             VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
             _testControllerImp = nullptr;
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);

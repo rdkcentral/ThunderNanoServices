@@ -57,14 +57,12 @@ namespace Plugin {
 
         _service->Unregister(&_connectionNotification);
 
-        if(_connectionId != 0){
-             ASSERT(_implementation != nullptr);
+        if(_implementation != nullptr){
 
             Exchange::JVolumeControl::Unregister(*this);
-
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
             _implementation->Unregister(&_volumeNotification);
 
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
             VARIABLE_IS_NOT_USED uint32_t result = _implementation->Release();
             _implementation = nullptr;
             // It should have been the last reference we are releasing,

@@ -73,13 +73,8 @@ namespace Plugin {
                 stateControl->Release();
 
                 const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
-                if (connection== nullptr) {
-                    message = _T("Spark could not be instantiated. Couldnt get Remote Connection");
-                } else {
+                if (connection != nullptr) {
                     _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
-                    if(_memory == nullptr){
-                        message = _T("Spark Memory couldnt be observed");
-                    }
                     connection->Release();
                 }
             }
@@ -100,8 +95,7 @@ namespace Plugin {
         // start cleaning up..
         _service->Unregister(&_notification);
 
-        if(_connectionId != 0){
-            ASSERT(_spark != nullptr);
+        if(_spark != nullptr){
             UnregisterAll();
             _spark->Unregister(&_notification);
 
@@ -111,6 +105,9 @@ namespace Plugin {
             if (stateControl != nullptr) {
                 stateControl->Unregister(&_notification);
                 stateControl->Release();
+            } else {
+            // On behalf of the crashed process, we will release the notification sink.
+            _   notification.Release();
             }
 
             if(_memory != nullptr) {

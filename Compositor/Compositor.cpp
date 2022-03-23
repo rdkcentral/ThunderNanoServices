@@ -223,13 +223,10 @@ namespace Plugin {
             subSystems->Release();
         }
 
-        if (_connectionId != 0) {
-            ASSERT(_composition != nullptr);
+        if (_composition != nullptr) {
             UnregisterAll();
             _composition->Unregister(&_notification);
 
-            // Stop processing:
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
             if (_inputSwitch != nullptr) {
                 _inputSwitch->Release();
                 _inputSwitch = nullptr;
@@ -238,6 +235,9 @@ namespace Plugin {
                 _brightness->Release();
                 _brightness = nullptr;
             }
+
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
             VARIABLE_IS_NOT_USED uint32_t result = _composition->Release();
             _composition = nullptr;
             // It should have been the last reference we are releasing,

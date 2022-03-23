@@ -42,6 +42,7 @@ namespace Plugin {
         if (_svalbard == nullptr) {
             message = _T("Svalbard could not be instantiated.");
         } else {
+            printf("Svalbard - Connection Id - %u\n",_connectionId);
             _svalbard->Configure(_service);
         }
 
@@ -58,10 +59,11 @@ namespace Plugin {
 
         _service->Unregister(&_notification);
 
-        if (_connectionId != 0) {
+        if (_svalbard != nullptr) {
 
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            ASSERT(_svalbard != nullptr);
+            printf("Svalbard - Remote Connection  - %p\n",connection);
+
             VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
             _svalbard = nullptr;
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);

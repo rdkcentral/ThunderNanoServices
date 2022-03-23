@@ -80,8 +80,7 @@ namespace Plugin {
 
         service->Unregister(&_notification);
 
-        if(_connectionId != 0){
-            ASSERT(_player != nullptr);
+        if(_player != nullptr){
             UnregisterAll();
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
             VARIABLE_IS_NOT_USED uint32_t result = _player->Release();
@@ -94,15 +93,17 @@ namespace Plugin {
                 connection->Terminate();
                 connection->Release();
             }
-        }
 
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-        if (subSystem != nullptr) {
-            if(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
-                subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
-                subSystem->Release();
+            PluginHost::ISubSystem* subSystem = service->SubSystems();
+            if (subSystem != nullptr) {
+                if(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
+                    subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
+                    subSystem->Release();
+                }
             }
         }
+
+
         _service->Release();
         _service = nullptr;
         _connectionId = 0;

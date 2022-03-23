@@ -47,7 +47,6 @@ namespace Plugin {
         _service->Register(&_notification);
 
         _player = service->Root<Exchange::IPlayerProperties>(_connectionId, 2000, _T("PlayerInfoImplementation"));
-
         if (_player != nullptr) {
 
             if ((_player->AudioCodecs(_audioCodecs) == Core::ERROR_NONE) && (_audioCodecs != nullptr)) {
@@ -90,8 +89,10 @@ namespace Plugin {
 
         _service->Unregister(&_notification);
 
-        if (_connectionId != 0) {
-            ASSERT(_player != nullptr);
+        if (_player != nullptr) {
+            if(_audioCodecs != nullptr && _videoCodecs != nullptr) {
+                Exchange::JPlayerProperties::Unregister(*this);
+            }
             if (_audioCodecs != nullptr) {
                 _audioCodecs->Release();
                 _audioCodecs = nullptr;
@@ -100,8 +101,6 @@ namespace Plugin {
                 _videoCodecs->Release();
                 _videoCodecs = nullptr;
             }
-            Exchange::JPlayerProperties::Unregister(*this);
-
             #if DOLBY_SUPPORT
                 if (_dolbyOut != nullptr) {
                     _dolbyNotification.Deinitialize();

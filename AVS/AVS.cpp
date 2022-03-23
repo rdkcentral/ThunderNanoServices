@@ -32,6 +32,8 @@ namespace Plugin {
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_connectionId == 0);
+        ASSERT(_AVSClient == nullptr);
+
         _service = service;
         _service->AddRef();
 
@@ -70,7 +72,7 @@ namespace Plugin {
             }
         }
 
-        if(message.length() != 0) {
+        if (message.length() != 0) {
             Deinitialize(service);
         }
 
@@ -84,8 +86,7 @@ namespace Plugin {
         _service->Unregister(&_audiosourceNotification);
         _service->Unregister(&_connectionNotification);
 
-        if (_connectionId != 0) {
-            ASSERT(_AVSClient != nullptr);
+        if (_AVSClient != nullptr) {
             TRACE_L1(_T("Deinitializing AVSClient..."));
 
             if (_controller != nullptr) {

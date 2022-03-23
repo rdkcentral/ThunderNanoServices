@@ -60,34 +60,31 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
             > (_connectionId, 2000, _T("CobaltImplementation"));
 
     if (_cobalt != nullptr) {
+        _cobalt->Register(&_notification);
         PluginHost::IStateControl *stateControl(
                 _cobalt->QueryInterface<PluginHost::IStateControl>());
+
         if (stateControl == nullptr) {
             message = _T("Cobalt StateControl could not be Obtained.");
         } else {
+            stateControl->Register(&_notification);
+            stateControl->Configure(_service);
+            stateControl->Release();
             _application = _cobalt->QueryInterface<Exchange::IApplication>();
             if (_application != nullptr) {
+
                 RegisterAll();
                 Exchange::JApplication::Register(*this, _application);
+
                 RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
-                if(remoteConnection != nullptr) {
+                if (remoteConnection != nullptr) {
                     _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
-                    if(_memory != nullptr) {
-                        _cobalt->Register(&_notification);
-                        stateControl->Register(&_notification);
-                        stateControl->Configure(_service);
-                    } else {
-                        message = _T("Cobalt Memory Obesever could not be Obtained.");
-                    }
+                    ASSERT(_memory != nullptr);
                     remoteConnection->Release();
-                } else {
-                    message = _T("Cobalt Remote Connection could not be Obtained.");
                 }
             } else {
                 message = _T("Cobalt IApplication could not be Obtained.");
             }
-            stateControl->Release();
-
         }
     } else {
         message = _T("Cobalt could not be instantiated.");
@@ -103,16 +100,11 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
 void Cobalt::Deinitialize(PluginHost::IShell *service)
 {
     ASSERT(_service == service);
-    ASSERT(_cobalt != nullptr);
-    ASSERT(_application != nullptr);
-    ASSERT(_memory != nullptr);
 
-    ASSERT(_service == service);
     _service->Unregister(&_notification);
 
-    if(_connectionId != 0) {
-        ASSERT(_cobalt != nullptr);
-
+    if (_cobalt != nullptr) {
+        _cobalt->Unregister(&_notification);
         PluginHost::IStateControl *stateControl(_cobalt->QueryInterface<PluginHost::IStateControl>());
         // Make sure the Activated and Deactivated are no longer called before we
         // start cleaning up..
@@ -125,12 +117,11 @@ void Cobalt::Deinitialize(PluginHost::IShell *service)
             // On behalf of the crashed process, we will release the notification sink.
             _notification.Release();
         }
-        if(_memory != nullptr) {
-            _cobalt->Unregister(&_notification);
+        if (_memory != nullptr) {
             _memory->Release();
             _memory = nullptr;
         }
-        if(_application != nullptr) {
+        if (_application != nullptr) {
             Exchange::JApplication::Unregister(*this);
             UnregisterAll();
             _application->Release();

@@ -72,14 +72,14 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
 
     _service->Unregister(&_notification);
 
-    if(_connectionId != 0){
-        RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
-        ASSERT(_webpa != nullptr);
+    if(_webpa != nullptr){
+
         _webpa->Deinitialize(_service);
+
+        RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
         VARIABLE_IS_NOT_USED uint32_t result = _webpa->Release();
         _webpa = nullptr;
         ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
         // The connection can disappear in the meantime...
         if (nullptr != serviceConnection) {
             // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)

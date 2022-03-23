@@ -36,9 +36,9 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
-        if (Core::Directory(_service->PersistentPath().c_str()).CreatePath())
+        if (Core::Directory(_service->PersistentPath().c_str()).CreatePath()) {
             _langSettingsFileName = _service->PersistentPath() + "LanguageSettings.json";
-
+        }
         _language = GetCurrentLanguageFromPersistentStore();
         // Setup skip URL for right offset.
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
@@ -59,7 +59,7 @@ namespace Plugin {
             Deinitialize(service);
         }
 
-        return result;
+        return message;
     }
 
     /* virtual */ void LanguageAdministrator::Deinitialize(PluginHost::IShell* service)
@@ -70,9 +70,7 @@ namespace Plugin {
 
         UpdateLanguageUsed(_language);
 
-        if(_connectionId != 0) {
-
-            ASSERT(_impl != nullptr);
+        if(_impl != nullptr) {
 
             Exchange::JLanguageTag::Unregister(*this);
             _impl->Unregister(&_LanguageTagNotification);

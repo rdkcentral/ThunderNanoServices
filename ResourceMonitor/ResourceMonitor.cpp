@@ -50,7 +50,7 @@ namespace WPEFramework
             else
             {
                 if(_monitor->Configure(service) == Core::ERROR_INCOMPLETE_CONFIG){
-                    message = _T("ResourceMonitor could not be instantiated.");
+                    message = _T("ResourceMonitor could not be Configured.");
                 }
             }
 
@@ -67,9 +67,8 @@ namespace WPEFramework
 
             _service->Unregister(&_notification);
 
-            if (_connectionId != 0)
+            if (_monitor != nullptr)
             {
-                ASSERT(_monitor != nullptr);
                 RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
                 VARIABLE_IS_NOT_USED uint32_t result = _monitor->Release();
                 _monitor = nullptr;
