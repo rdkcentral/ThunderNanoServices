@@ -87,10 +87,10 @@ namespace Plugin {
 
             if (connection != nullptr) {
                 _memory = WPEFramework::TestController::MemoryObserver(connection);
+                ASSERT(_memory != nullptr);
                 connection->Release();
                
             } else {
-                message = _T("Colud not get Remote connection");
                 TRACE(Trace::Warning, (_T("Colud not get Remote connection")));
             }
         } else {

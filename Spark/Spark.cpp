@@ -75,6 +75,7 @@ namespace Plugin {
                 const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
                 if (connection != nullptr) {
                     _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
+                    ASSERT(_memory != nullptr);
                     connection->Release();
                 }
             }

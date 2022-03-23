@@ -90,6 +90,7 @@ namespace Plugin {
             RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
             if (remoteConnection) {
                 _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
+                ASSERT(_memory != nullptr);
                 remoteConnection->Release();
             }
 
