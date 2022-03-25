@@ -299,7 +299,7 @@ namespace Plugin {
             ExternalAccess & operator= ( ExternalAccess const & ) = delete;
 
             ExternalAccess ( CompositorImplementation & , Core::NodeId const & , string const & , Core::ProxyType < RPC::InvokeServer > const & );
-            ~ExternalAccess () override = default;
+            ~ExternalAccess () override;
 
         private :
 
@@ -411,6 +411,12 @@ namespace Plugin {
 
             valid_t Initialize ();
             void DeInitialize ();
+
+            static_assert ( std::is_pointer < dpy_t > :: value != false );
+            static constexpr dpy_t InvalidDisplay () { return nullptr ; }
+
+            static_assert ( std::is_pointer < surf_t > :: value != false );
+            static constexpr surf_t InvalidSurface () { return nullptr ; }
         };
 
 
@@ -997,6 +1003,7 @@ namespace Plugin {
         string Port () const override;
 
         IClient * CreateClient ( string const & , uint32_t const , uint32_t const ) override;
+        void InvalidateClient ( IClient * ) override;
 
         Exchange::IComposition::ScreenResolution Resolution () const override;
         uint32_t Resolution ( Exchange::IComposition::ScreenResolution const ) override;
@@ -1066,8 +1073,6 @@ namespace Plugin {
         _nativeSurface = { ModeSet::GBM::InvalidBuf () , ModeSet::GBM::InvalidFd () , ModeSet::GBM::InvalidFd () , WPEFramework::Plugin::EGL::InvalidImage () };
 
         _compositor . Release ();
-
-        _compositor . Detached ( _name );
     }
 
     RPC::instance_id ClientSurface::Native () const {
@@ -1103,7 +1108,8 @@ namespace Plugin {
         static struct flock fl = init ();
 
         // Operates on i-node
-        bool ret = _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd () && fcntl ( _nativeSurface . _sync_fd , F_SETLKW ,  & fl ) != -1;
+        bool ret =    _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd ()
+                   && fcntl ( _nativeSurface . _sync_fd , F_SETLKW ,  & fl ) != -1;
 
         assert ( ret != false );
 
@@ -1125,7 +1131,8 @@ namespace Plugin {
 
         static struct flock fl = init ();
 
-        bool ret = _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd ()  && fcntl ( _nativeSurface . _sync_fd , F_SETLK , & fl ) != -1;
+        bool ret =    _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd ()
+                   && fcntl ( _nativeSurface . _sync_fd , F_SETLK , & fl ) != -1;
 
         assert ( ret != false );
 
@@ -1170,7 +1177,8 @@ namespace Plugin {
         }
     }
 
-
+    CompositorImplementation::ExternalAccess::~ExternalAccess () {
+    }
 
     void * CompositorImplementation::ExternalAccess::Aquire ( string const & className , uint32_t const interfaceId , uint32_t const version ) {
         silence ( className );
@@ -1179,7 +1187,6 @@ namespace Plugin {
         // Use the className to check for multiple HDMI's. 
         return ( _parent . QueryInterface ( interfaceId ) );
     }
-
 
 
 
@@ -1195,7 +1202,7 @@ namespace Plugin {
     CompositorImplementation::DMATransfer::~DMATransfer () {
         Stop ();
 
-        /* bool */ Wait ( WPEFramework::Core::Thread::BLOCKED | WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
+        /* bool */ Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
 
         /* valid_t */ Deinit ();
     }
@@ -1666,7 +1673,7 @@ namespace Plugin {
         static_assert ( std::is_pointer < dpy_t > :: value != false );
 // TODO: return type Open
         ret =    _set . Open ("") == Core::ERROR_NONE
-              && Display () != nullptr;
+              && Display () != InvalidDisplay ();
 
         using width_t = decltype ( std::declval < ModeSet > () . Width () );
         using height_t = decltype ( std::declval < ModeSet > () . Height () );
@@ -1676,7 +1683,7 @@ namespace Plugin {
 
         if ( ret != false ) {
             _surf = _set . CreateRenderTarget ( width , height );
-            ret = _surf != nullptr;
+            ret = _surf != InvalidSurface ();
         }
 
         if ( ret != true ) {
@@ -1692,7 +1699,7 @@ namespace Plugin {
     void CompositorImplementation::Natives::DeInitialize () {
         _valid = false;
 
-        if ( _surf != nullptr ) {
+        if ( _surf != InvalidSurface () ) {
             _set . DestroyRenderTarget ( _surf );
         }
     }
@@ -2970,9 +2977,9 @@ namespace Plugin {
         // Consume any error
         /* EGLint */ eglGetError ();
 
-        /* bool */ Wait ( WPEFramework::Core::Thread::STOPPED | WPEFramework::Core::Thread::BLOCKED , WPEFramework::Core::infinite );
-
         Stop ();
+
+        /* bool */ Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
     }
 
     uint32_t CompositorImplementation::EGL::RenderThread::Worker () {
@@ -2994,6 +3001,8 @@ namespace Plugin {
 
     CompositorImplementation::EGL::SceneRenderer::~SceneRenderer () {
         Stop ();
+
+        /* bool */ Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
     }
 
     CompositorImplementation::EGL::SceneRenderer::timeout_t CompositorImplementation::EGL::SceneRenderer::Worker ()  {
@@ -3038,6 +3047,8 @@ namespace Plugin {
 
     CompositorImplementation::EGL::TextureRenderer::~TextureRenderer () {
         Stop ();
+
+        /* bool */ Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
     }
 
     void CompositorImplementation::EGL::TextureRenderer::SetClientName ( std::string const & name ) {
@@ -3179,6 +3190,8 @@ namespace Plugin {
             }
 
         }
+
+        client . Release ();
 
         {
             std::lock_guard < decltype ( _access ) > const lock ( _access );
@@ -3901,6 +3914,12 @@ namespace Plugin {
             delete _externalAccess;
             _engine . Release();
         }
+
+        _service -> Release ();
+
+        for ( auto & observer : _observers) {
+           observer -> Release ();
+        }
     }
 
     bool CompositorImplementation::FDFor ( std::string const & name , CompositorImplementation::DMATransfer::fds_t & fds ) {
@@ -3937,7 +3956,8 @@ namespace Plugin {
                 fds [ 0 ] = static_cast < fd_t > ( client -> Native () );
                 fds [ 1 ] = static_cast < fd_t > ( client -> SyncPrimitive () );
 
-                ret = fds  [ 0 ] != DMATransfer::InvalidFD () && fds [ 1 ] != DMATransfer::InvalidFD ();
+                ret =    fds  [ 0 ] != DMATransfer::InvalidFD ()
+                      && fds [ 1 ] != DMATransfer::InvalidFD ();
             }
         }
 
@@ -3968,6 +3988,8 @@ namespace Plugin {
                          + std::to_string ( modifier )
                          ;
         }
+
+        client . Release ();
 
         return ret;
     }
@@ -4112,6 +4134,8 @@ namespace Plugin {
 
         _service = service;
 
+        _service -> AddRef ();
+
         string configuration ( service -> ConfigLine () );
 
         Config config;
@@ -4167,7 +4191,7 @@ namespace Plugin {
         if ( index != _observers . end () ) {
 
             _clients . Visit (
-                [ = ] ( string const & name , Core::ProxyType < ClientSurface > const & element ) { notification -> Attached ( name , & ( * element ) ) ;  }
+                [ = ] ( string const & name , Core::ProxyType < ClientSurface > const & element ) { silence ( element ); notification -> Detached ( name ) ;  }
             );
 
             _observers . erase ( index );
@@ -4244,7 +4268,9 @@ namespace Plugin {
             TRACE ( Trace::Error , ( _T ( "Unable to create the ClientSurface with name %s" ) , name . c_str () ) );
         }
         else {
-            _dma = new DMATransfer ( * this );
+            if ( _dma == nullptr ) {
+                _dma = new DMATransfer ( * this );
+            }
 
             if (    _dma == nullptr
                  || _dma -> Valid () != true
@@ -4256,12 +4282,34 @@ namespace Plugin {
                 _dma = nullptr;
             }
             else {
-                /* void */ _dma -> Run ();
-                /* void */ _sceneRenderer . Run ();
+                if ( _dma -> IsRunning () != true ) {
+                    /* void */ _dma -> Run ();
+                }
+
+                if ( _sceneRenderer . IsRunning () != true ) {
+                    /* void */ _sceneRenderer . Run ();
+                }
             }
         }
 
         return client;
+    }
+
+    void CompositorImplementation::InvalidateClient ( IClient * client ) {
+
+        if ( client != nullptr ) {
+            Core::ProxyType < ClientSurface > object = _clients . Find ( client -> Name () );
+
+            if ( object . IsValid () != false ) {
+
+                Detached ( object -> Name () );
+
+                ClientSurface::surf_t const & surf = object ->  Surface ();
+
+                _gles . SkipEGLImageFromScene ( surf . _khr );
+
+            }
+        }
     }
 
     Exchange::IComposition::ScreenResolution CompositorImplementation::Resolution () const {

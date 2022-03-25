@@ -72,7 +72,7 @@ namespace Plugin {
 
             Job ( SimpleEGLImplementation & , runtype const );
             Job ( Job const & );
-            ~Job () override = default;
+            ~Job () override;
 
             Job & operator= ( Job const & );
 
@@ -162,7 +162,7 @@ namespace Plugin {
 #pragma warning(default : 4355)
 #endif
 
-            ~PluginMonitor () override = default;
+            ~PluginMonitor () override;
 
             void Activated ( string const & , PluginHost::IShell * ) override;
             void Deactivated ( string const & , PluginHost::IShell * ) override;
@@ -428,9 +428,13 @@ namespace Plugin {
         , _type ( copy._type ) {
     }
 
+    WPEFramework::Plugin::SimpleEGLImplementation::Job::~Job () {
+     }
+
     WPEFramework::Plugin::SimpleEGLImplementation::Job & WPEFramework::Plugin::SimpleEGLImplementation::Job::operator= ( Job const & RHS ) {
         _parent = RHS . _parent;
         _type = RHS . _type;
+
         return ( * this );
     }
 
@@ -478,9 +482,9 @@ namespace Plugin {
      WPEFramework::Plugin::SimpleEGLImplementation::~SimpleEGLImplementation () {
         TRACE ( Trace::Information , ( _T ( "Destructing the SimpleEGLImplementation" ) ) );
 
-        Stop (); //Block();
+        Stop ();
 
-        if ( Wait ( Core::Thread::STOPPED | Core::Thread::BLOCKED , _config . _destruct . Value () ) == false ) {
+        if ( Wait ( Core::Thread::STOPPED , _config . _destruct . Value () ) == false ) {
             TRACE ( Trace::Information , ( _T ( "Bailed out before the thread signalled completion. %d ms" ) , _config . _destruct . Value () ) );
         }
 
@@ -510,7 +514,7 @@ namespace Plugin {
 
     string WPEFramework::Plugin::SimpleEGLImplementation::GetURL () const {
         TRACE ( Trace::Information , ( _T ( "Requested URL: [%s]" ) , _requestedURL . c_str () ) );
-        return (_requestedURL);
+        return ( _requestedURL );
     }
 
     uint32_t WPEFramework::Plugin::SimpleEGLImplementation::Configure ( PluginHost::IShell * service ) {
@@ -716,8 +720,11 @@ namespace Plugin {
 
 
     WPEFramework::Plugin::SimpleEGLImplementation::PluginMonitor::PluginMonitor ( SimpleEGLImplementation & parent )
-        : _parent(parent)
-    {}
+        : _parent ( parent ) {
+    }
+
+    WPEFramework::Plugin::SimpleEGLImplementation::PluginMonitor::~PluginMonitor () {
+    }
 
     void WPEFramework::Plugin::SimpleEGLImplementation::PluginMonitor::Activated ( string const & , PluginHost::IShell * service ) {
         Exchange::ITimeSync * time = service -> QueryInterface < Exchange::ITimeSync > ();
@@ -797,7 +804,6 @@ namespace Plugin {
                       ;
 
         if ( ret != false ) {
-            // Trigger the creation of the display, implicit AddRef () on _dpy
             _dpy = Compositor::IDisplay::Instance ( std::string ( Name ) . append ( ":Display" ) , display );
 
             ret = _dpy != InvalidDisplay ();
@@ -808,7 +814,6 @@ namespace Plugin {
         constexpr width_t const width = InvalidWidth ();
 
         if ( ret != false )  {
-            // Trigger the creation of the surfac, implicit AddRef () on _surf!
             _surf = _dpy -> Create ( std::string ( Name ) . append ( ":Surface" ) , width , height );
             ret = _surf != InvalidSurface ();
         }

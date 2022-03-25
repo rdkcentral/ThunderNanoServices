@@ -188,6 +188,7 @@ namespace Plugin {
             message = "Instantiating the compositor failed. Could not load: CompositorImplementation";
         } else {
             _service = service;
+            _service -> AddRef ();
 
             _notification.Initialize(service, _composition);
 
@@ -205,6 +206,8 @@ namespace Plugin {
     /* virtual */ void Compositor::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(service == _service);
+
+        _notification.Deinitialize();
 
         // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
         PluginHost::ISubSystem* subSystems = _service->SubSystems();
@@ -225,12 +228,13 @@ namespace Plugin {
             _brightness->Release();
             _brightness = nullptr;
         }
+
         if (_composition != nullptr) {
             _composition->Release();
             _composition = nullptr;
         }
 
-        _notification.Deinitialize();
+        _service -> Release ();
     }
     /* virtual */ string Compositor::Information() const
     {

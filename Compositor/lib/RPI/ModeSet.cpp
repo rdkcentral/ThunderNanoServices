@@ -382,8 +382,7 @@ namespace WPEFramework {
 
                     if ( _fd != DRM::InvalidFd () ) {
                         bool success = false;
-
-                        printf ( "Test Card: %s\n" , index -> c_str () );
+                        TRACE ( Trace::Information , ( _T ( "Test Card: %s\n" ) , index -> c_str () ) );
                         if (       ( FindProperDisplay ( _fd , _crtc , _encoder , _connector , _fb ) == true )
                                    /* TODO: Changes the original fb which might not be what is intended */
                                 && ( CreateBuffer ( _fd , _connector , _device , _mode , _fb , _buffer , _vrefresh ) == true )
@@ -400,7 +399,7 @@ namespace WPEFramework {
                         }
 
                         if ( success == true ) {
-                            printf ( "Opened Card: %s\n" , index -> c_str () );
+                            TRACE ( Trace::Information , ( _T ( "Opened Card: %s\n" ) , index -> c_str () ) );
                         }
                         else {
                             Close ();
@@ -523,8 +522,9 @@ namespace WPEFramework {
     }
 
     uint32_t ModeSet::Width () const {
+        static_assert ( narrowing < GBM::width_t , uint32_t , true > :: value != true );
         // Derived from modinfo if CreateBuffer was called prior to this
-        uint32_t width = 0;
+        GBM::width_t width = GBM::InvalidWidth ();
 
         if ( GBM::InvalidBuf () != _buffer ) {
             width = gbm_bo_get_width ( _buffer );
@@ -534,8 +534,9 @@ namespace WPEFramework {
     }
 
     uint32_t ModeSet::Height () const {
+        static_assert ( narrowing < GBM::height_t , uint32_t , true > :: value != true );
         // Derived from modinfo if CreateBuffer was called prior to this
-        uint32_t height = 0;
+        GBM::height_t height = GBM::InvalidHeight ();
 
         if ( GBM::InvalidBuf () != _buffer ) {
             height = gbm_bo_get_height ( _buffer );
@@ -571,7 +572,7 @@ namespace WPEFramework {
 
     void ModeSet::DestroyRenderTarget ( struct BufferInfo & buffer ) {
         if ( GBM::InvalidBuf () != buffer . _bo ) {
-            if ( static_cast < uint32_t > ( ~0 ) == buffer . _id ) {
+            if ( buffer . _id != DRM::InvalidFb () ) {
                 drmModeRmFB ( _fd , buffer . _id );
             }
 
@@ -622,7 +623,7 @@ namespace WPEFramework {
     void ModeSet::Swap ( struct BufferInfo & buffer ) {
         assert ( _fd != DRM::InvalidFd () );
 
-        // Lock the a new buffer so we can use it
+        // Lock the new buffer so we can use it
         buffer . _bo = gbm_surface_lock_front_buffer ( buffer . _surface );
 
         if ( buffer . _bo != GBM::InvalidBuf () ) {
@@ -731,12 +732,13 @@ namespace WPEFramework {
                 }
 
                 if (    _fd != DRM::InvalidFd ()
-                     && buffer . _id == DRM::InvalidFb ()
+                     && buffer . _id != DRM::InvalidFb ()
                      && drmModeRmFB ( _fd , buffer . _id ) != 0
                    ) {
                     TRACE ( Trace::Error , ( _T ( "Unable to remove (old) frame buffer." ) ) );
                 }
             }
+
 
             if (    buffer . _surface != GBM::InvalidSurf ()
                  && buffer . _bo != GBM::InvalidBuf ()
@@ -747,7 +749,6 @@ namespace WPEFramework {
             else {
                 TRACE ( Trace::Error , ( _T ( "Unable to release (old) buffer." ) ) );
             }
-
         }
         else {
             TRACE ( Trace::Error , ( _T ( "Unable to obtain a buffer to support scan out." ) ) );
