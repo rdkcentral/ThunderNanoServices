@@ -131,7 +131,7 @@ namespace Plugin {
             }
             JSONObjectFactory(const JSONObjectFactory&);
             JSONObjectFactory& operator=(const JSONObjectFactory&);
-            ~JSONObjectFactory() override = default;
+            ~JSONObjectFactory() = default;
 
        public:
             static JSONObjectFactory& Instance()
