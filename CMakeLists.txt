@@ -232,3 +232,4 @@ if(PLUGIN_DTV)
 endif()
 
 add_subdirectory(examples)
+add_subdirectory(tests)
