@@ -40,7 +40,7 @@ public:
             _jsonDescription.Description = description;
         }
 
-        virtual ~DescriptionBuilder() = default;
+        ~DescriptionBuilder() = default;
 
     private:
         friend class TestBase;
