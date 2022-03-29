@@ -62,7 +62,7 @@ public:
     {
     }
 
-    virtual ~CrashCore() = default;
+    ~CrashCore() = default;
 
     static CrashCore& Instance()
     {

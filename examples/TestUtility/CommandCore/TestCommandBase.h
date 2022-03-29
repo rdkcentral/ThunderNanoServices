@@ -65,7 +65,7 @@ public:
             return (*this);
         }
 
-        virtual ~SignatureBuilder() = default;
+        ~SignatureBuilder() = default;
 
     private:
         friend class TestCommandBase;
@@ -93,7 +93,7 @@ public:
             _jsonDescription.Description = description;
         }
 
-        virtual ~DescriptionBuilder() = default;
+        ~DescriptionBuilder() = default;
 
     private:
         friend class TestCommandBase;
