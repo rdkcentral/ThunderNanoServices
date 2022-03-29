@@ -83,7 +83,7 @@ public:
         BaseClass::Open(waitTime, node, callsign);
         BaseClass::Aquire<Thunder::Exchange::IDictionary>(waitTime, node, callsign);
     }
-    ~Dictionary()
+    ~Dictionary() override
     {
         BaseClass::Close(Thunder::Core::infinite);
     }
@@ -117,7 +117,7 @@ public:
     }
 
 private:
-    void Operational(const bool upAndRunning)
+    void Operational(const bool upAndRunning) override
     {
         printf("Operational state of Dictionary: %s\n", upAndRunning ? _T("true") : _T("false"));
     }
@@ -164,7 +164,7 @@ public:
     }
 
 private:
-    void Operational(const bool upAndRunning)
+    void Operational(const bool upAndRunning) override
     {
         printf("Operational state of PersistentStore: %s\n", upAndRunning ? _T("true") : _T("false"));
     }
@@ -172,6 +172,112 @@ private:
 
 namespace JSONRPC {
 class PersistentStore : public Thunder::JSONRPC::SmartLinkType<Thunder::Core::JSON::IElement> {
+private:
+    class Parameters : public Thunder::Core::JSON::Container {
+    public:
+        Parameters()
+            : Thunder::Core::JSON::Container()
+            , Key()
+            , Value()
+            , NameSpace()
+        {
+            Add(_T("key"), &Key);
+            Add(_T("value"), &Value);
+            Add(_T("namespace"), &NameSpace);
+        }
+        Parameters(const Parameters& copy)
+            : Thunder::Core::JSON::Container()
+            , Key(copy.Key)
+            , Value(copy.Value)
+            , NameSpace(copy.NameSpace)
+        {
+            Add(_T("key"), &Key);
+            Add(_T("value"), &Value);
+            Add(_T("namespace"), &NameSpace);
+        }
+        Parameters(const string& key, const string& value, const string& nameSpace)
+            : Thunder::Core::JSON::Container()
+            , Key()
+            , Value()
+            , NameSpace()
+        {
+            Add(_T("key"), &Key);
+            Add(_T("value"), &Value);
+            Add(_T("namespace"), &NameSpace);
+            if (key.empty() == false) {
+               Key = key;
+            }
+
+            if (value.empty() == false) {
+                Value = value;
+            }
+
+            if (nameSpace.empty() == false) {
+                NameSpace = nameSpace;
+            }
+        }
+        ~Parameters() override = default;
+
+        Parameters& operator=(const Parameters& RHS)
+        {
+            Key = RHS.Key;
+            Value = RHS.Value;
+            NameSpace = RHS.NameSpace;
+
+            return (*this);
+        }
+
+    public:
+        Thunder::Core::JSON::String Key;
+        Thunder::Core::JSON::String Value;
+        Thunder::Core::JSON::String NameSpace;
+    };
+    class Response : public Thunder::Core::JSON::Container {
+    public:
+        Response()
+            : Thunder::Core::JSON::Container()
+            , Value()
+            , Success()
+        {
+            Add(_T("value"), &Value);
+            Add(_T("success"), &Success);
+        }
+        Response(const Response& copy)
+            : Thunder::Core::JSON::Container()
+            , Value(copy.Value)
+            , Success(copy.Success)
+        {
+            Add(_T("value"), &Value);
+            Add(_T("success"), &Success);
+        }
+        Response(const string& value, const bool success)
+            : Thunder::Core::JSON::Container()
+            , Value()
+            , Success()
+        {
+            Add(_T("value"), &Value);
+            Add(_T("success"), &Success);
+            if (value.empty() == false) {
+                Value = value;
+            }
+            Success = success;
+        }
+        ~Response() override = default;
+
+        Response& operator=(const Response& RHS)
+        {
+            Value = RHS.Value;
+            Success = RHS.Success;
+
+            return (*this);
+        }
+
+    public:
+        Thunder::Core::JSON::String Value;
+        Thunder::Core::JSON::Boolean Success;
+    };
+
+
 public:
     PersistentStore(const uint32_t waitTime VARIABLE_IS_NOT_USED, const Thunder::Core::NodeId& node VARIABLE_IS_NOT_USED, const string& callsign VARIABLE_IS_NOT_USED)
         : Thunder::JSONRPC::SmartLinkType<Thunder::Core::JSON::IElement>("PersistentStore.1", "client.monitor.2")
@@ -199,25 +305,25 @@ public:
     }
     bool Get(const string& nameSpace, const string& key, string& value) const
     {
-        JsonObject parameters;
-        parameters["namespace"] = nameSpace;
-        parameters["key"] = key;
-        JsonObject response;
+        Parameters parameters;
+        parameters.NameSpace = nameSpace;
+        parameters.Key = key;
 
-        const_cast<PersistentStore*>(this)->template Invoke<JsonObject, JsonObject>(10000, _T("getValue"), parameters, response);
-        value = response["value"].String();
-        return response["success"].Boolean();
+        Response response;
+        const_cast<PersistentStore*>(this)->template Invoke<Parameters, Response>(10000, _T("getValue"), parameters, response);
+        value = response.Value.Value();
+        return response.Success.Value();
     }
     bool Set(const string& nameSpace, const string& key, const string& value)
     {
-        JsonObject parameters;
-        parameters["namespace"] = nameSpace;
-        parameters["key"] = key;
-        parameters["value"] = value;
-        JsonObject response;
+        Parameters parameters;
+        parameters.NameSpace = nameSpace;
+        parameters.Key = key;
+        parameters.Value = value;
 
-        this->template Invoke<JsonObject, JsonObject>(10000, _T("setValue"), parameters, response);
-        return response["success"].Boolean();
+        Response response;
+        this->template Invoke<Parameters, Response>(10000, _T("setValue"), parameters, response);
+        return response.Success.Value();
     }
 
 private:
@@ -392,7 +498,7 @@ public:
         , _callSign(callSign)
     {
     }
-    virtual ~StorePerformance() = default;
+    ~StorePerformance() = default;
 
 public:
     bool IsOperational()
