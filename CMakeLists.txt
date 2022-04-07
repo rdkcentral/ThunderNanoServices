@@ -59,6 +59,8 @@ option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_DTV "Include DTV plugin" OFF)
 
+find_package(ConfigGenerator)
+
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()

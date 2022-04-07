@@ -1,0 +1,29 @@
+from json_helper import *
+
+config = JSON()
+
+precondition = ["Platform"]
+config.add("precondition", precondition)
+
+config.add("autostart", "@PLUGIN_DISPLAYINFO_AUTOSTART@")
+
+configuration = JSON()
+
+if(JSON.to_bool("@PLUGIN_DISPLAYINFO_USE_BEST_MODE@")):
+    configuration.add("useBestMode", "@PLUGIN_DISPLAYINFO_USE_BEST_MODE@")
+
+configuration.add_non_empty("drmDeviceName", "@PLUGIN_DISPLAYINFO_DRM_DEVICE_NAME@")
+configuration.add_non_empty("drmSubsystemPath", "@PLUGIN_DISPLAYINFO_EDID_FILEPATH@")
+configuration.add_non_empty("hdcpLevelFilepath", "@PLUGIN_DISPLAYINFO_HDCP_LEVEL_FILEPATH@")
+configuration.add_non_empty("hdrLevelFilepath", "@PLUGIN_DISPLAYINFO_HDR_LEVEL_FILEPATH@")
+configuration.add_non_empty("gpuMemoryFile", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_FILE@")
+configuration.add_non_empty("gpuMemoryFreePattern", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_FREE_PATTERN@")
+configuration.add_non_empty("gpuMemoryTotalPattern", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_TOTAL_PATTERN@")
+configuration.add_non_empty("gpuMemoryUnitMultiplier", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_UNIT_MULTIPLIER@")
+configuration.add_non_empty("hdcplevel", "@PLUGIN_DISPLAYINFO_HDCP_LEVEL@")
+
+root = JSON()
+root.add("mode", "@PLUGIN_DISPLAYINFO_MODE@")
+configuration.add("root", root)
+
+config.add("configuration", configuration)

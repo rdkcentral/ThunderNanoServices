@@ -1,0 +1,12 @@
+from json_helper import *
+
+config = JSON()
+
+config.add("autostart", "@PLUGIN_DICTIONARY_AUTOSTART@")
+
+configuration = JSON()
+
+configuration.add("storage", "DataModel.json")
+configuration.add("lingertime", 10)
+
+config.add("configuration", configuration)
