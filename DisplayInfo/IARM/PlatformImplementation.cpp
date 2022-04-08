@@ -69,7 +69,7 @@ public:
 
     DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
     DisplayInfoImplementation& operator= (const DisplayInfoImplementation&) = delete;
-    virtual ~DisplayInfoImplementation()
+    ~DisplayInfoImplementation() override
     {
         IARM_Result_t res;
         IARM_CHECK( IARM_Bus_UnRegisterEventHandler(IARM_BUS_DSMGR_NAME,IARM_BUS_DSMGR_EVENT_RES_PRECHANGE) );

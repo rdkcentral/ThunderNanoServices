@@ -68,7 +68,7 @@ namespace Plugin {
                 Add(_T("egl"), &EGLProvider);
                 Add(_T("clientidentifier"), &ClientIdentifier);
             }
-            ~Config() {}
+            ~Config() override = default;
 
         public:
             Core::JSON::String Url;
@@ -92,7 +92,7 @@ namespace Plugin {
                 , _command(PluginHost::IStateControl::SUSPEND)
             {
             }
-            virtual ~NotificationSink()
+            ~NotificationSink() override
             {
                 Block();
                 Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
@@ -108,7 +108,7 @@ namespace Plugin {
             }
 
         private:
-            virtual uint32_t Worker()
+            uint32_t Worker() override
             {
 
                 bool success = false;
@@ -137,8 +137,8 @@ namespace Plugin {
             SceneWindow& operator=(const SceneWindow&) = delete;
 
             struct ICommand {
-                ICommand() : _refCount(1) {}
-                virtual ~ICommand() {}
+                ICommand() : _refCount(1) = default;
+                virtual ~ICommand() = default;
 
                 void AddRef() { _refCount++; }
                 void Release() { if (--_refCount == 0) { delete this; } }
@@ -161,11 +161,10 @@ namespace Plugin {
                     , _status(false)
                     , _signaled(false, true) {
                 }
-                virtual ~SuspendImplementation() {
-                }
+                ~SuspendImplementation() override = default;
 
             public:
-                virtual void Execute() override {
+                void Execute() override {
 
                     if (_parent._view != nullptr) {
                         pxScriptView* realClass = static_cast<pxScriptView*>(_parent._view.getPtr());
@@ -215,11 +214,10 @@ namespace Plugin {
                     : _parent(parent)
                     , _hide(hide) {
                 }
-                virtual ~HideImplementation() {
-                }
+                ~HideImplementation() override = default;
 
             public:
-                virtual void Execute() override {
+                void Execute() override {
                     // JRJR TODO Why aren't these necessary for glut... pxCore bug
                     _parent.setVisibility(!_hide);
                 }
@@ -241,7 +239,7 @@ namespace Plugin {
                 , _fullPath()
             {
             }
-            virtual ~SceneWindow()
+            ~SceneWindow() override
             {
                 Stop();
                 Quit();
@@ -436,7 +434,7 @@ namespace Plugin {
                 return (_animationFPS);
             }
 
-            virtual void onClose() override
+            void onClose() override
             {
             }
 
@@ -447,18 +445,18 @@ namespace Plugin {
                 command->Execute();
                 command->Release();
             }
-            virtual void* getInterface(const char* /* name */) override
+            void* getInterface(const char* /* name */) override
             {
                 return nullptr;
             }
-            virtual void onCreate() override 
+            void onCreate() override
             {
             }
-            virtual void invalidateRect(pxRect* r) override
+            void invalidateRect(pxRect* r) override
             {
                 pxWindow::invalidateRect(r);
             }
-            virtual void onCloseRequest() override
+            void onCloseRequest() override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -473,7 +471,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onAnimationTimer() override
+            void onAnimationTimer() override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -483,7 +481,7 @@ namespace Plugin {
                 script.pump();
             }
 
-            virtual void onSize(int32_t w, int32_t h) override
+            void onSize(int32_t w, int32_t h) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -492,7 +490,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onMouseDown(int32_t x, int32_t y, uint32_t flags) override
+            void onMouseDown(int32_t x, int32_t y, uint32_t flags) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -500,7 +498,7 @@ namespace Plugin {
                 }
                 EXITSCENELOCK();
             }
-            virtual void onMouseUp(int32_t x, int32_t y, uint32_t flags) override
+            void onMouseUp(int32_t x, int32_t y, uint32_t flags) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -509,7 +507,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onMouseLeave() override
+            void onMouseLeave() override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -518,7 +516,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onMouseMove(int32_t x, int32_t y) override
+            void onMouseMove(int32_t x, int32_t y) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -527,7 +525,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onKeyDown(uint32_t keycode, uint32_t flags) override
+            void onKeyDown(uint32_t keycode, uint32_t flags) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -536,7 +534,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onKeyUp(uint32_t keycode, uint32_t flags) override
+            void onKeyUp(uint32_t keycode, uint32_t flags) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -545,7 +543,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onChar(uint32_t character) override
+            void onChar(uint32_t character) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -554,7 +552,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onDraw(pxSurfaceNative) override
+            void onDraw(pxSurfaceNative) override
             {
                 context.updateRenderTick();
                 ENTERSCENELOCK();
@@ -564,7 +562,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onMouseEnter() override
+            void onMouseEnter() override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -573,7 +571,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onFocus() override
+            void onFocus() override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -582,7 +580,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onBlur() override
+            void onBlur() override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -591,7 +589,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onScrollWheel(float dx, float dy) override
+            void onScrollWheel(float dx, float dy) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -600,7 +598,7 @@ namespace Plugin {
                 EXITSCENELOCK();
             }
 
-            virtual void onDragDrop(int32_t x, int32_t y, int32_t type, const char* dropped) override
+            void onDragDrop(int32_t x, int32_t y, int32_t type, const char* dropped) override
             {
                 ENTERSCENELOCK();
                 if (_view != nullptr) {
@@ -625,7 +623,7 @@ namespace Plugin {
 
                 return (Core::ERROR_NONE);
             }
-            virtual uint32_t Worker()
+            uint32_t Worker() override
             {
                 ENTERSCENELOCK()
 
@@ -685,11 +683,9 @@ namespace Plugin {
         {
         }
 
-        virtual ~SparkImplementation()
-        {
-        }
+        ~SparkImplementation() override = default;
 
-        virtual uint32_t Configure(PluginHost::IShell* service)
+        uint32_t Configure(PluginHost::IShell* service) override
         {
             uint32_t result = _window.Configure(service);
 
@@ -697,19 +693,23 @@ namespace Plugin {
 
             return (result);
         }
-        virtual void SetURL(const string& URL) override {
+        void SetURL(const string& URL) override
+        {
             _window.SetURL(URL);
         }
-        virtual string GetURL() const override {
+        string GetURL() const override
+        {
             return (_window.GetURL());
         }
-        virtual uint32_t GetFPS() const override {
+        uint32_t GetFPS() const override
+        {
             return (_window.AnimationFPS());
         }
-        virtual void Hide(const bool hidden) {
+        void Hide(const bool hidden) override
+        {
             _window.Hidden(hidden);
         }
-        virtual void Register(Exchange::IBrowser::INotification* sink)
+        void Register(Exchange::IBrowser::INotification* sink) override
         {
             _adminLock.Lock();
 
@@ -722,7 +722,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        virtual void Unregister(Exchange::IBrowser::INotification* sink)
+        void Unregister(Exchange::IBrowser::INotification* sink) override
         {
             _adminLock.Lock();
 
@@ -740,7 +740,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        virtual void Register(PluginHost::IStateControl::INotification* sink)
+        void Register(PluginHost::IStateControl::INotification* sink) override
         {
             _adminLock.Lock();
 
@@ -753,7 +753,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        virtual void Unregister(PluginHost::IStateControl::INotification* sink)
+        void Unregister(PluginHost::IStateControl::INotification* sink) override
         {
             _adminLock.Lock();
 
@@ -770,12 +770,12 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        virtual PluginHost::IStateControl::state State() const
+        PluginHost::IStateControl::state State() const override
         {
             return (_state);
         }
 
-        virtual uint32_t Request(const PluginHost::IStateControl::command command)
+        uint32_t Request(const PluginHost::IStateControl::command command) override
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
@@ -916,24 +916,26 @@ namespace Spark {
             : _main(id == 0 ? Core::ProcessInfo().Id() : id)
         {
         }
-        ~MemoryObserverImpl() {}
+        ~MemoryObserverImpl() override = default;
 
     public:
-        virtual uint64_t Resident() const
+        uint64_t Resident() const override
         {
             return _main.Resident();
         }
-        virtual uint64_t Allocated() const
+        uint64_t Allocated() const override
         {
             return _main.Allocated();
         }
-        virtual uint64_t Shared() const
+        uint64_t Shared() const override
         {
             return _main.Shared();
         }
-        virtual uint8_t Processes() const { return (IsOperational() ? 1 : 0); }
-
-        virtual bool IsOperational() const
+        uint8_t Processes() const override
+        {
+            return (IsOperational() ? 1 : 0);
+        }
+        bool IsOperational() const override
         {
             return _main.IsActive();
         }

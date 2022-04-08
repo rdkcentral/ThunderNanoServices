@@ -25,9 +25,7 @@ namespace Plugin {
 
     constexpr uint32_t WaitForResponse = 2000;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     NTPClient::NTPClient()
         : Core::SocketDatagram(false, Core::NodeId(), Core::NodeId(), 128, 512)
         , _adminLock()
@@ -50,9 +48,7 @@ namespace Plugin {
         _packet.RootDispersion(0x00010000); // Insignificant, 1 second
         _packet.ReferenceID(0x00000000);
     }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
 
     /* virtual */ NTPClient::~NTPClient()
     {

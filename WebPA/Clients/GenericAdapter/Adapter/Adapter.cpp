@@ -43,7 +43,7 @@ public:
         , _attribute(attribute)
     {
     }
-    virtual ~Helper() {}
+    virtual ~Helper() = default;
 
     void UpdateRebootReason(const req_struct*& reqObj);
     WebPAStatus GetParameters(const req_struct*& reqObj, res_struct*& resObj) const;

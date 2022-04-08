@@ -46,7 +46,7 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification() {}
+            ~Notification() override = default;
 
         public:
             virtual void Activated(RPC::IRemoteConnection* process) { _parent.Activated(process); }
@@ -91,7 +91,7 @@ namespace Plugin {
                 Add(_T("testsResults"), &Results);
             }
 
-            ~OverallTestResults() = default;
+            ~OverallTestResults() override = default;
 
         public:
             Core::JSON::ArrayType<TestCore::TestResult> Results;
@@ -110,7 +110,7 @@ namespace Plugin {
             RegisterAll();
         }
 
-        virtual ~TestController()
+        ~TestController() override
         {
             UnregisterAll();
         }

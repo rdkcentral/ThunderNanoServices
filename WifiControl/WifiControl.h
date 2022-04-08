@@ -49,7 +49,7 @@ namespace Plugin {
             }
 
         private:
-            virtual void Dispatch(const WPASupplicant::Controller::events& event) override
+            void Dispatch(const WPASupplicant::Controller::events& event) override
             {
                 _parent.WifiEvent(event);
             }
@@ -445,7 +445,7 @@ namespace Plugin {
                 , _ssid()
             {
             }
-            ~WpsConnect() = default;
+            virtual ~WpsConnect() = default;
 
             uint32_t Invoke(const string& ssid, const JsonData::WifiControl::ConnectParamsData::AutoconnectType actype, const string& pin, const uint32_t walkTime)
             {
@@ -646,9 +646,7 @@ namespace Plugin {
                 Add(_T("wpswalktime"), &WpsWalkTime);
                 Add(_T("wpsdisabled"), &WpsDisabled);
             }
-            virtual ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::String ConnectorDirectory;
@@ -781,9 +779,7 @@ namespace Plugin {
                 Add(_T("networks"), &Networks);
             }
 
-            virtual ~NetworkList()
-            {
-            }
+            ~NetworkList() override = default;
 
         public:
             void Set(WPASupplicant::Network::Iterator& list)
@@ -812,9 +808,7 @@ namespace Plugin {
                 Add(_T("configs"), &Configs);
             }
 
-            virtual ~ConfigList()
-            {
-            }
+            ~ConfigList() override = default;
 
         public:
             void Set(WPASupplicant::Config::Iterator& list)
@@ -836,7 +830,7 @@ namespace Plugin {
     public:
         WifiControl();
 
-        virtual ~WifiControl()
+        ~WifiControl() override
         {
             UnregisterAll();
         }
@@ -844,14 +838,14 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         // Helper methods

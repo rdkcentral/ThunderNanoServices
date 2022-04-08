@@ -35,7 +35,7 @@ namespace Plugin {
         return string();
     }
 
-    /* virtual */ void PerformanceMonitor::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void PerformanceMonitor::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
     }
 

@@ -21,13 +21,15 @@
 
 #include "ThunderInputManager.h"
 #include "ThunderVoiceHandler.h"
-#include <interfaces/IAVSClient.h>
+
 
 #if defined(KWD_PRYON)
-#include <AVS/KWD/AbstractKeywordDetector.h>
+#include <acsdkKWDImplementations/AbstractKeywordDetector.h>
+#include <acsdkKWDProvider/KWDProvider/KeywordDetectorProvider.h>
 #endif
 
 #include <AVS/SampleApp/SampleApplication.h>
+#include <interfaces/IAVSClient.h>
 
 #include <vector>
 
@@ -37,6 +39,9 @@ namespace Plugin {
     class AVSDevice
         : public Exchange::IAVSClient,
           private alexaClientSDK::sampleApp::SampleApplication {
+    private:
+        using MediaPlayerInterface = alexaClientSDK::avsCommon::utils::mediaPlayer::MediaPlayerInterface;
+
     public:
         AVSDevice()
             : _service(nullptr)
@@ -47,7 +52,7 @@ namespace Plugin {
 
         AVSDevice(const AVSDevice&) = delete;
         AVSDevice& operator=(const AVSDevice&) = delete;
-        virtual ~AVSDevice() = default;
+        ~AVSDevice() override = default;
 
     private:
         class Config : public Core::JSON::Container {
@@ -71,7 +76,7 @@ namespace Plugin {
                 Add(_T("enablekwd"), &EnableKWD);
             }
 
-            ~Config() = default;
+            ~Config() override = default;
 
         public:
             Core::JSON::String Audiosource;
@@ -92,16 +97,16 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder);
+        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, const std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& configJsonStreams);
         bool InitSDKLogs(const string& logLevel);
-        bool JsonConfigToStream(std::vector<std::shared_ptr<std::istream>>& streams, const std::string& configFile);
+        bool JsonConfigToStream(std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& streams, const std::string& configFile);
 
     private:
         PluginHost::IShell* _service;
         std::shared_ptr<ThunderInputManager> m_thunderInputManager;
         std::shared_ptr<ThunderVoiceHandler<alexaClientSDK::sampleApp::InteractionManager>> m_thunderVoiceHandler;
 #if defined(KWD_PRYON)
-        std::unique_ptr<alexaClientSDK::kwd::AbstractKeywordDetector> m_keywordDetector;
+        std::unique_ptr<alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector> m_keywordDetector;
 #endif
     };
 

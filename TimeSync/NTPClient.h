@@ -345,7 +345,7 @@ namespace Plugin {
             }
 
         public:
-            virtual void Dispatch() override
+            void Dispatch() override
             {
                 _parent.Dispatch();
             }
@@ -360,20 +360,20 @@ namespace Plugin {
 
     public:
         NTPClient();
-        virtual ~NTPClient();
+        ~NTPClient() override;
 
     public:
         void Initialize(SourceIterator& sources, const uint16_t retries, const uint16_t delay);
-        virtual void Register(Exchange::ITimeSync::INotification* notification) override;
-        virtual void Unregister(Exchange::ITimeSync::INotification* notification) override;
+        void Register(Exchange::ITimeSync::INotification* notification) override;
+        void Unregister(Exchange::ITimeSync::INotification* notification) override;
 
-        virtual uint32_t Synchronize() override;
-        virtual void Cancel() override;
-        virtual string Source() const override;
-        virtual uint64_t SyncTime() const override;
+        uint32_t Synchronize() override;
+        void Cancel() override;
+        string Source() const override;
+        uint64_t SyncTime() const override;
 
         // ITime methods
-        virtual uint64_t TimeSync() const override
+        uint64_t TimeSync() const override
         {
             return SyncTime();
         }
@@ -385,11 +385,11 @@ namespace Plugin {
 
     private:
         // Implement Core::SocketDatagram
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
 
         // Signal a state change, Opened, Closed or Accepted
-        virtual void StateChange() override;
+        void StateChange() override;
 
         void Update();
         void Dispatch();

@@ -43,15 +43,13 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification()
-            {
-            }
+            ~Notification() override = default;
 
         public:
-            virtual void Activated(RPC::IRemoteConnection*)
+            void Activated(RPC::IRemoteConnection*) override
             {
             }
-            virtual void Deactivated(RPC::IRemoteConnection* connection)
+            void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
             }
@@ -299,9 +297,7 @@ namespace Plugin {
         };
 
     public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         Streamer()
             : _skipURL(0)
             , _connectionId(0)
@@ -313,9 +309,7 @@ namespace Plugin {
         {
             RegisterAll();
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
         ~Streamer() override
         {
             UnregisterAll();

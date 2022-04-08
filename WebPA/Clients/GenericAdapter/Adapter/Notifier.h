@@ -51,9 +51,8 @@ private:
             Add(_T("paramValue"), &Value);
             Add(_T("notificationType"), &NotifyType);
         }
-        virtual ~NotifierPayload()
-        {
-        }
+        ~NotifierPayload() override = default;
+
     public:
         Core::JSON::String DeviceID;
         Core::JSON::DecUInt8 Type;
@@ -73,9 +72,7 @@ private:
         {
             Add(_T("notifiers"), &Notifiers);
         }
-        virtual ~NotifierList()
-        {
-        }
+        ~NotifierList() override = default;
 
     public:
         Core::JSON::ArrayType<Core::JSON::String> Notifiers;

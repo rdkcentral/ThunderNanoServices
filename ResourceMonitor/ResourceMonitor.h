@@ -38,9 +38,7 @@ namespace WPEFramework
             {
             }
 
-            virtual ~ResourceMonitor()
-            {
-            }
+            ~ResourceMonitor() override = default;
 
             void Inbound(Web::Request&) override
             {

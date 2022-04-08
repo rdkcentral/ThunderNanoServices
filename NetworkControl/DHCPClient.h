@@ -475,6 +475,7 @@ namespace Plugin {
         };
 
         struct ICallback {
+            virtual ~ICallback() = default;
             virtual void Offered(const Offer&) = 0;
             virtual void Approved(const Offer&) = 0;
             virtual void Rejected(const Offer&) = 0;
@@ -489,7 +490,7 @@ namespace Plugin {
         DHCPClient& operator=(const DHCPClient&) = delete;
 
         DHCPClient(const string& interfaceName, ICallback* callback);
-        virtual ~DHCPClient();
+        ~DHCPClient() override;
 
     public:
         bool HasActiveLease() const {
@@ -631,11 +632,11 @@ namespace Plugin {
 
     private:
         // Methods to extract and insert data into the socket buffers
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
 
         // Signal a state change, Opened, Closed or Accepted
-        virtual void StateChange() override;
+        void StateChange() override;
 
         inline bool IsZero(const uint8_t option[], const uint8_t length) const
         {

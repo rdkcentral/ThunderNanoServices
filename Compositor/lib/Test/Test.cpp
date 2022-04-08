@@ -40,12 +40,8 @@ private:
     Keyboard& operator=(const Keyboard&) = delete;
 
 public:
-    Keyboard()
-    {
-    }
-    virtual ~Keyboard()
-    {
-    }
+    Keyboard() = default;
+    ~Keyboard() override = default;
 
 public:
     virtual void AddRef() const override
