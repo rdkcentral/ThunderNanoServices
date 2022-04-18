@@ -28,7 +28,7 @@ namespace WPEFramework
 
         const string ResourceMonitor::Initialize(PluginHost::IShell *service)
         {
-            string message(EMPTY_STRING);
+            string message;
 
             ASSERT(service != nullptr);
             ASSERT(_service == nullptr);

@@ -35,7 +35,7 @@ namespace Plugin {
         ASSERT(_connectionId == 0);
         ASSERT(_player == nullptr);
 
-        string message(EMPTY_STRING);
+        string message;
         Config config;
         config.FromString(service->ConfigLine());
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());

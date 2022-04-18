@@ -26,7 +26,7 @@ namespace Plugin {
 
     const string Svalbard::Initialize(PluginHost::IShell* service) /* override */ 
     {
-        string message(EMPTY_STRING);
+        string message;
 
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);

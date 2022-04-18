@@ -50,7 +50,7 @@ namespace Plugin {
         ASSERT(_connectionId == 0);
         ASSERT(_state == nullptr);
 
-        string message(EMPTY_STRING);
+        string message;
 
         _service = service;
         _service->AddRef();

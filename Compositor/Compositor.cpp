@@ -156,7 +156,7 @@ namespace Plugin {
 
     /* virtual */ const string Compositor::Initialize(PluginHost::IShell* service)
     {
-        string message(EMPTY_STRING);
+        string message;
         string result;
 
         ASSERT(service != nullptr);

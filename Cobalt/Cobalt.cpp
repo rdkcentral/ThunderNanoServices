@@ -35,7 +35,7 @@ static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(
 const string Cobalt::Initialize(PluginHost::IShell *service)
 {
     Config config;
-    string message(EMPTY_STRING);
+    string message;
 
     ASSERT(service != nullptr);
     ASSERT(_service == nullptr);

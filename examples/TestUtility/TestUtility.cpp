@@ -66,7 +66,7 @@ namespace Plugin {
 
     /* virtual */ const string TestUtility::Initialize(PluginHost::IShell* service)
     {
-        string message = EMPTY_STRING;
+        string message;
         Config config;
 
         ASSERT(service != nullptr);

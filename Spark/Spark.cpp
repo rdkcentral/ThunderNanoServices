@@ -37,7 +37,7 @@ namespace Plugin {
     /* virtual */ const string Spark::Initialize(PluginHost::IShell* service)
     {
         Config config;
-        string message(EMPTY_STRING);
+        string message;
 
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr)

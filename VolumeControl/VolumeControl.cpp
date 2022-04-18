@@ -26,7 +26,7 @@ namespace Plugin {
 
     const string VolumeControl::Initialize(PluginHost::IShell* service)
     {
-        string message(EMPTY_STRING);
+        string message;
 
         ASSERT (_service == nullptr);
         ASSERT (service != nullptr);

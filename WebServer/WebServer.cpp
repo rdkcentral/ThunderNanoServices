@@ -33,7 +33,7 @@ namespace Plugin {
 
     /* virtual */ const string WebServer::Initialize(PluginHost::IShell* service)
     {
-        string message(EMPTY_STRING);
+        string message;
 
         ASSERT(_server == nullptr);
         ASSERT(_memory == nullptr);
@@ -105,6 +105,15 @@ namespace Plugin {
 
         if(_server != nullptr){
 
+            PluginHost::ISubSystem* subSystem = service->SubSystems();
+            if (subSystem != nullptr) {
+                if(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
+                    subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
+                    subSystem->Release();
+                }
+            }
+
+
             if (_memory != nullptr) {
                 _memory->Release();
                 _memory = nullptr;
@@ -124,13 +133,6 @@ namespace Plugin {
                 connection->Release();
             }
 
-            PluginHost::ISubSystem* subSystem = service->SubSystems();
-            if (subSystem != nullptr) {
-                if(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
-                    subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
-                    subSystem->Release();
-                }
-            }
         }
 
         _service->Release();

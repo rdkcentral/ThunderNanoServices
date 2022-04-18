@@ -26,7 +26,7 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
 
 /* virtual */ const string WebPA::Initialize(PluginHost::IShell* service)
 {
-    string message(EMPTY_STRING);
+    string message;
 
     ASSERT(service != nullptr);
     ASSERT(_webpa == nullptr);

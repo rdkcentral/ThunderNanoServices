@@ -65,7 +65,7 @@ namespace Plugin {
     /* virtual */ const string TestController::Initialize(PluginHost::IShell* service)
     {
         /*Assume that everything is OK*/
-        string message = EMPTY_STRING;
+        string message;
         Config config;
 
         ASSERT(service != nullptr);
