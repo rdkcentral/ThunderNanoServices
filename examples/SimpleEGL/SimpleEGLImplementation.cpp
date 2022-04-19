@@ -464,7 +464,6 @@ namespace Plugin {
     }
 
 
-
     WPEFramework::Plugin::SimpleEGLImplementation::SimpleEGLImplementation ()
         : Core::Thread ( 0 , _T ( "SimpleEGLImplementation" ) )
         , _requestedURL ()
@@ -488,6 +487,8 @@ namespace Plugin {
             TRACE ( Trace::Information , ( _T ( "Bailed out before the thread signalled completion. %d ms" ) , _config . _destruct . Value () ) );
         }
 
+        _service -> Release ();
+
         if ( _egl != nullptr ) {
             /* valid_t */ _egl -> DeInitialize ();
             _egl = nullptr;
@@ -500,7 +501,6 @@ namespace Plugin {
 
         if ( _display != nullptr ) {
             _display -> Release ();
-
             _display = nullptr;
         }
 
@@ -541,13 +541,13 @@ namespace Plugin {
 
             _display = nullptr;
 
-            if ( service -> COMLink () != nullptr ) {
+//            if ( service -> COMLink () != nullptr ) {
                 auto composition = service -> QueryInterfaceByCallsign < Exchange::IComposition > ( "Compositor" );
 
                 if ( composition != nullptr ) {
                     _display = composition -> QueryInterface < Exchange::IComposition::IDisplay > ();
 
-                    TRACE( Trace::Information , ( _T ( "Using non-COM-RPC path %p" ) , _display ) );
+//                    TRACE( Trace::Information , ( _T ( "Using non-COM-RPC path %p" ) , _display ) );
 
                     if ( _display != nullptr ) {
                         _natives = & Natives::Instance ( _display );
@@ -562,7 +562,7 @@ namespace Plugin {
 
                     composition -> Release ();
                 }
-            }
+//            }
 
             Run ();
 

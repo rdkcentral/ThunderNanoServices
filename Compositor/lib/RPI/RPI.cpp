@@ -1003,7 +1003,7 @@ namespace Plugin {
         string Port () const override;
 
         IClient * CreateClient ( string const & , uint32_t const , uint32_t const ) override;
-        void InvalidateClient ( IClient * ) override;
+        void InvalidateClient ( string const & ) override;
 
         Exchange::IComposition::ScreenResolution Resolution () const override;
         uint32_t Resolution ( Exchange::IComposition::ScreenResolution const ) override;
@@ -1066,7 +1066,7 @@ namespace Plugin {
             /* int */ close ( _nativeSurface . _sync_fd );
         }
 
-        if ( _nativeSurface . Valid () != false ) {
+        if ( _nativeSurface . _buf != ModeSet::GBM::InvalidBuf () ) {
             _modeSet . DestroyBufferObject ( _nativeSurface . _buf );
         }
 
@@ -3070,19 +3070,21 @@ namespace Plugin {
 
         EGL::valid_t status = Render () != false;
 
-        if ( status != false ) {
-            Block ();
+        Block ();
 
+        if ( status != false ) {
 // TODO: do not exceed a single frame time for multiple
+
             std::lock_guard < decltype ( _access ) > const lock ( _access );
             if ( queue . size () > 0 ) {
                 static_assert ( std::is_integral < decltype ( ret ) > :: value != false );
                 ret = 0;
             }
+
         }
         else {
 // TODO: Stop () implies no state change possblie anymore.
-            Stop ();
+//            Stop ();
         }
 
         return ret;
@@ -3187,11 +3189,11 @@ namespace Plugin {
 
                 ret =    client -> SyncPrimitiveEnd ()
                       && ret;
+
             }
 
+            client . Release ();
         }
-
-        client . Release ();
 
         {
             std::lock_guard < decltype ( _access ) > const lock ( _access );
@@ -4011,6 +4013,7 @@ namespace Plugin {
     }
 
      bool CompositorImplementation::FrameFlip () {
+
         using milli_t = int64_t;
 
         auto RefreshRateFromResolution = [] ( Exchange::IComposition::ScreenResolution const resolution ) -> milli_t {
@@ -4295,20 +4298,18 @@ namespace Plugin {
         return client;
     }
 
-    void CompositorImplementation::InvalidateClient ( IClient * client ) {
+    void CompositorImplementation::InvalidateClient ( string const & name ) {
 
-        if ( client != nullptr ) {
-            Core::ProxyType < ClientSurface > object = _clients . Find ( client -> Name () );
+        Core::ProxyType < ClientSurface > object = _clients . Find ( name );
 
-            if ( object . IsValid () != false ) {
+        if ( object . IsValid () != false ) {
 
-                Detached ( object -> Name () );
+            Detached ( object -> Name () );
 
-                ClientSurface::surf_t const & surf = object ->  Surface ();
+            ClientSurface::surf_t const & surf = object ->  Surface ();
 
-                _gles . SkipEGLImageFromScene ( surf . _khr );
+            _gles . SkipEGLImageFromScene ( surf . _khr );
 
-            }
         }
     }
 
