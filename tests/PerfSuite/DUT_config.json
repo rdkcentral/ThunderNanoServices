@@ -1,0 +1,29 @@
+{
+  "dutLists": [
+    {
+      "name": "Metrological",
+      "device": "RPI",
+      "type": "BR_RPI",
+      "host": "192.168.1.10",
+      "ssh": {
+        "user": "root",
+        "password": "root"
+      },
+      "logFilePath": "/var/log/messages",
+      "thunderPort": 80
+
+    },
+    {
+      "name": "RDK",
+      "device": "RPI",
+      "type": "RDK_RPI",
+      "host": "192.168.1.11",
+      "ssh": {
+        "user": "root",
+        "password": "root"
+      },
+      "logFilePath": "/var/log/messages",
+      "thunderPort": 55555
+    }
+  ]
+}
