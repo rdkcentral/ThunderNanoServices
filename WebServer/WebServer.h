@@ -29,15 +29,11 @@ namespace Plugin {
 
     class WebServer : public PluginHost::IPlugin {
     private:
-        WebServer(const WebServer&) = delete;
-        WebServer& operator=(const WebServer&) = delete;
 
         class Notification : public RPC::IRemoteConnection::INotification {
-        private:
+        public:
             Notification() = delete;
             Notification(const Notification&) = delete;
-
-        public:
             explicit Notification(WebServer* parent)
                 : _parent(*parent)
             {
@@ -66,9 +62,13 @@ namespace Plugin {
         };
 
     public:
+
+        WebServer(const WebServer&) = delete;
+        WebServer& operator=(const WebServer&) = delete;
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         WebServer()
-            : _service(nullptr)
+            : _connectionId(0)
+            , _service(nullptr)
             , _server(nullptr)
             , _memory(nullptr)
             , _notification(this)

@@ -36,11 +36,11 @@ namespace TestCore {
 
         //  TestControllerImp methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Setup() {
+        void Setup() override {
             //This is overall TestController setup
             //ToDo: Do 'Setup' for ITestController if it is needed
         };
-        virtual void TearDown() {
+        void TearDown() override {
             //This is overall TestController tear down
             //ToDo: Do 'Tear Down' for ITestController if it is needed
         };

@@ -28,16 +28,13 @@ namespace Plugin {
 
     class Streamer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-        Streamer(const Streamer&) = delete;
-        Streamer& operator=(const Streamer&) = delete;
 
         class Notification : public RPC::IRemoteConnection::INotification {
-        private:
+        public:
             Notification() = delete;
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
 
-        public:
             explicit Notification(Streamer* parent)
                 : _parent(*parent)
             {
@@ -65,20 +62,17 @@ namespace Plugin {
         class StreamProxy {
         private:
             class StreamSink : public Exchange::IStream::ICallback {
-            private:
+            public:
                 StreamSink() = delete;
                 StreamSink(const StreamSink&) = delete;
                 StreamSink& operator=(const StreamSink&) = delete;
 
-            public:
                 StreamSink(StreamProxy* parent)
                     : _parent(*parent)
                 {
                     ASSERT(parent != nullptr);
                 }
-                ~StreamSink() override
-                {
-                }
+                ~StreamSink() override = default;
 
             public:
                 void StateChange(const Exchange::IStream::state state) override
@@ -115,9 +109,8 @@ namespace Plugin {
             {
                 ASSERT (_implementation != nullptr);
             }
-            ~StreamProxy()
-            {
-            }
+            ~StreamProxy() = default;
+
             Exchange::IStream* operator->() {
                 return (_implementation);
             }
@@ -149,20 +142,17 @@ namespace Plugin {
         class ControlProxy {
         private:
             class ControlSink : public Exchange::IStream::IControl::ICallback {
-            private:
+            public:
                 ControlSink() = delete;
                 ControlSink(const ControlSink&) = delete;
                 ControlSink& operator=(const ControlSink&) = delete;
 
-            public:
                 ControlSink(ControlProxy* parent)
                     : _parent(*parent)
                 {
                     ASSERT(parent != nullptr);
                 }
-                ~ControlSink() override
-                {
-                }
+                ~ControlSink() override = default;
 
             public:
                 void TimeUpdate(const uint64_t position) override
@@ -193,8 +183,7 @@ namespace Plugin {
                 , _controlSink(this) {
                 ASSERT (_implementation != nullptr);
             }
-            ~ControlProxy() {
-            }
+            ~ControlProxy() = default;
 
             Exchange::IStream::IControl* operator->() {
                 return (_implementation);
@@ -225,11 +214,10 @@ namespace Plugin {
 
     public:
         class Data : public Core::JSON::Container {
-        private:
+        public:
             Data(const Data&) = delete;
             Data& operator=(const Data&) = delete;
 
-        public:
             Data()
                 : Core::JSON::Container()
                 , X()
@@ -268,9 +256,7 @@ namespace Plugin {
                 Add(_T("metadata"), &Metadata);
                 Add(_T("ids"), &Ids);
             }
-            ~Data()
-            {
-            }
+            ~Data() = default;
 
         public:
             Core::JSON::DecUInt32 X;
@@ -297,6 +283,9 @@ namespace Plugin {
         };
 
     public:
+        Streamer(const Streamer&) = delete;
+        Streamer& operator=(const Streamer&) = delete;
+
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         Streamer()
             : _skipURL(0)
@@ -307,13 +296,10 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _streams()
             , _controls()
         {
-            RegisterAll();
         }
 POP_WARNING()
-        ~Streamer() override
-        {
-            UnregisterAll();
-        }
+
+        ~Streamer() override = default;
 
     public:
         BEGIN_INTERFACE_MAP(Streamer)

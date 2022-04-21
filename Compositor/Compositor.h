@@ -30,51 +30,16 @@ namespace WPEFramework {
 namespace Plugin {
     class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-        class Notification : public Exchange::IComposition::INotification {
-        private:
+        class Notification : public Exchange::IComposition::INotification, public RPC::IRemoteConnection::INotification {
+        public:
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
 
-        public:
             Notification(Compositor* parent)
                 : _parent(*parent)
-                , _client()
-                , _service()
             {
             }
             ~Notification() override = default;
-
-            void Initialize(PluginHost::IShell* service, Exchange::IComposition* client)
-            {
-                ASSERT(_service == nullptr);
-                ASSERT(service != nullptr);
-                ASSERT(_client == nullptr);
-                ASSERT(client != nullptr);
-
-                _client = client;
-                _client->AddRef();
-
-                _service = service;
-                _service->AddRef();
-                _client->Register(this);
-            }
-            void Deinitialize()
-            {
-
-                ASSERT(_service != nullptr);
-                ASSERT(_client != nullptr);
-
-                if (_client != nullptr) {
-                    _client->Unregister(this);
-                    _client->Release();
-                    _client = nullptr;
-                }
-
-                if (_service != nullptr) {
-                    _service->Release();
-                    _service = nullptr;
-                }
-            }
 
             //   IComposition INotification methods
             // -------------------------------------------------------------------------------------------------------
@@ -87,14 +52,22 @@ namespace Plugin {
                 _parent.Detached(name);
             }
 
+            //RPC::IRemoteConnection::INotification methods
+            void Activated(RPC::IRemoteConnection* connection) override {
+            }
+
+            void Deactivated(RPC::IRemoteConnection* connection) override
+            {
+                _parent.Deactivated(connection);
+            }
+
             BEGIN_INTERFACE_MAP(PluginSink)
             INTERFACE_ENTRY(Exchange::IComposition::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
             Compositor& _parent;
-            Exchange::IComposition* _client;
-            PluginHost::IShell* _service;
         };
 
     public:
@@ -116,9 +89,7 @@ namespace Plugin {
                 Add(_T("workdir"), &WorkDir);
                 Add(_T("inputswitch"), &InputSwitch);
             }
-            ~Config()
-            {
-            }
+            ~Config() = default;
 
         public:
             Core::JSON::String System;
@@ -127,11 +98,10 @@ namespace Plugin {
         };
 
         class Data : public Core::JSON::Container {
-        private:
+        public:
             Data(const Data&) = delete;
             Data& operator=(const Data&) = delete;
 
-        public:
             Data()
                 : Core::JSON::Container()
                 , Clients()
@@ -160,7 +130,7 @@ namespace Plugin {
         Compositor& operator=(const Compositor&) = delete;
         
         Compositor();
-        ~Compositor() override;
+        ~Compositor() override = default;
 
     public:
         BEGIN_INTERFACE_MAP(Compositor)
@@ -186,6 +156,7 @@ namespace Plugin {
     private:
         void Attached(const string& name, Exchange::IComposition::IClient* client);
         void Detached(const string& name);
+        void Deactivated(RPC::IRemoteConnection* connection);
 
         uint32_t Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;
