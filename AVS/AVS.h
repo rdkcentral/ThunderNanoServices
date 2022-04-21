@@ -143,7 +143,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            ~DialogueNotification() = default;
+            ~DialogueNotification() override = default;
 
             BEGIN_INTERFACE_MAP(DialogueNotification)
             INTERFACE_ENTRY(Exchange::IAVSController::INotification)
@@ -184,7 +184,7 @@ namespace Plugin {
                 Add(_T("enablekwd"), &EnableKWD);
             }
 
-            ~Config() = default;
+            ~Config() override = default;
 
         public:
             Core::JSON::String Audiosource;

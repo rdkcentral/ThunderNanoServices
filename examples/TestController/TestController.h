@@ -91,7 +91,7 @@ namespace Plugin {
                 Add(_T("testsResults"), &Results);
             }
 
-            ~OverallTestResults() = default;
+            ~OverallTestResults() override = default;
 
         public:
             Core::JSON::ArrayType<TestCore::TestResult> Results;

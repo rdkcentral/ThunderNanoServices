@@ -498,9 +498,7 @@ namespace Plugin {
             ChannelMap(const ChannelMap&) = delete;
             ChannelMap& operator=(const ChannelMap&) = delete;
 
-            #ifdef __WINDOWS__
-            #pragma warning(disable : 4355)
-            #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             ChannelMap()
                 : Core::SocketServerType<IncomingChannel>()
                 , _accessor()
@@ -510,9 +508,7 @@ namespace Plugin {
                 , _proxyMap(*this)
             {
             }
-            #ifdef __WINDOWS__
-            #pragma warning(default : 4355)
-            #endif
+POP_WARNING()
             ~ChannelMap()
             {
                 // Start by closing the server thread..

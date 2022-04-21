@@ -34,7 +34,7 @@ namespace Plugin {
             VolumeChangedCallback&& volumeChanged,
             MutedChangedCallback&& mutedChanged);
 
-        virtual ~VolumeControlPlatform() {}
+        virtual ~VolumeControlPlatform() = default;
 
         virtual uint32_t Muted(bool muted) = 0;
         virtual bool Muted() const = 0;

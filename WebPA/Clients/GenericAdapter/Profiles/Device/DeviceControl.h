@@ -36,19 +36,19 @@ public:
 
 public:
     DeviceControl();
-    virtual ~DeviceControl();
+    ~DeviceControl() override;
 
-    virtual bool Initialize() override;
-    virtual bool Deinitialize() override;
+    bool Initialize() override;
+    bool Deinitialize() override;
 
-    virtual FaultCode Parameter(Data& parameter) const override;
-    virtual FaultCode Parameter(const Data& parameter) override;
+    FaultCode Parameter(Data& parameter) const override;
+    FaultCode Parameter(const Data& parameter) override;
 
-    virtual FaultCode Attribute(Data& parameter) const override;
-    virtual FaultCode Attribute(const Data& parameter) override;
+    FaultCode Attribute(Data& parameter) const override;
+    FaultCode Attribute(const Data& parameter) override;
 
-    virtual void SetCallback(IProfileControl::ICallback* cb) override;
-    virtual void CheckForUpdates() override;
+    void SetCallback(IProfileControl::ICallback* cb) override;
+    void CheckForUpdates() override;
 
 private:
     NotifierMap _notifier;

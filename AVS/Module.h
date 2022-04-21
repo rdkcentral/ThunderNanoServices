@@ -23,8 +23,8 @@
 #define MODULE_NAME Plugin_AVS
 #endif
 
-#include <WPEFramework/core/core.h>
-#include <WPEFramework/plugins/plugins.h>
+#include <core/core.h>
+#include <plugins/plugins.h>
 
 #undef EXTERNAL
 #define EXTERNAL

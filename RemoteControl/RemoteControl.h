@@ -43,9 +43,7 @@ namespace Plugin {
                 : _parent(parent) 
             {
             }
-            ~Feedback() override 
-            {
-            } 
+            ~Feedback() override = default;
 
         public:
             void Dispatch(const IVirtualInput::KeyData::type type, const uint32_t code)  override {
@@ -92,9 +90,7 @@ namespace Plugin {
                     Add(_T("passon"), &PassOn);
                     Add(_T("settings"), &Settings);
                 }
-                ~Device()
-                {
-                }
+                ~Device() override = default;
 
                 Core::JSON::String Name;
                 Core::JSON::String MapFile;
@@ -181,9 +177,7 @@ namespace Plugin {
                 Add(_T("devices"), &Devices);
             }
 
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::ArrayType<Core::JSON::String> Devices;
@@ -194,7 +188,7 @@ namespace Plugin {
         RemoteControl& operator=(const RemoteControl&) = delete;
 
         RemoteControl();
-        virtual ~RemoteControl();
+        ~RemoteControl() override;
 
         BEGIN_INTERFACE_MAP(RemoteControl)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -231,29 +225,29 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service) override;
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const override;
+        string Information() const override;
 
         //      IWeb methods
         // -------------------------------------------------------------------------------------------------------
         // Whenever a request is received, it might carry some additional data in the body. This method allows
         // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
         // in the body of the request.
-        virtual void Inbound(Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
 
         // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
         // do our thing and to return the result in the response object. Here the actual specific module work,
         // based on a a request is handled.
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         //      IKeyHandler methods
         // -------------------------------------------------------------------------------------------------------
@@ -262,7 +256,7 @@ namespace Plugin {
         // in this plugin. No need to signal this.
         uint32_t KeyEvent(const bool pressed, const uint32_t code, const string& mapName) override;
         // Anounce events from keyproducers to registered clients.
-        virtual void ProducerEvent(const string& producerName, const Exchange::ProducerEvents event) override;
+        void ProducerEvent(const string& producerName, const Exchange::ProducerEvents event) override;
 
         uint32_t AxisEvent(const int16_t x, const int16_t y) override;
         uint32_t PointerButtonEvent(const bool pressed, const uint8_t button) override;
@@ -271,7 +265,7 @@ namespace Plugin {
 
         // Next to handling keys, we also have a number of devices can produce keys. All these key producers have a name.
         // Using the next interface it is possible to retrieve the KeyProducers implemented by ths plugin.
-        virtual Exchange::IKeyProducer* Producer(const string& name) override
+        Exchange::IKeyProducer* Producer(const string& name) override
         {
             Exchange::IKeyProducer* result = nullptr;
 
@@ -292,7 +286,7 @@ namespace Plugin {
             return (result);
         }
 
-        virtual Exchange::IWheelProducer* WheelProducer(const string& name) override
+        Exchange::IWheelProducer* WheelProducer(const string& name) override
         {
             Exchange::IWheelProducer* result = nullptr;
             auto index(Remotes::RemoteAdministrator::Instance().WheelProducers());
@@ -309,7 +303,7 @@ namespace Plugin {
             return (result);
         }
 
-        virtual Exchange::IPointerProducer* PointerProducer(const string& name) override
+        Exchange::IPointerProducer* PointerProducer(const string& name) override
         {
             Exchange::IPointerProducer* result = nullptr;
             auto index(Remotes::RemoteAdministrator::Instance().PointerProducers());
@@ -326,7 +320,7 @@ namespace Plugin {
             return (result);
         }
 
-        virtual Exchange::ITouchProducer* TouchProducer(const string& name) override
+        Exchange::ITouchProducer* TouchProducer(const string& name) override
         {
             Exchange::ITouchProducer* result = nullptr;
             auto index(Remotes::RemoteAdministrator::Instance().TouchProducers());
@@ -346,9 +340,9 @@ namespace Plugin {
         //      IRemoteControl Methods
         // -------------------------------------------------------------------------------------------------------
         // Register for events from RemoteControl plugin originating from key producers.
-        virtual void RegisterEvents(IRemoteControl::INotification* sink) override;
+        void RegisterEvents(IRemoteControl::INotification* sink) override;
         // Unregister for events from RemoteControl originating from key producers.
-        virtual void UnregisterEvents(IRemoteControl::INotification* sink) override;
+        void UnregisterEvents(IRemoteControl::INotification* sink) override;
 
     private:
         uint32_t Load(PluginHost::VirtualInput::KeyMap& map, const string& mappingFile);

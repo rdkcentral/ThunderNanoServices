@@ -95,7 +95,7 @@ public:
         TRACE(Trace::Information, (_T("WebPAImplementation::Construct()")));
     }
 
-    virtual ~WebPAImplementation()
+    ~WebPAImplementation() override
     {
         TRACE(Trace::Information, (_T("WebPAImplementation::Destruct()")));
 
@@ -112,7 +112,7 @@ public:
     END_INTERFACE_MAP
 
     //WebPAService Interface
-    virtual uint32_t Initialize(PluginHost::IShell* service) override
+    uint32_t Initialize(PluginHost::IShell* service) override
     {
         ASSERT(nullptr != service);
 
@@ -215,7 +215,8 @@ public:
         }
     }
 
-    virtual void Deinitialize(PluginHost::IShell* service) {
+    void Deinitialize(PluginHost::IShell* service) override
+    {
 
         _adminLock.Lock();
         // Stop processing of the webpa:
@@ -226,7 +227,8 @@ public:
         _adminLock.Unlock();
     }
 
-    virtual Exchange::IWebPA::IWebPAClient* Client(const std::string& name) override {
+    Exchange::IWebPA::IWebPAClient* Client(const std::string& name) override
+    {
 
         Exchange::IWebPA::IWebPAClient* webpaClient = nullptr;
 
@@ -243,7 +245,7 @@ public:
     }
 
 private:
-    virtual uint32_t Worker()
+    uint32_t Worker() override
     {
         TRACE(Trace::Information, (string(__FUNCTION__)));
         uint16_t size = _options.BlockSize();

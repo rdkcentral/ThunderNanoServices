@@ -51,7 +51,7 @@ private:
             Run();
             printf("%s constructed. Line: %d\n", __PRETTY_FUNCTION__,  __LINE__);
         }
-        virtual ~NotificationCallback()
+        ~NotificationCallback() override
         {
             Stop();
             _signaled.SetEvent();
@@ -59,10 +59,10 @@ private:
             Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
             TRACE(Trace::Information, (_T("%s destructed. Line: %d"), __PRETTY_FUNCTION__, __LINE__));
         }
-        virtual void NotifyEvent() override;
+        void NotifyEvent() override;
 
     private:
-    virtual uint32_t Worker();
+        uint32_t Worker() override;
 
     private:
         Adapter* _parent;

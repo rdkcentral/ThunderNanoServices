@@ -34,7 +34,7 @@ namespace A2DP {
         using type = Exchange::IBluetoothAudioSink::audiocodec;
         using StreamFormat = Exchange::IBluetoothAudioSink::IControl::Format;
 
-        virtual ~IAudioCodec() { }
+        virtual ~IAudioCodec() = default;
 
         virtual type Type() const = 0;
 

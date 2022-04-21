@@ -45,10 +45,10 @@ namespace Plugin {
             }
 
         public:
-            virtual void Activated(RPC::IRemoteConnection* /* connection */)
+            void Activated(RPC::IRemoteConnection* /* connection */)
             {
             }
-            virtual void Deactivated(RPC::IRemoteConnection* connectionId)
+            void Deactivated(RPC::IRemoteConnection* connectionId)
             {
                 _parent.Deactivated(connectionId);
             }
@@ -65,9 +65,7 @@ namespace Plugin {
 
         WebServer(const WebServer&) = delete;
         WebServer& operator=(const WebServer&) = delete;
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         WebServer()
             : _connectionId(0)
             , _service(nullptr)
@@ -76,9 +74,7 @@ namespace Plugin {
             , _notification(this)
         {
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
         ~WebServer() override = default;
 
         BEGIN_INTERFACE_MAP(WebServer)

@@ -55,7 +55,7 @@ namespace TestCore {
             {
             }
 
-            virtual ~Iterator() = default;
+            ~Iterator() override = default;
 
             BEGIN_INTERFACE_MAP(Iterator)
             INTERFACE_ENTRY(Exchange::ITestUtility::ICommand::IIterator)

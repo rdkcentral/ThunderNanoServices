@@ -41,7 +41,7 @@ namespace Plugin {
         _service->Register(&_connectionNotification);
 
         ASSERT(service->PersistentPath() != _T(""));
-        Core::Directory directory((service->PersistentPath() + _T("/db")).c_str());
+        Core::Directory directory((service->PersistentPath() + _T("db")).c_str());
         if (directory.CreatePath() != true) {
             message = _T("Failed to create Persistent Path");
         }

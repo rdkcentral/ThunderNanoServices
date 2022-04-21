@@ -83,7 +83,7 @@ public:
         TRACE(Trace::Information, (_T("CCSP::Construct()")));
     }
 
-    virtual ~CCSP()
+    ~CCSP() override
     {
         TRACE(Trace::Information, (_T("CCSP::Destruct()")));
 
@@ -99,7 +99,7 @@ public:
     END_INTERFACE_MAP
 
     //WebPAClient Interface
-    virtual uint32_t Configure(PluginHost::IShell* service) override
+    uint32_t Configure(PluginHost::IShell* service) override
     {
         ASSERT(nullptr != service);
         Config config;
@@ -119,7 +119,7 @@ public:
         return (Core::ERROR_NONE);
     }
 
-    virtual void Launch() override
+    void Launch() override
     {
         Block();
         Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
@@ -131,7 +131,7 @@ public:
     }
 
 private:
-    virtual uint32_t Worker();
+    uint32_t Worker() override;
 
 private:
     Core::CriticalSection _adminLock;

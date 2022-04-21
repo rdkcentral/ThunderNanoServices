@@ -37,7 +37,7 @@ public:
         TestCore::TestCategory1::Instance().Register(this);
     }
 
-    virtual ~Test1()
+    ~Test1() override
     {
         TestCore::TestCategory1::Instance().Unregister(this);
     }

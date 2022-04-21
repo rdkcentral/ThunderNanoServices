@@ -42,16 +42,16 @@ private:
         {
             ASSERT(nullptr != parent);
         }
-        virtual ~Notification()
+        ~Notification() override
         {
             TRACE(Trace::Information, (_T("WebPA::Notification destructed. Line: %d"), __LINE__));
         }
 
     public:
-        virtual void Activated(RPC::IRemoteConnection* /* connection */)
+        void Activated(RPC::IRemoteConnection* /* connection */) override
         {
         }
-        virtual void Deactivated(RPC::IRemoteConnection* connection)
+        void Deactivated(RPC::IRemoteConnection* connection) override
         {
             _parent.Deactivated(connection);
         }
@@ -68,9 +68,7 @@ public:
     WebPA(const WebPA&) = delete;
     WebPA& operator=(const WebPA&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     WebPA()
         : _skipURL(0)
         , _connectionId(0)
@@ -80,12 +78,8 @@ public:
     {
 
     }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
-    virtual ~WebPA()
-    {
-    }
+POP_WARNING()
+    ~WebPA() override = default;
 
 public:
     BEGIN_INTERFACE_MAP(WebPA)

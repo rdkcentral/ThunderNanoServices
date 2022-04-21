@@ -32,7 +32,7 @@ namespace Plugin {
 
     public:
         SystemdConnector();
-        virtual ~SystemdConnector();
+        ~SystemdConnector() override;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(SystemdConnector)
@@ -42,9 +42,9 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
     };
 
 } // namespace Plugin

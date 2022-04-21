@@ -42,23 +42,6 @@ namespace Plugin {
         init(configuration::ConfigurationNode::getRoot()[CONFIG_KEY_DEFAULT_LOGGER]);
     }
 
-    void ThunderLogger::Trace(const std::string& stringToPrint)
-    {
-        TRACE_L1("AVSClient - %s", stringToPrint.c_str());
-    }
-
-    void ThunderLogger::PrettyTrace(const std::string& stringToPrint)
-    {
-        Trace(stringToPrint);
-    }
-
-    void ThunderLogger::PrettyTrace(std::initializer_list<std::string> lines)
-    {
-        for (const auto& line : lines) {
-            PrettyTrace(line);
-        }
-    }
-
     void ThunderLogger::Log(const std::string& stringToPrint)
     {
         TRACE_GLOBAL(AVSClient, (stringToPrint.c_str()));

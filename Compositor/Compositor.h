@@ -113,7 +113,8 @@ namespace Plugin {
                 Add(_T("width"), &Width);
                 Add(_T("height"), &Height);
             }
-            ~Data() = default;
+
+            ~Data() override = default;
 
         public:
             Core::JSON::ArrayType<Core::JSON::String> Clients;
@@ -129,7 +130,7 @@ namespace Plugin {
         Compositor& operator=(const Compositor&) = delete;
         
         Compositor();
-        virtual ~Compositor() = default;
+        ~Compositor() override = default;
 
     public:
         BEGIN_INTERFACE_MAP(Compositor)

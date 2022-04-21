@@ -50,7 +50,7 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            ~Notification() = default;
+            ~Notification() override = default;
 
         public:
             void Activated(RPC::IRemoteConnection* process VARIABLE_IS_NOT_USED) override { /*_parent.Activated(process);*/ }
