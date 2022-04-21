@@ -187,6 +187,10 @@ namespace Plugin {
             {
                 return (Name());
             }
+            type Type() const override
+            {
+                return type::JOYSTICK;
+            }
             bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
             {
                 if (type == EV_REL) {
@@ -249,6 +253,10 @@ namespace Plugin {
             string MetaData() const override
             {
                 return (Name());
+            }
+            type Type() const override
+            {
+                return type::MOUSE;
             }
             bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
             {
@@ -371,6 +379,10 @@ namespace Plugin {
             string MetaData() const override
             {
                 return (Name());
+            }
+            type Type() const override
+            {
+                return type::TOUCH;
             }
             bool HandleInput(uint16_t code, uint16_t type, int32_t value) override
             {
@@ -781,8 +793,8 @@ namespace Plugin {
 ENUM_CONVERSION_BEGIN(Plugin::LinuxDevice::type)
     { Plugin::LinuxDevice::type::NONE, _TXT("NONE") },
     { Plugin::LinuxDevice::type::KEYBOARD, _TXT("KEYBOARD") },
-    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("MOUSE") },
-    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("JOYSTICK") },
-    { Plugin::LinuxDevice::type::KEYBOARD, _TXT("TOUCH") },
+    { Plugin::LinuxDevice::type::MOUSE, _TXT("MOUSE") },
+    { Plugin::LinuxDevice::type::JOYSTICK, _TXT("JOYSTICK") },
+    { Plugin::LinuxDevice::type::TOUCH, _TXT("TOUCH") },
     ENUM_CONVERSION_END(Plugin::LinuxDevice::type);
 }
