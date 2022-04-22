@@ -1,11 +1,6 @@
-from json_helper import *
-
-config = JSON()
-
 precondition = ["Platform"]
-config.add("precondition", precondition)
 
-config.add("autostart", "@PLUGIN_DISPLAYINFO_AUTOSTART@")
+autosart = "@PLUGIN_DISPLAYINFO_AUTOSTART@"
 
 configuration = JSON()
 
@@ -26,4 +21,3 @@ root = JSON()
 root.add("mode", "@PLUGIN_DISPLAYINFO_MODE@")
 configuration.add("root", root)
 
-config.add("configuration", configuration)
