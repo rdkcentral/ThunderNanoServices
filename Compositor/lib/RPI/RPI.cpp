@@ -405,6 +405,8 @@ namespace Plugin {
             dpy_t Display () const { return _set . UnderlyingHandle () ; }
             surf_t Surface () const { return _surf ; }
 
+            valid_t Invalidate ();
+
             valid_t Valid () const { return _valid ; }
 
         private :
@@ -851,6 +853,8 @@ namespace Plugin {
             static img_t CreateImage ( EGL const & , ClientSurface::surf_t const & );
             static img_t DestroyImage ( EGL const & , ClientSurface::surf_t const & );
 
+            valid_t Invalidate ();
+
             valid_t Valid () const { return _valid ; }
 
         private :
@@ -1057,17 +1061,18 @@ namespace Plugin {
 
     ClientSurface::~ClientSurface () {
         // Part of the client is cleaned up via the detached (hook)
+        if ( _nativeSurface . _buf != ModeSet::GBM::InvalidBuf () ) {
+            _modeSet . DestroyBufferObject ( _nativeSurface . _buf );
+        }
 
         if ( _nativeSurface . _fd != ModeSet::GBM::InvalidFd () ) {
-            /* int */ close ( _nativeSurface . _fd );
+            int ret = close ( _nativeSurface . _fd );
+            assert ( ret != -1 );
         }
 
         if ( _nativeSurface . _sync_fd != ModeSet::GBM::InvalidFd () ) {
-            /* int */ close ( _nativeSurface . _sync_fd );
-        }
-
-        if ( _nativeSurface . _buf != ModeSet::GBM::InvalidBuf () ) {
-            _modeSet . DestroyBufferObject ( _nativeSurface . _buf );
+            int ret = close ( _nativeSurface . _sync_fd );
+            assert ( ret != -1 );
         }
 
         _nativeSurface = { ModeSet::GBM::InvalidBuf () , ModeSet::GBM::InvalidFd () , ModeSet::GBM::InvalidFd () , WPEFramework::Plugin::EGL::InvalidImage () };
@@ -1662,8 +1667,16 @@ namespace Plugin {
     }
 
     CompositorImplementation::Natives::~Natives () {
-        _valid = false;
         DeInitialize ();
+        _valid = false;
+    }
+
+    CompositorImplementation::Natives::valid_t CompositorImplementation::Natives::Invalidate () {
+        valid_t ret = true;
+
+        DeInitialize ();
+
+        return ret;
     }
 
     CompositorImplementation::Natives::valid_t CompositorImplementation::Natives::Initialize () {
@@ -1702,6 +1715,8 @@ namespace Plugin {
         if ( _surf != InvalidSurface () ) {
             _set . DestroyRenderTarget ( _surf );
         }
+
+        _set . Close ();
     }
 
 
@@ -2972,11 +2987,6 @@ namespace Plugin {
     }
 
     CompositorImplementation::EGL::RenderThread::~RenderThread () {
-        /* EGLBoolean */ eglMakeCurrent ( _egl . Display () , EGL_NO_SURFACE , EGL_NO_SURFACE, EGL_NO_CONTEXT );
-
-        // Consume any error
-        /* EGLint */ eglGetError ();
-
         Stop ();
 
         /* bool */ Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
@@ -3213,8 +3223,8 @@ namespace Plugin {
     {}
 
     CompositorImplementation::EGL::~EGL () {
-        _valid = false;
         DeInitialize ();
+        _valid = false;
     }
 
     EGL::img_t CompositorImplementation::EGL::CreateImage ( EGL const & egl , ClientSurface::surf_t const & surf ) {
@@ -3378,6 +3388,7 @@ namespace Plugin {
 
                     static_assert ( std::is_convertible < decltype ( surf . _buf ) , EGLClientBuffer > :: value != false );
                     ret = peglCreateImage ( egl . Display () , EGL_NO_CONTEXT , EGL_LINUX_DMA_BUF_EXT , nullptr , _attrs );
+
                 }
             }
             else {
@@ -3428,6 +3439,14 @@ namespace Plugin {
         else {
             TRACE_WITHOUT_THIS ( Trace::Error , _T ( "EGL is not properly initialized." ) );
         }
+
+        return ret;
+    }
+
+    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Invalidate () {
+        valid_t ret = true;
+
+        DeInitialize ();
 
         return ret;
     }
@@ -3541,7 +3560,7 @@ namespace Plugin {
             };
 
             _surf = eglCreateWindowSurface ( _dpy , _conf , _natives . Surface () , & attr [ 0 ] );
-            ret = _surf != EGL_NO_SURFACE;
+            ret = _surf != EGL::InvalidSurf ();
         }
 
         if ( ret != true ) {
@@ -3552,8 +3571,19 @@ namespace Plugin {
     }
 
     void CompositorImplementation::EGL::DeInitialize () {
+        valid_t ret =    _valid != false
+                      && eglMakeCurrent ( _dpy , EGL::InvalidSurf () , EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
+                      && eglGetError () == EGL_SUCCESS
+                      && eglDestroySurface ( _dpy , _surf ) != FALSE
+                      && eglGetError () == EGL_SUCCESS
+                      && eglDestroyContext ( _dpy , _ctx ) != EGL_FALSE
+                      && eglGetError () == EGL_SUCCESS
+                      && eglTerminate ( _dpy ) != EGL_FALSE
+                      && eglGetError () == EGL_SUCCESS;
+
         _valid = false;
-        /* EGLBoolean */ eglTerminate ( _dpy );
+
+        silence ( ret );
     }
 
     // Although compile / build time may succeed, runtime checks are also mandatory
@@ -3603,7 +3633,7 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
              // Avoid any memory leak if the local thread is stopped (by another thread)
-            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+            ret =    eglMakeCurrent ( _dpy , EGL::InvalidSurf () , EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
                   && ret
                   ;
         }
@@ -3643,7 +3673,7 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
-            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+            ret =    eglMakeCurrent ( _dpy , EGL::InvalidSurf () , EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
                   && ret
                   ;
         }
@@ -3683,7 +3713,7 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
-            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+            ret =    eglMakeCurrent ( _dpy , EGL::InvalidSurf () , EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
                   && ret
                   ;
         }
@@ -3724,7 +3754,7 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+            ret =    eglMakeCurrent ( _dpy , EGL::InvalidSurf () , EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
                   && ret
                   ;
         }
@@ -3759,7 +3789,7 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+            ret =    eglMakeCurrent ( _dpy , EGL::InvalidSurf () , EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
                   && ret
                   ;
         }
@@ -3792,7 +3822,7 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+            ret =    eglMakeCurrent ( _dpy , EGL::InvalidSurf (), EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
                   && ret
                   ;
         }
@@ -3819,7 +3849,7 @@ namespace Plugin {
             { WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync ( _dpy ) ; }
 
             // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
-            ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , EGL_NO_CONTEXT ) != EGL_FALSE
+            ret =    eglMakeCurrent ( _dpy , EGL::InvalidSurf () , EGL::InvalidSurf () , EGL::InvalidCtx () ) != EGL_FALSE
                   && ret
                   ;
         }
@@ -3903,6 +3933,10 @@ namespace Plugin {
         _sceneRenderer . Stop ();
 
         /* bool */ _sceneRenderer . Wait ( WPEFramework::Core::Thread::STOPPED , WPEFramework::Core::infinite );
+
+        /* valid_t ret = */ _egl . Invalidate ();
+
+        /* valid_t ret = */ _natives . Invalidate ();
 
         if ( _dma != nullptr ) {
             delete _dma;
@@ -4310,6 +4344,8 @@ namespace Plugin {
 
             _gles . SkipEGLImageFromScene ( surf . _khr );
 
+// TODO: Const object contains invalid member
+           /*  surf . _khr = */ EGL::DestroyImage ( _egl , surf );
         }
     }
 

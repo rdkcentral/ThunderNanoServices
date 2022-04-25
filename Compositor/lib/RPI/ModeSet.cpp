@@ -448,7 +448,8 @@ namespace WPEFramework {
         }
 
         if ( _fd != DRM::InvalidFd () ) {
-            close ( _fd );
+            /* int */ drmDropMaster ( _fd );
+            /* int */ close ( _fd );
             _fd = DRM::InvalidFd ();
         }
 

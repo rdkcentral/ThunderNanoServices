@@ -1297,8 +1297,14 @@ namespace Plugin {
     WPEFramework::Plugin::SimpleEGLImplementation::EGL::valid_t WPEFramework::Plugin::SimpleEGLImplementation::EGL::DeInitialize () {
         _valid = false;
 
-        valid_t ret =    eglTerminate ( _dpy ) != EGL_FALSE
-                      && eglGetError () == EGL_SUCCESS;;
+        valid_t ret =    eglMakeCurrent ( _dpy , EGL_NO_SURFACE , EGL_NO_SURFACE , _cont ) != EGL_FALSE
+                      && eglGetError () == EGL_SUCCESS
+                      && eglDestroySurface ( _dpy , _surf ) != FALSE
+                      && eglGetError () == EGL_SUCCESS
+                      && eglDestroyContext ( _dpy , _cont ) != EGL_FALSE
+                      && eglGetError () == EGL_SUCCESS
+                      && eglTerminate ( _dpy ) != EGL_FALSE
+                      && eglGetError () == EGL_SUCCESS;
         return ret;
     }
 
@@ -1308,9 +1314,6 @@ namespace Plugin {
     {}
 
     WPEFramework::Plugin::SimpleEGLImplementation::EGL::~EGL () {
-        _valid = false;
-
-        DeInitialize ();
     }
 
     WPEFramework::Plugin::SimpleEGLImplementation::EGL::valid_t WPEFramework::Plugin::SimpleEGLImplementation::EGL::Initialize () {
