@@ -230,7 +230,7 @@ namespace Plugin {
                 {
                     response->Body(_textBodies.Element());
                 } 
-                void Send(const Core::ProxyType<Web::Request>& request) override
+                void Send(const Core::ProxyType<Web::Request>& request VARIABLE_IS_NOT_USED) override
                 {
                     std::list<OutstandingMessage>::iterator index(_outstandingMessages.begin());
 

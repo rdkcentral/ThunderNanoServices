@@ -505,7 +505,7 @@ namespace Plugin {
         const string& Interface() const {
             return (_interfaceName);
         }
-        void UpdateMAC(const uint8_t buffer[], const uint8_t size) {
+        void UpdateMAC(const uint8_t buffer[], const uint8_t size VARIABLE_IS_NOT_USED) {
             ASSERT(size == _udpFrame.MACSize);
             _udpFrame.SourceMAC(buffer);
         }
@@ -647,7 +647,7 @@ namespace Plugin {
             return (index == length);
         }
 
-        uint16_t Message(uint8_t stream[], const uint16_t length) const
+        uint16_t Message(uint8_t stream[], const uint16_t length VARIABLE_IS_NOT_USED) const
         {
             CoreMessage& frame(*reinterpret_cast<CoreMessage*>(stream));
 
