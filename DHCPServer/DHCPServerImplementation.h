@@ -504,7 +504,7 @@ namespace Plugin {
             {
                 return (_optionData[2]);
             }
-            inline uint16_t SendData(uint8_t dataFrame[], const uint16_t length)
+            inline uint16_t SendData(uint8_t dataFrame[], const uint16_t length VARIABLE_IS_NOT_USED)
             {
                 ASSERT(length >= (sizeof(_dhcpReply) + _optionSize + 1));
 
