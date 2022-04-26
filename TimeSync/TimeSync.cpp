@@ -74,7 +74,7 @@ POP_WARNING()
         return _T("");
     }
 
-    /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         Core::IWorkerPool::Instance().Revoke(_activity);
         _sink.Deinitialize();

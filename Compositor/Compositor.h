@@ -53,7 +53,7 @@ namespace Plugin {
             }
 
             //RPC::IRemoteConnection::INotification methods
-            void Activated(RPC::IRemoteConnection* connection) override {
+            void Activated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) override {
             }
 
             void Deactivated(RPC::IRemoteConnection* connection) override

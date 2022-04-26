@@ -97,7 +97,7 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
     return message;
 }
 
-void Cobalt::Deinitialize(PluginHost::IShell *service)
+void Cobalt::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
 {
     ASSERT(_service == service);
 
