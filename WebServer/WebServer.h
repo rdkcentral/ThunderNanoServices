@@ -27,10 +27,10 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class WebServer : public PluginHost::IPlugin {
+    class WebServer : public PluginHost::IPlugin, public PluginHost::IWeb{
     private:
 
-        class Notification : public RPC::IRemoteConnection::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification, public PluginHost::IStateControl::INotification {
         public:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -53,8 +53,14 @@ namespace Plugin {
                 _parent.Deactivated(connectionId);
             }
 
+
+            void StateChange(const PluginHost::IStateControl::state state) override {
+                _parent.StateChange(state);
+            }
+
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            INTERFACE_ENTRY (PluginHost::IStateControl::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -79,6 +85,7 @@ POP_WARNING()
 
         BEGIN_INTERFACE_MAP(WebServer)
         INTERFACE_ENTRY(IPlugin)
+        INTERFACE_ENTRY(IWeb)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(Exchange::IWebServer, _server)
         INTERFACE_AGGREGATE(PluginHost::IStateControl, _server)
@@ -104,6 +111,14 @@ POP_WARNING()
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
         string Information() const override;
+
+        void StateChange(PluginHost::IStateControl::state);
+
+
+        //  IWeb methods
+        // -------------------------------------------------------------------------------------------------------
+        void Inbound(Web::Request &request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request &request) override;
 
     private:
         void Deactivated(RPC::IRemoteConnection* connection);

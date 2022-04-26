@@ -30,6 +30,52 @@ namespace WebServer {
 namespace Plugin {
 
     SERVICE_REGISTRATION(WebServer, 1, 0);
+    void WebServer::Inbound(Web::Request &request)
+    {
+    }
+
+    Core::ProxyType<Web::Response> WebServer::Process(const Web::Request &request)
+    {
+        Core::ProxyType < Web::Response
+                > result(PluginHost::IFactories::Instance().Response());
+
+        Core::TextSegmentIterator index(
+                Core::TextFragment(request.Path, _skipURL,
+                        request.Path.length() - _skipURL), false, '/');
+
+        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+        result->Message = "Unknown error";
+
+        if (request.Verb == Web::Request::HTTP_POST) {
+            // We might be receiving a plugin download request.
+            if ((index.Next() == true) && (index.Next() == true)
+                    && (_server != nullptr)) {
+                PluginHost::IStateControl *stateControl(
+                        _server->QueryInterface<PluginHost::IStateControl>());
+                if (stateControl != nullptr) {
+                    result->ErrorCode = Web::STATUS_OK;
+                    result->Message = "OK";
+                    if (index.Remainder() == _T("Suspend")) {
+                        stateControl->Request(PluginHost::IStateControl::SUSPEND);
+                    } else if (index.Remainder() == _T("Resume")) {
+                        stateControl->Request(PluginHost::IStateControl::RESUME);
+                    } else {
+                        result->ErrorCode = Web::STATUS_BAD_REQUEST;
+                        result->Message = "Unknown error";
+                    }
+                    stateControl->Release();
+                }
+            }
+        }
+        return result;
+    }
+    void WebServer::StateChange(PluginHost::IStateControl::state state) {
+        if(state == PluginHost::IStateControl::RESUMED) {
+            _service->Notify("{ \"suspended\":false }");
+        } else if (state == PluginHost::IStateControl::SUSPENDED) {
+            _service->Notify("{ \"suspended\":true }");
+        }
+    }
 
     /* virtual */ const string WebServer::Initialize(PluginHost::IShell* service)
     {
