@@ -83,7 +83,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void PlayerInfo::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void PlayerInfo::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(service == _service);
 
