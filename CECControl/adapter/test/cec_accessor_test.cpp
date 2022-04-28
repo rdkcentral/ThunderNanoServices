@@ -1,0 +1,343 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2022 Metrological
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef MODULE_NAME
+#define MODULE_NAME CECAccessorTest
+#endif
+
+#include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <stdarg.h>
+#include <thread>
+#include <time.h>
+
+#include <CECAdapter.h>
+#include <CECIAccessor.h>
+#include <CECProcessor.h>
+#include <Messages.h>
+
+#include <core/core.h>
+#include <localtracer/localtracer.h>
+// #include <messaging/messaging.h>
+#include <tracing/tracing.h>
+
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
+
+using namespace WPEFramework::CEC;
+using namespace WPEFramework;
+
+namespace {
+struct conversion_entry {
+    int from; // Local value
+    int to; // External value
+};
+
+static constexpr conversion_entry _tableDevType[] = {
+    { .from = 1, .to = CEC_DEVICE_TV },
+    { .from = 2, .to = CEC_DEVICE_RECORDER },
+    { .from = 3, .to = CEC_DEVICE_TUNER },
+    { .from = 4, .to = CEC_DEVICE_PLAYBACK },
+    { .from = 5, .to = CEC_DEVICE_AUDIOSYSTEM },
+    { .from = 6, .to = CEC_DEVICE_SWITCH },
+    { .from = 7, .to = CEC_DEVICE_VIDEOPROCESSOR }
+};
+
+template <size_t N>
+int Convert(const conversion_entry (&table)[N], const int from, const int ifnotfound)
+{
+    uint16_t index = 0;
+    while ((index < N) && (from != table[index].from)) {
+        index++;
+    }
+    return (index < N ? table[index].to : ifnotfound);
+}
+
+class Config : public Core::JSON::Container {
+public:
+    class Interface : public Core::JSON::Container {
+    public:
+        Interface(const Interface& copy)
+            : Name(copy.Name)
+            , Config(copy.Config)
+        {
+        }
+
+        Interface& operator=(const Interface& rhs)
+        {
+            Name = rhs.Name;
+            Config = rhs.Config;
+            return (*this);
+        }
+
+        Interface()
+            : Name()
+            , Config()
+        {
+            Add(_T("name"), &Name);
+            Add(_T("configuration"), &Config);
+        }
+
+        ~Interface() = default;
+
+    public:
+        Core::JSON::String Name;
+        Core::JSON::String Config;
+    };
+
+public:
+    Config(const Config&) = delete;
+    Config& operator=(const Config&) = delete;
+    Config()
+        : Interfaces()
+    {
+        Add(_T("interfaces"), &Interfaces);
+    }
+    ~Config()
+    {
+    }
+
+public:
+    Core::JSON::ArrayType<Core::JSON::String> Interfaces;
+};
+
+// constexpr char topconfig[] = "{\"interfaces\":[\
+//     {\
+//         \"name\":\"hdmi1\",\
+//         \"configuration\":{\"node\":\"/dev/cec0\",\"roles\":[\"recorder\"]}\
+//     },\
+//     {\
+//         \"name\":\"hdmi2\",\
+//         \"configuration\":{\"node\":\"/dev/cec1\",\"roles\":[\"playback\"]}\
+//     }\
+// ]}";
+
+// constexpr char topconfig[] = "{\"interfaces\":[\
+//     {\
+//         \"name\":\"hdmi1\",\
+//         \"configuration\":{\"node\":\"0\",\"roles\":[\"recorder\"]}\
+//     },\
+// ]}";
+
+class App {
+private:
+public:
+    App(const string& filename)
+    {
+        TRACE(Trace::Information, ("Start %s(%p) - config file: %s", __FUNCTION__, this, filename.c_str()));
+
+        WPEFramework::Core::File configFile(filename.c_str());
+
+        if (configFile.Exists() && configFile.Open(true)) {
+            _config.IElement::FromFile(configFile);
+            configFile.Close();
+        } else {
+            std::cerr << "Failed to open " << filename << std::endl << std::flush;
+        }
+
+        auto index(_config.Interfaces.Elements());
+
+        while (index.Next() == true) {
+            Config::Interface iface;
+            iface.FromString(index.Current().Value());
+
+            string name = iface.Name.Value();
+            string config = iface.Config.Value();
+            WPEFramework::CEC::IAccessor::Instance()->Announce(name, config);
+        }
+
+        ShowMenu();
+    }
+
+    ~App()
+    {
+        TRACE(Trace::Information, ("Exit %s", __FUNCTION__));
+
+        auto index(_config.Interfaces.Elements());
+
+        while (index.Next() == true) {
+            Config::Interface iface;
+            iface.FromString(index.Current().Value());
+
+            string name = iface.Name.Value();
+            WPEFramework::CEC::IAccessor::Instance()->Revoke(name);
+        }
+
+        TRACE(Trace::Information, ("Exit %s done...", __FUNCTION__));
+    }
+
+    void Run()
+    {
+        int character;
+
+        do {
+            character = toupper(GetUserInput());
+
+            switch (character) {
+            case 'S': {
+                WPEFramework::CEC::Adapter adapter = WPEFramework::CEC::IAccessor::Instance()->GetAdapter("hdmi1", CEC_DEVICE_RECORDER);
+
+                if (adapter.IsValid()) {
+                    for (uint8_t dest = CEC_LOGICAL_ADDRESS_TV; dest <= CEC_LOGICAL_ADDRESS_SPECIFIC; dest++) {
+                        Message::Version version;
+                        uint32_t r = adapter.Exchange(static_cast<logical_address_t>(dest), version);
+
+                        if (r == Core::ERROR_NONE) {
+                            if (version.Value() == CEC_VERSION_2_0) {
+                                TRACE(Trace::Information, ("Device 0x%02X supports bleeding edge CEC!!!!", dest));
+                            } else {
+                                TRACE(Trace::Information, ("Device 0x%02X supports 0x%02X CEC :-(", dest, version.Value()));
+                            }
+                        } else {
+                            TRACE(Trace::Error, ("Error 0x%02X for device 0x%02X....", r, dest));
+                        }
+                    }
+                } else {
+                    TRACE(Trace::Error, ("Could not find valid adapter"));
+                }
+
+                break;
+            }
+            case 'P': {
+                WPEFramework::CEC::Adapter adapter = WPEFramework::CEC::IAccessor::Instance()->GetAdapter("hdmi1", CEC_DEVICE_RECORDER);
+                if (adapter.IsValid()) {
+                    for (uint8_t dest = CEC_LOGICAL_ADDRESS_TV; dest <= CEC_LOGICAL_ADDRESS_SPECIFIC; dest++) {
+                        Message::Poll poll;
+                        uint32_t r = adapter.Exchange(static_cast<logical_address_t>(dest), poll);
+                        TRACE(Trace::Information, ("Exchange[0x%04X]: Device 0x%02X %s", r, dest, (r == Core::ERROR_NONE) ? "available" : "unavailable"));
+                    }
+                } else {
+                    TRACE(Trace::Error, ("Could not find valid adapter"));
+                }
+                break;
+            }
+            case '?': {
+                ShowMenu();
+                break;
+            }
+            default:
+                break;
+            }
+        } while (character != 'Q');
+    }
+
+private:
+    role_t SelectRole()
+    {
+        int character(CEC_LOGICAL_ADDRESS_UNREGISTERED);
+
+        std::cout << "Choose device type:\n"
+                     "  1 : TV\n"
+                     "  2 : Recorder\n"
+                     "  3 : Tuner\n"
+                     "  4 : Playback\n"
+                     "  5 : Audiosystem\n"
+                     "  6 : Backup\n"
+                     "  7 : Specific\n"
+                  << std::endl
+                  << std::flush;
+
+        character = toupper(GetUserInput());
+
+        uint8_t dev = static_cast<uint8_t>(strtol((char*)&character, NULL, 10));
+
+        return static_cast<role_t>(Convert(_tableDevType, dev, CEC_DEVICE_UNKNOWN));
+    }
+
+    void ShowMenu()
+    {
+        std::cout << "Enter\n"
+                     "  S : Start Device\n"
+                     "  P : Poll all logical addresses\n"
+                     "  ? : Help\n"
+                     "  Q : Quit\n"
+                  << std::endl;
+    }
+
+    char GetUserInput()
+    {
+        char x;
+        std::cin >> x;
+        return x;
+    }
+
+    uint8_t SelectDevice()
+    {
+        int character(CEC_LOGICAL_ADDRESS_UNREGISTERED);
+
+        std::cout << "Choose device type:\n"
+                     "  1 : TV\n"
+                     "  2 : Record\n"
+                     "  3 : Tuner\n"
+                     "  4 : Playback\n"
+                     "  5 : Audiosystem\n"
+                     "  6 : Other\n"
+                  << std::endl;
+
+        character = toupper(GetUserInput());
+
+        return strtol((char*)&character, NULL, 16) & 0x0F;
+    }
+
+private:
+    Config _config;
+    WPEFramework::CEC::role_type _role;
+
+}; // class App
+} // namespace
+
+int main(int argc, const char* argv[])
+{
+    {
+        std::string filename;
+
+        if (argc == 1) {
+            filename = "cec_config.json";
+        } else {
+            filename = argv[1];
+        }
+
+        {
+            Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
+            Messaging::ConsolePrinter printer(false);
+
+            tracer.Callback(&printer);
+            tracer.EnableMessage("CECAdapter", "Information", true);
+            tracer.EnableMessage("CECAdapter", "Error", true);
+            tracer.EnableMessage("CECAccessorTest", "Information", true);
+            tracer.EnableMessage("CECAccessorTest", "Error", true);
+
+            TRACE(Trace::Information, ("%s - build: %s", Core::FileNameOnly(argv[0]), __TIMESTAMP__));
+
+            App app(filename);
+
+            app.Run();
+
+            tracer.Close();
+        }
+
+        std::cout << "Dispose..." << std::endl << std::flush;
+
+        WPEFramework::Core::Singleton::Dispose();
+    }
+
+    std::cout << "Ok, bye! " << std::endl << std::flush;
+
+    return 0;
+}
