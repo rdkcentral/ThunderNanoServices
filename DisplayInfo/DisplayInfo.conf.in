@@ -1,10 +1,10 @@
 precondition = ["Platform"]
 
-autosart = "@PLUGIN_DISPLAYINFO_AUTOSTART@"
+autostart = "@PLUGIN_DISPLAYINFO_AUTOSTART@"
 
 configuration = JSON()
 
-if(JSON.to_bool("@PLUGIN_DISPLAYINFO_USE_BEST_MODE@")):
+if to_bool("@PLUGIN_DISPLAYINFO_USE_BEST_MODE@"):
     configuration.add("useBestMode", "@PLUGIN_DISPLAYINFO_USE_BEST_MODE@")
 
 configuration.add_non_empty("drmDeviceName", "@PLUGIN_DISPLAYINFO_DRM_DEVICE_NAME@")
