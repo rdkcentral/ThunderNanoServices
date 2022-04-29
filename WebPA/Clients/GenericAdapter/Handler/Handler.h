@@ -77,8 +77,7 @@ public:
                 Add("profilename", &ProfileName);
                 Add("profilecontrol", &ProfileControl);
             }
-            virtual ~Link() {
-            }
+            ~Link() override = default;
 
         public:
             Core::JSON::String ProfileName;
@@ -114,9 +113,7 @@ public:
             : _parent(parent)
         {
         }
-        virtual ~NotificationCallback()
-        {
-        }
+        ~NotificationCallback() override = default;
 
         void NotifyEvent(const EventId& eventId, const EventData& eventData);
 
@@ -149,7 +146,7 @@ public:
     uint32_t Configure(PluginHost::IShell* service);
 
 private:
-    virtual uint32_t Worker();
+    uint32_t Worker() override;
     IProfileControl* GetProfileController(const std::string& value);
     const IProfileControl* GetProfileController(const std::string& value) const;
     std::vector<std::string> SplitParam(std::string parameter, char delimeter) const;

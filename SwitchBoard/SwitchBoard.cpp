@@ -25,9 +25,7 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::JSONBodyType<SwitchBoard::Config> > jsonBodySwitchFactory(1);
 
-    #ifdef __WIN32__ 
-    #pragma warning( disable : 4355 )
-    #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     SwitchBoard::SwitchBoard()
         : _skipURL(0)
         , _defaultCallsign(nullptr)
@@ -39,9 +37,7 @@ namespace Plugin {
     {
     }
 
-    #ifdef __WIN32__ 
-    #pragma warning( default : 4355 )
-    #endif
+POP_WARNING()
     /* virtual */ SwitchBoard::~SwitchBoard()
     {
         ASSERT(_service == nullptr);

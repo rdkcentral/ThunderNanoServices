@@ -50,12 +50,11 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification() = default;
+            ~Notification() override = default;
 
         public:
-            virtual void Activated(RPC::IRemoteConnection* process VARIABLE_IS_NOT_USED) { /*_parent.Activated(process);*/ }
-
-            virtual void Deactivated(RPC::IRemoteConnection* process) { _parent.Deactivated(process); }
+            void Activated(RPC::IRemoteConnection* process VARIABLE_IS_NOT_USED) override { /*_parent.Activated(process);*/ }
+            void Deactivated(RPC::IRemoteConnection* process) override { _parent.Deactivated(process); }
 
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
@@ -92,13 +91,9 @@ namespace Plugin {
             , _skipURL(0)
             , _connection(0)
         {
-            RegisterAll();
         }
 
-        virtual ~TestUtility()
-        {
-            UnregisterAll();
-        }
+        ~TestUtility() override = default;
 
         BEGIN_INTERFACE_MAP(TestUtility)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -110,14 +105,14 @@ namespace Plugin {
 
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Deactivated(RPC::IRemoteConnection* process);

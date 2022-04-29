@@ -127,8 +127,8 @@ namespace Plugin {
             return static_cast<uint32_t>(Core::ERROR_UNAVAILABLE);
         }
 
-        m_parent.m_interactionManager->setMute(SpeakerInterface::Type::AVS_SPEAKER_VOLUME, mute);
-        m_parent.m_interactionManager->setMute(SpeakerInterface::Type::AVS_ALERTS_VOLUME, mute);
+        m_parent.m_interactionManager->setMute(ChannelVolumeInterface::Type::AVS_SPEAKER_VOLUME, mute);
+        m_parent.m_interactionManager->setMute(ChannelVolumeInterface::Type::AVS_ALERTS_VOLUME, mute);
 
         return static_cast<uint32_t>(Core::ERROR_NONE);
     }
@@ -160,10 +160,13 @@ namespace Plugin {
     }
 
     void ThunderInputManager::onCapabilitiesStateChange(
-        CapabilitiesObserverInterface::State newState,
-        CapabilitiesObserverInterface::Error newError VARIABLE_IS_NOT_USED)
+        CapabilitiesDelegateObserverInterface::State newState,
+        CapabilitiesDelegateObserverInterface::Error newError VARIABLE_IS_NOT_USED,
+        const std::vector<std::string>& addedOrUpdatedEndpointIds VARIABLE_IS_NOT_USED,
+        const std::vector<std::string>& deletedEndpointIds VARIABLE_IS_NOT_USED)
+
     {
-        m_limitedInteraction = m_limitedInteraction || (newState == CapabilitiesObserverInterface::State::FATAL_ERROR);
+        m_limitedInteraction = m_limitedInteraction || (newState == CapabilitiesDelegateObserverInterface::State::FATAL_ERROR);
     }
 
 } // namespace Plugin

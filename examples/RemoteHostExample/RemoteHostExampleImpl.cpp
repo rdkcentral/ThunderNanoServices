@@ -60,7 +60,7 @@ namespace Exchange {
 
         }
 
-        virtual ~RemoteHostExampleImpl() 
+        ~RemoteHostExampleImpl() override
         {
             Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_timeSubject), Core::infinite);
         }

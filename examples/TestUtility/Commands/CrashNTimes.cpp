@@ -44,7 +44,10 @@ public:
         _crashCore.ExecPendingCrash();
     }
 
-    virtual ~CrashNTimes() { TestCore::TestCommandController::Instance().Revoke(this); }
+    ~CrashNTimes() override
+    {
+        TestCore::TestCommandController::Instance().Revoke(this);
+    }
 
     BEGIN_INTERFACE_MAP(CrashNTimes)
     INTERFACE_ENTRY(Exchange::ITestUtility::ICommand)

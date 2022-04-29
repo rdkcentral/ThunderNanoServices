@@ -34,14 +34,12 @@ class Cobalt: public PluginHost::IPlugin,
         public PluginHost::IWeb,
         public PluginHost::JSONRPC {
 private:
-    Cobalt(const Cobalt&) = delete;
-    Cobalt& operator=(const Cobalt&) = delete;
 
     class Notification: public RPC::IRemoteConnection::INotification,
             public PluginHost::IStateControl::INotification,
             public Exchange::IBrowser::INotification {
 
-    private:
+    public:
         Notification() = delete;
         Notification(const Notification&) = delete;
         Notification& operator=(const Notification&) = delete;
@@ -95,7 +93,7 @@ private:
 
 public:
     class Data: public Core::JSON::Container {
-    private:
+    public:
         Data(const Data&) = delete;
         Data& operator=(const Data&) = delete;
 
@@ -122,8 +120,11 @@ public:
     };
 
 public:
+    Cobalt(const Cobalt&);
+    Cobalt& operator=(const Cobalt&);
     Cobalt()
         : _skipURL(0)
+        , _connectionId(0)
         , _hidden(false)
         , _cobalt(nullptr)
         , _application(nullptr)
@@ -163,17 +164,6 @@ private:
     void URLChanged(const string &URL);
     void Hidden(const bool hidden);
     void Closure();
-
-    inline void ConnectionTermination(uint32_t connectionId)
-    {
-        if (connectionId != 0) {
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
-            }
-        }
-    }
 
     // JsonRpc
     void RegisterAll();

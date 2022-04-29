@@ -29,6 +29,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
+    using namespace alexaClientSDK;
     using namespace alexaClientSDK::avsCommon;
     using namespace alexaClientSDK::avsCommon::avs;
     using namespace alexaClientSDK::avsCommon::sdkInterfaces;
@@ -93,7 +94,7 @@ namespace Plugin {
         std::unordered_set<std::shared_ptr<KeyWordDetectorStateObserverInterface>> keyWordDetectorStateObservers,
         utils::AudioFormat audioFormat,
         std::chrono::milliseconds msToPushPerIteration)
-        : AbstractKeywordDetector(keyWordObservers, keyWordDetectorStateObservers)
+        : acsdkKWDImplementations::AbstractKeywordDetector(keyWordObservers, keyWordDetectorStateObservers)
         , m_isShuttingDown{ false }
         , m_stream{ stream }
         , m_streamReader{ nullptr }

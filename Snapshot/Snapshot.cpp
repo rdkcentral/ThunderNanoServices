@@ -38,11 +38,9 @@ namespace Plugin {
         {
         }
 
-        virtual ~StoreImpl()
-        {
-        }
+        ~StoreImpl() override = default;
 
-        virtual bool R8_G8_B8_A8(const unsigned char* buffer, const unsigned int width, const unsigned int height)
+        bool R8_G8_B8_A8(const unsigned char* buffer, const unsigned int width, const unsigned int height) override
         {
 
             png_structp pngPointer = nullptr;
@@ -153,7 +151,7 @@ namespace Plugin {
             }
 
         public:
-            virtual ~FileBodyExtended()
+            ~FileBodyExtended() override
             {
                 Core::File::Destroy();
 

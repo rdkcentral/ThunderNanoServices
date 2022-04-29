@@ -132,10 +132,12 @@ namespace Plugin {
 
         Core::File dictionaryFile(service->PersistentPath() + _config.Storage.Value());
 
-        if (dictionaryFile.Open(true) == true) {
+        if (dictionaryFile.Create() == true) {
             NameSpace dictionary;
             CreateExternalDictionary(EMPTY_STRING, dictionary);
-            dictionary.IElement::ToFile(dictionaryFile);
+            if (dictionary.IElement::ToFile(dictionaryFile) == false) {
+                SYSLOG(Logging::Shutdown, (_T("Error occured while trying to save dictionary data to file!")));
+            }
         }
     }
 

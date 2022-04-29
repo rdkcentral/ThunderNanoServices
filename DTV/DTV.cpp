@@ -172,6 +172,7 @@ namespace WPEFramework
       {
          ASSERT(service != nullptr);
          ASSERT(_dtv == nullptr);
+         ASSERT(_service == nullptr);
          ASSERT(_connectionId == 0);
 
          string message;
@@ -273,7 +274,6 @@ namespace WPEFramework
          }
 
          _connectionId = 0;
-
          _service->Release();
          _service = nullptr;
       }
