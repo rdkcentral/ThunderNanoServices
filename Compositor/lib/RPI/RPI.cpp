@@ -52,7 +52,7 @@ extern "C" {
 #include <chrono>
 #include <set>
 #include <queue>
-
+#include <stack>
 
 template < class T >
 struct remove_reference {
@@ -551,6 +551,9 @@ namespace Plugin {
         private :
 
             std::map < EGL::img_t , texture_t > _scene;
+
+            std::stack < texture_t > _preallocated;
+
             std::mutex _token;
 
         public :
@@ -1948,19 +1951,17 @@ namespace Plugin {
             glBindTexture ( tex . _target , ( tex . _tex ) );
             GL_ERROR ();
 
-            if ( quick != true ) {
-                glTexParameteri ( tex . _target , GL_TEXTURE_WRAP_S , GL_CLAMP_TO_EDGE );
-                GL_ERROR ();
+            glTexParameteri ( tex . _target , GL_TEXTURE_WRAP_S , GL_CLAMP_TO_EDGE );
+            GL_ERROR ();
 
-                glTexParameteri ( tex . _target , GL_TEXTURE_WRAP_T , GL_CLAMP_TO_EDGE );
-                GL_ERROR ();
+            glTexParameteri ( tex . _target , GL_TEXTURE_WRAP_T , GL_CLAMP_TO_EDGE );
+            GL_ERROR ();
 
-                glTexParameteri ( tex . _target , GL_TEXTURE_MIN_FILTER , GL_LINEAR );
-                GL_ERROR ();
+            glTexParameteri ( tex . _target , GL_TEXTURE_MIN_FILTER , GL_LINEAR );
+            GL_ERROR ();
 
-                glTexParameteri ( tex . _target , GL_TEXTURE_MAG_FILTER , GL_LINEAR );
-                GL_ERROR ();
-            }
+            glTexParameteri ( tex . _target , GL_TEXTURE_MAG_FILTER , GL_LINEAR );
+            GL_ERROR ();
 
             tex . _width = width;
             tex . _height = height;
@@ -2001,8 +2002,14 @@ namespace Plugin {
 
                 case GL_TEXTURE_2D :
                     {
-                        glTexImage2D ( GL_TEXTURE_2D , 0 , GL_RGBA , tex . _width , tex . _height , 0 , GL_RGBA , GL_UNSIGNED_BYTE , nullptr );
-                        GL_ERROR ();
+                        if ( quick != true ) {
+                            glTexImage2D ( tex . _target , 0 , GL_RGBA , tex . _width , tex . _height , 0 , GL_RGBA , GL_UNSIGNED_BYTE , nullptr );
+                            GL_ERROR ();
+                        }
+                        else {
+                            // Clear the content
+                            glTexSubImage2D ( tex . _target , 0 , 0 , 0 , tex . _width , tex . _height , GL_RGBA , GL_UNSIGNED_BYTE , nullptr );
+                        }
                     }; break;
 
                 default :
@@ -2110,7 +2117,6 @@ namespace Plugin {
                     // Found, just update values
                     tex_fbo = it -> second;
 
-#ifdef _RESIZE_TEXTURE
                     // Did dimensions change ?
 
                     using common_w_t = std::common_type < decltype ( width ) , decltype ( it -> second . _width ) > :: type;
@@ -2120,22 +2126,39 @@ namespace Plugin {
                          || static_cast < common_h_t > ( height ) != static_cast < common_h_t > (it -> second . _height )
                        ) {
 
-                        TRACE_WITHOUT_THIS ( Trace::Information , ( _T ( "Texture dimensions change detected!" ) ) );
+                        TRACE_WITHOUT_THIS ( Trace::Error , ( _T ( "Unsupported texture dimensions change detected!" ) ) );
 
-                        ret =    DestroyTexture ( tex_fbo )
-                              && _scene . erase ( img ) == 1
-                              && SetupTexture ( tex_fbo , img , width , height , false ) != false;
+                        assert ( false );
 
-                        if ( ret != false ) {
-                            auto it = _scene . insert ( std::pair < EGL::img_t , texture_t > ( img , tex_fbo ) );
-
-                            ret = it . second != false;
-                        }
                     }
-#endif
+
                 }
                 else {
-                    ret = SetupTexture ( tex_fbo , img , width , height , false ) != false;
+                    if (_preallocated . size () > 0 ) {
+                        tex_fbo = _preallocated . top ();
+
+                        _preallocated . pop ();
+
+                        // Did dimensions change ?
+
+                        using common_w_t = std::common_type < decltype ( width ) , decltype ( tex_fbo . _width ) > :: type;
+                        using common_h_t = std::common_type < decltype ( height ) , decltype ( tex_fbo . _height ) > :: type;
+
+                        if (    static_cast < common_w_t > ( width ) != static_cast < common_w_t > ( tex_fbo . _width)
+                             || static_cast < common_h_t > ( height ) != static_cast < common_h_t > (tex_fbo . _height )
+                           ) {
+
+                            TRACE_WITHOUT_THIS ( Trace::Error , ( _T ( "Unsupported texture dimensions change detected!" ) ) );
+
+                            assert ( false );
+
+                        }
+
+                        ret = SetupTexture ( tex_fbo , img , width , height , true ) != false;
+                    }
+                    else {
+                        ret = SetupTexture ( tex_fbo , img , width , height , false ) != false;
+                    }
 
                     if ( ret != false ) {
                         auto it = _scene . insert ( std::pair < EGL::img_t , texture_t > ( img , tex_fbo ) );
@@ -2200,6 +2223,9 @@ namespace Plugin {
                     && RenderTileOES ()
                   ) != false;
 
+
+            glFramebufferTexture2D ( GL_FRAMEBUFFER , GL_COLOR_ATTACHMENT0 , GL_TEXTURE_2D , InvalidTex () , 0 );
+            GL_ERROR ();
 
             glBindTexture ( tex_oes . _target , InvalidTex () );
             GL_ERROR ();
@@ -2396,6 +2422,11 @@ namespace Plugin {
         ret = it != _scene . end ();
 
         if ( ret != false ) {
+
+// TODO: Apparently it is hard to release (GPU) memory allocated so reuse it
+            // Move texture to the stack for reuse
+            _preallocated . push ( it -> second );
+
             using scene_t = decltype ( _scene );
 
             scene_t::size_type size = _scene . size ();
