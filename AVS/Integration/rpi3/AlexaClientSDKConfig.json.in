@@ -4,7 +4,7 @@
         // Note: The directory specified must be valid.
         // The database file (cblAuthDelegate.db) will be created by SampleApp, do not create it yourself.
         // The database file should only be used for CBLAuthDelegate (don't use it for other components of SDK)
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/cblAuthDelegate.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/cblAuthDelegate.db"
     },
     "deviceInfo":{
         // Unique device serial number. e.g. 123456
@@ -32,23 +32,23 @@
         //              }
         //          ]
         //      }
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/capabilitiesDelegate.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/capabilitiesDelegate.db"
     },
     "miscDatabase":{
         // Path to misc database file. e.g. /home/ubuntu/Build/miscDatabase.db
         // Note: The directory specified must be valid.
         // The database file (miscDatabase.db) will be created by SampleApp, do not create it yourself.
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/miscDatabase.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/miscDatabase.db"
     },
     "alertsCapabilityAgent":{
         // Path to Alerts database file. e.g. /home/ubuntu/Build/alerts.db
         // Note: The directory specified must be valid.
         // The database file (alerts.db) will be created by SampleApp, do not create it yourself.
         // The database file should only be used for alerts (don't use it for other components of SDK)
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/alerts.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/alerts.db"
     },
     "lwaAuthorization":{
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/lwa.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/lwa.db"
     },
     "speakerManagerCapabilityAgent":{
         "defaultSpeakerVolume":40,
@@ -60,7 +60,7 @@
         // Note: The directory specified must be valid.
         // The database file (deviceSettings.db) will be created by SampleApp, do not create it yourself.
         // The database file should only be used for device settings (don't use it for other components of SDK)
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/deviceSettings.db",
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/deviceSettings.db",
         // The list of supported locales on this device.
         "locales":["en-US","en-GB","de-DE","en-IN","en-CA","ja-JP","en-AU","fr-FR","it-IT","es-ES","es-MX","fr-CA",
             "es-US", "hi-IN", "pt-BR"],
@@ -80,21 +80,21 @@
         // Note: The directory specified must be valid.
         // The database file (bluetooth.db) will be created by SampleApp, do not create it yourself.
         // The database file should only be used for bluetooth (don't use it for other components of SDK)
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/bluetooth.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/bluetooth.db"
     },
     "certifiedSender":{
         // Path to Certified Sender database file. e.g. /home/ubuntu/Build/certifiedsender.db
         // Note: The directory specified must be valid.
         // The database file (certifiedsender.db) will be created by SampleApp, do not create it yourself.
         // The database file should only be used for certifiedSender (don't use it for other components of SDK)
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/certifiedSender.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/certifiedSender.db"
     },
     "notifications":{
         // Path to Notifications database file. e.g. /home/ubuntu/Build/notifications.db
         // Note: The directory specified must be valid.
         // The database file (notifications.db) will be created by SampleApp, do not create it yourself.
         // The database file should only be used for notifications (don't use it for other components of SDK)
-        "databaseFilePath":"@PLUGIN_AVS_PESISTENT_PATH@/db/notifications.db"
+        "databaseFilePath":"@PLUGIN_AVS_PERSISTENT_PATH@/db/notifications.db"
     },
     "sampleApp": {
         // To specify if the SampleApp supports display cards.
