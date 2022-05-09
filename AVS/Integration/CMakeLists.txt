@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_AVS_DB_PATH "/root/AVS/db" CACHE STRING "AVS database directory location")
+set(PLUGIN_AVS_PESISTENT_PATH "/root/AVS" CACHE STRING "AVS database directory location")
 
 # platform independent files
 install(DIRECTORY
@@ -23,13 +23,9 @@ install(DIRECTORY
     COMPONENT ${MODULE_NAME})
 
 # platform dependent files
-file(READ ${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json.in MOD_ALEXA_CLIENT_SDK_CONFIG)
-    string(
-           REGEX REPLACE "AVS_DB_PATH" "${PLUGIN_AVS_DB_PATH}"
-           MOD_ALEXA_CLIENT_SDK_CONFIG "${MOD_ALEXA_CLIENT_SDK_CONFIG}"
-    )
-    file(WRITE ${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json "${MOD_ALEXA_CLIENT_SDK_CONFIG}")
-
+configure_file( "${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json.in"
+                "${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json"
+                @ONLY)
 install(FILES "${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json"
     DESTINATION "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}"
     COMPONENT ${MODULE_NAME})
