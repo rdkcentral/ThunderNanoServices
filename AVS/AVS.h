@@ -228,17 +228,7 @@ namespace Plugin {
         void Activated(RPC::IRemoteConnection* connection);
         void Deactivated(RPC::IRemoteConnection* connection);
         const string CreateInstance(const string& name, const Config& config);
-        inline void TerminateConnection(uint32_t connectionId)
-        {
-            if (connectionId != 0) {
-                RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
-                if (connection != nullptr) {
-                    connection->Terminate();
-                    connection->Release();
-                    connection = nullptr;
-                }
-            }
-        }
+
     private:
 
         Exchange::IAVSClient* _AVSClient;

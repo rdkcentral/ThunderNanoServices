@@ -27,7 +27,7 @@
 #include <Audio/MicrophoneInterface.h>
 #include <AVS/SampleApp/InteractionManager.h>
 #if defined(ENABLE_SMART_SCREEN_SUPPORT)
-#include <SmartScreen/SampleApp/GUI/GUIManager.h>
+#include <SampleApp/GUI/GUIManager.h>
 #endif
 
 #include <mutex>

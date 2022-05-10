@@ -29,19 +29,48 @@ namespace Plugin {
 
     class PlayerInfo : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-#if DOLBY_SUPPORT
-        class Notification : protected Exchange::Dolby::IOutput::INotification {
-        private:
+        class Notification : public RPC::IRemoteConnection::INotification {
+        public:
             Notification() = delete;
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
-        public:
+
             explicit Notification(PlayerInfo* parent)
                 : _parent(*parent)
             {
                 ASSERT(parent != nullptr);
             }
-            virtual ~Notification() = default;
+            ~Notification() override = default;
+
+        public:
+            void Activated(RPC::IRemoteConnection*) override
+            {
+            }
+            void Deactivated(RPC::IRemoteConnection* connection) override
+            {
+                _parent.Deactivated(connection);
+            }
+
+            BEGIN_INTERFACE_MAP(Notification)
+                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            END_INTERFACE_MAP
+
+        private:
+            PlayerInfo& _parent;
+        };
+#if DOLBY_SUPPORT
+        class DolbyNotification : protected Exchange::Dolby::IOutput::INotification {
+        public:
+            DolbyNotification() = delete;
+            DolbyNotification(const DolbyNotification&) = delete;
+            DolbyNotification& operator=(const DolbyNotification&) = delete;
+
+            explicit DolbyNotification(PlayerInfo* parent)
+                : _parent(*parent)
+            {
+                ASSERT(parent != nullptr);
+            }
+            ~DolbyNotification() override = default;
 
             void Initialize(Exchange::Dolby::IOutput* client)
             {
@@ -63,7 +92,7 @@ namespace Plugin {
             {
                 Exchange::Dolby::JOutput::Event::AudioModeChanged(_parent, mode, enabled);
             }
-            BEGIN_INTERFACE_MAP(Notification)
+            BEGIN_INTERFACE_MAP(DolbyNotification)
             INTERFACE_ENTRY(Exchange::Dolby::IOutput::INotification)
             END_INTERFACE_MAP
 
@@ -83,12 +112,14 @@ namespace Plugin {
             , _audioCodecs(nullptr)
             , _videoCodecs(nullptr)
 #if DOLBY_SUPPORT
-            , _notification(this)
+            , _dolbyNotification(this)
 #endif
+            , _notification(this)
+            , _service(nullptr)
         {
         }
 
-        virtual ~PlayerInfo() = default;
+        ~PlayerInfo() override = default;
 
         BEGIN_INTERFACE_MAP(PlayerInfo)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -100,16 +131,17 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
+        void Deactivated(RPC::IRemoteConnection* connection);
         void Info(JsonData::PlayerInfo::CodecsData&) const;
 
 #if DOLBY_SUPPORT
@@ -128,8 +160,10 @@ namespace Plugin {
         Exchange::IPlayerProperties::IVideoCodecIterator* _videoCodecs;
 #if DOLBY_SUPPORT
         Exchange::Dolby::IOutput* _dolbyOut;
-        Core::Sink<Notification> _notification;
+        Core::Sink<DolbyNotification> _dolbyNotification;
 #endif
+        Core::Sink<Notification> _notification;
+        PluginHost::IShell* _service;
     };
 
 } // namespace Plugin

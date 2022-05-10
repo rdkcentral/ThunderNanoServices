@@ -37,15 +37,15 @@ namespace TestController {
             ~MemoryObserverImpl() {}
 
         public:
-            virtual uint64_t Resident() const { return _main.Resident(); }
+            uint64_t Resident() const override { return _main.Resident(); }
 
-            virtual uint64_t Allocated() const { return _main.Allocated(); }
+            uint64_t Allocated() const override { return _main.Allocated(); }
 
-            virtual uint64_t Shared() const { return _main.Shared(); }
+            uint64_t Shared() const override { return _main.Shared(); }
 
-            virtual uint8_t Processes() const { return (IsOperational() ? 1 : 0); }
+            uint8_t Processes() const override { return (IsOperational() ? 1 : 0); }
 
-            virtual bool IsOperational() const { return _main.IsActive(); }
+            bool IsOperational() const override { return _main.IsActive(); }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
             INTERFACE_ENTRY(Exchange::IMemory)
@@ -65,42 +65,41 @@ namespace Plugin {
     /* virtual */ const string TestController::Initialize(PluginHost::IShell* service)
     {
         /*Assume that everything is OK*/
-        string message = EMPTY_STRING;
+        string message;
         Config config;
 
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_testControllerImp == nullptr);
         ASSERT(_memory == nullptr);
+        ASSERT(_connection == 0);
 
         _service = service;
+        _service->AddRef();
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         _service->Register(&_notification);
         _testControllerImp = _service->Root<Exchange::ITestController>(_connection, ImplWaitTime, _T("TestControllerImp"));
 
-        if ((_testControllerImp != nullptr) && (_service != nullptr)) {
+        if (_testControllerImp != nullptr) {
+            RegisterAll();
+            _testControllerImp->Setup();
             const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connection);
-            ASSERT(connection != nullptr);
 
             if (connection != nullptr) {
                 _memory = WPEFramework::TestController::MemoryObserver(connection);
-
                 ASSERT(_memory != nullptr);
-
                 connection->Release();
-                _testControllerImp->Setup();
+               
             } else {
-                _memory = nullptr;
-                TRACE(Trace::Warning, (_T("Colud not create MemoryObserver in TestController")));
+                TRACE(Trace::Warning, (_T("Colud not get Remote connection")));
             }
         } else {
-            ProcessTermination(_connection);
-            _service = nullptr;
-            _testControllerImp = nullptr;
-            _service->Unregister(&_notification);
-
             TRACE(Trace::Fatal, (_T("*** TestController could not be instantiated ***")))
             message = _T("TestUtility could not be instantiated.");
+        }
+
+        if(message.length() != 0) {
+            Deinitialize(service);
         }
 
         return message;
@@ -109,22 +108,37 @@ namespace Plugin {
     /* virtual */ void TestController::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
-        ASSERT(_testControllerImp != nullptr);
-        ASSERT(_memory != nullptr);
 
-        _testControllerImp->TearDown();
-
-
-        _testControllerImp->Release();
-        if (_connection != 0) {
-            ProcessTermination(_connection);
-        }
-
-        _testControllerImp = nullptr;
-        _memory->Release();
-        _memory = nullptr;
         _service->Unregister(&_notification);
+ 
+        if(_testControllerImp != nullptr) {
+            UnregisterAll();
+            _testControllerImp->TearDown();
+
+            if(_memory != nullptr){
+                if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                    TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+                }
+                _memory = nullptr;
+            }
+
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+            VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
+            _testControllerImp = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            // The connection can disappear in the meantime...
+            if (connection != nullptr) {
+                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                connection->Terminate();
+                connection->Release();
+            }           
+            
+
+        }
+        _service->Release();
         _service = nullptr;
+        _connection = 0;
     }
 
     /* virtual */ string TestController::Information() const

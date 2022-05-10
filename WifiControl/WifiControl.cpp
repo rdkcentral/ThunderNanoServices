@@ -175,7 +175,7 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ void WifiControl::Deinitialize(PluginHost::IShell * service)
+    /* virtual */ void WifiControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
 #ifndef USE_WIFI_HAL
 
