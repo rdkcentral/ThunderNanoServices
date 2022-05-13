@@ -37,7 +37,9 @@ class BluetoothControl : public PluginHost::IPlugin
                        , public Exchange::IBluetooth {
 
     private:
-        class DecoupledJob : private Core::ThreadPool::JobType<DecoupledJob&> {
+        class DecoupledJob : private Core::WorkerPool::JobType<DecoupledJob&> {
+            friend class Core::ThreadPool::JobType<DecoupledJob&>;
+
         public:
             using Job = std::function<void()>;
 
@@ -45,56 +47,47 @@ class BluetoothControl : public PluginHost::IPlugin
             DecoupledJob& operator=(const DecoupledJob&) = delete;
 
             DecoupledJob()
-                : Core::ThreadPool::JobType<DecoupledJob&>(*this)
+                : Core::WorkerPool::JobType<DecoupledJob&>(*this)
                 , _lock()
                 , _job(nullptr)
             {
             }
+
             ~DecoupledJob() = default;
 
         public:
-            void Submit(const Job& job, const uint32_t defer = 0)
+            void Submit(const Job& job)
             {
-                Core::ProxyType<Core::IDispatch> handler(Core::ThreadPool::JobType<DecoupledJob&>::Submit());
-
-               _lock.Lock();
-
-                if (handler.IsValid() == true) {
-                    _job = job;
-
-                    if (defer == 0) {
-                        Core::WorkerPool::Instance().Submit(handler);
-                    } else {
-                        Core::WorkerPool::Instance().Schedule(Core::Time::Now().Add(defer), handler);
-                    }
-                } else {
-                    TRACE(Trace::Information, (_T("Job in progress, skipping request")));
-                }
-
-               _lock.Unlock();
+                _lock.Lock();
+                _job = job;
+                JobType::Submit();
+                ASSERT(JobType::IsIdle() == false);
+                _lock.Unlock();
+            }
+            void Schedule(const Job& job, const uint32_t defer)
+            {
+                _lock.Lock();
+                _job = job;
+                JobType::Reschedule(Core::Time::Now().Add(defer));
+                ASSERT(JobType::IsIdle() == false);
+                _lock.Unlock();
             }
             void Revoke()
             {
-                Core::ProxyType<Core::IDispatch> handler(Core::ThreadPool::JobType<DecoupledJob&>::Revoke());
                 _lock.Lock();
-                if (handler.IsValid() == true) {
-			Core::WorkerPool::Instance().Revoke(handler);
-			Core::ThreadPool::JobType<DecoupledJob&>::Revoked();
-		}
                 _job = nullptr;
+                JobType::Revoke();
                 _lock.Unlock();
             }
 
         private:
-            friend class Core::ThreadPool::JobType<DecoupledJob&>;
             void Dispatch()
             {
                 _lock.Lock();
-                ASSERT(_job != nullptr);
-                Job job = _job;
+                Job DoTheJob = _job;
                 _job = nullptr;
                 _lock.Unlock();
-                job();
+                DoTheJob();
             }
 
         private:
@@ -1283,10 +1276,10 @@ class BluetoothControl : public PluginHost::IPlugin
                         UpdateListener();
                         _parent->event_devicestatechange(Address().ToString(), JsonData::BluetoothControl::DevicestatechangeParamsData::DevicestateType::PAIRING);
                         TRACE(Trace::Information, (_T("Pairing of device %s in progress..."), Address().ToString().c_str()));
-                        _abortPairingJob.Submit([this](){
+                        _abortPairingJob.Schedule([this](){
                             TRACE(Trace::Information, (_T("Timeout! Aborting pairing!"), Address().ToString().c_str()));
                             AbortPairing();
-                        }, 1000L * timeout);
+                        }, (1000L * timeout));
                         result = Core::ERROR_NONE;
                     } else {
                         if (result == Core::ERROR_ALREADY_CONNECTED) {
@@ -1631,12 +1624,13 @@ class BluetoothControl : public PluginHost::IPlugin
                     _class = classId;
                     TRACE(DeviceFlow, (_T("Device class updated to: '%6x'"), _class));
                     updated = true;
-                    if (notifyListener == true) {
-                        UpdateListener();
-                    }
                 }
 
                 _state.Unlock();
+
+                if ((notifyListener == true) && (updated == true)) {
+                    UpdateListener();
+                }
 
                 return (updated);
             }
@@ -1650,12 +1644,13 @@ class BluetoothControl : public PluginHost::IPlugin
                     _name = name;
                     TRACE(DeviceFlow, (_T("Device name updated to: '%s'"), _name.c_str()));
                     updated = true;
-                    if (notifyListener == true) {
-                        UpdateListener();
-                    }
                 }
 
                 _state.Unlock();
+
+                if ((notifyListener == true) && (updated == true)) {
+                    UpdateListener();
+                }
 
                 return (updated);
             }
@@ -1883,11 +1878,6 @@ protected:
             {
                 uint32_t result = Core::ERROR_GENERAL;
 
-                if (IsBonded() == true) {
-                    AutoConnect(true);
-                    result = Core::ERROR_REQUEST_SUBMITTED;
-                }
-
                 if (SetState(CONNECTING) == Core::ERROR_NONE) {
                     if (IsConnected() == false) {
                         if (IsBonded() == true) {
@@ -1908,15 +1898,12 @@ protected:
                                     Connection(handle);
                                 } else {
                                     TRACE(ControlFlow, (_T("Connect command failed [%d]"), connect.Result()));
-                                    AutoConnect(false);
                                 }
                             } else {
                                 TRACE(Trace::Error, (_T("Failed to connect [%d]"), result));
 
                                 if (result == Core::ERROR_TIMEDOUT) {
                                     result = Core::ERROR_REQUEST_SUBMITTED;
-                                } else {
-                                    AutoConnect(false);
                                 }
                             }
                         } else {
@@ -1926,7 +1913,6 @@ protected:
                     } else {
                         result = Core::ERROR_ALREADY_CONNECTED;
                         TRACE(Trace::Error, (_T("Device already connected!")));
-                        AutoConnect(false);
                     }
 
                     ClearState(CONNECTING);
@@ -2118,7 +2104,7 @@ protected:
             {
                 return ( (_ltks.Entries() >= 1) && (_irk.IsValid()) );
             }
-            virtual uint32_t Connect() override
+            uint32_t Connect() override
             {
                 uint32_t result = Core::ERROR_GENERAL;
 
@@ -2371,7 +2357,7 @@ protected:
         {
             RegisterAll();
         }
-        virtual ~BluetoothControl()
+        ~BluetoothControl() override
         {
             UnregisterAll();
         }
@@ -2394,34 +2380,34 @@ protected:
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from the webbridge. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After this call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetaData plugin to publish this information to the outside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         //  IBluetooth methods
         // -------------------------------------------------------------------------------------------------------
-        virtual uint32_t Register(IBluetooth::INotification* notification) override;
-        virtual uint32_t Unregister(IBluetooth::INotification* notification) override;
+        uint32_t Register(IBluetooth::INotification* notification) override;
+        uint32_t Unregister(IBluetooth::INotification* notification) override;
 
-        virtual bool IsScanning() const override;
-        virtual uint32_t Scan(const bool lowEnergy, const uint16_t duration) override;
-        virtual uint32_t StopScanning() override;
+        bool IsScanning() const override;
+        uint32_t Scan(const bool lowEnergy, const uint16_t duration) override;
+        uint32_t StopScanning() override;
 
-        virtual IBluetooth::IDevice* Device(const string&) override;
-        virtual IBluetooth::IDevice::IIterator* Devices() override;
+        IBluetooth::IDevice* Device(const string&) override;
+        IBluetooth::IDevice::IIterator* Devices() override;
 
     public:
         inline ControlSocket& Connector() {

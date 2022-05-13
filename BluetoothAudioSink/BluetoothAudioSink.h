@@ -97,6 +97,8 @@ namespace Plugin {
         }; // class Config
 
         class DecoupledJob : private Core::WorkerPool::JobType<DecoupledJob&> {
+            friend class Core::ThreadPool::JobType<DecoupledJob&>;
+
         public:
             using Job = std::function<void()>;
 
@@ -113,22 +115,22 @@ namespace Plugin {
             ~DecoupledJob() = default;
 
         public:
-            void Submit(const Job& job, const uint32_t defer = 0)
+            void Submit(const Job& job)
             {
                 _lock.Lock();
-                if (_job == nullptr) {
-                    _job = job;
-                    if (defer == 0) {
-                        JobType::Submit();
-                    } else {
-                        JobType::Schedule(Core::Time::Now().Add(defer));
-                    }
-                } else {
-                    TRACE(Trace::Information, (_T("Job in progress, skipping request")));
-                }
+                _job = job;
+                JobType::Submit();
+                ASSERT(JobType::IsIdle() == false);
                 _lock.Unlock();
             }
-
+            void Schedule(const Job& job, const uint32_t defer)
+            {
+                _lock.Lock();
+                _job = job;
+                JobType::Reschedule(Core::Time::Now().Add(defer));
+                ASSERT(JobType::IsIdle() == false);
+                _lock.Unlock();
+            }
             void Revoke()
             {
                 _lock.Lock();
@@ -138,14 +140,13 @@ namespace Plugin {
             }
 
         private:
-            friend class Core::ThreadPool::JobType<DecoupledJob&>;
             void Dispatch()
             {
                 _lock.Lock();
-                Job job = _job;
+                Job DoTheJob = _job;
                 _job = nullptr;
                 _lock.Unlock();
-                job();
+                DoTheJob();
             }
 
         private:
@@ -256,7 +257,8 @@ namespace Plugin {
                 , _drmList()
                 , _latency(0)
                 , _player(nullptr)
-                , _job()
+                , _discoveryJob()
+                , _updateJob()
             {
                 ASSERT(parent != nullptr);
                 ASSERT(device != nullptr);
@@ -278,6 +280,9 @@ namespace Plugin {
             {
                 _audioService = A2DP::ServiceDiscovery::AudioService(data);
                 _type = DeviceType(_audioService.Features());
+
+                ASSERT(_device != nullptr);
+                _device->Connect();
             }
             ~A2DPSink()
             {
@@ -319,7 +324,7 @@ namespace Plugin {
                     Core::EnumerateType<Exchange::IBluetoothAudioSink::state> value(_state);
                     TRACE(Trace::Information, (_T("Bluetooth audio sink state: %s"), (value.IsSet()? value.Data() : "(undefined)")));
 
-                    _job.Submit([this]() {
+                    _updateJob.Submit([this]() {
                         _parent.Updated();
                     });
                 }
@@ -543,16 +548,9 @@ namespace Plugin {
                 ASSERT(_device != nullptr);
                 if (_device->IsBonded() == true) {
                     if (_device->IsConnected() == true) {
-                        if (_audioService.Type() == A2DP::ServiceDiscovery::AudioService::UNKNOWN) {
-                            TRACE(ProfileFlow, (_T("Unknown device connected, attempt audio sink discovery...")));
+                        if (_state == Exchange::IBluetoothAudioSink::DISCONNECTED) {
+                            TRACE(ProfileFlow, (_T("Device disconnected")));
                             DiscoverAudioServices();
-                        } else if (_audioService.Type() == A2DP::ServiceDiscovery::AudioService::SINK) {
-                            TRACE(ProfileFlow, (_T("Audio sink device connected, connect to the sink...")));
-                            DiscoverAudioStreamEndpoints(_audioService);
-                        } else {
-                            // It's not an audio sink device, can't do anything.
-                            TRACE(Trace::Error, (_T("Connected device does is not an audio sink!")));
-                            State(Exchange::IBluetoothAudioSink::CONNECTED_BAD_DEVICE);
                         }
                     } else {
                         TRACE(ProfileFlow, (_T("Device disconnected")));
@@ -571,7 +569,7 @@ namespace Plugin {
                 // Let's see if the device features audio sink services...
                 if (_discovery.Connect() == Core::ERROR_NONE) {
                     _discovery.Discover([this](const std::list<A2DP::ServiceDiscovery::AudioService>& services) {
-                        _job.Submit([this, &services]() {
+                        _discoveryJob.Submit([this, &services]() {
                             OnAudioServicesDiscovered(services);
                         });
                     });
@@ -608,7 +606,7 @@ namespace Plugin {
 
             Exchange::IBluetoothAudioSink::devicetype DeviceType(const A2DP::ServiceDiscovery::AudioService::features features) const
             {
-                Exchange::IBluetoothAudioSink::devicetype type;
+                Exchange::IBluetoothAudioSink::devicetype type = Exchange::IBluetoothAudioSink::UNKNOWN;
                 if (features & A2DP::ServiceDiscovery::AudioService::features::HEADPHONE) {
                     type = Exchange::IBluetoothAudioSink::HEADPHONE;
                 } else if (features & A2DP::ServiceDiscovery::AudioService::features::SPEAKER) {
@@ -627,7 +625,7 @@ namespace Plugin {
                 // Let's see what endpoints does the sink have...
                 if (_signalling.Connect(Designator(_device, service.PSM())) == Core::ERROR_NONE) {
                     _signalling.Discover([this](std::list<A2DP::AudioEndpoint>& endpoints) {
-                        _job.Submit([this, &endpoints]() {
+                        _discoveryJob.Submit([this, &endpoints]() {
                             OnAudioStreamEndpointsDiscovered(endpoints);
                         });
                     });
@@ -696,7 +694,8 @@ namespace Plugin {
             std::list<Exchange::IBluetoothAudioSink::drmscheme> _drmList;
             uint32_t _latency; // device latency
             AudioPlayer* _player;
-            DecoupledJob _job;
+            DecoupledJob _discoveryJob;
+            DecoupledJob _updateJob;
         }; // class A2DPSink
 
     public:
@@ -983,6 +982,7 @@ namespace Plugin {
     public:
         Exchange::IBluetooth* Controller() const
         {
+            ASSERT(_service != nullptr);
             return (_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
         }
 

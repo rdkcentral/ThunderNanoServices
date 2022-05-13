@@ -39,14 +39,14 @@ public:
         TestCore::TestCommandController::Instance().Announce(this);
     }
 
-    virtual ~Statm()
+    ~Statm() override
     {
         TestCore::TestCommandController::Instance().Revoke(this);
     }
 
 public:
     // ICommand methods
-    string Execute(const string& params) final
+    string Execute(const string& params VARIABLE_IS_NOT_USED) final
     {
         return _memoryAdmin.CreateResponse();
     }

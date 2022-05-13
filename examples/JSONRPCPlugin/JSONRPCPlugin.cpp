@@ -48,9 +48,7 @@ namespace Plugin
 
     SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
 
-    #ifdef __WINDOWS__
-    #pragma warning(disable : 4355)
-    #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     JSONRPCPlugin::JSONRPCPlugin()
         : PluginHost::JSONRPC({ 2, 3, 4 }, [&](const string& token, const string& method, const string& parameters) -> PluginHost::JSONRPC::classification { return (Validation(token, method, parameters)); }) // version 2, 3 and 4 of the interface, use this as the default :-)
         , _job(Core::ProxyType<PeriodicSync>::Create(this))
@@ -63,9 +61,7 @@ namespace Plugin
     {
         RegisterAll();
     }
-    #ifdef __WINDOWS__
-    #pragma warning(default : 4355)
-    #endif
+POP_WARNING()
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
     {
         UnregisterAll();

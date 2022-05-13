@@ -57,7 +57,7 @@ public:
 
         vc_tv_register_callback(&DisplayCallback, reinterpret_cast<void*>(this));
     }
-    virtual ~DisplayInfoImplementation()
+    ~DisplayInfoImplementation() override
     {
         bcm_host_deinit();
     }

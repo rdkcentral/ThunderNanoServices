@@ -35,18 +35,10 @@ namespace Plugin {
         class ChannelMap;
 
         class WebFlow {
-        private:
-            // -------------------------------------------------------------------
-            // This object should not be copied or assigned. Prevent the copy
-            // constructor and assignment constructor from being used. Compiler
-            // generated assignment and copy methods will be blocked by the
-            // following statments.
-            // Define them but do not implement them, compile error/link error.
-            // -------------------------------------------------------------------
+        public:
             WebFlow(const WebFlow& a_Copy) = delete;
             WebFlow& operator=(const WebFlow& a_RHS) = delete;
 
-        public:
             WebFlow(const Core::ProxyType<Web::Request>& request)
             {
                 if (request.IsValid() == true) {
@@ -67,9 +59,7 @@ namespace Plugin {
                     _text = Core::ToString(string('\n' + text + '\n'));
                 }
             }
-            ~WebFlow()
-            {
-            }
+            ~WebFlow() = default;
 
         public:
             inline const char* Data() const
@@ -86,16 +76,11 @@ namespace Plugin {
         };
 
         class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-
         public:
             class Proxy : public Core::JSON::Container {
-            private:
+            public:
                 Proxy& operator=(const Proxy&) = delete;
 
-            public:
                 Proxy()
                     : Core::JSON::Container()
                     , Path()
@@ -116,9 +101,7 @@ namespace Plugin {
                     Add(_T("subst"), &Subst);
                     Add(_T("server"), &Server);
                 }
-                virtual ~Proxy()
-                {
-                }
+                ~Proxy() override = default;
 
             public:
                 Core::JSON::String Path;
@@ -127,6 +110,9 @@ namespace Plugin {
             };
 
         public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
             Config()
                 : Core::JSON::Container()
                 , Port(8888)
@@ -142,9 +128,7 @@ namespace Plugin {
                 Add(_T("idletime"), &IdleTime);
                 Add(_T("proxies"), &Proxies);
             }
-            ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::DecUInt16 Port;
@@ -156,18 +140,14 @@ namespace Plugin {
         };
 
         class RequestFactory {
-        private:
+         public:
             RequestFactory() = delete;
             RequestFactory(const RequestFactory&) = delete;
             RequestFactory operator=(const RequestFactory&) = delete;
 
-        public:
-            RequestFactory(const uint32_t)
-            {
-            }
-            ~RequestFactory()
-            {
-            }
+            RequestFactory(const uint32_t) {
+            };
+            ~RequestFactory() = default;
 
         public:
             Core::ProxyType<Web::Request> Element()
@@ -177,18 +157,14 @@ namespace Plugin {
         };
 
         class ResponseFactory {
-        private:
+        public:
             ResponseFactory() = delete;
             ResponseFactory(const ResponseFactory&) = delete;
             ResponseFactory operator=(const ResponseFactory&) = delete;
 
-        public:
-            ResponseFactory(const uint32_t)
-            {
+            ResponseFactory(const uint32_t) {
             }
-            ~ResponseFactory()
-            {
-            }
+            ~ResponseFactory() = default;
 
         public:
             Core::ProxyType<Web::Response> Element()
@@ -250,11 +226,11 @@ namespace Plugin {
                 {
                     return (_path);
                 }
-                virtual void LinkBody(Core::ProxyType<Web::Response>& response)
+                void LinkBody(Core::ProxyType<Web::Response>& response) override
                 {
                     response->Body(_textBodies.Element());
-                }
-                virtual void Send(const Core::ProxyType<Web::Request>& request)
+                } 
+                void Send(const Core::ProxyType<Web::Request>& request VARIABLE_IS_NOT_USED) override
                 {
                     std::list<OutstandingMessage>::iterator index(_outstandingMessages.begin());
 
@@ -268,7 +244,7 @@ namespace Plugin {
                     index->Request.Release();
                 }
                 // Whenever there is a state change on the link, it is reported here.
-                virtual void StateChange()
+                void StateChange() override
                 {
                     if (IsOpen() == true) {
 
@@ -277,7 +253,7 @@ namespace Plugin {
                         }
                     }
                 }
-                virtual void Received(Core::ProxyType<Web::Response>& response);
+                void Received(Core::ProxyType<Web::Response>& response) override;
 
             private:
                 const string _path;
@@ -287,12 +263,11 @@ namespace Plugin {
                 ProxyMap& _proxyMap;
             };
 
-        private:
+        public:
             ProxyMap() = delete;
             ProxyMap(const ProxyMap&) = delete;
             ProxyMap& operator=(const ProxyMap&) = delete;
 
-        public:
             ProxyMap(ChannelMap& server)
                 : _server(server)
                 , _proxies()
@@ -380,7 +355,7 @@ namespace Plugin {
                 return (found);
             }
 
-            inline void AddProxy(const string& path, const string& subst, const string& address)
+            void AddProxy(const string& path, const string& subst, const string& address)
             {
                 const Core::NodeId node(address.c_str());
 
@@ -389,7 +364,7 @@ namespace Plugin {
                     _proxies.push_back(new OutgoingChannel(path, subst, *this, node));
                 }
             }
-            inline void RemoveProxy(const string& path)
+            void RemoveProxy(const string& path)
             {
                 std::list<OutgoingChannel*>::iterator index(_proxies.begin());
 
@@ -404,11 +379,11 @@ namespace Plugin {
                     _proxies.erase(index);
                 }
             }
-            inline void Submit(uint32_t channelId, Core::ProxyType<Web::Response>& response)
+            void Submit(uint32_t channelId, Core::ProxyType<Web::Response>& response)
             {
                 _server.Submit(channelId, response);
             }
-            inline bool Completed(const uint32_t channelId)
+            bool Completed(const uint32_t channelId)
             {
                 // Relay completed; check if we can close the incoming connection
                 bool close = false;
@@ -452,23 +427,21 @@ namespace Plugin {
             // Handle the HTTP Web requests.
             // [INBOUND]  Completed received requests are triggering the Received,
             // [OUTBOUND] Completed send responses are triggering the Send.
-            virtual void LinkBody(Core::ProxyType<Web::Request>& request)
+            void LinkBody(Core::ProxyType<Web::Request>& request) override
             {
                 if (request->Verb == Web::Request::HTTP_POST) {
                     request->Body(_textBodies.Element());
                 }
             }
-            virtual void Send(const Core::ProxyType<Web::Response>& response)
+            void Send(const Core::ProxyType<Web::Response>& response) override
             {
                 TRACE(WebFlow, (response));
                 if (_parent.RelayComplete(Id())) {
                     Close(0);
                 }
             }
-            virtual void StateChange()
-            {
-            }
-            virtual void Received(Core::ProxyType<Web::Request>& request);
+            void StateChange() override { }
+            void Received(Core::ProxyType<Web::Request>& request) override;
 
         private:
             friend class Core::SocketServerType<IncomingChannel>;
@@ -485,9 +458,6 @@ namespace Plugin {
 
         class ChannelMap : public Core::SocketServerType<IncomingChannel> {
         private:
-            ChannelMap(const ChannelMap&) = delete;
-            ChannelMap& operator=(const ChannelMap&) = delete;
-
             typedef Core::SocketServerType<IncomingChannel> BaseClass;
 
             class TimeHandler {
@@ -504,9 +474,7 @@ namespace Plugin {
                     : _parent(copy._parent)
                 {
                 }
-                ~TimeHandler()
-                {
-                }
+                ~TimeHandler() = default;
 
                 TimeHandler& operator=(const TimeHandler& RHS)
                 {
@@ -527,9 +495,10 @@ namespace Plugin {
             };
 
         public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+            ChannelMap(const ChannelMap&) = delete;
+            ChannelMap& operator=(const ChannelMap&) = delete;
+
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             ChannelMap()
                 : Core::SocketServerType<IncomingChannel>()
                 , _accessor()
@@ -539,9 +508,7 @@ namespace Plugin {
                 , _proxyMap(*this)
             {
             }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
             ~ChannelMap()
             {
                 // Start by closing the server thread..
@@ -561,21 +528,21 @@ namespace Plugin {
             }
 
         public:
-            inline uint32_t Configure(const string& prefixPath, const Config& configuration)
+            uint32_t Configure(const string& prefixPath, const Config& configuration)
             {
                 Core::NodeId accessor;
                 uint32_t result(Core::ERROR_INCOMPLETE_CONFIG);
                 Core::NodeId listenNode(configuration.Binding.Value().c_str());
                 Core::JSON::ArrayType<Config::Proxy>::ConstIterator index(configuration.Proxies.Elements());
 
-                if( configuration.Path.IsSet() == true ) {
-                    if (configuration.Path.Value()[0] == '/') {
-                        _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
-                    } else {
-                        _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
-                    }
-                } else {
+                if (configuration.Path.IsSet() == false) {
                     _prefixPath.clear();
+                }
+                else if (configuration.Path.Value()[0] == '/') {
+                        _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
+                }
+                else {
+                    _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
                 }
 
                 _proxyMap.Create(index);
@@ -624,32 +591,29 @@ namespace Plugin {
 
                 return (result);
             }
-            inline uint32_t Open(const uint32_t waitTime)
+            uint32_t Open(const uint32_t waitTime)
             {
                 return (Core::SocketServerType<IncomingChannel>::Open(waitTime));
             }
-            inline uint32_t Close(const uint32_t waitTime)
+            uint32_t Close(const uint32_t waitTime)
             {
                 return (Core::SocketServerType<IncomingChannel>::Close(waitTime));
             }
-            inline const string& PrefixPath() const
+            const string& PrefixPath() const
             {
                 return (_prefixPath);
             }
-            inline bool Relay(Core::ProxyType<Web::Request>& request, const uint32_t id)
+            bool Relay(Core::ProxyType<Web::Request>& request, const uint32_t id)
             {
                 return (_proxyMap.Relay(request, id));
             }
-            inline bool RelayComplete(const uint32_t id)
+            bool RelayComplete(const uint32_t id)
             {
                 return (_proxyMap.Completed(id));
             }
-            inline string Accessor() const
+            string Accessor() const
             {
                 return (_accessor);
-            }
-            void Close(IncomingChannel&)
-            {
             }
             inline void AddProxy(const string& path, const string& subst, const string& address)
             {
@@ -698,22 +662,19 @@ namespace Plugin {
             ProxyMap _proxyMap;
         };
 
-    private:
+    public:
         WebServerImplementation(const WebServerImplementation&) = delete;
         WebServerImplementation& operator=(const WebServerImplementation&) = delete;
 
-    public:
         WebServerImplementation()
             : _channelServer()
             , _observers()
         {
         }
 
-        virtual ~WebServerImplementation()
-        {
-        }
+        ~WebServerImplementation() override = default;
 
-        virtual uint32_t Configure(PluginHost::IShell* service)
+        uint32_t Configure(PluginHost::IShell* service) override
         {
             ASSERT(service != nullptr);
 
@@ -729,17 +690,17 @@ namespace Plugin {
 
             return (result);
         }
-        virtual PluginHost::IStateControl::state State() const
+        PluginHost::IStateControl::state State() const override
         {
             return (PluginHost::IStateControl::RESUMED);
         }
-        virtual uint32_t Request(const PluginHost::IStateControl::command)
+        uint32_t Request(const PluginHost::IStateControl::command) override
         {
             // No state can be set, we can only move from ININITIALIZED to RUN...
             return (Core::ERROR_NONE);
         }
 
-        virtual void Register(PluginHost::IStateControl::INotification* notification)
+        void Register(PluginHost::IStateControl::INotification* notification) override
         {
 
             // Only subscribe an interface once.
@@ -749,7 +710,7 @@ namespace Plugin {
             notification->AddRef();
             _observers.push_back(notification);
         }
-        virtual void Unregister(PluginHost::IStateControl::INotification* notification)
+        void Unregister(PluginHost::IStateControl::INotification* notification) override
         {
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
@@ -764,22 +725,22 @@ namespace Plugin {
                 _observers.erase(index);
             }
         }
-        virtual void AddProxy(const string& path, const string& subst, const string& address)
+        void AddProxy(const string& path, const string& subst, const string& address) override
         {
             _channelServer.AddProxy(path, subst, address);
         }
-        virtual void RemoveProxy(const string& path)
+        void RemoveProxy(const string& path) override
         {
             _channelServer.RemoveProxy(path);
         }
-        virtual string Accessor() const
+        string Accessor() const override
         {
             return (_channelServer.Accessor());
         }
 
         BEGIN_INTERFACE_MAP(WebServerImplementation)
-        INTERFACE_ENTRY(Exchange::IWebServer)
-        INTERFACE_ENTRY(PluginHost::IStateControl)
+            INTERFACE_ENTRY(Exchange::IWebServer)
+            INTERFACE_ENTRY(PluginHost::IStateControl)
         END_INTERFACE_MAP
 
     private:
@@ -791,16 +752,38 @@ namespace Plugin {
 
     /* virtual */ void WebServerImplementation::IncomingChannel::Received(Core::ProxyType<Web::Request>& request)
     {
-
         TRACE(WebFlow, (request));
 
+        bool safePath = true;
+        uint32_t base = static_cast<uint32_t>(_parent.PrefixPath().length());
+
+        if (request->Path.length() > base) {
+           string realPath = Core::File::Normalize(request->Path.substr(base), safePath);
+           if (safePath == true) {
+               // Normalize the remainder of the Path
+               request->Path = _parent.PrefixPath() + realPath;
+           }
+        }
+
         // Check if the channel server will relay this message.
-        if (_parent.Relay(request, Id()) == false) {
+        if (safePath == false) {
+            Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
+            response->ErrorCode = Web::STATUS_BAD_REQUEST;
+            response->Message = "Invalid Request";
+            Submit(response);
+        }
+        else if (_parent.Relay(request, Id()) == false) {
 
             Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
             Core::ProxyType<Web::FileBody> fileBody(PluginHost::IFactories::Instance().FileBody());
 
-            if( _parent.IsFileServerEnabled() == true ) {
+            if (_parent.IsFileServerEnabled() == false) {
+                Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
+                response->ErrorCode = Web::STATUS_BAD_REQUEST;
+                response->Message = "Invalid Request";
+                Submit(response);
+            }
+            else {
 
                 // If so, don't deal with it ourselves.
                 Web::MIMETypes result;
@@ -814,7 +797,8 @@ namespace Plugin {
                     *fileBody = fileToService + _T("index.html");
                     response->ContentType = Web::MIME_HTML;
                     response->Body<Web::FileBody>(fileBody);
-                } else {
+                }
+                else {
                     *fileBody = fileToService;
                     response->ContentType = result;
                     if (encoding != Web::ENCODING_UNKNOWN) {
@@ -823,9 +807,6 @@ namespace Plugin {
                     response->Body<Web::FileBody>(fileBody);
                 }
                 Submit(response);
-            } else {
-                response->ErrorCode = Web::STATUS_BAD_REQUEST;
-                response->Message = "Invalid Request";
             }
         }
     }

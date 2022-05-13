@@ -31,7 +31,7 @@ namespace A2DP {
 
         using type = Exchange::IBluetoothAudioSink::drmscheme;
 
-        virtual ~IAudioContentProtection() { }
+        virtual ~IAudioContentProtection() = default;
 
         virtual type Type() const;
 

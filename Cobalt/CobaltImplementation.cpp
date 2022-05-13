@@ -78,8 +78,7 @@ private:
             Add(_T("connection"), &Connection);
             Add(_T("playbackrates"), &PlaybackRates);
         }
-        ~Config() {
-        }
+        ~Config() override = default;
 
     public:
         Core::JSON::String Url;
@@ -105,24 +104,29 @@ private:
         NotificationSink& operator=(const NotificationSink&) = delete;
 
     public:
-        NotificationSink(CobaltImplementation &parent) :
-                _parent(parent), _waitTime(0), _command(
-                        PluginHost::IStateControl::SUSPEND) {
+        NotificationSink(CobaltImplementation &parent)
+            : _parent(parent)
+            , _waitTime(0)
+            , _command(PluginHost::IStateControl::SUSPEND)
+        {
         }
-        virtual ~NotificationSink() {
+        ~NotificationSink() override
+        {
             Stop();
             Wait(Thread::STOPPED | Thread::BLOCKED, Core::infinite);
         }
 
     public:
         void RequestForStateChange(
-                const PluginHost::IStateControl::command command) {
+                const PluginHost::IStateControl::command command)
+        {
             _command = command;
             Run();
         }
 
     private:
-        virtual uint32_t Worker() {
+        uint32_t Worker() override
+        {
             bool success = false;
 
             if ((IsRunning() == true) && (success == false)) {
@@ -155,14 +159,15 @@ private:
             , _debugPort()
         {
         }
-        virtual ~CobaltWindow()
+        ~CobaltWindow() override
         {
             Block();
             third_party::starboard::wpe::shared::Stop();
             Wait(Thread::BLOCKED | Thread::STOPPED | Thread::STOPPING, Core::infinite);
         }
 
-        uint32_t Configure(PluginHost::IShell* service) {
+        uint32_t Configure(PluginHost::IShell* service)
+        {
             uint32_t result = Core::ERROR_NONE;
 
             Config config;
@@ -257,23 +262,14 @@ private:
 
         inline string Url() const { return _url; }
         inline void Language(string& language) const { language = _language; }
-        inline void Language(const string& language) {
+        inline void Language(const string& language)
+        {
             Core::SystemInfo::SetEnvironment(_T("LANG"), language.c_str());
             Core::SystemInfo::SetEnvironment(_T("LANGUAGE"), language.c_str());
             _language = language;
         }
 
     private:
-        uint32_t Initialize() override
-        {
-            sigset_t mask;
-            sigemptyset(&mask);
-            sigaddset(&mask, SIGQUIT);
-            sigaddset(&mask, SIGUSR1);
-            sigaddset(&mask, SIGCONT);
-            pthread_sigmask(SIG_UNBLOCK, &mask, nullptr);
-            return Core::ERROR_NONE;
-        }
         uint32_t Worker() override
         {
             const std::string cmdURL = "--url=" + _url;
@@ -303,25 +299,28 @@ private:
     CobaltImplementation& operator=(const CobaltImplementation&) = delete;
 
 public:
-    CobaltImplementation() :
-            _language(),
-            _window(*this),
-            _adminLock(),
-            _state(PluginHost::IStateControl::UNINITIALIZED),
-            _cobaltBrowserClients(),
-            _stateControlClients(),
-            _sink(*this),
-            _service(nullptr) {
+    CobaltImplementation()
+        : _language()
+        , _window(*this)
+        , _adminLock()
+        , _state(PluginHost::IStateControl::UNINITIALIZED)
+        , _cobaltBrowserClients()
+        , _stateControlClients()
+        , _sink(*this)
+        , _service(nullptr)
+    {
     }
 
-    virtual ~CobaltImplementation() {
+    ~CobaltImplementation() override
+    {
         if (_service) {
             _service->Release();
             _service = nullptr;
         }
     }
 
-    virtual uint32_t Configure(PluginHost::IShell *service) {
+    uint32_t Configure(PluginHost::IShell *service) override
+    {
         uint32_t result = _window.Configure(service);
         _window.Suspend(!service->Resumed());
         _state = (!service->Resumed()) ? PluginHost::IStateControl::SUSPENDED : PluginHost::IStateControl::RESUMED;
@@ -334,22 +333,27 @@ public:
         return (result);
     }
 
-    virtual void SetURL(const string &URL) override {
+    void SetURL(const string &URL) override
+    {
         third_party::starboard::wpe::shared::SetURL(URL.c_str());
     }
 
-    virtual string GetURL() const override {
+    string GetURL() const override
+    {
         return _window.Url();
     }
 
-    virtual uint32_t GetFPS() const override {
+    uint32_t GetFPS() const override
+    {
         return 0;
     }
 
-    virtual void Hide(VARIABLE_IS_NOT_USED const bool hidden) {
+    void Hide(VARIABLE_IS_NOT_USED const bool hidden) override
+    {
     }
 
-    virtual void Register(Exchange::IBrowser::INotification *sink) {
+    void Register(Exchange::IBrowser::INotification *sink) override
+    {
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
@@ -362,7 +366,8 @@ public:
         _adminLock.Unlock();
     }
 
-    virtual void Unregister(Exchange::IBrowser::INotification *sink) {
+    void Unregister(Exchange::IBrowser::INotification *sink)  override
+    {
         _adminLock.Lock();
 
         std::list<Exchange::IBrowser::INotification*>::iterator index(
@@ -379,16 +384,18 @@ public:
         _adminLock.Unlock();
     }
 
-    void Register(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override {
+    void Register(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override
+    {
         // Kept empty since visibility change is not supported
     }
 
-    void Unregister(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override {
+    void Unregister(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override
+    {
         // Kept empty since visibility change is not supported
     }
 
-    uint32_t Reset(const resettype type) override {
-
+    uint32_t Reset(const resettype type) override
+    {
         uint32_t status = Core::ERROR_GENERAL;
         switch (type) {
         case FACTORY:
@@ -414,57 +421,70 @@ public:
         return status;
     }
 
-    uint32_t Identifier(string& id) const override {
+    uint32_t Identifier(string& id) const override
+    {
+        PluginHost::ISubSystem* subSystem = _service->SubSystems();
+        if (subSystem != nullptr) {
 
-        const PluginHost::ISubSystem::IIdentifier* identifier(_service->SubSystems()->Get<PluginHost::ISubSystem::IIdentifier>());
-        if (identifier != nullptr) {
-            uint8_t buffer[64];
+            const PluginHost::ISubSystem::IIdentifier* identifier(subSystem->Get<PluginHost::ISubSystem::IIdentifier>());
+            if (identifier != nullptr) {
+                uint8_t buffer[64];
 
-            buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
-                        ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
+                buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
+                            ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
 
-            if (buffer[0] != 0) {
-                id = Core::SystemInfo::Instance().Id(buffer, ~0);
+                if (buffer[0] != 0) {
+                    id = Core::SystemInfo::Instance().Id(buffer, ~0);
+                }
+
+                identifier->Release();
             }
-
-            identifier->Release();
+            subSystem->Release();
         }
 
         return Core::ERROR_NONE;
     }
 
-    uint32_t ContentLink(const string& link) override {
+    uint32_t ContentLink(const string& link) override
+    {
         third_party::starboard::wpe::shared::DeepLink(link.c_str());
         return Core::ERROR_NONE;
     }
 
-    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED launchpointtype& point) const override {
+    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED launchpointtype& point) const override
+    {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED const launchpointtype& point) override {
+    uint32_t LaunchPoint(VARIABLE_IS_NOT_USED const launchpointtype& point) override
+    {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(VARIABLE_IS_NOT_USED bool& visiblity) const override {
+    uint32_t Visible(VARIABLE_IS_NOT_USED bool& visiblity) const override
+    {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(VARIABLE_IS_NOT_USED const bool& visiblity) override {
+    uint32_t Visible(VARIABLE_IS_NOT_USED const bool& visiblity) override
+    {
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Language(string& language) const override {
+    uint32_t Language(string& language) const override
+    {
         _window.Language(language);
         return Core::ERROR_NONE;
     }
 
-    uint32_t Language(const string& language) override {
+    uint32_t Language(const string& language) override
+    {
         _window.Language(language);
         return Core::ERROR_NONE;
     }
 
-    virtual void Register(PluginHost::IStateControl::INotification *sink) {
+    void Register(PluginHost::IStateControl::INotification *sink) override
+    {
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
@@ -479,7 +499,8 @@ public:
         _adminLock.Unlock();
     }
 
-    virtual void Unregister(PluginHost::IStateControl::INotification *sink) {
+    void Unregister(PluginHost::IStateControl::INotification *sink) override
+    {
         _adminLock.Lock();
 
         std::list<PluginHost::IStateControl::INotification*>::iterator index(
@@ -497,11 +518,13 @@ public:
         _adminLock.Unlock();
     }
 
-    virtual PluginHost::IStateControl::state State() const {
+    PluginHost::IStateControl::state State() const override
+    {
         return (_state);
     }
 
-    virtual uint32_t Request(const PluginHost::IStateControl::command command) {
+    uint32_t Request(const PluginHost::IStateControl::command command) override
+    {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
         _adminLock.Lock();
@@ -572,14 +595,15 @@ public:
     }
 
     BEGIN_INTERFACE_MAP (CobaltImplementation)
-        INTERFACE_ENTRY (Exchange::IBrowser)
-        INTERFACE_ENTRY (PluginHost::IStateControl)
-        INTERFACE_ENTRY (Exchange::IApplication)
+    INTERFACE_ENTRY (Exchange::IBrowser)
+    INTERFACE_ENTRY (PluginHost::IStateControl)
+    INTERFACE_ENTRY (Exchange::IApplication)
     END_INTERFACE_MAP
 
 private:
     inline bool RequestForStateChange(
-            const PluginHost::IStateControl::command command) {
+            const PluginHost::IStateControl::command command)
+    {
         bool result = false;
 
         switch (command) {
@@ -602,7 +626,8 @@ private:
         return result;
     }
 
-    void StateChange(const PluginHost::IStateControl::state newState) {
+    void StateChange(const PluginHost::IStateControl::state newState)
+    {
         _adminLock.Lock();
 
         _state = newState;
@@ -644,26 +669,31 @@ private:
 
     public:
     MemoryObserverImpl(const RPC::IRemoteConnection* connection) :
-        _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId()) {
+        _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
+    {
     }
-    ~MemoryObserverImpl() {
-    }
+    ~MemoryObserverImpl() override = default;
 
     public:
-    virtual uint64_t Resident() const {
+    uint64_t Resident() const override
+    {
         return _main.Resident();
     }
-    virtual uint64_t Allocated() const {
+    uint64_t Allocated() const override
+    {
         return _main.Allocated();
     }
-    virtual uint64_t Shared() const {
+    uint64_t Shared() const override
+    {
         return _main.Shared();
     }
-    virtual uint8_t Processes() const {
+    uint8_t Processes() const override
+    {
         return (IsOperational() ? 1 : 0);
     }
 
-    virtual bool IsOperational() const {
+    bool IsOperational() const override
+    {
         return _main.IsActive();
     }
 
@@ -673,7 +703,8 @@ private:
     Core::ProcessInfo _main;
     };
 
-    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection) {
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
+    {
         ASSERT(connection != nullptr);
         Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
         return (result);

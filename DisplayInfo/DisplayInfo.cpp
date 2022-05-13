@@ -29,18 +29,24 @@ namespace Plugin {
 
     /* virtual */ const string DisplayInfo::Initialize(PluginHost::IShell* service)
     {
+        string message;
+
         ASSERT(service != nullptr);
+        ASSERT(_service == nullptr);
         ASSERT(_connectionProperties == nullptr);
         ASSERT(_connectionId == 0);
         ASSERT(_graphicsProperties == nullptr);
         ASSERT(_hdrProperties == nullptr);
 
-
-        string message;
+        _service = service;
+        _service->AddRef();
+        _service->Register(&_notification);
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         _connectionProperties = service->Root<Exchange::IConnectionProperties>(_connectionId, 2000, _T("DisplayInfoImplementation"));
         if (_connectionProperties != nullptr) {
+            _connectionProperties->Register(&_notification);
+            Exchange::JConnectionProperties::Register(*this, _connectionProperties);
 
             Exchange::IConfiguration* configConnection = _connectionProperties->QueryInterface<Exchange::IConfiguration>();
             if (configConnection != nullptr) {
@@ -52,13 +58,11 @@ namespace Plugin {
             if (_graphicsProperties == nullptr) {
                 message = _T("DisplayInfo could not be instantiated. Could not acquire GraphicsProperties interface");
             } else {
+                Exchange::JGraphicsProperties::Register(*this, _graphicsProperties);
                 _hdrProperties = _connectionProperties->QueryInterface<Exchange::IHDRProperties>();
                 if (_hdrProperties == nullptr) {
                     message = _T("DisplayInfo could not be instantiated. Could not acquire HDRProperties interface");
                 } else {
-                    _notification.Initialize(_connectionProperties);
-                    Exchange::JGraphicsProperties::Register(*this, _graphicsProperties);
-                    Exchange::JConnectionProperties::Register(*this, _connectionProperties);
                     Exchange::JHDRProperties::Register(*this, _hdrProperties);
                 }
             }
@@ -75,28 +79,28 @@ namespace Plugin {
 
     void DisplayInfo::Deinitialize(PluginHost::IShell* service) /* override */
     {
-        ASSERT(service != nullptr);
+        ASSERT(service == _service);
 
-        if (_hdrProperties != nullptr) {
-
-            Exchange::JHDRProperties::Unregister(*this);
-            Exchange::JConnectionProperties::Unregister(*this);
-            Exchange::JGraphicsProperties::Unregister(*this);
-            _notification.Deinitialize();
-
-            _hdrProperties->Release();
-            _hdrProperties = nullptr;
-        }
-
-        if (_graphicsProperties != nullptr) {
-            _graphicsProperties->Release();
-            _graphicsProperties = nullptr;
-        }
+        _service->Unregister(&_notification);
 
         if(_connectionProperties != nullptr) {
+            _connectionProperties->Unregister(&_notification);
+            Exchange::JConnectionProperties::Unregister(*this);
+
+            if (_hdrProperties != nullptr) {
+                Exchange::JHDRProperties::Unregister(*this);
+                _hdrProperties->Release();
+                _hdrProperties = nullptr;
+            }
+
+            if (_graphicsProperties != nullptr) {
+                Exchange::JGraphicsProperties::Unregister(*this);
+                _graphicsProperties->Release();
+                _graphicsProperties = nullptr;
+            }
+
             // Stop processing:
             RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-
             VARIABLE_IS_NOT_USED uint32_t result = _connectionProperties->Release();
             _connectionProperties = nullptr;
 
@@ -115,8 +119,9 @@ namespace Plugin {
                 connection->Release();
             }
         }
-
         _connectionId = 0;
+        _service->Release();
+        _service = nullptr;
     }
 
     string DisplayInfo::Information() const /* override */
@@ -197,6 +202,18 @@ namespace Plugin {
         Exchange::IHDRProperties::HDRType hdrType(Exchange::IHDRProperties::HDRType::HDR_OFF);
         if (_hdrProperties->HDRSetting(hdrType) == Core::ERROR_NONE) {
             displayInfo.Hdrtype = static_cast<JsonData::DisplayInfo::DisplayinfoData::HdrtypeType>(hdrType);
+        }
+    }
+
+    void DisplayInfo::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
+        // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
+        if (_connectionId == connection->Id()) {
+
+            ASSERT(_service != nullptr);
+
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 

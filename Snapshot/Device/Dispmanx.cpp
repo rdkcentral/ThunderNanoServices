@@ -50,24 +50,19 @@ namespace Plugin {
         Dispmanx& operator=(const Dispmanx&) = delete;
 
     public:
-        Dispmanx()
-        {
-        }
-
-        virtual ~Dispmanx()
-        {
-        }
+        Dispmanx() = default;
+        ~Dispmanx() override = default;
 
         BEGIN_INTERFACE_MAP(Dispmanx)
         INTERFACE_ENTRY(Exchange::ICapture)
         END_INTERFACE_MAP
 
-        virtual const TCHAR* Name() const
+        const TCHAR* Name() const override
         {
             return (_T("Dispmanx"));
         }
 
-        virtual bool Capture(ICapture::IStore& storer)
+        bool Capture(ICapture::IStore& storer) override
         {
 
             DISPMANX_DISPLAY_HANDLE_T display;

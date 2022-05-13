@@ -29,19 +29,16 @@ namespace Plugin {
 
     class OutOfProcessPlugin : public PluginHost::IPluginExtended, public PluginHost::IWeb {
     private:
-        OutOfProcessPlugin(const OutOfProcessPlugin&);
-        OutOfProcessPlugin& operator=(const OutOfProcessPlugin&);
 
         class Notification : public Exchange::IBrowser::INotification,
                              public PluginHost::IStateControl::INotification,
                              public RPC::IRemoteConnection::INotification,
                              public PluginHost::IPlugin::INotification {
-        private:
-            Notification();
-            Notification(const Notification&);
-            Notification& operator=(const Notification&);
 
         public:
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
+
             explicit Notification(OutOfProcessPlugin* parent)
                 : _parent(*parent)
             {
@@ -49,37 +46,37 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("================ Constructing the Notification =================\n")));
 
             }
-            ~Notification()
+            ~Notification() override
             {
                 TRACE(Trace::Information, (_T("================ Destructing the Notification =================\n")));
                 TRACE(Trace::Information, (_T("WebServer::Notification destructed. Line: %d"), __LINE__));
             }
 
         public:
-            virtual void LoadFinished(const string& URL)
+             void LoadFinished(const string& URL) override
             {
                 _parent.LoadFinished(URL);
             }
-            virtual void URLChanged(const string& URL)
+            void URLChanged(const string& URL) override
             {
                 _parent.URLChanged(URL);
             }
-            virtual void Hidden(const bool hidden)
+            void Hidden(const bool hidden) override
             {
                 _parent.Hidden(hidden);
             }
-            virtual void StateChange(const PluginHost::IStateControl::state value)
+            void StateChange(const PluginHost::IStateControl::state value) override
             {
                 _parent.StateChange(value);
             }
-            virtual void Activated(RPC::IRemoteConnection* /* connection */)
+            void Activated(RPC::IRemoteConnection* /* connection */) override
             {
             }
-            virtual void Deactivated(RPC::IRemoteConnection* connection)
+            void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
             }
-            virtual void Closure()
+            void Closure() override
             {
             }
 
@@ -108,11 +105,11 @@ namespace Plugin {
 
     public:
         class Data : public Core::JSON::Container {
-        private:
-            Data(const Data&);
-            Data& operator=(const Data&);
 
         public:
+            Data(const Data&) = delete;
+            Data& operator=(const Data&) = delete;
+
             Data()
                 : Core::JSON::Container()
                 , URL()
@@ -139,9 +136,7 @@ namespace Plugin {
                 Add(_T("hidden"), &Hidden);
                 URL = url;
             }
-            ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::String URL;
@@ -151,12 +146,14 @@ namespace Plugin {
         };
 
     public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+        OutOfProcessPlugin(const OutOfProcessPlugin&) = delete;
+        OutOfProcessPlugin& operator=(const OutOfProcessPlugin&) = delete;
+
         OutOfProcessPlugin()
             : _adminLock()
             , _skipURL(0)
+            , _connectionId(0)
             , _webPath("")
             , _service(nullptr)
             , _browser(nullptr)
@@ -167,10 +164,8 @@ namespace Plugin {
             , _hidden(false)
         {
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
-        virtual ~OutOfProcessPlugin()
+POP_WARNING()
+        ~OutOfProcessPlugin() override
         {
             _notification->Release();
         }
@@ -195,35 +190,34 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override; 
 
         // The plugin is unloaded from the webbridge. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         // ================================== CALLED ON COMMUNICATION THREAD =====================================
         // Whenever a Channel (WebSocket connection) is created to the plugin that will be reported via the Attach.
         // Whenever the channel is closed, it is reported via the detach method.
-        virtual bool Attach(PluginHost::Channel& channel);
-        virtual void Detach(PluginHost::Channel& channel);
+        bool Attach(PluginHost::Channel& channel) override;
+        void Detach(PluginHost::Channel& channel) override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void LoadFinished(const string& URL);
         void URLChanged(const string& URL);
         void Hidden(const bool hidden);
         void StateChange(const PluginHost::IStateControl::state value);
-        void ConnectionTermination(uint32_t connection);
         void Deactivated(RPC::IRemoteConnection* connection);
 
         static const char* PluginStateStr(const PluginHost::IShell::state state);

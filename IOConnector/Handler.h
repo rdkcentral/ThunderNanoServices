@@ -28,14 +28,14 @@ namespace WPEFramework {
 namespace Plugin {
 
     struct IHandler {
-        virtual ~IHandler() {}
+        virtual ~IHandler() = default;
         virtual void Trigger(GPIO::Pin& pin) = 0;
     };
 
     class HandlerAdministrator {
     private:
         struct IFactory {
-            virtual ~IFactory() {}
+            virtual ~IFactory() = default;
             virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end) = 0;
         };
 
@@ -59,10 +59,8 @@ namespace Plugin {
             {
                 HandlerAdministrator::Instance().Announce(Core::ClassNameOnly(typeid(HANDLER).name()).Text(), this);
             }
-            virtual ~Entry()
-            {
-            }
-            virtual IHandler* Factory(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end) override
+            ~Entry() override = default;
+            IHandler* Factory(PluginHost::IShell* service, const string& configuration, const uint32_t start, const uint32_t end) override
             {
                 return (new HANDLER(service, configuration, start, end));
             }

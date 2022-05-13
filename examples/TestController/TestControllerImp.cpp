@@ -32,25 +32,25 @@ namespace TestCore {
         TestControllerImp(const TestControllerImp&) = delete;
         TestControllerImp& operator=(const TestControllerImp&) = delete;
 
-        virtual ~TestControllerImp() {}
+        ~TestControllerImp() override = default;
 
         //  TestControllerImp methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Setup(){
+        void Setup() override {
             //This is overall TestController setup
             //ToDo: Do 'Setup' for ITestController if it is needed
         };
-        virtual void TearDown(){
+        void TearDown() override {
             //This is overall TestController tear down
             //ToDo: Do 'Tear Down' for ITestController if it is needed
         };
 
-        virtual ICategory::IIterator* Categories() const override
+        ICategory::IIterator* Categories() const override
         {
             return TestCore::TestAdministrator::Instance().Categories();
         }
 
-        virtual ICategory* Category(const string& category) const override
+        ICategory* Category(const string& category) const override
         {
             return TestCore::TestAdministrator::Instance().Category(category);
         }

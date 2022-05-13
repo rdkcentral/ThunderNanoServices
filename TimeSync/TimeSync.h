@@ -44,9 +44,7 @@ namespace Plugin {
                 Add(_T("time"), &SyncTime);
             }
 
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::String TimeSource;
@@ -66,9 +64,7 @@ namespace Plugin {
                 Add(_T("time"), &Time);
             }
 
-            virtual ~SetData()
-            {
-            }
+            ~SetData() override = default;
 
         public:
             TimeRep Time;
@@ -120,7 +116,7 @@ namespace Plugin {
                 }
             }
 
-            virtual void Completed()
+            void Completed() override
             {
                 uint64_t timeTicks = _client->SyncTime();
 
@@ -195,7 +191,7 @@ namespace Plugin {
             }
 
         public:
-            virtual void Dispatch() override
+            void Dispatch() override
             {
                 _timeSync->Synchronize();
             }
@@ -210,7 +206,7 @@ namespace Plugin {
 
     public:
         TimeSync();
-        virtual ~TimeSync();
+        ~TimeSync() override;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(TimeSync)
@@ -223,14 +219,14 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void SyncedTime(const uint64_t timeTicks);

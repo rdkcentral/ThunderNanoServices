@@ -44,9 +44,7 @@ namespace Plugin {
         {
         }
 
-        ~LanguageAdministrator() override
-        {
-        }
+        ~LanguageAdministrator() override = default;
 
     public:
         BEGIN_INTERFACE_MAP(LanguageAdministrator)
@@ -111,9 +109,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            ~Notification() override
-            {
-            }
+            ~Notification() override = default;
 
             //PluginHost::IPlugin::INotification
             void Activated(const string& callsign, PluginHost::IShell* plugin) override
@@ -157,8 +153,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            ~LanguageTagNotification() override {
-            }
+            ~LanguageTagNotification() override = default;
 
             LanguageTagNotification() = delete;
             LanguageTagNotification(const LanguageTagNotification&) = delete;
