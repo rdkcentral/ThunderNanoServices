@@ -127,7 +127,7 @@ namespace CEC {
 
                 _adapter = cec_adapter_create(config.Node.Value().c_str());
 
-                TRACE(Trace::Information, ("construct adapter %p for %s", _adapter, config.Node.Value().c_str()));
+                TRACE(Trace::Information, ("Construct adapter %p for %s", _adapter, config.Node.Value().c_str()));
 
                 ASSERT(_adapter != nullptr);
 

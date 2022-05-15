@@ -41,7 +41,7 @@ namespace CEC {
 
         operation.UnlockParameters(responseLength);
 
-        TRACE( Trace::Information, ("Awnser operation: Length: %d, Opcode 0x%02x, %s.", operation.Size(), operation.OpCode(), broadcast ? "broadcast" : ""));
+        TRACE(Trace::Information, ("Awnser operation: Length: %d, Opcode 0x%02x, %s.", operation.Size(), operation.OpCode(), broadcast ? "broadcast" : "direct"));
     }
 
     uint32_t Processor::Announce(Service* service)
@@ -53,7 +53,7 @@ namespace CEC {
             _awnsers.emplace(std::make_pair(service->RequestOpCode(), service));
             TRACE(Trace::Information, ("Announced opcode 0x%02X, %p", service->RequestOpCode(), service));
         } else {
-            TRACE( Trace::Error, ("Skipped awnser id 0x%02x, it was allready annouced\n", service->RequestOpCode()));
+            TRACE(Trace::Error, ("Skipped awnser id 0x%02x, it was allready annouced", service->RequestOpCode()));
         }
 
         return 0;
@@ -67,7 +67,7 @@ namespace CEC {
         if (index != _awnsers.end()) {
             _awnsers.erase(index);
         } else {
-            TRACE( Trace::Error, ("Skipped awnser id 0x%02x, it was not found\n", service->RequestOpCode()));
+            TRACE(Trace::Error, ("Skipped awnser id 0x%02x, it was not found", service->RequestOpCode()));
         }
 
         return 0;

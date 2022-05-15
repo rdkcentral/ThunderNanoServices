@@ -42,9 +42,9 @@ namespace CEC {
             _adapters.emplace(std::piecewise_construct,
                 std::forward_as_tuple(id),
                 std::forward_as_tuple(Core::ProxyType<AdapterImplementation>(Core::ProxyType<AdapterImplementation>::Create(info))));
-            TRACE(Trace::Information, ("Anounced %s\n", id.c_str()));
+            TRACE(Trace::Information, ("Anounced %s.", id.c_str()));
         } else {
-            TRACE(Trace::Error, ("Skipped id %s, it was allready annouced\n", id.c_str()));
+            TRACE(Trace::Error, ("Skipped id %s, it was allready annouced.", id.c_str()));
         }
 
         return 0;
@@ -58,9 +58,9 @@ namespace CEC {
 
         if (index != _adapters.end()) {
             _adapters.erase(index);
-            TRACE(Trace::Information, ("Revoked %s\n", id.c_str()));
+            TRACE(Trace::Information, ("Revoked %s.", id.c_str()));
         } else {
-            TRACE(Trace::Error, ("Skipped id %s it was not found\n", id.c_str()));
+            TRACE(Trace::Error, ("Skipped id %s it was not found.", id.c_str()));
         }
 
         return 0;
