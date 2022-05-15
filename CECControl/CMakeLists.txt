@@ -43,6 +43,7 @@ find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
+add_subdirectory(simpleworker)
 add_subdirectory(adapter)
 
 add_library(${MODULE_NAME} SHARED
