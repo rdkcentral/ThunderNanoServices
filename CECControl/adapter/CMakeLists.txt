@@ -24,7 +24,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_subdirectory(include)
 add_subdirectory(processor)
 
-option(CEC_TESTS "Include CEC test apps" ON)
+option(CEC_TESTS "Include CEC test apps" OFF)
 
 set(CEC_DEVICE_ADAPTER_LIBRARY_NAME "_ceccontrol_device_adapter" CACHE INTERNAL "INTERNALLY USED")
 add_subdirectory(device_adapter)
@@ -46,6 +46,6 @@ target_link_libraries(${CECADAPTER_LIBRARY_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing)
 
-#if(CEC_TESTS)
+if(CEC_TESTS)
     add_subdirectory(test)
-#endif()
+endif()
