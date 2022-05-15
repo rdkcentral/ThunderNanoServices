@@ -23,22 +23,6 @@
 
 namespace WPEFramework {
 namespace CEC {
-    typedef enum role_type : uint8_t {
-        CEC_DEVICE_TV = HDMI_CEC_ADAPTER_DEVICE_TV,
-        CEC_DEVICE_RECORDER = HDMI_CEC_ADAPTER_DEVICE_RECORDER,
-        CEC_DEVICE_TUNER = HDMI_CEC_ADAPTER_DEVICE_TUNER,
-        CEC_DEVICE_PLAYBACK = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK,
-        CEC_DEVICE_AUDIOSYSTEM = HDMI_CEC_ADAPTER_DEVICE_AUDIOSYSTEM,
-        CEC_DEVICE_SWITCH = HDMI_CEC_ADAPTER_DEVICE_SWITCH,
-        CEC_DEVICE_VIDEOPROCESSOR = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR,
-        // Reserved
-        CEC_DEVICE_UNKNOWN = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN,
-        CEC_DEVICE_ALL = HDMI_CEC_ADAPTER_DEVICE_ALL,
-    } role_t;
-
-    typedef std::list<role_t> device_list_t;
-    typedef uint8_t role_mask_t;
-
     typedef enum logical_address_type : uint8_t {
         CEC_LOGICAL_ADDRESS_TV = 0x00,
         CEC_LOGICAL_ADDRESS_RECORD_1 = 0x01,
@@ -60,11 +44,16 @@ namespace CEC {
         CEC_LOGICAL_ADDRESS_INVALID = 0xFF
     } logical_address_t;
 
+    typedef std::list<cec_adapter_role_t> device_list_t;
     typedef std::list<logical_address_t> logical_address_list_t;
 
-    inline role_t Convert(const logical_address_t address)
+    typedef std::map<cec_adapter_role_t, logical_address_t> role_map_t;
+
+    typedef uint8_t role_mask_t;
+
+    inline cec_adapter_role_t Convert(const logical_address_t address)
     {
-        role_t deviceType(CEC_DEVICE_UNKNOWN);
+        cec_adapter_role_t deviceType(CEC_DEVICE_UNKNOWN);
 
         switch (address) {
         case CEC_LOGICAL_ADDRESS_TV: {
@@ -113,7 +102,7 @@ namespace CEC {
         return deviceType;
     }
 
-    inline logical_address_list_t Convert(const role_t role)
+    inline logical_address_list_t Convert(const cec_adapter_role_t role)
     {
         logical_address_list_t addresses;
 

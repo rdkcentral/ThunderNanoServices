@@ -72,12 +72,12 @@ namespace CEC {
 
         public:
             Core::JSON::String Node;
-            Core::JSON::ArrayType<Core::JSON::EnumType<role_t>> Roles;
+            Core::JSON::ArrayType<Core::JSON::EnumType<cec_adapter_role_t>> Roles;
         };
 
         class AdapterImplementation : public IDeviceAdapter {
         private:
-            typedef std::unordered_map<role_t, bool> role_status_map_t;
+            typedef std::unordered_map<cec_adapter_role_t, bool> role_status_map_t;
 
             uint32_t Convert(cec_adapter_error_t errorCode)
             {
@@ -159,7 +159,7 @@ namespace CEC {
                 _adapter = nullptr;
             }
 
-            uint32_t Transmit(const role_t initiator, const logical_address_t follower, const uint8_t length, const uint8_t data[]) override
+            uint32_t Transmit(const cec_adapter_role_t initiator, const logical_address_t follower, const uint8_t length, const uint8_t data[]) override
             {
                 cec_adapter_error_t result = cec_adapter_transmit(_adapter, static_cast<cec_adapter_role_t>(initiator), static_cast<uint8_t>(follower), length, data);
 
@@ -200,7 +200,7 @@ namespace CEC {
                 return Core::ERROR_NONE;
             }
 
-            bool IsSupported(const role_t role) const
+            bool IsSupported(const cec_adapter_role_t role) const
             {
                 return (_roles.find(role) != _roles.end());
             }
@@ -211,7 +211,7 @@ namespace CEC {
                 AdapterImplementation* implementation = reinterpret_cast<AdapterImplementation*>(cb_data);
 
                 if (implementation != nullptr) {
-                    implementation->Received(static_cast<role_t>(follower), static_cast<logical_address_t>(initiator), length, data);
+                    implementation->Received(static_cast<cec_adapter_role_t>(follower), static_cast<logical_address_t>(initiator), length, data);
                 }
             }
 
@@ -233,7 +233,7 @@ namespace CEC {
                 }
             }
 
-            void Received(const role_t follower, const logical_address_t initiator, const uint8_t length, const uint8_t data[])
+            void Received(const cec_adapter_role_t follower, const logical_address_t initiator, const uint8_t length, const uint8_t data[])
             {
                 OperationFrame msg(length, data);
 
@@ -307,7 +307,7 @@ namespace CEC {
          * @param node - A unique id for the CEC device
          * @return  IAdapterAccessor* or nullptr if error.
          */
-        Adapter GetAdapter(const string& id, const role_t role);
+        Adapter GetAdapter(const string& id, const cec_adapter_role_t role);
 
         typedef std::unordered_map<string, Core::ProxyType<AdapterImplementation>> AdapterMap;
 

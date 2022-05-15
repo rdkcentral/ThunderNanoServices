@@ -21,7 +21,7 @@ namespace CEC {
             virtual ~Sink() = default;
 
         public:
-            uint8_t Received(const role_t follower, const logical_address_t initiator, const uint8_t length, const uint8_t data[]) override
+            uint8_t Received(const cec_adapter_role_t follower, const logical_address_t initiator, const uint8_t length, const uint8_t data[]) override
             {
                 return _parent.Received(initiator, length, data);
             }
@@ -31,7 +31,7 @@ namespace CEC {
         };
 
     public:
-        Adapter(role_t initiator, const Core::ProxyType<IDeviceAdapter> deviceAdapter)
+        Adapter(cec_adapter_role_t initiator, const Core::ProxyType<IDeviceAdapter> deviceAdapter)
             : _initiator(initiator)
             , _deviceAdapter(deviceAdapter)
             , _sink(*this)
@@ -94,7 +94,7 @@ namespace CEC {
 
     private:
         Core::CriticalSection _exchangeLock;
-        role_t _initiator;
+        cec_adapter_role_t _initiator;
         Core::ProxyType<IDeviceAdapter> _deviceAdapter;
         Sink _sink;
         Core::Event _awnserEvent;

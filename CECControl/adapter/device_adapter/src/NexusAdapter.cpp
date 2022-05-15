@@ -51,14 +51,14 @@ namespace CEC {
         };
 
         static constexpr conversion_entry _table_role_to_NEXUS_CecDeviceType[] = {
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TV, .to = NEXUS_CecDeviceType_eTv },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_RECORDER, .to = NEXUS_CecDeviceType_eRecordingDevice },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TUNER, .to = NEXUS_CecDeviceType_eTuner },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK, .to = NEXUS_CecDeviceType_ePlaybackDevice },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_AUDIOSYSTEM, .to = NEXUS_CecDeviceType_eAudioSystem },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_SWITCH, .to = NEXUS_CecDeviceType_ePureCecSwitch },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR, .to = NEXUS_CecDeviceType_eVideoProcessor },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN, .to = NEXUS_CecDeviceType_eMax }
+            { .from = CEC_DEVICE_TV, .to = NEXUS_CecDeviceType_eTv },
+            { .from = CEC_DEVICE_RECORDER, .to = NEXUS_CecDeviceType_eRecordingDevice },
+            { .from = CEC_DEVICE_TUNER, .to = NEXUS_CecDeviceType_eTuner },
+            { .from = CEC_DEVICE_PLAYBACK, .to = NEXUS_CecDeviceType_ePlaybackDevice },
+            { .from = CEC_DEVICE_AUDIOSYSTEM, .to = NEXUS_CecDeviceType_eAudioSystem },
+            { .from = CEC_DEVICE_SWITCH, .to = NEXUS_CecDeviceType_ePureCecSwitch },
+            { .from = CEC_DEVICE_VIDEOPROCESSOR, .to = NEXUS_CecDeviceType_eVideoProcessor },
+            { .from = CEC_DEVICE_UNKNOWN, .to = NEXUS_CecDeviceType_eMax }
         };
 
         static constexpr uint16_t TxMaxTimeout = 1500;
@@ -261,7 +261,7 @@ namespace CEC {
                     Core::SafeSyncType<Core::CriticalSection> scopedLock(_lock);
 
                     if (_callbacks.received != nullptr) {
-                        cec_adapter_role_t role = static_cast<cec_adapter_role_t>(Convert(static_cast<logical_address_t>(receivedMessage.data.destinationAddr)));
+                        cec_adapter_role_t role = Convert(static_cast<logical_address_t>(receivedMessage.data.destinationAddr)));
                         _callbacks.received(_callbackData, role, static_cast<logical_address_t>(receivedMessage.data.initiatorAddr), receivedMessage.data.length, receivedMessage.data.buffer);
                     }
                 }

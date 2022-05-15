@@ -66,7 +66,7 @@ namespace CEC {
         return 0;
     }
 
-    Adapter CECAccessor::GetAdapter(const string& id, const role_t role)
+    Adapter CECAccessor::GetAdapter(const string& id, const cec_adapter_role_t role)
     {
         Adapter adapter;
 

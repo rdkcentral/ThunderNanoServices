@@ -43,32 +43,32 @@ namespace CEC {
         };
 
         static constexpr conversion_entry _table_role_to_LogAdressType[] = {
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TV, .to = CEC_LOG_ADDR_TYPE_TV },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_RECORDER, .to = CEC_LOG_ADDR_TYPE_RECORD },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TUNER, .to = CEC_LOG_ADDR_TYPE_TUNER },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK, .to = CEC_LOG_ADDR_TYPE_PLAYBACK },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_AUDIOSYSTEM, .to = CEC_LOG_ADDR_TYPE_AUDIOSYSTEM },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_SWITCH, .to = CEC_LOG_ADDR_TYPE_SPECIFIC },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR, .to = CEC_LOG_ADDR_TYPE_SPECIFIC },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN, .to = CEC_LOG_ADDR_TYPE_UNREGISTERED }
+            { .from = CEC_DEVICE_TV, .to = CEC_LOG_ADDR_TYPE_TV },
+            { .from = CEC_DEVICE_RECORDER, .to = CEC_LOG_ADDR_TYPE_RECORD },
+            { .from = CEC_DEVICE_TUNER, .to = CEC_LOG_ADDR_TYPE_TUNER },
+            { .from = CEC_DEVICE_PLAYBACK, .to = CEC_LOG_ADDR_TYPE_PLAYBACK },
+            { .from = CEC_DEVICE_AUDIOSYSTEM, .to = CEC_LOG_ADDR_TYPE_AUDIOSYSTEM },
+            { .from = CEC_DEVICE_SWITCH, .to = CEC_LOG_ADDR_TYPE_SPECIFIC },
+            { .from = CEC_DEVICE_VIDEOPROCESSOR, .to = CEC_LOG_ADDR_TYPE_SPECIFIC },
+            { .from = CEC_DEVICE_UNKNOWN, .to = CEC_LOG_ADDR_TYPE_UNREGISTERED }
         };
         static constexpr conversion_entry _table_role_to_PrimaryDeviceType[] = {
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TV, .to = CEC_OP_PRIM_DEVTYPE_TV },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_RECORDER, .to = CEC_OP_PRIM_DEVTYPE_RECORD },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TUNER, .to = CEC_OP_PRIM_DEVTYPE_TUNER },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK, .to = CEC_OP_PRIM_DEVTYPE_PLAYBACK },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_AUDIOSYSTEM, .to = CEC_OP_PRIM_DEVTYPE_AUDIOSYSTEM },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_SWITCH, .to = CEC_OP_PRIM_DEVTYPE_SWITCH },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR, .to = CEC_OP_PRIM_DEVTYPE_PROCESSOR }
+            { .from = CEC_DEVICE_TV, .to = CEC_OP_PRIM_DEVTYPE_TV },
+            { .from = CEC_DEVICE_RECORDER, .to = CEC_OP_PRIM_DEVTYPE_RECORD },
+            { .from = CEC_DEVICE_TUNER, .to = CEC_OP_PRIM_DEVTYPE_TUNER },
+            { .from = CEC_DEVICE_PLAYBACK, .to = CEC_OP_PRIM_DEVTYPE_PLAYBACK },
+            { .from = CEC_DEVICE_AUDIOSYSTEM, .to = CEC_OP_PRIM_DEVTYPE_AUDIOSYSTEM },
+            { .from = CEC_DEVICE_SWITCH, .to = CEC_OP_PRIM_DEVTYPE_SWITCH },
+            { .from = CEC_DEVICE_VIDEOPROCESSOR, .to = CEC_OP_PRIM_DEVTYPE_PROCESSOR }
         };
         static constexpr conversion_entry _table_role_to_AllDeviceType[] = {
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TV, .to = CEC_OP_ALL_DEVTYPE_TV },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_RECORDER, .to = CEC_OP_ALL_DEVTYPE_RECORD },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_TUNER, .to = CEC_OP_ALL_DEVTYPE_TUNER },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK, .to = CEC_OP_ALL_DEVTYPE_PLAYBACK },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_AUDIOSYSTEM, .to = CEC_OP_ALL_DEVTYPE_AUDIOSYSTEM },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_SWITCH, .to = CEC_OP_ALL_DEVTYPE_SWITCH },
-            { .from = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR, .to = CEC_OP_ALL_DEVTYPE_SWITCH }
+            { .from = CEC_DEVICE_TV, .to = CEC_OP_ALL_DEVTYPE_TV },
+            { .from = CEC_DEVICE_RECORDER, .to = CEC_OP_ALL_DEVTYPE_RECORD },
+            { .from = CEC_DEVICE_TUNER, .to = CEC_OP_ALL_DEVTYPE_TUNER },
+            { .from = CEC_DEVICE_PLAYBACK, .to = CEC_OP_ALL_DEVTYPE_PLAYBACK },
+            { .from = CEC_DEVICE_AUDIOSYSTEM, .to = CEC_OP_ALL_DEVTYPE_AUDIOSYSTEM },
+            { .from = CEC_DEVICE_SWITCH, .to = CEC_OP_ALL_DEVTYPE_SWITCH },
+            { .from = CEC_DEVICE_VIDEOPROCESSOR, .to = CEC_OP_ALL_DEVTYPE_SWITCH }
         };
 
         static constexpr uint8_t max_osd_length = 15;
@@ -190,7 +190,7 @@ namespace CEC {
                 uint8_t data_to_copy(0);
 
                 if ((data != nullptr) && (length > 0)) {
-                    _callbacks.received(_callbackData, HDMI_CEC_ADAPTER_DEVICE_INTERNAL, 0xFF, sizeof(opcode), &opcode);
+                    _callbacks.received(_callbackData, CEC_DEVICE_INTERNAL, 0xFF, sizeof(opcode), &opcode);
 
                     if (_internalBuffer[1] == response) {
                         memset(data, 0, length);
@@ -284,7 +284,7 @@ namespace CEC {
 
                 uint8_t data_size = (length > CEC_MAX_MSG_SIZE) ? CEC_MAX_MSG_SIZE : length;
 
-                if (initiator == HDMI_CEC_ADAPTER_DEVICE_INTERNAL) {
+                if (initiator == CEC_DEVICE_INTERNAL) {
 
                     memset(_internalBuffer, 0, sizeof(_internalBuffer));
 
@@ -409,7 +409,7 @@ namespace CEC {
             {
                 Core::SafeSyncType<Core::CriticalSection> scopedLock(_lock);
                 if (_callbacks.received != nullptr) {
-                    cec_adapter_role_t role = static_cast<cec_adapter_role_t>(Convert(message.Follower()));
+                    cec_adapter_role_t role = Convert(message.Follower());
                     _callbacks.received(_callbackData, role, static_cast<logical_address_t>(message.Initiator()), message.PayloadLength(), message.Payload());
                 }
             }
@@ -434,9 +434,9 @@ namespace CEC {
 
                 if (_link.Write(CEC_ADAP_G_LOG_ADDRS, &currentSettings) == HDMI_CEC_ADAPTER_ERROR_OK) {
                     while (!found && (i < CEC_MAX_LOG_ADDRS)) {
-                        if ((currentSettings.log_addr[i] <= 0xf) && ((role == static_cast<cec_adapter_role_t>(Convert(static_cast<logical_address_t>(currentSettings.log_addr[i])))) || (role == HDMI_CEC_ADAPTER_DEVICE_ALL))) {
+                        if ((currentSettings.log_addr[i] <= 0xf) && ((role == static_cast<cec_adapter_role_t>(Convert(static_cast<logical_address_t>(currentSettings.log_addr[i])))) || (role == CEC_DEVICE_ALL))) {
                             list.push_back(currentSettings.log_addr[i]);
-                            found = (role != HDMI_CEC_ADAPTER_DEVICE_ALL);
+                            found = (role != CEC_DEVICE_ALL);
                         }
                         if (!found) {
                             ++i;

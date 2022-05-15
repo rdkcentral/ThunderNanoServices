@@ -79,7 +79,7 @@ namespace CEC {
          *
          * @param message - The message that was received.
          */
-        void Process(/*const role_t role,*/ OperationFrame& message, bool& broadcast);
+        void Process(/*const cec_adapter_role_t role,*/ OperationFrame& message, bool& broadcast);
 
     private:
         mutable Core::CriticalSection _adminLock;

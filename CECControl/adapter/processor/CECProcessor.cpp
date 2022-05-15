@@ -8,7 +8,7 @@
 
 namespace WPEFramework {
 namespace CEC {
-    void Processor::Process(/*const role_t role, */ WPEFramework::CEC::OperationFrame& operation, bool& broadcast)
+    void Processor::Process(/*const cec_adapter_role_t role, */ WPEFramework::CEC::OperationFrame& operation, bool& broadcast)
     {
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 

@@ -124,7 +124,7 @@ namespace CEC {
             return _isBroadcast;
         }
 
-        inline bool IsAllowed(const role_t role) const
+        inline bool IsAllowed(const cec_adapter_role_t role) const
         {
             return ((_allowedRoles & role) > 0);
         }

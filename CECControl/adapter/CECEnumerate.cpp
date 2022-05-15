@@ -24,13 +24,13 @@
 #include <core/core.h>
 
 namespace WPEFramework {
-    ENUM_CONVERSION_BEGIN(WPEFramework::CEC::role_t)
-    { WPEFramework::CEC::CEC_DEVICE_TV, _TXT("tv") },
-    { WPEFramework::CEC::CEC_DEVICE_RECORDER, _TXT("recorder") },
-    { WPEFramework::CEC::CEC_DEVICE_TUNER, _TXT("tuner") },
-    { WPEFramework::CEC::CEC_DEVICE_PLAYBACK, _TXT("playback") },
-    { WPEFramework::CEC::CEC_DEVICE_AUDIOSYSTEM, _TXT("audiosystem") },
-    { WPEFramework::CEC::CEC_DEVICE_SWITCH, _TXT("switch") },
-    { WPEFramework::CEC::CEC_DEVICE_VIDEOPROCESSOR, _TXT("videoprocessor") },
-    ENUM_CONVERSION_END(WPEFramework::CEC::role_t);
+ENUM_CONVERSION_BEGIN(cec_adapter_role_t)
+    { CEC_DEVICE_TV, _TXT("tv") },
+    { CEC_DEVICE_RECORDER, _TXT("recorder") },
+    { CEC_DEVICE_TUNER, _TXT("tuner") },
+    { CEC_DEVICE_PLAYBACK, _TXT("playback") },
+    { CEC_DEVICE_AUDIOSYSTEM, _TXT("audiosystem") },
+    { CEC_DEVICE_SWITCH, _TXT("switch") },
+    { CEC_DEVICE_VIDEOPROCESSOR, _TXT("videoprocessor") },
+ENUM_CONVERSION_END(cec_adapter_role_t);
 }

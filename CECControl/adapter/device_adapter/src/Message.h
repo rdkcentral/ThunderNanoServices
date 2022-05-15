@@ -28,30 +28,6 @@ using namespace WPEFramework;
 
 namespace WPEFramework {
 namespace CEC {
-
-    struct la_role_conversion_entry {
-        logical_address_t la;
-        role_t role;
-    };
-
-    static constexpr la_role_conversion_entry _table_la_to_device[] = {
-        { .la = CEC_LOGICAL_ADDRESS_TV, .role = CEC_DEVICE_TV },
-        { .la = CEC_LOGICAL_ADDRESS_RECORD_1, .role = CEC_DEVICE_RECORDER },
-        { .la = CEC_LOGICAL_ADDRESS_RECORD_2, .role = CEC_DEVICE_RECORDER },
-        { .la = CEC_LOGICAL_ADDRESS_RECORD_3, .role = CEC_DEVICE_RECORDER },
-        { .la = CEC_LOGICAL_ADDRESS_TUNER_1, .role = CEC_DEVICE_TUNER },
-        { .la = CEC_LOGICAL_ADDRESS_TUNER_2, .role = CEC_DEVICE_TUNER },
-        { .la = CEC_LOGICAL_ADDRESS_TUNER_3, .role = CEC_DEVICE_TUNER },
-        { .la = CEC_LOGICAL_ADDRESS_TUNER_4, .role = CEC_DEVICE_TUNER },
-        { .la = CEC_LOGICAL_ADDRESS_PLAYBACK_1, .role = CEC_DEVICE_PLAYBACK },
-        { .la = CEC_LOGICAL_ADDRESS_PLAYBACK_2, .role = CEC_DEVICE_PLAYBACK },
-        { .la = CEC_LOGICAL_ADDRESS_PLAYBACK_3, .role = CEC_DEVICE_PLAYBACK },
-        { .la = CEC_LOGICAL_ADDRESS_AUDIOSYSTEM, .role = CEC_DEVICE_AUDIOSYSTEM },
-        { .la = CEC_LOGICAL_ADDRESS_BACKUP_1, .role = CEC_DEVICE_VIDEOPROCESSOR },
-        { .la = CEC_LOGICAL_ADDRESS_BACKUP_2, .role = CEC_DEVICE_VIDEOPROCESSOR },
-        { .la = CEC_LOGICAL_ADDRESS_SPECIFIC, .role = CEC_DEVICE_SWITCH }
-    };
-
     class Message : public Core::FrameType<0, false, uint8_t> {
     private:
         using BaseClass = Core::FrameType<0, false, uint8_t>;
@@ -62,20 +38,32 @@ namespace CEC {
         static constexpr uint8_t MaxPayloadLength = MaxLength - HeaderLength;
 
     public:
-        Message(Message&) = delete;
+        Message(Message& msg)
+            : BaseClass(_buffer, sizeof(_buffer), 0)
+        {
+            memset(_buffer, 0, sizeof(_buffer));
+
+            ASSERT(msg.Size() <= MaxLength);
+
+            if ((msg.Size() > 0) && (msg.Size() <= MaxLength)) {
+                BaseClass::Size(msg.Size());
+                BaseClass::Copy(0, msg.Size(), msg.Data());
+            }
+        }
+
         Message& operator=(const Message&) = delete;
 
         Message()
             : BaseClass(_buffer, sizeof(_buffer), 0)
         {
-            memset(_buffer, 0 , sizeof(_buffer));
+            memset(_buffer, 0, sizeof(_buffer));
         }
 
         explicit Message(const uint8_t length, const uint8_t raw[])
             : BaseClass(_buffer, sizeof(_buffer), 0)
         {
 
-            memset(_buffer, 0 , sizeof(_buffer));
+            memset(_buffer, 0, sizeof(_buffer));
 
             ASSERT(length <= MaxLength);
 
@@ -89,7 +77,7 @@ namespace CEC {
             : BaseClass(_buffer, sizeof(_buffer), 0)
         {
 
-            memset(_buffer, 0 , sizeof(_buffer));
+            memset(_buffer, 0, sizeof(_buffer));
 
             BaseClass::Size(1);
             BaseClass::Writer writer(*this, 0);

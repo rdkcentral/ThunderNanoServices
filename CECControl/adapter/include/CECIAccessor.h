@@ -16,8 +16,8 @@ namespace CEC {
         virtual uint32_t Revoke(const std::string& id) = 0;
 
         // TODO: Keep Adapter objects intern... and give IAdapterAccessor* instead
-        virtual Adapter GetAdapter(const string& id, const role_t role) = 0;
-        //virtual IAdapterAccessor* GetAdapter(const string& id, const role_t role) = 0;
+        virtual Adapter GetAdapter(const string& id, const cec_adapter_role_t role) = 0;
+        //virtual IAdapterAccessor* GetAdapter(const string& id, const cec_adapter_role_t role) = 0;
 
         virtual ~IAccessor() = default;
     }; // struct IAccessor

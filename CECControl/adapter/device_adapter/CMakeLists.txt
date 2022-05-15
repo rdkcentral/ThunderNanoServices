@@ -59,7 +59,12 @@ endif()
 if("${CEC_DEVICE_ADAPTER_IMPLEMENTATION}" STREQUAL "Amlogic")
     target_sources(${CEC_DEVICE_ADAPTER_LIBRARY_NAME}
         PRIVATE
-            src/AmlogicAdapter.cpp)
+            src/AmlogicAdapter.cpp
+            src/LogicAddressClaimer.cpp)
+
+    target_link_libraries(${CEC_DEVICE_ADAPTER_LIBRARY_NAME}
+        PUBLIC
+            SimpleWorker::SimpleWorker)
 endif()
 
 if(CEC_TESTS)

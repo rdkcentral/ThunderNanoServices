@@ -29,13 +29,13 @@ struct conversion_entry {
 };
 
 static constexpr conversion_entry _tableDevType[] = {
-    { .from = 1, .to = HDMI_CEC_ADAPTER_DEVICE_TV },
-    { .from = 2, .to = HDMI_CEC_ADAPTER_DEVICE_RECORDER },
-    { .from = 3, .to = HDMI_CEC_ADAPTER_DEVICE_TUNER },
-    { .from = 4, .to = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK },
-    { .from = 5, .to = HDMI_CEC_ADAPTER_DEVICE_AUDIOSYSTEM },
-    { .from = 6, .to = HDMI_CEC_ADAPTER_DEVICE_SWITCH },
-    { .from = 7, .to = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR }
+    { .from = 1, .to = CEC_DEVICE_TV },
+    { .from = 2, .to = CEC_DEVICE_RECORDER },
+    { .from = 3, .to = CEC_DEVICE_TUNER },
+    { .from = 4, .to = CEC_DEVICE_PLAYBACK },
+    { .from = 5, .to = CEC_DEVICE_AUDIOSYSTEM },
+    { .from = 6, .to = CEC_DEVICE_SWITCH },
+    { .from = 7, .to = CEC_DEVICE_VIDEOPROCESSOR }
 };
 
 template <size_t N>
@@ -76,7 +76,7 @@ private:
 
         uint8_t dev = static_cast<uint8_t>(strtol((char*)&character, NULL, 10));
 
-        return static_cast<cec_adapter_role_t>(Convert(_tableDevType, dev, HDMI_CEC_ADAPTER_DEVICE_UNKNOWN));
+        return static_cast<cec_adapter_role_t>(Convert(_tableDevType, dev, CEC_DEVICE_UNKNOWN));
     }
 
     void ShowMenu()
@@ -267,7 +267,7 @@ private:
     mutable Core::CriticalSection _lock;
 
     cec_adapter_handle_t _adapter;
-    std::unordered_map<role_t, logical_address_t> _roles;
+    std::unordered_map<cec_adapter_role_t, logical_address_t> _roles;
     std::string _name;
     std::string _language;
     cec_adapter_callbacks_t _callbacks;
