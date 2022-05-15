@@ -43,7 +43,7 @@ namespace CEC {
         };
 
         static constexpr conversion_entry _table_role_to_LogAdressType[] = {
-            { .from = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN, .to = CEC_LOG_ADDR_TYPE_TV },
+            { .from = HDMI_CEC_ADAPTER_DEVICE_TV, .to = CEC_LOG_ADDR_TYPE_TV },
             { .from = HDMI_CEC_ADAPTER_DEVICE_RECORDER, .to = CEC_LOG_ADDR_TYPE_RECORD },
             { .from = HDMI_CEC_ADAPTER_DEVICE_TUNER, .to = CEC_LOG_ADDR_TYPE_TUNER },
             { .from = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK, .to = CEC_LOG_ADDR_TYPE_PLAYBACK },
@@ -53,7 +53,7 @@ namespace CEC {
             { .from = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN, .to = CEC_LOG_ADDR_TYPE_UNREGISTERED }
         };
         static constexpr conversion_entry _table_role_to_PrimaryDeviceType[] = {
-            { .from = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN, .to = CEC_OP_PRIM_DEVTYPE_TV },
+            { .from = HDMI_CEC_ADAPTER_DEVICE_TV, .to = CEC_OP_PRIM_DEVTYPE_TV },
             { .from = HDMI_CEC_ADAPTER_DEVICE_RECORDER, .to = CEC_OP_PRIM_DEVTYPE_RECORD },
             { .from = HDMI_CEC_ADAPTER_DEVICE_TUNER, .to = CEC_OP_PRIM_DEVTYPE_TUNER },
             { .from = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK, .to = CEC_OP_PRIM_DEVTYPE_PLAYBACK },
@@ -62,7 +62,7 @@ namespace CEC {
             { .from = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR, .to = CEC_OP_PRIM_DEVTYPE_PROCESSOR }
         };
         static constexpr conversion_entry _table_role_to_AllDeviceType[] = {
-            { .from = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN, .to = CEC_OP_ALL_DEVTYPE_TV },
+            { .from = HDMI_CEC_ADAPTER_DEVICE_TV, .to = CEC_OP_ALL_DEVTYPE_TV },
             { .from = HDMI_CEC_ADAPTER_DEVICE_RECORDER, .to = CEC_OP_ALL_DEVTYPE_RECORD },
             { .from = HDMI_CEC_ADAPTER_DEVICE_TUNER, .to = CEC_OP_ALL_DEVTYPE_TUNER },
             { .from = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK, .to = CEC_OP_ALL_DEVTYPE_PLAYBACK },
