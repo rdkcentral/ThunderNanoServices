@@ -5,6 +5,8 @@
 #include <map>
 #include <unordered_map>
 
+#include <cec_device_adapter.h>
+
 #undef EXTERNAL
 #ifdef _MSVC_LANG
 #ifdef CEC_ADAPTER_EXPORTS
@@ -22,16 +24,16 @@
 namespace WPEFramework {
 namespace CEC {
     typedef enum role_type : uint8_t {
-        CEC_DEVICE_TV = 0x01,
-        CEC_DEVICE_RECORDER = 0x02,
-        CEC_DEVICE_TUNER = 0x04,
-        CEC_DEVICE_PLAYBACK = 0x08,
-        CEC_DEVICE_AUDIOSYSTEM = 0x10,
-        CEC_DEVICE_SWITCH = 0x20,
-        CEC_DEVICE_VIDEOPROCESSOR = 0x40,
+        CEC_DEVICE_TV = HDMI_CEC_ADAPTER_DEVICE_TV,
+        CEC_DEVICE_RECORDER = HDMI_CEC_ADAPTER_DEVICE_RECORDER,
+        CEC_DEVICE_TUNER = HDMI_CEC_ADAPTER_DEVICE_TUNER,
+        CEC_DEVICE_PLAYBACK = HDMI_CEC_ADAPTER_DEVICE_PLAYBACK,
+        CEC_DEVICE_AUDIOSYSTEM = HDMI_CEC_ADAPTER_DEVICE_AUDIOSYSTEM,
+        CEC_DEVICE_SWITCH = HDMI_CEC_ADAPTER_DEVICE_SWITCH,
+        CEC_DEVICE_VIDEOPROCESSOR = HDMI_CEC_ADAPTER_DEVICE_VIDEOPROCESSOR,
         // Reserved
-        CEC_DEVICE_ALL = 0x7F,
-        CEC_DEVICE_UNKNOWN = 0x00,
+        CEC_DEVICE_UNKNOWN = HDMI_CEC_ADAPTER_DEVICE_UNKNOWN,
+        CEC_DEVICE_ALL = HDMI_CEC_ADAPTER_DEVICE_ALL,
     } role_t;
 
     typedef std::list<role_t> device_list_t;

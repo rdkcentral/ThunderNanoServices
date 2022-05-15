@@ -23,7 +23,7 @@ typedef enum cec_adapter_error {
     HDMI_CEC_ADAPTER_ERROR_TIMEOUT = -7,
     HDMI_CEC_ADAPTER_ERROR_NOT_FOUND = -8,
     HDMI_CEC_ADAPTER_ERROR_INCONSITENT = -9,
-    HDMI_CEC_ADAPTER_ERROR_INVALID_STATE = -10,
+    HDMI_CEC_ADAPTER_ERROR_INVALID_STATE = -10
 } cec_adapter_error_t;
 
 typedef enum cec_adapter_role {
