@@ -25,6 +25,3 @@
 
 #include <core/core.h>
 #include <plugins/plugins.h>
-
-#undef EXTERNAL
-#define EXTERNAL

@@ -32,6 +32,8 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(Cobalt REQUIRED)
 
+option(PLUGIN_COBALT_PLATFORMSERVICE "Enable Cobalt Platform service." OFF)
+
 get_filename_component(CONFIG_HEADER_NAME ${WPEFRAMEWORK_PLUGIN_COBALT_STARBOARD_CONFIGURATION_INCLUDE} NAME)
 get_filename_component(CONFIG_HEADER_DIRECTORY ${WPEFRAMEWORK_PLUGIN_COBALT_STARBOARD_CONFIGURATION_INCLUDE} DIRECTORY)
 
@@ -47,6 +49,10 @@ add_library(${MODULE_NAME} SHARED
     CobaltImplementation.cpp
     CobaltJsonRpc.cpp
     Module.cpp)
+
+if(PLUGIN_COBALT_PLATFORMSERVICE)
+    target_sources(${MODULE_NAME} PRIVATE CobaltPlatformService.cpp)
+endif()
 
 target_compile_definitions(${MODULE_NAME} 
     PRIVATE 
