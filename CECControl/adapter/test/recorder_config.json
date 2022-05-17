@@ -1,0 +1,13 @@
+{
+    "interfaces": [
+      {
+        "name": "hdmi1",
+        "configuration": {
+          "node": "/dev/cec1",
+          "roles": [
+            "recorder"
+          ]
+        }
+      }
+    ]
+  }
