@@ -13,14 +13,33 @@
 
 #include <CECTypes.h>
 #include <core/core.h>
-#include <localtracer/localtracer.h>
-// #include <messaging/messaging.h>
 #include <tracing/tracing.h>
+
+#include <localtracer/localtracer.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 using namespace WPEFramework::CEC;
 using namespace WPEFramework;
+
+enum _cec_log_dev_addr_e {
+    CEC_TV_ADDR = 0x00,
+    CEC_RECORDING_DEVICE_1_ADDR,
+    CEC_RECORDING_DEVICE_2_ADDR,
+    CEC_TUNER_1_ADDR,
+    CEC_PLAYBACK_DEVICE_1_ADDR,
+    CEC_AUDIO_SYSTEM_ADDR,
+    CEC_TUNER_2_ADDR,
+    CEC_TUNER_3_ADDR,
+    CEC_PLAYBACK_DEVICE_2_ADDR,
+    CEC_RECORDING_DEVICE_3_ADDR,
+    CEC_TUNER_4_ADDR,
+    CEC_PLAYBACK_DEVICE_3_ADDR,
+    CEC_RESERVED_1_ADDR,
+    CEC_RESERVED_2_ADDR,
+    CEC_FREE_USE_ADDR,
+    CEC_UNREGISTERED_ADDR
+};
 
 namespace {
 struct conversion_entry {
@@ -50,16 +69,24 @@ int Convert(const conversion_entry (&table)[N], const int from, const int ifnotf
 
 class App {
 private:
-    char GetUserInput()
+    string GetUserInput(bool capitalize)
     {
-        char x;
-        std::cin >> x;
-        return x;
+        std::string input;
+        std::getline(std::cin, input); // get input until enter key is pressed
+
+        if (capitalize) {
+            for (uint8_t i = 0; i < input.size(); i++) {
+                input.at(i) = toupper(input.at(i));
+            }
+        }
+
+        return input;
     }
 
     cec_adapter_role_t SelectRole()
     {
-        int character(CEC_LOGICAL_ADDRESS_UNREGISTERED);
+        string uInput;
+        uint8_t dev(~0);
 
         std::cout << "Choose device type:\n"
                      "  1 : TV\n"
@@ -72,11 +99,56 @@ private:
                   << std::endl
                   << std::flush;
 
-        character = toupper(GetUserInput());
+        uInput = GetUserInput(true);
 
-        uint8_t dev = static_cast<uint8_t>(strtol((char*)&character, NULL, 10));
+        if (uInput.size() > 0) {
+            dev = static_cast<uint8_t>(strtol(uInput.c_str(), NULL, 10));
+        }
 
         return static_cast<cec_adapter_role_t>(Convert(_tableDevType, dev, CEC_DEVICE_UNKNOWN));
+    }
+
+    logical_address_t SelectAddress()
+    {
+        string uInput;
+        logical_address_t adress(CEC_LOGICAL_ADDRESS_INVALID);
+
+        std::cout << "To whom?\n"
+                     "  (0-15): for direct\n"
+                     "  A: for all devices\n"
+                  << std::endl
+                  << std::flush;
+
+        uInput = GetUserInput(true);
+
+        if (uInput.size() > 0) {
+            if (uInput == "A") {
+                adress = CEC_LOGICAL_ADDRESS_INVALID;
+            } else {
+                adress = static_cast<logical_address_t>(strtol(uInput.c_str(), NULL, 10));
+            }
+        }
+
+        return adress;
+    }
+
+    uint8_t SelectNumber()
+    {
+        string uInput;
+        uint8_t number(1);
+
+        std::cout << "How many times? (0-255)\n"
+                  << std::endl
+                  << std::flush;
+
+        uInput = GetUserInput(true);
+
+        if (uInput.size() > 0) {
+            long int n = (strtol(uInput.c_str(), NULL, 10));
+            number = (n <= 0) ? 1 : ((n > 255) ? 255 : static_cast<uint8_t>(n));
+        }
+
+        return number;
     }
 
     void ShowMenu()
@@ -84,7 +156,9 @@ private:
         std::cout << "Enter\n"
                      "  C : Claim Logical address\n"
                      "  R : Release logical address\n"
-                     "  P : Poll all logical addresses\n"
+                     "  P : Poll logical address(es)\n"
+                     "  V : Get VendorID(s)\n"
+                     "----------------------------------------\n"
                      "  ? : Help\n"
                      "  Q : Quit\n"
                   << std::endl
@@ -97,7 +171,8 @@ public:
     App& operator=(const App&) = delete;
 
     App(const string& device)
-        : _adapter(cec_adapter_create(device.c_str()))
+        : _lock()
+        , _adapter(cec_adapter_create(device.c_str()))
         , _roles()
         , _name("Metrological")
         , _language("dut")
@@ -115,10 +190,16 @@ public:
     {
         ShowMenu();
 
-        int character;
+        char character;
         do {
             int res;
-            character = toupper(GetUserInput());
+            character = '\0';
+
+            string uInput = GetUserInput(true);
+
+            if (uInput.size() > 0) {
+                character = uInput.at(0);
+            }
 
             switch (character) {
             case 'C': {
@@ -133,9 +214,35 @@ public:
             }
             case 'P': {
                 cec_adapter_role_t role = SelectRole();
-                for (uint8_t dest = CEC_LOGICAL_ADDRESS_TV; dest <= CEC_LOGICAL_ADDRESS_SPECIFIC; dest++) {
-                    res = cec_adapter_transmit(_adapter, role, static_cast<logical_address_t>(dest), 0, nullptr);
-                    TRACE(Trace::Information, ("Polled device 0x%02x, result %d", dest, res));
+                logical_address_t address = SelectAddress();
+
+                if (address == CEC_LOGICAL_ADDRESS_INVALID) {
+                    for (uint8_t dest = CEC_LOGICAL_ADDRESS_TV; dest <= CEC_LOGICAL_ADDRESS_SPECIFIC; dest++) {
+                        res = cec_adapter_transmit(_adapter, role, static_cast<logical_address_t>(dest), 0, nullptr);
+                        TRACE(Trace::Information, ("Polled device 0x%02x, result %d", dest, res));
+                    }
+                } else {
+                    uint8_t n = SelectNumber();
+                    for (uint8_t i = 0; i < n; i++) {
+                        res = cec_adapter_transmit(_adapter, role, address, 0, nullptr);
+                        TRACE(Trace::Information, ("Polled device no. %d 0x%02x, result %d", i + 1, address, res));
+                    }
+                }
+                break;
+            }
+            case 'V': {
+                cec_adapter_role_t role = SelectRole();
+                logical_address_t address = SelectAddress();
+                uint8_t getVendor(GIVE_DEVICE_VENDOR_ID);
+
+                if (address == CEC_LOGICAL_ADDRESS_INVALID) {
+                    for (uint8_t dest = CEC_LOGICAL_ADDRESS_TV; dest <= CEC_LOGICAL_ADDRESS_SPECIFIC; dest++) {
+                        res = cec_adapter_transmit(_adapter, role, static_cast<logical_address_t>(dest), sizeof(getVendor), &getVendor);
+                        TRACE(Trace::Information, ("Request VendorId of device 0x%02x, result %d", dest, res));
+                    }
+                } else {
+                    res = cec_adapter_transmit(_adapter, role, address, sizeof(getVendor), &getVendor);
+                    TRACE(Trace::Information, ("Request VendorId of device 0x%02x, result %d", address, res));
                 }
                 break;
             }
@@ -146,6 +253,7 @@ public:
             default:
                 break;
             }
+
         } while (character != 'Q');
     }
 
@@ -167,8 +275,11 @@ public:
     void Received(const cec_adapter_role_t follower, const uint8_t initiator, const uint8_t length, const uint8_t payload[])
     {
         string sdata;
-        Core::ToHexString(payload, length, sdata);
-        TRACE(Trace::Information, ("Data received from 0x%02X, for 0x%02X: %s", initiator, follower, sdata.c_str()));
+
+        if (payload) {
+            Core::ToHexString(payload, length, sdata);
+            TRACE(Trace::Information, ("Data received from 0x%02X, for 0x%02X: %s", initiator, follower, sdata.c_str()));
+        }
 
         Parse(follower, initiator, length, payload);
     }
@@ -190,7 +301,7 @@ public:
 private:
     int Transmit(const cec_adapter_role_t role, const uint8_t follower, const uint8_t length, const uint8_t payload[])
     {
-        TRACE(Trace::Information, ("Transmitting to 0x%02X on the behave of 0x%02X", follower, role));
+        TRACE(Trace::Information, ("Transmitting to 0x%02X via role 0x%02X", follower, role));
 
         int result = cec_adapter_transmit(_adapter, role, follower, length, payload);
 
@@ -265,7 +376,6 @@ private:
 
 private:
     mutable Core::CriticalSection _lock;
-
     cec_adapter_handle_t _adapter;
     std::unordered_map<cec_adapter_role_t, logical_address_t> _roles;
     std::string _name;
@@ -274,27 +384,29 @@ private:
 };
 }
 
-int main(int /*argc*/, const char* argv[])
+int main(int argc, const char* argv[])
 {
-    std::string device("/dev/cec1");
+    std::string device = "/dev/cec";
 
-    Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
-    Messaging::ConsolePrinter printer(false);
+    if (argc > 1) {
+        device = argv[1];
+    }
 
-    tracer.Callback(&printer);
-    tracer.EnableMessage("CECDeviceAdapter", "Information", true);
-    tracer.EnableMessage("CECDeviceAdapter", "Error", true);
-    tracer.EnableMessage("CECMessageProcessor", "Information", true);
-    tracer.EnableMessage("CECMessageProcessor", "Error", true);
-    tracer.EnableMessage("CecDeviceAdapterTest", "Information", true);
+    {
+        Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
+        Messaging::ConsolePrinter printer(false);
 
-    TRACE(Trace::Information, ("%s - build: %s", Core::FileNameOnly(argv[0]), __TIMESTAMP__));
+        tracer.Callback(&printer);
+        tracer.EnableMessage("CECAdapter", "Information", true);
+        tracer.EnableMessage("CECAdapter", "Error", true);
+        tracer.EnableMessage("CecDeviceAdapterTest", "Information", true);
 
-    App app(device);
+        TRACE(Trace::Information, ("%s - build: %s", Core::FileNameOnly(argv[0]), __TIMESTAMP__));
 
-    app.Run();
-
-    tracer.Close();
+        App app(device);
+        app.Run();
+        tracer.Close();
+    }
 
     WPEFramework::Core::Singleton::Dispose();
 
