@@ -2,7 +2,6 @@
 #define MODULE_NAME CecDeviceAdapterTest
 #endif
 
-#include "cec_defines.h"
 #include <cec_device_adapter.h>
 
 #include <chrono>
@@ -22,24 +21,26 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 using namespace WPEFramework::CEC;
 using namespace WPEFramework;
 
-enum _cec_log_dev_addr_e {
-    CEC_TV_ADDR = 0x00,
-    CEC_RECORDING_DEVICE_1_ADDR,
-    CEC_RECORDING_DEVICE_2_ADDR,
-    CEC_TUNER_1_ADDR,
-    CEC_PLAYBACK_DEVICE_1_ADDR,
-    CEC_AUDIO_SYSTEM_ADDR,
-    CEC_TUNER_2_ADDR,
-    CEC_TUNER_3_ADDR,
-    CEC_PLAYBACK_DEVICE_2_ADDR,
-    CEC_RECORDING_DEVICE_3_ADDR,
-    CEC_TUNER_4_ADDR,
-    CEC_PLAYBACK_DEVICE_3_ADDR,
-    CEC_RESERVED_1_ADDR,
-    CEC_RESERVED_2_ADDR,
-    CEC_FREE_USE_ADDR,
-    CEC_UNREGISTERED_ADDR
-};
+/* Power Status Feature */
+#define CEC_MESSAGE_GIVE_DEVICE_POWER_STATUS 0x8f
+#define CEC_MESSAGE_REPORT_POWER_STATUS 0x90
+/* Power Status Operand (pwr_state) */
+#define CEC_PARAMETER_POWER_STATUS_ON 0
+#define CEC_PARAMETER_POWER_STATUS_STANDBY 1
+#define CEC_PARAMETER_POWER_STATUS_TO_ON 2
+#define CEC_PARAMETER_POWER_STATUS_TO_STANDBY 3
+
+/* General Protocol Messages */
+#define CEC_MESSAGE_FEATURE_ABORT 0x00
+/* Abort Reason Operand (reason) */
+#define CEC_PARAMETER_ABORT_UNRECOGNIZED_OP 0
+#define CEC_PARAMETER_ABORT_INCORRECT_MODE 1
+#define CEC_PARAMETER_ABORT_NO_SOURCE 2
+#define CEC_PARAMETER_ABORT_INVALID_OP 3
+#define CEC_PARAMETER_ABORT_REFUSED 4
+#define CEC_PARAMETER_ABORT_UNDETERMINED 5
+
+#define CEC_MESSAGE_ABORT 0xff
 
 namespace {
 struct conversion_entry {
@@ -350,7 +351,7 @@ private:
                 break;
             }
             case GIVE_DEVICE_POWER_STATUS: {
-                uint8_t parameters[] = { REPORT_POWER_STATUS, CEC_OP_POWER_STATUS_ON };
+                uint8_t parameters[] = { REPORT_POWER_STATUS, CEC_PARAMETER_POWER_STATUS_ON };
                 memcpy(&replyData, &parameters, sizeof(parameters));
                 relayLength = sizeof(parameters);
                 break;
@@ -362,7 +363,7 @@ private:
                 break;
             }
             default:
-                uint8_t parameters[] = { FEATURE_ABORT, CEC_OP_ABORT_INVALID_OP };
+                uint8_t parameters[] = { FEATURE_ABORT, CEC_PARAMETER_ABORT_INVALID_OP };
                 memcpy(&replyData, &parameters, sizeof(parameters));
                 relayLength = sizeof(parameters);
                 break;

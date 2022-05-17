@@ -49,7 +49,7 @@ namespace CEC {
             };
         } // namespace Response
 
-        static Service::Version service_version(CEC_VERSION_2_0);
+        static Service::Version service_version(VERSION_CEC_2_0);
 
     } // namespace Message
 } // namespace CEC

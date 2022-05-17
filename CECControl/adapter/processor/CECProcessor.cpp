@@ -27,14 +27,14 @@ namespace CEC {
                 // Validation of payload failed...
                 broadcast = false;
                 operation.OpCode(FEATURE_ABORT);
-                payload[0] = CEC_ABORT_REASON_INVALID_OPERAND;
+                payload[0] = ABORT_REASON_INVALID_OPERAND;
                 responseLength = 1;
             }
         } else {
             // We cannot awnser this request...
             // operation.Destination(operation.Initiator());
             operation.OpCode(FEATURE_ABORT);
-            payload[0] = CEC_ABORT_REASON_UNRECOGNIZED_OPCODE;
+            payload[0] = ABORT_REASON_UNRECOGNIZED_OPCODE;
             responseLength = 1;
         }
 

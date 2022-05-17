@@ -232,7 +232,7 @@ public:
                         uint32_t r = adapter.Exchange(static_cast<logical_address_t>(dest), version);
 
                         if (r == Core::ERROR_NONE) {
-                            if (version.Value() == CEC_VERSION_2_0) {
+                            if (version.Value() == VERSION_CEC_2_0) {
                                 TRACE(Trace::Information, ("Device 0x%02X supports bleeding edge CEC!!!!", dest));
                             } else {
                                 TRACE(Trace::Information, ("Device 0x%02X supports 0x%02X CEC :-(", dest, version.Value()));

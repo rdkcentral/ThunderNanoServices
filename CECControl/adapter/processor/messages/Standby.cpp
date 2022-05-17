@@ -146,16 +146,16 @@ namespace CEC {
 
                     switch (state) {
                     case WPEFramework::Exchange::IPower::On:
-                        buffer[0] = CEC_POWER_STATUS_ON;
+                        buffer[0] = POWER_STATUS_ON;
                         break;
                     case WPEFramework::Exchange::IPower::ActiveStandby:
                     case WPEFramework::Exchange::IPower::PassiveStandby:
                     case WPEFramework::Exchange::IPower::SuspendToRAM:
                     case WPEFramework::Exchange::IPower::Hibernate:
-                        buffer[0] = CEC_POWER_STATUS_STANDBY;
+                        buffer[0] = POWER_STATUS_STANDBY;
                         break;
                     default:
-                        buffer[0] = CEC_POWER_STATUS_UNKNOWN;
+                        buffer[0] = POWER_STATUS_UNKNOWN;
                         break;
                     };
 

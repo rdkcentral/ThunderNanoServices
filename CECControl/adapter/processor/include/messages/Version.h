@@ -27,7 +27,7 @@ namespace CEC {
         class Version : public ExchangeType<GET_CEC_VERSION, CEC_VERSION, Version> {
             friend ExchangeType;
         public:
-            Version() : _parameter(CEC_VERSION_UNKNOWN){}
+            Version() : _parameter(VERSION_CEC_UNKNOWN){}
             ~Version() override = default;
 
             version_t Value() const
