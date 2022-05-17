@@ -31,8 +31,6 @@
 #include <CECTypes.h>
 
 #include <cec_device_adapter.h>
-
-// #include <messaging/messaging.h>
 #include <tracing/tracing.h>
 
 #include <string>

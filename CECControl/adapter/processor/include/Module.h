@@ -24,5 +24,4 @@
 #endif
 
 #include <core/core.h>
-// #include <messaging/messaging.h>
 #include <tracing/tracing.h>

@@ -6,7 +6,6 @@
 #include <CECProcessor.h>
 
 #include <localtracer/localtracer.h>
-// #include <messaging/messaging.h>
 #include <tracing/tracing.h>
 
 #include <chrono>
