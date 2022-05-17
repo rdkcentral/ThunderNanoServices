@@ -231,9 +231,9 @@ namespace CEC {
                                          std::forward_as_tuple(connector),
                                          std::forward_as_tuple(Core::ProxyType<CECAdapterImplementation>(Core::ProxyType<CECAdapterImplementation>::Create(connector))))
                                 .first;
-                } else {
-                    index->second.AddRef();
                 }
+
+                index->second.AddRef();
 
                 TRACE(Trace::Information, ("%s adapter[%p]", __FUNCTION__, index->second.operator->()));
 
