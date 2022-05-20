@@ -207,7 +207,7 @@ namespace WPEFramework {
 				TRACE(Trace::Information, (_T("Request: [%d] from [%d], method: [%s]"), newId, context.ChannelId(), method.c_str()));
 
 				// Time to fire of the request to RUST ->
-				_module->Request(newId, context.Token(), method, message->Parameters.Value());
+				_module->Request(newId, context.Token(), method, inbound.Parameters.Value());
 
 				// Wait for ID to return, we can not report anything back yet...
 				message.Release();
@@ -386,9 +386,17 @@ namespace WPEFramework {
 
 				// Oke, there is someone waiting for a response!
 				message->Id = requestId;
+
+				if (response.empty() == true) {
+					message->Error.Code = error;
+					message->Error.Data = _T("FAILED");
+				}
+				else {
+					message->Result = response;
+				}
+
 				_service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(message));
 			}
-
 		}
 
 

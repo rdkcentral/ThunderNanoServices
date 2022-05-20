@@ -131,6 +131,19 @@ pub extern fn wpe_rust_plugin_create(_name: *const c_char, send_func: SendToFunc
     name: name,
     plugin: plugin 
   });
+  
+  /* Sorry for the lack of RUST knowledge, this was the only way we */
+  /* could send back a list with the methods supported by this Rust */
+  /* plugin. Prefer to send it so Thudner can already filter on non */
+  /* existing methods. Suggest to return this string as a parameter */
+  /* on this method call.. */ 
+  let methods = CString::new("[ \"add\", \"mul\" ]").unwrap();
+  unsafe {
+	// let c_buf = methods.unwrap();
+    //let c_str: &CStr = unsafe { CStr::from_ptr(c_buf) };
+    //let str_slice: &str = c_str.to_str().unwrap();
+    send_func(0, methods.as_ptr(), plugin_ctx);
+  }
 
   Box::into_raw(c_plugin)
 }

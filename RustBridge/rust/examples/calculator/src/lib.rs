@@ -21,11 +21,15 @@ struct Calculator {
 }
 
 impl Calculator {
+  
   fn dispatch_request(&mut self, req: json::JsonValue, ctx: thunder_rs::RequestContext) {
     if let Some(method) = req["method"].as_str() {
       match method {
-        "calculator.add" => { self.add(req, ctx); }
-        "calculator.mul" => { self.mul(req, ctx); }
+		/* suggest not to work with the "calculator" prefix here. It is */
+		/* already verified by thunder. here we just would like to work */
+        /* on the method name. */
+        "add" => { self.add(req, ctx); }
+        "mul" => { self.mul(req, ctx); }
         _ => {
           println!("method {} not handled here", method);
         }

@@ -285,8 +285,8 @@ namespace WPEFramework {
 					std::vector<string> searchPath;
 					string className(framework->ClassName());
 
-					if (config.ModuleName.Value().empty() == false) {
-						rustModule = framework->Callsign();
+					if (config.ModuleName.Value().empty() == true) {
+						rustModule = framework->Callsign() + _T(".so");
 					}
 					else {
 						rustModule = config.ModuleName.Value();
@@ -297,10 +297,14 @@ namespace WPEFramework {
 					searchPath.push_back(framework->SystemPath());
 					searchPath.push_back(framework->PluginPath());
 					
+					_callback = callback;
+
 					result = _connector.Initialize(searchPath, rustModule, className, framework->ConfigLine());
 					
-					if (result == Core::ERROR_NONE) {					
-						_callback = callback;
+					if (result != Core::ERROR_NONE) {
+						_callback = nullptr;
+					}
+					else {
 						_callback->AddRef();		
 						_service = framework;
 						_service->AddRef();
@@ -325,6 +329,7 @@ namespace WPEFramework {
 			// Allow THUNDER to send an event to the interested subscribers in the RUST
 			// world.
 			void Event(const string& event, const string& parmeters) override {
+				_callback->Event(event, parmeters);
 			}
 
 			void Response(const uint32_t id, const string& response, const int32_t errorCode) {
@@ -355,17 +360,24 @@ extern "C" void wpe_send_to(uint32_t id, const char* json, Plugin::Rust::PluginC
 	Plugin::RustBridgeImplementation* implementation = reinterpret_cast<Plugin::RustBridgeImplementation*>(plugin);
 
 	if (implementation != nullptr) {
-		Core::JSONRPC::Message convert;
-		convert.FromString(json);
-
-		if (convert.Error.IsSet() == true) {
-			implementation->Response(id, Core::emptyString, convert.Error.Code.Value());
-		}
-		else if (convert.Result.Value().empty() == true) {
-			implementation->Response(id, string(Core::JSON::IElement::NullTag), 0);
+		if ((id == 0) && (json[0] == '[')) {
+			// TODO: Can we make an explicit call for this or return the methods on the fn_create ?
+			// Hacky way to get a JSON list of the supported methods in the class
+			implementation->Event(_T("registerjsonrpcmethods"), json);
 		}
 		else {
-			implementation->Response(id, convert.Result.Value(), 0);
+			Core::JSONRPC::Message convert;
+			convert.FromString(json);
+
+			if (convert.Error.IsSet() == true) {
+				implementation->Response(id, Core::emptyString, convert.Error.Code.Value());
+			}
+			else if (convert.Result.Value().empty() == true) {
+				implementation->Response(id, string(Core::JSON::IElement::NullTag), 0);
+			}
+			else {
+				implementation->Response(id, convert.Result.Value(), 0);
+			}
 		}
 	}
 }
