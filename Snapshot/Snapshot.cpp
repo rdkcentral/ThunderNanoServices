@@ -44,12 +44,11 @@ namespace Plugin {
         {
 
             png_structp pngPointer = nullptr;
-            bool result = false;
 
             pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
             if (pngPointer == nullptr) {
 
-                return result;
+                return false;
             }
 
             png_infop infoPointer = nullptr;
@@ -57,14 +56,14 @@ namespace Plugin {
             if (infoPointer == nullptr) {
 
                 png_destroy_write_struct(&pngPointer, &infoPointer);
-                return result;
+                return false;
             }
 
             // Set up error handling.
             if (setjmp(png_jmpbuf(pngPointer))) {
 
                 png_destroy_write_struct(&pngPointer, &infoPointer);
-                return result;
+                return false;
             }
 
             // Set image attributes.
@@ -95,6 +94,7 @@ namespace Plugin {
                 }
             }
 
+            bool result = false;
             // Duplicate file descriptor and create File stream based on it.
             FILE* filePointer = static_cast<FILE*>(*_file);
             if (nullptr != filePointer) {
