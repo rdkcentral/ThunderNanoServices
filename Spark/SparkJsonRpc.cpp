@@ -105,6 +105,8 @@ namespace Plugin {
                 _spark->Hide(false);
             }
             else {
+                // Note: Hide is not working, since there is no
+                // required platform support from pxCore library
                 _spark->Hide(true);
             }
 
