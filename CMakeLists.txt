@@ -42,6 +42,7 @@ option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_RESOURCEMONITOR "Include ResourceMonitor plugin" OFF)
+option(PLUGIN_RUSTBRIDGE "Include RustBridge plugin" OFF)
 option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
@@ -162,6 +163,10 @@ endif()
 
 if(PLUGIN_RESOURCEMONITOR)
     add_subdirectory(ResourceMonitor)
+endif()
+
+if(PLUGIN_RUSTBRIDGE)
+    add_subdirectory(RustBridge)
 endif()
 
 if(PLUGIN_SECURESHELLSERVER)
