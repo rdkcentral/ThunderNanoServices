@@ -62,10 +62,4 @@ if(WestonServer_FOUND AND NOT TARGET WestonServer::WestonServer)
             INTERFACE_COMPILE_OPTIONS "${WESTON_SERVER_CFLAGS_OTHER}"
             INTERFACE_LINK_LIBRARIES "${WESTON_SERVER_LIBRARIES}"
             )
-else()
-    if(WestonServer_FIND_REQUIRED)
-        message(FATAL_ERROR "Could NOT find Weston Server")
-    elseif(NOT WestonServer_FIND_QUIETLY)
-        message(STATUS "Could NOT find Weston Server")
-    endif()
 endif()
