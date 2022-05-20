@@ -26,7 +26,7 @@ namespace Player {
     namespace Implementation {
         namespace {
             namespace GstCallbacks {
-                gboolean gstBusCallback(GstBus* bus, GstMessage* message, CENC::PipelineData* data)
+                gboolean gstBusCallback(GstBus* bus VARIABLE_IS_NOT_USED, GstMessage* message, CENC::PipelineData* data)
                 {
                     switch (GST_MESSAGE_TYPE(message)) {
                     case GST_MESSAGE_ERROR: {

@@ -131,13 +131,15 @@ namespace Plugin {
             PluginHost::IStateControl::command _command;
         };
 
+PUSH_WARNING(DISABLE_WARNING_NON_VIRTUAL_DESTRUCTOR)
         class SceneWindow : public Core::Thread, public pxWindow, public pxIViewContainer {
+POP_WARNING()
         private:
             SceneWindow(const SceneWindow&) = delete;
             SceneWindow& operator=(const SceneWindow&) = delete;
 
             struct ICommand {
-                ICommand() : _refCount(1) = default;
+                ICommand() : _refCount(1) {}
                 virtual ~ICommand() = default;
 
                 void AddRef() { _refCount++; }
@@ -439,7 +441,7 @@ namespace Plugin {
             }
 
         private:
-            static void windowThread(void* context, void* data)
+            static void windowThread(void* context VARIABLE_IS_NOT_USED, void* data)
             {
                 ICommand* command = reinterpret_cast<ICommand*>(data);
                 command->Execute();

@@ -23,14 +23,14 @@ install(DIRECTORY
     COMPONENT ${MODULE_NAME})
 
 # platform dependent files
-configure_file( "${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json.in"
-                "${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json"
+configure_file( "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json.in"
+                "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json"
                 @ONLY)
-install(FILES "${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json"
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json"
     DESTINATION "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}"
     COMPONENT ${MODULE_NAME})
 
-install(FILES "${PLUGIN_AVS_PLATFORM}/SmartScreenSDKConfig.json"
+install(FILES "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/SmartScreenSDKConfig.json"
     DESTINATION "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}"
     COMPONENT ${MODULE_NAME})
 
