@@ -28,14 +28,17 @@ find_package(LibParodus REQUIRED)
 find_package(Parodus2CCSP REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_library(${TARGET} CCSP.cpp)
+add_library(${TARGET} SHARED
+    CCSP.cpp
+    Module.cpp
+)
 
 target_link_libraries(${TARGET}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        parodus2ccsp::parodus2ccsp
+        Parodus2CCSP::Parodus2CCSP
 )
 
 target_compile_definitions(${TARGET} PRIVATE ${PLUGIN_DEFINITIONS})

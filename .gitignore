@@ -15,3 +15,6 @@ build/
 */*.so
 */*/*/*.so
 */config
+*/*/*/*.a
+*/*/*/*.webpa
+*/*/*/*/*/*.profile

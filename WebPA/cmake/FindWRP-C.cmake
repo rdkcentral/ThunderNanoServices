@@ -1,8 +1,8 @@
-# - Try to find Procps
+# - Try to find WRP-C
 # Once done this will define
-#  PROCPS_FOUND - System has Procps
-#  PROCPS_INCLUDE_DIRS - The Procps include directories
-#  PROCPS_LIBRARIES - The libraries needed to use Procps
+#  WRP-C_FOUND - System has WRP-C
+#  WRP_C_INCLUDE_DIRS - The WRP-C include directories
+#  WRP_C_LIBRARIES - The libraries needed to use WRP-C
 #
 # Copyright (C) 2019 Metrological.
 #
@@ -27,30 +27,33 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
-# PROCPS has no pc file to search for
+# WRP_C has no pc file to search for
 
-find_library(PROCPS_LIBRARY procps)
+find_path(WRP_C_INCLUDE wrp-c.h
+    HINTS /usr/include/wrp-c /usr/local/include/wrp-c ${CMAKE_INSTALL_PREFIX}/usr/include/wrp-c)
 
-if(EXISTS "${PROCPS_LIBRARY}")
+find_library(WRP_C_LIBRARY wrp-c)
+
+if(EXISTS "${WRP_C_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    find_package_handle_standard_args(Procps DEFAULT_MSG PROCPS_LIBRARY)
-    mark_as_advanced(PROCPS_LIBRARY)
-    set(PROCPS_FOUND ${Procps_FOUND})
+    find_package_handle_standard_args(WRP-C DEFAULT_MSG WRP_C_INCLUDE WRP_C_LIBRARY)
+    mark_as_advanced(WRP_C_INCLUDE WRP_C_LIBRARY)
 
-    if(Procps_FOUND AND NOT TARGET Procps::Procps)
-        add_library(Procps::Procps UNKNOWN IMPORTED)
+    if(WRP-C_FOUND AND NOT TARGET WRP-C::WRP-C)
+        add_library(WRP-C::WRP-C UNKNOWN IMPORTED)
 
-        set_target_properties(Procps::Procps PROPERTIES
+        set_target_properties(WRP-C::WRP-C PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${PROCPS_LIBRARY}"
+                IMPORTED_LOCATION "${WRP_C_LIBRARY}"
+                INTERFACE_INCLUDE_DIRECTORIES "${WRP_C_INCLUDE}"
                 )
     endif()
 else()
-    if(Procps_FIND_REQUIRED)
-        message(FATAL_ERROR "PROCPS_LIBRARY not available")
-    elseif(NOT Procps_FIND_QUIETLY)
-        message(STATUS "PROCPS_LIBRARY not available")
+    if(WRP-C_FIND_REQUIRED)
+        message(FATAL_ERROR "WRP_C_LIBRARY not available")
+    elseif(NOT WRP-C_FIND_QUIETLY)
+        message(STATUS "WRP_C_LIBRARY not available")
     endif()
 
 endif()

@@ -88,7 +88,7 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
         }
     }
     _connectionId = 0;
-    _service->Release()
+    _service->Release();
     _service = nullptr;
 }
 
