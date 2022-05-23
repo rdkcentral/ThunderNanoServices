@@ -5,7 +5,7 @@
 
 namespace WPEFramework {
 namespace CEC {
-    class Adapter : public IAdapterAccesor {
+    class Adapter : public IAdapterAccessor {
     private:
         class Sink : public IDeviceAdapter::INotification {
         public:
