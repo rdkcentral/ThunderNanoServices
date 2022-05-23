@@ -319,7 +319,7 @@ private:
         if ((length > 0) && (payload[0] != NO_OPCODE)) {
             switch (payload[0]) {
             case GET_CEC_VERSION: {
-                uint8_t parameters[] = { CEC_VERSION, CEC_VERSION_2_0 };
+                uint8_t parameters[] = { CEC_VERSION, VERSION_CEC_2_0 };
                 memcpy(&replyData, &parameters, sizeof(parameters));
                 relayLength = sizeof(parameters);
                 break;
@@ -357,7 +357,7 @@ private:
                 break;
             }
             case GIVE_FEATURES: {
-                uint8_t parameters[] = { REPORT_FEATURES, CEC_VERSION_2_0, 0x00, 0x00, 0x00 };
+                uint8_t parameters[] = { REPORT_FEATURES, VERSION_CEC_2_0, 0x00, 0x00, 0x00 };
                 memcpy(&replyData, &parameters, sizeof(parameters));
                 relayLength = sizeof(parameters);
                 break;
