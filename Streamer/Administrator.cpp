@@ -133,7 +133,7 @@ namespace Player {
             auto it = _streamers.begin();
             for (; it != _streamers.end(); ++it) {
                 ASSERT((*it).second != nullptr);
-                if ((static_cast<uint32_t>((*it).second->Type()) & static_cast<uint32_t>(streamType)) != 0) {
+                if (static_cast<uint32_t>((*it).second->Type()) == static_cast<uint32_t>(streamType)) {
                     IPlayerPlatform* player = (*it).second->Create();
                     if (player != nullptr) {
                         frontend = new Frontend(this, player);
