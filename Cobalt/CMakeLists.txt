@@ -56,7 +56,7 @@ add_library(${PLUGIN_COBALT_IMPLEMENTATION} SHARED
     CobaltImplementation.cpp)
 
 if(PLUGIN_COBALT_PLATFORMSERVICE)
-    target_sources(${PLUGIN_COBALT_IMPLEMENTATION} PRIVATE CobaltPlatformService.cpp)
+    include(Extension/CMakeLists.txt)
 endif()
 
 target_compile_definitions(${PLUGIN_COBALT_IMPLEMENTATION}
