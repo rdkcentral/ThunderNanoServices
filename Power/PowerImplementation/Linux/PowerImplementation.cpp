@@ -213,17 +213,16 @@ private:
                             ::write(_triggerFile, "0", 1);
                             /* Reset the State to 'On' once device wakes-up. */
                             SetState(Exchange::IPower::PCState::On, 0);
-                            Notify(state, Exchange::IPower::After);
                         }
                         break;
                     case Exchange::IPower::PCState::Hibernate: break;
                     case Exchange::IPower::PCState::PowerOff:
                         system("poweroff");
-                        Notify(state, Exchange::IPower::After);
                         break;
                     default:
                         TRACE(Trace::Error, (_T("Should not reach here at any case...!!!")));
                 }
+                Notify(state, Exchange::IPower::After);
             }
         }
     }

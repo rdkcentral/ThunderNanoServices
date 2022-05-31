@@ -241,7 +241,7 @@ namespace Plugin {
     void Power::PowerKey() /* override */ {
         if (power_get_state() == Exchange::IPower::PCState::On) {
             // Maybe this value should be coming from the config :-)
-            SetState(_powerOffMode, ~0);
+            SetState(_powerOffMode, _powerOffMode);
         }
         else {
             SetState(Exchange::IPower::PCState::On, 0);
