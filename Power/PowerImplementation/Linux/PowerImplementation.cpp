@@ -138,12 +138,22 @@ public:
     {
         TRACE(Trace::Information, (_T("~LinuxPowerImplementation()")));
 
+        RevokeJob();
+
         if (_triggerFile >= 0) {
             ::close(_triggerFile);
         }
 
         if (_stateFile >= 0) {
             ::close(_stateFile);
+        }
+    }
+    void RevokeJob()
+    {
+        Core::ProxyType<Core::IDispatch> job(_job.Revoke());
+        if (job.IsValid()) {
+            Core::IWorkerPool::Instance().Revoke(job);
+            _job.Revoked();
         }
     }
 
@@ -212,6 +222,7 @@ private:
                             /* Reset the early wakeup trigger for low level drivers. */
                             ::write(_triggerFile, "0", 1);
                             /* Reset the State to 'On' once device wakes-up. */
+                            RevokeJob();
                             SetState(Exchange::IPower::PCState::On, 0);
                         }
                         break;
