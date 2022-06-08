@@ -4,18 +4,18 @@ autostart = "@PLUGIN_DISPLAYINFO_AUTOSTART@"
 
 configuration = JSON()
 
-if to_bool("@PLUGIN_DISPLAYINFO_USE_BEST_MODE@"):
+if boolean("@PLUGIN_DISPLAYINFO_USE_BEST_MODE@"):
     configuration.add("useBestMode", "@PLUGIN_DISPLAYINFO_USE_BEST_MODE@")
 
-configuration.add_non_empty("drmDeviceName", "@PLUGIN_DISPLAYINFO_DRM_DEVICE_NAME@")
-configuration.add_non_empty("drmSubsystemPath", "@PLUGIN_DISPLAYINFO_EDID_FILEPATH@")
-configuration.add_non_empty("hdcpLevelFilepath", "@PLUGIN_DISPLAYINFO_HDCP_LEVEL_FILEPATH@")
-configuration.add_non_empty("hdrLevelFilepath", "@PLUGIN_DISPLAYINFO_HDR_LEVEL_FILEPATH@")
-configuration.add_non_empty("gpuMemoryFile", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_FILE@")
-configuration.add_non_empty("gpuMemoryFreePattern", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_FREE_PATTERN@")
-configuration.add_non_empty("gpuMemoryTotalPattern", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_TOTAL_PATTERN@")
-configuration.add_non_empty("gpuMemoryUnitMultiplier", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_UNIT_MULTIPLIER@")
-configuration.add_non_empty("hdcplevel", "@PLUGIN_DISPLAYINFO_HDCP_LEVEL@")
+configuration.add("drmDeviceName", "@PLUGIN_DISPLAYINFO_DRM_DEVICE_NAME@")
+configuration.add("drmSubsystemPath", "@PLUGIN_DISPLAYINFO_EDID_FILEPATH@")
+configuration.add("hdcpLevelFilepath", "@PLUGIN_DISPLAYINFO_HDCP_LEVEL_FILEPATH@")
+configuration.add("hdrLevelFilepath", "@PLUGIN_DISPLAYINFO_HDR_LEVEL_FILEPATH@")
+configuration.add("gpuMemoryFile", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_FILE@")
+configuration.add("gpuMemoryFreePattern", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_FREE_PATTERN@")
+configuration.add("gpuMemoryTotalPattern", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_TOTAL_PATTERN@")
+configuration.add("gpuMemoryUnitMultiplier", "@PLUGIN_DISPLAYINFO_GPU_MEMORY_UNIT_MULTIPLIER@")
+configuration.add("hdcplevel", "@PLUGIN_DISPLAYINFO_HDCP_LEVEL@")
 
 root = JSON()
 root.add("mode", "@PLUGIN_DISPLAYINFO_MODE@")
