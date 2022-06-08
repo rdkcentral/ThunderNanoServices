@@ -65,7 +65,7 @@ POP_WARNING()
         {
             return _browser != nullptr;
         }
-        virtual void Stopped(const string& data, const string& payload)
+        virtual void Stopped(const string& data VARIABLE_IS_NOT_USED, const string& payload VARIABLE_IS_NOT_USED)
         {
             if (_browser != nullptr) {
                 _browser->Unregister(&_notification);
@@ -105,10 +105,10 @@ POP_WARNING()
             {
                 _parent->_hidden = hidden;
             }
-            void LoadFinished(const string& URL) override
+            void LoadFinished(const string& URL VARIABLE_IS_NOT_USED) override
             {
             }
-            void URLChanged(const string& URL) override
+            void URLChanged(const string& URL VARIABLE_IS_NOT_USED) override
             {
             }
             void Closure() override

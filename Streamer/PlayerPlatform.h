@@ -142,7 +142,7 @@ namespace Player {
                 ASSERT(_slots.Empty() == true);
                 _configuration = config.PlayerConfig.Value();
 
-                result = (_Initialize != nullptr? _Initialize(_configuration) : Core::ERROR_NONE);
+                result = (_Initialize != nullptr? _Initialize(_configuration) : static_cast<uint32_t>(Core::ERROR_NONE));
 
                 if (result == Core::ERROR_NONE) {
                     // Pick up the number of frontends

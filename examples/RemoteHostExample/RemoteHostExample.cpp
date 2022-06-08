@@ -29,6 +29,8 @@ namespace Plugin {
     {
         string errorMessage = "";
 
+        ASSERT(service != nullptr);
+
         service->AddRef();
         _shell = service;
 
@@ -43,7 +45,6 @@ namespace Plugin {
         if (_implementation != nullptr) {
 
             if (service->RemoteConnection(connectionId)->ConnectionType() == RPC::IRemoteConnection::Type::Local) {
-
                 // code run only on plugin host
                 _implementation->Initialize(service);
             } else {
@@ -72,6 +73,8 @@ namespace Plugin {
 
             _implementation = nullptr;
         }
+        _shell->Release();
+        _shell = nullptr;
     }
 
     string RemoteHostExample::Information() const 

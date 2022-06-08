@@ -73,6 +73,7 @@ namespace Plugin {
             if (stateControl != nullptr) {
 
                 _state = stateControl;
+                _state->AddRef();
 
                 _state->Configure(_service);
                 _state->Register(_notification);
@@ -89,15 +90,12 @@ namespace Plugin {
                         ASSERT(_memory != nullptr);
                         remoteConnection->Release();
                     }
-                    else {
-                        message = _T("Failed to instantiate the OutOfProcessPlugin.");
-                    }
                 } else {
-                    message = _T("Failed to instantiate the OutOfProcessPlugin.");
+                    message = _T("Failed to register Notification sink.");
                 }
             }
             else {
-                message = _T("OutOfProcessPlugin could not be instantiated.");
+                message = _T("OutOfProcessPlugin could not obtain state control.");
             }
         }
         
@@ -111,33 +109,32 @@ namespace Plugin {
     /* virtual */ void OutOfProcessPlugin::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(service == _service);
-        
-        _service->DisableWebServer();
+
         _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-        
-        if(_memory != nullptr) {
-            _memory->Release();
-            _memory = nullptr;
-        }
-
-        if (_state != nullptr) {
-            PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
-            if (sink != nullptr) {
-                _service->Unregister(sink);
-                sink->Release();
-            }
-            _state->Unregister(_notification);
-            _state->Release();
-            _state = nullptr;
-        }
+        _service->DisableWebServer();
 
         if(_browser != nullptr) {
             _browser->Unregister(_notification);
 
+            if(_memory != nullptr) {
+                _memory->Release();
+                _memory = nullptr;
+            }
+
+            if (_state != nullptr) {
+                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+                if (sink != nullptr) {
+                    _service->Unregister(sink);
+                    sink->Release();
+                }
+                _state->Unregister(_notification);
+                _state->Release();
+                _state = nullptr;
+            }
+
             // Stop processing:
             RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-
             VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
             _browser = nullptr;
 
@@ -158,7 +155,6 @@ namespace Plugin {
         }
 
         _connectionId = 0;
-
         _service->Release();
         _service = nullptr;
     }

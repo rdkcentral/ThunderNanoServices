@@ -40,6 +40,7 @@ endif()
 option(PLUGIN_WEBSERVER_PROXY_DEVICEINFO "Enable proxy for DeviceInfo" ${PLUGIN_DEVICEINFO})
 option(PLUGIN_WEBSERVER_PROXY_DIALSERVER "Enable proxy for DIALServer" ${PLUGIN_DIALSERVER})
 
+find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -55,6 +56,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME} 

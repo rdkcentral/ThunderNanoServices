@@ -48,9 +48,7 @@ namespace Plugin {
             {
                 ASSERT(parent != nullptr);
             }
-            ~Notification()
-            {
-            }
+            ~Notification() override = default;
 
         public:
             BEGIN_INTERFACE_MAP(Notification)
@@ -91,11 +89,9 @@ namespace Plugin {
 
     public:
         class Data : public Core::JSON::Container {
-        private:
+        public:
             Data(const Data&) = delete;
             Data& operator=(const Data&) = delete;
-
-        public:
             Data()
                 : Core::JSON::Container()
                 , URL()
@@ -108,9 +104,7 @@ namespace Plugin {
                 Add(_T("suspended"), &Suspended);
                 Add(_T("hidden"), &Hidden);
             }
-            ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::String URL;
@@ -122,18 +116,15 @@ namespace Plugin {
     public:
         Spark()
             : _skipURL(0)
+            , _connectionId(0)
             , _hidden(false)
             , _spark(nullptr)
             , _memory(nullptr)
             , _service(nullptr)
             , _notification(this)
         {
-            RegisterAll();
         }
-        ~Spark() override
-        {
-            UnregisterAll();
-        }
+        ~Spark() override = default;
 
     public:
         BEGIN_INTERFACE_MAP(Spark)
