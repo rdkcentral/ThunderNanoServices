@@ -2128,7 +2128,7 @@ namespace Plugin {
 
                         TRACE_WITHOUT_THIS ( Trace::Error , ( _T ( "Unsupported texture dimensions change detected!" ) ) );
 
-                        assert ( false );
+//                        assert ( false );
 
                     }
 
