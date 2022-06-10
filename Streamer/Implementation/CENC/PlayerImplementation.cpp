@@ -130,7 +130,7 @@ namespace Player {
                 return Core::ERROR_NONE;
             }
 
-            void CENC::Callback(ICallback* callback)
+            void CENC::Callback(ICallback* callback VARIABLE_IS_NOT_USED)
             {
                 TRACE(Trace::Information, (_T("CENC callback setter is called, not implemented")));
             }
@@ -301,7 +301,7 @@ namespace Player {
                 return static_cast<uint64_t>(position);
             }
 
-            void CENC::TimeRange(uint64_t& begin, uint64_t& end) const
+            void CENC::TimeRange(uint64_t& begin VARIABLE_IS_NOT_USED, uint64_t& end VARIABLE_IS_NOT_USED) const
             {
                 TRACE(Trace::Information, (_T("CENC time range not supported")));
             }
@@ -314,7 +314,7 @@ namespace Player {
                 return result;
             }
 
-            void CENC::Window(const Rectangle& rectangle)
+            void CENC::Window(const Rectangle& rectangle VARIABLE_IS_NOT_USED)
             {
                 TRACE(Trace::Information, (_T("CENC window shape not supported")));
             }
@@ -325,7 +325,7 @@ namespace Player {
                 return 0;
             }
 
-            void CENC::Order(const uint32_t order)
+            void CENC::Order(const uint32_t order VARIABLE_IS_NOT_USED)
             {
                 TRACE(Trace::Information, (_T("CENC window order not supported.")));
             }

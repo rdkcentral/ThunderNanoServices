@@ -27,45 +27,37 @@ elseif(LibDRM_FIND_REQUIRED)
 endif()
 
 find_package(PkgConfig)
-if(${PKG_CONFIG_FOUND})
 
-    # Just check if the libdrm.pc exist, and create the PkgConfig::libdrm target
-    # No version requirement (yet)
-    pkg_check_modules(LIBDRM ${_LIBDRM_MODE} IMPORTED_TARGET libdrm)
+# Just check if the libdrm.pc exist, and create the PkgConfig::libdrm target
+# No version requirement (yet)
+pkg_check_modules(LIBDRM ${_LIBDRM_MODE} IMPORTED_TARGET libdrm)
 
-    find_library(LIBDRM_ACTUAL_LIBRARY NAMES drm
-        HINTS ${LIBDRM_LIBRARY_DIRS} )
+find_library(LIBDRM_ACTUAL_LIBRARY NAMES drm
+    HINTS ${LIBDRM_LIBRARY_DIRS} )
 
-    include(FindPackageHandleStandardArgs)
+include(FindPackageHandleStandardArgs)
 
-    # Sets the FOUND variable to TRUE if all required variables are present and set
-    find_package_handle_standard_args(
-        LibDRM
-        REQUIRED_VARS
-            LIBDRM_INCLUDE_DIRS
-            LIBDRM_CFLAGS
-            LIBDRM_LDFLAGS
-            LIBDRM_LIBRARIES
-            LIBDRM_ACTUAL_LIBRARY
-        VERSION_VAR
-            LIBDRM_VERSION
-    )
-    mark_as_advanced(LIBDRM_INCLUDE_DIRS LIBDRM_LIBRARIES)
-    set(LIBDRM_FOUND ${LibDRM_FOUND})
+# Sets the FOUND variable to TRUE if all required variables are present and set
+find_package_handle_standard_args(
+    LibDRM
+    REQUIRED_VARS
+        LIBDRM_INCLUDE_DIRS
+        LIBDRM_CFLAGS
+        LIBDRM_LDFLAGS
+        LIBDRM_LIBRARIES
+        LIBDRM_ACTUAL_LIBRARY
+    VERSION_VAR
+        LIBDRM_VERSION
+)
+mark_as_advanced(LIBDRM_INCLUDE_DIRS LIBDRM_LIBRARIES)
+set(LIBDRM_FOUND ${LibDRM_FOUND})
 
-    if(LibDRM_FOUND AND NOT TARGET LibDRM::LibDRM)
-        add_library(LibDRM::LibDRM UNKNOWN IMPORTED)
-        set_target_properties(LibDRM::LibDRM PROPERTIES
-            IMPORTED_LOCATION "${LIBDRM_ACTUAL_LIBRARY}"
-            INTERFACE_LINK_LIBRARIES "${LIBDRM_LIBRARIES}"
-            INTERFACE_COMPILE_OPTIONS "${LIBDRM_CFLAGS}"
-            INTERFACE_INCLUDE_DIRECTORIES "${LIBDRM_INCLUDE_DIRS}"
-            )
-    else()
-        message(STATUS "Some required variable(s) is (are) not found / set! Does libdrm.pc exist?")
-    endif()
-else()
-
-    message(STATUS "Unable to locate PkgConfig")
-
+if(LibDRM_FOUND AND NOT TARGET LibDRM::LibDRM)
+    add_library(LibDRM::LibDRM UNKNOWN IMPORTED)
+    set_target_properties(LibDRM::LibDRM PROPERTIES
+        IMPORTED_LOCATION "${LIBDRM_ACTUAL_LIBRARY}"
+        INTERFACE_LINK_LIBRARIES "${LIBDRM_LIBRARIES}"
+        INTERFACE_COMPILE_OPTIONS "${LIBDRM_CFLAGS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${LIBDRM_INCLUDE_DIRS}"
+        )
 endif()
