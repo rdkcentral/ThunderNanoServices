@@ -29,7 +29,8 @@ extern "C" {
 /**
  * Function definition to signal a power state change.
  */
-typedef void (*power_state_change)(void* userData, enum WPEFramework::Exchange::IPower::PCState newState);
+typedef void (*power_state_change)(void* userData, enum WPEFramework::Exchange::IPower::PCState newState, \
+                                   enum WPEFramework::Exchange::IPower::PCPhase phase);
 
 /**
  * Function to initialize and deinitialize the module
