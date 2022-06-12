@@ -37,7 +37,20 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 namespace Plugin
 {
 
-    SERVICE_REGISTRATION(IOConnector, 1, 0);
+    namespace {
+
+        static Metadata<IOConnector> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<IOConnector::Data>> jsonBodyDataFactory(1);
 

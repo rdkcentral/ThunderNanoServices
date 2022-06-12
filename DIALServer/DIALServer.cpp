@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(DIALServer, 1, 0);
+    namespace {
+
+        static Metadata<DIALServer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::NETWORK },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static const string _SearchTarget(_T("urn:dial-multiscreen-org:service:dial:1"));
     static const string _DefaultAppInfoPath(_T("Apps"));

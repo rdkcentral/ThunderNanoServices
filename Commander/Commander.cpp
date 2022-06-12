@@ -33,7 +33,21 @@ ENUM_CONVERSION_BEGIN(Plugin::Commander::state)
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Commander, 1, 0);
+    namespace {
+
+        static Metadata<Commander> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Core::JSON::String>>> jsonBodyDataFactory(1);
     static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Data>>> jsonBodyArrayDataFactory(2);

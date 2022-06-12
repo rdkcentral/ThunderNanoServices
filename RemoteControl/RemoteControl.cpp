@@ -29,7 +29,20 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<RemoteControl::Data>> jsonResponseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry>> jsonCodeFactory(1);
 
-    SERVICE_REGISTRATION(RemoteControl, 1, 0);
+    namespace {
+
+        static Metadata<RemoteControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     class KeyActivity {
     private:

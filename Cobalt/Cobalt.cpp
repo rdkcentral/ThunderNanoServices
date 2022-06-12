@@ -74,7 +74,21 @@ private:
 
 namespace Plugin {
 
-SERVICE_REGISTRATION(Cobalt, 1, 0);
+    namespace {
+
+        static Metadata<Cobalt> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM, subsystem::GRAPHICS, subsystem::INTERNET },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
+
 
 static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
 static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(2);

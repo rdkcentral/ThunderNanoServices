@@ -23,8 +23,19 @@ namespace WPEFramework
 
     namespace Plugin
     {
+        namespace {
 
-        SERVICE_REGISTRATION(ResourceMonitor, 1, 0);
+            static Metadata<ResourceMonitor> metadata(
+                // Version
+                1, 0, 0,
+                // Preconditions
+                {},
+                // Terminations
+                {},
+                // Controls
+                {}
+            );
+        }
 
         const string ResourceMonitor::Initialize(PluginHost::IShell *service)
         {

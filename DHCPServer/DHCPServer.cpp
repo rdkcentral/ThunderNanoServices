@@ -23,7 +23,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(DHCPServer, 1, 0);
+    namespace {
+
+        static Metadata<DHCPServer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data>> jsonDataFactory(1);
     static Core::ProxyPoolType<Web::JSONBodyType<DHCPServer::Data::Server>> jsonServerDataFactory(1);
