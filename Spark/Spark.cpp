@@ -34,7 +34,7 @@ namespace Plugin {
             // Version
             1, 0, 0,
             // Preconditions
-            { subsystem::INTERNET, susytem::GRAPHICS },
+            { subsystem::INTERNET, subsytem::GRAPHICS },
             // Terminations
             {},
             // Controls
