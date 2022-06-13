@@ -34,7 +34,7 @@ elseif(Spark_FIND_REQUIRED)
 endif()
 
 find_package(PkgConfig)
-pkg_check_modules(SPARK Spark)
+pkg_check_modules(SPARK ${_SPARK_MODE} Spark)
 
 find_library(SPARK_LIBRARY NAMES ${SPARK_LIBRARIES}
         HINTS ${SPARK_LIBDIR} ${SPARK_LIBRARY_DIRS}
