@@ -28,7 +28,19 @@ namespace Spark {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Spark, 1, 0);
+    namespace {
+
+        static Metadata<Spark> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::INTERNET, subsytem::GRAPHICS },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Spark::Data>> jsonBodyDataFactory(2);

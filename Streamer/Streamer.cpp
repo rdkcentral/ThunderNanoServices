@@ -23,7 +23,19 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Streamer, 1, 0);
+    namespace {
+
+        static Metadata<Streamer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {  subsystem::PLATFORM, subsystem::GRAPHICS },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::JSONBodyType<Streamer::Data>> jsonBodyDataFactory(2);
 

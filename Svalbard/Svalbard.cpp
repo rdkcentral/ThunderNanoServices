@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Svalbard, 1, 0);
+    namespace {
+
+        static Metadata<Svalbard> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     const string Svalbard::Initialize(PluginHost::IShell* service) /* override */ 
     {

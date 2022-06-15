@@ -23,7 +23,20 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(BluetoothAudioSink, 1, 0);
+    namespace {
+
+        static Metadata<BluetoothAudioSink> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::BLUETOOTH },
+            // Terminations
+            { subsystem::BLUETOOTH },
+            // Controls
+            {}
+        );
+    }
+
 
     /* virtual */ const string BluetoothAudioSink::Initialize(PluginHost::IShell* service)
     {

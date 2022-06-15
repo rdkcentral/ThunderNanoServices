@@ -29,7 +29,19 @@ namespace WebServer {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(WebServer, 1, 0);
+    namespace {
+
+        static Metadata<WebServer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {  subsystem::NETWORK },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     /* virtual */ const string WebServer::Initialize(PluginHost::IShell* service)
     {

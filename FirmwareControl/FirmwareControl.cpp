@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(FirmwareControl, 1, 0);
+    namespace {
+
+        static Metadata<FirmwareControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     /* virtual */ const string FirmwareControl::Initialize(PluginHost::IShell* service)
     {

@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Containers, 1, 0);
+    namespace {
+
+        static Metadata<Containers> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     const string Containers::Initialize(PluginHost::IShell* service) 
     {

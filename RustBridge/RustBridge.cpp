@@ -22,7 +22,19 @@
 namespace WPEFramework {
 	namespace Plugin {
 
-		SERVICE_REGISTRATION(RustBridge, 1, 0);
+		namespace {
+
+			static Metadata<RustBridge> metadata(
+				// Version
+				1, 0, 0,
+				// Preconditions
+				{},
+				// Terminations
+				{},
+				// Controls
+				{}
+			);
+		}
 
 		class Registration : public Core::JSON::Container {
 		public:
