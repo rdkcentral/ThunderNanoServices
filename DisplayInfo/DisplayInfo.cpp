@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(DisplayInfo, 1, 0);
+    namespace {
+
+        static Metadata<DisplayInfo> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<JsonData::DisplayInfo::DisplayinfoData>> jsonResponseFactory(4);

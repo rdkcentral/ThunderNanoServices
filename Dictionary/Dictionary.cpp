@@ -31,7 +31,20 @@ ENUM_CONVERSION_BEGIN(Plugin::Dictionary::enumType)
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Dictionary, 1, 0);
+    namespace {
+
+        static Metadata<Dictionary> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<Dictionary::NameSpace>> jsonBodyDataFactory(4);
     static Core::ProxyPoolType<Web::TextBody> textBodyDataFactory(4);

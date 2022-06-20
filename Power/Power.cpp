@@ -23,15 +23,29 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Power, 1, 0);
+    namespace {
+
+        static Metadata<Power> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<Power::Data>> jsonBodyDataFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Power::Data>> jsonResponseFactory(4);
 
     extern "C" {
 
-    static void PowerStateChange(void* userData, enum WPEFramework::Exchange::IPower::PCState newState) {
-        reinterpret_cast<Power*>(userData)->PowerChange(newState);
+    static void PowerStateChange(void* userData, enum WPEFramework::Exchange::IPower::PCState newState, \
+                                 Exchange::IPower::PCPhase phase) {
+        reinterpret_cast<Power*>(userData)->PowerChange(newState, phase);
     }
 
     }
@@ -63,7 +77,8 @@ namespace Plugin {
         }
 
         // Receive all plugin information on state changes.
-        _service->Register(&_sink);
+        if (_controlClients)
+            _service->Register(&_sink);
 
         power_initialize(PowerStateChange, this, _service->ConfigLine().c_str(), persistedState);
 
@@ -75,7 +90,8 @@ namespace Plugin {
         ASSERT(_service == service);
 
         // No need to monitor the Process::Notification anymore, we will kill it anyway.
-        _service->Unregister(&_sink);
+        if (_controlClients)
+            _service->Unregister(&_sink);
 
         // Remove all registered clients
         _clients.clear();
@@ -197,17 +213,6 @@ namespace Plugin {
             result = Core::ERROR_DUPLICATE_KEY;
             TRACE(Trace::Information, (_T("No need to change power states, we are already at this stage!")));
         } else if (is_power_state_supported(state)) {
-            _adminLock.Unlock();
-
-            std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
-
-            while (index != _notificationClients.end()) {
-                (*index)->StateChange(state);
-                index++;
-            }
-
-            _adminLock.Unlock();
- 
             if (state != Exchange::IPower::PCState::On) {
                 ControlClients(state);
             }
@@ -216,15 +221,15 @@ namespace Plugin {
             power_set_persisted_state(state);
 
             if ( (result = power_set_state(state, waitTime)) != Core::ERROR_NONE) {
-                TRACE(Trace::Information, (_T("Could not change the power state, error: %d"), result));
+                TRACE(Trace::Error, (_T("Could not change the power state, error: %d"), result));
             }
         }
 
         return (result);
     }
-    void Power::PowerChange(const Exchange::IPower::PCState state) {
+    void Power::PowerChange(const Exchange::IPower::PCState state, const Exchange::IPower::PCPhase phase) {
 
-        if (state == Exchange::IPower::PCState::On) {
+        if ((state == Exchange::IPower::PCState::On) && (Exchange::IPower::After == phase)) {
             ControlClients(state);
         }
 
@@ -233,19 +238,23 @@ namespace Plugin {
         std::list<Exchange::IPower::INotification*>::iterator index(_notificationClients.begin());
 
         while (index != _notificationClients.end()) {
-            (*index)->StateChange(state);
+            (*index)->StateChange(_currentState, state, phase);
             index++;
         }
 
         _adminLock.Unlock();
 
-        /* May be resuming from another power state; lets update persisted state. */
-        power_set_persisted_state(state);
+        if (Exchange::IPower::After == phase) {
+            /* May be resuming from another power state; lets update persisted state. */
+            power_set_persisted_state(state);
+
+            _currentState = state;
+        }
     }
     void Power::PowerKey() /* override */ {
         if (power_get_state() == Exchange::IPower::PCState::On) {
             // Maybe this value should be coming from the config :-)
-            SetState(_powerOffMode, ~0);
+            SetState(_powerOffMode, _powerOffMode);
         }
         else {
             SetState(Exchange::IPower::PCState::On, 0);

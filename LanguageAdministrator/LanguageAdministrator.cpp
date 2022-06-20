@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(LanguageAdministrator, 1, 0);
+    namespace {
+
+        static Metadata<LanguageAdministrator> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::INTERNET },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     /* virtual */ const string LanguageAdministrator::Initialize(PluginHost::IShell* service)
     {

@@ -23,7 +23,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SystemCommands, 1, 0);
+    namespace {
+
+        static Metadata<SystemCommands> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     const string SystemCommands::Initialize(PluginHost::IShell* service)
     {
