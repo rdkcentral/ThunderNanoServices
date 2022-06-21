@@ -21,7 +21,20 @@
 
 namespace WPEFramework {
 namespace Plugin {
-    SERVICE_REGISTRATION(SwitchBoard, 1, 0);
+
+    namespace {
+
+        static Metadata<SwitchBoard> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::JSONBodyType<SwitchBoard::Config> > jsonBodySwitchFactory(1);
 

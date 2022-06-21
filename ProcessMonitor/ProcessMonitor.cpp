@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-SERVICE_REGISTRATION(ProcessMonitor, 1, 0);
+namespace {
+
+    static Metadata<ProcessMonitor> metadata(
+        // Version
+        1, 0, 0,
+        // Preconditions
+        {},
+        // Terminations
+        {},
+        // Controls
+        {}
+    );
+}
 
 const string ProcessMonitor::Initialize(PluginHost::IShell* service)
 {

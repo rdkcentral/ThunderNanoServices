@@ -23,7 +23,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Power, 1, 0);
+    namespace {
+
+        static Metadata<Power> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<Power::Data>> jsonBodyDataFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Power::Data>> jsonResponseFactory(4);

@@ -33,6 +33,20 @@ ENUM_CONVERSION_BEGIN(Core::SerialPort::Parity){ Core::SerialPort::EVEN, _TXT("e
 
 namespace Plugin {
 
+    namespace {
+
+        static Metadata<WebProxy> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
     class StreamChannel : public Core::StreamType<Core::SocketStream> {
     private:
         StreamChannel() = delete;
@@ -204,8 +218,6 @@ POP_WARNING()
     private:
         STREAMTYPE _streamType;
     };
-
-    SERVICE_REGISTRATION(WebProxy, 1, 0);
 
     /* virtual */ const string WebProxy::Initialize(PluginHost::IShell* service)
     {
