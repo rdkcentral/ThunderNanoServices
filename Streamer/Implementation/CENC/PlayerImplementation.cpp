@@ -87,14 +87,21 @@ namespace Player {
 
             uint32_t CENC::SetupGstElements()
             {
-                _data._playbin = gst_element_factory_make("playbin", nullptr);
-                _bus = gst_element_get_bus(_data._playbin);
-                gst_bus_add_watch(_bus, (GstBusFunc)GstCallbacks::gstBusCallback, &_data);
+                GstRegistry* plugins_register = gst_registry_get();
+                GstPluginFeature* cencdecrypt = gst_registry_lookup_feature(plugins_register, "cencdecrypt");
+                if (cencdecrypt != nullptr) {
+                    gst_plugin_feature_set_rank(cencdecrypt, GST_RANK_PRIMARY + 1);
+                    gst_object_unref(cencdecrypt);
 
-                _data._mainLoop = g_main_loop_new(NULL, FALSE);
-                if (_data._mainLoop == nullptr || _data._playbin == nullptr) {
-                    TRACE(Trace::Error, (_T("Could not initialize the gstreamer pipeline")));
-                    return Core::ERROR_OPENING_FAILED;
+                    _data._playbin = gst_element_factory_make("playbin", nullptr);
+                    _bus = gst_element_get_bus(_data._playbin);
+                    gst_bus_add_watch(_bus, (GstBusFunc)GstCallbacks::gstBusCallback, &_data);
+
+                    _data._mainLoop = g_main_loop_new(NULL, FALSE);
+                    if (_data._mainLoop == nullptr || _data._playbin == nullptr) {
+                        TRACE(Trace::Error, (_T("Could not initialize the gstreamer pipeline")));
+                        return Core::ERROR_OPENING_FAILED;
+                    }
                 }
 
                 return Core::ERROR_NONE;
