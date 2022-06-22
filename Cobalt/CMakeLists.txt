@@ -31,6 +31,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(Cobalt REQUIRED)
 
 get_filename_component(CONFIG_HEADER_NAME ${WPEFRAMEWORK_PLUGIN_COBALT_STARBOARD_CONFIGURATION_INCLUDE} NAME)
@@ -59,11 +61,14 @@ target_compile_definitions(${PLUGIN_COBALT_IMPLEMENTATION}
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         )
 
 target_link_libraries(${PLUGIN_COBALT_IMPLEMENTATION}
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${COBALT_LIBRARIES}
         )
