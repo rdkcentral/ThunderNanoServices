@@ -69,7 +69,10 @@ namespace Plugin {
         };
 
     public:
-        BackOffice() = default;
+        BackOffice()
+            : _requestSender(nullptr)
+        {
+        }
         ~BackOffice() override = default;
 
         BackOffice(const BackOffice&) = delete;
@@ -86,8 +89,11 @@ namespace Plugin {
         string Information() const override;
 
     private:
+        void Send(PluginHost::IShell::state state, const string& callsign);
+
+    private:
         Core::Sink<StateChangeObserver> _stateChangeObserver;
-        RequestSender _requestSender;
+        std::unique_ptr<RequestSender> _requestSender;
     };
 
 } // namespace

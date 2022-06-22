@@ -17,6 +17,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     BackOffice.cpp
+    RequestSender.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
