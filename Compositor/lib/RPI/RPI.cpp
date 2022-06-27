@@ -20,6 +20,7 @@
 #include "Module.h"
 
 #include <interfaces/IComposition.h>
+#include <core/core.h>
 #include <com/com.h>
 
 #include "ModeSet.h"
@@ -232,10 +233,10 @@ namespace Plugin {
         ~ClientSurface () override;
 
         // Underlying native surface handle
-        RPC::instance_id Native () const override;
+        Core::instance_id Native () const override;
 
         // Inter-process synchronization
-        RPC::instance_id SyncPrimitive () const;
+        Core::instance_id SyncPrimitive () const;
         bool SyncPrimitiveStart () const;
         bool SyncPrimitiveEnd () const;
 
@@ -1005,7 +1006,7 @@ namespace Plugin {
         //
         // Echange::IComposition::IDisplay
         // ==================================================================================================================
-        RPC::instance_id Native () const override;
+        Core::instance_id Native () const override;
 
         string Port () const override;
 
@@ -1083,21 +1084,21 @@ namespace Plugin {
         _compositor . Release ();
     }
 
-    RPC::instance_id ClientSurface::Native () const {
+    Core::instance_id ClientSurface::Native () const {
         // Sharing this handle does not imply its contents can be accessed!
 // TODO: narrowing
-        static_assert ( ( std::is_convertible < decltype ( _nativeSurface . _fd ) , RPC::instance_id > :: value ) != false );
-        static_assert ( sizeof ( decltype ( _nativeSurface . _fd ) ) <= sizeof ( RPC::instance_id ) );
+        static_assert ( ( std::is_convertible < decltype ( _nativeSurface . _fd ) , Core::instance_id > :: value ) != false );
+        static_assert ( sizeof ( decltype ( _nativeSurface . _fd ) ) <= sizeof ( Core::instance_id ) );
 
-        return static_cast < RPC::instance_id > ( _nativeSurface . _fd );
+        return static_cast < Core::instance_id > ( _nativeSurface . _fd );
     }
 
-    RPC::instance_id ClientSurface::SyncPrimitive () const {
+    Core::instance_id ClientSurface::SyncPrimitive () const {
 // TODO: narrowing
-        static_assert ( ( std::is_convertible < decltype ( _nativeSurface . _sync_fd ) , RPC::instance_id > :: value ) != false );
-        static_assert ( sizeof ( decltype ( _nativeSurface . _sync_fd ) ) <= sizeof ( RPC::instance_id ) );
+        static_assert ( ( std::is_convertible < decltype ( _nativeSurface . _sync_fd ) , Core::instance_id > :: value ) != false );
+        static_assert ( sizeof ( decltype ( _nativeSurface . _sync_fd ) ) <= sizeof ( Core::instance_id ) );
 
-        return static_cast < RPC::instance_id > ( _nativeSurface . _sync_fd );
+        return static_cast < Core::instance_id > ( _nativeSurface . _sync_fd );
     }
 
     bool ClientSurface::SyncPrimitiveStart () const {
@@ -4290,7 +4291,7 @@ namespace Plugin {
         _adminLock . Unlock ();
     }
 
-    RPC::instance_id CompositorImplementation::Native () const {
+    Core::instance_id CompositorImplementation::Native () const {
         using class_t = std::remove_reference < decltype ( _natives ) > :: type;
         using return_t = decltype ( std::declval < class_t > () . Display () );
 
@@ -4310,7 +4311,7 @@ namespace Plugin {
             TRACE ( Trace::Error , ( _T ( "The native display (id) might be invalid / unsupported. Using the EGL default display instead!" ) ) );
         }
 
-        return reinterpret_cast < RPC::instance_id > ( result );
+        return reinterpret_cast < Core::instance_id > ( result );
     }
 
     string CompositorImplementation::Port () const {
