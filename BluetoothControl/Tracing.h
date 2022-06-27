@@ -206,7 +206,11 @@ namespace Plugin {
                 FORMAT_EVENT(MGMT_EV_NEW_LONG_TERM_KEY, info.key.addr.bdaddr, info.key.addr.type);
                 string key;
                 Core::ToHexString(info.key.val, sizeof(info.key.val), key);
+#ifdef NO_INCLUSIVE_LANGUAGE
+                Format(_T("store_hint=%d, key.type=%d, key.central=%d"), info.store_hint, info.key.type, info.key.central);
+#else
                 Format(_T("store_hint=%d, key.type=%d, key.master=%d"), info.store_hint, info.key.type, info.key.master);
+#endif            
                 Format(_T("key.enc_size=%u, key.ediv=%u, key.rand=%llu, key.val=%s"), info.key.enc_size, btohs(info.key.ediv), btohll(info.key.rand), key.c_str());
             }
         }; // class ManagementFlow
