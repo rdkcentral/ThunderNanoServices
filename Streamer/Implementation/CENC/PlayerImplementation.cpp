@@ -87,14 +87,21 @@ namespace Player {
 
             uint32_t CENC::SetupGstElements()
             {
-                _data._playbin = gst_element_factory_make("playbin", nullptr);
-                _bus = gst_element_get_bus(_data._playbin);
-                gst_bus_add_watch(_bus, (GstBusFunc)GstCallbacks::gstBusCallback, &_data);
+                GstRegistry* plugins_register = gst_registry_get();
+                GstPluginFeature* cencdecrypt = gst_registry_lookup_feature(plugins_register, "cencdecrypt");
+                if (cencdecrypt != nullptr) {
+                    gst_plugin_feature_set_rank(cencdecrypt, GST_RANK_PRIMARY + 1);
+                    gst_object_unref(cencdecrypt);
 
-                _data._mainLoop = g_main_loop_new(NULL, FALSE);
-                if (_data._mainLoop == nullptr || _data._playbin == nullptr) {
-                    TRACE(Trace::Error, (_T("Could not initialize the gstreamer pipeline")));
-                    return Core::ERROR_OPENING_FAILED;
+                    _data._playbin = gst_element_factory_make("playbin", nullptr);
+                    _bus = gst_element_get_bus(_data._playbin);
+                    gst_bus_add_watch(_bus, (GstBusFunc)GstCallbacks::gstBusCallback, &_data);
+
+                    _data._mainLoop = g_main_loop_new(NULL, FALSE);
+                    if (_data._mainLoop == nullptr || _data._playbin == nullptr) {
+                        TRACE(Trace::Error, (_T("Could not initialize the gstreamer pipeline")));
+                        return Core::ERROR_OPENING_FAILED;
+                    }
                 }
 
                 return Core::ERROR_NONE;
@@ -130,7 +137,7 @@ namespace Player {
                 return Core::ERROR_NONE;
             }
 
-            void CENC::Callback(ICallback* callback)
+            void CENC::Callback(ICallback* callback VARIABLE_IS_NOT_USED)
             {
                 TRACE(Trace::Information, (_T("CENC callback setter is called, not implemented")));
             }
@@ -301,7 +308,7 @@ namespace Player {
                 return static_cast<uint64_t>(position);
             }
 
-            void CENC::TimeRange(uint64_t& begin, uint64_t& end) const
+            void CENC::TimeRange(uint64_t& begin VARIABLE_IS_NOT_USED, uint64_t& end VARIABLE_IS_NOT_USED) const
             {
                 TRACE(Trace::Information, (_T("CENC time range not supported")));
             }
@@ -314,7 +321,7 @@ namespace Player {
                 return result;
             }
 
-            void CENC::Window(const Rectangle& rectangle)
+            void CENC::Window(const Rectangle& rectangle VARIABLE_IS_NOT_USED)
             {
                 TRACE(Trace::Information, (_T("CENC window shape not supported")));
             }
@@ -325,7 +332,7 @@ namespace Player {
                 return 0;
             }
 
-            void CENC::Order(const uint32_t order)
+            void CENC::Order(const uint32_t order VARIABLE_IS_NOT_USED)
             {
                 TRACE(Trace::Information, (_T("CENC window order not supported.")));
             }

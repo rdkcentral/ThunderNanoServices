@@ -24,12 +24,15 @@ find_package(WPEFramework)
 project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+set(PLUGIN_COBALT_IMPLEMENTATION "${MODULE_NAME}Impl" CACHE STRING "library with cobalt implementation." )
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(Cobalt REQUIRED)
 
 get_filename_component(CONFIG_HEADER_NAME ${WPEFRAMEWORK_PLUGIN_COBALT_STARBOARD_CONFIGURATION_INCLUDE} NAME)
@@ -44,17 +47,28 @@ endif()
 
 add_library(${MODULE_NAME} SHARED 
     Cobalt.cpp
-    CobaltImplementation.cpp
     CobaltJsonRpc.cpp
     Module.cpp)
 
-target_compile_definitions(${MODULE_NAME} 
+add_library(${PLUGIN_COBALT_IMPLEMENTATION} SHARED
+    Module.cpp
+    CobaltImplementation.cpp)
+
+target_compile_definitions(${PLUGIN_COBALT_IMPLEMENTATION}
     PRIVATE 
         STARBOARD 
         STARBOARD_CONFIGURATION_INCLUDE="${WPEFRAMEWORK_PLUGIN_COBALT_STARBOARD_CONFIGURATION_INCLUDE}")
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        )
+
+target_link_libraries(${PLUGIN_COBALT_IMPLEMENTATION}
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${COBALT_LIBRARIES}
         )
@@ -62,6 +76,7 @@ target_link_libraries(${MODULE_NAME}
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+install(TARGETS ${PLUGIN_COBALT_IMPLEMENTATION} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
 set(PLUGIN_COBALT_AUTOSTART "false" CACHE STRING "Automatically start Cobalt plugin")
 set(PLUGIN_COBALT_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")

@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-SERVICE_REGISTRATION(WebPA, 1, 0);
+namespace {
+
+    static Metadata<WebPA> metadata(
+        // Version
+        1, 0, 0,
+        // Preconditions
+        {},
+        // Terminations
+        {},
+        // Controls
+        {}
+    );
+}
 
 /* virtual */ const string WebPA::Initialize(PluginHost::IShell* service)
 {

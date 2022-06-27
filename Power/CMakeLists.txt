@@ -76,7 +76,7 @@ else()
         PowerImplementation/Stub/MFRPersistPowerStub.cpp)
 endif()
 
-if(BCM_PM_FOUND)
+if(BcmPowerManager_FOUND)
     find_package(NEXUS REQUIRED)
     find_package(NXCLIENT REQUIRED)
     if (NXCLIENT_FOUND)

@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(AVS, 1, 0);
+     namespace {
+
+        static Metadata<AVS> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::INTERNET },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     const string AVS::Initialize(PluginHost::IShell* service)
     {

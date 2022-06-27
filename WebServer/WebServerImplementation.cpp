@@ -827,14 +827,11 @@ POP_WARNING()
         TRACE(WebFlow, (request));
 
         bool safePath = true;
-        uint32_t base = static_cast<uint32_t>(_parent.PrefixPath().length());
 
-        if (request->Path.length() > base) {
-           string realPath = Core::File::Normalize(request->Path.substr(base), safePath);
-           if (safePath == true) {
-               // Normalize the remainder of the Path
-               request->Path = _parent.PrefixPath() + realPath;
-           }
+        string realPath = Core::File::Normalize(request->Path, safePath);
+        if (safePath == true) {
+            // Use Normalized Path
+            request->Path = realPath;
         }
 
         // Check if the channel server will relay this message.
@@ -872,11 +869,16 @@ POP_WARNING()
                 }
                 else {
                     *fileBody = fileToService;
-                    response->ContentType = result;
-                    if (encoding != Web::ENCODING_UNKNOWN) {
-                        response->ContentEncoding = encoding;
+                    if (fileBody->Exists() == true) {
+                        response->ContentType = result;
+                        if (encoding != Web::ENCODING_UNKNOWN) {
+                            response->ContentEncoding = encoding;
+                        }
+                        response->Body<Web::FileBody>(fileBody);
+                    } else {
+                        response->ErrorCode = Web::STATUS_NOT_FOUND;
+                        response->Message = "Not Found";
                     }
-                    response->Body<Web::FileBody>(fileBody);
                 }
                 Submit(response);
             }

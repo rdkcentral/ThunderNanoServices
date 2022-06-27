@@ -23,7 +23,19 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SubsystemControl, 1, 0);
+    namespace {
+
+        static Metadata<SubsystemControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     struct JSecurity : public PluginHost::ISubSystem::ISecurity, public Core::JSON::Container {
     public:

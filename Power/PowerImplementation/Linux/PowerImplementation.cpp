@@ -138,12 +138,22 @@ public:
     {
         TRACE(Trace::Information, (_T("~LinuxPowerImplementation()")));
 
+        RevokeJob();
+
         if (_triggerFile >= 0) {
             ::close(_triggerFile);
         }
 
         if (_stateFile >= 0) {
             ::close(_stateFile);
+        }
+    }
+    void RevokeJob()
+    {
+        Core::ProxyType<Core::IDispatch> job(_job.Revoke());
+        if (job.IsValid()) {
+            Core::IWorkerPool::Instance().Revoke(job);
+            _job.Revoked();
         }
     }
 
@@ -194,7 +204,7 @@ private:
                 uint8_t value = -1;
                 TRACE(Trace::Information, (_T("Scheduled Job: changing Power mode to %s[%d]."),
                             newMode->label, state));
-                Notify(state);
+                Notify(state, Exchange::IPower::Before);
                 _currentState = state;
 
                 switch (state) {
@@ -212,6 +222,7 @@ private:
                             /* Reset the early wakeup trigger for low level drivers. */
                             ::write(_triggerFile, "0", 1);
                             /* Reset the State to 'On' once device wakes-up. */
+                            RevokeJob();
                             SetState(Exchange::IPower::PCState::On, 0);
                         }
                         break;
@@ -222,12 +233,13 @@ private:
                     default:
                         TRACE(Trace::Error, (_T("Should not reach here at any case...!!!")));
                 }
+                Notify(state, Exchange::IPower::After);
             }
         }
     }
-    void Notify (const Exchange::IPower::PCState mode) {
+    void Notify (const Exchange::IPower::PCState mode, const Exchange::IPower::PCPhase phase) {
        if (_callback != nullptr) {
-           _callback(_userData, mode);
+           _callback(_userData, mode, phase);
        }
     }
 

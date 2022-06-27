@@ -23,7 +23,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(TimeSync, 1, 0);
+    namespace {
+
+        static Metadata<TimeSync> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::INTERNET },
+            // Terminations
+            {},
+            // Controls
+            { subsystem::TIME }
+        );
+    }
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data<>>> jsonResponseFactory(4);

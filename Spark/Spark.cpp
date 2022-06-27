@@ -28,7 +28,19 @@ namespace Spark {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Spark, 1, 0);
+    namespace {
+
+        static Metadata<Spark> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::INTERNET, subsytem::GRAPHICS },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Spark::Data>> jsonBodyDataFactory(2);
@@ -40,7 +52,7 @@ namespace Plugin {
         string message;
 
         ASSERT(_service == nullptr);
-        ASSERT(service != nullptr)
+        ASSERT(service != nullptr);
         ASSERT(_connectionId == 0);
         ASSERT(_spark == nullptr);
         ASSERT(_memory == nullptr);
@@ -88,7 +100,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void Spark::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void Spark::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
@@ -107,8 +119,8 @@ namespace Plugin {
                 stateControl->Unregister(&_notification);
                 stateControl->Release();
             } else {
-            // On behalf of the crashed process, we will release the notification sink.
-            _   notification.Release();
+                // On behalf of the crashed process, we will release the notification sink.
+                _notification.Release();
             }
 
             if(_memory != nullptr) {

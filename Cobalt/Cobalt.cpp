@@ -22,12 +22,73 @@
 namespace WPEFramework {
 namespace Cobalt {
 
-extern Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection);
+class MemoryObserverImpl: public Exchange::IMemory {
+private:
+    MemoryObserverImpl();
+    MemoryObserverImpl(const MemoryObserverImpl&);
+    MemoryObserverImpl& operator=(const MemoryObserverImpl&);
+
+    public:
+    MemoryObserverImpl(const RPC::IRemoteConnection* connection) :
+        _main(connection == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
+    {
+    }
+    ~MemoryObserverImpl() override = default;
+
+    public:
+    uint64_t Resident() const override
+    {
+        return _main.Resident();
+    }
+    uint64_t Allocated() const override
+    {
+        return _main.Allocated();
+    }
+    uint64_t Shared() const override
+    {
+        return _main.Shared();
+    }
+    uint8_t Processes() const override
+    {
+        return (IsOperational() ? 1 : 0);
+    }
+
+    bool IsOperational() const override
+    {
+        return _main.IsActive();
+    }
+
+    BEGIN_INTERFACE_MAP (MemoryObserverImpl)INTERFACE_ENTRY (Exchange::IMemory)END_INTERFACE_MAP
+
+private:
+    Core::ProcessInfo _main;
+    };
+
+    Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
+    {
+        ASSERT(connection != nullptr);
+        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        return (result);
+    }
 }
 
 namespace Plugin {
 
-SERVICE_REGISTRATION(Cobalt, 1, 0);
+    namespace {
+
+        static Metadata<Cobalt> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM, subsystem::GRAPHICS, subsystem::INTERNET },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
+
 
 static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
 static Core::ProxyPoolType<Web::JSONBodyType<Cobalt::Data>> jsonBodyDataFactory(2);
