@@ -12,17 +12,25 @@ namespace Plugin {
     private:
         class StateChangeObserver : public PluginHost::IPlugin::INotification {
         public:
-            using Callback = std::function<void(PluginHost::IShell::state, const string&)>;
+            using Callback = std::function<void(const string&, const string&)>;
 
             StateChangeObserver()
                 : _callback(nullptr)
             {
-                _callsigns.emplace(_T("DisplayInfo"));
             }
             ~StateChangeObserver() override = default;
 
             StateChangeObserver(const StateChangeObserver&) = delete;
             StateChangeObserver& operator=(const StateChangeObserver&) = delete;
+
+            void RegisterObservable(const string& callsign)
+            {
+                _callsigns.emplace(callsign);
+            }
+            void UnregisterObservable(const string& callsign)
+            {
+                _callsigns.erase(callsign);
+            }
 
             void Register(const Callback& callback)
             {
@@ -42,7 +50,7 @@ namespace Plugin {
             {
                 if (_callback != nullptr) {
                     if (_callsigns.find(callsign) != _callsigns.end()) {
-                        _callback(PluginHost::IShell::ACTIVATED, callsign);
+                        _callback(_T("Activated"), callsign);
                     }
                 }
             }
@@ -50,7 +58,7 @@ namespace Plugin {
             {
                 if (_callback != nullptr) {
                     if (_callsigns.find(callsign) != _callsigns.end()) {
-                        _callback(PluginHost::IShell::DEACTIVATED, callsign);
+                        _callback(_T("Deactivated"), callsign);
                     }
                 }
             }
@@ -58,7 +66,7 @@ namespace Plugin {
             {
                 if (_callback != nullptr) {
                     if (_callsigns.find(callsign) != _callsigns.end()) {
-                        _callback(PluginHost::IShell::UNAVAILABLE, callsign);
+                        _callback(_T("Unavailable"), callsign);
                     }
                 }
             }
@@ -66,6 +74,43 @@ namespace Plugin {
         private:
             Callback _callback;
             std::unordered_set<string> _callsigns;
+        };
+
+    public:
+        class Config : public Core::JSON::Container {
+        public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+            Config()
+                : Core::JSON::Container()
+                , ServerAddress()
+                , ServerPort()
+                , Customer()
+                , Platform()
+                , Country()
+                , CallsignMapping()
+                , StateMapping()
+            {
+                Add(_T("server_address"), &ServerAddress);
+                Add(_T("server_port"), &ServerPort);
+                Add(_T("customer"), &Customer);
+                Add(_T("platform"), &Platform);
+                Add(_T("country"), &Country);
+                Add(_T("callsign_mapping"), &CallsignMapping);
+                Add(_T("state_mapping"), &StateMapping);
+            }
+
+            ~Config() override = default;
+
+        public:
+            Core::JSON::String ServerAddress;
+            Core::JSON::DecUInt16 ServerPort;
+            Core::JSON::String Customer;
+            Core::JSON::String Platform;
+            Core::JSON::String Country;
+            Core::JSON::ArrayType<Core::JSON::String> CallsignMapping;
+            Core::JSON::ArrayType<Core::JSON::String> StateMapping;
         };
 
     public:
@@ -89,11 +134,15 @@ namespace Plugin {
         string Information() const override;
 
     private:
-        void Send(PluginHost::IShell::state state, const string& callsign);
+        void Send(const string& state, const string& callsign);
 
     private:
         Core::Sink<StateChangeObserver> _stateChangeObserver;
         std::unique_ptr<RequestSender> _requestSender;
+        Config _config;
+        PluginHost::ISubSystem* _subSystem;
+        std::unordered_map<string, string> _callsignMappings;
+        std::unordered_map<string, string> _stateMappings;
     };
 
 } // namespace

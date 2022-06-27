@@ -54,7 +54,7 @@ namespace Plugin {
                     Trace::Information(_T("State change to open, attempting to send a request"));
                     auto request = Core::ProxyType<WPEFramework::Web::Request>::Create();
                     request->Verb = Web::Request::HTTP_GET;
-                    request->Query = Core::Format("%s&event=%s&id=%s", _parent._queryParameters.c_str(), _parent._event.c_str(), _parent._id.c_str());
+                    request->Query = Core::Format("%sevent=%s&id=%s", _parent._queryParameters.c_str(), _parent._event.c_str(), _parent._id.c_str());
                     request->Host = _parent._hostAddress;
                     request->Connection = Web::Request::CONNECTION_CLOSE;
                     Submit(request);
@@ -77,9 +77,6 @@ namespace Plugin {
             _hostAddress = node.HostAddress();
             for (const auto& entry : queryParameters) {
                 _queryParameters += Core::Format("%s=%s&", entry.first.c_str(), entry.second.c_str());
-            }
-            if (!_queryParameters.length() >= 1) {
-                _queryParameters.pop_back(); //remove trailing &
             }
 
             ASSERT(!_queryParameters.empty());
