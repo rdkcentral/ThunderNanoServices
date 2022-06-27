@@ -33,33 +33,20 @@ namespace Plugin {
             RUNNING
         };
         class ChannelMap;
-        class NotificationSink : public Core::Thread {
+        class StateRequestHandler : public Core::IDispatch {
             public:
-                NotificationSink() = delete;
-                NotificationSink(const NotificationSink&) = delete;
-                NotificationSink& operator= (const NotificationSink&) = delete;
-                NotificationSink(WebServerImplementation& parent):_parent(parent) {
+                StateRequestHandler() = delete;
+                StateRequestHandler(const StateRequestHandler& ) = delete;
+                StateRequestHandler& operator=(const StateRequestHandler&) = delete;
+                StateRequestHandler(WebServerImplementation& parent, PluginHost::IStateControl::command cmd): _cmd(cmd), _parent(parent) {
                 }
-                ~NotificationSink() {
-                    Stop();
-                    Wait(Thread::STOPPED| Thread::BLOCKED, Core::infinite);
-                }
-                void RequestForStateChange(PluginHost::IStateControl::command command) {
-
-                    _command = command;
-                    Run();
-                }
-            public:
-                uint32_t Worker() override {
-                    if (IsRunning() == true) {
-                        _parent.RequestForStateChange(_command);
-                    }
-                    Block();
-                    return (Core::infinite);
+                void Dispatch () override {
+                    _parent.RequestForStateChange(_cmd);
                 }
             private:
+                PluginHost::IStateControl::command _cmd;
                 WebServerImplementation& _parent;
-                PluginHost::IStateControl::command _command;
+
         };
         class WebFlow {
         public:
@@ -701,7 +688,6 @@ POP_WARNING()
             , _adminLock()
             , _observers()
             , _state(PluginHost::IStateControl::UNINITIALIZED)
-            , _sink(*this)
         {
         }
 
@@ -761,9 +747,8 @@ POP_WARNING()
             if (_state == PluginHost::IStateControl::UNINITIALIZED || 
                 (_state == PluginHost::IStateControl::RESUMED && command == PluginHost::IStateControl::SUSPEND) ||
                 (_state == PluginHost::IStateControl::SUSPENDED && command == PluginHost::IStateControl::RESUME)){
-                _adminLock.Lock();
-                _sink.RequestForStateChange(command);
-                _adminLock.Unlock();
+                Core::ProxyType<Core::IDispatch> job = Core::ProxyType<Core::IDispatch>(Core::ProxyType<StateRequestHandler>::Create(*this, command));
+                Core::WorkerPool::Instance().Submit(job);
             }
             return (Core::ERROR_NONE);
         }
@@ -816,7 +801,6 @@ POP_WARNING()
         mutable Core::CriticalSection _adminLock;
         std::list<PluginHost::IStateControl::INotification*> _observers;
         PluginHost::IStateControl::state _state;
-        NotificationSink _sink;
 
     };
 

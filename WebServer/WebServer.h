@@ -27,7 +27,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class WebServer : public PluginHost::IPlugin, public PluginHost::IWeb{
+    class WebServer : public PluginHost::IPlugin{
     private:
 
         class Notification : public RPC::IRemoteConnection::INotification, public PluginHost::IStateControl::INotification {
@@ -85,7 +85,6 @@ POP_WARNING()
 
         BEGIN_INTERFACE_MAP(WebServer)
         INTERFACE_ENTRY(IPlugin)
-        INTERFACE_ENTRY(IWeb)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(Exchange::IWebServer, _server)
         INTERFACE_AGGREGATE(PluginHost::IStateControl, _server)
@@ -115,10 +114,6 @@ POP_WARNING()
         void StateChange(PluginHost::IStateControl::state);
 
 
-        //  IWeb methods
-        // -------------------------------------------------------------------------------------------------------
-        void Inbound(Web::Request &request) override;
-        Core::ProxyType<Web::Response> Process(const Web::Request &request) override;
 
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
