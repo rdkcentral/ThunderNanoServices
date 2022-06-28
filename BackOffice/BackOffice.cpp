@@ -68,7 +68,7 @@ namespace Plugin {
                 if (tokens.size() == 2) {
                     mapping.emplace(tokens[0], tokens[1]);
                 } else {
-                    result = _T("Failed parsing callsign mapping!");
+                    result = _T("Failed parsing mapping!");
                 }
             }
             return result;
@@ -113,10 +113,9 @@ namespace Plugin {
                 _requestSender.reset(new RequestSender(Core::NodeId(_config.ServerAddress.Value().c_str(), _config.ServerPort.Value()), queryParameters));
                 if (_requestSender != nullptr) {
                     for (const auto& callsign : _callsignMappings) {
-                        _stateChangeObserver.RegisterObservable(callsign.first);
+                        _stateChangeObserver.RegisterObservable({ callsign.first });
                     }
-                    _stateChangeObserver.Register(std::bind(&BackOffice::Send, this, std::placeholders::_1, std::placeholders::_2));
-                    service->Register(&_stateChangeObserver);
+                    _stateChangeObserver.RegisterOperationalNotifications(std::bind(&BackOffice::Send, this, std::placeholders::_1, std::placeholders::_2), service);
                 }
             } else {
                 result = _T("Server address or port not specified!");
@@ -127,8 +126,8 @@ namespace Plugin {
     }
     void BackOffice::Deinitialize(PluginHost::IShell* service)
     {
-        _stateChangeObserver.Unregister();
-        service->Unregister(&_stateChangeObserver);
+        ASSERT(service != nullptr);
+        _stateChangeObserver.UnregisterOperationalNotifications(service);
     }
     string BackOffice::Information() const
     {
