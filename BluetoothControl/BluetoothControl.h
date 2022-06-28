@@ -242,7 +242,12 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (info.store_hint != 0) {
                         if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::LongTermKey(info.key.addr.bdaddr, info.key.addr.type, info.key.type,
-                                                                       info.key.master, info.key.enc_size, btohs(info.key.ediv),
+#ifdef NO_INCLUSIVE_LANGUAGE
+                                                                       info.key.central,
+#else
+                                                                       info.key.master,
+#endif
+                                                                       info.key.enc_size, btohs(info.key.ediv),
                                                                        btohll(info.key.rand), info.key.val)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store LTK")));
                         }

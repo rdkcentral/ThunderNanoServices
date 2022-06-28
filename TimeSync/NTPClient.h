@@ -328,7 +328,7 @@ namespace Plugin {
                 // bit (NTP time)
         };
 
-        class Activity : public Core::IDispatchType<void> {
+        class Activity : public Core::IDispatch {
         private:
             Activity() = delete;
             Activity(const Activity&) = delete;
@@ -406,7 +406,7 @@ namespace Plugin {
         uint32_t _currentAttempt;
         ServerList _servers;
         ServerIterator _serverIndex;
-        Core::ProxyType<Core::IDispatchType<void>> _activity;
+        Core::ProxyType<Core::IDispatch> _activity;
         std::list<Exchange::ITimeSync::INotification*> _clients;
     };
 
