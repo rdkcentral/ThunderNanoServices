@@ -46,10 +46,86 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            void Activated(const string& callsign, PluginHost::IShell*) override
+            class StateObserver {
+            private:
+                class Notification : public PluginHost::IStateControl::INotification {
+                public:
+                    Notification(const std::function<void(PluginHost::IStateControl::state)>& callback)
+                        : _callback(callback)
+                    {
+                    }
+                    ~Notification() override = default;
+
+                    BEGIN_INTERFACE_MAP(Notification)
+                    INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
+                    END_INTERFACE_MAP
+
+                private:
+                    void StateChange(const PluginHost::IStateControl::state state) override
+                    {
+                        _callback(state);
+                    }
+
+                    std::function<void(PluginHost::IStateControl::state)> _callback;
+                };
+
+            public:
+                StateObserver(const std::function<void(const string&, PluginHost::IStateControl::state)>& callback, PluginHost::IShell* service)
+                    : _notification(std::bind(callback, std::placeholders::_1))
+                {
+                    ASSERT(service != nullptr);
+                    _control = service->QueryInterface<PluginHost::IStateControl>();
+                    if (_control != nullptr) {
+                        _control->Register(&_notification);
+                    }
+                }
+                ~StateObserver()
+                {
+                    if (_control != nullptr) {
+                        _control->Unregister(&_notification);
+                        _control->Release();
+                    }
+                }
+
+            private:
+                PluginHost::IStateControl* _control;
+                Core::Sink<Notification> _notification;
+            };
+
+            std::unordered_map<string, StateObserver> _stateObservers;
+            void CreateObservable(const string& callsign, PluginHost::IShell* service)
+            {
+                if (_stateObservers.count(callsign) == 0) {
+                    _stateObservers.emplace(std::piecewise_construct,
+                        std::forward_as_tuple(callsign),
+                        std::forward_as_tuple(std::bind(&StateChangeObserver::StateChange, this, callsign, std::placeholders::_2), service));
+                }
+            }
+            void DestroyObservable(const string& callsign)
+            {
+                if (_stateObservers.count(callsign) != 0) {
+                    _stateObservers.erase(callsign);
+                }
+            }
+
+            void StateChange(const string& callsign, const PluginHost::IStateControl::state state)
             {
                 if (_callback != nullptr) {
-                    if (_callsigns.find(callsign) != _callsigns.end()) {
+                    if (state == PluginHost::IStateControl::RESUMED) {
+                        _callback(_T("Resumed"), callsign);
+                    } else if (state == PluginHost::IStateControl::SUSPENDED) {
+                        _callback(_T("Suspended"), callsign);
+                    }
+                }
+            }
+
+            void Activated(const string& callsign, PluginHost::IShell* service) override
+            {
+                ASSERT(service != nullptr);
+
+                if (_callback != nullptr) {
+                    if (_callsigns.count(callsign) != 0) {
+                        CreateObservable(callsign, service);
                         _callback(_T("Activated"), callsign);
                     }
                 }
@@ -57,7 +133,8 @@ namespace Plugin {
             void Deactivated(const string& callsign, PluginHost::IShell*) override
             {
                 if (_callback != nullptr) {
-                    if (_callsigns.find(callsign) != _callsigns.end()) {
+                    if (_callsigns.count(callsign) != 0) {
+                        DestroyObservable(callsign);
                         _callback(_T("Deactivated"), callsign);
                     }
                 }
@@ -141,6 +218,7 @@ namespace Plugin {
         std::unique_ptr<RequestSender> _requestSender;
         Config _config;
         PluginHost::ISubSystem* _subSystem;
+        PluginHost::IStateControl* _stateControl;
         std::unordered_map<string, string> _callsignMappings;
         std::unordered_map<string, string> _stateMappings;
     };
