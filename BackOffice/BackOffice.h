@@ -7,11 +7,53 @@
 
 namespace WPEFramework {
 namespace Plugin {
-
     class BackOffice : public PluginHost::IPlugin {
     private:
         class StateChangeObserver {
-            using Callback = std::function<void(const string&, const string&)>;
+        public:
+            enum State {
+                ACTIVATED,
+                DEACTIVATED,
+                UNAVAILABLE,
+                RESUMED,
+                SUSPENDED,
+                UNKNOWN
+            };
+
+            static State Convert(PluginHost::IStateControl::state state)
+            {
+                switch (state) {
+                case PluginHost::IStateControl::RESUMED:
+                    return State::RESUMED;
+                case PluginHost::IStateControl::SUSPENDED:
+                    return State::SUSPENDED;
+                case PluginHost::IStateControl::UNINITIALIZED:
+                default:
+                    return State::UNKNOWN;
+                }
+            }
+            static string Convert(State state)
+            {
+                switch (state) {
+                case ACTIVATED:
+                    return _T("Activated");
+                case DEACTIVATED:
+                    return _T("Deactivated");
+                case UNAVAILABLE:
+                    return _T("Unavailable");
+                case RESUMED:
+                    return _T("Resumed");
+                case SUSPENDED:
+                    return _T("Suspended");
+                case UNKNOWN:
+                    return _T("Unknown");
+                default:
+                    Trace::Error(_T("Unknown mapping found!"));
+                    return _T("Unknown");
+                }
+            }
+
+            using Callback = std::function<void(State, const string&)>;
 
             class OperationalObserver : public PluginHost::IPlugin::INotification {
             public:
@@ -35,7 +77,7 @@ namespace Plugin {
                     if (_parent._callback != nullptr) {
                         if (_parent._callsigns.count(callsign) != 0) {
                             _parent.CreateObservable(callsign, service);
-                            _parent._callback(_T("Activated"), callsign);
+                            _parent._callback(State::ACTIVATED, callsign);
                         }
                     }
                 }
@@ -44,7 +86,7 @@ namespace Plugin {
                     if (_parent._callback != nullptr) {
                         if (_parent._callsigns.count(callsign) != 0) {
                             _parent.DestroyObservable(callsign);
-                            _parent._callback(_T("Deactivated"), callsign);
+                            _parent._callback(State::DEACTIVATED, callsign);
                         }
                     }
                 }
@@ -52,7 +94,7 @@ namespace Plugin {
                 {
                     if (_parent._callback != nullptr) {
                         if ((_parent._callsigns.count(callsign) != 0)) {
-                            _parent._callback(_T("Unavailable"), callsign);
+                            _parent._callback(State::UNAVAILABLE, callsign);
                         }
                     }
                 }
@@ -65,7 +107,7 @@ namespace Plugin {
             private:
                 class Notification : public PluginHost::IStateControl::INotification {
                 public:
-                    explicit Notification(const std::function<void(PluginHost::IStateControl::state)>& callback)
+                    explicit Notification(const std::function<void(StateChangeObserver::State)>& callback)
                         : _callback(callback)
                     {
                     }
@@ -81,14 +123,14 @@ namespace Plugin {
                 private:
                     void StateChange(const PluginHost::IStateControl::state state) override
                     {
-                        _callback(state);
+                        _callback(Convert(state));
                     }
 
-                    std::function<void(PluginHost::IStateControl::state)> _callback;
+                    std::function<void(StateChangeObserver::State)> _callback;
                 };
 
             public:
-                StandbyObserver(const std::function<void(PluginHost::IStateControl::state)>& callback, PluginHost::IShell* service)
+                StandbyObserver(const std::function<void(StateChangeObserver::State)>& callback, PluginHost::IShell* service)
                     : _notification(callback)
                 {
                     ASSERT(service != nullptr);
@@ -119,7 +161,11 @@ namespace Plugin {
                 , _operationalObserver(*this)
             {
             }
-            ~StateChangeObserver() = default;
+            ~StateChangeObserver()
+            {
+                _callsigns.clear();
+                _standbyObservers.clear();
+            }
 
             StateChangeObserver(const StateChangeObserver&) = delete;
             StateChangeObserver& operator=(const StateChangeObserver&) = delete;
@@ -164,14 +210,10 @@ namespace Plugin {
                 }
             }
 
-            void StateChange(const string& callsign, const PluginHost::IStateControl::state state)
+            void StateChange(const string& callsign, State state)
             {
                 if (_callback != nullptr) {
-                    if (state == PluginHost::IStateControl::RESUMED) {
-                        _callback(_T("Resumed"), callsign);
-                    } else if (state == PluginHost::IStateControl::SUSPENDED) {
-                        _callback(_T("Suspended"), callsign);
-                    }
+                    _callback(state, callsign);
                 }
             }
 
@@ -240,14 +282,13 @@ namespace Plugin {
         string Information() const override;
 
     private:
-        void Send(const string& state, const string& callsign);
+        void Send(StateChangeObserver::State state, const string& callsign);
 
     private:
         StateChangeObserver _stateChangeObserver;
         std::unique_ptr<RequestSender> _requestSender;
         Config _config;
         PluginHost::ISubSystem* _subSystem;
-        PluginHost::IStateControl* _stateControl;
         std::unordered_map<string, string> _callsignMappings;
         std::unordered_map<string, string> _stateMappings;
     };

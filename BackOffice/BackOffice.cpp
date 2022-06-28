@@ -42,13 +42,16 @@ namespace Plugin {
             return result;
         }
 
-        std::vector<std::string> TokenizeString(const std::string& buffer, char delimiter)
+        std::vector<string> TokenizeString(string buffer, char delimiter)
         {
-            std::vector<std::string> result;
+            std::vector<string> result;
 
             if (!buffer.empty()) {
+                string token;
+
+                //delete whitespaces
+                buffer.erase(std::remove_if(buffer.begin(), buffer.end(), ::isspace), buffer.end());
                 std::istringstream iss(buffer);
-                std::string token;
 
                 while (iss.good()) {
                     getline(iss, token, delimiter);
@@ -65,7 +68,7 @@ namespace Plugin {
             string result;
             while (iterator.Next()) {
                 auto tokens = TokenizeString(iterator.Current().Value(), _T(','));
-                if (tokens.size() == 2) {
+                if (tokens.size() == 2 && !tokens[0].empty() && !tokens[1].empty()) {
                     mapping.emplace(tokens[0], tokens[1]);
                 } else {
                     result = _T("Failed parsing mapping!");
@@ -128,15 +131,19 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         _stateChangeObserver.UnregisterOperationalNotifications(service);
+        if (_subSystem != nullptr) {
+            _subSystem->Release();
+        }
+        _requestSender.reset(nullptr);
     }
     string BackOffice::Information() const
     {
         return _T("");
     }
-    void BackOffice::Send(const string& state, const string& callsign)
+    void BackOffice::Send(StateChangeObserver::State state, const string& callsign)
     {
         auto id = _callsignMappings.find(callsign);
-        auto event = _stateMappings.find(state);
+        auto event = _stateMappings.find(StateChangeObserver::Convert(state));
 
         if (id != _callsignMappings.end() && event != _stateMappings.end()) {
             _requestSender->Send(event->second, id->second);
