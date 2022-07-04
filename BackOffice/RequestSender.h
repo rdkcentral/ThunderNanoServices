@@ -8,6 +8,9 @@
 namespace WPEFramework {
 namespace Plugin {
     class RequestSender {
+    public:
+        constexpr static uint32_t MAX_WAIT_TIME = 1000;
+
     private:
         class WebClient : public Web::WebLinkType<Crypto::SecureSocketPort, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> {
         private:
@@ -90,8 +93,8 @@ namespace Plugin {
             {
                 _lock.Lock();
 
-                if (_parent._inProgress.Lock(1000) == 0) {
-                    auto result = _parent._webClient.Open(10000);
+                if (_parent._inProgress.Lock(MAX_WAIT_TIME) == 0) {
+                    auto result = _parent._webClient.Open(0);
 
                     if (result == Core::ERROR_NONE || result == Core::ERROR_INPROGRESS) {
                         Trace::Information(_T("Connection opened"));
@@ -101,8 +104,8 @@ namespace Plugin {
                         _parent._canClose.SetEvent();
                     }
 
-                    if (_parent._canClose.Lock(1000) == 0) {
-                        _parent._webClient.Close(1000);
+                    if (_parent._canClose.Lock(MAX_WAIT_TIME) == 0) {
+                        _parent._webClient.Close(MAX_WAIT_TIME);
                         _parent._canClose.ResetEvent();
                     }
                 }
