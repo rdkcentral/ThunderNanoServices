@@ -4,6 +4,7 @@
 
 #include "Module.h"
 #include "RequestSender.h"
+#include <unordered_set>
 
 namespace WPEFramework {
 namespace Plugin {

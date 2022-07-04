@@ -1,15 +1,17 @@
 #pragma once
 
 #include "Module.h"
+#include <cryptalgo/cryptalgo.h>
 #include <iostream>
+#include <list>
 
 namespace WPEFramework {
 namespace Plugin {
     class RequestSender {
     private:
-        class WebClient : public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> {
+        class WebClient : public Web::WebLinkType<Crypto::SecureSocketPort, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> {
         private:
-            typedef Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> BaseClass;
+            typedef Web::WebLinkType<Crypto::SecureSocketPort, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> BaseClass;
             static WPEFramework::Core::ProxyPoolType<Web::Response> _responseFactory;
 
         public:
@@ -18,15 +20,12 @@ namespace Plugin {
             WebClient& operator=(const WebClient&) = delete;
 
             WebClient(RequestSender& parent, const WPEFramework::Core::NodeId& remoteNode)
-                : BaseClass(5, _responseFactory, false, remoteNode.AnyInterface(), remoteNode, 2048, 2048)
+                : BaseClass(5, _responseFactory, Core::SocketPort::STREAM, remoteNode.AnyInterface(), remoteNode, 2048, 2048)
                 , _parent(parent)
                 , _textBodyFactory(2)
             {
             }
-            ~WebClient() override
-            {
-                Close(WPEFramework::Core::infinite);
-            }
+            ~WebClient() override = default;
 
         public:
             // Notification of a Partial Request received, time to attach a body..
@@ -46,21 +45,32 @@ namespace Plugin {
                 string send;
                 response->ToString(send);
                 Trace::Information(_T("Send: %s"), send.c_str());
-                _parent._inProgress.Unlock();
+                _parent._inProgress.SetEvent();
+                _parent._canClose.SetEvent();
             }
             void StateChange() override
             {
                 if (IsOpen()) {
-                    Trace::Information(_T("State change to open, attempting to send a request"));
-                    auto request = Core::ProxyType<WPEFramework::Web::Request>::Create();
-                    request->Verb = Web::Request::HTTP_GET;
-                    request->Query = Core::Format("%sevent=%s&id=%s", _parent._queryParameters.c_str(), _parent._event.c_str(), _parent._id.c_str());
-                    request->Host = _parent._hostAddress;
-                    request->Connection = Web::Request::CONNECTION_CLOSE;
-                    Submit(request);
+                    _parent._inProgress.ResetEvent();
+                    _parent._containerLock.Lock();
+
+                    if (!_parent._queue.empty()) {
+                        auto entry = _parent._queue.back();
+                        _parent._queue.pop_back();
+
+                        Trace::Information(_T("State change to open, attempting to send a request"));
+                        auto request = Core::ProxyType<WPEFramework::Web::Request>::Create();
+                        request->Verb = Web::Request::HTTP_GET;
+                        request->Query = Core::Format("%sevent=%s&id=%s", _parent._queryParameters.c_str(), entry.first.c_str(), entry.second.c_str());
+                        request->Host = _parent._hostAddress;
+                        request->Connection = Web::Request::CONNECTION_CLOSE;
+                        Submit(request);
+                    }
+                    _parent._containerLock.Unlock();
+
                 } else {
                     Trace::Information(_T("State change to false"));
-                    _parent._inProgress.Unlock();
+                    _parent._inProgress.SetEvent();
                 }
             }
 
@@ -69,47 +79,76 @@ namespace Plugin {
             RequestSender& _parent;
         };
 
+        class Worker : public Core::IDispatch {
+        public:
+            Worker(RequestSender& parent)
+                : _parent(parent)
+            {
+            }
+
+            void Dispatch() override
+            {
+                _lock.Lock();
+
+                if (_parent._inProgress.Lock(1000) == 0) {
+                    auto result = _parent._webClient.Open(10000);
+
+                    if (result == Core::ERROR_NONE || result == Core::ERROR_INPROGRESS) {
+                        Trace::Information(_T("Connection opened"));
+                    } else {
+                        Trace::Error(_T("Could not open the connection, error: %d"), result);
+                        _parent._inProgress.ResetEvent();
+                        _parent._canClose.SetEvent();
+                    }
+
+                    if (_parent._canClose.Lock(1000) == 0) {
+                        _parent._webClient.Close(1000);
+                        _parent._canClose.ResetEvent();
+                    }
+                }
+
+                _lock.Unlock();
+            }
+
+        private:
+            RequestSender& _parent;
+            Core::CriticalSection _lock;
+        };
+
     public:
         RequestSender(Core::NodeId node, const std::list<std::pair<string, string>>& queryParameters)
             : _webClient(*this, node)
             , _inProgress(true, true)
+            , _canClose(true, true)
+            , _worker(Core::ProxyType<Worker>::Create(*this))
         {
             _hostAddress = node.HostAddress();
             for (const auto& entry : queryParameters) {
                 _queryParameters += Core::Format("%s=%s&", entry.first.c_str(), entry.second.c_str());
             }
-
+            node.IsValid();
             ASSERT(!_queryParameters.empty());
         }
-        ~RequestSender()
-        {
-            _webClient.Close(Core::infinite);
-        }
+        ~RequestSender() = default;
 
         void Send(const string& event, const string& id)
         {
-            _event = event;
-            _id = id;
-            if (_inProgress.Lock(0) == 0) {
-                auto result = _webClient.Open(0);
-
-                if (result == Core::ERROR_NONE) {
-                    Trace::Information(_T("Connection opened"));
-
-                } else {
-                    Trace::Error(_T("Could not open the connection, error: %d"), result);
-                    _inProgress.Unlock();
-                }
-            }
+            _containerLock.Lock();
+            _queue.emplace_back(event, id);
+            _containerLock.Unlock();
+            Core::IWorkerPool::Instance().Schedule(Core::Time::Now(), Core::ProxyType<Core::IDispatch>(_worker));
         }
 
     private:
+        std::list<std::pair<string, string>> _queue;
+        Core::CriticalSection _containerLock;
+
         WebClient _webClient;
         Core::Event _inProgress;
+        Core::Event _canClose;
         string _queryParameters;
         string _hostAddress;
-        string _event;
-        string _id;
+        Core::ProxyType<Worker> _worker;
     };
 }
 }
