@@ -71,6 +71,8 @@ namespace Plugin {
                 END_INTERFACE_MAP
 
             private:
+
+#if THUNDER_VERSION >= 3
                 void Activated(const string& callsign, PluginHost::IShell* service) override
                 {
                     ASSERT(service != nullptr);
@@ -99,6 +101,29 @@ namespace Plugin {
                         }
                     }
                 }
+#else
+                void StateChange(PluginHost::IShell* plugin) override
+                {
+                    ASSERT(plugin != nullptr);
+
+                    if (_parent._callback != nullptr) {
+                        auto callsign = plugin->Callsign();
+                        if ((_parent._callsigns.count(callsign) != 0)) {
+                            switch (plugin->State()) {
+                            case PluginHost::IShell::ACTIVATED:
+                                _parent._callback(State::ACTIVATED, callsign);
+                                break;
+                            case PluginHost::IShell::DEACTIVATED:
+                                _parent._callback(State::DEACTIVATED, callsign);
+                                break;
+                            default:
+                                Trace::Information(_T("Change to unknown state, ignoring."));
+                                break;
+                            }
+                        }
+                    }
+                }
+#endif
 
             private:
                 StateChangeObserver& _parent;
