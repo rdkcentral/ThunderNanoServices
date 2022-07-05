@@ -46,6 +46,14 @@
                         "type": "string",
                         "description": "Country code"
                     },
+                    "type": {
+                        "type": "string",
+                        "description": "Type"
+                    },
+                    "session": {
+                        "type": "number",
+                        "description": "session number"
+                    },
                     "callsign_mapping": {
                         "type": "string",
                         "description": "Mapping on how to map callsigns to server accepted names"

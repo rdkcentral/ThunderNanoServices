@@ -79,6 +79,8 @@ The table below lists configuration options of the plugin.
 | configuration.customer | string | Customer name |
 | configuration.platform | string | Platform name |
 | configuration.country | string | Country code |
+| configuration?.type | string | <sup>*(optional)*</sup> Type |
+| configuration?.session | number | <sup>*(optional)*</sup> session number |
 | configuration.callsign_mapping | string | Mapping on how to map callsigns to server accepted names |
 | configuration.state_mapping | string | Mapping on how to map state to server accepted states |
 
