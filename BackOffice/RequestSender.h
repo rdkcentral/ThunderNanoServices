@@ -122,7 +122,7 @@ namespace Plugin {
         RequestSender(Core::NodeId node, const std::list<std::pair<string, string>>& queryParameters)
             : _webClient(*this, node)
             , _inProgress(true, true)
-            , _canClose(true, true)
+            , _canClose(false, true)
             , _worker(Core::ProxyType<Worker>::Create(*this))
         {
             _hostAddress = node.HostAddress();
