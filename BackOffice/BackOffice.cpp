@@ -16,7 +16,12 @@ namespace Plugin {
             if (config.Country.IsSet() && !config.Country.Value().empty()) {
                 result.emplace_back(_T("country"), config.Country.Value());
             }
-            result.emplace_back(_T("type"), _T("app"));
+            if (config.Type.IsSet() && !config.Type.Value().empty()) {
+                result.emplace_back(_T("type"), config.Type.Value());
+            }
+            if (config.Session.IsSet()) {
+                result.emplace_back(_T("session"), std::to_string(config.Session.Value()));
+            }
             return result;
         }
 

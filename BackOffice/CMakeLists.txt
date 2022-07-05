@@ -15,6 +15,8 @@ set(PLUGIN_BACKOFFICE_SERVER_PORT "80" CACHE STRING "Backoffice server address")
 set(PLUGIN_BACKOFFICE_CUSTOMER "metrological" CACHE STRING "Customer name")
 set(PLUGIN_BACKOFFICE_PLATFORM "rpi" CACHE STRING "Platform name")
 set(PLUGIN_BACKOFFICE_COUNTRY "US" CACHE STRING "Country name")
+set(PLUGIN_BACKOFFICE_TYPE "app" CACHE STRING "Type (default: app)")
+set(PLUGIN_BACKOFFICE_SESSION 1234 CACHE STRING "Session number")
 set(PLUGIN_BACKOFFICE_CALLSIGN_MAPPING "" CACHE STRING "Map framework callsigns in format: callsign1,mapping1;callsign2,mapping2")
 set(PLUGIN_BACKOFFICE_STATE_MAPPING "Activated,load;Deactivated,unload;Resumed,open;Suspended,close" CACHE STRING "Map states in format: state1,mapping1;state2,mapping2, allowed states: Activated, Deactivated, Suspended, Resumed")
 

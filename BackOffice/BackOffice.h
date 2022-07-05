@@ -263,6 +263,8 @@ namespace Plugin {
                 , Customer()
                 , Platform()
                 , Country()
+                , Type()
+                , Session()
                 , CallsignMapping()
                 , StateMapping()
             {
@@ -271,6 +273,8 @@ namespace Plugin {
                 Add(_T("customer"), &Customer);
                 Add(_T("platform"), &Platform);
                 Add(_T("country"), &Country);
+                Add(_T("type"), &Type);
+                Add(_T("session"), &Session);
                 Add(_T("callsign_mapping"), &CallsignMapping);
                 Add(_T("state_mapping"), &StateMapping);
             }
@@ -283,6 +287,8 @@ namespace Plugin {
             Core::JSON::String Customer;
             Core::JSON::String Platform;
             Core::JSON::String Country;
+            Core::JSON::String Type;
+            Core::JSON::DecUInt16 Session;
             Core::JSON::ArrayType<Core::JSON::String> CallsignMapping;
             Core::JSON::ArrayType<Core::JSON::String> StateMapping;
         };
