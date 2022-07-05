@@ -1,6 +1,5 @@
 // Copyright (c) 2022 Metrological. All rights reserved.
 #include "BackOffice.h"
-#include <regex>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -101,10 +100,8 @@ namespace Plugin {
             if (_subSystem != nullptr) {
                 _subSystem->AddRef();
                 auto deviceId = DeviceIdentifier(_subSystem);
-                if (deviceId.IsSet()) {
-                    auto deviceIdNormalized = deviceId.Value();
-                    deviceIdNormalized = std::regex_replace(deviceIdNormalized, std::regex(_T("WPE")), "");
-                    queryParameters.emplace_back(_T("household"), deviceIdNormalized);
+                if (deviceId.IsSet() && !deviceId.Value().empty()) {
+                    queryParameters.emplace_back(_T("household"), deviceId.Value());
                 }
             } else {
                 result = _T("Unable to obtain subsystem");
