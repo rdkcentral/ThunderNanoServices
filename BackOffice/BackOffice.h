@@ -111,9 +111,11 @@ namespace Plugin {
                         if ((_parent._callsigns.count(callsign) != 0)) {
                             switch (plugin->State()) {
                             case PluginHost::IShell::ACTIVATED:
+                                _parent.CreateObservable(callsign, plugin);
                                 _parent._callback(State::ACTIVATED, callsign);
                                 break;
                             case PluginHost::IShell::DEACTIVATED:
+                                _parent.DestroyObservable(callsign);
                                 _parent._callback(State::DEACTIVATED, callsign);
                                 break;
                             default:
