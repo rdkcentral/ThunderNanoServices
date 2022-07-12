@@ -24,7 +24,20 @@ namespace WPEFramework {
 namespace Plugin
 {
 
-    SERVICE_REGISTRATION(NetworkControl, 1, 0);
+    namespace {
+
+        static Metadata<NetworkControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            { subsystem::NETWORK }
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<JsonData::NetworkControl::NetworkData>>> jsonNetworksFactory(1);

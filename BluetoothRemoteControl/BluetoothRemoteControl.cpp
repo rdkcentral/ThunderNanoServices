@@ -33,7 +33,19 @@ ENUM_CONVERSION_END(Plugin::BluetoothRemoteControl::recorder)
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(BluetoothRemoteControl, 1, 0);
+    namespace {
+
+        static Metadata<BluetoothRemoteControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::BLUETOOTH },
+            // Terminations
+            { subsystem::BLUETOOTH },
+            // Controls
+            {}
+        );
+    }
 
     template<typename FROM, typename TO>
     class LUT {
