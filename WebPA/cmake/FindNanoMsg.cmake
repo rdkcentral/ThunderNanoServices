@@ -1,8 +1,8 @@
-# - Try to find Procps
+# - Try to find NANOMSG
 # Once done this will define
-#  PROCPS_FOUND - System has Procps
-#  PROCPS_INCLUDE_DIRS - The Procps include directories
-#  PROCPS_LIBRARIES - The libraries needed to use Procps
+#  NANOMSG_FOUND - System has nanomsg
+#  NANOMSG_INCLUDE_DIRS - The nanomsg include directories
+#  NANOMSG_LIBRARIES - The libraries needed to use nanomsg
 #
 # Copyright (C) 2019 Metrological.
 #
@@ -27,30 +27,29 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
-# PROCPS has no pc file to search for
+if(NanoMsg_FIND_QUIETLY)
+    set(_NANOMSG_MODE QUIET)
+elseif(NanoMsg_FIND_REQUIRED)
+    set(_NANOMSG_MODE REQUIRED)
+endif()
 
-find_library(PROCPS_LIBRARY procps)
+find_package(PkgConfig)
+pkg_check_modules(NANOMSG ${_NANOMSG_MODE} nanomsg)
 
-if(EXISTS "${PROCPS_LIBRARY}")
-    include(FindPackageHandleStandardArgs)
+find_library(NANOMSG_LIBRARY NAMES ${NANOMSG_LIBRARIES}
+        HINTS ${NANOMSG_LIBDIR} ${NANOMSG_LIBRARY_DIRS}
+        )
 
-    find_package_handle_standard_args(Procps DEFAULT_MSG PROCPS_LIBRARY)
-    mark_as_advanced(PROCPS_LIBRARY)
-    set(PROCPS_FOUND ${Procps_FOUND})
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(NanoMsg DEFAULT_MSG NANOMSG_LIBRARIES NANOMSG_LIBRARY)
+mark_as_advanced(NANOMSG_INCLUDE_DIRS NANOMSG_LIBRARIES NANOMSG_LIBRARY)
 
-    if(Procps_FOUND AND NOT TARGET Procps::Procps)
-        add_library(Procps::Procps UNKNOWN IMPORTED)
-
-        set_target_properties(Procps::Procps PROPERTIES
-                IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${PROCPS_LIBRARY}"
-                )
-    endif()
-else()
-    if(Procps_FIND_REQUIRED)
-        message(FATAL_ERROR "PROCPS_LIBRARY not available")
-    elseif(NOT Procps_FIND_QUIETLY)
-        message(STATUS "PROCPS_LIBRARY not available")
-    endif()
-
+if(NanoMsg_FOUND AND NOT TARGET NanoMsg::NanoMsg)
+    add_library(NanoMsg::NanoMsg UNKNOWN IMPORTED)
+    set_target_properties(NanoMsg::NanoMsg PROPERTIES
+            IMPORTED_LOCATION "${NANOMSG_LIBRARY}"
+            INTERFACE_LINK_LIBRARIES "${NANOMSG_LIBRARIES}"
+            INTERFACE_COMPILE_OPTIONS "${NANOMSG_DEFINITIONS}"
+            INTERFACE_INCLUDE_DIRECTORIES "${NANOMSG_INCLUDE_DIRS}"
+            )
 endif()

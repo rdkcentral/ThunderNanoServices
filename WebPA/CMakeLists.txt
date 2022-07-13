@@ -51,7 +51,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ParodusService::ParodusService
-        wdmp_c::wdmp_c
+        WDMP-C::WDMP-C
 )
 
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)

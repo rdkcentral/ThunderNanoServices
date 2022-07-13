@@ -178,7 +178,7 @@ void Adapter::InitializeNotifyParameters()
     TRACE(Trace::Information, (_T("End of setInitial Notify")));
 }
 
-void Adapter::ProcessRequest(char* reqPayload,char* transactionId, char** resPayload)
+void Adapter::ProcessRequest(char* reqPayload, char* transactionId VARIABLE_IS_NOT_USED, char** resPayload)
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
 
@@ -275,7 +275,7 @@ void Adapter::Helper::AllocateGetResponse(const req_struct*& reqObj, res_struct*
 }
 
 template <typename TYPE>
-void Adapter::Helper::AllocateParamResponse(const req_struct*& reqObj, res_struct*& resObj, TYPE type) const
+void Adapter::Helper::AllocateParamResponse(const req_struct*& reqObj VARIABLE_IS_NOT_USED, res_struct*& resObj, TYPE type) const
 {
     resObj->timeSpan = nullptr;
 

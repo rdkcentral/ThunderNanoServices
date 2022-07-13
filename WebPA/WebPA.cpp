@@ -100,7 +100,7 @@ namespace {
         }
     }
     _connectionId = 0;
-    _service->Release()
+    _service->Release();
     _service = nullptr;
 }
 
