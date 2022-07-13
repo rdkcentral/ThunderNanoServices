@@ -26,7 +26,19 @@ namespace Plugin
 
     using namespace JsonData::WifiControl;
 
-    SERVICE_REGISTRATION(WifiControl, 1, 0);
+    namespace {
+
+        static Metadata<WifiControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {  subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::JSONBodyType<StatusData>> jsonResponseFactoryStatus(1);
     static Core::ProxyPoolType<Web::JSONBodyType<WifiControl::NetworkList>> jsonResponseFactoryNetworkList(1);

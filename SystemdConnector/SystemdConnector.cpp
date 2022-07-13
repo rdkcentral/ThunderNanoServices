@@ -24,7 +24,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SystemdConnector, 1, 0);
+    namespace {
+
+        static Metadata<SystemdConnector> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     SystemdConnector::SystemdConnector()
     {

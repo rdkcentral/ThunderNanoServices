@@ -24,7 +24,19 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Compositor, 1, 0);
+    namespace {
+
+        static Metadata<Compositor> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            { subsystem::PLATFORM, subsystem::GRAPHICS }
+        );
+    }
 
     static string PrimaryName(const string& layerName) 
     {

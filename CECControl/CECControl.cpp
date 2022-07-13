@@ -24,7 +24,20 @@
 namespace WPEFramework {
 
 namespace Plugin {
-    SERVICE_REGISTRATION(CECControl, 1, 0);
+
+    namespace {
+
+        static Metadata<CECControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     const string CECControl::Initialize(PluginHost::IShell* service)
     {
