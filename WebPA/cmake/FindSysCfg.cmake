@@ -1,8 +1,8 @@
-# - Try to find Parodus2CCSP
+# - Try to find SysCfg
 # Once done this will define
-#  PARODUS2CCSP_FOUND - System has Parodus2CCSP
-#  PARODUS2CCSP_INCLUDE_DIRS - The Parodus2CCSP include directories
-#  PARODUS2CCSP_LIBRARIES - The libraries needed to use Parodus2CCSP
+#  SYSCFG_FOUND - System has SysCfg
+#  SYSCFG_INCLUDE_DIRS - The SysCfg include directories
+#  SYSCFG_LIBRARIES - The libraries needed to use SysCfg
 #
 # Copyright (C) 2019 Metrological.
 #
@@ -27,29 +27,30 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
-# Parodus2CCSP has no pc file to search for
+# SysCfg has no pc file to search for
 
-find_library(PARODUS2CCSP_LIBRARY webpa)
+find_library(SYSCFG_LIBRARY syscfg)
 
-if(EXISTS "${PARODUS2CCSP_LIBRARY}")
+if(EXISTS "${SYSCFG_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    set(PARODUS2CCSP_FOUND TRUE)
+    set(SYSCFG_FOUND TRUE)
 
-    find_package_handle_standard_args(PARODUS2CCSP DEFAULT_MSG PARODUS2CCSP_FOUND PARODUS2CCSP_LIBRARY)
-    mark_as_advanced(PARODUS2CCSP_LIBRARY)
+    find_package_handle_standard_args(SYSCFG DEFAULT_MSG SYSCFG_FOUND SYSCFG_LIBRARY)
+    mark_as_advanced(SYSCFG_LIBRARY)
 
-    if(NOT TARGET Parodus2CCSP::Parodus2CCSP)
-        add_library(Parodus2CCSP::Parodus2CCSP UNKNOWN IMPORTED)
-        set_target_properties(Parodus2CCSP::Parodus2CCSP PROPERTIES
+    message("SYSCFG_LIBRARY = " ${SYSCFG_LIBRARY})
+    if(NOT TARGET SysCfg::SysCfg)
+        add_library(SysCfg::SysCfg UNKNOWN IMPORTED)
+        set_target_properties(SysCfg::SysCfg PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${PARODUS2CCSP_LIBRARY}"
+                IMPORTED_LOCATION "${SYSCFG_LIBRARY}"
                 )
     endif()
 else()
-    if(Parodus2CCSP_FIND_REQUIRED)
-        message(FATAL_ERROR "PARODUS2CCSP_LIBRARY not available")
-    elseif(NOT Parodus2CCSP_FIND_QUIETLY)
-        message(STATUS "PARODUS2CCSP_LIBRARY not available")
+    if(SysCfg_FIND_REQUIRED)
+        message(FATAL_ERROR "SYSCFG_LIBRARY not available")
+    elseif(NOT SysCfg_FIND_QUIETLY)
+        message(STATUS "SYSCFG_LIBRARY not available")
     endif()
 endif()
