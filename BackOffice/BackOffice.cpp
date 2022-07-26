@@ -4,6 +4,18 @@
 namespace WPEFramework {
 namespace Plugin {
     namespace {
+
+        static Metadata<BackOffice> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM, subsystem::INTERNET },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+
         std::list<std::pair<string, string>> CreateQueryParameters(const BackOffice::Config& config)
         {
             std::list<std::pair<string, string>> result;
