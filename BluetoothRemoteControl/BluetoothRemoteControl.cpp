@@ -41,7 +41,7 @@ namespace Plugin {
             // Preconditions
             { subsystem::BLUETOOTH },
             // Terminations
-            { subsystem::BLUETOOTH },
+            { subsystem::NOT_BLUETOOTH },
             // Controls
             {}
         );
