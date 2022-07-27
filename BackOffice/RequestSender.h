@@ -79,8 +79,8 @@ namespace Plugin {
             }
 
         private:
-            Core::ProxyPoolType<Web::TextBody> _textBodyFactory;
             RequestSender& _parent;
+            Core::ProxyPoolType<Web::TextBody> _textBodyFactory;
         };
 
         class Worker : public Core::IDispatch {
