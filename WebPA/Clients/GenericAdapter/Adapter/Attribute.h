@@ -43,7 +43,7 @@ public:
     WebPAStatus Values(const std::map<std::string, Data>& attributes, std::vector<WebPAStatus>& status);
 
 private:
-    const WebPAStatus Values(const std::string& parameterName, Data& attributes) const;
+    WebPAStatus Values(const std::string& parameterName, Data& attributes) const;
     WebPAStatus Values(const std::string& parameterName, const Data& attribute);
 
 private:

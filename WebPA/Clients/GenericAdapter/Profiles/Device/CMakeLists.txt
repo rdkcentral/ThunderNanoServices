@@ -22,7 +22,6 @@ find_package(Procps REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 file(GLOB IFACE_CONTROL_PLUGIN_INCLUDES *.h)
-
 add_library(${TARGET}
     Module.cpp
     DeviceControl.cpp
@@ -47,4 +46,4 @@ target_link_libraries(${TARGET}
 set_target_properties(${TARGET} PROPERTIES SUFFIX ".profile")
 set_target_properties(${TARGET} PROPERTIES PREFIX "")
 
-install(TARGETS ${TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/${PLUGIN_NAME})
+install(TARGETS ${TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/${PROJECT_NAME})

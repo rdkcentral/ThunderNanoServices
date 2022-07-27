@@ -24,7 +24,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Snapshot, 1, 0);
+    namespace {
+
+        static Metadata<Snapshot> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::GRAPHICS },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     class StoreImpl : public Exchange::ICapture::IStore {
     private:

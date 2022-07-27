@@ -16,13 +16,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_DTV
+#define MODULE_NAME Plugin_WebPACCSPClient
 #endif
 
+#include <core/core.h>
+#include <tracing/tracing.h>
 #include <plugins/plugins.h>
 
 #undef EXTERNAL

@@ -23,7 +23,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(InputSwitch, 1, 0);
+    namespace {
+
+        static Metadata<InputSwitch> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType< Core::JSON::ArrayType < InputSwitch::Data > > > jsonResponseFactory(1);
 

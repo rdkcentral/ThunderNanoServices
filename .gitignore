@@ -14,4 +14,8 @@ build/
 /artifacts
 */*.so
 */*/*/*.so
+*/*/*/*.a
 */config
+*/*/*/*.a
+*/*/*/*.webpa
+*/*/*/*/*/*.profile

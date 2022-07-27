@@ -17,8 +17,7 @@
  * limitations under the License.
  */
  
-#include <core/core.h>
-#include <tracing/tracing.h>
+#include "Module.h"
 
 #include <signal.h>
 #include <string>
@@ -119,7 +118,7 @@ public:
         return (Core::ERROR_NONE);
     }
 
-    void Launch() override
+    uint32_t Launch() override
     {
         Block();
         Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
@@ -128,6 +127,7 @@ public:
                 // Call Parodus listner worker function
                 Run();
         }
+        return (Core::ERROR_NONE);
     }
 
 private:

@@ -32,7 +32,9 @@ namespace TestCore {
         TestControllerImp(const TestControllerImp&) = delete;
         TestControllerImp& operator=(const TestControllerImp&) = delete;
 
-        ~TestControllerImp() override = default;
+        ~TestControllerImp() override {
+            TestCore::TestAdministrator::Instance().Release();
+        }
 
         //  TestControllerImp methods
         // -------------------------------------------------------------------------------------------------------

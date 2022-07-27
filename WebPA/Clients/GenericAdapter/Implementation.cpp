@@ -234,11 +234,13 @@ uint32_t GenericAdapter::ConnectToParodus()
     uint16_t maxRetrySleep = (uint16_t) pow(2, backoffMaxTime) - 1;
     TRACE(Trace::Information, (_T("maxRetrySleep = %d"), maxRetrySleep));
 
+PUSH_WARNING(DISABLE_WARNING_MISSING_FIELD_INITIALIZERS)
     libpd_cfg_t clientCFG = {.service_name = "config",
                              .receive = true, .keepalive_timeout_secs = 64,
                              .parodus_url = _parodusURL.c_str(),
                              .client_url = _clientURL.c_str()
                             };
+POP_WARNING()
 
     TRACE(Trace::Information, (_T("parodusUrl = %s clientUrl = %s"), _parodusURL.c_str(), _clientURL.c_str()));
 
