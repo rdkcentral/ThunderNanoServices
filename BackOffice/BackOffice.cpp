@@ -94,8 +94,6 @@ namespace Plugin {
         }
     }
 
-    SERVICE_REGISTRATION(BackOffice, 1, 0);
-
     const string BackOffice::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
