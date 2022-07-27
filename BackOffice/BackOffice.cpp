@@ -115,7 +115,8 @@ namespace Plugin {
 
         if (result.empty()) {
             if (_config.ServerAddress.IsSet() && !_config.ServerAddress.Value().empty() && _config.ServerPort.IsSet()) {
-                _requestSender.reset(new RequestSender(Core::NodeId(_config.ServerAddress.Value().c_str(), _config.ServerPort.Value()), queryParameters));
+                _requestSender.reset(new RequestSender(Core::NodeId(_config.ServerAddress.Value().c_str(), _config.ServerPort.Value()),
+                    queryParameters, Core::Format("Thunder::%s", service->Callsign().c_str())));
                 if (_requestSender != nullptr) {
                     for (const auto& callsign : _callsignMappings) {
                         _stateChangeObserver.RegisterObservable({ callsign.first });
