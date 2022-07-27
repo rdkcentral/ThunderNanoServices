@@ -66,7 +66,8 @@ namespace Plugin {
                         request->Verb = Web::Request::HTTP_GET;
                         request->Query = Core::Format("%sevent=%s&id=%s", _parent._queryParameters.c_str(), entry.first.c_str(), entry.second.c_str());
                         request->Host = _parent._hostAddress;
-                        request->Connection = Web::Request::CONNECTION_CLOSE;
+                        request->Accept = _T("*/*");
+                        request->UserAgent = _parent._userAgent;
                         Submit(request);
                     }
                     _parent._containerLock.Unlock();
@@ -119,11 +120,12 @@ namespace Plugin {
         };
 
     public:
-        RequestSender(Core::NodeId node, const std::list<std::pair<string, string>>& queryParameters)
+        RequestSender(Core::NodeId node, const std::list<std::pair<string, string>>& queryParameters, const string& userAgent)
             : _webClient(*this, node)
             , _inProgress(true, true)
             , _canClose(false, true)
             , _worker(Core::ProxyType<Worker>::Create(*this))
+            , _userAgent(userAgent)
         {
             _hostAddress = node.HostAddress();
             for (const auto& entry : queryParameters) {
@@ -152,6 +154,7 @@ namespace Plugin {
         string _queryParameters;
         string _hostAddress;
         Core::ProxyType<Worker> _worker;
+        string _userAgent;
     };
 }
 }
