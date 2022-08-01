@@ -49,7 +49,7 @@ namespace Plugin {
                 case UNKNOWN:
                     return _T("Unknown");
                 default:
-                    Trace::Error(_T("Unknown mapping found!"));
+                    TRACE_GLOBAL(Trace::Error, (_T("Unknown mapping found!")));
                     return _T("Unknown");
                 }
             }
@@ -119,7 +119,7 @@ namespace Plugin {
                                 _parent._callback(State::DEACTIVATED, callsign);
                                 break;
                             default:
-                                Trace::Information(_T("Change to unknown state, ignoring."));
+                                TRACE(Trace::Information, (_T("Change to unknown state, ignoring.")));
                                 break;
                             }
                         }

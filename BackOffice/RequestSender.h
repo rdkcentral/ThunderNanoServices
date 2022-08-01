@@ -40,14 +40,14 @@ namespace Plugin {
             void Received(Core::ProxyType<WPEFramework::Web::Response>& element) override
             {
                 if (element->ErrorCode != Web::STATUS_OK) {
-                    Trace::Error(_T("Received error code: %d"), element->ErrorCode);
+                    TRACE(Trace::Error, (_T("Received error code: %d"), element->ErrorCode));
                 }
             }
             void Send(const Core::ProxyType<WPEFramework::Web::Request>& response) override
             {
                 string send;
                 response->ToString(send);
-                Trace::Information(_T("Send: %s"), send.c_str());
+                TRACE(Trace::Information, (_T("Send: %s"), send.c_str()));
                 _parent._inProgress.SetEvent();
                 _parent._canClose.SetEvent();
             }
@@ -61,7 +61,7 @@ namespace Plugin {
                         auto entry = _parent._queue.back();
                         _parent._queue.pop_back();
 
-                        Trace::Information(_T("State change to open, attempting to send a request"));
+                        TRACE(Trace::Information, (_T("State change to open, attempting to send a request")));
                         auto request = Core::ProxyType<WPEFramework::Web::Request>::Create();
                         request->Verb = Web::Request::HTTP_GET;
                         request->Query = Core::Format("%sevent=%s&id=%s", _parent._queryParameters.c_str(), entry.first.c_str(), entry.second.c_str());
@@ -73,7 +73,7 @@ namespace Plugin {
                     _parent._containerLock.Unlock();
 
                 } else {
-                    Trace::Information(_T("State change to false"));
+                    TRACE(Trace::Information, (_T("State change to close!")));
                     _parent._inProgress.SetEvent();
                 }
             }
@@ -98,9 +98,9 @@ namespace Plugin {
                     auto result = _parent._webClient.Open(0);
 
                     if (result == Core::ERROR_NONE || result == Core::ERROR_INPROGRESS) {
-                        Trace::Information(_T("Connection opened"));
+                        TRACE(Trace::Information, (_T("Connection opened")));
                     } else {
-                        Trace::Error(_T("Could not open the connection, error: %d"), result);
+                        TRACE(Trace::Error, (_T("Could not open the connection, error: %d"), result));
                         _parent._inProgress.ResetEvent();
                         _parent._canClose.SetEvent();
                     }

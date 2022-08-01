@@ -24,6 +24,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Cryptalgo REQUIRED)
+find_package(${NAMESPACE}Tracing REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
@@ -39,6 +40,7 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         ${NAMESPACE}Cryptalgo::${NAMESPACE}Cryptalgo)
 
 install(TARGETS ${MODULE_NAME}
