@@ -120,7 +120,7 @@ namespace Plugin {
             {
                 _parent.Deactivated(callsign, plugin);
             }
-            void Unavailable(const string& callsign, PluginHost::IShell* plugin) override
+            void Unavailable(const string& callsign VARIABLE_IS_NOT_USED, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
             {
             }
             void StateChange(const PluginHost::IStateControl::state newState) override
@@ -274,7 +274,7 @@ namespace Plugin {
         private:
             PluginHost::IShell* _shell;
         };
-        class Job : public Core::IDispatchType<void> {
+        class Job : public Core::IDispatch {
         private:
             Job() = delete;
             Job(const Job&) = delete;
@@ -463,7 +463,7 @@ namespace Plugin {
         std::list<Exchange::ISwitchBoard::INotification*> _notificationClients;
         Core::Sink<Notification> _sink;
         PluginHost::IShell* _service;
-        Core::ProxyType< Core::IDispatchType<void> > _job;
+        Core::ProxyType<Core::IDispatch> _job;
         volatile state _state;
     };
 
