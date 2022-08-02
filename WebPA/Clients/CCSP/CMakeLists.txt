@@ -27,6 +27,7 @@ find_package(WDMP-C REQUIRED)
 find_package(LibParodus REQUIRED)
 find_package(Parodus2CCSP REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(SysCfg  REQUIRED)
 
 add_library(${TARGET} SHARED
     CCSP.cpp
@@ -39,6 +40,7 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         Parodus2CCSP::Parodus2CCSP
+        SysCfg::SysCfg
 )
 
 target_compile_definitions(${TARGET} PRIVATE ${PLUGIN_DEFINITIONS})
