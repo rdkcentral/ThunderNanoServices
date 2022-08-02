@@ -45,7 +45,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         , _activeCallsign(nullptr)
         , _sink(this)
         , _service(nullptr)
-        , _job(Core::ProxyType<Core::IDispatchType<void>>(Core::ProxyType<Job>::Create(this)))
+        , _job(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(this)))
         , _state(INACTIVE)
     {
     }
@@ -109,7 +109,7 @@ POP_WARNING()
         return (_service != nullptr ? _T("") : _T("No group of callsigns available."));
     }
 
-    /* virtual */ void SwitchBoard::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void SwitchBoard::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
         ASSERT(_switches.size() > 1);
@@ -128,7 +128,7 @@ POP_WARNING()
         return (string());
     }
 
-    /* virtual */ void SwitchBoard::Inbound(Web::Request& request)
+    /* virtual */ void SwitchBoard::Inbound(Web::Request& request VARIABLE_IS_NOT_USED)
     {
         // No body required...
     }
@@ -415,7 +415,7 @@ POP_WARNING()
         _adminLock.Unlock();
     }
 
-    void SwitchBoard::Activated(const string& callsign, PluginHost::IShell* plugin)
+    void SwitchBoard::Activated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
     {
         _adminLock.Lock();
         std::map<string, Entry>::iterator index(_switches.find(callsign));
@@ -426,7 +426,7 @@ POP_WARNING()
         _adminLock.Unlock();
     }
 
-    void SwitchBoard::Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    void SwitchBoard::Deactivated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
     {
         _adminLock.Lock();
         std::map<string, Entry>::iterator index(_switches.find(callsign));
