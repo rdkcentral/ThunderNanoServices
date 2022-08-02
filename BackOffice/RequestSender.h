@@ -9,7 +9,7 @@ namespace WPEFramework {
 namespace Plugin {
     class RequestSender {
     public:
-        constexpr static uint32_t MAX_WAIT_TIME = 1000;
+        constexpr static uint32_t MAX_WAIT_TIME = 5 * 1000;
 
     private:
         class WebClient : public Web::WebLinkType<Crypto::SecureSocketPort, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> {

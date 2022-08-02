@@ -71,7 +71,6 @@ namespace Plugin {
                 END_INTERFACE_MAP
 
             private:
-
 #if THUNDER_VERSION >= 3
                 void Activated(const string& callsign, PluginHost::IShell* service) override
                 {
@@ -88,8 +87,8 @@ namespace Plugin {
                 {
                     if (_parent._callback != nullptr) {
                         if (_parent._callsigns.count(callsign) != 0) {
-                            _parent.DestroyObservable(callsign);
                             _parent._callback(State::DEACTIVATED, callsign);
+                            _parent.DestroyObservable(callsign);
                         }
                     }
                 }
@@ -107,16 +106,16 @@ namespace Plugin {
                     ASSERT(plugin != nullptr);
 
                     if (_parent._callback != nullptr) {
-                        auto callsign = plugin->Callsign();
+                        string callsign = plugin->Callsign();
                         if ((_parent._callsigns.count(callsign) != 0)) {
                             switch (plugin->State()) {
                             case PluginHost::IShell::ACTIVATED:
                                 _parent.CreateObservable(callsign, plugin);
-                                _parent._callback(State::ACTIVATED, callsign);
+                                _parent.StateChange(callsign, State::ACTIVATED);
                                 break;
-                            case PluginHost::IShell::DEACTIVATED:
+                            case PluginHost::IShell::DEACTIVATION:
+                                _parent.StateChange(callsign, State::DEACTIVATED);
                                 _parent.DestroyObservable(callsign);
-                                _parent._callback(State::DEACTIVATED, callsign);
                                 break;
                             default:
                                 TRACE(Trace::Information, (_T("Change to unknown state, ignoring.")));
@@ -159,7 +158,9 @@ namespace Plugin {
 
             public:
                 StandbyObserver(const std::function<void(StateChangeObserver::State)>& callback, PluginHost::IShell* service)
-                    : _notification(callback)
+                    : _control(nullptr)
+                    , _notification(callback)
+
                 {
                     ASSERT(service != nullptr);
                     _control = service->QueryInterface<PluginHost::IStateControl>();
@@ -225,17 +226,21 @@ namespace Plugin {
         private:
             void CreateObservable(const string& callsign, PluginHost::IShell* service)
             {
+                _lock.Lock();
                 if (_standbyObservers.count(callsign) == 0) {
                     _standbyObservers.emplace(std::piecewise_construct,
                         std::forward_as_tuple(callsign),
                         std::forward_as_tuple(std::bind(&StateChangeObserver::StateChange, this, callsign, std::placeholders::_1), service));
                 }
+                _lock.Unlock();
             }
             void DestroyObservable(const string& callsign)
             {
+                _lock.Lock();
                 if (_standbyObservers.count(callsign) != 0) {
                     _standbyObservers.erase(callsign);
                 }
+                _lock.Unlock();
             }
 
             void StateChange(const string& callsign, State state)
@@ -250,6 +255,7 @@ namespace Plugin {
             std::unordered_set<string> _callsigns;
             std::unordered_map<string, StandbyObserver> _standbyObservers;
             Core::Sink<OperationalObserver> _operationalObserver;
+            Core::CriticalSection _lock;
         };
 
     public:
