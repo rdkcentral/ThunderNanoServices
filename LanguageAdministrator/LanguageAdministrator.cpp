@@ -143,7 +143,7 @@ namespace Plugin {
 
     }
 
-    void LanguageAdministrator::Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    void LanguageAdministrator::Deactivated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
     {
         _lock.Lock();
         TRACE(Trace::Information , (_T("LanguageAdministrator::Deactivated Called")));
