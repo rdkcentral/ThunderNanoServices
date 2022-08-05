@@ -31,6 +31,31 @@ namespace Plugin {
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
+    class Job : public Core::Thread {
+        private:
+            Job() = delete;
+            Job(const Job&) = delete;
+            Job& operator=(const Job&) = delete;
+
+        public:
+            Job(CompositorImplementation& parent)
+                : _parent(parent)
+            {
+            }
+            ~Job() override = default;
+
+        public:
+            uint32_t Worker()
+            {
+                Block();
+                _parent.Process();
+                return (Core::infinite);
+            }
+
+        private:
+            CompositorImplementation& _parent;
+        };
+
         class ExternalAccess : public RPC::Communicator {
         private:
             ExternalAccess() = delete;
@@ -64,17 +89,12 @@ namespace Plugin {
         private:
             void Offer(Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
-                Exchange::IComposition::IClient* result = element->QueryInterface<Exchange::IComposition::IClient>();
-
-                if (result != nullptr) {
-                    _parent.NewClientOffered(result);
-                    result->Release();
-                }
+                _parent.Update(true, element);
             }
 
             void Revoke(const Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
-                _parent.ClientRevoked(element);
+                _parent.Update(false, element);
             }
 
         private:
@@ -89,15 +109,20 @@ namespace Plugin {
             , _externalAccess(nullptr)
             , _observers()
             , _clients()
+            , _updatedClients()
+            , _job(*this)
         {
         }
 
         ~CompositorImplementation() override
         {
+            _job.Stop();
+            _job.Wait(Core::Thread::STOPPED | Core::Thread::STOPPING, Core::infinite);
             if (_externalAccess != nullptr) {
                 delete _externalAccess;
                 _engine.Release();
             }
+            _updatedClients.clear();
         }
 
         BEGIN_INTERFACE_MAP(CompositorImplementation)
@@ -219,6 +244,9 @@ namespace Plugin {
 
 
     private:
+        using UpdatedClient = std::pair<const IUnknown*, bool>;
+        using UpdatedClients = std::list<UpdatedClient>;
+
         using ClientDataContainer = std::map<string, ClientData>;
         using ConstClientDataIterator = ClientDataContainer::const_iterator;
 
@@ -227,8 +255,10 @@ namespace Plugin {
             return _clients.find(callsign);
         }
 
-        void NewClientOffered(Exchange::IComposition::IClient* client)
+        void NewClientOffered(IUnknown* element)
         {
+            Exchange::IComposition::IClient* client = element->QueryInterface<Exchange::IComposition::IClient>();
+
             ASSERT(client != nullptr);
             if (client != nullptr) {
 
@@ -252,6 +282,7 @@ namespace Plugin {
 
                     }
 
+                    client->AddRef();
                     _clients.emplace(std::piecewise_construct,
                                          std::forward_as_tuple(name),
                                          std::forward_as_tuple(client, Resolution()));
@@ -262,6 +293,7 @@ namespace Plugin {
 
                     _adminLock.Unlock();
                 }
+                client->Release();
             }
         }
 
@@ -284,6 +316,7 @@ namespace Plugin {
                     index->Detached(name.c_str());
                 }
 
+                it->second.clientInterface->Release();
                 _clients.erase(it);
             }
 
@@ -292,6 +325,28 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
 
+        void Update(bool addClient, const Core::IUnknown* element) {
+            _adminLock.Lock();
+            _updatedClients.push_back({element, addClient});
+            _adminLock.Unlock();
+            _job.Run();
+        }
+
+        void Process()
+        {
+            _adminLock.Lock();
+            UpdatedClients::iterator client(_updatedClients.begin());
+
+            while (client != _updatedClients.end() && _updatedClients.size()) {
+                if (client->second == true) {
+                    NewClientOffered(const_cast<IUnknown*>(client->first));
+                } else {
+                    ClientRevoked(client->first);
+                }
+                client = _updatedClients.erase(client);
+            }
+            _adminLock.Unlock();
+        }
 
         void PlatformReady()
         {
@@ -377,6 +432,8 @@ namespace Plugin {
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;
+        UpdatedClients _updatedClients;
+        Job _job;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
