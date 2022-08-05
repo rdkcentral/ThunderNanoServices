@@ -78,11 +78,11 @@ namespace Plugin {
                 _state->Configure(_service);
                 _state->Register(_notification);
 
-                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+//                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
 
-                if (sink != nullptr) {
-                    _service->Register(sink);
-                    sink->Release();
+  //              if (sink != nullptr) {
+    //                _service->Register(sink);
+      //              sink->Release();
 
                     RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
                     if (remoteConnection != nullptr) {
@@ -90,9 +90,9 @@ namespace Plugin {
                         ASSERT(_memory != nullptr);
                         remoteConnection->Release();
                     }
-                } else {
-                    message = _T("Failed to register Notification sink.");
-                }
+//                } else {
+  //                  message = _T("Failed to register Notification sink.");
+    //            }
             }
             else {
                 message = _T("OutOfProcessPlugin could not obtain state control.");
@@ -123,11 +123,11 @@ namespace Plugin {
             }
 
             if (_state != nullptr) {
-                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
-                if (sink != nullptr) {
-                    _service->Unregister(sink);
-                    sink->Release();
-                }
+//                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+  //              if (sink != nullptr) {
+    //                _service->Unregister(sink);
+      //              sink->Release();
+        //        }
                 _state->Unregister(_notification);
                 _state->Release();
                 _state = nullptr;

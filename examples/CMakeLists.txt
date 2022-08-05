@@ -56,9 +56,7 @@ if(PLUGIN_FILETRANSFER)
     add_subdirectory(FileTransferClient)
 endif()
 
-if(PLUGIN_OUTOFPROCESS)
     add_subdirectory(OutOfProcessPlugin)
-endif()
 
 if(PLUGIN_STATECONTROLLER)
     add_subdirectory(StateController)

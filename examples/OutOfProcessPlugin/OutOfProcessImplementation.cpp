@@ -50,13 +50,16 @@ POP_WARNING()
             ~PluginMonitor() override = default;
 
         public:
-            void Activated(const string&, PluginHost::IShell* service) override
+            void Activated(const string& name, PluginHost::IShell* service) override
             {
-                Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
+/*                Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
 				if (time != nullptr) {
 					TRACE(Trace::Information, (_T("Time interface supported")));
 					time->Release();
-				}
+				}*/
+
+                printf("Huppel: activated [%s]\n", name.c_str());
+
             }
             void Deactivated(const string&, PluginHost::IShell*) override
             {
@@ -256,6 +259,8 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
 POP_WARNING()
         ~OutOfProcessImplementation() override
         {
+
+
             TRACE(Trace::Information, (_T("Destructing the OutOfProcessImplementation")));
             Block();
 
@@ -274,6 +279,10 @@ POP_WARNING()
             }
 
             if (_service) {
+
+                _service->Unregister(&_sink);
+
+
                 TRACE(Trace::Information, (_T("Releasing service")));
                 _service->Release();
                 _service = nullptr;
@@ -314,6 +323,10 @@ POP_WARNING()
             if (_service) {
                 TRACE(Trace::Information, (_T("OutOfProcessImplementation::Configure: AddRef service")));
                 _service->AddRef();
+
+                _service->Register(&_sink);
+
+
             }
 
             _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
@@ -490,7 +503,7 @@ POP_WARNING()
         BEGIN_INTERFACE_MAP(OutOfProcessImplementation)
             INTERFACE_ENTRY(Exchange::IBrowser)
             INTERFACE_ENTRY(PluginHost::IStateControl)
-            INTERFACE_AGGREGATE(PluginHost::IPlugin::INotification,static_cast<IUnknown*>(&_sink))
+//            INTERFACE_AGGREGATE(PluginHost::IPlugin::INotification,static_cast<IUnknown*>(&_sink))
         END_INTERFACE_MAP
 
     private:
