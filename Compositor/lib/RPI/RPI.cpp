@@ -31,7 +31,7 @@ namespace Plugin {
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
-    class Job : public Core::Thread {
+    class Job : public Core::IDispatch {
         private:
             Job() = delete;
             Job(const Job&) = delete;
@@ -45,11 +45,9 @@ namespace Plugin {
             ~Job() override = default;
 
         public:
-            uint32_t Worker()
+            void Dispatch()
             {
-                Block();
-                _parent.Process();
-                return (Core::infinite);
+                _parent.Dispatch();
             }
 
         private:
@@ -109,15 +107,14 @@ namespace Plugin {
             , _externalAccess(nullptr)
             , _observers()
             , _clients()
+            , _isProcessing(false)
             , _updatedClients()
-            , _job(*this)
+            , _job(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this)))
         {
         }
 
         ~CompositorImplementation() override
         {
-            _job.Stop();
-            _job.Wait(Core::Thread::STOPPED | Core::Thread::STOPPING, Core::infinite);
             if (_externalAccess != nullptr) {
                 delete _externalAccess;
                 _engine.Release();
@@ -272,10 +269,12 @@ namespace Plugin {
                     ClientDataContainer::iterator element (_clients.find(name));
 
                     if (element != _clients.end()) {
+                        _adminLock.Unlock();
                         // as the old one may be dangling becayse of a crash let's remove that one, this is the most logical thing to do
                         ClientRevoked(element->second.clientInterface);
 
                         TRACE(Trace::Information, (_T("Replace client %s."), name.c_str()));
+                        _adminLock.Lock();
                     }
                     else {
                         TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
@@ -287,11 +286,11 @@ namespace Plugin {
                                          std::forward_as_tuple(name),
                                          std::forward_as_tuple(client, Resolution()));
 
+                    _adminLock.Unlock();
                     for (auto&& index : _observers) {
                         index->Attached(name, client);
                     }
 
-                    _adminLock.Unlock();
                 }
                 client->Release();
             }
@@ -307,20 +306,23 @@ namespace Plugin {
             while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
             if (it != _clients.end()) {
+                _clients.erase(it);
+                _adminLock.Unlock();
+
                 string name (it->first);
                 TRACE(Trace::Information, (_T("Remove client %s."), name.c_str()));
                 for (auto index : _observers) {
                     // note as we have the name here, we could more efficiently pass the name to the
                     // caller as it is not allowed to get it from the pointer passes, but we are going
                     // to restructure the interface anyway
-                    index->Detached(name.c_str());
+                    index->Detached(name);
                 }
 
                 it->second.clientInterface->Release();
-                _clients.erase(it);
+            } else {
+                _adminLock.Unlock();
             }
 
-            _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
@@ -328,23 +330,29 @@ namespace Plugin {
         void Update(bool addClient, const Core::IUnknown* element) {
             _adminLock.Lock();
             _updatedClients.push_back({element, addClient});
+            if (_isProcessing == false) {
+                Core::IWorkerPool::Instance().Submit(_job);
+            }
             _adminLock.Unlock();
-            _job.Run();
         }
 
-        void Process()
+        void Dispatch()
         {
             _adminLock.Lock();
-            UpdatedClients::iterator client(_updatedClients.begin());
+            _isProcessing = true;
 
-            while (client != _updatedClients.end() && _updatedClients.size()) {
+            while (_updatedClients.size()) {
+                UpdatedClients::iterator client(_updatedClients.begin());
+                _updatedClients.erase(client);
+                _adminLock.Unlock();
                 if (client->second == true) {
                     NewClientOffered(const_cast<IUnknown*>(client->first));
                 } else {
                     ClientRevoked(client->first);
                 }
-                client = _updatedClients.erase(client);
+                _adminLock.Lock();
             }
+            _isProcessing = false;
             _adminLock.Unlock();
         }
 
@@ -432,8 +440,10 @@ namespace Plugin {
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;
+
+        bool _isProcessing;
         UpdatedClients _updatedClients;
-        Job _job;
+        Core::ProxyType<Core::IDispatch> _job;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
