@@ -1,8 +1,8 @@
-# - Try to find Procps
+# - Try to find SysCfg
 # Once done this will define
-#  PROCPS_FOUND - System has Procps
-#  PROCPS_INCLUDE_DIRS - The Procps include directories
-#  PROCPS_LIBRARIES - The libraries needed to use Procps
+#  SYSCFG_FOUND - System has SysCfg
+#  SYSCFG_INCLUDE_DIRS - The SysCfg include directories
+#  SYSCFG_LIBRARIES - The libraries needed to use SysCfg
 #
 # Copyright (C) 2019 Metrological.
 #
@@ -27,30 +27,30 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
-# PROCPS has no pc file to search for
+# SysCfg has no pc file to search for
 
-find_library(PROCPS_LIBRARY procps)
+find_library(SYSCFG_LIBRARY syscfg)
 
-if(EXISTS "${PROCPS_LIBRARY}")
+if(EXISTS "${SYSCFG_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    find_package_handle_standard_args(Procps DEFAULT_MSG PROCPS_LIBRARY)
-    mark_as_advanced(PROCPS_LIBRARY)
-    set(PROCPS_FOUND ${Procps_FOUND})
+    set(SYSCFG_FOUND TRUE)
 
-    if(Procps_FOUND AND NOT TARGET Procps::Procps)
-        add_library(Procps::Procps UNKNOWN IMPORTED)
+    find_package_handle_standard_args(SYSCFG DEFAULT_MSG SYSCFG_FOUND SYSCFG_LIBRARY)
+    mark_as_advanced(SYSCFG_LIBRARY)
 
-        set_target_properties(Procps::Procps PROPERTIES
+    message("SYSCFG_LIBRARY = " ${SYSCFG_LIBRARY})
+    if(NOT TARGET SysCfg::SysCfg)
+        add_library(SysCfg::SysCfg UNKNOWN IMPORTED)
+        set_target_properties(SysCfg::SysCfg PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
-                IMPORTED_LOCATION "${PROCPS_LIBRARY}"
+                IMPORTED_LOCATION "${SYSCFG_LIBRARY}"
                 )
     endif()
 else()
-    if(Procps_FIND_REQUIRED)
-        message(FATAL_ERROR "PROCPS_LIBRARY not available")
-    elseif(NOT Procps_FIND_QUIETLY)
-        message(STATUS "PROCPS_LIBRARY not available")
+    if(SysCfg_FIND_REQUIRED)
+        message(FATAL_ERROR "SYSCFG_LIBRARY not available")
+    elseif(NOT SysCfg_FIND_QUIETLY)
+        message(STATUS "SYSCFG_LIBRARY not available")
     endif()
-
 endif()

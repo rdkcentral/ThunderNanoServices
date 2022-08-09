@@ -2107,7 +2107,7 @@ protected:
             // IDevice overrides
             bool IsBonded() const override
             {
-                return ( (_ltks.Entries() >= 1) && (_irk.IsValid()) );
+                return (_ltks.Entries() >= 1);
             }
             uint32_t Connect() override
             {

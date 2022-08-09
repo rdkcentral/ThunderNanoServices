@@ -22,8 +22,6 @@
 #include "Module.h"
 #include <interfaces/ILanguageTag.h>
 
-using namespace std;
-
 namespace WPEFramework {
 namespace Plugin {
 
@@ -49,7 +47,7 @@ namespace Plugin {
     private:
         string _language;
         Core::CriticalSection _adminLock;
-        vector<Exchange::ILanguageTag::INotification*> _notifications;
+        std::vector<Exchange::ILanguageTag::INotification*> _notifications;
 
         void NotifyLanguageChanged(const string& language);
     };

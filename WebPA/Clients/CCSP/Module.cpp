@@ -17,12 +17,6 @@
  * limitations under the License.
  */
  
-#pragma once
+#include "Module.h"
 
-#ifndef MODULE_NAME
-#define MODULE_NAME Plugin_WebPAGenericAdapter
-#endif
-
-#include <core/core.h>
-#include <tracing/tracing.h>
-#include <plugins/plugins.h>
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
