@@ -45,7 +45,7 @@ set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE ST
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
 set(PLUGIN_COMPOSITOR_WESTON_TTY_LIST "1;2;3;4" CACHE STRING "TTY ids for weston drm backend")
 set(PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS "HDMI-A-1,1280x720@60.0 16:9,normal" CACHE STRING "Output configs for weston drm backend")
-set(PLUGIN_COMPOSITOR_THREAD_COUNT "3"  CACHE STRING "Specify the minimum thread count required to run in outofprocess mode")
+set(PLUGIN_COMPOSITOR_THREAD_COUNT "2"  CACHE STRING "Specify the minimum thread count required to run in outofprocess mode")
 
 # deprecated/legacy flags support
 if(PLUGIN_COMPOSITOR_OUTOFPROCESS STREQUAL "false")

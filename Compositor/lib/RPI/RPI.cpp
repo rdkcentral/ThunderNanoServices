@@ -31,27 +31,70 @@ namespace Plugin {
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
-    class Job : public Core::IDispatch {
+        class ClientHandler {
         private:
-            Job() = delete;
-            Job(const Job&) = delete;
-            Job& operator=(const Job&) = delete;
+            using Client = std::pair<const IUnknown*, bool>;
+            using Clients = std::list<Client>;
+
+        private:
+            ClientHandler() = delete;
+            ClientHandler(const ClientHandler&) = delete;
+            ClientHandler& operator=(const ClientHandler&) = delete;
 
         public:
-            Job(CompositorImplementation& parent)
-                : _parent(parent)
+            ClientHandler(CompositorImplementation& parent)
+                : _clients()
+                , _adminLock()
+                , _parent(parent)
+                , _job(*this)
             {
             }
-            ~Job() override = default;
+            ~ClientHandler()
+            {
+                _job.Revoke();
+                _clients.clear();
+            }
 
         public:
+            void Offer(const Core::IUnknown* element)
+            {
+                _adminLock.Lock();
+                _clients.push_back({element, true});
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
+            void Revoke(const Core::IUnknown* element)
+            {
+                _adminLock.Lock();
+                _clients.push_back({element, false});
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
             void Dispatch()
             {
-                _parent.Dispatch();
+                _adminLock.Lock();
+
+                while (_clients.size()) {
+                    Clients::iterator client(_clients.begin());
+                    _clients.erase(client);
+                    _adminLock.Unlock();
+                    if (client->second == true) {
+                        _parent.NewClientOffered(const_cast<IUnknown*>(client->first));
+                    } else {
+                        _parent.ClientRevoked(client->first);
+                    }
+                    _adminLock.Lock();
+                }
+                _adminLock.Unlock();
             }
 
         private:
+            Clients _clients;
+            Core::CriticalSection _adminLock;
             CompositorImplementation& _parent;
+            Core::WorkerPool::JobType<ClientHandler&> _job;
         };
 
         class ExternalAccess : public RPC::Communicator {
@@ -67,7 +110,7 @@ namespace Plugin {
                 const string& proxyStubPath, 
                 const Core::ProxyType<RPC::InvokeServer>& handler)
                 : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
-                , _parent(parent)
+                , _handler(parent)
             {
                 uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
 
@@ -87,16 +130,16 @@ namespace Plugin {
         private:
             void Offer(Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
-                _parent.Update(true, element);
+                _handler.Offer(element);
             }
 
             void Revoke(const Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
-                _parent.Update(false, element);
+                _handler.Revoke(element);
             }
 
         private:
-            CompositorImplementation& _parent;
+            CompositorImplementation::ClientHandler _handler;
         };
 
     public:
@@ -107,9 +150,6 @@ namespace Plugin {
             , _externalAccess(nullptr)
             , _observers()
             , _clients()
-            , _isProcessing(false)
-            , _updatedClients()
-            , _job(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this)))
         {
         }
 
@@ -119,7 +159,6 @@ namespace Plugin {
                 delete _externalAccess;
                 _engine.Release();
             }
-            _updatedClients.clear();
         }
 
         BEGIN_INTERFACE_MAP(CompositorImplementation)
@@ -241,9 +280,6 @@ namespace Plugin {
 
 
     private:
-        using UpdatedClient = std::pair<const IUnknown*, bool>;
-        using UpdatedClients = std::list<UpdatedClient>;
-
         using ClientDataContainer = std::map<string, ClientData>;
         using ConstClientDataIterator = ClientDataContainer::const_iterator;
 
@@ -325,35 +361,6 @@ namespace Plugin {
 
 
             TRACE(Trace::Information, (_T("Client detached completed")));
-        }
-
-        void Update(bool addClient, const Core::IUnknown* element) {
-            _adminLock.Lock();
-            _updatedClients.push_back({element, addClient});
-            if (_isProcessing == false) {
-                Core::IWorkerPool::Instance().Submit(_job);
-            }
-            _adminLock.Unlock();
-        }
-
-        void Dispatch()
-        {
-            _adminLock.Lock();
-            _isProcessing = true;
-
-            while (_updatedClients.size()) {
-                UpdatedClients::iterator client(_updatedClients.begin());
-                _updatedClients.erase(client);
-                _adminLock.Unlock();
-                if (client->second == true) {
-                    NewClientOffered(const_cast<IUnknown*>(client->first));
-                } else {
-                    ClientRevoked(client->first);
-                }
-                _adminLock.Lock();
-            }
-            _isProcessing = false;
-            _adminLock.Unlock();
         }
 
         void PlatformReady()
@@ -440,10 +447,6 @@ namespace Plugin {
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;
         ClientDataContainer _clients;
-
-        bool _isProcessing;
-        UpdatedClients _updatedClients;
-        Core::ProxyType<Core::IDispatch> _job;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
