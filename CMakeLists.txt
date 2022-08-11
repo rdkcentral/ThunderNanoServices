@@ -39,7 +39,6 @@ option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
 option(PLUGIN_LANGUAGEADMINISTRATOR "Include LanguageAdministrator plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(PLUGIN_PERFORMANCEMONITOR "Include Performance Monitor" OFF)
-option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_RESOURCEMONITOR "Include ResourceMonitor plugin" OFF)
@@ -156,10 +155,6 @@ endif()
 
 if (PLUGIN_PERFORMANCEMONITOR)
     add_subdirectory(PerformanceMonitor)
-endif()
-
-if(PLUGIN_PLAYERINFO)
-    add_subdirectory(PlayerInfo)
 endif()
 
 if(PLUGIN_REMOTECONTROL)
