@@ -274,31 +274,6 @@ namespace Plugin {
         private:
             PluginHost::IShell* _shell;
         };
-        class Job : public Core::IDispatch {
-        private:
-            Job() = delete;
-            Job(const Job&) = delete;
-            Job& operator=(const Job&) = delete;
-
-        public:
-            Job(SwitchBoard* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~Job() override
-            {
-            }
-
-        public:
-            void Dispatch() override
-            {
-                _parent.Evaluate();
-            }
-
-        private:
-            SwitchBoard& _parent;
-        };
 
     public:
         class Iterator {
@@ -454,6 +429,13 @@ namespace Plugin {
         void Deactivated(const string& callsign, PluginHost::IShell* plugin);
         void StateChange(PluginHost::IStateControl::state newState);
 
+        friend Core::ThreadPool::JobType<SwitchBoard&>;
+        void Dispatch()
+        {
+            TRACE(Trace::Information, (_T("%s: Job is Dispatched"), _service->Callsign().c_str()));
+            Evaluate();
+        }
+
     private:
         Core::CriticalSection _adminLock;
         uint8_t _skipURL;
@@ -463,8 +445,9 @@ namespace Plugin {
         std::list<Exchange::ISwitchBoard::INotification*> _notificationClients;
         Core::Sink<Notification> _sink;
         PluginHost::IShell* _service;
-        Core::ProxyType<Core::IDispatch> _job;
         volatile state _state;
+
+        Core::WorkerPool::JobType<SwitchBoard&> _job;
     };
 
 }

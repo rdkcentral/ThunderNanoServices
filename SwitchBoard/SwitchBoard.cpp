@@ -45,8 +45,8 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         , _activeCallsign(nullptr)
         , _sink(this)
         , _service(nullptr)
-        , _job(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(this)))
         , _state(INACTIVE)
+        , _job(*this)
     {
     }
 
@@ -436,7 +436,7 @@ POP_WARNING()
             index->second.Unregister(&_sink);
             if ((_state == IDLE) && (&(index->second) == _activeCallsign)) {
                 _state = INPROGRESS;
-                PluginHost::WorkerPool::Instance().Submit(_job);
+                _job.Submit();
             }
         }
         _adminLock.Unlock();
@@ -450,7 +450,7 @@ POP_WARNING()
 
             if (_state == IDLE) {
                 _state = INPROGRESS;
-                PluginHost::WorkerPool::Instance().Submit(_job);
+                _job.Submit();
             }
 
             _adminLock.Unlock();
