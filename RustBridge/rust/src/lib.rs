@@ -32,9 +32,7 @@ pub enum PluginResponse {
 pub trait PluginProtocol {
     fn send_message(&self, channel_id: u32, id: u32, response: PluginResponse);
 }
-
-pub trait Plugin {
-    fn register(&mut self);
+pub trait PluginBase {
     fn invoke_method(
         &mut self,
         method: String,
@@ -42,7 +40,11 @@ pub trait Plugin {
         ctx: &RequestContext,
     ) -> PluginResponse;
     fn get_supported_methods(&self) -> String;
-    //fn on_message(&mut self, json: String, ctx: RequestContext);
+ }
+
+pub trait Plugin : PluginBase {
+    fn register(&mut self);
+   //fn on_message(&mut self, json: String, ctx: RequestContext);
     fn on_client_connect(&self, channel_id: u32);
     fn on_client_disconnect(&self, channel_id: u32);
 }
@@ -58,6 +60,7 @@ pub struct ServiceMetadata {
     pub create: fn() -> Box<dyn Plugin>,
 }
 
+//type handler_function =  fn(&mut Self, &RequestContext, String) -> PluginResponse;
 #[macro_export]
 macro_rules! export_plugin {
     ($name:expr, $version:expr,  $create:expr) => {

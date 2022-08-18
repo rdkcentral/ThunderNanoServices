@@ -18,7 +18,9 @@
  */
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use thunder_rs::{PluginResponse, RequestContext};
+use thunder_rs::{PluginResponse, RequestContext, PluginBase, Plugin};
+use pluginbase_derive::PluginBase;
+#[derive(PluginBase)]
 struct Calculator {
     function_handlers:
         HashMap<String, fn(&mut Self, &thunder_rs::RequestContext, String) -> PluginResponse>,
@@ -67,73 +69,15 @@ impl Calculator {
         }
     }
 
-    /*
-    fn add(&mut self, req: json::JsonValue, ctx: thunder_rs::RequestContext) {
-      let mut sum = 0;
-      for val in req["params"].members() {
-        if let Some(n) = val.as_u32() {
-          sum += n;
-        }
-      }
-
-      let res = json::object!{
-        "jsonrpc": "2.0",
-        "id": req["id"].as_u32(),
-        "result": sum
-      };
-
-      self.send_response(res, ctx);
-    }
-
-    fn mul(&mut self, req: json::JsonValue, ctx: thunder_rs::RequestContext) {
-      let mut product = 0;
-      for val in req["params"].members() {
-        if let Some(n) = val.as_u32() {
-          product *= n
-        }
-      }
-
-      let res = json::object!{
-        "jsonrpc": "2.0",
-        "id": req["id"].as_u32(),
-        "result": product
-      };
-
-      self.send_response(res, ctx);
-    } */
 }
 
-impl thunder_rs::Plugin for Calculator {
+impl Plugin for Calculator {
     fn register(&mut self) {
         println!("Registering function handlers");
         self.function_handlers
             .insert("add".to_owned(), Calculator::add2);
         self.function_handlers
             .insert("mul".to_owned(), Calculator::mul2);
-    }
-
-    fn get_supported_methods(&self) -> String {
-        json!(Vec::from_iter(self.function_handlers.keys())).to_string()
-    }
-
-    fn invoke_method(
-        &mut self,
-        method: String,
-        params: String,
-        ctx: &thunder_rs::RequestContext,
-    ) -> PluginResponse {
-        println!("Incoming method: {:?}", method);
-        if let Some(&func) = self.function_handlers.get(&method) {
-            let res: PluginResponse = (func)(self, ctx, params);
-            println!("Invoke Result: {:?}", res);
-            res
-        } else {
-            println!("Invoke Result: FAILURE");
-            PluginResponse::Failure {
-                code: -143,
-                message: "Unknown Method".to_owned(),
-            }
-        }
     }
 
     fn on_client_connect(&self, _channel_id: u32) {}
