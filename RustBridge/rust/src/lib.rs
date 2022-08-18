@@ -40,11 +40,11 @@ pub trait PluginBase {
         ctx: &RequestContext,
     ) -> PluginResponse;
     fn get_supported_methods(&self) -> String;
- }
+}
 
-pub trait Plugin : PluginBase {
+pub trait Plugin: PluginBase {
     fn register(&mut self);
-   //fn on_message(&mut self, json: String, ctx: RequestContext);
+    //fn on_message(&mut self, json: String, ctx: RequestContext);
     fn on_client_connect(&self, channel_id: u32);
     fn on_client_disconnect(&self, channel_id: u32);
 }
