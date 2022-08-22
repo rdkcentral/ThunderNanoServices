@@ -28,7 +28,6 @@ option(PLUGIN_COBALT "Include Cobalt plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(PLUGIN_PROCESSCONTAINERS "Include ProcessContainers plugin" OFF)
-option(PLUGIN_DISPLAYINFO "Include DisplayInfo plugin" OFF)
 option(PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
 option(PLUGIN_DIALSERVER " Include DIALServer plugin" OFF)
 option(PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
@@ -103,10 +102,6 @@ endif()
 
 if (PLUGIN_PROCESSCONTAINERS)
     add_subdirectory(ProcessContainers)
-endif()
-
-if(PLUGIN_DISPLAYINFO)
-    add_subdirectory(DisplayInfo)
 endif()
 
 if(PLUGIN_DHCPSERVER)
