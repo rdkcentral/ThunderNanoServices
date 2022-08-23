@@ -48,7 +48,6 @@ namespace Plugin {
                 string send;
                 response->ToString(send);
                 Trace::Information(_T("Send: %s"), send.c_str());
-                _parent._inProgress.SetEvent();
                 _parent._canClose.SetEvent();
             }
             void StateChange() override
@@ -83,49 +82,14 @@ namespace Plugin {
             Core::ProxyPoolType<Web::TextBody> _textBodyFactory;
         };
 
-        class Worker : public Core::IDispatch {
-        public:
-            Worker(RequestSender& parent)
-                : _parent(parent)
-            {
-            }
-
-            void Dispatch() override
-            {
-                _lock.Lock();
-
-                if (_parent._inProgress.Lock(MAX_WAIT_TIME) == 0) {
-                    auto result = _parent._webClient.Open(0);
-
-                    if (result == Core::ERROR_NONE || result == Core::ERROR_INPROGRESS) {
-                        Trace::Information(_T("Connection opened"));
-                    } else {
-                        Trace::Error(_T("Could not open the connection, error: %d"), result);
-                        _parent._inProgress.ResetEvent();
-                        _parent._canClose.SetEvent();
-                    }
-
-                    if (_parent._canClose.Lock(MAX_WAIT_TIME) == 0) {
-                        _parent._webClient.Close(MAX_WAIT_TIME);
-                        _parent._canClose.ResetEvent();
-                    }
-                }
-
-                _lock.Unlock();
-            }
-
-        private:
-            RequestSender& _parent;
-            Core::CriticalSection _lock;
-        };
-
     public:
         RequestSender(Core::NodeId node, const std::list<std::pair<string, string>>& queryParameters, const string& userAgent)
-            : _webClient(*this, node)
+            : _containerLock()
+            , _webClient(*this, node)
             , _inProgress(true, true)
             , _canClose(false, true)
-            , _worker(Core::ProxyType<Worker>::Create(*this))
             , _userAgent(userAgent)
+            , _job(*this)
         {
             _hostAddress = node.HostAddress();
             for (const auto& entry : queryParameters) {
@@ -141,7 +105,31 @@ namespace Plugin {
             _containerLock.Lock();
             _queue.emplace_back(event, id);
             _containerLock.Unlock();
-            Core::IWorkerPool::Instance().Schedule(Core::Time::Now(), Core::ProxyType<Core::IDispatch>(_worker));
+            _job.Submit();
+        }
+
+    private:
+        friend Core::ThreadPool::JobType<RequestSender&>;
+        void Dispatch()
+        {
+            Trace::Information(_T("BackOffice: RequestHandler Job is Dispatched"));
+            if (_inProgress.Lock(MAX_WAIT_TIME) == 0) {
+                auto result = _webClient.Open(0);
+
+                if (result == Core::ERROR_NONE || result == Core::ERROR_INPROGRESS) {
+                    Trace::Information(_T("Connection opened"));
+                } else {
+                    Trace::Error(_T("Could not open the connection, error: %d"), result);
+                    _inProgress.ResetEvent();
+                    _canClose.SetEvent();
+                }
+
+                uint32_t ret = _canClose.Lock(MAX_WAIT_TIME);
+                if (ret == 0) {
+                    _webClient.Close(MAX_WAIT_TIME);
+                    _canClose.ResetEvent();
+                }
+            }
         }
 
     private:
@@ -153,8 +141,9 @@ namespace Plugin {
         Core::Event _canClose;
         string _queryParameters;
         string _hostAddress;
-        Core::ProxyType<Worker> _worker;
         string _userAgent;
+
+        Core::WorkerPool::JobType<RequestSender&> _job;
     };
 }
 }
