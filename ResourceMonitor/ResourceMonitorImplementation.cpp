@@ -31,6 +31,7 @@ namespace WPEFramework {
 namespace Plugin {
     class ResourceMonitorImplementation : public Exchange::IResourceMonitor {
     private:
+        static constexpr const TCHAR* CSVFileName = _T("/tmp/resource.csv");
         class CSVFile {
         public:
             CSVFile(string filepath, string seperator)
@@ -98,7 +99,7 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , Path(_T("/tmp/resource.csv"))
+                , Path(CSVFileName)
                 , Seperator(_T(";"))
                 , Interval(5)
             {
@@ -298,7 +299,7 @@ namespace Plugin {
     public:
         ResourceMonitorImplementation()
             : _processThread(nullptr)
-            , _csvFilePath()
+            , _csvFilePath(CSVFileName)
         {
         }
 
@@ -312,6 +313,10 @@ namespace Plugin {
 
             Config config;
             config.FromString(service->ConfigLine());
+
+            if (config.Path.IsSet()) {
+                _csvFilePath = config.Path.Value().c_str();
+            }
 
             if (config.Interval.Value() <= 0) {
                 TRACE(Trace::Error, (_T("Interval must be greater than 0!")));
