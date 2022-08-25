@@ -114,8 +114,12 @@ POP_WARNING()
         ASSERT(_service == service);
         ASSERT(_switches.size() > 1);
 
-        Deinitialize();
+        for (auto& index: _switches) {
+            index.second.Unregister(&_sink);
+        }
         _switches.clear();
+
+        Deinitialize();
 
         _service->Unregister(&_sink);
         _service->Release();

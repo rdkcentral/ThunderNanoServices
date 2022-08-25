@@ -310,8 +310,6 @@ POP_WARNING()
 
         // CLear the virtual devices.
         _virtualDevices.clear();
-
-        Remotes::RemoteAdministrator::Instance().RevokeAll();
     }
 
     /* virtual */ string RemoteControl::Information() const
