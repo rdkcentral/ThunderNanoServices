@@ -605,7 +605,7 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
-    template<typename DEVICE=BluetoothControl::DeviceImpl>
+    template<typename DEVICE>
     DEVICE* BluetoothControl::Find(const uint16_t handle) const
     {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
