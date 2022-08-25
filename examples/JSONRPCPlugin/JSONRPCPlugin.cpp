@@ -51,13 +51,14 @@ namespace Plugin
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     JSONRPCPlugin::JSONRPCPlugin()
         : PluginHost::JSONRPC({ 2, 3, 4 }, [&](const string& token, const string& method, const string& parameters) -> PluginHost::JSONRPC::classification { return (Validation(token, method, parameters)); }) // version 2, 3 and 4 of the interface, use this as the default :-)
-        , _job(Core::ProxyType<PeriodicSync>::Create(this))
         , _window()
         , _data()
         , _array(255)
         , _rpcServer(nullptr)
         , _jsonServer(nullptr)
         , _msgServer(nullptr)
+        , _callback(this)
+        , _job(*this)
     {
         RegisterAll();
     }
@@ -151,14 +152,13 @@ POP_WARNING()
         Config config;
         config.FromString(service->ConfigLine());
 
-	Core::NodeId source(config.Connector.Value().c_str());
-	    
+        Core::NodeId source(config.Connector.Value().c_str());
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance()));
         _rpcServer = new COMServer(Core::NodeId(source, source.PortNumber()), this, service->ProxyStubPath(), engine);
         _jsonServer = new JSONRPCChannel<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber() + 1), *this);
         _msgServer = new JSONRPCChannel<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber() + 2), *this);
-        _job->Period(5);
-        Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
+        Period(5);
+        _job.Reschedule(Core::Time::Now().Add(5000));
 
         // On success return empty, to indicate there is no error text.
         return (string());
@@ -166,11 +166,11 @@ POP_WARNING()
 
     /* virtual */ void JSONRPCPlugin::Deinitialize(PluginHost::IShell * /* service */)
     {
-        _job->Period(0);
-        Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_job));
+        Period(0);
+        _job.Revoke();
         delete _rpcServer;
         delete _jsonServer;
-	delete _msgServer;
+        delete _msgServer;
     }
 
     /* virtual */ string JSONRPCPlugin::Information() const
@@ -203,11 +203,11 @@ POP_WARNING()
         // PluginHost::JSONRPC method to send out a JSONRPC message to all subscribers to the event "clock".
         Notify(_T("clock"), currentTime);
 
-		// We are currently supporting more release, the old interface is expecting a bit a different response:
+        // We are currently supporting more release, the old interface is expecting a bit a different response:
         GetHandler(1)->Notify(_T("clock"), Data::Time(now.Hours(), now.Minutes(), now.Seconds()));
     }
 
-    void JSONRPCPlugin::SendTime(Core::JSONRPC::Context& channel)
+    void JSONRPCPlugin::SendTime(const Core::JSONRPC::Context& channel)
     {
         Response(channel, Data::Response(Core::Time::Now().Ticks(), Data::Response::FAILURE));
     }
