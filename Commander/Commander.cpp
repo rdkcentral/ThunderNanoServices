@@ -107,10 +107,8 @@ namespace Plugin {
 
         while (index != _sequencers.end()) {
 
-            Core::ProxyType<Core::IDispatch> job(index->second);
-
             index->second->Abort();
-            Core::IWorkerPool::Instance().Revoke(job);
+            index->second->Revoke();
 
             index++;
         }
@@ -136,8 +134,8 @@ namespace Plugin {
         }
     }
 
-    // GET: ../Sequencer/[SequencerName]	; Return [ALL] available sequencers and their current state
-    // GET: ../Commands						; Return all possible commmands
+    // GET: ../Sequencer/[SequencerName]        ; Return [ALL] available sequencers and their current state
+    // GET: ../Commands                         ; Return all possible commmands
 
     /* virtual */ Core::ProxyType<Web::Response> Commander::Process(const Web::Request& request)
     {
@@ -217,17 +215,14 @@ namespace Plugin {
             } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatch> job(sequencer);
 
                 if (sequencer->Abort() != Core::ERROR_NONE) {
                     response->ErrorCode = Web::STATUS_NO_CONTENT;
                     response->Message = _T("Sequencer was not in a running state");
-                } else if (Core::IWorkerPool::Instance().Revoke(job, 2000) == Core::ERROR_NONE) {
+                } else {
+                    sequencer->Revoke();
                     response->ErrorCode = Web::STATUS_OK;
                     response->Message = _T("Sequencer available for next sequence");
-                } else {
-                    response->ErrorCode = Web::STATUS_REQUEST_TIME_OUT;
-                    response->Message = _T("Sequencer did not stop in time (2S)");
                 }
             }
         } else if (request.Verb == Web::Request::HTTP_PUT) {
@@ -239,7 +234,6 @@ namespace Plugin {
             } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatch> job(sequencer);
 
                 if (sequencer->IsActive() == true) {
                     response->ErrorCode = Web::STATUS_TEMPORARY_REDIRECT;
@@ -248,7 +242,7 @@ namespace Plugin {
                     sequencer->Load(*(request.Body<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Command>>>()));
                     sequencer->Execute();
 
-                    Core::IWorkerPool::Instance().Submit(job);
+                    sequencer->Submit();
 
                     // Attach to response.
                     response->Message = _T("Sequence List Imported");

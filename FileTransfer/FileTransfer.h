@@ -166,14 +166,19 @@ namespace Core {
                         // Clear this index, we are no longer observing
                         _files.erase(index);
                         _observers.erase(loop);
-                        if (_files.size() == 0) {
+                        uint32_t size = _files.size();
+                        _adminLock.Unlock();
+
+                        if (size == 0) {
                             // This is the first entry, lets start monitoring
                             Core::ResourceMonitor::Instance().Unregister(*this);
                         }
+                    } else {
+                        _adminLock.Unlock();
                     }
+                } else {
+                    _adminLock.Unlock();
                 }
-
-                _adminLock.Unlock();
             }
 
         private:
@@ -195,7 +200,6 @@ namespace Core {
                         length = ::read(_notifyFd, eventBuffer, sizeof(eventBuffer));
                         if (length > 0) {
                             const struct inotify_event *event = reinterpret_cast<const struct inotify_event *>(eventBuffer);
-
                             _adminLock.Lock();
 
                             // Check if we have this entry..
@@ -220,35 +224,7 @@ namespace Core {
 
 namespace Plugin
 {
-    class FileObserver {
-        private:
-            class Sink : public Core::FileSystemMonitor::ICallback, public Core::IDispatch {
-                public:
-                    Sink() = delete;
-                    Sink(const Sink &) = delete;
-                    Sink &operator=(const Sink &) = delete;
-                    Sink(FileObserver *parent)
-                        : _parent(*parent)
-                    {
-                    }
-                    ~Sink() override
-                    {
-                    }
-
-                public:
-                    void Updated() override
-                    {
-                        _parent.Updated();
-                    }
-                    void Dispatch() override
-                    {
-                        _parent.Dispatch();
-                    }
-
-                private:
-                    FileObserver &_parent;
-            };
-
+    class FileObserver : public Core::FileSystemMonitor::ICallback {
         public:
             struct ICallback
             {
@@ -260,14 +236,16 @@ namespace Plugin
             FileObserver(const FileObserver &) = delete;
             FileObserver &operator=(const FileObserver &) = delete;
             FileObserver()
-                : _job(Core::ProxyType<Sink>::Create(this))
-                , _callback(nullptr)
+                : _callback(nullptr)
                 , _position(0)
                 , _path()
+                , _job(*this)
             {
             }
             ~FileObserver()
             {
+                _job.Revoke();
+
                 // Please Unregister before destructing!!!
                 ASSERT(_callback == nullptr);
                 if (_callback != nullptr)
@@ -289,17 +267,17 @@ namespace Plugin
 
                 _path = entry;
                 _callback = callback;
-                Core::FileSystemMonitor::Instance().Register(&(*_job), _path);
+                Core::FileSystemMonitor::Instance().Register(this, _path);
             }
             void Unregister()
             {
                 ASSERT(_callback != nullptr);
 
                 // First make sure the dispatcher Job will longer be fired
-                Core::FileSystemMonitor::Instance().Unregister(&(*_job), _path);
+                Core::FileSystemMonitor::Instance().Unregister(this, _path);
 
                 // Potentially the Job might still be waiting, let’s kill it
-                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatchType<void> >(_job));
+                _job.Revoke();
 
                 _path = EMPTY_STRING;
                 _position = 0;
@@ -317,8 +295,11 @@ namespace Plugin
                 }
                 return pos;
             }
+
+            friend Core::ThreadPool::JobType<FileObserver&>;
             void Dispatch()
             {
+                TRACE(Trace::Information, (_T("FileObserver: job is dispatched")));
                 std::ifstream file(_path);
                 if (file) {
                     file.seekg(_position, file.beg);
@@ -332,14 +313,15 @@ namespace Plugin
             }
             void Updated()
             {
-                Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_job));
+                _job.Submit();
             }
 
         private:
-            const Core::ProxyType<Sink> _job;
             ICallback *_callback;
             long int _position;
             string _path;
+
+            Core::WorkerPool::JobType<FileObserver&> _job;
         };
 
     class FileTransfer : public PluginHost::IPlugin {
@@ -547,9 +529,7 @@ namespace Plugin
                     , _fileUpdate(&_logOutput)
                 {
                 }
-                ~FileTransfer() override
-                {
-                }
+                ~FileTransfer() override = default;
 
                 BEGIN_INTERFACE_MAP(FileTransfer)
                 INTERFACE_ENTRY(PluginHost::IPlugin)
