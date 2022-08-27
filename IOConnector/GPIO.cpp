@@ -93,7 +93,6 @@ namespace GPIO
         }
         // The derived class shoud set, the initial value of the modifiers...
         _timedPin.AddRef();
-        _timedPin.AddReference();
     }
 
     /* virtual */ Pin::~Pin()
@@ -124,7 +123,6 @@ namespace GPIO
 
         Period(0);
 
-        _timedPin.DropReference();
         _timedPin.CompositRelease();
 
     }
