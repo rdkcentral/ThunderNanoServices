@@ -31,6 +31,7 @@ namespace WPEFramework {
 namespace Plugin {
     class ResourceMonitorImplementation : public Exchange::IResourceMonitor {
     private:
+        static constexpr const TCHAR* CSVFileName = _T("resource.csv");
         class CSVFile {
         public:
             CSVFile(string filepath, string seperator)
@@ -98,11 +99,13 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , Path(_T("/tmp/resource.csv"))
+                , Path()
+                , Name(CSVFileName)
                 , Seperator(_T(";"))
                 , Interval(5)
             {
                 Add(_T("csv_filepath"), &Path);
+                Add(_T("csv_filename"), &Name);
                 Add(_T("csv_sep"), &Seperator);
                 Add(_T("interval"), &Interval);
                 Add(_T("names"), &FilterNames);
@@ -111,6 +114,7 @@ namespace Plugin {
             Config(const Config& copy)
                 : Core::JSON::Container()
                 , Path(copy.Path)
+                , Name(copy.Name)
                 , Interval(copy.Interval)
                 , FilterNames(copy.FilterNames)
             {
@@ -122,6 +126,7 @@ namespace Plugin {
 
         public:
             Core::JSON::String Path;
+            Core::JSON::String Name;
             Core::JSON::String Seperator;
             Core::JSON::DecUInt32 Interval;
             Core::JSON::ArrayType<Core::JSON::String> FilterNames;
@@ -150,10 +155,10 @@ namespace Plugin {
             };
 
         public:
-            explicit StatCollecter(const Config& config)
+            explicit StatCollecter(const string& csvFilePath, const Config& config)
                 : _userCpuTime(0)
                 , _systemCpuTime(0)
-                , _logfile(config.Path.Value(), config.Seperator.Value())
+                , _logfile(csvFilePath, config.Seperator.Value())
                 , _interval(config.Interval.Value())
                 , _worker(Core::ProxyType<Worker>::Create(this))
 
@@ -313,10 +318,14 @@ namespace Plugin {
             Config config;
             config.FromString(service->ConfigLine());
 
+            _csvFilePath = (config.Path.IsSet() == true) ?
+                    Core::Directory::Normalize(config.Path.Value()) : service->VolatilePath();
+            _csvFilePath += config.Name.Value();
+
             if (config.Interval.Value() <= 0) {
                 TRACE(Trace::Error, (_T("Interval must be greater than 0!")));
             } else {
-                _processThread.reset(new StatCollecter(config));
+                _processThread.reset(new StatCollecter(_csvFilePath, config));
                 result = Core::ERROR_NONE;
             }
 

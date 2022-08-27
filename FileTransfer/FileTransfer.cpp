@@ -48,7 +48,7 @@ namespace Plugin {
         return string();
     }
 
-    void FileTransfer::Deinitialize(PluginHost::IShell* service)
+    void FileTransfer::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         _observer.Unregister();
     }
