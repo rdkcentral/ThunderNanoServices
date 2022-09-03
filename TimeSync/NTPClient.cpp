@@ -35,8 +35,8 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         , _fired(true)
         , _WaitForNetwork(2000) // Wait for 2 Seconds for a new attempt
         , _retryAttempts(5)
-        , _activity(Core::ProxyType<Activity>::Create(this))
         , _clients()
+        , _job(*this)
     {
         _packet.LeapIndicator(0x03); // Unknown
         _packet.NTPVersion(0x04); // Version 4
@@ -52,7 +52,7 @@ POP_WARNING()
 
     /* virtual */ NTPClient::~NTPClient()
     {
-        Core::IWorkerPool::Instance().Revoke(_activity);
+        _job.Revoke();
 
         Close(Core::infinite);
     }
@@ -96,7 +96,7 @@ POP_WARNING()
         if ((_state == INITIAL) || (_state == SUCCESS) || ((_state == FAILED) && (_serverIndex.IsValid() == false))) {
             result = Core::ERROR_NONE;
             _state = SENDREQUEST;
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Submit();
         } else if (_state == SENDREQUEST || _state == INPROGRESS) {
             result = Core::ERROR_INPROGRESS;
         }
@@ -119,8 +119,8 @@ POP_WARNING()
 
             _state = FAILED;
 
-            Core::IWorkerPool::Instance().Revoke(_activity);
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Revoke();
+            _job.Submit();
         }
         _adminLock.Unlock();
     }
@@ -250,10 +250,10 @@ POP_WARNING()
             Close(0);
 
             // Lets remove the watchdog subject, we do not want to wait anymore, we got an answer.
-            Core::IWorkerPool::Instance().Revoke(_activity);
+            _job.Revoke();
 
             // Schedule it again to broadcast the successfull update of the time.
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Submit();
         }
 
         _adminLock.Unlock();
@@ -266,8 +266,8 @@ POP_WARNING()
     {
         if (HasError() == true) {
             Close(0);
-            Core::IWorkerPool::Instance().Revoke(_activity);
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Revoke();
+            _job.Submit();
         }
     }
 
@@ -332,7 +332,6 @@ POP_WARNING()
 
     void NTPClient::Update()
     {
-
         // runs always in the context of the adminlock
 
         if(_state == FAILED){
@@ -352,6 +351,7 @@ POP_WARNING()
     {
         uint32_t result = Core::infinite;
 
+        TRACE(Trace::Information, (_T("NTPClient: job is dispatched")));
         _adminLock.Lock();
 
         if (_state == SENDREQUEST) {
@@ -392,7 +392,7 @@ POP_WARNING()
         if (result != Core::infinite) {
             Core::Time timestamp(Core::Time::Now());
             timestamp.Add(result);
-            Core::IWorkerPool::Instance().Schedule(timestamp, _activity);
+            _job.Reschedule(timestamp);
         }
    }
 
