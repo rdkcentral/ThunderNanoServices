@@ -133,34 +133,13 @@ namespace Plugin {
         };
 
         class StatCollecter {
-        private:
-            class Worker : public Core::IDispatch {
-            public:
-                Worker(StatCollecter* parent)
-                    : _parent(*parent)
-                {
-                }
-
-                void Dispatch() override
-                {
-                    _parent._guard.Lock();
-                    _parent.Dispatch();
-                    _parent._guard.Unlock();
-
-                    Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(_parent._interval * 1000), Core::ProxyType<Core::IDispatch>(*this));
-                }
-
-            private:
-                StatCollecter& _parent;
-            };
-
         public:
             explicit StatCollecter(const string& csvFilePath, const Config& config)
                 : _userCpuTime(0)
                 , _systemCpuTime(0)
                 , _logfile(csvFilePath, config.Seperator.Value())
                 , _interval(config.Interval.Value())
-                , _worker(Core::ProxyType<Worker>::Create(this))
+                , _job(*this)
 
             {
                 _logfile.Append("Time[s]", "Name", "USS[KiB]", "PSS[KiB]", "RSS[KiB]", "VSS[KiB]", "UserTotalCPU[%]", "SystemTotalCPU[%]");
@@ -174,15 +153,34 @@ namespace Plugin {
                     }
                 }
 
-                Core::IWorkerPool::Instance().Schedule(Core::Time::Now(), Core::ProxyType<Core::IDispatch>(_worker));
+                _job.Submit();
             }
 
             ~StatCollecter()
             {
-                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_worker), Core::infinite);
+                _job.Revoke();
             }
 
         private:
+            friend Core::ThreadPool::JobType<StatCollecter&>;
+            void Dispatch()
+            {
+                TRACE(Trace::Information, (_T("StatCollecter: job is dispatched")));
+                _guard.Lock();
+                for (const auto& filterName : _filterNames) {
+                    std::list<Core::ProcessInfo> processes;
+                    Core::ProcessInfo::FindByName(filterName, false, processes);
+
+                    for (const Core::ProcessInfo& process : processes) {
+                        CalculateCpuUsage(process.Id());
+                        LogProcess(process);
+                    }
+                }
+                _guard.Unlock();
+
+                _job.Reschedule(Core::Time::Now().Add(_interval * 1000));
+            }
+
             void GetTotalTime(Core::process_t pid)
             {
                 std::ifstream stat("/proc/stat");
@@ -239,20 +237,6 @@ namespace Plugin {
                 _processTimeInfo[pid].prevUTime = _processTimeInfo[pid].uTime;
             }
 
-            void Dispatch()
-            {
-
-                for (const auto& filterName : _filterNames) {
-                    std::list<Core::ProcessInfo> processes;
-                    Core::ProcessInfo::FindByName(filterName, false, processes);
-
-                    for (const Core::ProcessInfo& process : processes) {
-                        CalculateCpuUsage(process.Id());
-                        LogProcess(process);
-                    }
-                }
-            }
-
             void LogProcess(const Core::ProcessInfo& process)
             {
                 auto timestamp = static_cast<uint32_t>(Core::Time::Now().Ticks() / 1000 / 1000);
@@ -293,7 +277,7 @@ namespace Plugin {
             std::list<std::string> _filterNames;
 
             Core::CriticalSection _guard;
-            Core::ProxyType<Worker> _worker;
+            Core::WorkerPool::JobType<StatCollecter&> _job;
         };
 
     private:
@@ -303,7 +287,7 @@ namespace Plugin {
     public:
         ResourceMonitorImplementation()
             : _processThread(nullptr)
-            , _csvFilePath()
+            , _csvFilePath(CSVFileName)
         {
         }
 
