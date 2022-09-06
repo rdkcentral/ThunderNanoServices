@@ -24,6 +24,8 @@
 #include <interfaces/IDisplayInfo.h>
 #include <interfaces/IConfiguration.h>
 
+#include <displayinfo/ExtendedDisplayIdentification.h>
+
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -31,6 +33,7 @@
 #include <functional>
 #include <mutex>
 #include <string>
+#include <cstring>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -123,7 +126,8 @@ namespace Plugin {
 
                 for (auto& callback : _callbacks) {
                     if (std::find(values.begin(), values.end(), "DEVTYPE=" + callback.second) != values.end()) {
-                        callback.first(callback.second);
+// TODO: inspect 'action'
+                       callback.first(callback.second);
                     }
                 }
             }
@@ -132,7 +136,7 @@ namespace Plugin {
         }
 
     private:
-        /** 
+        /**
          * The following are structures copied from udev in order to properly parse messages coming in through
          * the socket connection(UdevObserver class).
          * Found @ https://github.com/systemd/systemd/blob/master/src/libsystemd/sd-device/device-monitor.c#L50
@@ -326,7 +330,7 @@ namespace Plugin {
         bool Connected() const
         {
             std::lock_guard<std::mutex> lock(_propertiesLock);
-            return _drmConnector ? _drmConnector->IsConnected() : 0;
+            return _drmConnector ? _drmConnector->IsConnected() : false;
         }
 
         uint32_t Width() const
@@ -350,7 +354,10 @@ namespace Plugin {
         Exchange::IConnectionProperties::HDCPProtectionType HDCP() const
         {
             std::lock_guard<std::mutex> lock(_propertiesLock);
-            return _hdcpLevel;
+
+            Exchange::IConnectionProperties::HDCPProtectionType value = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
+
+            return _drmConnector != nullptr && _drmConnector->GetHDCPType(value) != false ? value : Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
         }
 
         bool AudioPassthrough() const
@@ -359,7 +366,7 @@ namespace Plugin {
             return _audioPassthrough;
         }
 
-        std::vector<uint8_t> EDID() const
+        ExtendedDisplayIdentification const & EDID() const
         {
             std::lock_guard<std::mutex> lock(_propertiesLock);
             return _edid;
@@ -367,20 +374,29 @@ namespace Plugin {
 
         void Reauthenticate()
         {
+           // DisplayInfo does not set so only (re-)query
+            Exchange::IConnectionProperties::HDCPProtectionType value = HDCP();
+
             std::lock_guard<std::mutex> lock(_propertiesLock);
 
-            std::string hdcpStr = getLine(_hdcpLevelNode);
-            if (hdcpStr.find("succeed") != std::string::npos) {
-                if (hdcpStr.find("22") != std::string::npos) {
-                    _hdcpLevel = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_2X;
-                } else if (hdcpStr.find("14") != std::string::npos) {
-                    _hdcpLevel = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_1X;
+            _hdcpLevel = value;
+
+            if (Exchange::IConnectionProperties::HDCPProtectionType::HDCP_AUTO == _hdcpLevel) {
+                std::string hdcpStr = getLine(_hdcpLevelNode);
+
+                if (hdcpStr.find("succeed") != std::string::npos) {
+                    if (hdcpStr.find("22") != std::string::npos) {
+                        _hdcpLevel = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_2X;
+                    } else if (hdcpStr.find("14") != std::string::npos) {
+                        _hdcpLevel = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_1X;
+                    } else {
+                        TRACE(Trace::Error, (_T("Received HDCP value: %s"), hdcpStr.c_str()));
+                        _hdcpLevel = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
+                    }
                 } else {
-                    TRACE(Trace::Error, (_T("Received HDCP value: %s"), hdcpStr.c_str()));
+                    // This resets the previous value, possibly unintended or mid-transition
                     _hdcpLevel = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
                 }
-            } else {
-                _hdcpLevel = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
             }
 
             TRACE(Trace::Information, (_T("HDCP protection level: %d"), _hdcpLevel));
@@ -389,8 +405,12 @@ namespace Plugin {
         void RequeryProperties()
         {
             QueryDisplayProperties();
-            Reauthenticate();
-            QueryEDID();
+
+            // Next only when connected
+            if (_drmConnector != nullptr && _drmConnector->IsConnected() != false) {
+                Reauthenticate();
+                QueryEDID();
+	    }
         }
 
     private:
@@ -413,17 +433,41 @@ namespace Plugin {
         {
             std::lock_guard<std::mutex> lock(_propertiesLock);
 
-            std::ifstream instream(_edidNode, std::ios::in);
-            _edid.reserve(512);
-            if(instream.is_open()) {
-                char asciiHexByte[2];
-                while(!instream.eof()) {
-                    instream.read(asciiHexByte, 2);
-                    _edid.push_back(std::strtoul(asciiHexByte, nullptr, 16));
+            std::vector<uint8_t> data = _drmConnector->EDID();
+
+            if (data.empty() != false) {
+                std::ifstream instream(_edidNode, std::ios::in);
+                data.reserve(512);
+                if(instream.is_open()) {
+                    char asciiHexByte[2];
+                    while(!instream.eof()) {
+                        instream.read(asciiHexByte, 2);
+                        data.push_back(std::strtoul(asciiHexByte, nullptr, 16));
+                    }
+                } else {
+                    data.clear();
                 }
-            } else {
-                _edid.clear();
             }
+
+            _edid.Clear();
+
+            // Segment counter
+            uint8_t index = 0;
+
+            // Multiple of segment size, just an EDID specification
+            ASSERT(0 == data.size() % _edid.Length());
+
+            do {
+                // Forward pointer into underlying destination data placeholder
+                uint8_t * buffer = _edid.Segment(index);
+
+                // Possibly trivial
+                static_assert(sizeof(uint8_t) == sizeof(unsigned char));
+                /* void * */ std::memcpy(buffer, data.data() + (index * _edid.Length()), _edid.Length());
+
+                index++;
+
+            } while (index < _edid.Segments());
         }
 
         bool _usePreferredMode;
@@ -434,7 +478,7 @@ namespace Plugin {
         mutable std::mutex _propertiesLock;
         std::unique_ptr<AMLogic::DRMConnector> _drmConnector;
         bool _audioPassthrough;
-        std::vector<uint8_t> _edid;
+        ExtendedDisplayIdentification _edid;
         Exchange::IConnectionProperties::HDCPProtectionType _hdcpLevel;
     };
 
@@ -469,18 +513,23 @@ namespace Plugin {
             , _observers()
             , _observersLock()
         {
+            // HDMI change via udev kernel message
             _udevObserver.Register(_callback, "drm_minor");
+            // HDCP change via udev kernel message
             _udevObserver.Register(_callback, "hdcp");
         }
 
         uint32_t Configure(PluginHost::IShell* framework) override
         {
             _config.FromString(framework->ConfigLine());
-            
+
+// TODO: let compositor and displayinfo cooperate using the same node
+
             /* clang-format off */
             _display.reset(new DisplayProperties(Config::GetValue(_config.drmDeviceName)
             , Config::GetValue(_config.edidFilepath)
             , Config::GetValue(_config.hdcpLevelFilepath)
+            // Preferred negates Best, and, vice versa
             , Config::GetValue(_config.usePreferredMode)));
 
             _graphics = Core::Service<GraphicsProperties>::Create<Exchange::IGraphicsProperties>(Config::GetValue(_config.gpuMemoryFile)
@@ -580,26 +629,53 @@ namespace Plugin {
 
         uint32_t EDID(uint16_t& length, uint8_t data[]) const override
         {
-            uint32_t result = Core::ERROR_NONE;
+            uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            if (_display && length > 0) {
-                auto edid = _display->EDID();
-                memcpy(data, edid.data(), edid.size());
-                length = edid.size();
-            } else {
-                result = Core::ERROR_UNAVAILABLE;
+            if (_display != nullptr && length > 0) {
+                ExtendedDisplayIdentification const & edid = _display->EDID();
+
+                if (edid.IsValid() != false) {
+                    length = edid.Raw(length, data);
+
+                    result = Core::ERROR_NONE;
+                }
             }
+
             return result;
         }
 
-        uint32_t WidthInCentimeters(VARIABLE_IS_NOT_USED uint8_t& width /* @out */) const override
+        uint32_t WidthInCentimeters(uint8_t& width /* @out */) const override
         {
-            return Core::ERROR_UNAVAILABLE;
+            uint32_t result = Core::ERROR_UNAVAILABLE;
+
+            if (_display != nullptr) {
+                ExtendedDisplayIdentification const & edid = _display->EDID();
+
+                if (edid.IsValid() != false) {
+                    width = edid.WidthInCentimeters();
+
+                    result = Core::ERROR_NONE;
+                }
+            }
+
+            return result;
         }
 
-        uint32_t HeightInCentimeters(VARIABLE_IS_NOT_USED uint8_t& heigth /* @out */) const override
+        uint32_t HeightInCentimeters(uint8_t& heigth /* @out */) const override
         {
-            return Core::ERROR_UNAVAILABLE;
+            uint32_t result = Core::ERROR_UNAVAILABLE;
+
+            if (_display != nullptr) {
+                ExtendedDisplayIdentification const & edid = _display->EDID();
+
+                if (edid.IsValid() != false) {
+                    heigth = edid.HeightInCentimeters();
+
+                    result = Core::ERROR_NONE;
+                }
+            }
+
+            return result;
         }
 
         uint32_t HDCPProtection(HDCPProtectionType& value) const override
@@ -611,6 +687,7 @@ namespace Plugin {
             } else {
                 result = Core::ERROR_UNAVAILABLE;
             }
+
             return result;
         }
 
@@ -716,6 +793,7 @@ namespace Plugin {
 
             uint32_t Worker() override
             {
+                // Wait until a registered udev event occurs
                 _arrived.Lock();
                 _arrived.ResetEvent();
                 if (IsRunning()) {
@@ -724,6 +802,7 @@ namespace Plugin {
                     if (isExtracted && eventType == IConnectionProperties::INotification::Source::HDCP_CHANGE) {
                         _parent._display->Reauthenticate();
                     } else if (isExtracted && eventType == IConnectionProperties::INotification::Source::HDMI_CHANGE) {
+                        // This includes 'reauthenticate'
                         _parent._display->RequeryProperties();
                     }
                 }

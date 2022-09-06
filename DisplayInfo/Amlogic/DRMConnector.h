@@ -1,4 +1,5 @@
 /*
+
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
@@ -21,11 +22,23 @@
 
 #include <core/Portability.h>
 #include <tracing/Logging.h>
+#include <interfaces/IDisplayInfo.h>
+
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
 #include <string>
 #include <vector>
+
+// TODO:
+#ifndef DRM_MODE_HDCP_CONTENT_TYPE0
+#define DRM_MODE_HDCP_CONTENT_TYPE0 0
+#endif
+#ifndef DRM_MODE_HDCP_CONTENT_TYPE1
+#define DRM_MODE_HDCP_CONTENT_TYPE1 1
+#endif
+
+// TODO: property strings
 
 namespace WPEFramework {
 namespace Plugin {
@@ -33,12 +46,19 @@ namespace Plugin {
 
         bool operator<(const drmModeModeInfo& lhs, const drmModeModeInfo& rhs)
         {
-            return (lhs.hdisplay * lhs.vdisplay) < (rhs.hdisplay * rhs.vdisplay);
+            // Interlace should have lower pixel clock than progressive
+            // Highest pixel count requires (possibly) highest clock
+
+            return lhs.clock <= rhs.clock && ( (lhs.hdisplay * lhs.vdisplay) < (rhs.hdisplay * rhs.vdisplay) );
         }
 
         bool operator>(const drmModeModeInfo& lhs, const drmModeModeInfo& rhs)
         {
-            return (lhs.hdisplay * lhs.vdisplay) > (rhs.hdisplay * rhs.vdisplay);
+            // Interlace should have lower pixel clock than progressive
+            // Highest pixel count requires (possibly) highest clock
+
+            // Next possibly not needed
+            return lhs.clock > rhs.clock && ( (lhs.hdisplay * lhs.vdisplay) >= (rhs.hdisplay * rhs.vdisplay) );
         }
 
         class DRMConnector {
@@ -49,37 +69,350 @@ namespace Plugin {
                 , _height(0)
                 , _refreshRate(0)
             {
-                int drmFd = open(drmDevice.c_str(), O_RDWR | O_CLOEXEC);
-                if (drmFd < 0) {
-                    TRACE(Trace::Error, (_T("Could not open DRM device with path: %s"), drmDevice.c_str()));
-                } else {
-                    drmModeResPtr drmResources = drmModeGetResources(drmFd);
+// TODO: PLATFORM (compositor) also opens the node and may do some (non) (atomic) mode setting
 
-                    for (int i = 0; i < drmResources->count_connectors; ++i) {
-                        drmModeConnector* connector = drmModeGetConnector(drmFd, drmResources->connectors[i]);
-                        if (connector && connector->connector_type == drmConnectorType) {
-                            InitializeWithConnector(*connector, usePreferredMode);
+                // On no device or no (suitable) connectors the initialization values are used
+
+                std::vector<std::string> list;
+
+                if (drmDevice.empty() != true) {
+                    list.push_back(drmDevice);
+                }
+
+                // Duplicates are allowed
+                GetDRMNodesByType (DRM_NODE_PRIMARY, list);
+                GetDRMNodesByType (DRM_NODE_RENDER, list);
+
+                for (auto it = list.begin(), end = list.end(); it != end; it++) {
+                   _drmFd = open(it->c_str(), O_RDWR | O_CLOEXEC);
+
+                    if (_drmFd < 0) {
+                        TRACE(Trace::Error, (_T("Could not open DRM device with path: %s"), it->c_str()));
+                    } else {
+                        _drmFdPath = *it;
+
+                        drmModeResPtr drmResources = drmModeGetResources(_drmFd);
+
+                        if (drmResources != nullptr) {
+                            for (int i = 0; i < drmResources->count_connectors; ++i) {
+                                drmModeConnector* connector = drmModeGetConnector(_drmFd, drmResources->connectors[i]);
+                                // Only connected conectors are valid
+                                if (connector && (DRM_MODE_CONNECTED == connector->connection) && connector->connector_type == drmConnectorType) {
+                                    InitializeWithConnector(*connector, usePreferredMode);
+
+                                    // Break the loop(s) on valid mode
+                                    if (true == _connected) {
+                                        GetDRMConnectorProperties(connector);
+
+                                        break;
+                                    }
+
+                                    drmModeFreeConnector(connector);
+                                }
+                            }
+
+                            // On no device or no (suitable) connectors the initialization values are used
+                            drmModeFreeResources(drmResources);
                         }
-                        drmModeFreeConnector(connector);
                     }
 
-                    drmModeFreeResources(drmResources);
+                    // Break the loop(s) on valid mode
+                    if (true == _connected) {
+                        break;
+                    }
                 }
-                close(drmFd);
             }
 
-            bool IsConnected() { return _connected; }
+            ~DRMConnector() {
+                close(_drmFd);
+                _drmFd=-1;
+            }
 
-            uint32_t Height() { return _height; }
+            bool IsConnected() const { return _connected; }
 
-            uint32_t Width() { return _width; }
+            uint32_t Height() const { return _height; }
 
-            uint32_t RefreshRate() { return _refreshRate; }
+            uint32_t Width() const { return _width; }
+
+            uint32_t RefreshRate() const { return _refreshRate; }
+
+            std::vector <uint8_t> EDID() const { return _edid; }
+
+            bool SetHDCPType(Exchange::IConnectionProperties::HDCPProtectionType value) {
+                bool result = false;
+
+                auto it_hdcp = _propertyIds.find("HDCP Content Type");
+
+                if (it_hdcp != _propertyIds.end()) {
+                    // HDCP support is available
+
+                    switch (value) {
+                        case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_1X           :   result = SetDRMConnectorPropertyValue(_connectorId, it_hdcp->second, DRM_MODE_HDCP_CONTENT_TYPE0);
+                                                                                                        break;
+                        case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_2X           :   result = SetDRMConnectorPropertyValue(_connectorId, it_hdcp->second, DRM_MODE_HDCP_CONTENT_TYPE1);
+                                                                                                        break;
+                        case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_AUTO         :   // Try Type 1 first then type 0
+                                                                                                        result = SetDRMConnectorPropertyValue(_connectorId, it_hdcp->second, DRM_MODE_HDCP_CONTENT_TYPE1) || SetDRMConnectorPropertyValue(_connectorId, it_hdcp->second, DRM_MODE_HDCP_CONTENT_TYPE0);
+                                                                                                        break;
+                        case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted  :
+                        default                                                                     :   // No type setting
+                                                                                                        ;
+                    }
+                }
+
+                if (result != false) {
+                    auto it_prot = _propertyIds.find("Content Protection");
+
+                    if (it_prot != _propertyIds.end()) {
+                        // Protection support is available
+
+                        switch (value) {
+                            case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_1X           :
+                            case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_2X           :
+                            case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_AUTO         :
+                                                                                                            result = SetDRMConnectorPropertyValue(_connectorId, it_prot->second, DRM_MODE_CONTENT_PROTECTION_DESIRED);
+                                                                                                            break;
+                            case Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted  :
+                            default                                                                     :   // No type setting has occured
+                                                                                                            result = SetDRMConnectorPropertyValue(_connectorId, it_prot->second, DRM_MODE_CONTENT_PROTECTION_UNDESIRED);
+                        }
+                    }
+                }
+
+                return result;
+            }
+
+            bool GetHDCPType(Exchange::IConnectionProperties::HDCPProtectionType & value) const {
+                bool result = false;
+
+                auto it_prot = _propertyIds.find("Content Protection");
+
+                if (it_prot != _propertyIds.end()) {
+                    // Protection support is available
+                    uint64_t prop_val;
+
+                    if (GetDRMConnectorPropertyValue(_connectorId, it_prot->second, prop_val) != false) {
+                        switch (prop_val) {
+                            case DRM_MODE_CONTENT_PROTECTION_ENABLED    :   // HDCP type has meaning
+                                                                            {
+                                                                            auto it_hdcp = _propertyIds.find("HDCP Content Type");
+
+                                                                            result = it_hdcp != _propertyIds.end() && GetDRMConnectorPropertyValue(_connectorId, it_hdcp->second, prop_val) != false;
+
+                                                                            if (result != false) {
+                                                                                switch (prop_val) {
+                                                                                    case DRM_MODE_HDCP_CONTENT_TYPE0    :   value = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_1X;
+                                                                                                                            break;
+                                                                                    case DRM_MODE_HDCP_CONTENT_TYPE1    :   value = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_2X;
+                                                                                                                            break;
+                                                                                    default                             :   ASSERT(false);
+                                                                                }
+                                                                            }
+
+                                                                            break;
+                                                                            }
+                            case DRM_MODE_CONTENT_PROTECTION_UNDESIRED  :   // HDCP type is irrelevant
+                            case DRM_MODE_CONTENT_PROTECTION_DESIRED    :   // HDCP is still pending, nothing to say just yet
+                                                                            value = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
+                                                                            break;
+                            default                                     :   ASSERT(false);
+                        }
+                    }
+                }
+
+                return result;
+            }
 
         private:
+
+            void GetDRMNodesByType(const uint32_t type, std::vector<std::string> & list) const
+            {
+                // Arbitrary value
+                constexpr uint8_t const DrmMaxDevices = 16;
+
+                drmDevicePtr devices[DrmMaxDevices];
+
+                int count = drmGetDevices2(0 /* flags */ , &devices[0], static_cast<int>(DrmMaxDevices));
+
+                if (count > 0) {
+                    for (int i = 0; i < count; i++) {
+                        switch (type) {
+                            case DRM_NODE_PRIMARY   :   // card<num>, always created, KMS, privileged
+                            case DRM_NODE_CONTROL   :   // ControlD<num>, currently unused
+                            case DRM_NODE_RENDER    :   // Solely for render clients, unprivileged
+                                                        {
+                                                            if ((1 << type) == ((1 << type) & devices[i]->available_nodes)) {
+                                                                list.push_back(std::string(devices[i]->nodes[type]));
+                                                        }
+                                                        break;
+                                                        }
+                            case DRM_NODE_MAX       :
+                            default                 :   // Unknown (new) node type
+                                                        ;
+                        }
+                    }
+
+                    drmFreeDevices(&devices[0], count);
+                }
+            }
+
+            bool GetDRMConnectorProperty(VARIABLE_IS_NOT_USED uint32_t connectorId, uint32_t propertyId, drmModePropertyPtr & property) const {
+                bool result = false;
+
+                if (_drmFd > -1 && property == nullptr) {
+                    property = drmModeGetProperty(_drmFd, propertyId);
+
+                    result = property != nullptr;
+                }
+
+                return result;
+            }
+
+            bool GetDRMConnectorPropertyValue(uint32_t connectorId, uint32_t propertyId, uint64_t & value) const {
+                bool result = false;
+
+                if (_drmFd > -1) {
+                    drmModeConnectorPtr connector = drmModeGetConnector(_drmFd, connectorId);
+
+                    if (connector != nullptr) {
+                        for (int index = 0; index < connector->count_props; index++) {
+                            result = propertyId == connector->prop_values[index];
+
+                            if (result != false) {
+                                break;
+                            }
+                        }
+
+                        /* void */ drmModeFreeConnector(connector);
+                    }
+                }
+
+                return result;
+            }
+
+            bool SetDRMConnectorPropertyValue(uint32_t connectorId, uint32_t propertyId, uint64_t value) {
+                bool result = false;
+
+                if (_drmFd > -1) {
+                    result = (-1 !=  drmModeConnectorSetProperty(_drmFd, connectorId, propertyId, value));
+                }
+
+                return result;
+            }
+
+            void GetDRMConnectorProperties(drmModeConnectorPtr connector) {
+                ASSERT(nullptr != connector);
+
+                auto edid_cb = [this](uint32_t id, std::string name, uint32_t length, void * data) -> void {
+                    this->_edid.clear();
+
+                    this->_edid.reserve(length);
+
+                    for (uint32_t i = 0; i < length; i++) {
+                        this->_edid.push_back(static_cast<uint8_t *>(data)[i]);
+                    }
+                };
+
+                auto hdr_cb = [this](uint32_t id, std::string name, uint32_t length, void * data) -> void {
+                    TRACE(Trace::Information, (_T("HDR")));
+                };
+
+                auto path_cb = [this](uint32_t id, std::string name, uint32_t length, void * data) -> void {
+                    TRACE(Trace::Information, (_T("PATH")));
+                };
+
+                auto tile_cb = [this](uint32_t id, std::string name, uint32_t length, void * data) -> void {
+                    TRACE(Trace::Information, (_T("TILE")));
+                };
+
+                using blob_callback_t = std::function<void (uint32_t /* id */, std::string /* name */, uint32_t /* data length */, void * /* data */)>;
+
+
+                static std::map <std::string, blob_callback_t> const blob_cb_lookup = {
+                    { "EDID", edid_cb },
+                    { "HDR_OUTPUT_METADATA", hdr_cb },
+                    { "PATH", path_cb },
+                    { "TILE", tile_cb }
+                };
+
+                using enum_callback_t = std::function<void (uint32_t /* id */, std::string /* name */, uint64_t /* current value */, int /* length of list */, struct drm_mode_property_enum * /* list of possible values */)>;
+
+                auto hdcp_cb = [this](uint32_t id, std::string name, uint64_t value, int count, struct drm_mode_property_enum * data) -> void {
+                    // User space is responsible for polling (change in) this property or monitoring uevent
+
+                    if (std::string("Content Protection") == name) {
+                        switch (value) {
+                            case DRM_MODE_CONTENT_PROTECTION_UNDESIRED  :   TRACE(Trace::Information, (_T(" (DRM_MODE_CONTENT_PROTECTION_UNDESIRED)")));
+                                                                            break;
+                            case DRM_MODE_CONTENT_PROTECTION_DESIRED    :   TRACE(Trace::Information, (_T(" (DRM_MODE_CONTENT_PROTECTION_DESIRED)")));
+                                                                            break;
+                            case DRM_MODE_CONTENT_PROTECTION_ENABLED    :   // Only driver can set this
+                                                                            TRACE(Trace::Information, (_T(" (DRM_MODE_CONTENT_PROTECTION_ENABLED)")));
+                                                                            break;
+                            default                                     :   TRACE(Trace::Information, (_T(" (UNKNOWN)")));
+                        }
+                    }
+
+                    // User space (then) declares the content type
+
+                    if (std::string("HDCP Content Type") == name) {
+                        switch (value) {
+                            case DRM_MODE_HDCP_CONTENT_TYPE0    :   // 1.4 or 2.2, but user space can be ignorant of this value
+                                                                    TRACE(Trace::Information, (_T(" (HDCP Type0)")));
+                                                                    break;
+                            case DRM_MODE_HDCP_CONTENT_TYPE1    :   // Only 2.2 but user space can be ignorant of this value
+                                                                    TRACE(Trace::Information, (_T(" (HDCP Type1)")));
+                                                                    break;
+                            default                             :
+                                                                    TRACE(Trace::Information, (_T(" (UNKNOWN")));
+                        }
+                    }
+                };
+
+
+                static std::map <std::string, enum_callback_t> const enum_cb_lookup = {
+                    { "Content Protection", hdcp_cb },
+                    { "HDCP Content Type", hdcp_cb }
+                };
+
+
+                for ( int i = 0 ; i < connector->count_props ; i++ ) {
+                    drmModePropertyPtr property = nullptr;
+
+                    GetDRMConnectorProperty(connector->connector_id, connector->props[i], property);
+
+                    if ( nullptr != property ) {
+                        /* void */ auto it = _propertyIds.insert({property->name, property->prop_id});
+                        ASSERT(it.second != false);
+
+                        if (DRM_MODE_PROP_BLOB == (property->flags & DRM_MODE_PROP_BLOB)) {
+                            auto it = blob_cb_lookup.find(property->name);
+
+                            if (blob_cb_lookup.end () != it) {
+                                drmModePropertyBlobPtr blob = drmModeGetPropertyBlob(_drmFd, connector->prop_values[i]);
+
+                                if (nullptr != blob) {
+                                    it->second(connector->props[i], property->name, blob->length, blob->data);
+                                    /* void */ drmModeFreePropertyBlob(blob);
+                                }
+                            }
+                        }
+
+                        if (DRM_MODE_PROP_ENUM == (property->flags & DRM_MODE_PROP_ENUM)) {
+                            auto it = enum_cb_lookup.find(property->name);
+
+                            if (enum_cb_lookup.end () != it) {
+                                it->second(connector->props[i], property->name, connector->prop_values[i], property->count_enums, property->enums);
+                            }
+                        }
+
+                        /* void */ drmModeFreeProperty(property);
+                    }
+                }
+            }
+
             void InitializeWithConnector(drmModeConnector& connector, bool usePreferredMode)
             {
-
                 drmModeModeInfoPtr mode = usePreferredMode ? PreferredMode(connector.count_modes, connector.modes)
                                                            : BestMode(connector.count_modes, connector.modes);
 
@@ -96,7 +429,7 @@ namespace Plugin {
                     if (result == nullptr) {
                         result = modes + index;
                     } else {
-                        result = (*result > modes[index]) ? result : (modes + index);
+                        result = ((*result) > (modes[index])) ? result : (modes + index);
                     }
                 }
                 return result;
@@ -117,6 +450,13 @@ namespace Plugin {
             uint32_t _width;
             uint32_t _height;
             uint32_t _refreshRate;
+            std::vector<uint8_t> _edid;
+
+            int _drmFd;
+            std::string _drmFdPath;
+            uint32_t _connectorId;
+            std::map<std::string, uint32_t> _propertyIds;
+
         };
     }
 }
