@@ -112,7 +112,7 @@ elseif (BCM_HOST_FOUND)
 elseif (LIBDRM_FOUND)
     target_sources(${MODULE_NAME}
         PRIVATE
-            Amlogic/PlatformImplementation.cpp)
+            Linux/PlatformImplementation.cpp)
 
     target_link_libraries(${MODULE_NAME}
         PRIVATE
