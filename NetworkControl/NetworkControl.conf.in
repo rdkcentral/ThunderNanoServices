@@ -12,15 +12,15 @@ if "@PLUGIN_NETWORKCONTROL_INTERFACES@":
     for interface in "@PLUGIN_NETWORKCONTROL_INTERFACES@".split(';'):
         interface_attr = interface.split(':')
         if len(interface_attr) == 5:
-            interface_config = {}
-            interface_config['interface'] = interface_attr[0]
-            interface_config['mode'] = interface_attr[1]
+            interface_config = JSON()
+            interface_config.add("interface", interface_attr[0])
+            interface_config.add("mode", interface_attr[1])
             if interface_attr[2]:
-                interface_config['address'] = interface_attr[2]
+                interface_config.add("address", interface_attr[2])
             if interface_attr[3]:
-                interface_config['mask'] = interface_attr[3]
+                interface_config.add("mask", interface_attr[3])
             if interface_attr[4]:
-                interface_config['gateway'] = interface_attr[4]
+                interface_config.add("gateway", interface_attr[4])
             interface_list.append(interface_config)
 
 configuration.add("interfaces", interface_list)
