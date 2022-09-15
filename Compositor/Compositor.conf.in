@@ -112,10 +112,10 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
             for output_config in "@PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS@".split(';'):
                 output_config_items = output_config.split(',')
                 if len(output_config_items) == 3:
-                    output_config_dict = {}
-                    output_config_dict['name'] = output_config_items[0]
-                    output_config_dict['mode'] = output_config_items[1]
-                    output_config_dict['transform'] = output_config_items[2]
+                    output_config_dict = JSON()
+                    output_config_dict.add("name", output_config_items[0])
+                    output_config_dict.add("mode", output_config_items[1])
+                    output_config_dict.add("transform", output_config_items[2])
                     output_configs_list.append(output_config_dict)
             configuration.add("outputs", output_configs_list)
 
