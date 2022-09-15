@@ -24,6 +24,7 @@
 #include <interfaces/IDisplayInfo.h>
 #include <interfaces/IConfiguration.h>
 
+// Use the 'client libs' version
 #include <displayinfo/ExtendedDisplayIdentification.h>
 
 #include <xf86drm.h>
@@ -318,7 +319,6 @@ namespace Plugin {
             , _edidNode(edidFilepath)
             , _hdcpLevelNode(hdcpLevelFilepath)
             , _propertiesLock()
-            , _audioPassthrough(false)
             , _edid()
             , _hdcpLevel(Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted)
         {
@@ -357,13 +357,14 @@ namespace Plugin {
 
             Exchange::IConnectionProperties::HDCPProtectionType value = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
 
-            return _drmConnector != nullptr && _drmConnector->GetHDCPType(value) != false ? value : Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
+            return (_drmConnector != nullptr && _drmConnector->GetHDCPType(value) != false) ? value : Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
         }
 
         bool AudioPassthrough() const
         {
             std::lock_guard<std::mutex> lock(_propertiesLock);
-            return _audioPassthrough;
+
+            return _edid.IsValid() != false ? _edid.SupportedAudioFormats() != static_cast<uint32_t>(ExtendedDisplayIdentification::audioformattype::NONE_OR_UNKNOWN) : false;
         }
 
         ExtendedDisplayIdentification const & EDID() const
@@ -477,7 +478,6 @@ namespace Plugin {
 
         mutable std::mutex _propertiesLock;
         std::unique_ptr<Linux::DRMConnector> _drmConnector;
-        bool _audioPassthrough;
         ExtendedDisplayIdentification _edid;
         Exchange::IConnectionProperties::HDCPProtectionType _hdcpLevel;
     };
@@ -574,9 +574,18 @@ namespace Plugin {
             return (Core::ERROR_NONE);
         }
 
-        uint32_t IsAudioPassthrough(VARIABLE_IS_NOT_USED bool& passthru) const override
+        uint32_t IsAudioPassthrough(bool& passthru) const override
         {
-            return Core::ERROR_UNAVAILABLE;
+            uint32_t result = Core::ERROR_NONE;
+
+            if (_display != nullptr) {
+                passthru = _display->AudioPassthrough();
+            }
+            else {
+                passthru = false;
+                result = Core::ERROR_UNAVAILABLE;
+           }
+           return result;
         }
 
         uint32_t Connected(bool& isconnected) const override
