@@ -18,17 +18,17 @@ configuration.add("path", "@PLUGIN_WEBSERVER_PATH@")
 if boolean("@PLUGIN_WEBSERVER_PROXY_DEVICEINFO@") or boolean("@PLUGIN_WEBSERVER_PROXY_DIALSERVER@"):
     proxy_list = []
     if boolean("@PLUGIN_WEBSERVER_PROXY_DEVICEINFO@"):
-        proxy_config = {}
-        proxy_config["path"] = "/Service/DeviceInfo"
-        proxy_config["subst"] = "/Service/DeviceInfo"
-        proxy_config["server"] = "127.0.0.1:@PLUGIN_WEBSERVER_BRIDGE_PORT@"
+        proxy_config = JSON()
+        proxy_config.add("path", "/Service/DeviceInfo")
+        proxy_config.add("subst", "/Service/DeviceInfo")
+        proxy_config.add("server", "127.0.0.1:@PLUGIN_WEBSERVER_BRIDGE_PORT@")
         proxy_list.append(proxy_config)
 
     if boolean("@PLUGIN_WEBSERVER_PROXY_DIALSERVER@"):
-        proxy_config = {}
-        proxy_config["path"] = "/Service/DIALServer"
-        proxy_config["subst"] = "/Service/DIALServer"
-        proxy_config["server"] = "127.0.0.1:@PLUGIN_WEBSERVER_BRIDGE_PORT@"
+        proxy_config = JSON()
+        proxy_config.add("path", "/Service/DIALServer")
+        proxy_config.add("subst", "/Service/DIALServer")
+        proxy_config.add("server", "127.0.0.1:@PLUGIN_WEBSERVER_BRIDGE_PORT@")
         proxy_list.append(proxy_config)
 
     configuration.add("proxies", proxy_list)
