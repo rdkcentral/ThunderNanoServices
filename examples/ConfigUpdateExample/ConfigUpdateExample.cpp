@@ -43,27 +43,27 @@ namespace Plugin {
         // Setup skip URL for right offset.
         _service = service;
 
-	Config config;
-	config.FromString(service->ConfigLine());
+        Config config;
+        config.FromString(service->ConfigLine());
         
-	if (config.Plugins.IsSet() == true) {
+        if (config.Plugins.IsSet() == true) {
             Core::JSON::ArrayType<Config::Plugin>::Iterator index(config.Plugins.Elements());
-	    while (index.Next() == true) {
-                 const string& callsign(index.Current().Callsign.Value());
-                 PluginHost::IShell* shell = service->QueryInterfaceByCallsign<PluginHost::IShell>(callsign);
-		 if (shell != nullptr) {
-		     printf("Current SystemRootPath[%s] = %s\n", callsign.c_str(), shell->SystemRootPath().c_str());
-		     if (index.Current().SystemRootPath.IsSet() == true) {
-                         shell->SystemRootPath(index.Current().SystemRootPath.Value());
-    		         printf("New SystemRootPath[%s] = %s\n", callsign.c_str(), shell->SystemRootPath().c_str());
-                         PluginHost::IController* controller = service->QueryInterfaceByCallsign<PluginHost::IController>(EMPTY_STRING);
-                         if (controller != nullptr) {
-                             controller->Persist();
-			 }
-		     }
-		 }
-	    }
-	}
+            while (index.Next() == true) {
+                const string& callsign(index.Current().Callsign.Value());
+                PluginHost::IShell* shell = service->QueryInterfaceByCallsign<PluginHost::IShell>(callsign);
+                if (shell != nullptr) {
+                    TRACE(Trace::Information, (_T("Current SystemRootPath[%s] = %s"), callsign.c_str(), shell->SystemRootPath().c_str()));
+                    if (index.Current().SystemRootPath.IsSet() == true) {
+                        shell->SystemRootPath(index.Current().SystemRootPath.Value());
+                        TRACE(Trace::Information, (_T("New SystemRootPath[%s] = %s"), callsign.c_str(), shell->SystemRootPath().c_str()));
+                    }
+                }
+                PluginHost::IController* controller = service->QueryInterfaceByCallsign<PluginHost::IController>(EMPTY_STRING);
+                if (controller != nullptr) {
+                    controller->Persist();
+                }
+            }
+        }
         return message;
     }
 
