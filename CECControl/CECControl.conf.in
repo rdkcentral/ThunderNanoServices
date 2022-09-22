@@ -66,41 +66,21 @@
 #   ]
 # }
 
-set (autostart ${PLUGIN_CECCONTROL_AUTOSTART})
+autostart = "@PLUGIN_CECCONTROL_AUTOSTART@"
 
-map()
-end()
-ans(configuration)
+configuration = JSON()
 
-if(PLUGIN_CECCONTROL_INTERFACES)
-    # PLUGIN_CECCONTROL_INTERFACES = "hdmi1:/dev/cec0:recorder";"hdmi2:/dev/cec1:tuner,playback"
-    list(APPEND interfaces "${PLUGIN_CECCONTROL_INTERFACES}")
+if "@PLUGIN_CECCONTROL_INTERFACES@":
+    interface_list = []
+    for interface in "@PLUGIN_CECCONTROL_INTERFACES@".split(';'):
+        interface_attr = interface.split(':')
+        if len(interface_attr) == 3:
+            interface_item = JSON()
+            interface_item.add("name", interface_attr[0])
+            interface_configuration = JSON()
+            interface_configuration.add("node", interface_attr[1])
+            interface_configuration.add("roles", interface_attr[2].split(','))
+            interface_item.add("configuration", interface_configuration)
+            interface_list.append(interface_item)
 
-    foreach(if ${interfaces})
-        string(REPLACE ":" ";" vars ${if})
-
-        list(GET vars 0 name)
-        list(GET vars 1 node)
-        list(GET vars 2 roles)
-
-        string(REPLACE "," ";" roles ${roles})
-
-        map()
-            kv(node ${node})
-        end()
-        ans(interface-config-${name})
-
-        foreach(role ${roles})
-            map_append(${interface-config-${name}} roles ___array___ ${role})
-        endforeach()
-
-        map()
-            kv(name ${name})
-        end()
-        ans(interface-${name})
-
-        map_append(${interface-${name}} configuration ${interface-config-${name}})
-
-        map_append(${configuration} interfaces ___array___ ${interface-${name}})
-    endforeach()
-endif()
+    configuration.add("interfaces", interface_list)

@@ -38,6 +38,8 @@ set(PLUGIN_CECCONTROL_NAME "WPEFramework" CACHE STRING "The name of this device"
 set(CECADAPTER_LIBRARY_NAME "_cecadapter" CACHE STRING "Defines the name of the library")
 set(CEC_DEVICE_ADAPTER_LIBRARY_NAME "_ceccontrol_device_adapter" CACHE INTERNAL "INTERNALLY USED")
 
+set (PLUGIN_CECCONTROL_INTERFACES "hdmi1:/dev/cec0:recorder" "hdmi2:/dev/cec1:playback")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
