@@ -4,7 +4,7 @@
 
 using namespace WPEFramework;
 
-class UDPMessageOutput : public Messaging::IMessageOutput {
+class UDPMessageOutput : public Core::Messaging::IOutput {
 private:
     class Channel : public Core::SocketDatagram {
     public:
@@ -32,7 +32,7 @@ private:
             length = information.Deserialize(dataFrame, receivedSize);
 
             if (length != 0 && length <= receivedSize) {
-                if (information.MessageMetaData().Type() == Core::Messaging::MetaData::MessageType::TRACING || information.MessageMetaData().Type() == Core::Messaging::MetaData::MessageType::LOGGING) {
+                if (information.MessageMetaData().Type() == Core::Messaging::MessageType::TRACING || information.MessageMetaData().Type() == Core::Messaging::MessageType::LOGGING) {
                     message = _factory.Create();
                     length += message->Deserialize(dataFrame + length, receivedSize - length);
 
@@ -106,19 +106,19 @@ public:
 
     void Output(const Core::Messaging::Information& info, const Core::Messaging::IEvent* message)
     {
-        string deserializedMessage;
         std::ostringstream output;
 
-        message->ToString(deserializedMessage);
-        Core::Time now(info.TimeStamp());
+        const Core::Time now(info.TimeStamp());
 
         if (_abbreviated == true) {
             string time(now.ToTimeOnly(true));
-            output << '[' << time.c_str() << ']' << '[' << info.MessageMetaData().Category() << "]: " << deserializedMessage << std::endl;
+            output << '[' << time << "]:[" << info.MessageMetaData().Module() << "]:[" << info.MessageMetaData().Category()
+                << "]: " << message->Data() << std::endl;
         } else {
             string time(now.ToRFC1123(true));
-            output << '[' << time.c_str() << "]:[" << Core::FileNameOnly(info.FileName().c_str()) << ':' << info.LineNumber() << "] "
-                   << info.MessageMetaData().Category() << ": " << deserializedMessage << std::endl;
+            output << '[' << time << "]:[" << Core::FileNameOnly(info.FileName().c_str()) << ':' << info.LineNumber()
+                << "]:[" << info.ClassName() << "]:[" << info.MessageMetaData().Category() << "]: "
+                << message->Data() << std::endl;
         }
 
         _newLineQueue.Post(output.str());
