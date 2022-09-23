@@ -31,6 +31,7 @@ option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
+option(PLUGIN_CONFIGUPDATEEXAMPLE "Include Sample plugin to get/set plugins config" OFF)
 option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" OFF)
 option(EXAMPLE_IOCONNECTOR_TEST "Include IOConnector test suite" OFF)
 option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message control" OFF)
@@ -62,6 +63,10 @@ endif()
 
 if(PLUGIN_STATECONTROLLER)
     add_subdirectory(StateController)
+endif()
+
+if(PLUGIN_CONFIGUPDATEEXAMPLE)
+    add_subdirectory(ConfigUpdateExample)
 endif()
 
 if(EXAMPLE_CLIENT_SERVER)
