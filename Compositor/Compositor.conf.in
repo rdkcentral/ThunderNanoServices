@@ -3,6 +3,8 @@ autostart = "@PLUGIN_COMPOSITOR_AUTOSTART@"
 configuration = JSON()
 
 configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
+if "@PLUGIN_COMPOSITOR_CONNECTOR@":
+    configuration.add("connector", "@PLUGIN_COMPOSITOR_CONNECTOR@")
 
 if boolean("@PLUGIN_COMPOSITOR_NXSERVER@"):
 
