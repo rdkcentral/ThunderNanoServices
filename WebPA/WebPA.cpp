@@ -78,7 +78,7 @@ namespace {
     return message;
 }
 
-/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service)
+/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
     ASSERT(_service == service);
 

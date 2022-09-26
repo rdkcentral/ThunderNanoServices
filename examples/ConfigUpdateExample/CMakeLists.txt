@@ -15,52 +15,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(IOConnector)
-
-cmake_minimum_required(VERSION 3.3)
-
-find_package(WPEFramework)
-
-project_version(1.0.0)
-
-set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
-
-message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+set(PLUGIN_NAME ConfigUpdateExample)
+set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_IOCONNECTOR_AUTOSTART true CACHE STRING "Automatically start IOConnector plugin")
-
-add_library(${MODULE_NAME} SHARED 
-    Module.cpp
-    IOConnector.cpp
-    IOConnectorJsonRpc.cpp
-    GPIO.cpp
-    Handler.cpp
-    Reporter.cpp
-)
-
-if(PLUGIN_IOCONNECTOR_PAIRING_PIN)
-    target_sources(${MODULE_NAME} PRIVATE RemotePairing.cpp)
-endif(PLUGIN_IOCONNECTOR_PAIRING_PIN)
-
-if(PLUGIN_IOCONNECTOR_POWER_PIN)
-    target_sources(${MODULE_NAME} PRIVATE PowerDown.cpp)
-endif(PLUGIN_IOCONNECTOR_POWER_PIN)
+add_library(${MODULE_NAME} SHARED
+    ConfigUpdateExample.cpp
+    Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES)
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(${MODULE_NAME} 
+target_link_libraries(${MODULE_NAME}
+    PRIVATE
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
+target_include_directories( ${MODULE_NAME}
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>)
+
+target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS ${MODULE_NAME} 
+install(TARGETS ${MODULE_NAME}
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-write_config()
+write_config(PLUGINS ${PLUGIN_NAME} CLASSNAME ${PLUGIN_NAME})
