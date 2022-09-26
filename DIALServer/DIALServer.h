@@ -275,7 +275,7 @@ namespace Plugin {
                     } else {
                         running = (_service->State() == PluginHost::IShell::ACTIVATED);
                     }
-                    if ((running == true) && (_service->AutoStart() == true)) {
+                    if ((running == true) && (_service->Startup() == PluginHost::IShell::startup::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             running = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
@@ -297,7 +297,7 @@ namespace Plugin {
                         hidden = !hidden;
                         app->Release();
                     }
-                    if ((hidden == true) && (_service->AutoStart() == true)) {
+                    if ((hidden == true) && (_service->Startup() == PluginHost::IShell::startup::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             hidden = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
@@ -332,14 +332,14 @@ namespace Plugin {
             uint32_t Start(const string& parameters, const string& payload) override
             {
                 // DIAL active mode operation logic:
-                // AutoStart: OFF
+                // Startup: ACTIVATED
                 //  - Start activates the app, sets launch point, sets content link and sets visible state, resumes if needed
                 //  - Stop deactivates the app
                 //  - Hide sets app's invisible state
                 //  - 'Running' state is when service is activated and in visible state
                 //  - 'Hidden' state is when service is activated and in invisible state
                 //  - 'Stopped' state is when service is deactivated
-                // AutoStart: ON
+                // Startup: DEACTIVATED
                 //  - Start activates the app if needed, sets launch point, sets content link and sets visible state and resumes
                 //  - Stop suspends the app
                 //  - Hide sets app's invisible state
@@ -401,7 +401,7 @@ namespace Plugin {
                     _service->Notify(message);
                     _parent->event_stop(_callsign, parameters);
                 } else {
-                    if (_service->AutoStart() == true) {
+                    if (_service->Startup() == PluginHost::IShell::startup::ACTIVATED) {
                         PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             if (stateCtrl->State() != PluginHost::IStateControl::SUSPENDED) {
