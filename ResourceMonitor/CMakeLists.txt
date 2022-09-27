@@ -39,6 +39,7 @@ if(PLUGIN_RESOURCEMONITOR_OUTOFPROCESS STREQUAL "false")
     unset(PLUGIN_RESOURCEMONITOR_OUTOFPROCESS CACHE)
 endif()
 
+find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -53,6 +54,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
