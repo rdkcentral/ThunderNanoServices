@@ -1,0 +1,4 @@
+autostart = "@PLUGIN_PROCESSMONITOR_AUTOSTART@"
+
+configuration = JSON()
+configuration.add("exittimeout", "@PLUGIN_PROCESSMONITOR_EXITTIMEOUT@")
