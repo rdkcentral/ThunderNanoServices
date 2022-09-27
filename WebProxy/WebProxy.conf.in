@@ -1,0 +1,8 @@
+autostart = "@PLUGIN_WEBPROXY_AUTOSTART@"
+
+configuration = JSON()
+
+configuration.add("baudrate", "115200")
+configuration.add("parity", "none")
+configuration.add("data", "8")
+configuration.add("stop", "1")
