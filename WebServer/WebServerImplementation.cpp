@@ -547,14 +547,14 @@ POP_WARNING()
 
                 SetWebToken(configuration);
 
-                if (configuration.Path.IsSet() == true) {
-                    if (configuration.Path.Value()[0] == '/') {
+                if (configuration.Path.IsSet() == false) {
+                    _prefixPath.clear();
+                }
+                else if (configuration.Path.Value()[0] == '/') {
                         _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
-                    } else {
-                        _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
-                    }
-                } else {
-                    _prefixPath = prefixPath;
+                }
+                else {
+                    _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
                 }
 
                 _proxyMap.Create(index);
