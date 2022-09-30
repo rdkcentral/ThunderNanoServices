@@ -845,7 +845,7 @@ POP_WARNING()
         _eventLock.Lock();
 
         //Make sure a sink is not registered multiple times.
-        if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) != _notificationClients.end()) {
+        if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end()) {
 
             TRACE(Trace::Information, (_T("Registered a client with RemoteControl")));
             _notificationClients.push_back(sink);
@@ -862,7 +862,7 @@ POP_WARNING()
         std::list<Exchange::IRemoteControl::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
 
         // Make sure you do not unregister something you did not register !!!
-        if (index == _notificationClients.end()) {
+        if (index != _notificationClients.end()) {
 
             if (index != _notificationClients.end()) {
                 (*index)->Release();
