@@ -191,7 +191,7 @@ namespace Plugin {
                 TRACE(Switching, (_T("Activating plugin [%s] in plugin state [%d]"), _shell->Callsign().c_str(), _shell->State()));
 
                 if (_shell->State() != PluginHost::IShell::ACTIVATED) {
-                    if (_shell->AutoStart() == true) {
+                    if (_shell->Startup() == PluginHost::IShell::startup::ACTIVATED) {
                         TRACE(Trace::Error, (Trace::Format("Activation of %s required although it should be autostarted.", _shell->Callsign().c_str())));
                     }
 
@@ -236,11 +236,11 @@ namespace Plugin {
 
                         control->Release();
 
-                    } else if (_shell->AutoStart() == true) {
+                    } else if (_shell->Startup() == PluginHost::IShell::startup::ACTIVATED) {
                         TRACE(Trace::Error, (Trace::Format("Deactivation of %s required although it is autostarted, but has *NO* IStateControl.", _shell->Callsign().c_str())));
                     }
 
-                    if ((result != Core::ERROR_NONE) || (_shell->AutoStart() == false) || (control == nullptr)) {
+                    if ((result != Core::ERROR_NONE) || (_shell->Startup() == PluginHost::IShell::startup::DEACTIVATED) || (control == nullptr)) {
 
                         result = _shell->Deactivate(PluginHost::IShell::REQUESTED);
 

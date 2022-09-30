@@ -117,38 +117,48 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
     // change to "register" the sink for these events !!! So do it ahead of
     // instantiation.
     _service->Register(&_notification);
-    _cobalt = _service->Root < Exchange::IBrowser
-            > (_connectionId, 2000, _T("CobaltImplementation"));
 
-    if (_cobalt != nullptr) {
-        _cobalt->Register(&_notification);
-        PluginHost::IStateControl *stateControl(
-                _cobalt->QueryInterface<PluginHost::IStateControl>());
+    Plugin::Config::RootConfig rootConfig(service);
+    const uint32_t permission = (Core::File::USER_READ | Core::File::USER_WRITE |
+                                 Core::File::GROUP_READ | Core::File::GROUP_WRITE);
 
-        if (stateControl == nullptr) {
-            message = _T("Cobalt StateControl could not be Obtained.");
-        } else {
-            stateControl->Register(&_notification);
-            stateControl->Configure(_service);
-            stateControl->Release();
-            _application = _cobalt->QueryInterface<Exchange::IApplication>();
-            if (_application != nullptr) {
-
-                RegisterAll();
-                Exchange::JApplication::Register(*this, _application);
-
-                RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
-                if (remoteConnection != nullptr) {
-                    _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
-                    ASSERT(_memory != nullptr);
-                    remoteConnection->Release();
-                }
-            } else {
-                message = _T("Cobalt IApplication could not be Obtained.");
-            }
-        }
+    if (_service->EnablePersistentStorage(permission, rootConfig.User.Value(), rootConfig.Group.Value())
+        != Core::ERROR_NONE) {
+        message = _T("Could not setup persistent path: ") + service->PersistentPath();
     } else {
-        message = _T("Cobalt could not be instantiated.");
+        _cobalt = _service->Root < Exchange::IBrowser
+                > (_connectionId, 2000, _T("CobaltImplementation"));
+
+        if (_cobalt != nullptr) {
+            _cobalt->Register(&_notification);
+            PluginHost::IStateControl *stateControl(
+                    _cobalt->QueryInterface<PluginHost::IStateControl>());
+
+            if (stateControl == nullptr) {
+                message = _T("Cobalt StateControl could not be Obtained.");
+            } else {
+                stateControl->Register(&_notification);
+                stateControl->Configure(_service);
+                stateControl->Release();
+                _application = _cobalt->QueryInterface<Exchange::IApplication>();
+                if (_application != nullptr) {
+
+                    RegisterAll();
+                    Exchange::JApplication::Register(*this, _application);
+
+                    RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+                    if (remoteConnection != nullptr) {
+                        _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
+                        ASSERT(_memory != nullptr);
+                        remoteConnection->Release();
+                    }
+                } else {
+                    message = _T("Cobalt IApplication could not be Obtained.");
+                }
+            }
+        } else {
+            message = _T("Cobalt could not be instantiated.");
+        }
     }
 
     if (message.length() != 0) {
