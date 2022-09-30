@@ -18,8 +18,13 @@
 set(PLUGIN_NAME WebServer)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+option(PLUGIN_WEBSERVER_SECURITYAGENT "Enable support for SecurityAgent ([ON, OFF])." OFF)
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+if(PLUGIN_WEBSERVER_SECURITYAGENT)
+    find_package(securityagent REQUIRED)
+endif()
 
 add_library(${MODULE_NAME} SHARED 
     WebServer.cpp
@@ -34,6 +39,15 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
+if(PLUGIN_WEBSERVER_SECURITYAGENT)
+    target_compile_definitions(${MODULE_NAME}
+        PRIVATE
+            ENABLE_SECURITY_AGENT=1)
+    target_link_libraries(${MODULE_NAME}
+        PRIVATE
+            securityagent::securityagent)
+endif()
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
