@@ -1,0 +1,14 @@
+autostart = "@PLUGIN_BLUETOOTH_AUTOSTART@"
+
+configuration = JSON()
+
+configuration.add("interface", "0")
+configuration.add("port", "/dev/ttyAMA0")
+configuration.add("baudrate", "@PLUGIN_BLUETOOTH_BAUDRATE@")
+configuration.add("class", "'0x000424'")
+configuration.add("autopasskeyconfirm", "true")
+
+if boolean("@PLUGIN_BLUETOOTH_CONTINUOUS_BACKGROUND_SCAN@"):
+    configuration.add("continuousbackgroundscan", "true")
+if boolean("@PLUGIN_BLUETOOTH_PERSISTMAC@"):
+    configuration.add("persistmac", "true")
