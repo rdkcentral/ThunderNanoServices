@@ -364,7 +364,9 @@ namespace Plugin {
         {
             std::lock_guard<std::mutex> lock(_propertiesLock);
 
-            return _edid.IsValid() != false ? _edid.SupportedAudioFormats() != static_cast<uint32_t>(ExtendedDisplayIdentification::audioformattype::NONE_OR_UNKNOWN) : false;
+            auto it = _edid.CEASegment();
+
+            return it.IsValid() != false ? ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() != static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED) : false;
         }
 
         ExtendedDisplayIdentification const & EDID() const
