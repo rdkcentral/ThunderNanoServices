@@ -3,7 +3,7 @@ autostart = "@PLUGIN_TIMESYNC_AUTOSTART@"
 
 configuration = JSON()
 
-if "@PLUGIN_TIMESYNC_DEFFERED@":
+if boolean("@PLUGIN_TIMESYNC_DEFFERED@"):
     configuration.add("deferred", "true")
 else:
     configuration.add("deferred", "false")
