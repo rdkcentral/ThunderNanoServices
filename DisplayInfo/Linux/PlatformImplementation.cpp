@@ -366,7 +366,11 @@ namespace Plugin {
 
             auto it = _edid.CEASegment();
 
-            return it.IsValid() != false ? ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() != static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED) : false;
+            while (it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() == static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED)) {
+                it = _edid.CEASegment(it);
+            }
+
+            return it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() != static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED);
         }
 
         ExtendedDisplayIdentification const & EDID() const
@@ -528,18 +532,18 @@ namespace Plugin {
 // TODO: let compositor and displayinfo cooperate using the same node
 
             /* clang-format off */
-            _display.reset(new DisplayProperties(Config::GetValue(_config.drmDeviceName)
-            , Config::GetValue(_config.edidFilepath)
-            , Config::GetValue(_config.hdcpLevelFilepath)
+            _display.reset(new DisplayProperties(_config.drmDeviceName.Value()
+            , _config.edidFilepath.Value()
+            , _config.hdcpLevelFilepath.Value()
             // Preferred negates Best, and, vice versa
-            , Config::GetValue(_config.usePreferredMode)));
+            , _config.usePreferredMode.Value()));
 
-            _graphics = Core::Service<GraphicsProperties>::Create<Exchange::IGraphicsProperties>(Config::GetValue(_config.gpuMemoryFile)
-                , Config::GetValue(_config.gpuMemoryFreePattern)
-                , Config::GetValue(_config.gpuMemoryTotalPattern)
-                , Config::GetValue(_config.gpuMemoryUnitMultiplier));
+            _graphics = Core::Service<GraphicsProperties>::Create<Exchange::IGraphicsProperties>(_config.gpuMemoryFile.Value()
+                , _config.gpuMemoryFreePattern.Value()
+                , _config.gpuMemoryTotalPattern.Value()
+                , _config.gpuMemoryUnitMultiplier.Value());
 
-            _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(Config::GetValue(_config.hdrLevelFilepath));
+            _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value());
             /* clang-format on */
 
             return Core::ERROR_NONE;
@@ -738,14 +742,15 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , usePreferredMode()
-                , drmDeviceName()
-                , edidFilepath()
-                , hdcpLevelFilepath()
-                , hdrLevelFilepath()
-                , gpuMemoryFile()
-                , gpuMemoryFreePattern()
-                , gpuMemoryTotalPattern()
+                , usePreferredMode(true)
+                , drmDeviceName("")
+                , edidFilepath("")
+                , hdcpLevelFilepath("")
+                , hdrLevelFilepath("")
+                , gpuMemoryFile("")
+                , gpuMemoryFreePattern("")
+                , gpuMemoryTotalPattern("")
+                , gpuMemoryUnitMultiplier(1)
             {
                 Add(_T("usePreferredMode"), &usePreferredMode);
                 Add(_T("drmDeviceName"), &drmDeviceName);
@@ -757,10 +762,6 @@ namespace Plugin {
                 Add(_T("gpuMemoryTotalPattern"), &gpuMemoryTotalPattern);
                 Add(_T("gpuMemoryUnitMultiplier"), &gpuMemoryUnitMultiplier);
             }
-
-            static std::string GetValue(const Core::JSON::String& jsonValue) { return jsonValue.IsSet() ? jsonValue.Value() : ""; }
-            static bool GetValue(const Core::JSON::Boolean& jsonValue) { return jsonValue.IsSet() ? jsonValue.Value() : false; }
-            static int32_t GetValue(const Core::JSON::DecUInt32& jsonValue) { return jsonValue.IsSet() ? jsonValue.Value() : 0; }
 
             Core::JSON::Boolean usePreferredMode;
             Core::JSON::String drmDeviceName;
