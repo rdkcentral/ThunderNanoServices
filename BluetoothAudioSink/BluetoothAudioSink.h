@@ -29,8 +29,6 @@
 
 #include "AudioPlayer.h"
 
-#include "SDPServer.h"
-
 #include "ServiceDiscovery.h"
 #include "SignallingChannel.h"
 #include "TransportChannel.h"
@@ -707,7 +705,6 @@ namespace Plugin {
             , _comNotificationSink(*this)
             , _controller()
             , _latency(0)
-            , _sdpServer()
             , _sink(nullptr)
             , _sinkSEID(1)
             , _callback(nullptr)
@@ -1036,7 +1033,6 @@ namespace Plugin {
         Core::Sink<ComNotificationSink> _comNotificationSink;
         string _controller;
         uint16_t _latency; // host latency
-        SDP::ServiceDiscoveryServer _sdpServer;
         A2DPSink *_sink;
         uint32_t _sinkSEID;
         Exchange::IBluetoothAudioSink::ICallback* _callback;
