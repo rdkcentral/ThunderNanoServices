@@ -19,13 +19,4 @@
 
 #include "Module.h"
 
-#include "ServiceDiscovery.h"
-
-namespace WPEFramework {
-
-ENUM_CONVERSION_BEGIN(A2DP::ServiceDiscovery::AudioService::type)
-    { A2DP::ServiceDiscovery::AudioService::UNKNOWN, _TXT("Unknown") },
-    { A2DP::ServiceDiscovery::AudioService::SINK, _TXT("Sink") },
-ENUM_CONVERSION_END(A2DP::ServiceDiscovery::AudioService::type);
-
-}
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)

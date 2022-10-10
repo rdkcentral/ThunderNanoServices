@@ -58,22 +58,6 @@ namespace Plugin {
 
         Exchange::JBluetoothAudioSink::Register(*this, this);
 
-        if (config.SDPService.Enable.Value() == true) {
-            // Start the SDP server...
-            // Add an A2DP v1.3 AudioSource service, supporting AVDTP v1.2, transported via L2CAP connection using PSM 25.
-            namespace SDP = Bluetooth::SDP;
-            _sdpServer.Lock();
-            SDP::Service& audioSource = _sdpServer.Add();
-            audioSource.Description(config.SDPService.Name.Value(), config.SDPService.Description.Value(), config.SDPService.Provider.Value());
-            audioSource.BrowseGroupList()->Add(SDP::ClassID::PublicBrowseRoot);
-            audioSource.ServiceClassIDList()->Add(SDP::ClassID::AudioSource);
-            audioSource.ProfileDescriptorList()->Add(SDP::ClassID::AdvancedAudioDistribution, 0x0103);
-            audioSource.ProtocolDescriptorList()->Add(SDP::ClassID::L2CAP, SDP::Service::Protocol::L2CAP(25));
-            audioSource.ProtocolDescriptorList()->Add(SDP::ClassID::AVDTP, SDP::Service::Protocol::AVDTP(0x0102));
-            _sdpServer.Unlock();
-            _sdpServer.Start();
-        }
-
         if (Core::File(_service->PersistentPath()).IsDirectory() == false) {
             if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
                 TRACE(Trace::Error, (_T("Failed to create persistent storage folder [%s]"), _service->PersistentPath().c_str()));
@@ -123,8 +107,6 @@ namespace Plugin {
 
         delete _sink;
         _sink = nullptr;
-
-        _sdpServer.Stop();
 
         Exchange::JBluetoothAudioSink::Unregister(*this);
 
