@@ -538,7 +538,7 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
                 TRACE(Trace::Information, ("key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             } else {
-                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"))
+                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             }
         }
 

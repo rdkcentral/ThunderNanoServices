@@ -9,8 +9,6 @@
 * [DHCPServer](DHCPServer/doc/DHCPServerPlugin.md)
 * [DIALServer](DIALServer/doc/DIALServerPlugin.md)
 * [Dictionary](Dictionary/doc/DictionaryPlugin.md)
-* [DisplayInfo](DisplayInfo/doc/DisplayInfoPlugin.md)
-* [DTV](DTV/doc/DTVPlugin.md)
 * [FileTransfer](FileTransfer/doc/FileTransferPlugin.md)
 * [FirmwareControl](FirmwareControl/doc/FirmwareControlPlugin.md)
 * [InputSwitch](InputSwitch/doc/InputSwitchPlugin.md)
@@ -18,7 +16,6 @@
 * LanguageAdministrator
 * [NetworkControl](NetworkControl/doc/NetworkControlPlugin.md)
 * [PerformanceMonitor](PerformanceMonitor/doc/PerformanceMonitor.md)
-* [PlayerInfo](PlayerInfo/doc/PlayerInfoPlugin.md)
 * [Power](Power/doc/PowerPlugin.md)
 * [ProcessMonitor](ProcessMonitor/doc/ProcessMonitorPlugin.md)
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)

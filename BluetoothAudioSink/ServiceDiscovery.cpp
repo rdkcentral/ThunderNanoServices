@@ -25,9 +25,7 @@ namespace WPEFramework {
 
 ENUM_CONVERSION_BEGIN(A2DP::ServiceDiscovery::AudioService::type)
     { A2DP::ServiceDiscovery::AudioService::UNKNOWN, _TXT("Unknown") },
-    { A2DP::ServiceDiscovery::AudioService::SOURCE, _TXT("Source") },
     { A2DP::ServiceDiscovery::AudioService::SINK, _TXT("Sink") },
-    { A2DP::ServiceDiscovery::AudioService::OTHER, _TXT("Other") },
 ENUM_CONVERSION_END(A2DP::ServiceDiscovery::AudioService::type);
 
 }
