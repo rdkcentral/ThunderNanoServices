@@ -1,0 +1,10 @@
+autostart = "@PLUGIN_SVALBARD_AUTOSTART@"
+
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_SVALBARD_MODE@")
+rootobject.add("user", "@PLUGIN_SVALBARD_USER@")
+rootobject.add("group", "@PLUGIN_SVALBARD_GROUP@")
+
+configuration.add("root", rootobject)

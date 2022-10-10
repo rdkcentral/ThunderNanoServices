@@ -1,0 +1,4 @@
+autostart = "@PLUGIN_LANGUAGEADMINISTRATOR_AUTOSTART@"
+
+configuration = JSON()
+configuration.add("languagetag", "en_US")
