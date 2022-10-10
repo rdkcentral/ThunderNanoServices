@@ -34,17 +34,10 @@ namespace A2DP {
 
     public:
         class AudioService {
-        private:
-            enum attributeid : uint16_t {
-                SupportedFeatures = 0x0311
-            };
-
         public:
-            enum type {
-                UNKNOWN = 0,
-                SOURCE  = 1,
-                SINK    = 2,
-                OTHER   = 3
+            enum type : uint8_t {
+                UNKNOWN,
+                SINK
             };
 
             enum features : uint16_t {
@@ -52,11 +45,7 @@ namespace A2DP {
                 HEADPHONE   = (1 << 1),
                 SPEAKER     = (1 << 2),
                 RECORDER    = (1 << 3),
-                AMPLIFIER   = (1 << 4),
-                PLAYER      = (1 << 5),
-                MICROPHONE  = (1 << 6),
-                TUNER       = (1 << 7),
-                MIXER       = (1 << 8)
+                AMPLIFIER   = (1 << 4)
             };
 
         public:
@@ -71,13 +60,11 @@ namespace A2DP {
                     , A2DPVersion(0)
                     , AVDTPVersion(0)
                     , Features(0)
-                    , Type(SINK)
                 {
                     Add(_T("psm"), &PSM);
                     Add(_T("a2dp"), &A2DPVersion);
                     Add(_T("avdtp"), &AVDTPVersion);
                     Add(_T("features"), &Features);
-                    Add(_T("type"), &Type);
                 }
 
                 ~Data() = default;
@@ -87,7 +74,6 @@ namespace A2DP {
                 Core::JSON::HexUInt16 A2DPVersion;
                 Core::JSON::HexUInt16 AVDTPVersion;
                 Core::JSON::DecUInt16 Features;
-                Core::JSON::EnumType<type> Type;
             };
 
         public:
@@ -96,13 +82,9 @@ namespace A2DP {
                 using Element::Element;
 
             public:
-                features Features(const type devType) const
+                features Features() const
                 {
-                    if (devType == SINK) {
-                        return (static_cast<features>(Value()));
-                    } else {
-                        return (static_cast<features>((static_cast<uint8_t>(Value()) << 4)));
-                    }
+                    return (static_cast<features>(Value()));
                 }
             }; // class FeaturesDescriptor
 
@@ -124,8 +106,6 @@ namespace A2DP {
             {
                 namespace SDP = Bluetooth::SDP;
 
-                _type = OTHER;
-
                 const auto* a2dpData = service.Profile(SDP::ClassID::AdvancedAudioDistribution);
                 if (a2dpData != nullptr) {
                     _a2dpVersion = a2dpData->Version();
@@ -140,14 +120,12 @@ namespace A2DP {
 
                             if (service.HasClassID(SDP::ClassID::AudioSink)) {
                                 _type = SINK;
-                            } else if (service.HasClassID(SDP::ClassID::AudioSource)) {
-                                _type = SOURCE;
-                            }
 
-                            // This one is optional...
-                            const auto* supportedFeaturesData = service.Attribute(attributeid::SupportedFeatures);
-                            if (supportedFeaturesData != nullptr) {
-                                _features = FeaturesDescriptor(*supportedFeaturesData).Features(_type);
+                                // This one is optional...
+                                const auto* supportedFeaturesData = service.Attribute(Bluetooth::SDP::Service::AttributeDescriptor::a2dp::SupportedFeatures);
+                                if (supportedFeaturesData != nullptr) {
+                                    _features = FeaturesDescriptor(*supportedFeaturesData).Features();
+                                }
                             }
                         }
                     }
@@ -193,7 +171,6 @@ namespace A2DP {
                 data.A2DPVersion = _a2dpVersion;
                 data.AVDTPVersion = _avdtpVersion;
                 data.Features = _avdtpVersion;
-                data.Type = _type;
             }
 
         private:

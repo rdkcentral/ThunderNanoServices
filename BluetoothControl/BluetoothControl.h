@@ -742,6 +742,19 @@ class BluetoothControl : public PluginHost::IPlugin
             void Update(const evt_conn_request& info)
             {
                 BT_TRACE(ControlFlow, info);
+
+                if (Application() != nullptr) {
+                    const Bluetooth::Address address(info.bdaddr);
+                    DeviceImpl* device = Application()->Find(address);
+
+                    if (device == nullptr) {
+                        device = Application()->Discovered(false, info.bdaddr);
+                    }
+
+                    if (device != nullptr) {
+                        device->Class(UnpackDeviceClass(info.dev_class));
+                    }
+                }
             }
             void Update(const evt_conn_complete& info)
             {
