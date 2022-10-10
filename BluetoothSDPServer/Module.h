@@ -17,15 +17,14 @@
  * limitations under the License.
  */
 
-#include "Module.h"
+#pragma once
 
-#include "ServiceDiscovery.h"
+#ifndef MODULE_NAME
+#define MODULE_NAME Plugin_BluetoothSDPServer
+#endif
 
-namespace WPEFramework {
+#include <bluetooth/bluetooth.h>
+#include <plugins/plugins.h>
 
-ENUM_CONVERSION_BEGIN(A2DP::ServiceDiscovery::AudioService::type)
-    { A2DP::ServiceDiscovery::AudioService::UNKNOWN, _TXT("Unknown") },
-    { A2DP::ServiceDiscovery::AudioService::SINK, _TXT("Sink") },
-ENUM_CONVERSION_END(A2DP::ServiceDiscovery::AudioService::type);
-
-}
+#undef EXTERNAL
+#define EXTERNAL

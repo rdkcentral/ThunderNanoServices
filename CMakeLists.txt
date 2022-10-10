@@ -23,6 +23,7 @@ option(PLUGIN_BACKOFFICE "Include BackOffice plugin" OFF)
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
 option(PLUGIN_BLUETOOTHAUDIOSINK "Include Bluetooth Audio Sink plugin" OFF)
+option(PLUGIN_BLUETOOTHSDPSERVER "Include Bluetooth SDP server plugin" OFF)
 option(PLUGIN_CECCONTROL "Include CECControl plugin" OFF)
 option(PLUGIN_COBALT "Include Cobalt plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
@@ -82,6 +83,10 @@ endif()
 
 if(PLUGIN_BLUETOOTHAUDIOSINK)
     add_subdirectory(BluetoothAudioSink)
+endif()
+
+if(PLUGIN_BLUETOOTHSDPSERVER)
+    add_subdirectory(BluetoothSDPServer)
 endif()
 
 if(PLUGIN_CECCONTROL)

@@ -20,6 +20,7 @@
 #pragma once
 
 #include "Module.h"
+
 #include "Tracing.h"
 
 namespace WPEFramework {
@@ -27,8 +28,6 @@ namespace WPEFramework {
 namespace SDP {
 
     class ServiceDiscoveryServer : public Bluetooth::SDP::Tree {
-
-        using SDPServerFlow = A2DP::SDPServerFlow;
 
         class Implementation;
 
@@ -59,9 +58,9 @@ namespace SDP {
             {
                 if (upAndRunning == true) {
                     _lastActivity = Core::Time::Now().Ticks();
-                    TRACE(SDPServerFlow, (_T("Incoming connection from %s"), RemoteId().c_str()));
+                    TRACE(Tracing::Verbose, (_T("Incoming connection from %s"), RemoteId().c_str()));
                 } else {
-                    TRACE(SDPServerFlow, (_T("Closed connection to %s"), RemoteId().c_str()));
+                    TRACE(Tracing::Verbose, (_T("Closed connection to %s"), RemoteId().c_str()));
                 }
             }
 
@@ -69,19 +68,19 @@ namespace SDP {
             {
                 // Provides all service handles that realize the particular service class ID in this server's SDP tree.
                 // Used for serializing SDP_ServiceSearchRequest and SDP_ServiceSearchAttributeRequest (combined with Serialize()).
-                TRACE(SDPServerFlow, (_T("Incoming service query for UUID %s for remote client %s..."),
+                TRACE(Tracing::Verbose, (_T("Incoming service query for UUID %s for remote client %s..."),
                                       uuid.ToString().c_str(), RemoteId().c_str()));
 
                 _server.Tree().Lock();
                 for (auto const& service : _server.Tree().Services()) {
                     if (service.Search(uuid) == true) {
                         serviceHandles.push_back(service.Handle());
-                        TRACE(SDPServerFlow, (_T("Found service 0x%08x"), service.Handle()));
+                        TRACE(Tracing::Verbose, (_T("Found service 0x%08x '%s'"), service.Handle(), service.Name().c_str()));
                     }
                 }
                 _server.Tree().Unlock();
 
-                TRACE(SDPServerFlow, (_T("Found %i services"), serviceHandles.size()));
+                TRACE(Tracing::Verbose, (_T("Found %i matching services"), serviceHandles.size()));
 
                 _lastActivity = Core::Time::Now().Ticks();
             }
@@ -89,10 +88,11 @@ namespace SDP {
             void Serialize(const uint32_t serviceHandle, const std::pair<uint16_t, uint16_t>& range, std::function<void(const uint16_t id, const Bluetooth::Buffer& buffer)> Store) const override
             {
                 using AttributeDescriptor = Bluetooth::SDP::Service::AttributeDescriptor;
+                uint16_t count = 0;
 
                 // Serializes attribute data for a service.
                 // Used for serializing SDP_ServiceAttributeRequest and SDP_ServiceSearchAttributeRequest (combined with Services()).
-                TRACE(SDPServerFlow, (_T("Incoming attribute range 0x%04x-0x%04x query for service 0x%08x for remote client %s..."),
+                TRACE(Tracing::Verbose, (_T("Incoming attribute range 0x%04x-0x%04x query for service 0x%08x for remote client %s..."),
                                         range.first, range.second, serviceHandle, RemoteId().c_str()));
 
                 _server.Tree().Lock();
@@ -103,12 +103,14 @@ namespace SDP {
                             id <= std::min(static_cast<uint16_t>(AttributeDescriptor::IconURL), range.second); id++)
                     {
                         Store(id, service->Serialize(id));
+                        count++;
                     }
 
                     // Secondly, see if the custom attributes are in the range.
                     for (auto const& attr : service->Attributes()) {
                         if ((attr.Id() >= std::max(static_cast<uint16_t>(0x100), range.first)) && (attr.Id() <= range.second)) {
                             Store(attr.Id(), attr.Value());
+                            count++;
                         }
                     }
 
@@ -116,6 +118,8 @@ namespace SDP {
                 _server.Tree().Unlock();
 
                 _lastActivity = Core::Time::Now().Ticks();
+
+                TRACE(Tracing::Verbose, (_T("Found %i matching attributes"), count));
             }
 
         private:
@@ -183,7 +187,8 @@ namespace SDP {
                     }
 
                     TRACE(Trace::Information, (_T("Started SDP Server, listening on %s, providing %i services"), node.QualifiedName().c_str(), Tree().Services().size()));
-                    A2DP::Dump<SDPServerFlow>(Tree());
+
+                    Tracing::Dump<Tracing::Verbose>(Tree());
                 } else {
                     result = Core::ERROR_GENERAL;
                 }
@@ -214,7 +219,7 @@ namespace SDP {
                 while (index.Next() == true) {
                     if (timeNow - index.Client()->LastActivity() >= _inactivityTimeout) {
                         // Close inactive connections
-                        TRACE(SDPServerFlow, (_T("Closing inactive connection to %s"), index.Client()->RemoteId().c_str()));
+                        TRACE(Tracing::Verbose, (_T("Closing inactive connection to %s"), index.Client()->RemoteId().c_str()));
                         index.Client()->Close(0);
                     }
                 }

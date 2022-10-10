@@ -5,14 +5,6 @@ configuration = JSON()
 configuration.add("controller", "BluetoothControl")
 configuration.add("latency", "@PLUGIN_BLUETOOTHAUDIOSINK_LATENCY@")
 
-if boolean("@PLUGIN_BLUETOOTHAUDIOSINK_SDPSERVICE@"):
-   sdpservice = JSON()
-   sdpservice.add("enable", "true")
-   sdpservice.add("name", "@PLUGIN_BLUETOOTHAUDIOSINK_SDPSERVICE_NAME@")
-   sdpservice.add("description", "@PLUGIN_BLUETOOTHAUDIOSINK_SDPSERVICE_DESCRIPTION@")
-   sdpservice.add("provider", "@PLUGIN_BLUETOOTHAUDIOSINK_SDPSERVICE_PROVIDER@")
-   configuration.add("sdpservice", sdpservice)
-
 codecs = JSON()
 LC_SBC = JSON()
 LC_SBC.add("preset", "@PLUGIN_BLUETOOTHAUDIOSINK_CODECSBC_PRESET@")
