@@ -72,7 +72,7 @@ namespace WPEFramework
             return message;
         }
 
-        void ResourceMonitor::Deinitialize(PluginHost::IShell *service)
+        void ResourceMonitor::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
         {
             ASSERT(_service == _service);
 
