@@ -39,10 +39,10 @@ def UUIDs():
         uuids.append(UUID("110d"))
 
     if "@PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SOURCE@":
-        uuids.append(UUID("110a", "@PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SOURCE@", "0x20"))
+        uuids.append(UUID("110a", "@PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SOURCE@"))
 
     if "@PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SINK@":
-        uuids.append(UUID("110b", "@PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SINK@"))
+        uuids.append(UUID("110b", "@PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SINK@", "0x20"))
 
     return uuids
 
