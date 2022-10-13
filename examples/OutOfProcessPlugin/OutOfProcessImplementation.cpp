@@ -21,6 +21,8 @@
 #include "OutOfProcessPlugin.h"
 #include <interfaces/ITimeSync.h>
 
+#include <thread>
+
 #ifdef __CORE_EXCEPTION_CATCHING__
 #include <stdexcept>
 #endif
@@ -28,8 +30,49 @@
 namespace WPEFramework {
 namespace Plugin {
 
+    class TooMuchInfo {
+        // -------------------------------------------------------------------
+        // This object should not be copied or assigned. Prevent the copy
+        // constructor and assignment constructor from being used. Compiler
+        // generated assignment and copy methods will be blocked by the
+        // following statments.
+        // Define them but do not implement them, compile error/link error.
+        // -------------------------------------------------------------------
+
+    public:
+        TooMuchInfo(const TCHAR formatter[], ...)
+        {
+            va_list ap;
+            va_start(ap, formatter);
+            Core::Format(_text, formatter, ap);
+            va_end(ap);
+        }
+        explicit TooMuchInfo(const string& text)
+            : _text(Core::ToString(text))
+        {
+        }
+        ~TooMuchInfo() = default;
+
+        TooMuchInfo(const TooMuchInfo& a_Copy) = delete;
+        TooMuchInfo& operator=(const TooMuchInfo& a_RHS) = delete;
+
+    public:
+        inline const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        inline uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        string _text;
+    };
+
     class OutOfProcessImplementation 
         : public Exchange::IBrowser
+        , public Exchange::IBrowserResources
         , public PluginHost::IStateControl
         , public Core::Thread {
     private:
@@ -416,8 +459,103 @@ POP_WARNING()
             _job.Submit();
         }
 
+        // IBrowserResources (added so we can test lengthty calls back to Thunder )
+
+        uint32_t Headers(IStringIterator*& header ) const override {
+            std::list<string> headers;
+            for(uint16_t i = 0; i<1000; ++i) {
+                string s("Header_");
+                s += std::to_string(i);
+                headers.emplace_back(std::move(s));
+            }
+
+            header = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(headers);
+
+            return Core::ERROR_NONE;
+        }
+        uint32_t Headers(IStringIterator* const header) override {
+            TRACE(Trace::Information, (_T("Headers update start")));
+            ASSERT(header != nullptr);
+            header->Reset(0);
+            string value;
+            while (header->Next(value) == true) {
+                TRACE(TooMuchInfo, (_T("Header [%s] processed"), value.c_str()));
+            }
+            TRACE(Trace::Information, (_T("Headers update finished")));
+            return Core::ERROR_NONE;
+        }
+
+        uint32_t UserScripts(IStringIterator*& uris ) const override {
+            std::list<string> scripts;
+            for(uint16_t i = 0; i<1000; ++i) {
+                string s("UserScripts_");
+                s += std::to_string(i);
+                scripts.emplace_back(std::move(s));
+            }
+
+            uris = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(scripts);
+
+            return Core::ERROR_NONE;
+        }
+
+        uint32_t UserScripts(IStringIterator* const uris) override {
+            TRACE(Trace::Information, (_T("UserScripts update start")));
+            ASSERT(uris != nullptr);
+            uris->Reset(0);
+            string value;
+            uint32_t i = 0;
+            uint32_t sleep = 10;
+            while (uris->Next(value) == true) {
+                if(i == 0) {
+                    sleep = stoi(value);
+                    printf("Huppel in impl using sleep %u\n", sleep);
+                }
+                TRACE(TooMuchInfo, (_T("UserScript [%s] processed"), value.c_str()));
+                if( ++i == 5000 ) {
+                    if(sleep == 0 ) {
+                        int* crash = nullptr;
+                        *crash = 10;
+                    } else if(sleep < 1000) {
+                        std::thread t([=](){
+                            std::this_thread::sleep_for(std::chrono::milliseconds(sleep));            
+                            int* crash = nullptr;
+                            *crash = 10;
+                        });
+                        t.detach();
+                    } 
+                }
+            }
+            TRACE(Trace::Information, (_T("UserScripts update finished")));
+            return Core::ERROR_NONE;
+        }
+
+        uint32_t UserStyleSheets(IStringIterator*& uris ) const override {
+            std::list<string> sheets;
+            for(uint16_t i = 0; i<1000; ++i) {
+                string s("UserStyleSheets_");
+                s += std::to_string(i);
+                sheets.emplace_back(std::move(s));
+            }
+
+            uris = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(sheets);
+
+            return Core::ERROR_NONE;
+        }
+        uint32_t UserStyleSheets(IStringIterator* const uris) override {
+            TRACE(Trace::Information, (_T("UserStyleSheets update start")));
+            ASSERT(uris != nullptr);
+            uris->Reset(0);
+            string value;
+            while (uris->Next(value) == true) {
+                TRACE(TooMuchInfo, (_T("UserStyleSheets [%s] processed"), value.c_str()));
+            }
+            return Core::ERROR_NONE;
+            TRACE(Trace::Information, (_T("UserStyleSheets update finished")));
+        }
+
         BEGIN_INTERFACE_MAP(OutOfProcessImplementation)
             INTERFACE_ENTRY(Exchange::IBrowser)
+            INTERFACE_ENTRY(Exchange::IBrowserResources)
             INTERFACE_ENTRY(PluginHost::IStateControl)
             INTERFACE_AGGREGATE(PluginHost::IPlugin::INotification,static_cast<IUnknown*>(&_sink))
         END_INTERFACE_MAP
