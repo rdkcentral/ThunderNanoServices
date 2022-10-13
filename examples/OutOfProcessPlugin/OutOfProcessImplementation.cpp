@@ -508,7 +508,6 @@ POP_WARNING()
             while (uris->Next(value) == true) {
                 if(i == 0) {
                     sleep = stoi(value);
-                    printf("Huppel in impl using sleep %u\n", sleep);
                 }
                 TRACE(TooMuchInfo, (_T("UserScript [%s] processed"), value.c_str()));
                 if( ++i == 5000 ) {
