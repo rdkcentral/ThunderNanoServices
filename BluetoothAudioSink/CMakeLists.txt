@@ -29,6 +29,11 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+set(PLUGIN_BLUETOOTHSDPSERVER_AUTOSTART true CACHE STRING "Autostart")
+set(PLUGIN_BLUETOOTHSDPSERVER_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
+set(PLUGIN_BLUETOOTHSDPSERVER_LATENCY 0 CACHE STRING "Device audio latency adjustment (in ms)")
+set(PLUGIN_BLUETOOTHAUDIOSINK_CODECSBC_PRESET "HQ" CACHE STRING "SBC codec quality preset")
+
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
