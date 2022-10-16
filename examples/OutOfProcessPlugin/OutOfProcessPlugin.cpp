@@ -33,7 +33,19 @@ namespace OutOfProcessPlugin {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(OutOfProcessPlugin, 1, 0);
+    namespace {
+
+        static Metadata<OutOfProcessPlugin> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<OutOfProcessPlugin::Data> jsonDataFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<OutOfProcessPlugin::Data>> jsonBodyDataFactory(4);
@@ -45,6 +57,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         ASSERT(_browser == nullptr);
+        ASSERT(_browserresources == nullptr);
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_connectionId == 0);
@@ -66,6 +79,54 @@ namespace Plugin {
         if (_browser == nullptr) {
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
+            _browserresources = _browser->QueryInterface<Exchange::IBrowserResources>();
+            if( _browserresources != nullptr) {
+                Exchange::JBrowserResources::Register(*this, _browserresources);
+                Register("bigupdate", [this](const Core::JSONRPC::Context&, const string& params){ 
+                    uint32_t updates = 5000;
+                    string sleep("100");
+                    if(params.empty() == false) {
+                        class Params : public Core::JSON::Container {
+                        public:
+                            Params(const Params&) = delete;
+                            Params& operator=(const Params&) = delete;
+
+                            Params()
+                                : Core::JSON::Container()
+                                , Updates(5000)
+                                , Sleep("100")
+                            {
+                                Add(_T("updates"), &Updates);
+                                Add(_T("sleep"), &Sleep);
+                            }
+                            ~Params() override = default;
+
+                        public:
+                            Core::JSON::DecUInt32 Updates;
+                            Core::JSON::String Sleep;
+                        } paramscontainer;
+                        paramscontainer.FromString(params);
+                        updates = paramscontainer.Updates.Value();
+                        sleep = paramscontainer.Sleep.Value();
+                    }
+
+                    std::list<string> _elements;
+                    for(uint32_t i = 0; i<updates; ++i) {
+                        string s("UserScripts_Updated_");
+                        s += std::to_string(i);
+                        if( i == 0 ) {
+                            s = sleep;
+                        }
+                        _elements.push_back(s);
+                    }
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::Service<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
+                    if ((_params != nullptr)) {
+                        _browserresources->UserScripts(_params);
+                        _params->Release();
+                    }
+                }); 
+            }
+
             _browser->Register(_notification);
 
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
@@ -73,7 +134,6 @@ namespace Plugin {
             if (stateControl != nullptr) {
 
                 _state = stateControl;
-                _state->AddRef();
 
                 _state->Configure(_service);
                 _state->Register(_notification);
@@ -115,6 +175,11 @@ namespace Plugin {
         _service->DisableWebServer();
 
         if(_browser != nullptr) {
+            if( _browserresources != nullptr) {
+                Exchange::JBrowserResources::Unregister(*this);
+                _browserresources->Release();
+                _browserresources = nullptr;
+            }
             _browser->Unregister(_notification);
 
             if(_memory != nullptr) {

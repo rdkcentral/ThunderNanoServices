@@ -153,7 +153,7 @@ namespace Plugin {
         _service = nullptr;
     }
 
-    /* virtual */ void BluetoothSDPServer::Activated(const string& callsign, PluginHost::IShell* service)
+    /* virtual */ void BluetoothSDPServer::Activated(const string& callsign, PluginHost::IShell* /* service */)
     {
         _lock.Lock();
 
@@ -170,7 +170,7 @@ namespace Plugin {
         _lock.Unlock();
     }
 
-    /* virtual */ void BluetoothSDPServer::Deactivated(const string& callsign, PluginHost::IShell*)
+    /* virtual */ void BluetoothSDPServer::Deactivated(const string& callsign, PluginHost::IShell* /* service */)
     {
         _lock.Lock();
 
