@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A BluetoothControl plugin for Thunder framework.
+BluetoothControl plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -78,18 +78,24 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkBluetoothControl.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.interface | number | <sup>*(optional)*</sup> ID of interface |
-| configuration?.name | String | <sup>*(optional)*</sup> Name of interface |
-| configuration?.class | number | <sup>*(optional)*</sup> Number of Class |
+| configuration?.interface | number | <sup>*(optional)*</sup> ID of the local Bluetooth interface |
 | configuration?.autopasskeyconfirm | boolean | <sup>*(optional)*</sup> Enable autopass confirm |
 | configuration?.persistmac | boolean | <sup>*(optional)*</sup> Enable persistent MAC |
+| configuration?.name | String | <sup>*(optional)*</sup> Name of the local Bluetooth interface |
+| configuration?.shortname | String | <sup>*(optional)*</sup> Shortened name of the local Bluetooth interface |
+| configuration?.class | number | <sup>*(optional)*</sup> Class of device value of the local Bluetooth interface |
+| configuration?.uuids | array | <sup>*(optional)*</sup> UUIDs to include in the outbound EIR/AD blocks |
+| configuration?.uuids[#] | object | <sup>*(optional)*</sup> (UUID entry) |
+| configuration?.uuids[#]?.callsign | string | <sup>*(optional)*</sup> Callsign of the plugin providing the service |
+| configuration?.uuids[#]?.uuid | string | <sup>*(optional)*</sup> UUID value (short or long) |
+| configuration?.uuids[#]?.service | integer | <sup>*(optional)*</sup> Corresponding service bit in Class of Device value |
 
 <a name="head.Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- [BluetoothControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/BluetoothControl.json)
+- [BluetoothControl.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/BluetoothControl.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -100,22 +106,141 @@ BluetoothControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [scan](#method.scan) | Starts active scanning for Bluetooth devices |
-| [stopscanning](#method.stopscanning) | Stops scanning procedure |
+| [setdiscoverable](#method.setdiscoverable) | Starts advertising (or inquiry scanning), making the local interface visible by nearby Bluetooth devices |
+| [stopdiscoverable](#method.stopdiscoverable) | Stops advertising (or inquiry scanning) operation |
+| [scan](#method.scan) | Starts active discovery (or inquiry) of nearby Bluetooth devices |
+| [stopscanning](#method.stopscanning) | Stops discovery (or inquiry) operation |
 | [connect](#method.connect) | Connects to a Bluetooth device |
 | [disconnect](#method.disconnect) | Disconnects from a connected Bluetooth device |
 | [pair](#method.pair) | Pairs a Bluetooth device |
 | [unpair](#method.unpair) | Unpairs a paired Bluetooth device |
-| [abortpairing](#method.abortpairing) | Aborts the pairing process |
-| [pincode](#method.pincode) | Specifies a PIN code for authentication during a legacy pairing process |
-| [passkey](#method.passkey) | Specifies a passkey for authentication during a pairing process |
+| [abortpairing](#method.abortpairing) | Aborts pairing operation |
+| [providepincode](#method.providepincode) | Provides a PIN-code for authentication during a legacy pairing process |
+| [providepasskey](#method.providepasskey) | Provides a passkey for authentication during a pairing process |
 | [confirmpasskey](#method.confirmpasskey) | Confirms a passkey for authentication during a pairing process |
+| [forget](#method.forget) | Forgets a known Bluetooth device |
+| [getdevicelist](#method.getdevicelist) | Retrieves a list of known remote Bluetooth devices |
+| [getdeviceinfo](#method.getdeviceinfo) | Retrieves detailed information about a known Bluetooth device |
 
+
+<a name="method.setdiscoverable"></a>
+## *setdiscoverable [<sup>method</sup>](#head.Methods)*
+
+Starts advertising (or inquiry scanning), making the local interface visible by nearby Bluetooth devices.
+
+### Description
+
+Please note that discoverable state in *Limited* mode for Bluetooth Classic is bounded to 30 seconds only.
+
+Also see: [discoverablestarted](#event.discoverablestarted), [discoverablecomplete](#event.discoverablecomplete)
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.type | string | Discoverable type (must be one of the following: *Classic*, *LowEnergy*) |
+| params?.mode | string | <sup>*(optional)*</sup> Discoverable mode (must be one of the following: *General*, *Limited*) (default: *General*) |
+| params?.connectable | boolean | <sup>*(optional)*</sup> Selects connectable advertising (true, *LowEnergy* only) (default: *False*) |
+| params?.duration | integer | <sup>*(optional)*</sup> Duration of the discoverable operation (in seconds) (default: *30*) |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 1 | ```ERROR_GENERAL``` | Failed set discoverable state |
+| 12 | ```ERROR_INPROGRESS``` | Discoverable state of selected type is already in progress |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "BluetoothControl.1.setdiscoverable",
+    "params": {
+        "type": "LowEnergy",
+        "mode": "General",
+        "connectable": false,
+        "duration": 30
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": null
+}
+```
+
+<a name="method.stopdiscoverable"></a>
+## *stopdiscoverable [<sup>method</sup>](#head.Methods)*
+
+Stops advertising (or inquiry scanning) operation.
+
+Also see: [discoverablecomplete](#event.discoverablecomplete)
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.type | string | Discoverable type (must be one of the following: *Classic*, *LowEnergy*) |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 1 | ```ERROR_GENERAL``` | Failed to top scanning |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Adapter is in not discoverable state of selected type |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "BluetoothControl.1.stopdiscoverable",
+    "params": {
+        "type": "LowEnergy"
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": null
+}
+```
 
 <a name="method.scan"></a>
 ## *scan [<sup>method</sup>](#head.Methods)*
 
-Starts active scanning for Bluetooth devices.
+Starts active discovery (or inquiry) of nearby Bluetooth devices.
 
 Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
 
@@ -124,9 +249,10 @@ Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | params | object |  |
-| params.type | string | Bluetooth device type (must be one of the following: *Classic*, *LowEnergy*) |
-| params?.timeout | number | <sup>*(optional)*</sup> Duration of the scan (in seconds); default: 10 seconds |
-| params?.duration | number | <sup>*(optional)*</sup> Duration of the scan (in seconds); default: 10 seconds |
+| params.type | string | Scan type (must be one of the following: *Classic*, *LowEnergy*) |
+| params?.mode | string | <sup>*(optional)*</sup> Scan mode (must be one of the following: *General*, *Limited*) (default: *General*) |
+| params?.timeout | integer | <sup>*(deprecated)*</sup> <sup>*(optional)*</sup> Duration of the scan (in seconds) (default: *10*) |
+| params?.duration | integer | <sup>*(optional)*</sup> Duration of the scan (in seconds) (default: *10*) |
 
 ### Result
 
@@ -139,7 +265,7 @@ Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 1 | ```ERROR_GENERAL``` | Failed to scan |
-| 12 | ```ERROR_INPROGRESS``` | Scan already in progress |
+| 12 | ```ERROR_INPROGRESS``` | Scan of selected type is already in progress |
 
 ### Example
 
@@ -152,7 +278,7 @@ Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
     "method": "BluetoothControl.1.scan",
     "params": {
         "type": "LowEnergy",
-        "timeout": 60,
+        "mode": "General",
         "duration": 60
     }
 }
@@ -171,13 +297,16 @@ Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
 <a name="method.stopscanning"></a>
 ## *stopscanning [<sup>method</sup>](#head.Methods)*
 
-Stops scanning procedure.
+Stops discovery (or inquiry) operation.
 
 Also see: [scancomplete](#event.scancomplete)
 
 ### Parameters
 
-This method takes no parameters.
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params?.type | string | <sup>*(optional)*</sup> Scan type (must be one of the following: *Classic*, *LowEnergy*) (default: *LowEnergy*) |
 
 ### Result
 
@@ -190,7 +319,7 @@ This method takes no parameters.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 | 1 | ```ERROR_GENERAL``` | Failed to top scanning |
-| 5 | ```ERROR_ILLEGAL_STATE``` | No scan is in progress |
+| 5 | ```ERROR_ILLEGAL_STATE``` | Scan of selected type is not in progress |
 
 ### Example
 
@@ -200,7 +329,10 @@ This method takes no parameters.
 {
     "jsonrpc": "2.0",
     "id": 42,
-    "method": "BluetoothControl.1.stopscanning"
+    "method": "BluetoothControl.1.stopscanning",
+    "params": {
+        "type": "LowEnergy"
+    }
 }
 ```
 
@@ -221,7 +353,7 @@ Connects to a Bluetooth device.
 
 ### Description
 
-If the device is not available it will be automatically connected as soon it becomes available.
+This call also enables automatic reconnection of the device. If the device is currently not available it will be automatically connected as soon it becomes available.
 
 Also see: [devicestatechange](#event.devicestatechange)
 
@@ -231,6 +363,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params?.type | string | <sup>*(optional)*</sup> Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) (default: *LowEnergy*) |
 
 ### Result
 
@@ -258,7 +391,8 @@ Also see: [devicestatechange](#event.devicestatechange)
     "id": 42,
     "method": "BluetoothControl.1.connect",
     "params": {
-        "address": "81:6F:B0:91:9B:FE"
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy"
     }
 }
 ```
@@ -280,7 +414,7 @@ Disconnects from a connected Bluetooth device.
 
 ### Description
 
-Device will cease to re-connect automatically.
+This call also disables automatic reconnection. If the device is currently not connected it will not be reconnected when it becomes available.
 
 Also see: [devicestatechange](#event.devicestatechange)
 
@@ -290,6 +424,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params?.type | string | <sup>*(optional)*</sup> Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) (default: *LowEnergy*) |
 
 ### Result
 
@@ -315,7 +450,8 @@ Also see: [devicestatechange](#event.devicestatechange)
     "id": 42,
     "method": "BluetoothControl.1.disconnect",
     "params": {
-        "address": "81:6F:B0:91:9B:FE"
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy"
     }
 }
 ```
@@ -337,7 +473,7 @@ Pairs a Bluetooth device.
 
 ### Description
 
-The client may expect PIN or passkey requests during the pairing process. The process can be cancelled any time by calling the *abortpairing* method
+PIN-code or passkey requests may appear during the pairing process. The process can be cancelled any time by calling the *abortpairing* method.
 
 Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event.pincoderequest), [passkeyrequest](#event.passkeyrequest), [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 
@@ -347,7 +483,9 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
-| params?.timeout | integer | <sup>*(optional)*</sup> Maximum time allowed for the pairing process to complete (in seconds); default: 20 seconds |
+| params?.type | string | <sup>*(optional)*</sup> Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) (default: *LowEnergy*) |
+| params?.capabilities | string | <sup>*(optional)*</sup> Pairing capabilities (must be one of the following: *DisplayOnly*, *DisplayYesNo*, *KeyboardOnly*, *NoInputNoOutput*, *KeyboardDisplay*) (default: *NoInputNoOutput*) |
+| params?.timeout | integer | <sup>*(optional)*</sup> Maximum time allowed for the pairing process to complete (in seconds) (default: *20*) |
 
 ### Result
 
@@ -374,6 +512,8 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
     "method": "BluetoothControl.1.pair",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy",
+        "capabilities": "NoInputNoOutput",
         "timeout": 60
     }
 }
@@ -402,6 +542,7 @@ Also see: [devicestatechange](#event.devicestatechange)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params?.type | string | <sup>*(optional)*</sup> Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) (default: *LowEnergy*) |
 
 ### Result
 
@@ -426,7 +567,8 @@ Also see: [devicestatechange](#event.devicestatechange)
     "id": 42,
     "method": "BluetoothControl.1.unpair",
     "params": {
-        "address": "81:6F:B0:91:9B:FE"
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy"
     }
 }
 ```
@@ -444,7 +586,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 <a name="method.abortpairing"></a>
 ## *abortpairing [<sup>method</sup>](#head.Methods)*
 
-Aborts the pairing process.
+Aborts pairing operation.
+
+Also see: [devicestatechange](#event.devicestatechange)
 
 ### Parameters
 
@@ -452,6 +596,7 @@ Aborts the pairing process.
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params?.type | string | <sup>*(optional)*</sup> Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) (default: *LowEnergy*) |
 
 ### Result
 
@@ -476,7 +621,8 @@ Aborts the pairing process.
     "id": 42,
     "method": "BluetoothControl.1.abortpairing",
     "params": {
-        "address": "81:6F:B0:91:9B:FE"
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy"
     }
 }
 ```
@@ -491,16 +637,16 @@ Aborts the pairing process.
 }
 ```
 
-<a name="method.pincode"></a>
-## *pincode [<sup>method</sup>](#head.Methods)*
+<a name="method.providepincode"></a>
+## *providepincode [<sup>method</sup>](#head.Methods)*
 
-Specifies a PIN code for authentication during a legacy pairing process.
+Provides a PIN-code for authentication during a legacy pairing process.
 
 ### Description
 
-This method is to be called upon receiving a *pincoderequest* event during a legacy pairing process. If the specified PIN code is incorrect the pairing process will be aborted.
+This method should be called upon receiving a *pincoderequest* event during a legacy pairing process. If the specified PIN-code is incorrect the pairing process will be aborted.
 
-Also see: [pincoderequest](#event.pincoderequest)
+Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event.pincoderequest)
 
 ### Parameters
 
@@ -508,7 +654,8 @@ Also see: [pincoderequest](#event.pincoderequest)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
-| params.secret | string | A PIN code string, typically consisting of (but not limited to) four decimal digits |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+| params.secret | string | A PIN-code string typically consisting of (but not limited to) four decimal digits |
 
 ### Result
 
@@ -531,9 +678,10 @@ Also see: [pincoderequest](#event.pincoderequest)
 {
     "jsonrpc": "2.0",
     "id": 42,
-    "method": "BluetoothControl.1.pincode",
+    "method": "BluetoothControl.1.providepincode",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic",
         "secret": "0000"
     }
 }
@@ -549,16 +697,16 @@ Also see: [pincoderequest](#event.pincoderequest)
 }
 ```
 
-<a name="method.passkey"></a>
-## *passkey [<sup>method</sup>](#head.Methods)*
+<a name="method.providepasskey"></a>
+## *providepasskey [<sup>method</sup>](#head.Methods)*
 
-Specifies a passkey for authentication during a pairing process.
+Provides a passkey for authentication during a pairing process.
 
 ### Description
 
-This method is to be called upon receiving a *passkeyrequest* event during a pairing process. If the specified passkey is incorrect or empty the pairing process will be aborted.
+This method should be called upon receiving a *passkeyrequest* event during pairing process. If the specified passkey is incorrect or empty the pairing process will be aborted.
 
-Also see: [passkeyrequest](#event.passkeyrequest)
+Also see: [devicestatechange](#event.devicestatechange), [passkeyrequest](#event.passkeyrequest)
 
 ### Parameters
 
@@ -566,6 +714,7 @@ Also see: [passkeyrequest](#event.passkeyrequest)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
 | params.secret | integer | A six-digit decimal number passkey |
 
 ### Result
@@ -589,9 +738,10 @@ Also see: [passkeyrequest](#event.passkeyrequest)
 {
     "jsonrpc": "2.0",
     "id": 42,
-    "method": "BluetoothControl.1.passkey",
+    "method": "BluetoothControl.1.providepasskey",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic",
         "secret": 123456
     }
 }
@@ -614,9 +764,9 @@ Confirms a passkey for authentication during a pairing process.
 
 ### Description
 
-This method is to be called upon receiving a *passkeyconfirmationrequest* event during a pairing process. If the confirmation is negative or the pairing process will be aborted.
+This method should be called upon receiving a *passkeyconfirmationrequest* event during a pairing process. If the confirmation is negative the pairing process will be aborted.
 
-Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
+Also see: [devicestatechange](#event.devicestatechange), [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 
 ### Parameters
 
@@ -624,6 +774,7 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
 | params.iscorrect | boolean | Specifies if the passkey sent in *passkeyconfirmrequest* event is correct (true) or incorrect (false) |
 
 ### Result
@@ -650,6 +801,7 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
     "method": "BluetoothControl.1.confirmpasskey",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic",
         "iscorrect": true
     }
 }
@@ -665,6 +817,179 @@ Also see: [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 }
 ```
 
+<a name="method.forget"></a>
+## *forget [<sup>method</sup>](#head.Methods)*
+
+Forgets a known Bluetooth device.
+
+### Description
+
+The device will no longer be listed and its status tracked. If the device is connected and/or paired it will be disconnected and unpaired.
+
+Also see: [devicestatechange](#event.devicestatechange)
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.address | string | Bluetooth address |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "BluetoothControl.1.forget",
+    "params": {
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy"
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": null
+}
+```
+
+<a name="method.getdevicelist"></a>
+## *getdevicelist [<sup>method</sup>](#head.Methods)*
+
+Retrieves a list of known remote Bluetooth devices.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | array | List of devices |
+| result[#] | object | (device entry) |
+| result[#].address | string | Bluetooth address |
+| result[#].type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "BluetoothControl.1.getdevicelist"
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": [
+        {
+            "address": "81:6F:B0:91:9B:FE",
+            "type": "LowEnergy"
+        }
+    ]
+}
+```
+
+<a name="method.getdeviceinfo"></a>
+## *getdeviceinfo [<sup>method</sup>](#head.Methods)*
+
+Retrieves detailed information about a known Bluetooth device.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.address | string | Bluetooth address |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | object |  |
+| result.address | string | Bluetooth address |
+| result.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+| result?.name | string | <sup>*(optional)*</sup> Name of the device |
+| result?.class | integer | <sup>*(optional)*</sup> Class of device |
+| result?.appearance | integer | <sup>*(optional)*</sup> Appearance value |
+| result?.services | array | <sup>*(optional)*</sup> List of supported services |
+| result?.services[#] | string | <sup>*(optional)*</sup> Service UUID |
+| result.connected | boolean | Indicates if the device is currently connected |
+| result.paired | boolean | Indicates if the device is currently paired |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
+
+### Example
+
+#### Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "BluetoothControl.1.getdeviceinfo",
+    "params": {
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy"
+    }
+}
+```
+
+#### Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": {
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic",
+        "name": "Thunder Bluetooth Speaker",
+        "class": 2360324,
+        "appearance": 2113,
+        "services": [
+            "110a"
+        ],
+        "connected": true,
+        "paired": true
+    }
+}
+```
+
 <a name="head.Properties"></a>
 # Properties
 
@@ -676,8 +1001,8 @@ BluetoothControl interface properties:
 | :-------- | :-------- |
 | [adapters](#property.adapters) <sup>RO</sup> | List of local Bluetooth adapters |
 | [adapter](#property.adapter) <sup>RO</sup> | Local Bluetooth adapter information |
-| [devices](#property.devices) <sup>RO</sup> | List of known remote Bluetooth devices |
-| [device](#property.device) <sup>RO</sup> | Remote Bluetooth device information |
+| <sup>deprecated</sup> [devices](#property.devices) <sup>RO</sup> | List of known remote Bluetooth devices |
+| <sup>deprecated</sup> [device](#property.device) <sup>RO</sup> | Remote Bluetooth device information |
 
 
 <a name="property.adapters"></a>
@@ -689,10 +1014,12 @@ Provides access to the list of local Bluetooth adapters.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of local Bluetooth adapters |
-| (property)[#] | number | Adapter ID |
+| result | array | List of local Bluetooth adapters |
+| result[#] | integer | Adapter ID |
 
 ### Example
 
@@ -727,23 +1054,28 @@ Provides access to the local Bluetooth adapter information.
 
 ### Value
 
+> The *adapter id* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.adapter@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Local Bluetooth adapter information |
-| (property).interface | string | Ndapter interface name |
-| (property).address | string | Bluetooth address |
-| (property).version | number | Device version |
-| (property)?.manufacturer | number | <sup>*(optional)*</sup> Device manufacturer Company Identifer |
-| (property)?.name | string | <sup>*(optional)*</sup> Device name |
-| (property)?.shortname | string | <sup>*(optional)*</sup> Device short name |
-
-> The *adapter id* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.adapter@0*.
+| result | object | Local Bluetooth adapter information |
+| result.id | integer | Interface ID number |
+| result.interface | string | Interface name |
+| result.address | string | Bluetooth address |
+| result.type | string | Adapter type (must be one of the following: *Classic*, *LowEnergy*, *Dual*) |
+| result.version | integer | Version |
+| result?.manufacturer | integer | <sup>*(optional)*</sup> Manufacturer company identifer |
+| result?.class | integer | <sup>*(optional)*</sup> Class of device |
+| result?.name | string | <sup>*(optional)*</sup> Name |
+| result?.shortname | string | <sup>*(optional)*</sup> Short name |
 
 ### Errors
 
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown device |
+| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown adapter device |
 
 ### Example
 
@@ -764,11 +1096,14 @@ Provides access to the local Bluetooth adapter information.
     "jsonrpc": "2.0",
     "id": 42,
     "result": {
+        "id": 0,
         "interface": "hci0",
         "address": "81:6F:B0:91:9B:FE",
+        "type": "Dual",
         "version": 8,
-        "manufacturer": 0,
-        "name": "Thunder",
+        "manufacturer": 15,
+        "class": 1060,
+        "name": "Thunder Bluetooth Controller",
         "shortname": "Thunder"
     }
 }
@@ -781,12 +1116,16 @@ Provides access to the list of known remote Bluetooth devices.
 
 > This property is **read-only**.
 
+> This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
+
 ### Value
+
+### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of known remote Bluetooth devices |
-| (property)[#] | string | Bluetooth address |
+| result | array | List of known remote Bluetooth devices |
+| result[#] | string | Bluetooth address |
 
 ### Example
 
@@ -819,18 +1158,26 @@ Provides access to the remote Bluetooth device information.
 
 > This property is **read-only**.
 
+> This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
+
 ### Value
+
+> The *device address* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.device@81:6F:B0:91:9B:FE*.
+
+### Result
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Remote Bluetooth device information |
-| (property).name | string | Name of the device |
-| (property).type | string | Bluetooth device type (must be one of the following: *Classic*, *LowEnergy*) |
-| (property)?.class | integer | <sup>*(optional)*</sup> Class of device (3 octets) |
-| (property).connected | boolean | Denotes if the device is currently connected to host |
-| (property).paired | boolean | Denotes if the device is currently paired with host |
-
-> The *device address* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.device@81:6F:B0:91:9B:FE*.
+| result | object | Remote Bluetooth device information |
+| result.address | string | Bluetooth address |
+| result.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+| result?.name | string | <sup>*(optional)*</sup> Name of the device |
+| result?.class | integer | <sup>*(optional)*</sup> Class of device |
+| result?.appearance | integer | <sup>*(optional)*</sup> Appearance value |
+| result?.services | array | <sup>*(optional)*</sup> List of supported services |
+| result?.services[#] | string | <sup>*(optional)*</sup> Service UUID |
+| result.connected | boolean | Indicates if the device is currently connected |
+| result.paired | boolean | Indicates if the device is currently paired |
 
 ### Errors
 
@@ -857,9 +1204,14 @@ Provides access to the remote Bluetooth device information.
     "jsonrpc": "2.0",
     "id": 42,
     "result": {
-        "name": "Acme Bluetooth Device",
-        "type": "LowEnergy",
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic",
+        "name": "Thunder Bluetooth Speaker",
         "class": 2360324,
+        "appearance": 2113,
+        "services": [
+            "110a"
+        ],
         "connected": true,
         "paired": true
     }
@@ -877,18 +1229,78 @@ BluetoothControl interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [scanstarted](#event.scanstarted) | Notifies about start scanning |
-| [scancomplete](#event.scancomplete) | Notifies about scan completion |
-| [devicestatechange](#event.devicestatechange) | Notifies about device state change |
-| [pincoderequest](#event.pincoderequest) | Notifies about a PIN code request |
-| [passkeyrequest](#event.passkeyrequest) | Notifies about a passkey request |
-| [passkeyconfirmrequest](#event.passkeyconfirmrequest) | Notifies about a passkey confirmation request |
+| [discoverablestarted](#event.discoverablestarted) | Notifies of entering the discoverable state |
+| [discoverablecomplete](#event.discoverablecomplete) | Notifies of leaving the discoverable state |
+| [scanstarted](#event.scanstarted) | Notifies of scan start |
+| [scancomplete](#event.scancomplete) | Notifies of scan completion |
+| [devicestatechange](#event.devicestatechange) | Notifies of device state changes |
+| [pincoderequest](#event.pincoderequest) | Notifies of a PIN code request |
+| [passkeyrequest](#event.passkeyrequest) | Notifies of a passkey request |
+| [passkeyconfirmrequest](#event.passkeyconfirmrequest) | Notifies of a passkey confirmation request |
 
+
+<a name="event.discoverablestarted"></a>
+## *discoverablestarted [<sup>event</sup>](#head.Notifications)*
+
+Notifies of entering the discoverable state.
+
+### Description
+
+Register to this event to be notified about entering the discoverable state
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.type | string | Discoverable type (must be one of the following: *Classic*, *LowEnergy*) |
+| params.mode | string | Discoverable mode (must be one of the following: *General*, *Limited*) |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.discoverablestarted",
+    "params": {
+        "type": "LowEnergy",
+        "mode": "General"
+    }
+}
+```
+
+<a name="event.discoverablecomplete"></a>
+## *discoverablecomplete [<sup>event</sup>](#head.Notifications)*
+
+Notifies of leaving the discoverable state.
+
+### Description
+
+Register to this event to be notified about leaving the discoverable state
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.type | string | Discoverable type (must be one of the following: *Classic*, *LowEnergy*) |
+
+### Example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "client.events.1.discoverablecomplete",
+    "params": {
+        "type": "LowEnergy"
+    }
+}
+```
 
 <a name="event.scanstarted"></a>
 ## *scanstarted [<sup>event</sup>](#head.Notifications)*
 
-Notifies about start scanning.
+Notifies of scan start.
 
 ### Description
 
@@ -896,21 +1308,29 @@ Register to this event to be notified about device scan start
 
 ### Parameters
 
-This event carries no parameters.
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.type | string | Scan type (must be one of the following: *Classic*, *LowEnergy*) |
+| params?.mode | string | <sup>*(optional)*</sup> Scan mode (must be one of the following: *General*, *Limited*) (default: *General*) |
 
 ### Example
 
 ```json
 {
     "jsonrpc": "2.0",
-    "method": "client.events.1.scanstarted"
+    "method": "client.events.1.scanstarted",
+    "params": {
+        "type": "LowEnergy",
+        "mode": "General"
+    }
 }
 ```
 
 <a name="event.scancomplete"></a>
 ## *scancomplete [<sup>event</sup>](#head.Notifications)*
 
-Notifies about scan completion.
+Notifies of scan completion.
 
 ### Description
 
@@ -918,21 +1338,27 @@ Register to this event to be notified about device scan completion
 
 ### Parameters
 
-This event carries no parameters.
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.type | string | Scan type (must be one of the following: *Classic*, *LowEnergy*) |
 
 ### Example
 
 ```json
 {
     "jsonrpc": "2.0",
-    "method": "client.events.1.scancomplete"
+    "method": "client.events.1.scancomplete",
+    "params": {
+        "type": "LowEnergy"
+    }
 }
 ```
 
 <a name="event.devicestatechange"></a>
 ## *devicestatechange [<sup>event</sup>](#head.Notifications)*
 
-Notifies about device state change.
+Notifies of device state changes.
 
 ### Description
 
@@ -944,6 +1370,7 @@ Register to this event to be notified about device state changes
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
 | params.state | string | Device state (must be one of the following: *Pairing*, *Paired*, *Unpaired*, *Connected*, *Disconnected*) |
 | params?.disconnectreason | string | <sup>*(optional)*</sup> Disconnection reason in case of *Disconnected* event (must be one of the following: *ConnectionTimeout*, *AuthenticationFailure*, *RemoteLowOnResources*, *RemotePoweredOff*, *TerminatedByRemote*, *TerminatedByHost*) |
 
@@ -955,6 +1382,7 @@ Register to this event to be notified about device state changes
     "method": "client.events.1.devicestatechange",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy",
         "state": "Disconnected",
         "disconnectreason": "ConnectionTimeout"
     }
@@ -964,11 +1392,11 @@ Register to this event to be notified about device state changes
 <a name="event.pincoderequest"></a>
 ## *pincoderequest [<sup>event</sup>](#head.Notifications)*
 
-Notifies about a PIN code request.
+Notifies of a PIN code request.
 
 ### Description
 
-Register to this event to be notified about PIN code requests during a legacy pairing process. Upon receiving this event the client is required to respond with a *pincode* call in order to complete the pairing procedure. The PIN code value would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.<br><br>Note that this event will never be send for a Bluetooth LowEnergy device.
+Register to this event to be notified about PIN code requests during a legacy pairing process. Upon receiving this event the client is required to respond with a *providepincode* call in order to complete the pairing procedure. The PIN code value would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.<br><br>Note that this event will never be send for a Bluetooth LowEnergy device
 
 ### Parameters
 
@@ -976,6 +1404,7 @@ Register to this event to be notified about PIN code requests during a legacy pa
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
 
 ### Example
 
@@ -984,7 +1413,8 @@ Register to this event to be notified about PIN code requests during a legacy pa
     "jsonrpc": "2.0",
     "method": "client.events.1.pincoderequest",
     "params": {
-        "address": "81:6F:B0:91:9B:FE"
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic"
     }
 }
 ```
@@ -992,11 +1422,11 @@ Register to this event to be notified about PIN code requests during a legacy pa
 <a name="event.passkeyrequest"></a>
 ## *passkeyrequest [<sup>event</sup>](#head.Notifications)*
 
-Notifies about a passkey request.
+Notifies of a passkey request.
 
 ### Description
 
-Register to this event to be notified about passkey requests that may be required during a pairing process. Upon receiving this event the client is required to respond with a *passkey* call in order to complete the pairing procedure. The passkey value would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
+Register to this event to be notified about passkey requests that may be required during a pairing process. Upon receiving this event the client is required to respond with a *providepasskey* call in order to complete the pairing procedure. The passkey value would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted
 
 ### Parameters
 
@@ -1004,6 +1434,7 @@ Register to this event to be notified about passkey requests that may be require
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
 
 ### Example
 
@@ -1012,7 +1443,8 @@ Register to this event to be notified about passkey requests that may be require
     "jsonrpc": "2.0",
     "method": "client.events.1.passkeyrequest",
     "params": {
-        "address": "81:6F:B0:91:9B:FE"
+        "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic"
     }
 }
 ```
@@ -1020,11 +1452,11 @@ Register to this event to be notified about passkey requests that may be require
 <a name="event.passkeyconfirmrequest"></a>
 ## *passkeyconfirmrequest [<sup>event</sup>](#head.Notifications)*
 
-Notifies about a passkey confirmation request.
+Notifies of a passkey confirmation request.
 
 ### Description
 
-Register to this event to be notified about passkey confirmation requests that may required during a pairing process. Upon receiving this event the client is required to respond with a *passkeyconfirm* call in order to complete the pairing procedure. The passkey confirmation would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
+Register to this event to be notified about passkey confirmation requests that may required during a pairing process. Upon receiving this event the client is required to respond with a *passkeyconfirm* call in order to complete the pairing procedure. The passkey confirmation would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted
 
 ### Parameters
 
@@ -1032,7 +1464,8 @@ Register to this event to be notified about passkey confirmation requests that m
 | :-------- | :-------- | :-------- |
 | params | object |  |
 | params.address | string | Bluetooth address |
-| params.secret | integer | A six-digit decimal number passkey sent by the remote device for confirmation |
+| params.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+| params.secret | integer | A six-digit decimal number passkey sent by the remote device for confirmation; may be 0 for a simple accept/forbid paring request |
 
 ### Example
 
@@ -1042,6 +1475,7 @@ Register to this event to be notified about passkey confirmation requests that m
     "method": "client.events.1.passkeyconfirmrequest",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        "type": "Classic",
         "secret": 123456
     }
 }
