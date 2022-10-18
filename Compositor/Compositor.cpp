@@ -343,7 +343,7 @@ namespace Plugin {
             if (index.Next() == true) {
                 if (index.Current() == _T("Resolution")) { /* http://<ip>/Service/Compositor/Resolution/3 --> 720p*/
                     if (index.Next() == true) {
-                        Exchange::IComposition::ScreenResolution format(Exchange::IComposition::ScreenResolution_Unknown);
+                        Exchange::IComposition::ScreenResolution format(Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown);
                         uint32_t number(Core::NumberType<uint32_t>(index.Current()).Value());
 
                         if ((number != 0) && (number < 100)) {
@@ -355,7 +355,7 @@ namespace Plugin {
                                 format = value.Value();
                             }
                         }
-                        if (format != Exchange::IComposition::ScreenResolution_Unknown) {
+                        if (format != Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown) {
                             Resolution(format);
                         } else {
                             result->ErrorCode = Web::STATUS_BAD_REQUEST;
