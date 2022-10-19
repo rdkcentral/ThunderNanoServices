@@ -2902,8 +2902,8 @@ namespace Plugin {
 
         glViewport ( static_cast < GLint > ( quirk_x ) , static_cast < GLint > ( quirk_y ) , static_cast < GLsizei > ( quirk_width ) , static_cast < GLsizei > ( quirk_height ) );
 #else
-        static_assert ( narrowing < decltype ( width ) , Glsizei , true > :: value != true );
-        static_assert ( narrowing < decltype ( height ) , Glsizei , true > :: value != true );
+        static_assert ( narrowing < decltype ( width ) , GLsizei , true > :: value != true );
+        static_assert ( narrowing < decltype ( height ) , GLsizei , true > :: value != true );
 
         glViewport ( 0 , 0 , static_cast < GLsizei > ( width ) , static_cast < GLsizei > ( height ) );
 #endif
@@ -4094,6 +4094,8 @@ namespace Plugin {
                 case Exchange::IComposition::ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
                 case Exchange::IComposition::ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
                                                                             rate = 50; break;
+                case Exchange::IComposition::ScreenResolution_2160p30Hz : // 4K, 3840x2160 progressive @ 30 Hz, HDMI 1.4 bandwidth limited
+                                                                            rate = 30; break;
                 case Exchange::IComposition::ScreenResolution_480i      : // 720x480
                 case Exchange::IComposition::ScreenResolution_480p      : // 720x480 progressive
                 case Exchange::IComposition::ScreenResolution_720p      : // 1280x720 progressive
@@ -4154,9 +4156,10 @@ namespace Plugin {
             case ScreenResolution_1080p50Hz : // 1920x1080 progressive @ 50 Hz
             case ScreenResolution_1080p60Hz : // 1920x1080 progressive @ 60 Hz
                                                 width = 1920; break;
+            case ScreenResolution_2160p30Hz : // 4K, 3840x2160 progressive @ 30 Hz, HDMI 1.4 bandwidth limited
             case ScreenResolution_2160p50Hz : // 4K, 3840x2160 progressive @ 50 Hz
             case ScreenResolution_2160p60Hz : // 4K, 3840x2160 progressive @ 60 Hz
-                                                width = 2160; break;
+                                                width = 3840; break;
             case ScreenResolution_480i      : // Unknown according to the standards (?)
             case ScreenResolution_Unknown   :
             default                         :   width = 0;
@@ -4173,11 +4176,12 @@ namespace Plugin {
             case ScreenResolution_480i      :
             case ScreenResolution_480p      : height = 480; break;
             case ScreenResolution_720p      :
-            case ScreenResolution_720p50Hz  : height =720; break;
+            case ScreenResolution_720p50Hz  : height = 720; break;
             case ScreenResolution_1080p24Hz :
             case ScreenResolution_1080i50Hz :
             case ScreenResolution_1080p50Hz :
             case ScreenResolution_1080p60Hz : height = 1080; break;
+            case ScreenResolution_2160p30Hz : // 4K, 3840x2160 progressive @ 30 Hz, HDMI 1.4 bandwidth limited
             case ScreenResolution_2160p50Hz :
             case ScreenResolution_2160p60Hz : height = 2160; break;
             case ScreenResolution_Unknown   :
@@ -4417,6 +4421,7 @@ namespace Plugin {
                                 }
                 case 2160   :   {
                                     switch ( vrefresh ) {
+                                        case 30 : resolution = ScreenResolution_2160p30Hz; break; // 4K, 3840x2160 progressive @ 30 Hz, HDMI 1.4 bandwidth limited
                                         case 50 : resolution = ScreenResolution_2160p50Hz; break;
                                         case 60 : resolution = ScreenResolution_2160p60Hz; break;
                                         default : resolution = ScreenResolution_Unknown;
