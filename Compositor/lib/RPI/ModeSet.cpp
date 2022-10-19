@@ -203,7 +203,7 @@ namespace WPEFramework {
             if ( nullptr != pconnector ) {
                 bool found = false;
                 uint32_t index = 0;
-                uint64_t area = 0;
+                uint64_t area = 0, clock = 0;
 
                 while ( (    found == false )
                           && ( index < static_cast < uint32_t > ( pconnector -> count_modes )
@@ -238,22 +238,16 @@ namespace WPEFramework {
                         if ( DRM_MODE_TYPE_DRIVER == ( DRM_MODE_TYPE_DRIVER & type ) ) {
                             // Calculate screen area
                             uint64_t size = pconnector -> modes [ index ] . hdisplay * pconnector -> modes [ index ] . vdisplay;
-                            if ( area < size ) {
-                                area = size;
 
-                                // Use another selection criterium
-                                // Select highest clock and vertical refresh rate
-
-                                if ( ( pconnector -> modes [ index ] . clock > pconnector -> modes [ modeIndex ] . clock )
-                                        ||
-                                            (     ( pconnector -> modes [ index ] . clock == pconnector -> modes [ modeIndex ] . clock )
-                                               && ( pconnector -> modes [ index ] . vrefresh > pconnector -> modes [ modeIndex ] . vrefresh )
-                                            )
-                                   )
-                                {
+                            if (    area < size
+                                 || ( area == size && vrefresh < pconnector -> modes [ index ] . vrefresh )
+                                 || ( area == size && vrefresh == pconnector -> modes [ index ] . vrefresh && clock < pconnector -> modes [ index ] . clock )
+                               ) {
                                     modeIndex = index;
+
+                                    area = size;
                                     vrefresh = pconnector -> modes [ modeIndex ] . vrefresh;
-                                }
+                                    clock = pconnector -> modes [ modeIndex ] . clock;
                             }
                         }
                     }
