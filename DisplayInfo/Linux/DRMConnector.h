@@ -44,21 +44,23 @@ namespace WPEFramework {
 namespace Plugin {
     namespace Linux {
 
-        bool operator<(const drmModeModeInfo& lhs, const drmModeModeInfo& rhs)
-        {
-            // Interlace should have lower pixel clock than progressive
-            // Highest pixel count requires (possibly) highest clock
-
-            return lhs.clock <= rhs.clock && ( (lhs.hdisplay * lhs.vdisplay) < (rhs.hdisplay * rhs.vdisplay) );
-        }
-
         bool operator>(const drmModeModeInfo& lhs, const drmModeModeInfo& rhs)
         {
-            // Interlace should have lower pixel clock than progressive
-            // Highest pixel count requires (possibly) highest clock
+            int64_t area[2] = {lhs.hdisplay * lhs.vdisplay, rhs.hdisplay * rhs.vdisplay};
+            uint64_t rate[2] = {lhs.vrefresh, rhs.vrefresh};
+            uint64_t clock[2] = {lhs.clock, rhs.clock};
 
-            // Next possibly not needed
-            return lhs.clock > rhs.clock && ( (lhs.hdisplay * lhs.vdisplay) >= (rhs.hdisplay * rhs.vdisplay) );
+            bool result = area[0] > area[1] || (area[0] == area[1] && rate[0] > rate[1]) || (area[0] == area[1] && rate[0] == rate[1] && clock[0] > clock[1]);
+            return result;
+        }
+        bool operator==(const drmModeModeInfo& lhs, const drmModeModeInfo& rhs)
+        {
+            return lhs.hdisplay == rhs.hdisplay && lhs.vdisplay == rhs.vdisplay && lhs.vrefresh && rhs.vrefresh && lhs.clock == rhs.clock;
+        }
+
+        bool operator<(const drmModeModeInfo& lhs, const drmModeModeInfo& rhs)
+        {
+            return !(lhs == rhs || lhs > rhs);
         }
 
         class DRMConnector {
@@ -414,8 +416,10 @@ namespace Plugin {
 
             void InitializeWithConnector(drmModeConnector& connector, bool usePreferredMode)
             {
-                drmModeModeInfoPtr mode = usePreferredMode ? PreferredMode(connector.count_modes, connector.modes)
-                                                           : BestMode(connector.count_modes, connector.modes);
+                // A preferred mode is not guaranteed to exist among other avaiable modes
+                drmModeModeInfoPtr mode = PreferredMode(connector.count_modes, connector.modes);
+
+                mode = mode != nullptr && !usePreferredMode ? mode : BestMode(connector.count_modes, connector.modes);
 
                 _connected = (mode != nullptr);
                 _width = _connected ? mode->hdisplay : 0;
