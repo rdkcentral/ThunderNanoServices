@@ -548,8 +548,8 @@ POP_WARNING()
             while (uris->Next(value) == true) {
                 TRACE(TooMuchInfo, (_T("UserStyleSheets [%s] processed"), value.c_str()));
             }
-            return Core::ERROR_NONE;
             TRACE(Trace::Information, (_T("UserStyleSheets update finished")));
+            return Core::ERROR_NONE;
         }
 
         BEGIN_INTERFACE_MAP(OutOfProcessImplementation)

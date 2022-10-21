@@ -218,6 +218,9 @@ POP_WARNING()
         void Inbound(Web::Request& request) override;
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
+        // JsonRpc
+        uint32_t BigUpdate(const Core::JSON::String& params);
+
     private:
         void LoadFinished(const string& URL);
         void URLChanged(const string& URL);

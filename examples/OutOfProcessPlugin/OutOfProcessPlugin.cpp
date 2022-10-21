@@ -53,6 +53,52 @@ namespace Plugin {
 
     static const char SampleData[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=!";
 
+    uint32_t OutOfProcessPlugin::BigUpdate(const Core::JSON::String& params)
+    {
+        uint32_t updates = 5000;
+        string sleep("100");
+        if(params.Value().empty() == false) {
+            class Params : public Core::JSON::Container {
+            public:
+                Params(const Params&) = delete;
+                Params& operator=(const Params&) = delete;
+
+                Params()
+                    : Core::JSON::Container()
+                    , Updates(5000)
+                    , Sleep("100")
+                {
+                    Add(_T("updates"), &Updates);
+                    Add(_T("sleep"), &Sleep);
+                }
+                ~Params() override = default;
+
+            public:
+                Core::JSON::DecUInt32 Updates;
+                Core::JSON::String Sleep;
+            } paramscontainer;
+            paramscontainer.FromString(params.Value());
+            updates = paramscontainer.Updates.Value();
+            sleep = paramscontainer.Sleep.Value();
+        }
+
+        std::list<string> _elements;
+        for(uint32_t i = 0; i<updates; ++i) {
+            string s("UserScripts_Updated_");
+            s += std::to_string(i);
+            if( i == 0 ) {
+                s = sleep;
+            }
+            _elements.push_back(s);
+        }
+        RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::Service<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
+        if ((_params != nullptr)) {
+            _browserresources->UserScripts(_params);
+            _params->Release();
+        }
+        return (Core::ERROR_NONE);
+    }
+
     const string OutOfProcessPlugin::Initialize(PluginHost::IShell* service) /* override */
     {
         ASSERT(service != nullptr);
@@ -82,49 +128,7 @@ namespace Plugin {
             _browserresources = _browser->QueryInterface<Exchange::IBrowserResources>();
             if( _browserresources != nullptr) {
                 Exchange::JBrowserResources::Register(*this, _browserresources);
-                Register("bigupdate", [this](const Core::JSONRPC::Context&, const string& params){ 
-                    uint32_t updates = 5000;
-                    string sleep("100");
-                    if(params.empty() == false) {
-                        class Params : public Core::JSON::Container {
-                        public:
-                            Params(const Params&) = delete;
-                            Params& operator=(const Params&) = delete;
-
-                            Params()
-                                : Core::JSON::Container()
-                                , Updates(5000)
-                                , Sleep("100")
-                            {
-                                Add(_T("updates"), &Updates);
-                                Add(_T("sleep"), &Sleep);
-                            }
-                            ~Params() override = default;
-
-                        public:
-                            Core::JSON::DecUInt32 Updates;
-                            Core::JSON::String Sleep;
-                        } paramscontainer;
-                        paramscontainer.FromString(params);
-                        updates = paramscontainer.Updates.Value();
-                        sleep = paramscontainer.Sleep.Value();
-                    }
-
-                    std::list<string> _elements;
-                    for(uint32_t i = 0; i<updates; ++i) {
-                        string s("UserScripts_Updated_");
-                        s += std::to_string(i);
-                        if( i == 0 ) {
-                            s = sleep;
-                        }
-                        _elements.push_back(s);
-                    }
-                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::Service<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
-                    if ((_params != nullptr)) {
-                        _browserresources->UserScripts(_params);
-                        _params->Release();
-                    }
-                }); 
+                Register<Core::JSON::String, void>(_T("bigupdate"), &OutOfProcessPlugin::BigUpdate, this);
             }
 
             _browser->Register(_notification);
