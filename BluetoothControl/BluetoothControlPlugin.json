@@ -18,15 +18,15 @@
           "interface": {
             "type": "number",
             "size": "16",
-            "description": "ID of the local Bluetooth interface."
+            "description": "ID of the local Bluetooth interface"
           },
           "autopasskeyconfirm": {
             "type": "boolean",
-            "description": "Enable autopass confirm."
+            "description": "Enable automatic passkey confirmation (may pose a security risk)"
           },
           "persistmac": {
             "type": "boolean",
-            "description": "Enable persistent MAC."
+            "description": "Enable persistent Bluetooth address"
           },
           "name": {
             "type": "String",

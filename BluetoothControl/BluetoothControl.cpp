@@ -18,6 +18,7 @@
  */
 
 #include "BluetoothControl.h"
+#include "JBluetoothControl.h"
 
 namespace WPEFramework {
 
@@ -39,6 +40,10 @@ namespace Plugin {
 
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::DeviceImpl::Data>> jsonResponseFactoryDevice(1);
     static Core::ProxyPoolType<Web::JSONBodyType<BluetoothControl::Status>> jsonResponseFactoryStatus(1);
+
+    //
+    // PluginHost::IPlugin override
+    // -------------------------------------------------------------------------------------------------------
 
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
@@ -125,6 +130,12 @@ namespace Plugin {
                 ::destruct_bluetooth_driver();
             }
             else {
+                _classicInterface = Core::Service<ClassicImpl>::Create<ClassicImpl>(*this);
+                ASSERT(_classicInterface != nullptr);
+
+                _lowEnergyInterface = Core::Service<LowEnergyImpl>::Create<LowEnergyImpl>(*this);
+                ASSERT(_lowEnergyInterface != nullptr);
+
                 // UUIDs to be broadcasted in EIR
                 if (_config.UUIDs.IsSet() == true) {
                     auto index = _config.UUIDs.Elements();
@@ -156,6 +167,7 @@ namespace Plugin {
                 if (info.Name() != info.ShortName()) {
                     SYSLOG(Logging::Startup, (_T("        ShortName          %s"), info.ShortName().c_str()));
                 }
+
                 SYSLOG(Logging::Startup, (_T("        Version:           %d"), info.Version()));
                 SYSLOG(Logging::Startup, (_T("        Address:           %s"), info.Address().ToString().c_str()));
                 SYSLOG(Logging::Startup, (_T("        DeviceClass:       0x%06X"), info.DeviceClass()));
@@ -187,10 +199,13 @@ namespace Plugin {
                 // Bluetooth is ready!
                 PluginHost::ISubSystem* subSystems(_service->SubSystems());
                 ASSERT(subSystems != nullptr);
+
                 if (subSystems != nullptr) {
                     subSystems->Set(PluginHost::ISubSystem::BLUETOOTH, nullptr);
                     subSystems->Release();
                 }
+
+                Exchange::JBluetoothControl::Register<BluetoothControl>(*this, this);
             }
         }
 
@@ -219,6 +234,9 @@ namespace Plugin {
 
         Connector().BackgroundScan(false);
 
+        _lowEnergyInterface->Release();
+        _classicInterface->Release();
+
         // We bring the interface up, so we should bring it down as well..
         Connector().Close();
 
@@ -234,6 +252,11 @@ namespace Plugin {
         // No additional info to report.
         return (nullptr);
     }
+
+
+    //
+    // PluginHost::IPlugin::INotification overrides
+    // -------------------------------------------------------------------------------------------------------
 
     /* virtual */ void BluetoothControl::Activated(const string& callsign, PluginHost::IShell* /* service */)
     {
@@ -264,6 +287,11 @@ namespace Plugin {
 
         _adminLock.Unlock();
     }
+
+
+    //
+    // PluginHost::IWeb overrides
+    // -------------------------------------------------------------------------------------------------------
 
     /* virtual */ void BluetoothControl::Inbound(WPEFramework::Web::Request& request)
     {
@@ -415,7 +443,7 @@ namespace Plugin {
                         result->ErrorCode = Web::STATUS_NOT_FOUND;
                         result->Message = _T("Device not found.");
                     } else if (pair == true) {
-                        uint32_t res = device->Pair(IBluetooth::NO_INPUT_NO_OUTPUT, 20);
+                        uint32_t res = device->Pair(IBluetooth::IDevice::NO_INPUT_NO_OUTPUT, 20);
                         if (res == Core::ERROR_NONE) {
                             result->ErrorCode = Web::STATUS_OK;
                             result->Message = _T("Paired device.");
@@ -507,8 +535,11 @@ namespace Plugin {
         return result;
     }
 
-    //  IBluetooth methods
+
+    //
+    //  Exchange::IBluetooth overrides
     // -------------------------------------------------------------------------------------------------------
+
     /* virtual */ uint32_t BluetoothControl::Register(IBluetooth::INotification* notification)
     {
         _adminLock.Lock();
@@ -528,6 +559,7 @@ namespace Plugin {
 
         return (Core::ERROR_NONE);
     }
+
     /* virtual */ uint32_t BluetoothControl::Unregister(IBluetooth::INotification* notification)
     {
         _adminLock.Lock();
@@ -546,39 +578,49 @@ namespace Plugin {
 
         return (Core::ERROR_NONE);
     }
-    /* virtual */ bool BluetoothControl::IsScanning() const
+
+    /* virtual */ /* DEPRECATED */ bool BluetoothControl::IsScanning() const
     {
-        return (_application.IsScanning());
+        bool limited;
+        return (_application.IsScanning(limited) | _application.IsInquiring(limited));
     }
-    /* virtual */ uint32_t BluetoothControl::Scan(const bool lowEnergy, const uint16_t duration)
+
+    /* virtual */ /* DEPRECATED */ uint32_t BluetoothControl::Scan(const bool lowEnergy, const uint16_t duration)
     {
         uint32_t result;
 
         if (lowEnergy == true) {
             result = _application.Scan(duration, false, false);
         } else {
-            result = _application.Scan(duration, false);
+            result = _application.Inquiry(duration, false);
         }
 
         return (result);
     }
-    /* virtual */ uint32_t BluetoothControl::StopScanning()
+
+    /* virtual */ /* DEPRECATED */ uint32_t BluetoothControl::StopScanning()
     {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
+        bool limited;
 
-        if (_application.IsScanning() == true) {
-            TRACE(Trace::Information, ("Stop Bluetooth Scan"));
-            _application.Abort();
+        if (_application.IsScanning(limited) == true) {
+            _application.AbortScan();
+            result = Core::ERROR_NONE;
+        }
+
+        if (_application.IsInquiring(limited) == true) {
+            _application.AbortInquiry();
             result = Core::ERROR_NONE;
         }
 
         return (result);
     }
-    /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device(const string& address)
+
+    /* virtual */ Exchange::IBluetooth::IDevice* BluetoothControl::Device(const string& address, const Exchange::IBluetooth::IDevice::type type)
     {
         _adminLock.Lock();
 
-        IBluetooth::IDevice* result = Find(Bluetooth::Address(address.c_str()));
+        IBluetooth::IDevice* result = Find(Bluetooth::Address(address.c_str()), (type == Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC));
         if (result != nullptr) {
             result->AddRef();
         }
@@ -587,10 +629,26 @@ namespace Plugin {
 
         return (result);
     }
+
     /* virtual */ Exchange::IBluetooth::IDevice::IIterator* BluetoothControl::Devices()
     {
         return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
+
+    /* virtual */ uint32_t BluetoothControl::ForgetDevice(const string& , const IBluetooth::IDevice::type )
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        // TODO
+
+        return (result);
+    }
+
+
+    //
+    // Private methods
+    // -------------------------------------------------------------------------------------------------------
+
     BluetoothControl::DeviceImpl* BluetoothControl::Discovered(const bool lowEnergy, const Bluetooth::Address& address)
     {
         _adminLock.Lock();
@@ -607,6 +665,7 @@ namespace Plugin {
             }
 
             ASSERT(impl != nullptr);
+
             _devices.push_back(impl);
             Update(impl);
         }
@@ -630,14 +689,15 @@ namespace Plugin {
 
         _adminLock.Unlock();
     }
-    void BluetoothControl::Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oob_data)
+
+    void BluetoothControl::Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oobData)
     {
         _adminLock.Lock();
 
         DeviceImpl* entry = Find(device);
 
         if (entry != nullptr) {
-            entry->Capabilities(capability, authentication, oob_data);
+            entry->Capabilities(capability, authentication, oobData);
         }
         else {
             TRACE(Trace::Error, (_T("Could not set the capabilities for device %s"), device.ToString()));
@@ -645,6 +705,7 @@ namespace Plugin {
 
         _adminLock.Unlock();
     }
+
     BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search) const
     {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
@@ -655,6 +716,7 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
+
     BluetoothControl::DeviceImpl* BluetoothControl::Find(const Bluetooth::Address& search, bool lowEnergy) const
     {
         std::list<DeviceImpl*>::const_iterator index = _devices.begin();
@@ -665,6 +727,7 @@ namespace Plugin {
 
         return (index != _devices.end() ? (*index) : nullptr);
     }
+
     template<typename DEVICE>
     DEVICE* BluetoothControl::Find(const uint16_t handle) const
     {
@@ -705,11 +768,9 @@ namespace Plugin {
 
             if (administrator.LinkKey(lks) != Core::ERROR_NONE) {
                 result = Core::ERROR_UNAVAILABLE;
-            }
-            else if (administrator.LongTermKey(ltks) != Core::ERROR_NONE) {
+            } else if (administrator.LongTermKey(ltks) != Core::ERROR_NONE) {
                 result = Core::ERROR_UNAVAILABLE;
-            }
-            else if (administrator.IdentityKey(irks) != Core::ERROR_NONE) {
+            } else if (administrator.IdentityKey(irks) != Core::ERROR_NONE) {
                 result = Core::ERROR_UNAVAILABLE;
             }
         }
@@ -834,7 +895,7 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t BluetoothControl::ForgetDevice(const DeviceImpl* device)
+    uint32_t BluetoothControl::EraseDevice(const DeviceImpl* device)
     {
         uint32_t result = Core::ERROR_OPENING_FAILED;
 

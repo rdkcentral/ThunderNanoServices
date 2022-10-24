@@ -79,8 +79,8 @@ The table below lists configuration options of the plugin.
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.interface | number | <sup>*(optional)*</sup> ID of the local Bluetooth interface |
-| configuration?.autopasskeyconfirm | boolean | <sup>*(optional)*</sup> Enable autopass confirm |
-| configuration?.persistmac | boolean | <sup>*(optional)*</sup> Enable persistent MAC |
+| configuration?.autopasskeyconfirm | boolean | <sup>*(optional)*</sup> Enable automatic passkey confirmation (may pose a security risk) |
+| configuration?.persistmac | boolean | <sup>*(optional)*</sup> Enable persistent Bluetooth address |
 | configuration?.name | String | <sup>*(optional)*</sup> Name of the local Bluetooth interface |
 | configuration?.shortname | String | <sup>*(optional)*</sup> Shortened name of the local Bluetooth interface |
 | configuration?.class | number | <sup>*(optional)*</sup> Class of device value of the local Bluetooth interface |
