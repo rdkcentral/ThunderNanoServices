@@ -249,29 +249,89 @@ namespace Plugin {
     };
 
     class HDRProperties : public Exchange::IHDRProperties {
+    private:
+
+       using HDRIteratorImpl = RPC::IteratorType<Exchange::IHDRProperties::IHDRIterator>;
+
     public:
-        HDRProperties(const std::string& hdrLevelFilepath)
-            : _hdrLevelFilepath(hdrLevelFilepath)
+        HDRProperties(const std::string& hdrLevelFilepath, const displayinfo_edid_hdr_licensor_map_t& hdrLicensors)
+            : _hdrLevelFilepath(hdrLevelFilepath), _hdrLicensors(hdrLicensors)
         {
         }
 
         HDRProperties(const HDRProperties&) = delete;
         const HDRProperties& operator=(const HDRProperties&) = delete;
 
-        uint32_t TVCapabilities(VARIABLE_IS_NOT_USED IHDRIterator*& type) const override
+        uint32_t TVCapabilities(IHDRIterator*& type) const override
         {
-            return Core::ERROR_UNAVAILABLE;
+            std::list<Exchange::IHDRProperties::HDRType> capabilities;
+
+            if (((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_NONE) == DISPLAYINFO_EDID_HDR_LICENSOR_NONE)
+                || ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_UNKNOWN) == DISPLAYINFO_EDID_HDR_LICENSOR_UNKNOWN)) {
+                capabilities.push_back (HDR_OFF);
+            }
+
+            if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_LICENSING_LLC) == DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_LICENSING_LLC) {
+                // HDMI 1.4
+                capabilities.push_back (HDR_OFF);
+            }
+
+            if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_FORUM) == DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_FORUM) {
+                // HDMI 2.0
+                capabilities.push_back (HDR_OFF);
+            }
+
+            if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_HDR10PLUS_LLC) == DISPLAYINFO_EDID_HDR_LICENSOR_HDR10PLUS_LLC) {
+                // Assume full implementation
+                capabilities.push_back(HDR_10PLUS);
+            }
+
+            if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_DOLBY_LABORATORIES_INC) == DISPLAYINFO_EDID_HDR_LICENSOR_DOLBY_LABORATORIES_INC) {
+                // Assume full implementation
+                capabilities.push_back(HDR_DOLBYVISION);
+            }
+
+// TODO: check other properties, such as expected profile
+
+            type = Core::Service<HDRIteratorImpl>::Create<IHDRIterator>(capabilities);
+
+            return type != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE;
         }
 
         uint32_t STBCapabilities(VARIABLE_IS_NOT_USED IHDRIterator*& type) const override
         {
             return Core::ERROR_UNAVAILABLE;
         }
-
+        // HDR format in use
         uint32_t HDRSetting(HDRType& type) const override
         {
-            type = GetHDRLevel();
-            return Core::ERROR_NONE;
+            uint32_t result = Core::ERROR_UNAVAILABLE;
+
+            IHDRIterator* it = nullptr;
+
+            if (TVCapabilities(it) == Core::ERROR_NONE && it != nullptr) {
+                type = HDR_OFF;
+
+                while (it->Next(type) != false) {
+                        switch (type) {
+                            case HDR_10          :
+                            case HDR_10PLUS      :
+                            case HDR_HLG         :
+                            case HDR_DOLBYVISION :
+                            case HDR_TECHNICOLOR :
+                                                    // What is currently  set out of all options that are available
+                                                    type = GetHDRLevel();
+                            case HDR_OFF         :
+                                                    result = Core::ERROR_NONE;
+                                                    break;
+                            default              :
+                                                    result = Core::ERROR_INVALID_RANGE;
+                        }
+
+                }
+            }
+
+            return result;
         }
 
         Exchange::IHDRProperties::HDRType GetHDRLevel() const
@@ -306,6 +366,7 @@ namespace Plugin {
 
     private:
         std::string _hdrLevelFilepath;
+        displayinfo_edid_hdr_licensor_map_t _hdrLicensors;
     };
 
     class DisplayProperties {
@@ -417,7 +478,7 @@ namespace Plugin {
             if (_drmConnector != nullptr && _drmConnector->IsConnected() != false) {
                 Reauthenticate();
                 QueryEDID();
-	    }
+            }
         }
 
     private:
@@ -543,8 +604,22 @@ namespace Plugin {
                 , _config.gpuMemoryTotalPattern.Value()
                 , _config.gpuMemoryUnitMultiplier.Value());
 
-            _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value());
-            /* clang-format on */
+            if (_graphics != nullptr) {
+                ExtendedDisplayIdentification const & edid = _display->EDID();
+
+                auto it = edid.CEASegment();
+
+                while (it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() == static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)) {
+                    it = edid.CEASegment(it);
+                }
+
+                _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value()
+                    , it.IsValid() != false ? ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() : static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE));
+            }
+            else {
+                _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value()
+                    , static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE));
+            }
 
             return Core::ERROR_NONE;
         }
@@ -819,7 +894,7 @@ namespace Plugin {
                     }
                 }
                 return Core::infinite;
-            };
+            }
 
         private:
             Core::QueueType<IConnectionProperties::INotification::Source> _eventQueue;
