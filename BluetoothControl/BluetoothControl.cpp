@@ -205,7 +205,7 @@ namespace Plugin {
                     subSystems->Release();
                 }
 
-                Exchange::JBluetoothControl::Register<BluetoothControl>(*this, this);
+                Exchange::JBluetoothControl::Register<JSONRPCImplementation>(*this, &_jsonrpcImplementation);
             }
         }
 

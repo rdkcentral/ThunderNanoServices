@@ -1002,7 +1002,7 @@ BluetoothControl interface properties:
 | [adapters](#property.adapters) <sup>RO</sup> | List of local Bluetooth adapters |
 | [adapter](#property.adapter) <sup>RO</sup> | Local Bluetooth adapter information |
 | <sup>deprecated</sup> [devices](#property.devices) <sup>RO</sup> | List of known remote Bluetooth devices |
-| <sup>deprecated</sup> [device](#property.device) <sup>RO</sup> | Remote Bluetooth device information |
+| <sup>deprecated</sup> [device](#property.device) | Remote Bluetooth device information |
 
 
 <a name="property.adapters"></a>
@@ -1156,11 +1156,22 @@ Provides access to the list of known remote Bluetooth devices.
 
 Provides access to the remote Bluetooth device information.
 
-> This property is **read-only**.
-
 > This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
 
 ### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Remote Bluetooth device information |
+| (property).address | string | Bluetooth address |
+| (property).type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
+| (property)?.name | string | <sup>*(optional)*</sup> Name of the device |
+| (property)?.class | integer | <sup>*(optional)*</sup> Class of device |
+| (property)?.appearance | integer | <sup>*(optional)*</sup> Appearance value |
+| (property)?.services | array | <sup>*(optional)*</sup> List of supported services |
+| (property)?.services[#] | string | <sup>*(optional)*</sup> Service UUID |
+| (property).connected | boolean | Indicates if the device is currently connected |
+| (property).paired | boolean | Indicates if the device is currently paired |
 
 > The *device address* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.device@81:6F:B0:91:9B:FE*.
 
@@ -1168,7 +1179,7 @@ Provides access to the remote Bluetooth device information.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | object | Remote Bluetooth device information |
+| result | object |  |
 | result.address | string | Bluetooth address |
 | result.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
 | result?.name | string | <sup>*(optional)*</sup> Name of the device |
@@ -1205,6 +1216,28 @@ Provides access to the remote Bluetooth device information.
     "id": 42,
     "result": {
         "address": "81:6F:B0:91:9B:FE",
+        "type": "LowEnergy",
+        "name": "Thunder Bluetooth Speaker",
+        "class": 2360324,
+        "appearance": 2113,
+        "services": [
+            "110a"
+        ],
+        "connected": true,
+        "paired": true
+    }
+}
+```
+
+#### Set Request
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "BluetoothControl.1.device@81:6F:B0:91:9B:FE",
+    "params": {
+        "address": "81:6F:B0:91:9B:FE",
         "type": "Classic",
         "name": "Thunder Bluetooth Speaker",
         "class": 2360324,
@@ -1215,6 +1248,16 @@ Provides access to the remote Bluetooth device information.
         "connected": true,
         "paired": true
     }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
 }
 ```
 
@@ -1374,12 +1417,14 @@ Register to this event to be notified about device state changes
 | params.state | string | Device state (must be one of the following: *Pairing*, *Paired*, *Unpaired*, *Connected*, *Disconnected*) |
 | params?.disconnectreason | string | <sup>*(optional)*</sup> Disconnection reason in case of *Disconnected* event (must be one of the following: *ConnectionTimeout*, *AuthenticationFailure*, *RemoteLowOnResources*, *RemotePoweredOff*, *TerminatedByRemote*, *TerminatedByHost*) |
 
+> The *device type* argument shall be passed within the designator, e.g. *LowEnergy.client.events.1*.
+
 ### Example
 
 ```json
 {
     "jsonrpc": "2.0",
-    "method": "client.events.1.devicestatechange",
+    "method": "LowEnergy.client.events.1.devicestatechange",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
         "type": "LowEnergy",

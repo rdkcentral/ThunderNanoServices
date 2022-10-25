@@ -1,13 +1,10 @@
 
-// Partially generated from 'BluetoothControl.json'
-
-// TODO: Add copyright disclaimer here...
+// Generated automatically from 'BluetoothControl.json'. DO NOT EDIT.
 
 #pragma once
 
 #include "Module.h"
-#include <interfaces/json/JsonData_BluetoothControl.h>
-#include <interfaces/json/JBluetoothControl.h> // version
+#include "JsonData_BluetoothControl.h"
 
 namespace WPEFramework {
 
@@ -15,12 +12,15 @@ namespace Exchange {
 
     namespace JBluetoothControl {
 
-        using JSONRPC = PluginHost::JSONRPCSupportsEventStatus;
+        namespace Version {
 
-        using scantype = JsonData::BluetoothControl::scantype;
-        using scanmode = JsonData::BluetoothControl::scanmode;
-        using devicestate = JsonData::BluetoothControl::DevicestatechangeParamsData::devicestate;
-        using disconnectreason = JsonData::BluetoothControl::DevicestatechangeParamsData::disconnectreason;
+            constexpr uint8_t Major = 1;
+            constexpr uint8_t Minor = 0;
+            constexpr uint8_t Patch = 0;
+
+        } // namespace Version
+
+        using JSONRPC = PluginHost::JSONRPCSupportsEventStatus;
 
         template<typename IMPLEMENTATION>
         static void Register(JSONRPC& _module, IMPLEMENTATION* _implementation)
@@ -33,376 +33,180 @@ namespace Exchange {
 
             // Method: setdiscoverable - Starts advertising (or inquiry scanning), making the local interface visible by nearby Bluetooth devices
             _module.Register<JsonData::BluetoothControl::SetdiscoverableParamsData, void>(_T("setdiscoverable"),
-                [_implementation](const JsonData::BluetoothControl::SetdiscoverableParamsData& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const JsonData::BluetoothControl::scantype type{Params.Type.Value()};
-                    const JsonData::BluetoothControl::scanmode mode{Params.Mode.Value()};
-                    const bool connectable{Params.Connectable.Value()};
-                    const uint16_t duration{Params.Duration.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::SetdiscoverableParamsData& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->SetDiscoverable(params.Type, params.Mode, params.Connectable, params.Duration);
+                    return (_errorCode);
                 });
 
             // Method: stopdiscoverable - Stops advertising (or inquiry scanning) operation
             _module.Register<JsonData::BluetoothControl::StopdiscoverableParamsInfo, void>(_T("stopdiscoverable"),
-                [_implementation](const JsonData::BluetoothControl::StopdiscoverableParamsInfo& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const JsonData::BluetoothControl::scantype type{Params.Type.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::StopdiscoverableParamsInfo& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->StopDiscoverable(params.Type);
+                    return (_errorCode);
                 });
 
             // Method: scan - Starts active discovery (or inquiry) of nearby Bluetooth devices
             _module.Register<JsonData::BluetoothControl::ScanParamsData, void>(_T("scan"),
-                [_implementation](const JsonData::BluetoothControl::ScanParamsData& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const JsonData::BluetoothControl::scantype type{Params.Type.Value()};
-                    const JsonData::BluetoothControl::scanmode mode{Params.Mode.Value()};
-                    const uint16_t timeout{Params.Timeout.Value()};
-                    const uint16_t duration{Params.Duration.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ScanParamsData& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->Scan(params.Type, params.Mode, params.Timeout, params.Duration);
+                    return (_errorCode);
                 });
 
             // Method: stopscanning - Stops discovery (or inquiry) operation
             _module.Register<JsonData::BluetoothControl::StopdiscoverableParamsInfo, void>(_T("stopscanning"),
-                [_implementation](const JsonData::BluetoothControl::StopdiscoverableParamsInfo& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const JsonData::BluetoothControl::scantype type{Params.Type.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::StopdiscoverableParamsInfo& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->StopScanning(params.Type);
+                    return (_errorCode);
                 });
 
             // Method: connect - Connects to a Bluetooth device
             _module.Register<JsonData::BluetoothControl::ConnectParamsInfo, void>(_T("connect"),
-                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->Connect(params.Address, params.Type);
+                    return (_errorCode);
                 });
 
             // Method: disconnect - Disconnects from a connected Bluetooth device
             _module.Register<JsonData::BluetoothControl::ConnectParamsInfo, void>(_T("disconnect"),
-                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->Disconnect(params.Address, params.Type);
+                    return (_errorCode);
                 });
 
             // Method: pair - Pairs a Bluetooth device
             _module.Register<JsonData::BluetoothControl::PairParamsData, void>(_T("pair"),
-                [_implementation](const JsonData::BluetoothControl::PairParamsData& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::pairingcapabilities capabilities{Params.Capabilities.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-                    const uint16_t timeout{Params.Timeout.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::PairParamsData& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->Pair(params.Address, params.Capabilities, params.Type, params.Timeout);
+                    return (_errorCode);
                 });
 
             // Method: unpair - Unpairs a paired Bluetooth device
             _module.Register<JsonData::BluetoothControl::ConnectParamsInfo, void>(_T("unpair"),
-                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->Unpair(params.Address, params.Type);
+                    return (_errorCode);
                 });
 
             // Method: abortpairing - Aborts pairing operation
             _module.Register<JsonData::BluetoothControl::ConnectParamsInfo, void>(_T("abortpairing"),
-                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->AbortPairing(params.Address, params.Type);
+                    return (_errorCode);
                 });
 
             // Method: providepincode - Provides a PIN-code for authentication during a legacy pairing process
             _module.Register<JsonData::BluetoothControl::ProvidepincodeParamsData, void>(_T("providepincode"),
-                [_implementation](const JsonData::BluetoothControl::ProvidepincodeParamsData& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-                    const string secret{Params.Secret.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ProvidepincodeParamsData& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->ProvidePINCode(params.Address, params.Type, params.Secret);
+                    return (_errorCode);
                 });
 
             // Method: providepasskey - Provides a passkey for authentication during a pairing process
             _module.Register<JsonData::BluetoothControl::ProvidepasskeyParamsData, void>(_T("providepasskey"),
-                [_implementation](const JsonData::BluetoothControl::ProvidepasskeyParamsData& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-                    const uint32_t secret{Params.Secret.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ProvidepasskeyParamsData& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->ProvidePasskey(params.Address, params.Type, params.Secret);
+                    return (_errorCode);
                 });
 
             // Method: confirmpasskey - Confirms a passkey for authentication during a pairing process
             _module.Register<JsonData::BluetoothControl::ConfirmpasskeyParamsData, void>(_T("confirmpasskey"),
-                [_implementation](const JsonData::BluetoothControl::ConfirmpasskeyParamsData& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-                    const bool iscorrect{Params.Iscorrect.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ConfirmpasskeyParamsData& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->ConfirmPasskey(params.Address, params.Type, params.Iscorrect);
+                    return (_errorCode);
                 });
 
             // Method: forget - Forgets a known Bluetooth device
             _module.Register<JsonData::BluetoothControl::ConnectParamsInfo, void>(_T("forget"),
-                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& Params) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    const string address{Params.Address.Value()};
-                    const Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& params) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->Forget(params.Address, params.Type);
+                    return (_errorCode);
                 });
 
             // Method: getdevicelist - Retrieves a list of known remote Bluetooth devices
             _module.Register<void, Core::JSON::ArrayType<JsonData::BluetoothControl::ConnectParamsInfo>>(_T("getdevicelist"),
-                [_implementation](Core::JSON::ArrayType<JsonData::BluetoothControl::ConnectParamsInfo>& Result) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    std::list<JsonData::BluetoothControl::ConnectParamsInfo> result{};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    if (errorCode == Core::ERROR_NONE) {
-                        for (const JsonData::BluetoothControl::ConnectParamsInfo& resultElement : result) {
-                            // TODO: Fill in the array...
-                            Result.Add(resultElement);
-                        }
-                    }
-
-                    return (errorCode);
+                [_implementation](Core::JSON::ArrayType<JsonData::BluetoothControl::ConnectParamsInfo>& result) -> uint32_t {
+                    uint32_t _errorCode;
+                    _errorCode = _implementation->GetDeviceList(result);
+                    return (_errorCode);
                 });
 
             // Method: getdeviceinfo - Retrieves detailed information about a known Bluetooth device
             _module.Register<JsonData::BluetoothControl::ConnectParamsInfo, JsonData::BluetoothControl::DeviceData>(_T("getdeviceinfo"),
-                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& Params, JsonData::BluetoothControl::DeviceData& Result) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
-                    string address{Params.Address.Value()};
-                    Exchange::IBluetooth::IDevice::type type{Params.Type.Value()};
-                    string name{};
-                    uint32_t class_{};
-                    uint32_t appearance{};
-                    std::list<string> services{};
-                    bool connected{};
-                    bool paired{};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    if (errorCode == Core::ERROR_NONE) {
-                        Result.Address = address;
-                        Result.Type = type;
-                        Result.Name = name;
-                        Result.Class = class_;
-                        Result.Appearance = appearance;
-                        for (const string& servicesElement : services) {
-                            // TODO: Fill in the array...
-                            Core::JSON::String& servicesItem(Result.Services.Add());
-                            servicesItem = servicesElement;
-                        }
-                        Result.Connected = connected;
-                        Result.Paired = paired;
-                    }
-
-                    return (errorCode);
+                [_implementation](const JsonData::BluetoothControl::ConnectParamsInfo& params, JsonData::BluetoothControl::DeviceData& result) -> uint32_t {
+                    uint32_t _errorCode;
+                    result.Address = params.Address;
+                    result.Type = params.Type;
+                    _errorCode = _implementation->GetDeviceInfo(result.Address, result.Type, result.Name, result.Class, result.Appearance, result.Services, result.Connected, result.Paired);
+                    return (_errorCode);
                 });
 
             // Property: adapters - List of local Bluetooth adapters (r/o)
             _module.Register<void, Core::JSON::ArrayType<Core::JSON::DecUInt16>>(_T("adapters"),
-                [_implementation](Core::JSON::ArrayType<Core::JSON::DecUInt16>& Result) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
+                [_implementation](Core::JSON::ArrayType<Core::JSON::DecUInt16>& result) -> uint32_t {
+                    uint32_t _errorCode;
                     // read-only property get
-                    std::list<uint16_t> result{};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    if (errorCode == Core::ERROR_NONE) {
-                        for (const uint16_t& resultElement : result) {
-                            // TODO: Fill in the array...
-                            Core::JSON::DecUInt16& resultItem(Result.Add());
-                            resultItem = resultElement;
-                        }
-                    }
-
-                    return (errorCode);
+                    _errorCode = _implementation->Adapters(result);
+                    return (_errorCode);
                 });
 
             // Indexed Property: adapter - Local Bluetooth adapter information (r/o)
             _module.Register<void, JsonData::BluetoothControl::AdapterData, std::function<uint32_t(const std::string&, JsonData::BluetoothControl::AdapterData&)>>(_T("adapter"),
-                [_implementation](const string& Index, JsonData::BluetoothControl::AdapterData& Result) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
+                [_implementation](const string& index_, JsonData::BluetoothControl::AdapterData& result) -> uint32_t {
+                    uint32_t _errorCode;
                     // read-only property get
-                    uint16_t id{};
-                    string address{};
-                    string interface{};
-                    JsonData::BluetoothControl::AdapterData::adaptertype type{};
-                    uint8_t version{};
-                    uint16_t manufacturer{};
-                    uint32_t class_{};
-                    string name{};
-                    string shortname{};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(Index, ...);
-
-                    if (errorCode == Core::ERROR_NONE) {
-                        Result.Id = id;
-                        Result.Interface = interface;
-                        Result.Address = address;
-                        Result.Type = type;
-                        Result.Version = version;
-                        Result.Manufacturer = manufacturer;
-                        Result.Class = class_;
-                        Result.Name = name;
-                        Result.Shortname = shortname;
-                    }
-
-                    return (errorCode);
+                    _errorCode = _implementation->Adapter(index_, result.Id, result.Address, result.Interface, result.Type, result.Version, result.Manufacturer, result.Class, result.Name, result.Shortname);
+                    return (_errorCode);
                 });
 
             // Property: devices - List of known remote Bluetooth devices (DEPRECATED) (r/o)
             _module.Register<void, Core::JSON::ArrayType<Core::JSON::String>>(_T("devices"),
-                [_implementation](Core::JSON::ArrayType<Core::JSON::String>& Result) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
+                [_implementation](Core::JSON::ArrayType<Core::JSON::String>& result) -> uint32_t {
+                    uint32_t _errorCode;
                     // read-only property get
-                    std::list<string> result{};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(...);
-
-                    if (errorCode == Core::ERROR_NONE) {
-                        for (const string& resultElement : result) {
-                            // TODO: Fill in the array...
-                            Core::JSON::String& resultItem(Result.Add());
-                            resultItem = resultElement;
-                        }
-                    }
-
-                    return (errorCode);
+                    _errorCode = _implementation->Devices(result);
+                    return (_errorCode);
                 });
 
             // Indexed Property: device - Remote Bluetooth device information (DEPRECATED) (r/o)
             _module.Register<void, JsonData::BluetoothControl::DeviceData, std::function<uint32_t(const std::string&, JsonData::BluetoothControl::DeviceData&)>>(_T("device"),
-                [_implementation](const string& Index, JsonData::BluetoothControl::DeviceData& Result) -> uint32_t {
-                    uint32_t errorCode = Core::ERROR_NONE;
+                [_implementation](const string& index_, JsonData::BluetoothControl::DeviceData& result) -> uint32_t {
+                    uint32_t _errorCode;
                     // read-only property get
-                    string address{};
-                    Exchange::IBluetooth::IDevice::type type{};
-                    string name{};
-                    uint32_t class_{};
-                    uint32_t appearance{};
-                    std::list<string> services{};
-                    bool connected{};
-                    bool paired{};
-
-                    // TODO: Call implementation here...
-                    // errorCode = _implementation->api(Index, ...);
-
-                    if (errorCode == Core::ERROR_NONE) {
-                        Result.Address = address;
-                        Result.Type = type;
-                        Result.Name = name;
-                        Result.Class = class_;
-                        Result.Appearance = appearance;
-                        for (const string& servicesElement : services) {
-                            // TODO: Fill in the array...
-                            Core::JSON::String& servicesItem(Result.Services.Add());
-                            servicesItem = servicesElement;
-                        }
-                        Result.Connected = connected;
-                        Result.Paired = paired;
-                    }
-
-                    return (errorCode);
+                    _errorCode = _implementation->Device(index_, result.Address, result.Type, result.Name, result.Class, result.Appearance, result.Services, result.Connected, result.Paired);
+                    return (_errorCode);
                 });
 
             // Register event status listeners...
 
             _module.RegisterEventStatusListener(_T("discoverablestarted"),
-                [_implementation](const string& Client, const JSONRPC::Status Status) {
-                    const string id = Client.substr(0, Client.find('.'));
-
-                    if (Status == JSONRPC::Status::registered) {
-                        // TODO...
-                    } else if (Status == JSONRPC::Status::unregistered) {
-                        // TODO...
-                    }
+                [_implementation](const string& client, const JSONRPC::Status status) {
+                    const string id = client.substr(0, client.find('.'));
+                    _implementation->OnDiscoverableStartedEventRegistration(id, status);
                 });
 
             _module.RegisterEventStatusListener(_T("scanstarted"),
-                [_implementation](const string& Client, const JSONRPC::Status Status) {
-                    const string id = Client.substr(0, Client.find('.'));
-
-                    if (Status == JSONRPC::Status::registered) {
-                        // TODO...
-                    } else if (Status == JSONRPC::Status::unregistered) {
-                        // TODO...
-                    }
+                [_implementation](const string& client, const JSONRPC::Status status) {
+                    const string id = client.substr(0, client.find('.'));
+                    _implementation->OnScanStartedEventRegistration(id, status);
                 });
 
             _module.RegisterEventStatusListener(_T("devicestatechange"),
-                [_implementation](const string& Client, const JSONRPC::Status Status) {
-                    const string id = Client.substr(0, Client.find('.'));
-
-                    if (Status == JSONRPC::Status::registered) {
-                        // TODO...
-                    } else if (Status == JSONRPC::Status::unregistered) {
-                        // TODO...
-                    }
+                [_implementation](const string& client, const JSONRPC::Status status) {
+                    const string id = client.substr(0, client.find('.'));
+                    _implementation->OnDeviceStateChangedEventRegistration(id, status);
                 });
 
         }
@@ -438,94 +242,95 @@ namespace Exchange {
 
         namespace Event {
 
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_FUNCTIONS)
+
             // Event: discoverablestarted - Notifies of entering the discoverable state
-            static void DiscoverableStarted(const JSONRPC& _module, const JsonData::BluetoothControl::scantype& Type, const JsonData::BluetoothControl::scanmode& Mode)
+            static void DiscoverableStarted(const JSONRPC& _module, const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type, const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode)
             {
                 JsonData::BluetoothControl::DiscoverablestartedParamsInfo _params;
-                _params.Type = Type;
-                _params.Mode = Mode;
+                _params.Type = type;
+                _params.Mode = mode;
 
                 _module.Notify(_T("discoverablestarted"), _params);
             }
 
             // Event: discoverablecomplete - Notifies of leaving the discoverable state
-            static void DiscoverableComplete(const JSONRPC& _module, const JsonData::BluetoothControl::scantype& Type)
+            static void DiscoverableComplete(const JSONRPC& _module, const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type)
             {
                 JsonData::BluetoothControl::StopdiscoverableParamsInfo _params;
-                _params.Type = Type;
+                _params.Type = type;
 
                 _module.Notify(_T("discoverablecomplete"), _params);
             }
 
             // Event: scanstarted - Notifies of scan start
-            static void ScanStarted(const JSONRPC& _module, const JsonData::BluetoothControl::scantype& Type, const JsonData::BluetoothControl::scanmode& Mode)
+            static void ScanStarted(const JSONRPC& _module, const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type, const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode)
             {
                 JsonData::BluetoothControl::DiscoverablestartedParamsInfo _params;
-                _params.Type = Type;
-                _params.Mode = Mode;
+                _params.Type = type;
+                _params.Mode = mode;
 
                 _module.Notify(_T("scanstarted"), _params);
             }
 
             // Event: scancomplete - Notifies of scan completion
-            static void ScanComplete(const JSONRPC& _module, const JsonData::BluetoothControl::scantype& Type)
+            static void ScanComplete(const JSONRPC& _module, const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type)
             {
                 JsonData::BluetoothControl::StopdiscoverableParamsInfo _params;
-                _params.Type = Type;
+                _params.Type = type;
 
                 _module.Notify(_T("scancomplete"), _params);
             }
 
             // Event: devicestatechange - Notifies of device state changes
-            static void DeviceStateChanged(const JSONRPC& _module, const string& id, const string& Address, const Exchange::IBluetooth::IDevice::type& Type, 
-                const JsonData::BluetoothControl::DevicestatechangeParamsData::devicestate& State, 
-                const JsonData::BluetoothControl::DevicestatechangeParamsData::disconnectreason& Disconnectreason)
+            template<typename IMPLEMENTATION>
+            static void DeviceStateChanged(const JSONRPC& _module, IMPLEMENTATION* _implementation, const string& id, const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::EnumType<JsonData::BluetoothControl::DevicestatechangeParamsData::devicestate>& state, const Core::JSON::EnumType<JsonData::BluetoothControl::DevicestatechangeParamsData::disconnectreason>& disconnectreason)
             {
                 JsonData::BluetoothControl::DevicestatechangeParamsData _params;
-                _params.Address = Address;
-                _params.Type = Type;
-                _params.State = State;
+                _params.Address = address;
+                _params.Type = type;
+                _params.State = state;
+                _params.Disconnectreason = disconnectreason;
 
-                if (_params.State == JsonData::BluetoothControl::DevicestatechangeParamsData::devicestate::DISCONNECTED) {
-                    _params.Disconnectreason = Disconnectreason;
-                }
-
-                _module.Notify(_T("devicestatechange"), _params, [&id](const string& designator) -> bool {
+                _module.Notify(_T("devicestatechange"), _params, [&id, &_implementation](const string& designator) -> bool {
                     const string designatorId = designator.substr(0, designator.find('.'));
-                    return ((id == designatorId) || (designatorId.find(':') == string::npos));
+                    ASSERT(_implementation != nullptr);
+                    return (_implementation->DeviceStateChangedEventSendIfHook(_implementation, designatorId, id));
                 });
             }
 
             // Event: pincoderequest - Notifies of a PIN code request
-            static void PINCodeRequest(const JSONRPC& _module, const string& Address, const Exchange::IBluetooth::IDevice::type& Type)
+            static void PINCodeRequest(const JSONRPC& _module, const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
             {
                 JsonData::BluetoothControl::ConnectParamsInfo _params;
-                _params.Address = Address;
-                _params.Type = Type;
+                _params.Address = address;
+                _params.Type = type;
 
                 _module.Notify(_T("pincoderequest"), _params);
             }
 
             // Event: passkeyrequest - Notifies of a passkey request
-            static void PasskeyRequest(const JSONRPC& _module, const string& Address, const Exchange::IBluetooth::IDevice::type& Type)
+            static void PasskeyRequest(const JSONRPC& _module, const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
             {
                 JsonData::BluetoothControl::ConnectParamsInfo _params;
-                _params.Address = Address;
-                _params.Type = Type;
+                _params.Address = address;
+                _params.Type = type;
 
                 _module.Notify(_T("passkeyrequest"), _params);
             }
 
             // Event: passkeyconfirmrequest - Notifies of a passkey confirmation request
-            static void PasskeyConfirmRequest(const JSONRPC& _module, const string& Address, const Exchange::IBluetooth::IDevice::type& Type, const uint32_t& Secret)
+            static void PasskeyConfirmRequest(const JSONRPC& _module, const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::DecUInt32& secret)
             {
                 JsonData::BluetoothControl::PasskeyconfirmrequestParamsData _params;
-                _params.Address = Address;
-                _params.Type = Type;
-                _params.Secret = Secret;
+                _params.Address = address;
+                _params.Type = type;
+                _params.Secret = secret;
 
                 _module.Notify(_T("passkeyconfirmrequest"), _params);
             }
+
+            POP_WARNING()
 
         } // namespace Event
 
@@ -535,3 +340,31 @@ namespace Exchange {
 
 }
 
+#if _IMPLEMENTATION_STUB
+class JSONRPCImplementation {
+public:
+    uint32_t SetDiscoverable(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type, const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode, const Core::JSON::Boolean& connectable, const Core::JSON::DecUInt16& duration) { return (Core::ERROR_NONE); }
+    uint32_t StopDiscoverable(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type) { return (Core::ERROR_NONE); }
+    uint32_t Scan(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type, const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode, const Core::JSON::DecUInt16& timeout, const Core::JSON::DecUInt16& duration) { return (Core::ERROR_NONE); }
+    uint32_t StopScanning(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type) { return (Core::ERROR_NONE); }
+    uint32_t Connect(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
+    uint32_t Disconnect(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
+    uint32_t Pair(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::pairingcapabilities>& capabilities, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::DecUInt16& timeout) { return (Core::ERROR_NONE); }
+    uint32_t Unpair(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
+    uint32_t AbortPairing(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
+    uint32_t ProvidePINCode(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::String& secret) { return (Core::ERROR_NONE); }
+    uint32_t ProvidePasskey(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::DecUInt32& secret) { return (Core::ERROR_NONE); }
+    uint32_t ConfirmPasskey(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::Boolean& iscorrect) { return (Core::ERROR_NONE); }
+    uint32_t Forget(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
+    uint32_t GetDeviceList(Core::JSON::ArrayType<JsonData::BluetoothControl::ConnectParamsInfo>& result) { return (Core::ERROR_NONE); }
+    uint32_t GetDeviceInfo(Core::JSON::String& address, Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, Core::JSON::String& name, Core::JSON::DecUInt32& class_, Core::JSON::DecUInt32& appearance, Core::JSON::ArrayType<Core::JSON::String>& services, Core::JSON::Boolean& connected, Core::JSON::Boolean& paired) { return (Core::ERROR_NONE); }
+    uint32_t Adapters(Core::JSON::ArrayType<Core::JSON::DecUInt16>& result) const { return (Core::ERROR_NONE); }
+    uint32_t Adapter(const string& index_, Core::JSON::DecUInt16& id, Core::JSON::String& address, Core::JSON::String& interface, Core::JSON::EnumType<JsonData::BluetoothControl::AdapterData::adaptertype>& type, Core::JSON::DecUInt8& version, Core::JSON::DecUInt16& manufacturer, Core::JSON::DecUInt32& class_, Core::JSON::String& name, Core::JSON::String& shortname) const { return (Core::ERROR_NONE); }
+    uint32_t Devices(Core::JSON::ArrayType<Core::JSON::String>& result) const { return (Core::ERROR_NONE); }
+    uint32_t Device(const string& index_, Core::JSON::String& address, Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, Core::JSON::String& name, Core::JSON::DecUInt32& class_, Core::JSON::DecUInt32& appearance, Core::JSON::ArrayType<Core::JSON::String>& services, Core::JSON::Boolean& connected, Core::JSON::Boolean& paired) const { return (Core::ERROR_NONE); }
+    void OnDiscoverableStartedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status) { }
+    void OnScanStartedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status) { }
+    void OnDeviceStateChangedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status) { }
+    template<typename IMPLEMENTATION> static bool DeviceStateChangedEventSendIfHook(IMPLEMENTATION* _implementation, const string& designator, const string& id) { return (false); }
+}; // class JSONRPCImplementation
+#endif // _IMPLEMENTATION_STUB
