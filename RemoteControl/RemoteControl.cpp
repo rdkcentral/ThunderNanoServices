@@ -217,19 +217,21 @@ POP_WARNING()
                     loadName += _T(".json");
                 }
 
+                // Get a table for producer.
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
+
                 // See if we need to load a table.
                 string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
-
                 if ((specific.empty() == false) && (specific != mappingFile)) {
 
                     TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
 
-                    // Get our selves a table..
-                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
                     Load(map, specific);
                     if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());
                     }
+                } else {
+                    map.PassThrough(true);
                 }
             }
 
