@@ -1307,7 +1307,7 @@ namespace Weston {
             , _display(nullptr)
             , _exitTimer(nullptr)
             , _compositor(nullptr)
-            , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz)
+            , _resolution(Exchange::IDeviceVideoCapabilities::ScreenResolution_1080i50Hz)
             , _loadedSignal(false, true)
             , _adminLock()
         {
@@ -1497,21 +1497,21 @@ namespace Weston {
             }
             return status;
         }
-        uint32_t SetResolution(const Exchange::IComposition::ScreenResolution value) {
+        uint32_t SetResolution(const Exchange::IDeviceVideoCapabilities::ScreenResolution value) {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
             const char* request = nullptr;
             switch(value) {
-                case Exchange::IComposition::ScreenResolution_480i:      request = "720x480@60.0";       break;
-                case Exchange::IComposition::ScreenResolution_480p:      request = "720x480@60.0 16:9";  break;
-                case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720@60.0 16:9"; break;
-                case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720@50.0";      break;
-                case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080@24.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080@60.0";     break;
-                case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160@60.0";     break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_480i:      request = "720x480@60.0";       break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_480p:      request = "720x480@60.0 16:9";  break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_720p:      request = "1280x720@60.0 16:9"; break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_720p50Hz:  request = "1280x720@50.0";      break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_1080p24Hz: request = "1920x1080@24.0";     break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_1080i50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_1080p50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_1080p60Hz: request = "1920x1080@60.0";     break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_2160p50Hz: request = "3840x2160@50.0";     break;
+                case Exchange::IDeviceVideoCapabilities::ScreenResolution_2160p60Hz: request = "3840x2160@60.0";     break;
                 default: break;
             }
             if (request != nullptr) {
@@ -1522,7 +1522,7 @@ namespace Weston {
             }
             return (result);
         }
-        Exchange::IComposition::ScreenResolution GetResolution() const {
+        Exchange::IDeviceVideoCapabilities::ScreenResolution GetResolution() const {
             return (_resolution);
         }
 
@@ -1704,7 +1704,7 @@ namespace Weston {
         struct wl_event_source* _exitTimer;
         struct weston_compositor* _compositor;
         struct wl_listener _surfaceActivateListener;
-        Exchange::IComposition::ScreenResolution _resolution;
+        Exchange::IDeviceVideoCapabilities::ScreenResolution _resolution;
 
         mutable Core::Event _loadedSignal;
         mutable Core::CriticalSection _adminLock;
@@ -1720,10 +1720,10 @@ namespace Weston {
 
 } // namespace Weston
 
-    Exchange::IComposition::ScreenResolution GetResolution() {
+    Exchange::IDeviceVideoCapabilities::ScreenResolution GetResolution() {
         return (Weston::Compositor::Instance()->GetResolution());
     }
-    uint32_t SetResolution(Exchange::IComposition::ScreenResolution value) {
+    uint32_t SetResolution(Exchange::IDeviceVideoCapabilities::ScreenResolution value) {
         return (Weston::Compositor::Instance()->SetResolution(value));
     }
     IServer* Create(PluginHost::IShell* service)
