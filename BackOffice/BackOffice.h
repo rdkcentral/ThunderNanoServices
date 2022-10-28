@@ -28,6 +28,7 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , ServerAddress()
                 , ServerPort()
+                , UserAgent(_T("BackOffice Reporting Plugin"))
                 , Customer()
                 , Platform()
                 , Country()
@@ -35,8 +36,9 @@ namespace Plugin {
                 , Session()
                 , CallsignMapping()
             {
-                Add(_T("server_address"), &ServerAddress);
-                Add(_T("server_port"), &ServerPort);
+                Add(_T("server"), &ServerAddress);
+                Add(_T("port"), &ServerPort);
+                Add(_T("useragent"), &UserAgent);
                 Add(_T("customer"), &Customer);
                 Add(_T("platform"), &Platform);
                 Add(_T("country"), &Country);
@@ -50,6 +52,7 @@ namespace Plugin {
         public:
             Core::JSON::String ServerAddress;
             Core::JSON::DecUInt16 ServerPort;
+            Core::JSON::String UserAgent;
             Core::JSON::String Customer;
             Core::JSON::String Platform;
             Core::JSON::String Country;
@@ -73,6 +76,7 @@ namespace Plugin {
                 , _lock()
                 , _queue()
                 , _hostAddress()
+                , _userAgent()
                 , _message()
                 , _job(*this)
             {
@@ -83,8 +87,9 @@ namespace Plugin {
             }
 
         public:
-            uint32_t Configure(const Core::NodeId& remoteNode, const QueryParameters& queryParameters) {
+            uint32_t Configure(const Core::NodeId& remoteNode, const string& userAgent, const QueryParameters& queryParameters) {
                 _hostAddress = remoteNode.HostAddress();
+                _userAgent = userAgent;
 
                 BaseClass::Link().LocalNode(remoteNode.AnyInterface());
                 BaseClass::Link().RemoteNode(remoteNode.AnyInterface());
@@ -169,9 +174,11 @@ namespace Plugin {
                 std::pair<string, string> entry = _queue.back();
                 _queue.pop_back();
 
-                _message.Verb = Web::Request::HTTP_GET;
-                _message.Query = Core::Format("%sevent=%s&id=%s", _queryParameters.c_str(), entry.first.c_str(), entry.second.c_str());
-                _message.Host = _hostAddress;
+                _message.Verb       = Web::Request::HTTP_GET;
+                _message.Query      = Core::Format("%sevent=%s&id=%s", _queryParameters.c_str(), entry.first.c_str(), entry.second.c_str());
+                _message.Host       = _hostAddress;
+                _message.Accept     = _T("*/*");
+                _message.UserAgent  = _userAgent;
                 _message.Connection = Web::Request::CONNECTION_KEEPALIVE;
 
                 BaseClass::Submit(Core::ProxyType<WPEFramework::Web::Request>(_message));
@@ -183,6 +190,7 @@ namespace Plugin {
             Queue _queue;
             string _queryParameters;
             string _hostAddress;
+            string _userAgent;
             Core::ProxyObject<WPEFramework::Web::Request> _message;
             Core::ThreadPool::JobType<WebClient&> _job;
         };
@@ -261,7 +269,7 @@ namespace Plugin {
 
                 // Check out for which Callsigns we need to report the lifetime stuff.
                 while (index.Next() == true) {
-                    // TODO: To make it more clear it is anothername for the callsign, suggest to use an euqla sign
+                    // TODO: To make it more clear it is anothername for the callsign, suggest to use an equal sign
                     Core::TextSegmentIterator loop(Core::TextFragment(index.Current().Value()), false, ',');
                     if (loop.Next() == true) {
                         string callsign = loop.Current().Text();

@@ -70,7 +70,7 @@ namespace Plugin {
         else if ((config.ServerAddress.IsSet() == false) || (config.ServerAddress.Value().empty() == true) || (config.ServerPort.IsSet() == false)) {
             result = _T("Server address or port not specified!");
         }
-        else if (_requestSender.Configure(Core::NodeId(config.ServerAddress.Value().c_str(), config.ServerPort.Value()), queryParameters) != Core::ERROR_NONE) {
+        else if (_requestSender.Configure(Core::NodeId(config.ServerAddress.Value().c_str(), config.ServerPort.Value()), config.UserAgent.Value(), queryParameters) != Core::ERROR_NONE) {
             result = _T("Client connection could not be configured correctly!");
         }
 
