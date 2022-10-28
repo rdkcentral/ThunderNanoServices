@@ -23,7 +23,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(TimeSync, 1, 0);
+    namespace {
+
+        static Metadata<TimeSync> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            { subsystem::TIME }
+        );
+    }
 
     static Core::ProxyPoolType<Web::Response> responseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<TimeSync::Data<>>> jsonResponseFactory(4);
@@ -36,9 +48,9 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         : _skipURL(0)
         , _periodicity(0)
         , _client(Core::Service<NTPClient>::Create<Exchange::ITimeSync>())
-        , _activity(Core::ProxyType<PeriodicSync>::Create(_client))
         , _sink(this)
         , _service(nullptr)
+        , _job(*this)
     {
         RegisterAll();
     }
@@ -76,7 +88,7 @@ POP_WARNING()
 
     /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        Core::IWorkerPool::Instance().Revoke(_activity);
+        _job.Revoke();
         _sink.Deinitialize();
 
         ASSERT(_service != nullptr);
@@ -152,7 +164,7 @@ POP_WARNING()
                     if (result->ErrorCode == Web::STATUS_OK) {
                         // Stop automatic synchronisation
                         _client->Cancel();
-                        Core::IWorkerPool::Instance().Revoke(_activity);
+                        _job.Revoke();
 
                         if (newTime.IsValid()) {
                             Core::SystemInfo::Instance().SetTime(newTime);
@@ -182,7 +194,7 @@ POP_WARNING()
 
             // Seems we are synchronised with the time. Schedule the next timesync.
             TRACE(Trace::Information, (_T("Waking up again at %s."), newSyncTime.ToRFC1123(false).c_str()));
-            Core::IWorkerPool::Instance().Schedule(newSyncTime, _activity);
+            _job.Reschedule(newSyncTime);
 
             event_timechange();
         }

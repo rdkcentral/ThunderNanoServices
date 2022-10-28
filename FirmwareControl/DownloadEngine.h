@@ -242,6 +242,7 @@ namespace PluginHost {
         friend Core::ThreadPool::JobType<DownloadEngine&>;
         void Dispatch()
         {
+            TRACE(Trace::Information, (_T("FirmwareControl: Download progress is dispatched")));
             _adminLock.Lock();
 
             if (_notifier != nullptr) {

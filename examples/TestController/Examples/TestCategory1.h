@@ -39,7 +39,10 @@ namespace TestCore {
     public:
         TestCategory1(const TestCategory1&) = delete;
         TestCategory1& operator=(const TestCategory1&) = delete;
-        ~TestCategory1() override = default;
+        ~TestCategory1() override
+        {
+            TestCore::TestAdministrator::Instance().Revoke(this);
+        }
 
         static Exchange::ITestController::ICategory& Instance()
         {

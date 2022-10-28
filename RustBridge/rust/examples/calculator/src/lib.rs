@@ -16,79 +16,79 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-struct Calculator { 
-  proto: Box<dyn thunder_rs::PluginProtocol>
+use serde_json::{json, Value};
+use std::collections::HashMap;
+use thunder_rs::{PluginResponse, RequestContext, PluginBase, Plugin};
+use pluginbase_derive::PluginBase;
+#[derive(PluginBase)]
+struct Calculator {
+    function_handlers:
+        HashMap<String, fn(&mut Self, &thunder_rs::RequestContext, String) -> PluginResponse>,
 }
 
 impl Calculator {
-  
-  fn dispatch_request(&mut self, req: json::JsonValue, ctx: thunder_rs::RequestContext) {
-    if let Some(method) = req["method"].as_str() {
-      match method {
-		/* suggest not to work with the "calculator" prefix here. It is */
-		/* already verified by thunder. here we just would like to work */
-        /* on the method name. */
-        "add" => { self.add(req, ctx); }
-        "mul" => { self.mul(req, ctx); }
-        _ => {
-          println!("method {} not handled here", method);
+    fn add2(&mut self, ctx: &thunder_rs::RequestContext, params: String) -> PluginResponse {
+        let jparams: Result<Value, serde_json::Error> = serde_json::from_str(params.as_str());
+        if let Ok(json_params) = jparams {
+            if json_params.is_array() {
+                let json_params = json_params.as_array().unwrap();
+                let mut sum: u64 = 0;
+                for item in json_params {
+                    sum += item.as_u64().unwrap();
+                }
+                PluginResponse::Success(json!(sum))
+            } else {
+                PluginResponse::Failure {
+                    code: -143,
+                    message: "Invalid input param".to_owned(),
+                }
+            }
+        } else {
+            PluginResponse::Failure {
+                code: -143,
+                message: "Invalid input param".to_owned(),
+            }
         }
-      }
-    }
-  }
-
-  fn add(&mut self, req: json::JsonValue, ctx: thunder_rs::RequestContext) {
-    let mut sum = 0;
-    for val in req["params"].members() {
-      if let Some(n) = val.as_u32() {
-        sum += n;
-      }
     }
 
-    let res = json::object!{
-      "jsonrpc": "2.0",
-      "id": req["id"].as_u32(),
-      "result": sum
-    };
-
-    self.send_response(res, ctx);
-  }
-
-  fn mul(&mut self, req: json::JsonValue, ctx: thunder_rs::RequestContext) {
-    let mut product = 0;
-    for val in req["params"].members() {
-      if let Some(n) = val.as_u32() {
-        product *= n
-      }
+    fn mul2(&mut self, ctx: &thunder_rs::RequestContext, params: String) -> PluginResponse {
+        println!("Entering add2 function");
+        let json_params: Value = serde_json::from_str(params.as_str()).unwrap();
+        if json_params.is_array() {
+            let json_params = json_params.as_array().unwrap();
+            let mut sum: u64 = 0;
+            for item in json_params {
+                sum *= item.as_u64().unwrap();
+            }
+            PluginResponse::Success(json!(sum))
+        } else {
+            PluginResponse::Failure {
+                code: -143,
+                message: "Invalid input param".to_owned(),
+            }
+        }
     }
 
-    let res = json::object!{
-      "jsonrpc": "2.0",
-      "id": req["id"].as_u32(),
-      "result": product
-    };
-
-    self.send_response(res, ctx);
-  }
-
-  fn send_response(&mut self, res: json::JsonValue, ctx: thunder_rs::RequestContext) {
-    let s = json::stringify(res);
-    self.proto.send_to(ctx.channel_id, s);
-  }
 }
 
-impl thunder_rs::Plugin for Calculator {
-  fn on_message(&mut self, json: String, ctx: thunder_rs::RequestContext) {
-    let req: json::JsonValue = json::parse(json.as_str())
-      .unwrap();
-    self.dispatch_request(req, ctx);
-  }
-  fn on_client_connect(&mut self, _channel_id: u32) { }
-  fn on_client_disconnect(&mut self, _channel_id: u32) { }
+impl Plugin for Calculator {
+    fn register(&mut self) {
+        println!("Registering function handlers");
+        self.function_handlers
+            .insert("add".to_owned(), Calculator::add2);
+        self.function_handlers
+            .insert("mul".to_owned(), Calculator::mul2);
+    }
+
+    fn on_client_connect(&self, _channel_id: u32) {}
+
+    fn on_client_disconnect(&self, _channel_id: u32) {}
 }
 
-fn sample_plugin_init(proto: Box<dyn thunder_rs::PluginProtocol>) -> Box<dyn thunder_rs::Plugin> {
-  Box::new(Calculator{ proto: proto})
+fn sample_plugin_init() -> Box<dyn thunder_rs::Plugin> {
+    Box::new(Calculator {
+        function_handlers: Default::default(),
+    })
 }
 
-thunder_rs::export_plugin!("Calculator", (1,0,0), sample_plugin_init);
+thunder_rs::export_plugin!("Calculator", (1, 0, 0), sample_plugin_init);

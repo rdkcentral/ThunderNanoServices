@@ -33,7 +33,19 @@ ENUM_CONVERSION_END(Plugin::BluetoothRemoteControl::recorder)
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(BluetoothRemoteControl, 1, 0);
+    namespace {
+
+        static Metadata<BluetoothRemoteControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::BLUETOOTH },
+            // Terminations
+            { subsystem::NOT_BLUETOOTH },
+            // Controls
+            {}
+        );
+    }
 
     template<typename FROM, typename TO>
     class LUT {
@@ -526,7 +538,7 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
                 TRACE(Trace::Information, ("key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             } else {
-                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"))
+                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             }
         }
 

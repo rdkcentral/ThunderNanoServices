@@ -21,6 +21,8 @@
 #include "OutOfProcessPlugin.h"
 #include <interfaces/ITimeSync.h>
 
+#include <thread>
+
 #ifdef __CORE_EXCEPTION_CATCHING__
 #include <stdexcept>
 #endif
@@ -28,15 +30,60 @@
 namespace WPEFramework {
 namespace Plugin {
 
+    class TooMuchInfo {
+        // -------------------------------------------------------------------
+        // This object should not be copied or assigned. Prevent the copy
+        // constructor and assignment constructor from being used. Compiler
+        // generated assignment and copy methods will be blocked by the
+        // following statments.
+        // Define them but do not implement them, compile error/link error.
+        // -------------------------------------------------------------------
+
+    public:
+        TooMuchInfo(const TCHAR formatter[], ...)
+        {
+            va_list ap;
+            va_start(ap, formatter);
+            Core::Format(_text, formatter, ap);
+            va_end(ap);
+        }
+        explicit TooMuchInfo(const string& text)
+            : _text(Core::ToString(text))
+        {
+        }
+        ~TooMuchInfo() = default;
+
+        TooMuchInfo(const TooMuchInfo& a_Copy) = delete;
+        TooMuchInfo& operator=(const TooMuchInfo& a_RHS) = delete;
+
+    public:
+        inline const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        inline uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        string _text;
+    };
+
     class OutOfProcessImplementation 
         : public Exchange::IBrowser
+        , public Exchange::IBrowserResources
         , public PluginHost::IStateControl
         , public Core::Thread {
     private:
-        class PluginMonitor : public PluginHost::IPlugin::INotification {
-        private:
-            using Job = Core::ThreadPool::JobType<PluginMonitor>;
+        enum StateType {
+            SHOW,
+            HIDE,
+            RESUMED,
+            SUSPENDED
+        };
 
+        class PluginMonitor : public PluginHost::IPlugin::INotification {
         public:
             PluginMonitor(const PluginMonitor&) = delete;
             PluginMonitor& operator=(const PluginMonitor&) = delete;
@@ -47,16 +94,18 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             {
             }
 POP_WARNING()
-            ~PluginMonitor() override = default;
+            ~PluginMonitor() override
+            {
+            }
 
         public:
             void Activated(const string&, PluginHost::IShell* service) override
             {
                 Exchange::ITimeSync* time = service->QueryInterface<Exchange::ITimeSync>();
-				if (time != nullptr) {
-					TRACE(Trace::Information, (_T("Time interface supported")));
-					time->Release();
-				}
+                if (time != nullptr) {
+                    TRACE(Trace::Information, (_T("Time interface supported")));
+                    time->Release();
+                }
             }
             void Deactivated(const string&, PluginHost::IShell*) override
             {
@@ -67,15 +116,6 @@ POP_WARNING()
             BEGIN_INTERFACE_MAP(PluginMonitor)
                 INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
             END_INTERFACE_MAP
-
-        private:
-            friend Core::ThreadPool::JobType<PluginMonitor&>;
-
-            // Dispatch can be run in an unlocked state as the destruction of the observer list
-            // is always done if the thread that calls the Dispatch is blocked (paused)
-            void Dispatch()
-            {
-            }
 
         private:
             OutOfProcessImplementation& _parent;
@@ -113,64 +153,6 @@ POP_WARNING()
             Core::JSON::Boolean Single;
         };
 
-        class Job : public Core::IDispatch {
-        public:
-            enum runtype {
-                SHOW,
-                HIDE,
-                RESUMED,
-                SUSPENDED
-            };
-            Job()
-                : _parent(nullptr)
-                , _type(SHOW)
-            {
-            }
-            Job(OutOfProcessImplementation& parent, const runtype type)
-                : _parent(&parent)
-                , _type(type)
-            {
-            }
-            Job(const Job& copy)
-                : _parent(copy._parent)
-                , _type(copy._type)
-            {
-            }
-            ~Job() override = default;
-
-            Job& operator=(const Job& RHS)
-            {
-                _parent = RHS._parent;
-                _type = RHS._type;
-                return (*this);
-            }
-
-        public:
-            void Dispatch() override
-            {
-                switch (_type) {
-                case SHOW:
-                    ::SleepMs(300);
-                    _parent->Hidden(false);
-                    break;
-                case HIDE:
-                    ::SleepMs(100);
-                    _parent->Hidden(true);
-                    break;
-                case RESUMED:
-                    _parent->StateChange(PluginHost::IStateControl::RESUMED);
-                    break;
-                case SUSPENDED:
-                    _parent->StateChange(PluginHost::IStateControl::SUSPENDED);
-                    break;
-                }
-            }
-
-        private:
-            OutOfProcessImplementation* _parent;
-            runtype _type;
-        };
-
     public:
         OutOfProcessImplementation(const OutOfProcessImplementation&) = delete;
         OutOfProcessImplementation& operator=(const OutOfProcessImplementation&) = delete;
@@ -200,7 +182,7 @@ POP_WARNING()
             }
 
         private:
-            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+            virtual void* Aquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
@@ -219,24 +201,6 @@ POP_WARNING()
             Exchange::IBrowser* _parentInterface;
         };
 
-        class Dispatcher : public Core::ThreadPool::IDispatcher {
-        public:
-            Dispatcher(const Dispatcher&) = delete;
-            Dispatcher& operator=(const Dispatcher&) = delete;
-
-            Dispatcher() = default;
-            ~Dispatcher() override = default;
-
-        private:
-            void Initialize() override {
-            }
-            void Deinitialize() override {
-            }
-            void Dispatch(Core::IDispatch* job) override {
-                job->Dispatch();
-            }
-        };
-
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         OutOfProcessImplementation()
             : Core::Thread(0, _T("OutOfProcessImplementation"))
@@ -244,18 +208,19 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _setURL()
             , _fps(0)
             , _hidden(false)
-            , _dispatcher()
-            , _executor(1, 0, 4, &_dispatcher, nullptr)
             , _sink(*this)
             , _service(nullptr)
             , _engine()
             , _externalAccess(nullptr)
+            , _type(SHOW)
+            , _job(*this)
         {
             TRACE(Trace::Information, (_T("Constructed the OutOfProcessImplementation")));
         }
 POP_WARNING()
         ~OutOfProcessImplementation() override
         {
+            _job.Revoke();
             TRACE(Trace::Information, (_T("Destructing the OutOfProcessImplementation")));
             Block();
 
@@ -424,11 +389,11 @@ POP_WARNING()
 
             switch (command) {
             case PluginHost::IStateControl::SUSPEND:
-                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::SUSPENDED)), 20000);
+                UpdateState(SUSPENDED);
                 result = Core::ERROR_NONE;
                 break;
             case PluginHost::IStateControl::RESUME:
-                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::RESUMED)), 20000);
+                UpdateState(RESUMED);
                 result = Core::ERROR_NONE;
                 break;
             }
@@ -446,10 +411,10 @@ POP_WARNING()
 
             if (hidden == true) {
                 TRACE(Trace::Information, (_T("Requestsed a Hide.")));
-                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::HIDE)), 20000);
+                UpdateState(HIDE);
             } else {
+                UpdateState(SHOW);
                 TRACE(Trace::Information, (_T("Requestsed a Show.")));
-                _executor.Submit(Core::ProxyType<Core::IDispatch>(Core::ProxyType<Job>::Create(*this, Job::SHOW)), 20000);
             }
         }
         void StateChange(const PluginHost::IStateControl::state state)
@@ -486,12 +451,141 @@ POP_WARNING()
 
             _adminLock.Unlock();
         }
+        void UpdateState(const StateType type)
+        {
+            _adminLock.Lock();
+            _type = type;
+            _adminLock.Unlock();
+            _job.Submit();
+        }
+
+        // IBrowserResources (added so we can test lengthty calls back to Thunder )
+
+        uint32_t Headers(IStringIterator*& header ) const override {
+            std::list<string> headers;
+            for(uint16_t i = 0; i<1000; ++i) {
+                string s("Header_");
+                s += std::to_string(i);
+                headers.emplace_back(std::move(s));
+            }
+
+            header = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(headers);
+
+            return Core::ERROR_NONE;
+        }
+        uint32_t Headers(IStringIterator* const header) override {
+            TRACE(Trace::Information, (_T("Headers update start")));
+            ASSERT(header != nullptr);
+            header->Reset(0);
+            string value;
+            while (header->Next(value) == true) {
+                TRACE(TooMuchInfo, (_T("Header [%s] processed"), value.c_str()));
+            }
+            TRACE(Trace::Information, (_T("Headers update finished")));
+            return Core::ERROR_NONE;
+        }
+
+        uint32_t UserScripts(IStringIterator*& uris ) const override {
+            std::list<string> scripts;
+            for(uint16_t i = 0; i<1000; ++i) {
+                string s("UserScripts_");
+                s += std::to_string(i);
+                scripts.emplace_back(std::move(s));
+            }
+
+            uris = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(scripts);
+
+            return Core::ERROR_NONE;
+        }
+
+        uint32_t UserScripts(IStringIterator* const uris) override {
+            TRACE(Trace::Information, (_T("UserScripts update start")));
+            ASSERT(uris != nullptr);
+            uris->Reset(0);
+            string value;
+            uint32_t i = 0;
+            uint32_t sleep = 10;
+            while (uris->Next(value) == true) {
+                if(i == 0) {
+                    sleep = stoi(value);
+                }
+                TRACE(TooMuchInfo, (_T("UserScript [%s] processed"), value.c_str()));
+                if( ++i == 5000 ) {
+                    if(sleep == 0 ) {
+                        int* crash = nullptr;
+                        *crash = 10;
+                    } else if(sleep < 1000) {
+                        std::thread t([=](){
+                            std::this_thread::sleep_for(std::chrono::milliseconds(sleep));            
+                            int* crash = nullptr;
+                            *crash = 10;
+                        });
+                        t.detach();
+                    } 
+                }
+            }
+            TRACE(Trace::Information, (_T("UserScripts update finished")));
+            return Core::ERROR_NONE;
+        }
+
+        uint32_t UserStyleSheets(IStringIterator*& uris ) const override {
+            std::list<string> sheets;
+            for(uint16_t i = 0; i<1000; ++i) {
+                string s("UserStyleSheets_");
+                s += std::to_string(i);
+                sheets.emplace_back(std::move(s));
+            }
+
+            uris = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(sheets);
+
+            return Core::ERROR_NONE;
+        }
+        uint32_t UserStyleSheets(IStringIterator* const uris) override {
+            TRACE(Trace::Information, (_T("UserStyleSheets update start")));
+            ASSERT(uris != nullptr);
+            uris->Reset(0);
+            string value;
+            while (uris->Next(value) == true) {
+                TRACE(TooMuchInfo, (_T("UserStyleSheets [%s] processed"), value.c_str()));
+            }
+            return Core::ERROR_NONE;
+            TRACE(Trace::Information, (_T("UserStyleSheets update finished")));
+        }
 
         BEGIN_INTERFACE_MAP(OutOfProcessImplementation)
             INTERFACE_ENTRY(Exchange::IBrowser)
+            INTERFACE_ENTRY(Exchange::IBrowserResources)
             INTERFACE_ENTRY(PluginHost::IStateControl)
             INTERFACE_AGGREGATE(PluginHost::IPlugin::INotification,static_cast<IUnknown*>(&_sink))
         END_INTERFACE_MAP
+
+    private:
+        friend Core::ThreadPool::JobType<OutOfProcessImplementation&>;
+
+        // Dispatch can be run in an unlocked state as the destruction of the observer list
+        // is always done if the thread that calls the Dispatch is blocked (paused)
+        void Dispatch()
+        {
+            Trace::Information(_T("PluginMonitor: Job is Dispatched"));
+            _adminLock.Lock();
+            switch (_type) {
+            case SHOW:
+                ::SleepMs(300);
+                Hidden(false);
+                break;
+            case HIDE:
+                ::SleepMs(100);
+                Hidden(true);
+                break;
+            case RESUMED:
+                StateChange(PluginHost::IStateControl::RESUMED);
+                break;
+            case SUSPENDED:
+                StateChange(PluginHost::IStateControl::SUSPENDED);
+                break;
+            }
+            _adminLock.Unlock();
+        }
 
     private:
         virtual uint32_t Worker()
@@ -554,12 +648,13 @@ POP_WARNING()
         std::list<PluginHost::IStateControl::INotification*> _notificationClients;
         std::list<Exchange::IBrowser::INotification*> _browserClients;
         PluginHost::IStateControl::state _state;
-        Dispatcher _dispatcher;
-        Core::ThreadPool _executor;
         Core::Sink<PluginMonitor> _sink;
         PluginHost::IShell* _service;
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
+
+        StateType _type;
+        Core::WorkerPool::JobType<OutOfProcessImplementation&> _job;
     };
 
     SERVICE_REGISTRATION(OutOfProcessImplementation, 1, 0);

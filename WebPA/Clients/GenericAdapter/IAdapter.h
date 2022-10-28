@@ -63,7 +63,7 @@ public:
     };
 
 public:
-    static Administrator& Instance()
+    EXTERNAL static Administrator& Instance()
     {
         static Administrator _singleton;
         return (_singleton);

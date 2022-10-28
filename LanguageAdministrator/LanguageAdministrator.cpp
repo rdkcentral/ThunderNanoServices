@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(LanguageAdministrator, 1, 0);
+    namespace {
+
+        static Metadata<LanguageAdministrator> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::INTERNET },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     /* virtual */ const string LanguageAdministrator::Initialize(PluginHost::IShell* service)
     {
@@ -130,7 +143,7 @@ namespace Plugin {
 
     }
 
-    void LanguageAdministrator::Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    void LanguageAdministrator::Deactivated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
     {
         _lock.Lock();
         TRACE(Trace::Information , (_T("LanguageAdministrator::Deactivated Called")));

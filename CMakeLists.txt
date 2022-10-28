@@ -19,15 +19,16 @@ cmake_minimum_required(VERSION 3.3)
 project(NanoServices)
 
 option(PLUGIN_AVS "Include AVS plugin" OFF)
+option(PLUGIN_BACKOFFICE "Include BackOffice plugin" OFF)
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
 option(PLUGIN_BLUETOOTHAUDIOSINK "Include Bluetooth Audio Sink plugin" OFF)
+option(PLUGIN_BLUETOOTHSDPSERVER "Include Bluetooth SDP server plugin" OFF)
 option(PLUGIN_CECCONTROL "Include CECControl plugin" OFF)
 option(PLUGIN_COBALT "Include Cobalt plugin" OFF)
 option(PLUGIN_COMMANDER "Include Commander plugin" OFF)
 option(PLUGIN_COMPOSITOR "Include Compsitor plugin" OFF)
 option(PLUGIN_PROCESSCONTAINERS "Include ProcessContainers plugin" OFF)
-option(PLUGIN_DISPLAYINFO "Include DisplayInfo plugin" OFF)
 option(PLUGIN_DHCPSERVER "Include DHCPServer plugin" OFF)
 option(PLUGIN_DIALSERVER " Include DIALServer plugin" OFF)
 option(PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
@@ -38,7 +39,6 @@ option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
 option(PLUGIN_LANGUAGEADMINISTRATOR "Include LanguageAdministrator plugin" OFF)
 option(PLUGIN_NETWORKCONTROL "Include NetworkControlplugin" OFF)
 option(PLUGIN_PERFORMANCEMONITOR "Include Performance Monitor" OFF)
-option(PLUGIN_PLAYERINFO "Include PlayerInfo plugin" OFF)
 option(PLUGIN_POWER "Include Power plugin" OFF)
 option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_RESOURCEMONITOR "Include ResourceMonitor plugin" OFF)
@@ -59,14 +59,18 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
-option(PLUGIN_DTV "Include DTV plugin" OFF)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
+
 if(PLUGIN_AVS)
     add_subdirectory(AVS)
+endif()
+
+if(PLUGIN_BACKOFFICE)
+    add_subdirectory(BackOffice)
 endif()
 
 if(PLUGIN_BLUETOOTH)
@@ -79,6 +83,10 @@ endif()
 
 if(PLUGIN_BLUETOOTHAUDIOSINK)
     add_subdirectory(BluetoothAudioSink)
+endif()
+
+if(PLUGIN_BLUETOOTHSDPSERVER)
+    add_subdirectory(BluetoothSDPServer)
 endif()
 
 if(PLUGIN_CECCONTROL)
@@ -99,10 +107,6 @@ endif()
 
 if (PLUGIN_PROCESSCONTAINERS)
     add_subdirectory(ProcessContainers)
-endif()
-
-if(PLUGIN_DISPLAYINFO)
-    add_subdirectory(DisplayInfo)
 endif()
 
 if(PLUGIN_DHCPSERVER)
@@ -151,10 +155,6 @@ endif()
 
 if (PLUGIN_PERFORMANCEMONITOR)
     add_subdirectory(PerformanceMonitor)
-endif()
-
-if(PLUGIN_PLAYERINFO)
-    add_subdirectory(PlayerInfo)
 endif()
 
 if(PLUGIN_REMOTECONTROL)
@@ -235,10 +235,6 @@ endif()
 
 if(PLUGIN_FILETRANSFER)
     add_subdirectory(FileTransfer)
-endif()
-
-if(PLUGIN_DTV)
-    add_subdirectory(DTV)
 endif()
 
 add_subdirectory(examples)

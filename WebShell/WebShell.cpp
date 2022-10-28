@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(WebShell, 1, 0);
+    namespace {
+
+        static Metadata<WebShell> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
 #define SLOT_ALLOCATION 8
 

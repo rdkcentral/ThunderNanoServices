@@ -24,8 +24,8 @@ namespace TestCore {
 
     /* static */ TestAdministrator& TestAdministrator::Instance()
     {
-        static TestAdministrator _singleton;
-        return (_singleton);
+        static TestAdministrator* _singleton(Core::Service<TestAdministrator>::Create<TestAdministrator>());;
+        return (*_singleton);
     }
 
     void TestAdministrator::Announce(Exchange::ITestController::ICategory* category)

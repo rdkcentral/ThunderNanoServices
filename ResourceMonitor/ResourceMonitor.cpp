@@ -23,8 +23,19 @@ namespace WPEFramework
 
     namespace Plugin
     {
+        namespace {
 
-        SERVICE_REGISTRATION(ResourceMonitor, 1, 0);
+            static Metadata<ResourceMonitor> metadata(
+                // Version
+                1, 0, 0,
+                // Preconditions
+                {},
+                // Terminations
+                {},
+                // Controls
+                {}
+            );
+        }
 
         const string ResourceMonitor::Initialize(PluginHost::IShell *service)
         {
@@ -61,7 +72,7 @@ namespace WPEFramework
             return message;
         }
 
-        void ResourceMonitor::Deinitialize(PluginHost::IShell *service)
+        void ResourceMonitor::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
         {
             ASSERT(_service == _service);
 

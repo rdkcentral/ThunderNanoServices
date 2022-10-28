@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-SERVICE_REGISTRATION(WebPA, 1, 0);
+namespace {
+
+    static Metadata<WebPA> metadata(
+        // Version
+        1, 0, 0,
+        // Preconditions
+        {},
+        // Terminations
+        {},
+        // Controls
+        {}
+    );
+}
 
 /* virtual */ const string WebPA::Initialize(PluginHost::IShell* service)
 {
@@ -66,7 +78,7 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
     return message;
 }
 
-/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service)
+/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
     ASSERT(_service == service);
 
@@ -88,7 +100,7 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
         }
     }
     _connectionId = 0;
-    _service->Release()
+    _service->Release();
     _service = nullptr;
 }
 

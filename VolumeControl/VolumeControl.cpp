@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(VolumeControl, 1, 0);
+    namespace {
+
+        static Metadata<VolumeControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     const string VolumeControl::Initialize(PluginHost::IShell* service)
     {

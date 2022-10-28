@@ -98,6 +98,7 @@ string Notifier::Process(const NotifyData& notifyData)
                 TRACE(Trace::Information, (_T("paramValue: %d"), param->Value().Boolean()));
                 Core::JSON::Variant value(static_cast<bool>(param->Value().Integer()));
                 notfierPayload.Value = value;
+                break;
             }
             case Variant::ParamType::TypeUnsignedLong:
             {

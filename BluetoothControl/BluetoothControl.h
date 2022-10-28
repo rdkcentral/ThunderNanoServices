@@ -32,6 +32,7 @@ namespace Plugin {
 using namespace Tracing;
 
 class BluetoothControl : public PluginHost::IPlugin
+                       , public PluginHost::IPlugin::INotification
                        , public PluginHost::IWeb
                        , public PluginHost::JSONRPC
                        , public Exchange::IBluetooth {
@@ -242,7 +243,12 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (info.store_hint != 0) {
                         if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::LongTermKey(info.key.addr.bdaddr, info.key.addr.type, info.key.type,
-                                                                       info.key.master, info.key.enc_size, btohs(info.key.ediv),
+#ifdef NO_INCLUSIVE_LANGUAGE
+                                                                       info.key.central,
+#else
+                                                                       info.key.master,
+#endif
+                                                                       info.key.enc_size, btohs(info.key.ediv),
                                                                        btohll(info.key.rand), info.key.val)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to store LTK")));
                         }
@@ -737,6 +743,19 @@ class BluetoothControl : public PluginHost::IPlugin
             void Update(const evt_conn_request& info)
             {
                 BT_TRACE(ControlFlow, info);
+
+                if (Application() != nullptr) {
+                    const Bluetooth::Address address(info.bdaddr);
+                    DeviceImpl* device = Application()->Find(address);
+
+                    if (device == nullptr) {
+                        device = Application()->Discovered(false, info.bdaddr);
+                    }
+
+                    if (device != nullptr) {
+                        device->Class(UnpackDeviceClass(info.dev_class));
+                    }
+                }
             }
             void Update(const evt_conn_complete& info)
             {
@@ -859,12 +878,49 @@ class BluetoothControl : public PluginHost::IPlugin
 
         class Config : public Core::JSON::Container {
         public:
+            class UUIDConfig : public Core::JSON::Container {
+            public:
+                UUIDConfig& operator=(const UUIDConfig&) = delete;
+                UUIDConfig()
+                    : Core::JSON::Container()
+                    , UUID()
+                    , Service(0)
+                    , Callsign()
+                {
+                    Init();
+                }
+                UUIDConfig(const UUIDConfig& other)
+                    : Core::JSON::Container()
+                    , UUID(other.UUID)
+                    , Service(other.Service)
+                    , Callsign(other.Callsign)
+                {
+                    Init();
+                }
+                ~UUIDConfig()  = default;
+
+            private:
+                void Init()
+                {
+                    Add(_T("uuid"), &UUID);
+                    Add(_T("service"), &Service);
+                    Add(_T("callsign"), &Callsign);
+                }
+
+            public:
+                Core::JSON::String UUID;
+                Core::JSON::HexUInt8 Service;
+                Core::JSON::String Callsign;
+            };
+
+        public:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
             Config()
                 : Core::JSON::Container()
                 , Interface(0)
                 , Name(_T("Thunder BT Control"))
+                , ShortName(Name)
                 , Class(0)
                 , ContinuousBackgroundScan()
                 , AutoPasskeyConfirm(false)
@@ -872,10 +928,12 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 Add(_T("interface"), &Interface);
                 Add(_T("name"), &Name);
+                Add(_T("shortname"), &ShortName);
                 Add(_T("class"), &Class);
                 Add(_T("continuousbackgroundscan"), &ContinuousBackgroundScan);
                 Add(_T("autopasskeyconfirm"), &AutoPasskeyConfirm);
                 Add(_T("persistmac"), &PersistMAC);
+                Add(_T("uuids"), &UUIDs);
             }
             ~Config()
             {
@@ -884,10 +942,12 @@ class BluetoothControl : public PluginHost::IPlugin
         public:
             Core::JSON::DecUInt16 Interface;
             Core::JSON::String Name;
+            Core::JSON::String ShortName;
             Core::JSON::HexUInt32 Class;
             Core::JSON::Boolean ContinuousBackgroundScan;
             Core::JSON::Boolean AutoPasskeyConfirm;
             Core::JSON::Boolean PersistMAC;
+            Core::JSON::ArrayType<UUIDConfig> UUIDs;
         }; // class Config
 
         class Data : public Core::JSON::Container {
@@ -1754,7 +1814,7 @@ protected:
 
                 if (enable == true) {
                     if (_autoConnectionSubmitted == false) {
-                        uint32_t result = _parent->Connector().Control().AddDevice(AddressType(), Address(), AutoConnectMode());
+                        uint32_t result = _parent->Connector().Control().AddDevice(Address(), AddressType(), AutoConnectMode());
                         if (result != Core::ERROR_NONE) {
                             TRACE(DeviceFlow, (_T("Could not add device %s [%d]"), Address().ToString().c_str(), result));
                         } else {
@@ -1763,7 +1823,7 @@ protected:
                         }
                     }
                 } else {
-                    uint32_t result = _parent->Connector().Control().RemoveDevice(AddressType(), Address());
+                    uint32_t result = _parent->Connector().Control().RemoveDevice(Address(), AddressType());
                     if (result != Core::ERROR_NONE) {
                         TRACE(DeviceFlow, (_T("Could not remove device %s [%d]"), Address().ToString().c_str(), result));
                     } else {
@@ -2102,7 +2162,7 @@ protected:
             // IDevice overrides
             bool IsBonded() const override
             {
-                return ( (_ltks.Entries() >= 1) && (_irk.IsValid()) );
+                return (_ltks.Entries() >= 1);
             }
             uint32_t Connect() override
             {
@@ -2365,6 +2425,7 @@ protected:
     public:
         BEGIN_INTERFACE_MAP(BluetoothControl)
         INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_ENTRY(Exchange::IBluetooth)
@@ -2391,6 +2452,11 @@ protected:
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetaData plugin to publish this information to the outside world.
         string Information() const override;
+
+        // IPlugin::INotification methods
+        void Activated(const string& callsign, PluginHost::IShell*) override;
+        void Deactivated(const string& callsign, PluginHost::IShell*) override;
+        void Unavailable(const string&, PluginHost::IShell*) override { }
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------
@@ -2513,6 +2579,7 @@ protected:
         Bluetooth::Address _btAddress;
         std::list<DeviceImpl*> _devices;
         std::list<IBluetooth::INotification*> _observers;
+        std::list<std::tuple<string /* callsign */, Bluetooth::UUID, uint8_t /* service-bit */>> _uuids;
         Config _config;
         ControlSocket _application;
         string _persistentStoragePath;

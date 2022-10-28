@@ -153,38 +153,6 @@ namespace A2DP {
         std::string _text;
     }; // class TransportFlow
 
-    class SDPServerFlow {
-    public:
-        SDPServerFlow() = delete;
-        SDPServerFlow(const SDPServerFlow&) = delete;
-        SDPServerFlow& operator=(const SDPServerFlow&) = delete;
-        SDPServerFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit SDPServerFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-        ~SDPServerFlow() = default;
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class SDPServerFlow
-
     template<typename FLOW>
     void Dump(const Bluetooth::SDP::Tree& tree)
     {
@@ -196,8 +164,8 @@ namespace A2DP {
             string description;
             string provider;
 
-            if (service.Metadata(string(_T("en")), Service::Attribute::LanguageBaseAttributeIDList::CHARSET_US_ASCII, name, description, provider) == false) {
-                service.Metadata(string(_T("en")), Service::Attribute::LanguageBaseAttributeIDList::CHARSET_UTF8, name, description, provider);
+            if (service.Metadata(name, description, provider, _T("en"), CHARSET_US_ASCII) == false) {
+                service.Metadata(name, description, provider, _T("en"), CHARSET_UTF8);
             }
 
             TRACE_GLOBAL(FLOW, (_T("Service #%i - %s '%s'"), cnt++, provider.c_str(), name.c_str()));
