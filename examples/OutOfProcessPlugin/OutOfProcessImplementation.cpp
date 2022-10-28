@@ -134,16 +134,16 @@ POP_WARNING()
                 , Crash(false)
                 , Destruct(1000)
                 , Single(false)
+                , ExternalAccess(_T("/tmp/oopexample"))
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("config"), &Init);
                 Add(_T("crash"), &Crash);
                 Add(_T("destruct"), &Destruct);
                 Add(_T("single"), &Single);
+                Add(_T("accessor"), &ExternalAccess);
             }
-            ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::DecUInt16 Sleep;
@@ -151,6 +151,7 @@ POP_WARNING()
             Core::JSON::Boolean Crash;
             Core::JSON::DecUInt32 Destruct;
             Core::JSON::Boolean Single;
+            Core::JSON::String ExternalAccess;
         };
 
     public:
@@ -281,23 +282,26 @@ POP_WARNING()
                 _service->AddRef();
             }
 
-            _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
-            _externalAccess = new ExternalAccess(Core::NodeId("/tmp/oopexample"), this, service->ProxyStubPath(), _engine);
+            _config.FromString(service->ConfigLine());
 
-            result = Core::ERROR_OPENING_FAILED;
-            if (_externalAccess != nullptr) {
-                if (_externalAccess->IsListening() == false) {
-                    TRACE(Trace::Information, (_T("Deleting the External Server, it is not listening!")));
-                    delete _externalAccess;
-                    _externalAccess = nullptr;
-                    _engine.Release();
-                } 
+            if (_config.ExternalAccess.IsSet() == true) {
+                _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+                _externalAccess = new ExternalAccess(Core::NodeId(_config.ExternalAccess.Value().c_str()), this, service->ProxyStubPath(), _engine);
+
+                result = Core::ERROR_OPENING_FAILED;
+                if (_externalAccess != nullptr) {
+                    if (_externalAccess->IsListening() == false) {
+                        TRACE(Trace::Information, (_T("Deleting the External Server, it is not listening!")));
+                        delete _externalAccess;
+                        _externalAccess = nullptr;
+                        _engine.Release();
+                    }
+                }
             }
 
             if (result == Core::ERROR_NONE) {
 
                 _dataPath = service->DataPath();
-                _config.FromString(service->ConfigLine());
 
                 if (_config.Init.Value() > 0) {
                     TRACE(Trace::Information, (_T("Configuration requested to take [%d] mS"), _config.Init.Value()));
