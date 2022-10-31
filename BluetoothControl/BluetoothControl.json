@@ -1,0 +1,1040 @@
+{
+  "$schema": "interface.schema.json",
+  "jsonrpc": "2.0",
+  "mode": "auto",
+  "info": {
+    "title": "Bluetooth Control API",
+    "class": "BluetoothControl",
+    "description": "Bluetooth Control JSON-RPC interface"
+  },
+  "common": {
+    "$ref": "common.json"
+  },
+  "imports": {
+    "ibluetooth": {
+      "$ref": "{cppinterfacedir}/IBluetooth.h"
+    }
+  },
+  "definitions": {
+    "enums": {
+      "devicetype": {
+        "description": "Device type",
+        "$ref": "#/imports/ibluetooth/Exchange::IBluetooth::IDevice::type",
+        "default": "LowEnergy"
+      },
+      "pairingcapabilities": {
+        "description": "Pairing capabilities",
+        "$ref": "#/imports/ibluetooth/Exchange::IBluetooth::IDevice::pairingcapabilities",
+        "default": "NoInputNoOutput"
+      },
+      "devicestate": {
+        "description": "Device state",
+        "hint": "devicestate",
+        "type": "string",
+        "enum": [
+          "Pairing",
+          "Paired",
+          "Unpaired",
+          "Connected",
+          "Disconnected"
+        ],
+        "example": "Disconnected"
+      },
+      "adaptertype": {
+        "description": "Adapter type",
+        "hint": "adaptertype",
+        "type": "string",
+        "case": "snake",
+        "enum": [
+          "Classic",
+          "LowEnergy",
+          "Dual"
+        ],
+        "default": "Dual"
+      },
+      "scantype": {
+        "description": "Scan type",
+        "hint": "scantype",
+        "type": "string",
+        "case": "snake",
+        "enum": [
+          "Classic",
+          "LowEnergy"
+        ],
+        "default": "LowEnergy"
+      },
+      "discoverabletype": {
+        "description": "Discoverable type",
+        "$ref": "#definitions/enums/scantype"
+      },
+      "scanmode": {
+        "description": "Scan mode",
+        "hint": "scanmode",
+        "type": "string",
+        "enum": [
+          "General",
+          "Limited"
+        ],
+        "default": "General"
+      },
+      "discoverablemode": {
+        "description": "Discoverable mode",
+        "$ref": "#definitions/enums/scanmode"
+      },
+      "disconnectreason": {
+        "description": "Disconnection reason in case of *Disconnected* event",
+        "hint": "disconnectreason",
+        "type": "string",
+        "case": "snake",
+        "enum": [
+          "ConnectionTimeout",
+          "AuthenticationFailure",
+          "RemoteLowOnResources",
+          "RemotePoweredOff",
+          "TerminatedByRemote",
+          "TerminatedByHost"
+        ]
+      }
+    },
+    "deviceaddress": {
+      "description": "Bluetooth address",
+      "type": "string",
+      "example": "81:6F:B0:91:9B:FE"
+    },
+    "deviceinfo": {
+      "type": "object",
+      "hint": "DeviceData",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/deviceaddress"
+        },
+        "type": {
+          "$ref": "#/definitions/enums/devicetype",
+          "example": "Classic"
+        },
+        "name": {
+          "type": "string",
+          "example": "Thunder Bluetooth Speaker",
+          "description": "Name of the device"
+        },
+        "class": {
+          "description": "Class of device",
+          "type": "integer",
+          "example": 2360324
+        },
+        "appearance": {
+          "description": "Appearance value",
+          "type": "integer",
+          "example": 2113
+        },
+        "services": {
+          "description": "List of supported services",
+          "type": "array",
+          "items": {
+            "description": "Service UUID",
+            "type": "string",
+            "example": "110a"
+          }
+        },
+        "connected": {
+          "description": "Indicates if the device is currently connected",
+          "type": "boolean",
+          "example": true
+        },
+        "paired": {
+          "description": "Indicates if the device is currently paired",
+          "type": "boolean",
+          "example": true
+        }
+      },
+      "required": [
+        "address",
+        "type",
+        "connected",
+        "paired"
+      ]
+    },
+    "adapterinfo": {
+      "type": "object",
+      "hint": "AdapterData",
+      "properties": {
+        "id": {
+          "description": "Interface ID number",
+          "type": "integer",
+          "size": 16,
+          "example": 0
+        },
+        "interface": {
+          "description": "Interface name",
+          "type": "string",
+          "example": "hci0"
+        },
+        "address": {
+          "$ref": "#/definitions/deviceaddress"
+        },
+        "type": {
+          "$ref": "#/definitions/enums/adaptertype"
+        },
+        "version": {
+          "description": "Version",
+          "type": "integer",
+          "size": 8,
+          "example": 8
+        },
+        "manufacturer": {
+          "description": "Manufacturer company identifer",
+          "type": "integer",
+          "size": 16,
+          "example": 15
+        },
+        "class": {
+          "description": "Class of device",
+          "type": "integer",
+          "size": 32,
+          "example": 1060
+        },
+        "name": {
+          "description": "Name",
+          "type": "string",
+          "example": "Thunder Bluetooth Controller"
+        },
+        "shortname": {
+          "description": "Short name",
+          "type": "string",
+          "example": "Thunder"
+        }
+      },
+      "required": [
+        "id",
+        "interface",
+        "address",
+        "type",
+        "version"
+      ]
+    }
+  },
+  "methods": {
+    "setdiscoverable": {
+      "summary": "Starts advertising (or inquiry scanning), making the local interface visible by nearby Bluetooth devices",
+      "description": "Please note that discoverable state in *Limited* mode for Bluetooth Classic is bounded to 30 seconds only.",
+      "hint": "SetDiscoverable",
+      "events": [
+        "discoverablestarted",
+        "discoverablecomplete"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/discoverabletype"
+          },
+          "mode": {
+            "$ref": "#/definitions/enums/discoverablemode"
+          },
+          "connectable": {
+            "description": "Selects connectable advertising (true, *LowEnergy* only)",
+            "type": "boolean",
+            "default": false
+          },
+          "duration": {
+            "description": "Duration of the discoverable operation (in seconds)",
+            "type": "integer",
+            "size": 16,
+            "default": 30
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Failed set discoverable state",
+          "$ref": "#/common/errors/general"
+        },
+        {
+          "description": "Discoverable state of selected type is already in progress",
+          "$ref": "#/common/errors/inprogress"
+        }
+      ]
+    },
+    "stopdiscoverable": {
+      "summary": "Stops advertising (or inquiry scanning) operation",
+      "hint": "StopDiscoverable",
+      "events": [
+        "discoverablecomplete"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/discoverabletype"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Failed to top scanning",
+          "$ref": "#/common/errors/general"
+        },
+        {
+          "description": "Adapter is in not discoverable state of selected type",
+          "$ref": "#/common/errors/illegalstate"
+        }
+      ]
+    },
+    "scan": {
+      "summary": "Starts active discovery (or inquiry) of nearby Bluetooth devices",
+      "events": [
+        "scanstarted",
+        "scancomplete"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/scantype"
+          },
+          "mode": {
+            "$ref": "#/definitions/enums/scanmode"
+          },
+          "timeout": {
+            "description": "Duration of the scan (in seconds)",
+            "deprecated": true,
+            "type": "integer",
+            "size": 16,
+            "example": 60,
+            "default": 10
+          },
+          "duration": {
+            "description": "Duration of the scan (in seconds)",
+            "type": "integer",
+            "size": 16,
+            "example": 60,
+            "default": 10
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Failed to scan",
+          "$ref": "#/common/errors/general"
+        },
+        {
+          "description": "Scan of selected type is already in progress",
+          "$ref": "#/common/errors/inprogress"
+        }
+      ]
+    },
+    "stopscanning": {
+      "summary": "Stops discovery (or inquiry) operation",
+      "hint": "StopScanning",
+      "events": [
+        "scancomplete"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/scantype"
+          }
+        },
+        "required": []
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Failed to top scanning",
+          "$ref": "#/common/errors/general"
+        },
+        {
+          "description": "Scan of selected type is not in progress",
+          "$ref": "#/common/errors/illegalstate"
+        }
+      ]
+    },
+    "connect": {
+      "summary": "Connects to a Bluetooth device",
+      "description": "This call also enables automatic reconnection of the device. If the device is currently not available it will be automatically connected as soon it becomes available.",
+      "events": [
+        "devicestatechange"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device not paired",
+          "$ref": "#/common/errors/illegalstate"
+        },
+        {
+          "description": "Device already connected",
+          "$ref": "#/common/errors/alreadyconnected"
+        },
+        {
+          "description": "Failed to connect the device",
+          "$ref": "#/common/errors/general"
+        },
+        {
+          "description": "Device has not been connected but will be automatically connected when available",
+          "$ref": "#/common/errors/requestsubmitted"
+        }
+      ]
+    },
+    "disconnect": {
+      "summary": "Disconnects from a connected Bluetooth device",
+      "description": "This call also disables automatic reconnection. If the device is currently not connected it will not be reconnected when it becomes available.",
+      "events": [
+        "devicestatechange"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device not connected",
+          "$ref": "#/common/errors/alreadyreleased"
+        },
+        {
+          "description": "Device is currently not connected but it's autoconnection mode has been disabled",
+          "$ref": "#/common/errors/requestsubmitted"
+        }
+      ]
+    },
+    "pair": {
+      "summary": "Pairs a Bluetooth device",
+      "description": "PIN-code or passkey requests may appear during the pairing process. The process can be cancelled any time by calling the *abortpairing* method.",
+      "events": [
+        "devicestatechange",
+        "pincoderequest",
+        "passkeyrequest",
+        "passkeyconfirmrequest"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          },
+          "capabilities": {
+            "$ref": "#definitions/enums/pairingcapabilities"
+          },
+          "timeout": {
+            "description": "Maximum time allowed for the pairing process to complete (in seconds)",
+            "type": "integer",
+            "size": 16,
+            "example": "60",
+            "default": 20
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device already paired",
+          "$ref": "#/common/errors/alreadyconnected"
+        },
+        {
+          "description": "Failed to pair the device",
+          "$ref": "#/common/errors/general"
+        }
+      ]
+    },
+    "unpair": {
+      "summary": "Unpairs a paired Bluetooth device",
+      "events": [
+        "devicestatechange"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device not paired",
+          "$ref": "#/common/errors/alreadyreleased"
+        }
+      ]
+    },
+    "abortpairing": {
+      "summary": "Aborts pairing operation",
+      "hint": "AbortPairing",
+      "events": [
+        "devicestatechange"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device not currently pairing",
+          "$ref": "#/common/errors/illegalstate"
+        }
+      ]
+    },
+    "providepincode": {
+      "summary": "Provides a PIN-code for authentication during a legacy pairing process",
+      "description": "This method should be called upon receiving a *pincoderequest* event during a legacy pairing process. If the specified PIN-code is incorrect the pairing process will be aborted.",
+      "hint": "ProvidePINCode",
+      "events": [
+        "devicestatechange",
+        "pincoderequest"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype",
+            "default": "Classic",
+            "example": "Classic"
+          },
+          "secret": {
+            "description": "A PIN-code string typically consisting of (but not limited to) four decimal digits",
+            "type": "string",
+            "example": "0000"
+          }
+        },
+        "required": [
+          "address",
+          "type",
+          "secret"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device not currently pairing or PIN code has not been requested",
+          "$ref": "#/common/errors/illegalstate"
+        }
+      ]
+    },
+    "providepasskey": {
+      "summary": "Provides a passkey for authentication during a pairing process",
+      "description": "This method should be called upon receiving a *passkeyrequest* event during pairing process. If the specified passkey is incorrect or empty the pairing process will be aborted.",
+      "hint": "ProvidePasskey",
+      "events": [
+        "devicestatechange",
+        "passkeyrequest"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype",
+            "default": "Classic",
+            "example": "Classic"
+          },
+          "secret": {
+            "description": "A six-digit decimal number passkey",
+            "type": "integer",
+            "size": 32,
+            "example": 123456
+          }
+        },
+        "required": [
+          "address",
+          "type",
+          "secret"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device not currently pairing or a passkey has not been requested",
+          "$ref": "#/common/errors/illegalstate"
+        }
+      ]
+    },
+    "confirmpasskey": {
+      "summary": "Confirms a passkey for authentication during a pairing process",
+      "description": "This method should be called upon receiving a *passkeyconfirmationrequest* event during a pairing process. If the confirmation is negative the pairing process will be aborted.",
+      "hint": "ConfirmPasskey",
+      "events": [
+        "devicestatechange",
+        "passkeyconfirmrequest"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype",
+            "default": "Classic",
+            "example": "Classic"
+          },
+          "iscorrect": {
+            "description": "Specifies if the passkey sent in *passkeyconfirmrequest* event is correct (true) or incorrect (false)",
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "address",
+          "type",
+          "iscorrect"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        },
+        {
+          "description": "Device is currently not pairing or passkey confirmation has not been requested",
+          "$ref": "#/common/errors/illegalstate"
+        }
+      ]
+    },
+    "forget": {
+      "summary": "Forgets a known Bluetooth device",
+      "description": "The device will no longer be listed and its status tracked. If the device is connected and/or paired it will be disconnected and unpaired.",
+      "events": [
+        "devicestatechange"
+      ],
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          }
+        },
+        "required": [
+          "address",
+          "type"
+        ]
+      },
+      "result": {
+        "$ref": "#/common/results/void"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        }
+      ]
+    },
+    "getdevicelist": {
+      "summary": "Retrieves a list of known remote Bluetooth devices",
+      "hint": "GetDeviceList",
+      "result": {
+        "description": "List of devices",
+        "type": "array",
+        "items": {
+          "description": "(device entry)",
+          "type": "object",
+          "properties": {
+            "address": {
+              "$ref": "#/definitions/deviceaddress"
+            },
+            "type": {
+              "$ref": "#/definitions/enums/devicetype"
+            }
+          },
+          "required": [
+            "address",
+            "type"
+          ]
+        }
+      }
+    },
+    "getdeviceinfo": {
+      "summary": "Retrieves detailed information about a known Bluetooth device",
+      "hint": "GetDeviceInfo",
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          }
+        },
+        "required": [
+          "address",
+          "type"
+        ]
+      },
+      "result": {
+        "$ref": "#/definitions/deviceinfo"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "adapters": {
+      "readonly": true,
+      "summary": "List of local Bluetooth adapters",
+      "params": {
+        "type": "array",
+        "items": {
+          "description": "Adapter ID",
+          "type": "integer",
+          "size": 16,
+          "example": 0
+        }
+      }
+    },
+    "adapter": {
+      "readonly": true,
+      "summary": "Local Bluetooth adapter information",
+      "index": {
+        "name": "Adapter ID",
+        "example": "0"
+      },
+      "params": {
+        "$ref": "#/definitions/adapterinfo"
+      },
+      "errors": [
+        {
+          "description": "Unknown adapter device",
+          "$ref": "#/common/errors/unknownkey"
+        }
+      ]
+    },
+    "devices": {
+      "readonly": true,
+      "deprecated": true,
+      "summary": "List of known remote Bluetooth devices",
+      "params": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/deviceaddress"
+        }
+      }
+    },
+    "device": {
+      "deprecated": true,
+      "readonly": true,
+      "summary": "Remote Bluetooth device information",
+      "index": {
+        "name": "Device address",
+        "example": "81:6F:B0:91:9B:FE"
+      },
+      "params": {
+        "$ref": "#/definitions/deviceinfo"
+      },
+      "errors": [
+        {
+          "description": "Unknown device",
+          "$ref": "#/common/errors/unknownkey"
+        }
+      ]
+    }
+  },
+  "events": {
+    "discoverablestarted": {
+      "summary": "Notifies of entering the discoverable state",
+      "description": "Register to this event to be notified about entering the discoverable state",
+      "hint": "DiscoverableStarted",
+      "statuslistener": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/discoverabletype"
+          },
+          "mode": {
+            "$ref": "#/definitions/enums/discoverablemode"
+          },
+          "connectable": {
+            "description": "Indicates connectable advertising (true, *LowEnergy* only)",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "type",
+          "mode"
+        ]
+      }
+    },
+    "discoverablecomplete": {
+      "summary": "Notifies of leaving the discoverable state",
+      "description": "Register to this event to be notified about leaving the discoverable state",
+      "hint": "DiscoverableComplete",
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/discoverabletype"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      }
+    },
+    "scanstarted": {
+      "summary": "Notifies of scan start",
+      "description": "Register to this event to be notified about device scan start",
+      "hint": "ScanStarted",
+      "statuslistener": true,
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/scantype"
+          },
+          "mode": {
+            "$ref": "#/definitions/enums/scanmode"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      }
+    },
+    "scancomplete": {
+      "summary": "Notifies of scan completion",
+      "description": "Register to this event to be notified about device scan completion",
+      "hint": "ScanComplete",
+      "params": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/definitions/enums/scantype"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      }
+    },
+    "devicestatechange": {
+      "summary": "Notifies of device state changes",
+      "description": "Register to this event to be notified about device state changes",
+      "hint": "DeviceStateChanged",
+      "statuslistener": true,
+      "id": {
+        "name": "device type",
+        "type": "string",
+        "example": "LowEnergy",
+        "hook": true
+      },
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype"
+          },
+          "state": {
+            "$ref": "#/definitions/enums/devicestate"
+          },
+          "disconnectreason": {
+            "$ref": "#/definitions/enums/disconnectreason"
+          }
+        },
+        "required": [
+          "address",
+          "type",
+          "state"
+        ]
+      }
+    },
+    "pincoderequest": {
+      "summary": "Notifies of a PIN code request",
+      "description": "Register to this event to be notified about PIN code requests during a legacy pairing process. Upon receiving this event the client is required to respond with a *providepincode* call in order to complete the pairing procedure. The PIN code value would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.<br><br>Note that this event will never be send for a Bluetooth LowEnergy device",
+      "hint": "PINCodeRequest",
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype",
+            "example": "Classic"
+          }
+        },
+        "required": [
+          "address",
+          "type"
+        ]
+      }
+    },
+    "passkeyrequest": {
+      "summary": "Notifies of a passkey request",
+      "description": "Register to this event to be notified about passkey requests that may be required during a pairing process. Upon receiving this event the client is required to respond with a *providepasskey* call in order to complete the pairing procedure. The passkey value would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted",
+      "hint": "PasskeyRequest",
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype",
+            "example": "Classic"
+          }
+        },
+        "required": [
+          "address",
+          "type"
+        ]
+      }
+    },
+    "passkeyconfirmrequest": {
+      "summary": "Notifies of a passkey confirmation request",
+      "description": "Register to this event to be notified about passkey confirmation requests that may required during a pairing process. Upon receiving this event the client is required to respond with a *passkeyconfirm* call in order to complete the pairing procedure. The passkey confirmation would typically be collected by prompting the end-user. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted",
+      "hint": "PasskeyConfirmRequest",
+      "params": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "$ref": "#/definitions/deviceaddress"
+          },
+          "type": {
+            "$ref": "#/definitions/enums/devicetype",
+            "default": "Classic",
+            "example": "Classic"
+          },
+          "secret": {
+            "description": "A six-digit decimal number passkey sent by the remote device for confirmation; may be 0 for a simple accept/forbid paring request",
+            "type": "integer",
+            "example": 123456
+          }
+        },
+        "required": [
+          "address",
+          "type",
+          "secret"
+        ]
+      }
+    }
+  }
+}

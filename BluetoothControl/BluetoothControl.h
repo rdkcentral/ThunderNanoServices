@@ -42,9 +42,106 @@ namespace JBluetoothControl {
 class BluetoothControl : public PluginHost::IPlugin
                        , public PluginHost::IPlugin::INotification
                        , public PluginHost::IWeb
-                       , public PluginHost::JSONRPCSupportsEventStatus
+                       , public JBluetoothControl::JSONRPC
                        , public Exchange::IBluetooth {
+    public:
+        class Config : public Core::JSON::Container {
+        public:
+            enum adaptertype {
+                CLASSIC,
+                LOW_ENERGY,
+                DUAL
+            };
 
+        public:
+            class UUIDConfig : public Core::JSON::Container {
+            public:
+                UUIDConfig& operator=(const UUIDConfig&) = delete;
+                UUIDConfig()
+                    : Core::JSON::Container()
+                    , UUID()
+                    , Service(0)
+                    , Callsign()
+                {
+                    Init();
+                }
+                UUIDConfig(const UUIDConfig& other)
+                    : Core::JSON::Container()
+                    , UUID(other.UUID)
+                    , Service(other.Service)
+                    , Callsign(other.Callsign)
+                {
+                    Init();
+                }
+                ~UUIDConfig()  = default;
+
+            private:
+                void Init()
+                {
+                    Add(_T("uuid"), &UUID);
+                    Add(_T("service"), &Service);
+                    Add(_T("callsign"), &Callsign);
+                }
+
+            public:
+                Core::JSON::String UUID;
+                Core::JSON::HexUInt8 Service;
+                Core::JSON::String Callsign;
+            };
+
+        public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+            Config()
+                : Core::JSON::Container()
+                , Interface(0)
+                , Type(adaptertype::DUAL)
+                , Name(_T("Thunder BT Control"))
+                , ShortName(Name)
+                , Class(0)
+                , ContinuousBackgroundScan()
+                , AutoPasskeyConfirm(false)
+                , PersistMAC(false)
+            {
+                Add(_T("interface"), &Interface);
+                Add(_T("type"), &Type);
+                Add(_T("name"), &Name);
+                Add(_T("shortname"), &ShortName);
+                Add(_T("class"), &Class);
+                Add(_T("continuousbackgroundscan"), &ContinuousBackgroundScan);
+                Add(_T("autopasskeyconfirm"), &AutoPasskeyConfirm);
+                Add(_T("persistmac"), &PersistMAC);
+                Add(_T("uuids"), &UUIDs);
+            }
+            ~Config() = default;
+
+        public:
+            Core::JSON::DecUInt16 Interface;
+            Core::JSON::EnumType<adaptertype> Type;
+            Core::JSON::String Name;
+            Core::JSON::String ShortName;
+            Core::JSON::HexUInt32 Class;
+            Core::JSON::Boolean ContinuousBackgroundScan;
+            Core::JSON::Boolean AutoPasskeyConfirm;
+            Core::JSON::Boolean PersistMAC;
+            Core::JSON::ArrayType<UUIDConfig> UUIDs;
+        }; // class Config
+
+        class Data : public Core::JSON::Container {
+        public:
+            Data(const Data&) = delete;
+            Data& operator=(const Data&) = delete;
+            Data()
+                : Core::JSON::Container()
+                , MAC()
+            {
+                Add(_T("mac"), &MAC);
+            }
+            ~Data() = default;
+
+        public:
+            Core::JSON::String MAC;
+        }; // class Data
 
     private:
         class DecoupledJob : private Core::WorkerPool::JobType<DecoupledJob&> {
@@ -105,12 +202,14 @@ class BluetoothControl : public PluginHost::IPlugin
             Job _job;
         }; // class DecoupledJob
 
+    private:
         static uint32_t UnpackDeviceClass(const uint8_t buffer[3])
         {
             ASSERT(buffer != nullptr);
             return ((buffer[2] << 16) | (buffer[1] << 8) | (buffer[0]));
         }
 
+    private:
         class ControlSocket : public Bluetooth::HCISocket {
         private:
             class ManagementSocket : public Bluetooth::ManagementSocket {
@@ -307,39 +406,74 @@ class BluetoothControl : public PluginHost::IPlugin
             ~ControlSocket() = default;
 
         public:
-            Bluetooth::ManagementSocket& Control()
-            {
-                return(_administrator);
-            }
-            Bluetooth::ManagementSocket::Info Settings() const {
-                return(_administrator.Settings());
-            }
-            BluetoothControl* Application()
-            {
+            BluetoothControl* Application() {
                 return (_parent);
             }
-            void ContinuousBackgroundScan(const bool enable)
-            {
-                _continuousBackgroundScan = enable;
+            ManagementSocket& Administrator() {
+                return (_administrator);
             }
-            uint32_t Pair(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const Bluetooth::ManagementSocket::capabilities caps)
+
+        public:
+            uint32_t Open(BluetoothControl& parent)
             {
-                return(_administrator.Pair(remote, type, caps));
+                TRACE(ControlFlow, (_T("Opening HCI socket...")));
+                ASSERT(IsOpen() == false);
+                _parent = &parent;
+                HCISocket::LocalNode(Core::NodeId(_administrator.DeviceId(), HCI_CHANNEL_RAW));
+                return (Bluetooth::HCISocket::Open(Core::infinite));
             }
-            uint32_t PairAbort(const Bluetooth::Address& remote, const Bluetooth::Address::type type)
+            uint32_t Close()
             {
-                return(_administrator.PairAbort(remote, type));
+                TRACE(ControlFlow, (_T("Closing HCI socket...")));
+
+                ASSERT(IsOpen() == true);
+
+                VARIABLE_IS_NOT_USED bool limited;
+                VARIABLE_IS_NOT_USED bool connectable;
+
+                if (IsInquiring(limited) == true) {
+                    StopInquiry();
+                }
+
+                if (IsScanning(limited) == true) {
+                    StopScanning();
+                }
+
+                if (IsDiscoverable(limited) == true) {
+                    StopDiscoverable();
+                }
+
+                if (IsAdvertising(limited, connectable) == true) {
+                    StopAdvertising();
+                }
+
+                _scanJob.Revoke();
+                _reconnectJob.Revoke();
+
+                uint32_t result = Bluetooth::HCISocket::Close(Core::infinite);
+
+                _parent = nullptr;
+
+                return (result);
             }
-            uint32_t Unpair(const Bluetooth::Address& remote, const Bluetooth::Address::type type)
+
+        public:
+            Bluetooth::ManagementSocket::Info Settings() const
             {
-                return(_administrator.Unpair(remote, type));
+                return (_administrator.Settings());
             }
-            uint32_t Discoverable(const uint16_t discoverableTime, const bool limited)
+            uint32_t SetDiscoverable(const bool limited, const uint16_t discoverableTime)
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
-                if ((IsOpen() == true) && (SetState(DISCOVERABLE) == Core::ERROR_NONE)) {
-                    result = Control().Discoverable(true, limited, discoverableTime);
+                if ((discoverableTime == 0) || ((limited == true) && (discoverableTime > 30))) {
+                    TRACE(Trace::Error, (_T("Invalid discoverable parameters for BR/EDR interface")));
+                    result = Core::ERROR_BAD_REQUEST;
+                }
+                else {
+                    if ((IsOpen() == true) && (SetState(DISCOVERABLE) == Core::ERROR_NONE)) {
+                        result = _administrator.Discoverable(true, limited, discoverableTime);
+                    }
                 }
 
                 return (result);
@@ -349,7 +483,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if ((IsOpen() == true) && (ClearState(ADVERTISING) == Core::ERROR_NONE)) {
-                    result = Control().Discoverable(false);
+                    result = _administrator.Discoverable(false);
                 }
 
                 return (result);
@@ -359,12 +493,30 @@ class BluetoothControl : public PluginHost::IPlugin
                 limited = (GetState() & DISCOVERABLE_LIMITED);
                 return (GetState() & DISCOVERABLE);
             }
-            uint32_t Advertise(const uint16_t discoverableTime, const bool limited, const bool connectable)
+            void AddUUID(const Bluetooth::UUID& uuid, const uint8_t serviceBits)
+            {
+                ASSERT(uuid.IsValid() == true);
+
+                if (IsOpen() == true) {
+                    TRACE(Trace::Information, (_T("Adding UUID %s to EIR"), uuid.ToString().c_str()));
+                    _administrator.AddUUID(uuid, serviceBits);
+                }
+            }
+            void RemoveUUID(const Bluetooth::UUID& uuid)
+            {
+                ASSERT(uuid.IsValid() == true);
+
+                if (IsOpen() == true) {
+                    TRACE(Trace::Information, (_T("Adding UUID %s from EIR"), uuid.ToString().c_str()));
+                    _administrator.RemoveUUID(uuid);
+                }
+            }
+            uint32_t Advertise(const bool limited, const bool connectable, const uint16_t discoverableTime)
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
                 if ((IsOpen() == true) && (SetState(ADVERTISING) == Core::ERROR_NONE)) {
-                    result = Control().AddAdvertising(limited, connectable, discoverableTime);
+                    result = _administrator.AddAdvertising(limited, connectable, discoverableTime);
                 }
 
                 return (result);
@@ -374,7 +526,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if ((IsOpen() == true) && (ClearState(ADVERTISING) == Core::ERROR_NONE)) {
-                    result = Control().RemoveAdvertising();
+                    result = _administrator.RemoveAdvertising();
                 }
 
                 return (result);
@@ -383,9 +535,10 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 limited = (GetState() & ADVERTISING_LIMITED);
                 connectable = (GetState() & ADVERTISING_CONNECTABLE);
+
                 return (GetState() & ADVERTISING);
             }
-            uint32_t Inquiry(const uint16_t scanTime, const bool limited)
+            uint32_t Inquiry(const uint16_t scanTime, const bool limited) // blocking call
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
@@ -399,7 +552,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     _parent->RemoveDevices([](DeviceImpl* device) -> bool {
                         if ((device->IsPaired() == false) && (device->IsConnected() == false) && (device->AddressType() == Bluetooth::Address::BREDR_ADDRESS))
                         {
-                            device->Clear();
+                            device->ClearState();
                             return (true);
                         }
                         return (false);
@@ -409,7 +562,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                     _scanJob.Submit([this, scanTime, limited]() {
                         BackgroundScan(false);
-                        Bluetooth::HCISocket::Inquiry(scanTime, limited);
+                        HCISocket::Inquiry(scanTime, limited);
                         BackgroundScan(true);
                         ClearState(INQUIRING);
                         ClearState(INQUIRING_LIMITED);
@@ -424,7 +577,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if (GetState() & INQUIRING) {
-                    Bluetooth::HCISocket::AbortInquiry(); // makes Inquiry() return
+                    HCISocket::AbortInquiry(); // makes Inquiry() return
                     result = Core::ERROR_NONE;
                 }
 
@@ -433,9 +586,10 @@ class BluetoothControl : public PluginHost::IPlugin
             bool IsInquiring(bool& limited) const
             {
                 limited = (GetState() & INQUIRING_LIMITED);
+
                 return (GetState() & INQUIRING);
             }
-            uint32_t Scan(const uint16_t scanTime, const bool limited, const bool passive)
+            uint32_t Scan(const uint16_t scanTime, const bool limited, const bool passive) // blocking call
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
 
@@ -449,7 +603,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     _parent->RemoveDevices([](DeviceImpl* device) -> bool {
                         if ((device->IsPaired() == false) && (device->IsConnected() == false) && (device->AddressType() != Bluetooth::Address::BREDR_ADDRESS))
                         {
-                            device->Clear();
+                            device->ClearState();
                             return (true);
                         }
                         return (false);
@@ -459,7 +613,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                     _scanJob.Submit([this, scanTime, limited, passive]() {
                         BackgroundScan(false);
-                        Bluetooth::HCISocket::Scan(scanTime, limited, passive);
+                        HCISocket::Scan(scanTime, limited, passive);
                         BackgroundScan(true);
                         ClearState(SCANNING);
                         ClearState(SCANNING_LIMITED);
@@ -474,7 +628,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
                 if (GetState() & INQUIRING) {
-                    Bluetooth::HCISocket::AbortScan(); // makes Scan() return
+                    HCISocket::AbortScan(); // makes Scan() return
                     result = Core::ERROR_NONE;
                 }
 
@@ -484,6 +638,12 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 limited = (GetState() & SCANNING_LIMITED);
                 return (GetState() & SCANNING);
+            }
+
+        public:
+            void ContinuousBackgroundScan(const bool enable)
+            {
+                _continuousBackgroundScan = enable;
             }
             void BackgroundScan(const bool evaluate)
             {
@@ -510,25 +670,34 @@ class BluetoothControl : public PluginHost::IPlugin
                 }
 #endif // !defined(USE_KERNEL_CONNECTION_CONTROL)
             }
-            uint32_t Open(BluetoothControl& parent)
+
+        public:
+            uint32_t Pair(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const Bluetooth::ManagementSocket::capabilities caps)
             {
-                TRACE(ControlFlow, (_T("Opening HCI socket...")));
-                ASSERT(IsOpen() == false);
-                _parent = &parent;
-                Bluetooth::HCISocket::LocalNode(Core::NodeId(_administrator.DeviceId(), HCI_CHANNEL_RAW));
-                return (Bluetooth::HCISocket::Open(Core::infinite));
+                return (_administrator.Pair(remote, type, caps));
             }
-            uint32_t Close()
+            uint32_t PairAbort(const Bluetooth::Address& remote, const Bluetooth::Address::type type)
             {
-                TRACE(ControlFlow, (_T("Closing HCI socket...")));
-                ASSERT(IsOpen() == true);
-                Bluetooth::HCISocket::AbortScan();
-                Bluetooth::HCISocket::AbortInquiry();
-                _scanJob.Revoke();
-                uint32_t result = Bluetooth::HCISocket::Close(Core::infinite);
-                _parent = nullptr;
-                return (result);
+                return (_administrator.PairAbort(remote, type));
             }
+            uint32_t Unpair(const Bluetooth::Address& remote, const Bluetooth::Address::type type)
+            {
+                return (_administrator.Unpair(remote, type));
+            }
+            void PINCodeReply(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const string& pincode)
+            {
+                _administrator.UserPINCodeReply(remote, type, pincode);
+            }
+            void PasskeyReply(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const uint32_t passkey)
+            {
+                _administrator.UserPasskeyReply(remote, type, passkey);
+            }
+            void PasskeyConfirmReply(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const bool confirm)
+            {
+                _administrator.UserPasskeyConfirmReply(remote, type, confirm);
+            }
+
+        private:
             void PairingComplete(const Bluetooth::Address& remote, const Bluetooth::Address::type type, const uint8_t status)
             {
                 // Pairing is considered successful only if the appropriate keys are exchanged.
@@ -642,19 +811,16 @@ class BluetoothControl : public PluginHost::IPlugin
             }
 
         public:
-            void DiscoverableChanged(const bool started, const bool lowEnergy, const bool limited)
+            void DiscoverableChanged(const bool started, const bool lowEnergy, const bool limited, const bool connectable)
             {
                 TRACE(ControlFlow, (_T("%s discoverable state %s (%s)"), (lowEnergy? "BLE" : "BR/EDR"), (started? "started" : "ended"), Core::Time::Now().ToRFC1123().c_str()));
 
                 Application()->Update();
 
                 if (started == true) {
-                    JBluetoothControl::Event::DiscoverableStarted(*Application(),
-                        (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC),
-                        (limited? JBluetoothControl::scanmode::LIMITED : JBluetoothControl::scanmode::GENERAL));
+                    _parent->JSONRPC().DiscoverableStarted(lowEnergy, limited, connectable);
                 } else {
-                    JBluetoothControl::Event::DiscoverableComplete(*Application(),
-                        (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC));
+                    _parent->JSONRPC().DiscoverableComplete(lowEnergy);
                 }
             }
             void ScanningChanged(const bool started, const bool lowEnergy, const bool limited)
@@ -664,12 +830,9 @@ class BluetoothControl : public PluginHost::IPlugin
                 Application()->Update();
 
                 if (started == true) {
-                    JBluetoothControl::Event::ScanStarted(*Application(),
-                        (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC),
-                        (limited? JBluetoothControl::scanmode::LIMITED : JBluetoothControl::scanmode::GENERAL));
+                    _parent->JSONRPC().ScanStarted(lowEnergy, limited);
                 } else {
-                    JBluetoothControl::Event::ScanComplete(*Application(),
-                        (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC));
+                    _parent->JSONRPC().ScanComplete(lowEnergy);
                 }
             }
 
@@ -680,7 +843,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (Application() != nullptr) {
                     const Bluetooth::Address address(info.bdaddr);
-                    DeviceImpl* device = Application()->Find(address);
+                    DeviceImpl* device = Application()->Find(address, false);
 
                     if (device == nullptr) {
                         device = Application()->Discovered(false, info.bdaddr);
@@ -697,7 +860,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (Application() != nullptr) {
                     const Bluetooth::Address address(info.bdaddr);
-                    DeviceImpl* device = Application()->Find(address);
+                    DeviceImpl* device = Application()->Find(address, false);
 
                     if (device == nullptr) {
                         device = Application()->Discovered(false, info.bdaddr);
@@ -714,7 +877,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (Application() != nullptr) {
                     const Bluetooth::Address address(info.bdaddr);
-                    DeviceImpl* device = Application()->Find(address);
+                    DeviceImpl* device = Application()->Find(address, false);
 
                     if (device == nullptr) {
                         device = Application()->Discovered(false, info.bdaddr);
@@ -738,7 +901,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                     if ((info.evt_type == SCAN_RESPONSE) || (info.evt_type == CONNECTABLE_UNDIRECTED) || (info.evt_type == CONNECTABLE_DIRECTED)) {
                         const Bluetooth::Address address(info.bdaddr);
-                        DeviceImpl* device = Application()->Find(address);
+                        DeviceImpl* device = Application()->Find(address, true);
 
                         if ((device == nullptr) && ((info.evt_type == SCAN_RESPONSE) || (_continuousBackgroundScan == true))) {
                             device = Application()->Discovered(true, info.bdaddr);
@@ -875,7 +1038,7 @@ class BluetoothControl : public PluginHost::IPlugin
 
                 if (Application() != nullptr) {
                     const Bluetooth::Address address(info.bdaddr);
-                    DeviceImpl* device = Application()->Find(address);
+                    DeviceImpl* device = Application()->Find(address, false);
 
                     if (device == nullptr) {
                         device = Application()->Discovered(false, info.bdaddr);
@@ -1004,94 +1167,6 @@ class BluetoothControl : public PluginHost::IPlugin
             DecoupledJob _scanJob;
             DecoupledJob _reconnectJob;
         }; // class ControlSocket
-
-        class Config : public Core::JSON::Container {
-        public:
-            class UUIDConfig : public Core::JSON::Container {
-            public:
-                UUIDConfig& operator=(const UUIDConfig&) = delete;
-                UUIDConfig()
-                    : Core::JSON::Container()
-                    , UUID()
-                    , Service(0)
-                    , Callsign()
-                {
-                    Init();
-                }
-                UUIDConfig(const UUIDConfig& other)
-                    : Core::JSON::Container()
-                    , UUID(other.UUID)
-                    , Service(other.Service)
-                    , Callsign(other.Callsign)
-                {
-                    Init();
-                }
-                ~UUIDConfig()  = default;
-
-            private:
-                void Init()
-                {
-                    Add(_T("uuid"), &UUID);
-                    Add(_T("service"), &Service);
-                    Add(_T("callsign"), &Callsign);
-                }
-
-            public:
-                Core::JSON::String UUID;
-                Core::JSON::HexUInt8 Service;
-                Core::JSON::String Callsign;
-            };
-
-        public:
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-            Config()
-                : Core::JSON::Container()
-                , Interface(0)
-                , Name(_T("Thunder BT Control"))
-                , ShortName(Name)
-                , Class(0)
-                , ContinuousBackgroundScan()
-                , AutoPasskeyConfirm(false)
-                , PersistMAC(false)
-            {
-                Add(_T("interface"), &Interface);
-                Add(_T("name"), &Name);
-                Add(_T("shortname"), &ShortName);
-                Add(_T("class"), &Class);
-                Add(_T("continuousbackgroundscan"), &ContinuousBackgroundScan);
-                Add(_T("autopasskeyconfirm"), &AutoPasskeyConfirm);
-                Add(_T("persistmac"), &PersistMAC);
-                Add(_T("uuids"), &UUIDs);
-            }
-            ~Config() = default;
-
-        public:
-            Core::JSON::DecUInt16 Interface;
-            Core::JSON::String Name;
-            Core::JSON::String ShortName;
-            Core::JSON::HexUInt32 Class;
-            Core::JSON::Boolean ContinuousBackgroundScan;
-            Core::JSON::Boolean AutoPasskeyConfirm;
-            Core::JSON::Boolean PersistMAC;
-            Core::JSON::ArrayType<UUIDConfig> UUIDs;
-        }; // class Config
-
-        class Data : public Core::JSON::Container {
-        public:
-            Data(const Data&) = delete;
-            Data& operator=(const Data&) = delete;
-            Data()
-                : Core::JSON::Container()
-                , MAC()
-            {
-                Add(_T("mac"), &MAC);
-            }
-            ~Data() = default;
-
-        public:
-            Core::JSON::String MAC;
-        }; // class Data
 
     public:
         class DeviceImpl : public IBluetooth::IDevice {
@@ -1351,6 +1426,7 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             ~DeviceImpl() override
             {
+                TRACE(Trace::Information, (_T("Device [%s] has been forgotten"), RemoteId().c_str()));
             }
 
         public:
@@ -1426,10 +1502,17 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 return (_class);
             }
-            bool IsServiceSupported(const string& /* uuid */) const override
+            bool IsServiceSupported(const string& serviceUUID) const override
             {
-                // TODO
-                return (false);
+                Bluetooth::UUID uuid(serviceUUID);
+
+                _state.Lock();
+
+                const bool result =  (uuid.IsValid() == true? (std::find(_uuids.cbegin(), _uuids.cend(), uuid) != _uuids.cend()) : false);
+
+                _state.Unlock();
+
+                return (result);
             }
             bool IsConnected() const override
             {
@@ -1482,9 +1565,9 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result == Core::ERROR_INPROGRESS) {
                         UpdateListener();
                         DeviceStateChanged(JBluetoothControl::devicestate::PAIRING);
-                        TRACE(Trace::Information, (_T("Pairing of device %s in progress..."), Address().ToString().c_str()));
+                        TRACE(Trace::Information, (_T("Pairing of device %s in progress..."), RemoteId().c_str()));
                         _abortPairingJob.Schedule([this](){
-                            TRACE(Trace::Information, (_T("Timeout! Aborting pairing!"), Address().ToString().c_str()));
+                            TRACE(Trace::Information, (_T("Timeout! Aborting pairing!"), RemoteId().c_str()));
                             AbortPairing();
                         }, (1000L * timeout));
                         result = Core::ERROR_NONE;
@@ -1492,7 +1575,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         if (result == Core::ERROR_ALREADY_CONNECTED) {
                             TRACE(Trace::Information, (_T("Device is already paired")));
                         } else if (result != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, (_T("Failed to pair device %s [%d]"), Address().ToString().c_str(), result));
+                            TRACE(Trace::Error, (_T("Failed to pair device %s [%d]"), RemoteId().c_str(), result));
                         }
 
                         ClearState(PAIRING);
@@ -1510,7 +1593,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 if (SetState(PAIRING) != Core::ERROR_NONE) {
                     result = _parent->Connector().PairAbort(Address(), AddressType());
                     if (result == Core::ERROR_INPROGRESS) {
-                        TRACE(Trace::Information, (_T("Aborting pairing of device %s in progress..."), Address().ToString().c_str()));
+                        TRACE(Trace::Information, (_T("Aborting pairing of device %s in progress..."), RemoteId().c_str()));
                     } else if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to abort pairing [%d]"), result));
                     }
@@ -1533,7 +1616,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (result == Core::ERROR_ALREADY_RELEASED) {
                         TRACE(Trace::Information, (_T("Device is not paired")));
                     } else if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Failed to unpair device %s [%d]"), Address().ToString().c_str(), result));
+                        TRACE(Trace::Error, (_T("Failed to unpair device %s [%d]"), RemoteId().c_str(), result));
                     } else {
                         TRACE(Trace::Information, (_T("Device unpaired")));
                     }
@@ -1550,14 +1633,14 @@ class BluetoothControl : public PluginHost::IPlugin
             {
                 TRACE(Trace::Information, (_T("Passkey reply: %06d"), passkey));
                 _userReplyJob.Submit([this, passkey]() {
-                    _parent->Connector().Control().UserPasskeyReply(Address(), AddressType(), passkey);
+                    _parent->Connector().PasskeyReply(Address(), AddressType(), passkey);
                 });
             }
             void ConfirmPasskey(const bool confirm) override
             {
                 TRACE(Trace::Information, (_T("Passkey confirmation reply: %s"), confirm? "YES" : "NO"));
                 _userReplyJob.Submit([this, confirm]() {
-                    _parent->Connector().Control().UserPasskeyConfirmReply(Address(), AddressType(), confirm);
+                    _parent->Connector().PasskeyConfirmReply(Address(), AddressType(), confirm);
                 });
             }
             uint32_t Callback(IBluetooth::IDevice::ICallback* callback) override
@@ -1611,14 +1694,6 @@ class BluetoothControl : public PluginHost::IPlugin
             END_INTERFACE_MAP
 
         public:
-            inline void Clear()
-            {
-                _state.Lock();
-                if ((IsConnected() == false) && ((_state & ACTION_MASK) == 0)) {
-                    _state.SetState(static_cast<state>(0));
-                }
-                _state.Unlock();
-            }
             inline bool operator==(const Bluetooth::Address& rhs) const
             {
                 return (_remote == rhs);
@@ -1634,10 +1709,6 @@ class BluetoothControl : public PluginHost::IPlugin
             inline bool operator!=(const std::pair<const Bluetooth::Address&, const bool>& rhs) const
             {
                 return (!operator==(rhs));
-            }
-            uint32_t WaitState(const uint32_t state, const uint32_t waitTime)
-            {
-                return (_state.WaitState(state, waitTime));
             }
             Bluetooth::HCISocket::FeatureIterator Features() const
             {
@@ -1658,56 +1729,7 @@ class BluetoothControl : public PluginHost::IPlugin
             inline ControlSocket& Connector() {
                 return (_parent->Connector());
             }
-            void RequestPasskey()
-            {
-                TRACE(Trace::Information, (_T("Pairing with device %s; requesting passkey..."), Address().ToString().c_str()));
-                _userRequestJob.Submit([this](){
-                    Callback<IBluetooth::IDevice::ISecurityCallback>(SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
-                        cb->PasskeyRequest();
-                    });
-                });
-            }
-            void RequestPasskeyConfirm(const uint32_t passkey)
-            {
-                TRACE(Trace::Information, (_T("Pairing with device %s; confirm passkey %06d? (YES/NO)"), Address().ToString().c_str(), passkey));
 
-                // Request passkey confirmation from client or, if auto confirm is enabled, reply already.
-                if (_parent->AutoConfirmPasskey() == true) {
-                    TRACE(Trace::Information, (_T("Auto-confirm enabled, accepting the passkey!")));
-                    ConfirmPasskey(true);
-                } else {
-                    TRACE(Trace::Information, (_T("Waiting for user confirmation of the passkey...")));
-                    _userRequestJob.Submit([this, passkey]() {
-                        Callback<IBluetooth::IDevice::ISecurityCallback>(SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
-                            cb->PasskeyConfirmRequest(passkey);
-                        });
-                    });
-                }
-            }
-            void PairingComplete(const uint8_t status = 0)
-            {
-                _abortPairingJob.Revoke();
-                if (status == 0) {
-                    if (IsPaired() == true) {
-                        TRACE(Trace::Information, (_T("Device %s pairing successful"), _remote.ToString().c_str()));
-                    }
-                } else {
-                    if (status == MGMT_STATUS_CANCELLED) {
-                        TRACE(Trace::Information, (_T("Device %s pairing aborted!"), _remote.ToString().c_str()));
-                    } else {
-                        TRACE(Trace::Error, (_T("Device %s pairing failed! [0x%02x]"), _remote.ToString().c_str(), status));
-                    }
-
-                    PairedChange();
-                }
-                ClearState(PAIRING);
-            }
-            void PairedChange()
-            {
-                _parent->PairedChange(this);
-                UpdateListener();
-                DeviceStateChanged(IsPaired()? JBluetoothControl::devicestate::PAIRING : JBluetoothControl::devicestate::UNPAIRED);
-            }
             uint32_t SetState(const state value)
             {
                 uint32_t result = Core::ERROR_INPROGRESS;
@@ -1741,6 +1763,76 @@ class BluetoothControl : public PluginHost::IPlugin
                 _state.Unlock();
 
                 return (result);
+            }
+            void ClearState()
+            {
+                _state.Lock();
+
+                if ((IsConnected() == false) && ((_state & ACTION_MASK) == 0)) {
+                    _state.SetState(static_cast<state>(0));
+                }
+
+                _state.Unlock();
+            }
+            uint32_t WaitState(const uint32_t state, const uint32_t waitTime)
+            {
+                return (_state.WaitState(state, waitTime));
+            }
+
+        protected:
+            void RequestPasskey()
+            {
+                TRACE(Trace::Information, (_T("Pairing with device %s; requesting passkey..."), RemoteId().c_str()));
+                _userRequestJob.Submit([this](){
+                    Callback<IBluetooth::IDevice::ISecurityCallback>(SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
+                        cb->PasskeyRequest();
+                        _parent->JSONRPC().PasskeyRequest(RemoteId(), Type());
+                    });
+                });
+            }
+            void RequestPasskeyConfirm(const uint32_t passkey)
+            {
+                TRACE(Trace::Information, (_T("Pairing with device %s; confirm passkey %06d? (YES/NO)"), RemoteId().c_str(), passkey));
+
+                // Request passkey confirmation from client or, if auto confirm is enabled, reply already.
+                if (_parent->AutoConfirmPasskey() == true) {
+                    TRACE(Trace::Information, (_T("Auto-confirm enabled, accepting the passkey!")));
+                    ConfirmPasskey(true);
+                } else {
+                    TRACE(Trace::Information, (_T("Waiting for user confirmation of the passkey...")));
+                    _userRequestJob.Submit([this, passkey]() {
+                        Callback<IBluetooth::IDevice::ISecurityCallback>(SecurityCallback(), [&](IBluetooth::IDevice::ISecurityCallback* cb) {
+                            cb->PasskeyConfirmRequest(passkey);
+                            _parent->JSONRPC().PasskeyConfirmRequest(RemoteId(), Type(), passkey);
+                        });
+                    });
+                }
+            }
+            void PairingComplete(const uint8_t status = 0)
+            {
+                _abortPairingJob.Revoke();
+
+                if (status == 0) {
+                    if (IsPaired() == true) {
+                        TRACE(Trace::Information, (_T("Device %s pairing successful"), _remote.ToString().c_str()));
+                    }
+                } else {
+                    if (status == MGMT_STATUS_CANCELLED) {
+                        TRACE(Trace::Information, (_T("Device %s pairing aborted!"), _remote.ToString().c_str()));
+                    } else {
+                        TRACE(Trace::Error, (_T("Device %s pairing failed! [0x%02x]"), _remote.ToString().c_str(), status));
+                    }
+
+                    PairedChange();
+                }
+
+                ClearState(PAIRING);
+            }
+            void PairedChange()
+            {
+                _parent->PairedChange(this);
+                UpdateListener();
+                DeviceStateChanged(IsPaired()? JBluetoothControl::devicestate::PAIRING : JBluetoothControl::devicestate::UNPAIRED);
             }
             void Connection(const uint16_t handle)
             {
@@ -1919,26 +2011,12 @@ protected:
 #endif
             }
 
-            void DeviceStateChanged(const JBluetoothControl::devicestate& state, const JBluetoothControl::disconnectreason& reason = JBluetoothControl::disconnectreason{})
+            void DeviceStateChanged(const JBluetoothControl::devicestate state, const JBluetoothControl::disconnectreason reason = JBluetoothControl::disconnectreason{})
             {
                 Core::EnumerateType<Exchange::IBluetooth::IDevice::type> type_(Type());
                 Core::EnumerateType<JBluetoothControl::devicestate> state_(state);
-                TRACE(Trace::Information, (_T("Device [%s, %s] state changed to '%s'"), Address().ToString().c_str(), type_.Data(), state_.Data()));
-
-                Core::JSON::String jaddress;
-                Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type> jtype;
-                Core::JSON::EnumType<JBluetoothControl::devicestate> jstate;
-                Core::JSON::EnumType<JBluetoothControl::disconnectreason> jreason;
-
-                jaddress = Address().ToString();
-                jtype = Type();
-                jstate = state;
-                if (state == JBluetoothControl::devicestate::DISCONNECTED) {
-                    jreason = reason;
-                }
-
-                JBluetoothControl::Event::DeviceStateChanged<JSONRPCImplementation>(*_parent, &_parent->_jsonrpcImplementation,
-                    Address().ToString(), jaddress, jtype, jstate, jreason);
+                TRACE(Trace::Information, (_T("Device [%s, %s] state changed to '%s'"), RemoteId().c_str(), type_.Data(), state_.Data()));
+                _parent->JSONRPC().DeviceStateChanged(RemoteId(), Type(), state, reason);
             }
 
         private:
@@ -1970,18 +2048,18 @@ protected:
                     if (_autoConnectionSubmitted == false) {
                         uint32_t result = _parent->Connector().Control().AddDevice(Address(), AddressType(), AutoConnectMode());
                         if (result != Core::ERROR_NONE) {
-                            TRACE(DeviceFlow, (_T("Could not add device %s [%d]"), Address().ToString().c_str(), result));
+                            TRACE(DeviceFlow, (_T("Could not add device %s [%d]"), RemoteId().c_str(), result));
                         } else {
-                            TRACE(DeviceFlow, (_T("Enabled autoconnect of device %s"), Address().ToString().c_str()));
+                            TRACE(DeviceFlow, (_T("Enabled autoconnect of device %s"), RemoteId().c_str()));
                             _autoConnectionSubmitted = true;
                         }
                     }
                 } else {
                     uint32_t result = _parent->Connector().Control().RemoveDevice(Address(), AddressType());
                     if (result != Core::ERROR_NONE) {
-                        TRACE(DeviceFlow, (_T("Could not remove device %s [%d]"), Address().ToString().c_str(), result));
+                        TRACE(DeviceFlow, (_T("Could not remove device %s [%d]"), RemoteId().c_str(), result));
                     } else {
-                        TRACE(DeviceFlow, (_T("Disabled autoconnect of device %s"), Address().ToString().c_str()));
+                        TRACE(DeviceFlow, (_T("Disabled autoconnect of device %s"), RemoteId().c_str()));
                     }
 
                     _autoConnectionSubmitted = false;
@@ -2144,7 +2222,7 @@ protected:
             void PINCode(const string& pinCode) override
             {
                 _userReplyJob.Submit([this, pinCode](){
-                    _parent->Connector().Control().UserPINCodeReply(Address(), AddressType(), pinCode);
+                    _parent->Connector().PINCodeReply(Address(), AddressType(), pinCode);
                 });
             }
             uint32_t Callback(IBluetooth::IDevice::IClassic::ISecurityCallback* callback) override
@@ -2190,10 +2268,11 @@ protected:
         public:
             void RequestPINCode()
             {
-                TRACE(Trace::Information, (_T("Pairing with legacy device %s; requesting PIN code..."), Address().ToString().c_str()));
+                TRACE(Trace::Information, (_T("Pairing with legacy device %s; requesting PIN code..."), RemoteId().c_str()));
                 _userRequestJob.Submit([this]() {
                     Callback([&](IBluetooth::IDevice::IClassic::ISecurityCallback* cb) {
                         cb->PINCodeRequest();
+                        _parent->JSONRPC().PINCodeRequest(RemoteId(), Type());
                     });
                 });
             }
@@ -2319,9 +2398,7 @@ protected:
                 Class(config->Class.Value());
                 _irk = Bluetooth::IdentityKey(Address(), AddressType(), config->IdentityKey.Value());
             }
-            ~DeviceLowEnergy() override
-            {
-            }
+            ~DeviceLowEnergy() override = default;
 
         public:
             // IBluetooth::IDevice overrides
@@ -2605,7 +2682,7 @@ protected:
             }
             uint32_t InquiryScan(const bool limited, const uint16_t duration /* sec */) override
             {
-                return (_parent.Connector().Discoverable(limited, duration));
+                return (_parent.Connector().SetDiscoverable(limited, duration));
             }
             uint32_t StopInquiryScanning() override
             {
@@ -2725,24 +2802,674 @@ protected:
             std::list<IBluetooth::ILowEnergy::INotification*> _observers;
         }; // class LowEnergyImpl
 
+    private:
+        class JSONRPCImplementation {
+        public:
+            JSONRPCImplementation() = delete;
+            JSONRPCImplementation(JSONRPCImplementation&) = delete;
+            JSONRPCImplementation& operator=(JSONRPCImplementation&) = delete;
+
+            JSONRPCImplementation(BluetoothControl& parent)
+                : _parent(parent)
+            {
+            }
+            ~JSONRPCImplementation() = default;
+
+        public:
+            uint32_t SetDiscoverable(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type,
+                        const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode,
+                        const Core::JSON::Boolean& connectable,
+                        const Core::JSON::DecUInt16& duration)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                // If duration is not given, default to 30 seconds
+                const uint16_t period = ((duration.IsSet() == true)? duration.Value() : 30);
+
+                if ((type.IsSet() == true)) {
+                    result = Core::ERROR_UNAVAILABLE;
+
+                    if (type == JBluetoothControl::scantype::CLASSIC) {
+                        Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                        if (adapter != nullptr) {
+                            result = adapter->InquiryScan(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)), period);
+                            adapter->Release();
+                        }
+                    }
+                    else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
+                        Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                        if (adapter != nullptr) {
+                            result = adapter->Advertise(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)),
+                                ((connectable.IsSet() == false) || connectable), period);
+                            adapter->Release();
+                        }
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t StopDiscoverable(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if (type.IsSet() == true) {
+                    result = Core::ERROR_UNAVAILABLE;
+
+                    if (type == JBluetoothControl::scantype::CLASSIC) {
+                        Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                        if (adapter != nullptr) {
+                            result = adapter->StopInquiryScanning();
+                            adapter->Release();
+                        }
+                    }
+                    else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
+                        Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                        if (adapter != nullptr) {
+                            result = adapter->StopAdvertising();
+                            adapter->Release();
+                        }
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Scan(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type,
+                        const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode,
+                        const Core::JSON::DecUInt16& timeout /* DEPRECATED PAREMETER */,
+                        const Core::JSON::DecUInt16& duration)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                result = Core::ERROR_UNAVAILABLE;
+
+                // For backwards compatibility both timeout and duration are accepted.
+                // If neither is set, scan for 12 seconds
+                const uint16_t period = (((duration.IsSet() == true) || (timeout.IsSet() == true))? std::max(timeout.Value(), duration.Value()) : 12);
+
+                // For backwards compatibility allow omitting the type of scan
+                if ((type.IsSet() == true) && (type == JBluetoothControl::scantype::CLASSIC)) {
+                    Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                    if (adapter != nullptr) {
+                        result = adapter->Scan(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)), period);
+                        adapter->Release();
+                    }
+                }
+                else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
+                    Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                    if (adapter != nullptr) {
+                        result = adapter->Scan(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)), period);
+                        adapter->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t StopScanning(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type)
+            {
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+
+                // For backwards compatibility allow omitting the type of scan
+                if ((type.IsSet() == true) && (type == JBluetoothControl::scantype::CLASSIC)) {
+                    Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                    if (adapter != nullptr) {
+                        result = adapter->StopScanning();
+                        adapter->Release();
+                    }
+                }
+                else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
+                    Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                    if (adapter != nullptr) {
+                        result = adapter->StopScanning();
+                        adapter->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Connect(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if (address.IsSet() == true) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    // For backwards compatibility allow omitting the type of device
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
+                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    if (device != nullptr) {
+                        result = device->Connect();
+                        device->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Disconnect(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if (address.IsSet() == true) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
+                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    if (device != nullptr) {
+                        result = device->Disconnect();
+                        device->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Pair(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::pairingcapabilities>& capabilities,
+                        const Core::JSON::DecUInt16& timeout)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if (address.IsSet() == true) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
+                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    if (device != nullptr) {
+                        result = device->Pair((capabilities.IsSet() == true? capabilities.Value() : Exchange::IBluetooth::IDevice::pairingcapabilities::NO_INPUT_NO_OUTPUT),
+                                    ((timeout.IsSet() == true) ? timeout.Value() : 10));
+                        device->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Unpair(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if (address.IsSet() == true) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
+                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    if (device != nullptr) {
+                        result = device->Unpair();
+                        device->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t AbortPairing(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if (address.IsSet() == true) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
+                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    if (device != nullptr) {
+                        result = device->AbortPairing();
+                        device->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t ProvidePINCode(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type,
+                        const Core::JSON::String& secret)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if ((address.IsSet() == true) && (type.IsSet() == true)) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    if (device != nullptr) {
+                        Exchange::IBluetooth::IDevice::IClassic* classic = device->QueryInterface<Exchange::IBluetooth::IDevice::IClassic>();
+                        if (classic != nullptr) {
+                            classic->PINCode(secret.Value());
+                            classic->Release();
+                            result = Core::ERROR_NONE;
+                        }
+
+                        device->Release();
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t ProvidePasskey(const Core::JSON::String& address, const
+                        Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type,
+                        const Core::JSON::DecUInt32& secret)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if ((address.IsSet() == true) && (type.IsSet() == true) && (secret.IsSet() == true)) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    if (device != nullptr) {
+                        device->Passkey(secret.Value());
+                        device->Release();
+                        result = Core::ERROR_NONE;
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t ConfirmPasskey(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type,
+                        const Core::JSON::Boolean& iscorrect)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if ((address.IsSet() == true) && (type.IsSet() == true) && (iscorrect.IsSet() == true)) {
+                    result = Core::ERROR_UNKNOWN_KEY;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    if (device != nullptr) {
+                        device->ConfirmPasskey(iscorrect);
+                        device->Release();
+                        result = Core::ERROR_NONE;
+                    }
+                }
+
+                return (result);
+            }
+            uint32_t Forget(const Core::JSON::String& address,
+                        const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if ((address.IsSet() == true) && (type.IsSet() == true)) {
+                    result = (_parent.ForgetDevice(address.Value(), type));
+                }
+
+                return (result);
+            }
+            uint32_t GetDeviceList(Core::JSON::ArrayType<JsonData::BluetoothControl::ConnectParamsInfo>& devices)
+            {
+                _parent.IterateDevices([&devices](DeviceImpl& device) -> bool {
+                    auto& element = devices.Add();
+                    element.Address = device.RemoteId();
+                    element.Type = device.Type();
+                    return (false);
+                });
+
+                return (Core::ERROR_NONE);
+            }
+            uint32_t GetDeviceInfo(Core::JSON::String& address,
+                        Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type,
+                        Core::JSON::String& name,
+                        Core::JSON::DecUInt32& class_,
+                        Core::JSON::DecUInt32& appearance,
+                        Core::JSON::ArrayType<Core::JSON::String>& services,
+                        Core::JSON::Boolean& connected,
+                        Core::JSON::Boolean& paired) const
+            {
+                uint32_t result = Core::ERROR_BAD_REQUEST;
+
+                if ((address.IsSet() == true) && (type.IsSet() == true)) {
+                    result = Core::ERROR_UNAVAILABLE;
+
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    if (device != nullptr) {
+                        address = device->RemoteId();
+                        type = device->Type();
+                        connected = device->IsConnected();
+                        paired = device->IsPaired();
+
+                        if (device->Name().empty() == false) {
+                            name = device->Name();
+                        }
+
+                        if (device->Class() != 0) {
+                            class_ = device->Class();
+                        }
+
+                        std::list<Bluetooth::UUID> uuids = static_cast<DeviceImpl*>(device)->UUIDs(); // Safe cast!
+                        for (auto const& uuid : uuids) {
+                            auto& element = services.Add();
+                            element = uuid.ToString();
+                        }
+
+                        const Exchange::IBluetooth::IDevice::ILowEnergy* lowEnergy = device->QueryInterface<const Exchange::IBluetooth::IDevice::ILowEnergy>();
+                        if (lowEnergy != nullptr) {
+                            if (lowEnergy->Appearance() != 0) {
+                                appearance = lowEnergy->Appearance();
+                            }
+                            lowEnergy->Release();
+                        }
+
+                        device->Release();
+
+                        result = Core::ERROR_NONE;
+                    }
+                }
+
+                return (result);
+
+            }
+            uint32_t Adapters(Core::JSON::ArrayType<Core::JSON::DecUInt16>& adapters) const
+            {
+                _parent.IterateAdapters([&adapters](uint16_t& adapter) -> bool {
+                    auto& element = adapters.Add();
+                    element = adapter;
+                    return (false);
+                });
+
+                return (Core::ERROR_NONE);
+            }
+            uint32_t Adapter(const string& index_,
+                        Core::JSON::DecUInt16& id,
+                        Core::JSON::String& address,
+                        Core::JSON::String& interface,
+                        Core::JSON::EnumType<JsonData::BluetoothControl::AdapterData::adaptertype>& type,
+                        Core::JSON::DecUInt8& version,
+                        Core::JSON::DecUInt16& manufacturer,
+                        Core::JSON::DecUInt32& class_,
+                        Core::JSON::String& name,
+                        Core::JSON::String& shortname) const
+            {
+                uint32_t result = Core::ERROR_UNKNOWN_KEY;
+
+                if (::atoi(index_.c_str()) == _parent.InterfaceID()) {
+                    Bluetooth::ManagementSocket::Info info(_parent.Connector().Settings());
+
+                    id = _parent.InterfaceID();
+                    address = info.Address().ToString();
+                    interface = ("hci" + Core::ToString(_parent.InterfaceID()));
+                    type = JsonData::BluetoothControl::AdapterData::adaptertype::DUAL;
+                    version = info.Version();
+
+                    if (info.Manufacturer() != 0) {
+                        manufacturer = info.Manufacturer();
+                    }
+                    if (info.DeviceClass() != 0) {
+                        class_ = info.DeviceClass();
+                    }
+                    if (info.Name().empty() == false) {
+                        name = info.Name();
+                    }
+                    if (info.ShortName().empty() == false) {
+                        shortname = info.ShortName();
+                    }
+
+                    result = Core::ERROR_NONE;
+                }
+
+                return (result);
+            }
+            uint32_t Devices(Core::JSON::ArrayType<Core::JSON::String>& devices) const
+            {
+                /* This JSON-RPC method is deprecated. */
+
+                _parent.IterateDevices([&devices](DeviceImpl& device) -> bool {
+                    auto& element = devices.Add();
+                    element = device.RemoteId();
+                    return (false);
+                });
+
+                return (Core::ERROR_NONE);
+            }
+            uint32_t Device(const string& index_,
+                        Core::JSON::String& address,
+                        Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type,
+                        Core::JSON::String& name,
+                        Core::JSON::DecUInt32& class_,
+                        Core::JSON::DecUInt32& appearance,
+                        Core::JSON::ArrayType<Core::JSON::String>& services,
+                        Core::JSON::Boolean& connected,
+                        Core::JSON::Boolean& paired) const
+            {
+                /* This JSON-RPC method is deprecated. */
+
+                address = index_;
+                type = Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC;
+
+                return (GetDeviceInfo(address, type, name, class_, appearance, services, connected, paired));
+            }
+
+        public:
+            void OnDiscoverableStartedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status)
+            {
+                // A new discoverable started event listener has registered, let them know if the discoverable state is already enabled
+                if (status == JBluetoothControl::JSONRPC::Status::registered) {
+                    bool limited = false;
+                    bool connectable = true;
+
+                    Exchange::IBluetooth::IClassic* classic = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                    if (classic != nullptr) {
+                        if (classic->IsInquiryScanning(limited) == true) {
+                            DiscoverableStarted(false, limited, connectable, client);
+                        }
+
+                        classic->Release();
+                    }
+
+                    Exchange::IBluetooth::ILowEnergy* le = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                    if (le != nullptr) {
+                        if (le->IsAdvertising(limited, connectable) == true) {
+                            DiscoverableStarted(true, limited, connectable, client);
+                        }
+
+                        le->Release();
+                    }
+                }
+            }
+            void OnScanStartedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status)
+            {
+                // A new scan started event listener has registered, let them know if the scan is already in progress
+                if (status == JBluetoothControl::JSONRPC::Status::registered) {
+                    bool limited = false;
+
+                    Exchange::IBluetooth::IClassic* classic = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                    if (classic != nullptr) {
+                        if (classic->IsScanning(limited) == true) {
+                            ScanStarted(false, limited, client);
+                        }
+
+                        classic->Release();
+                    }
+
+                    Exchange::IBluetooth::ILowEnergy* le = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                    if (le != nullptr) {
+                        if (le->IsScanning(limited) == true) {
+                            ScanStarted(true, limited, client);
+                        }
+
+                        le->Release();
+                    }
+                }
+            }
+            void OnDeviceStateChangedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status)
+            {
+                // A new status change event listener has registered, let them know of current paired/connection status already
+                if (status == JBluetoothControl::JSONRPC::Status::registered) {
+                    _parent.IterateDevices([this, &client](DeviceImpl& device) -> bool {
+                        if (device.IsPaired() == true) {
+                            DeviceStateChanged(device.RemoteId(), device.Type(), JBluetoothControl::devicestate::PAIRED,
+                                JBluetoothControl::disconnectreason{}, client);
+                        }
+                        return (false);
+                    });
+
+                    _parent.IterateDevices([this, &client](DeviceImpl& device) -> bool {
+                        if (device.IsConnected() == true) {
+                            DeviceStateChanged(device.RemoteId(), device.Type(), JBluetoothControl::devicestate::CONNECTED,
+                                JBluetoothControl::disconnectreason{}, client);
+                            // Can't break the loop here, dwo devices (classic and BLE can be connected at the same time).
+                        }
+                        return (false);
+                    });
+                }
+            }
+
+        public:
+            void DiscoverableStarted(const bool lowEnergy, const bool limited, const bool connectable = false, const string& clientId = string{})
+            {
+                Core::JSON::EnumType<JBluetoothControl::scantype> Type;
+                Core::JSON::EnumType<JBluetoothControl::scanmode> Mode;
+                Core::JSON::Boolean Connectable;
+
+                Type = (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC);
+                Mode = (limited? JBluetoothControl::scanmode::LIMITED : JBluetoothControl::scanmode::GENERAL);
+
+                if (lowEnergy == true) {
+                    Connectable = connectable;
+                }
+
+                if (clientId.empty() == true) {
+                    JBluetoothControl::Event::DiscoverableStarted(_parent, Type, Mode, Connectable);
+                } else {
+                    // ClientID is set, meaning this is status report during registration.
+                    JBluetoothControl::Event::DiscoverableStarted(_parent, Type, Mode, Connectable, [&clientId](const string& designator) -> bool {
+                        return (designator == clientId);
+                    });
+                }
+            }
+            void DiscoverableComplete(const bool lowEnergy)
+            {
+                Core::JSON::EnumType<JBluetoothControl::scantype> Type;
+                Type = (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC);
+                JBluetoothControl::Event::DiscoverableComplete(_parent, Type);
+            }
+            void ScanStarted(const bool lowEnergy, const bool limited, const string& clientId = string{})
+            {
+                Core::JSON::EnumType<JBluetoothControl::scantype> Type;
+                Core::JSON::EnumType<JBluetoothControl::scanmode> Mode;
+
+                Type = (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC);
+                Mode = (limited? JBluetoothControl::scanmode::LIMITED : JBluetoothControl::scanmode::GENERAL);
+
+                if (clientId.empty() == true) {
+                    JBluetoothControl::Event::ScanStarted(_parent, Type, Mode);
+                } else {
+                    // ClientID is set, meaning this is status report during registration.
+                    JBluetoothControl::Event::ScanStarted(_parent, Type, Mode, [&clientId](const string& designator) -> bool {
+                        return (designator == clientId);
+                    });
+                }
+            }
+            void ScanComplete(const bool lowEnergy)
+            {
+                Core::JSON::EnumType<JBluetoothControl::scantype> Type;
+                Type = (lowEnergy? JBluetoothControl::scantype::LOW_ENERGY : JBluetoothControl::scantype::CLASSIC);
+                JBluetoothControl::Event::ScanComplete(_parent, Type);
+            }
+            void DeviceStateChanged(const string& address,
+                    Exchange::IBluetooth::IDevice::type type,
+                    const JBluetoothControl::devicestate state,
+                    const JBluetoothControl::disconnectreason reason,
+                    const string& clientId = string{})
+            {
+                Core::JSON::String Address;
+                Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type> Type;
+                Core::JSON::EnumType<JBluetoothControl::devicestate> State;
+                Core::JSON::EnumType<JBluetoothControl::disconnectreason> Reason;
+
+                Address = address;
+                Type = type;
+                State = state;
+
+                if (state == JBluetoothControl::devicestate::DISCONNECTED) {
+                    Reason = reason;
+                }
+
+                auto AddressMatch = [](const string& designator, const string& address) -> bool {
+                    // Also allow subscribing for all device changes when the beginning of the designator does not match
+                    // a Bluetooth address pattern (this also ensures backwards compatibility).
+                    const size_t delim = designator.find('.');
+                    return (((delim != string::npos) && (delim != 17))
+                                || (designator.compare(0, delim, address) == 0)
+                                || (designator.size() < 17)
+                                || (Bluetooth::Address(designator.c_str()).IsValid() == false));
+                };
+
+                if (clientId.empty() == true) {
+                    // Live change of status, only pick up the events for registered devices
+                    JBluetoothControl::Event::DeviceStateChanged(_parent, address, Address, Type, State, Reason, [&address, &AddressMatch](const string& designator) {
+                        return (AddressMatch(designator, address));
+                    });
+                } else {
+                    // ClientID is set, meaning this is status report during registration.
+                    JBluetoothControl::Event::DeviceStateChanged(_parent, clientId, Address, Type, State, Reason, [&clientId, &address, &AddressMatch](const string& designator) {
+                        return ((designator == clientId) && (AddressMatch(designator, address) == true));
+                    });
+                }
+            }
+            void PINCodeRequest(const string& address,
+                    Exchange::IBluetooth::IDevice::type type)
+            {
+                Core::JSON::String Address;
+                Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type> Type;
+
+                Address = address;
+                Type = type;
+
+                JBluetoothControl::Event::PINCodeRequest(_parent, Address, Type);
+            }
+            void PasskeyRequest(const string& address,
+                    Exchange::IBluetooth::IDevice::type type)
+            {
+                Core::JSON::String Address;
+                Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type> Type;
+
+                Address = address;
+                Type = type;
+
+                JBluetoothControl::Event::PasskeyRequest(_parent, Address, Type);
+            }
+            void PasskeyConfirmRequest(const string& address,
+                    Exchange::IBluetooth::IDevice::type type,
+                    const uint32_t& secret)
+            {
+                Core::JSON::String Address;
+                Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type> Type;
+                Core::JSON::DecUInt32 Secret;
+
+                Address = address;
+                Type = type;
+
+                if (secret != 0) {
+                    Secret = secret;
+                }
+
+                JBluetoothControl::Event::PasskeyConfirmRequest(_parent, Address, Type, Secret);
+            }
+
+        private:
+            BluetoothControl& _parent;
+        }; // class JSONRPCImplementation
+
     public:
         BluetoothControl(const BluetoothControl&) = delete;
         BluetoothControl& operator=(const BluetoothControl&) = delete;
         BluetoothControl()
             : _skipURL(0)
             , _adminLock()
+            , _config()
+            , _persistentStoragePath()
+            , _application()
+            , _jsonrpcImplementation(*this)
+            , _classicAdapter(nullptr)
+            , _lowEnergyAdapter(nullptr)
             , _service(nullptr)
             , _adapters()
             , _btInterface(0)
             , _btAddress()
             , _devices()
             , _observers()
-            , _jsonrpcImplementation(*this)
+            , _uuids()
         {
         }
-        ~BluetoothControl() override
-        {
-        }
+        ~BluetoothControl() override = default;
 
     public:
         BEGIN_INTERFACE_MAP(BluetoothControl)
@@ -2751,8 +3478,8 @@ protected:
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_ENTRY(Exchange::IBluetooth)
-        INTERFACE_AGGREGATE(Exchange::IBluetooth::IClassic, _classicInterface)
-        INTERFACE_AGGREGATE(Exchange::IBluetooth::ILowEnergy, _lowEnergyInterface)
+        INTERFACE_AGGREGATE(Exchange::IBluetooth::IClassic, _classicAdapter)
+        INTERFACE_AGGREGATE(Exchange::IBluetooth::ILowEnergy, _lowEnergyAdapter)
         END_INTERFACE_MAP
 
     public:
@@ -2812,7 +3539,8 @@ protected:
         {
             _adminLock.Lock();
             for (auto observer : _observers) {
-PUSH_WARNING(DISABLE_WARNING_DEPRECATED_USE) // Internal call to a deprecated method
+PUSH_WARNING(DISABLE_WARNING_DEPRECATED_USE)
+                // Internal call to a deprecated callback method
                 observer->Update();
 POP_WARNING()
             }
@@ -2847,73 +3575,38 @@ POP_WARNING()
             }
             _adminLock.Unlock();
         }
+        void IterateAdapters(std::function<bool(uint16_t&)> fn)
+        {
+            _adminLock.Lock();
+            for (auto adapter : _adapters) {
+                if (fn(adapter) == true) {
+                    break;
+                }
+            }
+            _adminLock.Unlock();
+        }
 
     private:
-        PUSH_WARNING(PUSH_WARNING_ARG_("-Wunused-parameter"))
-        PUSH_WARNING(PUSH_WARNING_ARG_("-Wunused-function"))
-        class JSONRPCImplementation {
-        public:
-            JSONRPCImplementation() = delete;
-            JSONRPCImplementation(BluetoothControl& parent)
-                : _parent(parent)
-            {
-            }
-            ~JSONRPCImplementation() = default;
+        DeviceImpl* Find(const uint16_t handle);
+        const DeviceImpl* Find(const uint16_t handle) const;
 
-        public:
-            uint32_t SetDiscoverable(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type, const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode, const Core::JSON::Boolean& connectable, const Core::JSON::DecUInt16& duration) { return (Core::ERROR_NONE); }
-            uint32_t StopDiscoverable(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type) { return (Core::ERROR_NONE); }
+        DeviceImpl* Find(const Bluetooth::Address& address, const bool lowEnergy);
+        const DeviceImpl* Find(const Bluetooth::Address& address, const bool lowEnergy) const;
 
-            uint32_t Scan(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type, const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode, const Core::JSON::DecUInt16& timeout, const Core::JSON::DecUInt16& duration)
-            {
-                uint32_t result = Core::ERROR_NONE;
+        template<typename DEVICE, typename std::enable_if<std::is_base_of<DeviceImpl, DEVICE>::value, int>::type = 0>
+        DEVICE* Find(const Bluetooth::Address& address)
+        {
+            return (reinterpret_cast<DEVICE*>(Find(address, std::is_same<DEVICE, DeviceLowEnergy>::value)));
+        }
 
-                if (type == JBluetoothControl::scantype::CLASSIC) {
-                    result = _parent.Classic()->Scan((mode == JBluetoothControl::scanmode::LIMITED), std::max(timeout, duration));
-                }
-                else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
-                    result = _parent.LowEnergy()->Scan((mode == JBluetoothControl::scanmode::LIMITED), std::max(timeout, duration));
-                }
-
-                return (result);
-            }
-
-            uint32_t StopScanning(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type) { return (Core::ERROR_NONE); }
-            uint32_t Connect(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
-            uint32_t Disconnect(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
-            uint32_t Pair(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::pairingcapabilities>& capabilities, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::DecUInt16& timeout) { return (Core::ERROR_NONE); }
-            uint32_t Unpair(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
-            uint32_t AbortPairing(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
-            uint32_t ProvidePINCode(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::String& secret) { return (Core::ERROR_NONE); }
-            uint32_t ProvidePasskey(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::DecUInt32& secret) { return (Core::ERROR_NONE); }
-            uint32_t ConfirmPasskey(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::Boolean& iscorrect) { return (Core::ERROR_NONE); }
-            uint32_t Forget(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type) { return (Core::ERROR_NONE); }
-            uint32_t GetDeviceList(Core::JSON::ArrayType<JsonData::BluetoothControl::ConnectParamsInfo>& result) { return (Core::ERROR_NONE); }
-            uint32_t GetDeviceInfo(Core::JSON::String& address, Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, Core::JSON::String& name, Core::JSON::DecUInt32& class_, Core::JSON::DecUInt32& appearance, Core::JSON::ArrayType<Core::JSON::String>& services, Core::JSON::Boolean& connected, Core::JSON::Boolean& paired) { return (Core::ERROR_NONE); }
-            uint32_t Adapters(Core::JSON::ArrayType<Core::JSON::DecUInt16>& result) const { return (Core::ERROR_NONE); }
-            uint32_t Adapter(const string& index_, Core::JSON::DecUInt16& id, Core::JSON::String& address, Core::JSON::String& interface, Core::JSON::EnumType<JsonData::BluetoothControl::AdapterData::adaptertype>& type, Core::JSON::DecUInt8& version, Core::JSON::DecUInt16& manufacturer, Core::JSON::DecUInt32& class_, Core::JSON::String& name, Core::JSON::String& shortname) const { return (Core::ERROR_NONE); }
-            uint32_t Devices(Core::JSON::ArrayType<Core::JSON::String>& result) const { return (Core::ERROR_NONE); }
-            uint32_t Device(const string& index_, Core::JSON::String& address, Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, Core::JSON::String& name, Core::JSON::DecUInt32& class_, Core::JSON::DecUInt32& appearance, Core::JSON::ArrayType<Core::JSON::String>& services, Core::JSON::Boolean& connected, Core::JSON::Boolean& paired) const { return (Core::ERROR_NONE); }
-            uint32_t Device(const string& index_, const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type, const Core::JSON::String& name, const Core::JSON::DecUInt32& class_, const Core::JSON::DecUInt32& appearance, const Core::JSON::ArrayType<Core::JSON::String>& services, const Core::JSON::Boolean& connected, const Core::JSON::Boolean& paired) { return (Core::ERROR_NONE); }
-            void OnDiscoverableStartedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status) { }
-            void OnScanStartedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status) { }
-            void OnDeviceStateChangedEventRegistration(const string& client, const JBluetoothControl::JSONRPC::Status status) { }
-            template<typename IMPLEMENTATION> static bool DeviceStateChangedEventSendIfHook(IMPLEMENTATION* _implementation, const string& designator, const string& id) { return (false); }
-
-        private:
-            BluetoothControl& _parent;
-        }; // class JSONRPCImplementation
-        POP_WARNING()
-        POP_WARNING()
+        template<typename DEVICE, typename std::enable_if<std::is_base_of<DeviceImpl, DEVICE>::value, int>::type = 0>
+        DEVICE* Find(const uint16_t& handle)
+        {
+            return (reinterpret_cast<DEVICE*>(Find(handle)));
+        }
 
     private:
-        template<typename DEVICE=DeviceImpl>
-        DEVICE* Find(const uint16_t handle) const;
-        DeviceImpl* Find(const Bluetooth::Address& address) const;
-        DeviceImpl* Find(const Bluetooth::Address& address, bool lowEnergy) const;
-        template<typename DEVICE>
-        DEVICE* Find(const Bluetooth::Address& address) const;
-        void RemoveDevices(std::function<bool(DeviceImpl*)> filter);
+        uint16_t RemoveDevices(std::function<bool(DeviceImpl*)> filter);
         DeviceImpl* Discovered(const bool lowEnergy, const Bluetooth::Address& address);
         void Notification(const uint8_t subEvent, const uint16_t length, const uint8_t* dataFrame);
         void Capabilities(const Bluetooth::Address& device, const uint8_t capability, const uint8_t authentication, const uint8_t oobData);
@@ -2925,19 +3618,15 @@ POP_WARNING()
         uint32_t EraseDevice(const DeviceImpl* device);
         uint32_t SaveDevice(const DeviceImpl* device) const;
 
+    private:
         bool AutoConfirmPasskey() const
         {
             return (_config.AutoPasskeyConfirm.Value());
         }
 
-    private:
-        ClassicImpl* Classic()
+        JSONRPCImplementation& JSONRPC()
         {
-            return (_classicInterface);
-        }
-        LowEnergyImpl* LowEnergy()
-        {
-            return (_lowEnergyInterface);
+            return (_jsonrpcImplementation);
         }
 
     private:
@@ -2949,36 +3638,21 @@ POP_WARNING()
     private:
         uint8_t _skipURL;
         Core::CriticalSection _adminLock;
+        Config _config;
+        string _persistentStoragePath;
+        ControlSocket _application;
+        JSONRPCImplementation _jsonrpcImplementation;
+        ClassicImpl* _classicAdapter;
+        LowEnergyImpl* _lowEnergyAdapter;
         PluginHost::IShell* _service;
         std::list<uint16_t> _adapters;
         uint16_t _btInterface;
         Bluetooth::Address _btAddress;
-        ClassicImpl* _classicInterface;
-        LowEnergyImpl* _lowEnergyInterface;
         std::list<DeviceImpl*> _devices;
         std::list<IBluetooth::INotification*> _observers;
         std::list<std::tuple<string /* callsign */, Bluetooth::UUID, uint8_t /* service-bit */>> _uuids;
-        Config _config;
-        ControlSocket _application;
-        string _persistentStoragePath;
-        JSONRPCImplementation _jsonrpcImplementation;
     }; // class BluetoothControl
 
-    template<>
-    inline BluetoothControl::DeviceImpl* BluetoothControl::Find<BluetoothControl::DeviceImpl>(const Bluetooth::Address& search) const
-    {
-        return (Find(search));
-    }
-    template<>
-    inline BluetoothControl::DeviceRegular* BluetoothControl::Find<BluetoothControl::DeviceRegular>(const Bluetooth::Address& search) const
-    {
-        return (reinterpret_cast<DeviceRegular*>(Find(search, false)));
-    }
-    template<>
-    inline BluetoothControl::DeviceLowEnergy* BluetoothControl::Find< BluetoothControl::DeviceLowEnergy>(const Bluetooth::Address& search) const
-    {
-        return (reinterpret_cast<DeviceLowEnergy*>(Find(search, true)));
-    }
 
 } //namespace Plugin
 
