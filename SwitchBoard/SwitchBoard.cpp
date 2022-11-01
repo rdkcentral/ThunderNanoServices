@@ -139,7 +139,7 @@ POP_WARNING()
 
     /* virtual */ Core::ProxyType<Web::Response> SwitchBoard::Process(const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         TRACE(Trace::Information, (string(_T("Received request"))));
 
