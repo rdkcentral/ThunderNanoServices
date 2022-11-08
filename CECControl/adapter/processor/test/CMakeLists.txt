@@ -1,7 +1,7 @@
 find_package(WPEFramework)
 
 find_package(${NAMESPACE}Core REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(${NAMESPACE}LocalTracer REQUIRED)
 
 add_executable(cec_processor_test
