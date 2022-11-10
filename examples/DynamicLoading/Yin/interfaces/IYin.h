@@ -27,9 +27,7 @@ namespace Exchange {
     // @json 1.0.0
     struct EXTERNAL IYin : virtual public Core::IUnknown {
 
-        static constexpr uint32_t ID_CUSTOM = 0x40000000;
-
-        enum { ID = ID_CUSTOM + 0x0010 };
+        enum { ID = IUnknown::ID_OFFSET_CUSTOM + 0x0010 };
 
         // @event
         struct EXTERNAL INotification : virtual public Core::IUnknown {

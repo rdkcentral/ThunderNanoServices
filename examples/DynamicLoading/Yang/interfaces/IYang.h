@@ -27,9 +27,7 @@ namespace Exchange {
     // @json 1.0.0
     struct EXTERNAL IYang : virtual public Core::IUnknown {
 
-        static constexpr uint32_t ID_CUSTOM = 0x40000000;
-
-        enum { ID = ID_CUSTOM + 0x0020 };
+        enum { ID = IUnknown::ID_OFFSET_CUSTOM + 0x0020 };
 
         enum color : uint8_t {
             GRAY,

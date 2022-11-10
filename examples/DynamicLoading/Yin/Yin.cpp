@@ -68,7 +68,7 @@ namespace Plugin {
         return (message);
     }
 
-    void Yin::Deinitialize(PluginHost::IShell* service)
+    void Yin::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
