@@ -12,8 +12,8 @@ target_link_libraries(_cec_message_processor
         _cec_common_includes
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         ${NAMESPACE}COM::${NAMESPACE}COM
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         )
 
 add_subdirectory(messages)
