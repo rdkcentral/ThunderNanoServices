@@ -243,7 +243,7 @@ public:
     }
 
 private:
-    void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+    void* Acquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
     {
         void* result = nullptr;
 

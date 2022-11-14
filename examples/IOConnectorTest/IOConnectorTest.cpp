@@ -149,13 +149,13 @@ int main(int argc, char** argv)
         JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(_T("IOConnector.1"), localCallsign, false, "");
         jsonrpc.Subscribe<JsonObject>(1000, _T("activity"), &Activity);
 
-        // Aquire interfaces over comrpc and register notification sinks
-        Exchange::IExternal::ICatalog* comrpc = client->Aquire<Exchange::IExternal::ICatalog>(2000, _T("IOConnector"), ~0);
+        // Acquire interfaces over comrpc and register notification sinks
+        Exchange::IExternal::ICatalog* comrpc = client->Acquire<Exchange::IExternal::ICatalog>(2000, _T("IOConnector"), ~0);
         ASSERT(comrpc != nullptr);
         Core::Sink<Plugin::Sink> sink;
         comrpc->Register(&sink);
 
-        Exchange::IInputPin::ICatalog* icomrpc = client->Aquire<Exchange::IInputPin::ICatalog>(2000, _T("IOConnector"), ~0);
+        Exchange::IInputPin::ICatalog* icomrpc = client->Acquire<Exchange::IInputPin::ICatalog>(2000, _T("IOConnector"), ~0);
         ASSERT(icomrpc != nullptr);
         Exchange::IInputPin* inputPin = icomrpc->IInputPinResource(INPUT_PIN_ID);
         ASSERT(inputPin != nullptr);
