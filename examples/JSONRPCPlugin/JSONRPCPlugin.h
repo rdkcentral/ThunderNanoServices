@@ -103,7 +103,7 @@ namespace Plugin {
             }
 
         private:
-            virtual void* Aquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
+            virtual void* Acquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
