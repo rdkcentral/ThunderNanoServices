@@ -30,51 +30,6 @@ namespace WPEFramework {
 
 class ModeSet {
 public:
-    template <typename T>
-    struct remove_pointer {
-        typedef T type;
-    };
-
-    template <typename T>
-    struct remove_pointer<T*> {
-        typedef T type;
-    };
-
-    template <typename FROM, class TO, bool ENABLE>
-    struct narrowing {
-        static_assert((std::is_arithmetic<FROM>::value && std::is_arithmetic<TO>::value) != false);
-
-        // Not complete, assume zero is minimum for unsigned
-        // Common type of signed and unsigned typically is unsigned
-        using common_t = typename std::common_type<FROM, TO>::type;
-        static constexpr bool value = ENABLE
-            && ((std::is_signed<FROM>::value
-                    && std::is_unsigned<TO>::value)
-                || (std::is_same<FROM, TO>::value != true
-                    && static_cast<common_t>(std::numeric_limits<FROM>::max()) > static_cast<common_t>(std::numeric_limits<TO>::max())));
-    };
-
-    template <typename TYPE, intmax_t VAL>
-    struct in_signed_range {
-        static_assert((std::is_integral<TYPE>::value
-                          && std::is_signed<TYPE>::value)
-            != false);
-        using common_t = typename std::common_type<TYPE, decltype(VAL)>::type;
-        static constexpr bool value = static_cast<common_t>(VAL) >= static_cast<common_t>(std::numeric_limits<TYPE>::min())
-            && static_cast<common_t>(VAL) <= static_cast<common_t>(std::numeric_limits<TYPE>::max());
-    };
-
-    template <typename TYPE, uintmax_t VAL>
-    struct in_unsigned_range {
-        static_assert((std::is_integral<TYPE>::value
-                          && std::is_unsigned<TYPE>::value)
-            != false);
-        using common_t = typename std::common_type<TYPE, decltype(VAL)>::type;
-        static constexpr bool value = static_cast<common_t>(VAL) >= static_cast<common_t>(std::numeric_limits<TYPE>::min())
-            && static_cast<common_t>(VAL) <= static_cast<common_t>(std::numeric_limits<TYPE>::max());
-    };
-
-public:
     class DRM {
     public:
         DRM() = delete;
@@ -83,26 +38,25 @@ public:
 
         using fd_t = int;
 
-        using fb_id_t = remove_pointer<decltype(drmModeFB::fb_id)>::type;
-        using crtc_id_t = remove_pointer<decltype(drmModeCrtc::crtc_id)>::type;
-        using enc_id_t = remove_pointer<decltype(drmModeEncoder::encoder_id)>::type;
-        using conn_id_t = remove_pointer<decltype(drmModeConnector::connector_id)>::type;
+        using fb_id_t = decltype(drmModeFB::fb_id);
+        using crtc_id_t = decltype(drmModeCrtc::crtc_id);
+        using enc_id_t = decltype(drmModeEncoder::encoder_id);
+        using conn_id_t = decltype(drmModeConnector::connector_id);
 
-        using width_t = remove_pointer<decltype(drmModeFB2 ::width)>::type;
-        using height_t = remove_pointer<decltype(drmModeFB2 ::height)>::type;
-        using frmt_t = remove_pointer<decltype(drmModeFB2 ::pixel_format)>::type;
-        using modifier_t = remove_pointer<decltype(drmModeFB2 ::modifier)>::type;
+        using width_t = decltype(drmModeFB2::width);
+        using height_t = decltype(drmModeFB2::height);
+        using format_t = decltype(drmModeFB2::pixel_format);
+        using modifier_t = decltype(drmModeFB2::modifier);
 
-        using handle_t = remove_pointer<std::decay<decltype(drmModeFB2::handles)>::type>::type;
-        using pitch_t = remove_pointer<std::decay<decltype(drmModeFB2::pitches)>::type>::type;
-        using offset_t = remove_pointer<std::decay<decltype(drmModeFB2::offsets)>::type>::type;
+        using handle_t = std::remove_reference<decltype(*drmModeFB2::handles)>::type;
+        using pitch_t = std::remove_reference<decltype(*drmModeFB2::pitches)>::type;
+        using offset_t = std::remove_reference<decltype(*drmModeFB2::offsets)>::type;
 
-        using x_t = remove_pointer<decltype(drmModeCrtc::x)>::type;
-        using y_t = remove_pointer<decltype(drmModeCrtc::y)>::type;
+        using x_t = decltype(drmModeCrtc::x);
+        using y_t = decltype(drmModeCrtc::y);
 
-        using duration_t = remove_pointer<decltype(timespec::tv_sec)>::type;
+        using duration_t = decltype(timespec::tv_sec);
 
-        static_assert(narrowing<decltype(-1), fd_t, true>::value != true);
         static constexpr fd_t InvalidFd() { return static_cast<fd_t>(-1); }
 
         static constexpr fb_id_t InvalidFb() { return static_cast<fb_id_t>(0); }
@@ -113,13 +67,8 @@ public:
         static constexpr width_t InvalidWidth() { return static_cast<width_t>(0); }
         static constexpr height_t InvalidHeight() { return static_cast<height_t>(0); }
 
-        // Probably signed to unsigned
-        static_assert(narrowing<decltype(DRM_FORMAT_INVALID), frmt_t, true>::value != true
-            || (DRM_FORMAT_INVALID >= static_cast<decltype(DRM_FORMAT_INVALID)>(0)
-                && in_unsigned_range<frmt_t, DRM_FORMAT_INVALID>::value != false));
-        static constexpr frmt_t InvalidFrmt() { return static_cast<frmt_t>(DRM_FORMAT_INVALID); }
+        static constexpr format_t InvalidFormat() { return static_cast<format_t>(DRM_FORMAT_INVALID); }
 
-        static_assert(narrowing<decltype(DRM_FORMAT_MOD_INVALID), modifier_t, true>::value != true);
         static constexpr modifier_t InvalidModifier() { return static_cast<modifier_t>(DRM_FORMAT_MOD_INVALID); }
     };
 
@@ -131,22 +80,21 @@ public:
 
         // See xf86drmMode.h for magic constant
         using plane_t = decltype(GBM_MAX_PLANES);
-        static_assert(static_cast<plane_t>(GBM_MAX_PLANES) == static_cast<plane_t>(4));
 
-        using width_t = remove_pointer<decltype(gbm_import_fd_modifier_data::width)>::type;
-        using height_t = remove_pointer<decltype(gbm_import_fd_modifier_data::height)>::type;
-        using frmt_t = remove_pointer<decltype(gbm_import_fd_modifier_data::format)>::type;
+        using width_t = decltype(gbm_import_fd_modifier_data::width);
+        using height_t = decltype(gbm_import_fd_modifier_data::height);
+        using format_t = decltype(gbm_import_fd_modifier_data::format);
 
-        using fd_t = remove_pointer<std::decay<decltype(gbm_import_fd_modifier_data::fds)>::type>::type;
-        using stride_t = remove_pointer<std ::decay<decltype(gbm_import_fd_modifier_data::strides)>::type>::type;
-        using offset_t = remove_pointer<std ::decay<decltype(gbm_import_fd_modifier_data::offsets)>::type>::type;
-        using modifier_t = remove_pointer<decltype(gbm_import_fd_modifier_data::modifier)>::type;
+        using fd_t = std::remove_reference<decltype(*gbm_import_fd_modifier_data::fds)>::type;
+        using stride_t = std::remove_reference<decltype(*gbm_import_fd_modifier_data::strides)>::type;
+        using offset_t = std::remove_reference<decltype(*gbm_import_fd_modifier_data::offsets)>::type;
+        using modifier_t = decltype(gbm_import_fd_modifier_data::modifier);
 
         using dev_t = struct gbm_device*;
         using surf_t = struct gbm_surface*;
         using buf_t = struct gbm_bo*;
 
-        using handle_t = decltype(gbm_bo_handle ::u32);
+        using handle_t = decltype(gbm_bo_handle::u32);
 
         static constexpr dev_t InvalidDev() { return static_cast<dev_t>(nullptr); }
         static constexpr surf_t InvalidSurf() { return static_cast<surf_t>(nullptr); }
@@ -156,7 +104,7 @@ public:
         static constexpr width_t InvalidWidth() { return static_cast<width_t>(0); }
         static constexpr height_t InvalidHeight() { return static_cast<height_t>(0); }
         static constexpr stride_t InvalidStride() { return static_cast<stride_t>(0); }
-        static constexpr frmt_t InvalidFrmt() { return static_cast<frmt_t>(DRM::InvalidFrmt()); }
+        static constexpr format_t InvalidFormat() { return static_cast<format_t>(DRM::InvalidFormat()); }
         static constexpr modifier_t InvalidModifier() { return static_cast<modifier_t>(DRM::InvalidModifier()); }
     };
 
@@ -188,12 +136,9 @@ public:
 
     GBM::dev_t /* const */ UnderlyingHandle() const;
 
-    static std::list<DRM::frmt_t> AvailableFormats(DRM::fd_t);
+    static std::list<DRM::format_t> AvailableFormats(DRM::fd_t);
 
-    static_assert(narrowing<decltype(DRM_FORMAT_ARGB8888), GBM::frmt_t, true>::value != true);
-    static constexpr GBM::frmt_t SupportedBufferType() { return static_cast<GBM::frmt_t>(DRM_FORMAT_ARGB8888); }
-
-    static_assert(narrowing<decltype(DRM_FORMAT_MOD_LINEAR), GBM::modifier_t, true>::value != true);
+    static constexpr GBM::format_t SupportedBufferType() { return static_cast<GBM::format_t>(DRM_FORMAT_ARGB8888); }
     static constexpr GBM::modifier_t FormatModifier() { return static_cast<GBM::modifier_t>(DRM_FORMAT_MOD_LINEAR); }
 
     DRM::fd_t Descriptor() const;

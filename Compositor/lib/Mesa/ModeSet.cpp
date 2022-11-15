@@ -35,7 +35,6 @@ static void GetNodes(uint32_t const type, std::vector<std::string>& list)
 
     drmDevicePtr devices[DrmMaxDevices];
 
-    static_assert(ModeSet::narrowing<decltype(DrmMaxDevices), int, true>::value != true);
     int device_count = drmGetDevices2(0 /* flags */, &devices[0], static_cast<int>(DrmMaxDevices));
 
     if (device_count > 0) {
@@ -45,10 +44,6 @@ static void GetNodes(uint32_t const type, std::vector<std::string>& list)
             case DRM_NODE_CONTROL: // ControlD<num>, currently unused
             case DRM_NODE_RENDER: // Solely for render clients, unprivileged
             {
-                static_assert(ModeSet::narrowing<decltype(DRM_NODE_PRIMARY), decltype(type), true>::value != false);
-                static_assert(ModeSet::narrowing<decltype(DRM_NODE_CONTROL), decltype(type), true>::value != false);
-                static_assert(ModeSet::narrowing<decltype(DRM_NODE_RENDER), decltype(type), true>::value != false);
-
                 if ((1 << type) == (devices[i]->available_nodes & (1 << type))) {
                     list.push_back(std::string(devices[i]->nodes[type]));
                 }
@@ -56,8 +51,7 @@ static void GetNodes(uint32_t const type, std::vector<std::string>& list)
             }
             case DRM_NODE_MAX:
             default: // Unknown (new) node type
-                static_assert(ModeSet::narrowing<decltype(DRM_NODE_MAX), decltype(type), true>::value != false);
-                ;
+                break;
             }
         }
 
@@ -122,10 +116,9 @@ static bool FindProperDisplay(WPEFramework::ModeSet::DRM::fd_t const fd, WPEFram
 {
     bool found = false;
 
-    assert(fd != WPEFramework::ModeSet::DRM::InvalidFd());
+    ASSERT(fd != WPEFramework::ModeSet::DRM::InvalidFd());
 
     // Only connected connectors are considered
-    static_assert(ModeSet::narrowing<decltype(DRM_MODE_CONNECTOR_HDMIA), uint32_t, true>::value != false);
     uint32_t connectorMask = GetConnectors(fd, DRM_MODE_CONNECTOR_HDMIA);
 
     // All CRTCs are considered for the given mode (valid / not valid)
@@ -188,10 +181,10 @@ static bool FindProperDisplay(WPEFramework::ModeSet::DRM::fd_t const fd, WPEFram
     return found;
 }
 
-static bool CreateBuffer(WPEFramework::ModeSet::DRM::fd_t const fd, WPEFramework::ModeSet::DRM::conn_id_t const connector, 
-WPEFramework::ModeSet::GBM::dev_t& device, uint32_t& modeIndex, WPEFramework::ModeSet::DRM::fb_id_t& id, WPEFramework::ModeSet::GBM::buf_t& buffer, uint32_t& vrefresh)
+static bool CreateBuffer(WPEFramework::ModeSet::DRM::fd_t const fd, WPEFramework::ModeSet::DRM::conn_id_t const connector,
+    WPEFramework::ModeSet::GBM::dev_t& device, uint32_t& modeIndex, WPEFramework::ModeSet::DRM::fb_id_t& id, WPEFramework::ModeSet::GBM::buf_t& buffer, uint32_t& vrefresh)
 {
-    assert(fd != WPEFramework::ModeSet::DRM::InvalidFd());
+    ASSERT(fd != WPEFramework::ModeSet::DRM::InvalidFd());
 
     bool created = false;
     buffer = WPEFramework::ModeSet::GBM::InvalidBuf();
@@ -213,11 +206,6 @@ WPEFramework::ModeSet::GBM::dev_t& device, uint32_t& modeIndex, WPEFramework::Mo
 
                 uint32_t type = pconnector->modes[index].type;
 
-                // Possibly signed to unsigned
-                static_assert(ModeSet::narrowing<decltype(DRM_MODE_TYPE_PREFERRED), decltype(type), true>::value != true
-                    || (DRM_MODE_TYPE_PREFERRED >= static_cast<decltype(DRM_MODE_TYPE_PREFERRED)>(0)
-                        && ModeSet::in_unsigned_range<decltype(type), DRM_MODE_TYPE_PREFERRED>::value != false));
-
                 // At least one preferred mode should be set by the driver, but dodgy EDID parsing might not provide it
                 if (DRM_MODE_TYPE_PREFERRED == (DRM_MODE_TYPE_PREFERRED & type)) {
                     modeIndex = index;
@@ -226,17 +214,13 @@ WPEFramework::ModeSet::GBM::dev_t& device, uint32_t& modeIndex, WPEFramework::Mo
                     // Found a suitable mode; break the loop
                     found = true;
                 } else {
-                    static_assert(ModeSet::narrowing<decltype(DRM_MODE_TYPE_DRIVER), decltype(type), true>::value != true
-                        || (DRM_MODE_TYPE_DRIVER >= static_cast<decltype(DRM_MODE_TYPE_DRIVER)>(0)
-                            && ModeSet::in_unsigned_range<decltype(type), DRM_MODE_TYPE_DRIVER>::value != false));
-
                     if (DRM_MODE_TYPE_DRIVER == (DRM_MODE_TYPE_DRIVER & type)) {
                         // Calculate screen area
                         uint64_t size = pconnector->modes[index].hdisplay * pconnector->modes[index].vdisplay;
                         if (area < size) {
                             area = size;
 
-                            // Use another selection criterium
+                            // Use another selection criteria
                             // Select highest clock and vertical refresh rate
 
                             if ((pconnector->modes[index].clock > pconnector->modes[modeIndex].clock)
@@ -265,12 +249,11 @@ WPEFramework::ModeSet::GBM::dev_t& device, uint32_t& modeIndex, WPEFramework::Mo
 
                 ModeSet::GBM::width_t width = gbm_bo_get_width(bo);
                 ModeSet::GBM::height_t height = gbm_bo_get_height(bo);
-                ModeSet::GBM::frmt_t format = gbm_bo_get_format(bo);
+                ModeSet::GBM::format_t format = gbm_bo_get_format(bo);
                 ModeSet::GBM::handle_t handle = gbm_bo_get_handle(bo).u32;
                 ModeSet::GBM::stride_t stride = gbm_bo_get_stride(bo);
                 ModeSet::GBM::modifier_t modifier = gbm_bo_get_modifier(bo);
 
-                static_assert(static_cast<ModeSet::GBM::plane_t>(GBM_MAX_PLANES) == static_cast<ModeSet::GBM::plane_t>(4));
                 ModeSet::DRM::handle_t const handles[GBM_MAX_PLANES] = { static_cast<ModeSet::DRM::handle_t>(handle), 0, 0, 0 };
                 ModeSet::DRM::pitch_t const pitches[GBM_MAX_PLANES] = { static_cast<ModeSet::DRM::pitch_t>(stride), 0, 0, 0 };
                 ModeSet::DRM::offset_t const offsets[GBM_MAX_PLANES] = { static_cast<ModeSet::DRM::offset_t>(0), 0, 0, 0 };
@@ -308,7 +291,6 @@ ModeSet::BufferInfo::BufferInfo(ModeSet::BufferInfo&& other)
     , _bo { other._bo }
     , _id { other._id }
 {
-
     if (this != &other) {
         other._surface = GBM::InvalidSurf();
         other._bo = GBM::InvalidBuf();
@@ -365,7 +347,7 @@ uint32_t ModeSet::Open(string const&)
         while ((index != nodes.end()) && (_fd == DRM::InvalidFd())) {
             // Select the first from the list
             if (index->empty() == false) {
-                // The node might be priviliged and the call will fail.
+                // The node might be privileged and the call will fail.
                 // Do not close fd with exec functions! No O_CLOEXEC!
                 _fd = open(index->c_str(), O_RDWR);
 
@@ -373,7 +355,7 @@ uint32_t ModeSet::Open(string const&)
                     bool success = false;
 
                     TRACE(Trace::Information, (_T ( "Test Card: %s" ), index->c_str()));
-                    
+
                     if ((FindProperDisplay(_fd, _crtc, _encoder, _connector, _fb) == true)
                         /* TODO: Changes the original fb which might not be what is intended */
                         && (CreateBuffer(_fd, _connector, _device, _mode, _fb, _buffer, _vrefresh) == true)
@@ -406,9 +388,6 @@ uint32_t ModeSet::Open(string const&)
 
 uint32_t ModeSet::Close()
 {
-    static_assert(std::is_enum<decltype(Core::ERROR_NONE)>::value != false);
-    static_assert(WPEFramework::ModeSet::narrowing<uint32_t, std::underlying_type<decltype(Core::ERROR_NONE)>::type, true>::value != true);
-
     // Destroy the initial buffer if one exists
     if (_buffer != GBM::InvalidBuf()) {
         TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_bo_destroy"), __FILE__, __LINE__, __FUNCTION__));
@@ -432,12 +411,6 @@ uint32_t ModeSet::Close()
     _encoder = DRM::InvalidEncoder();
     _connector = DRM::InvalidConnector();
 
-    static_assert(std::is_enum<decltype(Core::ERROR_NONE)>::value != false);
-    // Possible signed to unsigned
-    static_assert(narrowing<std::underlying_type<decltype(Core::ERROR_NONE)>::type, uint32_t, true>::value != true
-        || (Core::ERROR_NONE >= static_cast<std::underlying_type<decltype(Core::ERROR_NONE)>::type>(0)
-            && ModeSet::in_unsigned_range<uint32_t, Core::ERROR_NONE>::value != false));
-
     return static_cast<uint32_t>(Core::ERROR_NONE);
 }
 
@@ -446,9 +419,9 @@ ModeSet::GBM::dev_t /* const */ ModeSet::UnderlyingHandle() const
     return _device;
 }
 
-/* static */ std::list<ModeSet::DRM::frmt_t> ModeSet::AvailableFormats(ModeSet::DRM::fd_t fd)
+/* static */ std::list<ModeSet::DRM::format_t> ModeSet::AvailableFormats(ModeSet::DRM::fd_t fd)
 {
-    std::list<DRM::frmt_t> ret;
+    std::list<DRM::format_t> ret;
 
     if (fd != DRM::InvalidFd()) {
 
@@ -469,7 +442,7 @@ ModeSet::GBM::dev_t /* const */ ModeSet::UnderlyingHandle() const
                     decltype(drmModePlane::formats) formats = plane->formats;
 
                     // Uses the iterator constructor
-                    std::list<DRM::frmt_t> sub(&formats[0], &formats[number]);
+                    std::list<DRM::format_t> sub(&formats[0], &formats[number]);
 
                     sub.sort();
                     sub.unique();
@@ -596,21 +569,19 @@ using data_t = std::atomic<bool>;
 // GBM library signature of page_flip_handler
 static void PageFlip(int /* const */, unsigned int /* const */, unsigned int /* const */, unsigned int /* const */, void* data)
 {
-    assert(data != nullptr);
+    ASSERT(data != nullptr);
 
     if (data != nullptr) {
         data_t* _data = reinterpret_cast<data_t*>(data);
         *_data = false;
-    } else {
-        //            TRACE ( Trace::Error , ( _T ( "Invalid callback data." ) ) );
     }
 }
 
 void ModeSet::Swap(struct BufferInfo& buffer)
 {
-    assert(_fd != DRM::InvalidFd());
+    ASSERT(_fd != DRM::InvalidFd());
 
-   // TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_surface_lock_front_buffer"), __FILE__, __LINE__, __FUNCTION__));
+    // TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_surface_lock_front_buffer"), __FILE__, __LINE__, __FUNCTION__));
     // Lock the new buffer so we can use it
     buffer._bo = gbm_surface_lock_front_buffer(buffer._surface);
 
@@ -618,16 +589,15 @@ void ModeSet::Swap(struct BufferInfo& buffer)
         // TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_device_get_fd"), __FILE__, __LINE__, __FUNCTION__));
         ModeSet::GBM::fd_t fb_fd = gbm_device_get_fd(_device);
 
-        assert(_fd == fb_fd);
+        ASSERT(_fd == fb_fd);
 
         ModeSet::GBM::width_t width = gbm_bo_get_width(buffer._bo);
         ModeSet::GBM::height_t height = gbm_bo_get_height(buffer._bo);
-        ModeSet::GBM::frmt_t format = gbm_bo_get_format(buffer._bo);
+        ModeSet::GBM::format_t format = gbm_bo_get_format(buffer._bo);
         ModeSet::GBM::handle_t handle = gbm_bo_get_handle(buffer._bo).u32;
         ModeSet::GBM::stride_t stride = gbm_bo_get_stride(buffer._bo);
         ModeSet::GBM::modifier_t modifier = gbm_bo_get_modifier(buffer._bo);
 
-        static_assert(static_cast<ModeSet::GBM::plane_t>(GBM_MAX_PLANES) == static_cast<ModeSet::GBM::plane_t>(4));
         ModeSet::DRM::handle_t const handles[GBM_MAX_PLANES] = { static_cast<ModeSet::DRM::handle_t>(handle), static_cast<ModeSet::DRM::handle_t>(0), static_cast<ModeSet::DRM::handle_t>(0), static_cast<ModeSet::DRM::handle_t>(0) };
         ModeSet::DRM::pitch_t const pitches[GBM_MAX_PLANES] = { static_cast<ModeSet::DRM::pitch_t>(stride), static_cast<ModeSet::DRM::pitch_t>(0), static_cast<ModeSet::DRM::pitch_t>(0), static_cast<ModeSet::DRM::pitch_t>(0) };
         ModeSet::DRM::offset_t const offsets[GBM_MAX_PLANES] = { static_cast<ModeSet::DRM::offset_t>(0), static_cast<ModeSet::DRM::offset_t>(0), static_cast<ModeSet::DRM::offset_t>(0), static_cast<ModeSet::DRM::offset_t>(0) };
@@ -636,9 +606,9 @@ void ModeSet::Swap(struct BufferInfo& buffer)
         if (drmModeAddFB2WithModifiers(_fd, width, height, format, &handles[0], &pitches[0], &offsets[0], &modifiers[0], &(buffer._id), 0 /* flags */) != 0) {
             buffer._id = DRM::InvalidFb();
 
-            TRACE(Trace::Error, (_T ( "Unable to contruct a frame buffer for scan out." )));
+            TRACE(Trace::Error, (_T ( "Unable to construct a frame buffer for scan out." )));
         } else {
-            //TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG drmModeAddFB2WithModifiers"), __FILE__, __LINE__, __FUNCTION__));
+            // TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG drmModeAddFB2WithModifiers"), __FILE__, __LINE__, __FUNCTION__));
 
             static data_t cdata(true);
             cdata = true;
@@ -647,16 +617,13 @@ void ModeSet::Swap(struct BufferInfo& buffer)
             // Many causes, but the most obvious is a busy resource or a missing drmModeSetCrtc
             // Probably a missing drmModeSetCrtc or an invalid _crtc
             // See ModeSet::Create, not recovering here
-            assert(err != -EINVAL);
-            assert(err != -EBUSY);
+            ASSERT(err != -EINVAL);
+            ASSERT(err != -EBUSY);
 
             if (err == 0) {
                 // No error
                 // Asynchronous, but never called more than once, waiting in scope
                 // Use the magic constant here because the struct is versioned!
-
-                static_assert(std::is_integral<decltype(DRM_EVENT_CONTEXT_VERSION)>::value != false);
-                static_assert(DRM_EVENT_CONTEXT_VERSION >= static_cast<decltype(DRM_EVENT_CONTEXT_VERSION)>(2) && DRM_EVENT_CONTEXT_VERSION <= static_cast<decltype(DRM_EVENT_CONTEXT_VERSION)>(4));
 
                 drmEventContext context = {
                     .version = 2,
@@ -702,7 +669,7 @@ void ModeSet::Swap(struct BufferInfo& buffer)
                                     // Error; break the loop
                                     break;
                                 }
-                                // Flip probably occured already otherwise it loops again
+                                // Flip probably occurred already otherwise it loops again
                             }
                         }
 
@@ -728,7 +695,7 @@ void ModeSet::Swap(struct BufferInfo& buffer)
 
         if (buffer._surface != GBM::InvalidSurf()
             && buffer._bo != GBM::InvalidBuf()) {
-            //TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_surface_release_buffer"), __FILE__, __LINE__, __FUNCTION__));
+            // TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_surface_release_buffer"), __FILE__, __LINE__, __FUNCTION__));
             gbm_surface_release_buffer(buffer._surface, buffer._bo);
             buffer._bo = GBM::InvalidBuf();
         } else {
