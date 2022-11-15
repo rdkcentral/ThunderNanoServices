@@ -56,7 +56,7 @@ namespace Plugin {
             }
 
         private:
-            virtual void* Aquire(const string&, const uint32_t interfaceId, const uint32_t versionId)
+            virtual void* Acquire(const string&, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
@@ -64,7 +64,7 @@ namespace Plugin {
                 if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IPlayer::ID) || (interfaceId == Core::IUnknown::ID))) {
                     // Reference count our parent
                     _parentInterface->AddRef();
-                    TRACE(Trace::Information, ("Player interface aquired => %p", this));
+                    TRACE(Trace::Information, ("Player interface acquired => %p", this));
                     // Allright, respond with the interface.
                     result = _parentInterface;
                 }
