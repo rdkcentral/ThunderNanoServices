@@ -23,6 +23,7 @@
 #include <core/core.h>
 #include <interfaces/IComposition.h>
 
+#include "CompositorTrace.h"
 #include "ModeSet.h"
 
 #ifdef __cplusplus
@@ -36,10 +37,6 @@ extern "C" {
 #include <fcntl.h>
 #include <gbm.h>
 #include <sys/socket.h>
-
-#ifndef _GNU_SOURCE
-#error mkotemp requires feature macro _GNU_SOURCE to be defined
-#endif
 
 #ifdef __cplusplus
 }
@@ -56,167 +53,179 @@ extern "C" {
 #include <stdlib.h>
 #include <type_traits>
 
+#ifndef EGL_VERSION_1_5
+using EGLImage = EGLImageKHR;
+using EGL_NO_IMAGE = EGL_NO_IMAGE_KHR;
+#endif
+
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 namespace Plugin {
-
-    // Forward declaration
-    class CompositorImplementation;
-
-    // Different namespace and scope than CompositorImplementation::EGL
-    namespace EGL {
-#ifdef EGL_VERSION_1_5
-        using img_t = EGLImage;
-#else
-        using img_t = EGLImageKHR;
-#endif
-        using width_t = EGLint;
-        using height_t = EGLint;
-
-#ifdef EGL_VERSION_1_5
-        static constexpr img_t InvalidImage()
-        {
-            return static_cast<img_t>(EGL_NO_IMAGE);
-        }
-#else
-        static constexpr img_t InvalidImage()
-        {
-            return static_cast<img_t>(EGL_NO_IMAGE_KHR);
-        }
-#endif
-    }
-
     constexpr char DmaFdConnector[] = "/tmp/Compositor/DmaFdConnector";
-
-    class ClientSurface : public Exchange::IComposition::IClient,
-                          public Exchange::IComposition::IRender,
-                          public Exchange::IComposition::IClient::IProperties {
-    private:
-        // The buffer acts as a surface for the remote site
-        struct {
-            struct gbm_bo* _buf;
-            int _fd;
-            int _sync_fd;
-            EGL::img_t _khr;
-
-            bool Valid() const { return _buf != nullptr; }
-            bool DMAComplete() const { return Valid() && _fd != ModeSet::GBM::InvalidFd() && _sync_fd != ModeSet::GBM::InvalidFd(); };
-            bool RenderComplete() const
-            {
-                TRACE(Trace::Information,
-                    (_T("ClientSurface _fd=%d _sync_fd=%d _khr=%p." ), _fd, _sync_fd, _khr));
-
-                return Valid()
-                    && _fd != ModeSet::GBM::InvalidFd()
-                    && _sync_fd != ModeSet::GBM::InvalidFd()
-                    && _khr != WPEFramework::Plugin::EGL::InvalidImage();
-            }
-        } _nativeSurface;
-
-    private:
-        ModeSet& _modeSet;
-        CompositorImplementation& _compositor;
-        std::string const _name;
-
-        uint32_t _opacity;
-        uint32_t _layer;
-
-        Exchange::IComposition::Rectangle _destination;
-
-    public:
-        using surf_t = decltype(_nativeSurface);
-
-        ClientSurface() = delete;
-        ClientSurface(ClientSurface const&) = delete;
-        ClientSurface& operator=(ClientSurface const&) = delete;
-
-        ClientSurface(ModeSet&, CompositorImplementation&, const string&, uint32_t const, uint32_t const);
-        ~ClientSurface() override;
-
-        // Underlying native surface handle
-        Core::instance_id Native() const override
-        {
-            TRACE(Trace::Information, (_T("%s:%d %s ClientSurface Native id=%d"), __FILE__, __LINE__, __FUNCTION__, static_cast<Core::instance_id>(_nativeSurface._fd)));
-            return static_cast<Core::instance_id>(_nativeSurface._fd);
-        }
-
-        // Inter-process synchronization
-        Core::instance_id SyncPrimitive() const;
-        bool SyncPrimitiveStart() const;
-        bool SyncPrimitiveEnd() const;
-
-        // Just me
-        string Name() const override
-        {
-            TRACE(Trace::Information, (_T("%s:%d %s ClientSurface Name %s"), __FILE__, __LINE__, __FUNCTION__, _name.c_str()));
-            return _name;
-        }
-
-        // Opacity
-        void Opacity(uint32_t const value) override { _opacity = value; }
-        uint32_t Opacity() const override { return _opacity; }
-
-        // Geometry
-        uint32_t Geometry(Exchange::IComposition::Rectangle const& rectangle) override
-        {
-            _destination = rectangle;
-            return static_cast<uint32_t>(Core::ERROR_NONE);
-        }
-        Exchange::IComposition::Rectangle Geometry() const override
-        {
-            TRACE(Trace::Information, (_T("%s:%d %s ClientSurface Geometry %dx%d"), __FILE__, __LINE__, __FUNCTION__, _destination.width, _destination.height));
-            return _destination;
-        }
-
-        // Z-ordering within multiple surfaces
-        uint32_t ZOrder(uint16_t const zorder) override
-        {
-            _layer = zorder;
-            return static_cast<uint32_t>(Core::ERROR_NONE);
-        }
-        uint32_t ZOrder() const override { return _layer; }
-
-        // Buffer to display flipping
-        void ScanOut() override;
-
-        surf_t const& Surface(EGL::img_t const& khr = EGL::InvalidImage());
-
-        // IComposition::IClient::IProperties
-        uint32_t Stride()
-        {
-            return gbm_bo_get_stride(_nativeSurface._buf);
-        }
-        uint32_t Format()
-        {
-            return gbm_bo_get_format(_nativeSurface._buf);
-        }
-        uint32_t Offset()
-        {
-            return gbm_bo_get_offset(_nativeSurface._buf, 0);
-        }
-        uint64_t Modifier()
-        {
-            return gbm_bo_get_modifier(_nativeSurface._buf);
-        }
-
-        BEGIN_INTERFACE_MAP(ClientSurface)
-        INTERFACE_ENTRY(Exchange::IComposition::IClient)
-        INTERFACE_ENTRY(Exchange::IComposition::IRender)
-        INTERFACE_ENTRY(Exchange::IComposition::IClient::IProperties)
-        END_INTERFACE_MAP
-    };
+    constexpr int InvalidFd = ModeSet::GBM::InvalidFd();
 
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
     public:
+        class Client : public Exchange::IComposition::IClient,
+                       public Exchange::IComposition::IRender,
+                       public Exchange::IComposition::IClient::IProperties {
+        public:
+            // The buffer acts as a surface for the remote site
+            struct SurfaceType {
+                struct gbm_bo* _buf;
+                int _fd;
+                EGLImage _image;
+
+                SurfaceType()
+                    : _buf(nullptr)
+                    , _fd(InvalidFd)
+                    , _image(EGL_NO_IMAGE)
+                {
+                }
+
+                bool IsValid() const
+                {
+                    return (_buf != nullptr) && (_fd != InvalidFd) && (_image != EGL_NO_IMAGE);
+                }
+            };
+
+        public:
+            Client() = delete;
+            Client(Client const&) = delete;
+            Client& operator=(Client const&) = delete;
+
+            Client(ModeSet& modeSet, CompositorImplementation& compositor, string const& name, uint32_t const width, uint32_t const height)
+                : _nativeSurface()
+                , _modeSet(modeSet)
+                , _compositor(compositor)
+                , _name(name)
+                , _opacity(Exchange::IComposition::maxOpacity)
+                , _layer(0)
+                , _destination({ 0, 0, width, height })
+            {
+                // The compositor should not be destroyed before any existing client surface
+                _compositor.AddRef();
+
+                // TODO: The internal scan out flag might not be appropriate
+                _nativeSurface._buf = _modeSet.CreateBufferObject(width, height);
+
+                if (_nativeSurface._buf != nullptr) {
+                    _nativeSurface._fd = gbm_bo_get_fd(_nativeSurface._buf); // acts
+
+                    TRACE(CompositorTrace::Client, (_T("Constructed Client gbm_bo_fd=%d, width=%d, height=%d, stride=%d, format=0x%04X, modifier=0x%" PRIX64), _nativeSurface._fd, gbm_bo_get_width(_nativeSurface._buf), gbm_bo_get_height(_nativeSurface._buf), gbm_bo_get_stride(_nativeSurface._buf), gbm_bo_get_format(_nativeSurface._buf), gbm_bo_get_modifier(_nativeSurface._buf)));
+                } else {
+                    TRACE(Trace::Error, (_T ( "A Client cannot be created for %s" ), name.c_str()));
+                }
+            }
+
+            ~Client() override
+            {
+                // Part of the client is cleaned up via the detached (hook)
+                if (_nativeSurface._buf != ModeSet::GBM::InvalidBuf()) {
+                    _modeSet.DestroyBufferObject(_nativeSurface._buf);
+                }
+
+                if (_nativeSurface._fd != InvalidFd) {
+                    int ret = close(_nativeSurface._fd);
+                    ASSERT(ret != -1);
+                }
+
+                _compositor.Release();
+            }
+
+            // Underlying native surface handle
+            Core::instance_id Native() const override
+            {
+                return static_cast<Core::instance_id>(_nativeSurface._fd);
+            }
+
+            // Just me
+            string Name() const override
+            {
+                return _name;
+            }
+
+            // Opacity
+            void Opacity(uint32_t const value) override { _opacity = value; }
+            uint32_t Opacity() const override { return _opacity; }
+
+            // Geometry
+            uint32_t Geometry(Exchange::IComposition::Rectangle const& rectangle) override
+            {
+                _destination = rectangle;
+                return static_cast<uint32_t>(Core::ERROR_NONE);
+            }
+            Exchange::IComposition::Rectangle Geometry() const override
+            {
+                return _destination;
+            }
+
+            // Z-ordering within multiple surfaces
+            uint32_t ZOrder(uint16_t const zorder) override
+            {
+                _layer = zorder;
+                return static_cast<uint32_t>(Core::ERROR_NONE);
+            }
+            uint32_t ZOrder() const override { return _layer; }
+
+            // Buffer to display flipping
+            void ScanOut() override
+            {
+                bool composed = _compositor.CompositeFor(_name);
+                TRACE(CompositorTrace::Client, (_T("%s:%d %s for %s %s"), __FILE__, __LINE__, __FUNCTION__, _name.c_str(), (composed) ? "OK" : "Failed"));
+            }
+
+            SurfaceType const& Surface(EGLImage const& khr = EGL::InvalidImage())
+            {
+                TRACE(CompositorTrace::Client, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+                if (khr != EGL::InvalidImage()) {
+                    _nativeSurface._image = khr;
+                }
+
+                return _nativeSurface;
+            }
+
+            // IComposition::IClient::IProperties
+            uint32_t Stride()
+            {
+                return gbm_bo_get_stride(_nativeSurface._buf);
+            }
+            uint32_t Format()
+            {
+                return gbm_bo_get_format(_nativeSurface._buf);
+            }
+            uint32_t Offset()
+            {
+                return gbm_bo_get_offset(_nativeSurface._buf, 0);
+            }
+            uint64_t Modifier()
+            {
+                return gbm_bo_get_modifier(_nativeSurface._buf);
+            }
+
+            BEGIN_INTERFACE_MAP(Client)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            INTERFACE_ENTRY(Exchange::IComposition::IRender)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient::IProperties)
+            END_INTERFACE_MAP
+
+        private:
+            SurfaceType _nativeSurface;
+            ModeSet& _modeSet;
+            CompositorImplementation& _compositor;
+            std::string const _name;
+
+            uint32_t _opacity;
+            uint32_t _layer;
+
+            Exchange::IComposition::Rectangle _destination;
+        }; // class Client
+
         // The (preferred) type of lock
         using lock_t = std::mutex;
 
-        using ClientContainer = Core::ProxyMapType<string, ClientSurface>;
-
-        // Underlying display 'true' dimensions
-        using platform_w_t = decltype(std::declval<ModeSet>().Width());
-        using platform_h_t = decltype(std::declval<ModeSet>().Height());
+        using ClientContainer = Core::ProxyMapType<string, Client>;
 
         CompositorImplementation(CompositorImplementation const&) = delete;
         CompositorImplementation& operator=(CompositorImplementation const&) = delete;
@@ -255,7 +264,7 @@ namespace Plugin {
             ExternalAccess& operator=(ExternalAccess const&) = delete;
 
             ExternalAccess(CompositorImplementation&, Core::NodeId const&, string const&, Core::ProxyType<RPC::InvokeServer> const&);
-            ~ExternalAccess() override;
+            ~ExternalAccess() override = default;
 
         private:
             void* Acquire(string const&, uint32_t const, uint32_t const) override;
@@ -264,40 +273,69 @@ namespace Plugin {
         };
 
         class Natives final {
-        private:
-            ModeSet& _set;
-
-            using dpy_return_t = decltype(std::declval<ModeSet>().UnderlyingHandle());
-            using surf_return_t = decltype(std::declval<ModeSet>().CreateRenderTarget(0, 0));
-
-            surf_return_t _surf = nullptr;
-
-            bool _valid = false;
-
         public:
+            static constexpr ModeSet::GBM::dev_t InvalidDisplay = nullptr;
+            static constexpr ModeSet::GBM::surf_t InvalidSurface = nullptr;
+
             Natives() = delete;
             Natives(Natives const&) = delete;
             Natives& operator=(Natives const&) = delete;
 
-            using dpy_t = dpy_return_t;
-            using surf_t = decltype(_surf);
-            using valid_t = decltype(_valid);
+            explicit Natives(ModeSet& modeSet)
+                : _set(modeSet)
+                , _gbmSurface(InvalidSurface)
+            {
+                Initialize();
+            }
 
-            explicit Natives(ModeSet&);
-            ~Natives();
+            ~Natives()
+            {
+                Deinitialize();
+            }
 
-            dpy_t Display() const { return _set.UnderlyingHandle(); }
-            surf_t Surface() const { return _surf; }
+            ModeSet::GBM::dev_t Display() const { return _set.UnderlyingHandle(); }
+            ModeSet::GBM::surf_t Surface() const { return _gbmSurface; }
 
-            valid_t Invalidate();
+            void Invalidate()
+            {
+                Deinitialize();
+            }
 
-            valid_t Valid() const { return _valid; }
+            bool Valid() const
+            {
+                return (_gbmSurface != InvalidSurface);
+            }
 
         private:
-            valid_t Initialize();
-            void DeInitialize();
-            static constexpr dpy_t InvalidDisplay() { return nullptr; }
-            static constexpr surf_t InvalidSurface() { return nullptr; }
+            bool Initialize()
+            {
+                bool ret = false;
+
+                ret = _set.Open("") == Core::ERROR_NONE && Display() != InvalidDisplay;
+
+                if (ret == true) {
+                    _gbmSurface = _set.CreateRenderTarget(_set.Width(), _set.Height());
+                    ret = _gbmSurface != InvalidSurface;
+                }
+
+                if (ret != true) {
+                    TRACE(Trace::Error, (_T ( "Unable to create a compositor surface of dimensions: %u x %u [width, height]))." ), _set.Width(), _set.Height()));
+                }
+
+                return ret;
+            }
+            void Deinitialize()
+            {
+                if (_gbmSurface != InvalidSurface) {
+                    _set.DestroyRenderTarget(_gbmSurface);
+                }
+
+                _set.Close();
+            }
+
+        private:
+            ModeSet& _set;
+            ModeSet::GBM::surf_t _gbmSurface;
         };
 
         class GLES final {
@@ -356,6 +394,12 @@ namespace Plugin {
                     return *this;
                 }
 
+                opacity& operator=(opacity const& rhs)
+                {
+                    _alpha = rhs._alpha;
+                    return *this;
+                }
+
                 static opacity const& InitialOpacity()
                 {
                     static opacity const op(_max);
@@ -384,8 +428,6 @@ namespace Plugin {
 
             using version_t = GLuint;
 
-            using valid_t = decltype(_valid);
-
         public:
             struct texture {
                 tex_t _tex;
@@ -403,13 +445,30 @@ namespace Plugin {
                 texture();
                 explicit texture(tgt_t const, opacity_t const&);
                 explicit texture(texture const&);
+
+                texture& operator=(texture const& rhs)
+                {
+                    _tex = rhs._tex;
+                    _target = rhs._target;
+
+                    _opacity = rhs._opacity;
+
+                    _x = rhs._x;
+                    _y = rhs._y;
+                    _z = rhs._z;
+
+                    _width = rhs._width;
+                    _height = rhs._height;
+
+                    return *this;
+                }
             };
 
         public:
             using texture_t = texture;
 
         private:
-            std::map<EGL::img_t, texture_t> _scene;
+            std::map<EGLImage, texture_t> _scene;
 
             std::stack<texture_t> _preallocated;
 
@@ -423,45 +482,45 @@ namespace Plugin {
             ~GLES();
 
             static offset_t const InitialOffset() { return offset(); }
-            valid_t UpdateOffset(offset_t const&);
+            bool UpdateOffset(offset_t const&);
 
             static scale_t const InitialScale() { return scale(); }
-            valid_t UpdateScale(scale_t const&);
+            bool UpdateScale(scale_t const&);
 
             static opacity_t const& InitialOpacity() { return CompositorImplementation::GLES::opacity::InitialOpacity(); }
-            valid_t UpdateOpacity(opacity_t const&);
+            bool UpdateOpacity(opacity_t const&);
 
             static constexpr tex_t InvalidTex() { return static_cast<tex_t>(0); }
 
             static constexpr version_t MajorVersion() { return static_cast<version_t>(2); }
             static constexpr version_t MinorVersion() { return static_cast<version_t>(0); }
 
-            valid_t Valid() const { return _valid; }
+            bool Valid() const { return _valid; }
 
-            valid_t Render() { return Valid(); }
-            valid_t RenderColor(bool const, bool const, bool const, bool const alpha = true);
-            valid_t RenderEGLImage(EGL::img_t const&, EGLint const, EGLint const, EGL::width_t const, EGL::height_t const, EGLint, EGLint const);
-            valid_t RenderScene(width_t const, height_t const, std::function<valid_t(texture_t const&, texture_t const&)>);
+            bool Render() { return Valid(); }
+            bool RenderColor(bool const, bool const, bool const, bool const alpha = true);
+            bool RenderEGLImage(EGLImage const&, EGLint const, EGLint const, EGLint const, EGLint const, EGLint, EGLint const);
+            bool RenderScene(width_t const, height_t const, std::function<bool(texture_t const&, texture_t const&)>);
 
-            valid_t SkipEGLImageFromScene(EGL::img_t const&);
+            bool SkipEGLImageFromScene(EGLImage const&);
 
         private:
-            valid_t Initialize();
-            valid_t Deinitialize();
+            bool Initialize();
+            bool Deinitialize();
 
             // TODO: precompile programs at initialization stage
 
-            valid_t SetupProgram(char const[], char const[], prog_t&);
+            bool SetupProgram(char const[], char const[], prog_t&);
 
-            valid_t RenderTileOES();
-            valid_t RenderTile();
+            bool RenderTileOES();
+            bool RenderTile();
 
             template <size_t N>
-            valid_t RenderPolygon(std::array<GLfloat const, N> const&);
+            bool RenderPolygon(std::array<GLfloat const, N> const&);
 
-            valid_t Supported(std::string const&);
+            bool Supported(std::string const&);
 
-            valid_t SetupViewport(EGLint const, EGLint const, EGL::width_t const, EGL::height_t const);
+            bool SetupViewport(EGLint const, EGLint const, EGLint const, EGLint const);
         };
 
         class EGL {
@@ -498,8 +557,6 @@ namespace Plugin {
             using EGLuint64KHR = khronos_uint64_t;
 
             EGLContext _ctx = EGL_NO_CONTEXT;
-
-            using valid_t = bool;
 
         public:
             using ctx_t = decltype(_ctx);
@@ -561,7 +618,7 @@ namespace Plugin {
 
             class SceneRenderer final : public RenderThread {
             private:
-                using surf_t = ClientSurface;
+                using SurfaceType = Client;
 
                 CompositorImplementation& _compositor;
 
@@ -579,12 +636,12 @@ namespace Plugin {
                 timeout_t Worker() override;
 
             private:
-                EGL::valid_t Render();
+                bool Render();
             };
 
             class TextureRenderer final : public RenderThread {
             private:
-                using surf_t = ClientSurface;
+                using SurfaceType = Client;
 
                 // Local
                 std::mutex _access;
@@ -597,7 +654,8 @@ namespace Plugin {
 
                     element() = delete;
 
-                    explicit element(std::string const& name) : _name { name }
+                    explicit element(std::string const& name)
+                        : _name { name }
                     {
                     }
                     ~element() = default;
@@ -625,19 +683,19 @@ namespace Plugin {
                 timeout_t Worker() override;
 
             private:
-                EGL::valid_t Render();
+                bool Render();
             };
 
         public:
             using dpy_t = Sync::dpy_t;
-            using surf_t = EGLSurface;
+            using SurfaceType = EGLSurface;
 
-            using height_t = WPEFramework::Plugin::EGL::height_t;
-            using width_t = WPEFramework::Plugin::EGL::width_t;
+            using height_t = EGLint;
+            using width_t = EGLint;
 
             using size_t = EGLint;
 
-            using img_t = WPEFramework::Plugin::EGL::img_t;
+            using img_t = EGLImage;
 
             EGL() = delete;
             EGL(EGL const&) = delete;
@@ -646,11 +704,11 @@ namespace Plugin {
             EGL(Natives const& natives);
             ~EGL();
 
-            static constexpr img_t InvalidImage() { return WPEFramework::Plugin::EGL::InvalidImage(); }
+            static constexpr img_t InvalidImage() { return EGL_NO_IMAGE; }
 
             static constexpr dpy_t InvalidDpy() { return EGL_NO_DISPLAY; }
             static constexpr ctx_t InvalidCtx() { return EGL_NO_CONTEXT; }
-            static constexpr surf_t InvalidSurf() { return EGL_NO_SURFACE; }
+            static constexpr SurfaceType InvalidSurf() { return EGL_NO_SURFACE; }
 
             static constexpr EGL::size_t RedBufferSize() { return static_cast<EGL::size_t>(8); }
             static constexpr EGL::size_t GreenBufferSize() { return static_cast<EGL::size_t>(8); }
@@ -659,73 +717,73 @@ namespace Plugin {
             // For OpenGL ES 2.0 the only possible value is 16
             static constexpr EGL::size_t DepthBufferSize() { return static_cast<EGL::size_t>(GLES::MajorVersion() == static_cast<GLES::version_t>(2) ? 16 : 0); }
 
-            static constexpr width_t InvalidWidth() { return static_cast<width_t>(0); }
-            static constexpr height_t InvalidHeight() { return static_cast<height_t>(0); }
+            static constexpr EGLint InvalidWidth() { return 0; }
+            static constexpr EGLint InvalidHeight() { return 0; }
 
             dpy_t Display() const { return _dpy; }
-            surf_t Surface() const { return _surf; }
+            SurfaceType Surface() const { return _surf; }
             ctx_t Context() const { return _ctx; }
 
-            height_t Height() const { return _height; }
-            width_t Width() const { return _width; }
+            EGLint Height() const { return _height; }
+            EGLint Width() const { return _width; }
 
-            static img_t CreateImage(EGL const&, ClientSurface::surf_t const&);
-            static img_t DestroyImage(EGL const&, ClientSurface::surf_t const&);
+            static img_t CreateImage(EGL const&, Client::SurfaceType const&);
+            static img_t DestroyImage(EGL const&, Client::SurfaceType const&);
 
-            valid_t Invalidate();
+            bool Invalidate();
 
-            valid_t Valid() const { return _valid; }
+            bool Valid() const { return _valid; }
 
         private:
             static constexpr void* const EGL_NO_CONFIG = nullptr;
 
             dpy_t _dpy = InvalidDpy();
             EGLConfig _conf = EGL_NO_CONFIG;
-            surf_t _surf = InvalidSurf();
+            SurfaceType _surf = InvalidSurf();
 
-            width_t _width = InvalidWidth();
-            height_t _height = InvalidHeight();
+            EGLint _width = InvalidWidth();
+            EGLint _height = InvalidHeight();
 
             Natives const& _natives;
 
-            valid_t _valid = false;
+            bool _valid = false;
 
-            valid_t Initialize();
-            void DeInitialize();
+            bool Initialize();
+            void Deinitialize();
 
             template <typename FUNC, typename... ARG>
-            valid_t Render(std::false_type const, FUNC&&, bool const, ARG&&...);
+            bool Render(std::false_type const, FUNC&&, bool const, ARG&&...);
 
             template <typename FUNC, typename ARG0, typename... ARG>
-            valid_t Render(std::true_type const, FUNC&&, bool const, ARG0&&, ARG&&...);
+            bool Render(std::true_type const, FUNC&&, bool const, ARG0&&, ARG&&...);
 
             // TODO: two different signatures for callables
             template <typename FUNC, typename... ARG>
-            valid_t Render(std::false_type const, FUNC&&, FUNC&&, ARG&&...);
+            bool Render(std::false_type const, FUNC&&, FUNC&&, ARG&&...);
 
             template <typename FUNC, typename ARG0, typename... ARG>
-            valid_t Render(std::true_type const, FUNC&&, FUNC&&, ARG0&&, ARG&&...);
+            bool Render(std::true_type const, FUNC&&, FUNC&&, ARG0&&, ARG&&...);
 
             template <typename FUNC, typename... ARG>
-            valid_t RenderWithoutSwap(std::false_type const, FUNC&&, ARG&&...);
+            bool RenderWithoutSwap(std::false_type const, FUNC&&, ARG&&...);
 
             template <typename FUNC, typename ARG0, typename... ARG>
-            valid_t RenderWithoutSwap(std::true_type const, FUNC&&, ARG0&&, ARG&&...);
+            bool RenderWithoutSwap(std::true_type const, FUNC&&, ARG0&&, ARG&&...);
 
         public:
             // Although compile / build time may succeed, runtime checks are also mandatory
-            static valid_t Supported(dpy_t const, std::string const&);
+            static bool Supported(dpy_t const, std::string const&);
 
-            valid_t Render(GLES&);
-
-            template <typename FUNC, typename... ARG>
-            valid_t Render(FUNC&&, bool const, ARG&&...);
+            bool Render(GLES&);
 
             template <typename FUNC, typename... ARG>
-            valid_t Render(FUNC&&, FUNC&&, ARG&&...);
+            bool Render(FUNC&&, bool const, ARG&&...);
 
             template <typename FUNC, typename... ARG>
-            valid_t RenderWithoutSwap(FUNC&&, ARG&&...);
+            bool Render(FUNC&&, FUNC&&, ARG&&...);
+
+            template <typename FUNC, typename... ARG>
+            bool RenderWithoutSwap(FUNC&&, ARG&&...);
 
 #undef STRINGIFY
 #ifdef _KHRFIX
@@ -760,8 +818,6 @@ namespace Plugin {
 
         int SurfaceDmaFd(const uint32_t id)
         {
-            static int res = -1;
-
             class Find : public ClientContainer::IFind {
             public:
                 Find(const uint32_t id, const EGL& egl)
@@ -771,16 +827,14 @@ namespace Plugin {
                 {
                 }
 
-                bool Check(const string& key, const Core::ProxyType<ClientSurface>& client) const override
+                bool Check(const string& /*key*/, const Core::ProxyType<Client>& client) const override
                 {
                     bool isValid(false);
 
                     if (client->Native() == _id) {
-                        ClientSurface::surf_t surf = client->Surface(EGL::CreateImage(_egl, client->Surface()));
-
-                        _result = surf.Valid() ? client->Native() : -1;
-
-                        isValid = surf.Valid();
+                        Client::SurfaceType surf = client->Surface(EGL::CreateImage(_egl, client->Surface()));
+                        _result = surf.IsValid() ? client->Native() : -1;
+                        isValid = surf.IsValid();
                     }
 
                     return isValid;
@@ -815,7 +869,7 @@ namespace Plugin {
 
         DmaFdServer _dmaFdServer;
 
-        lock_t _clientLock;
+        Core::CriticalSection _clientLock;
 
         EGL::TextureRenderer _textureRenderer;
         EGL::SceneRenderer _sceneRenderer;
@@ -863,143 +917,6 @@ namespace Plugin {
         END_INTERFACE_MAP
     };
 
-    ClientSurface::ClientSurface(ModeSet& modeSet, CompositorImplementation& compositor, string const& name, uint32_t const width, uint32_t const height)
-        : _nativeSurface { ModeSet::GBM::InvalidBuf(), ModeSet::GBM::InvalidFd(), ModeSet::GBM::InvalidFd(), WPEFramework::Plugin::EGL::InvalidImage() }
-        , _modeSet { modeSet }
-        , _compositor { compositor }
-        , _name { name }
-        , _opacity { Exchange::IComposition::maxOpacity }
-        , _layer { 0 }
-        , _destination({ 0, 0, width, height })
-    {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-
-        // The compositor should not be destroyed before any existing client surface
-        _compositor.AddRef();
-
-        // using surface_t = decltype(_nativeSurface._buf);
-        // using class_t = std::remove_reference<decltype(_modeSet)>::type;
-        // using return_t = decltype(std::declval<class_t>().CreateBufferObject(width, height));
-
-        // TODO: The internal scan out flag might not be appropriate
-        _nativeSurface._buf = _modeSet.CreateBufferObject(width, height);
-
-        if (_nativeSurface.Valid() != true) {
-            TRACE(Trace::Error, (_T ( "A ClientSurface cannot be created for %s" ), name.c_str()));
-        } else {
-            TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_bo_get_fd"), __FILE__, __LINE__, __FUNCTION__));
-            _nativeSurface._fd = gbm_bo_get_fd(_nativeSurface._buf);
-
-            constexpr char const SYNC_FD_TEMPLATE[] = "/tmp/Compositor/sync_fd_XXXXXX";
-
-            _nativeSurface._sync_fd = mkostemp(const_cast<char*>(SYNC_FD_TEMPLATE), O_CLOEXEC);
-
-            TRACE(Trace::Information, (_T("%s:%d %s gbm_bo_fd=%d, _sync_fd=%d, width=%d, height=%d, stride=%d, format=0x%04X, modifier=0x%" PRIX64), __FILE__, __LINE__, __FUNCTION__, _nativeSurface._fd, _nativeSurface._sync_fd, gbm_bo_get_width(_nativeSurface._buf), gbm_bo_get_height(_nativeSurface._buf), gbm_bo_get_stride(_nativeSurface._buf), gbm_bo_get_format(_nativeSurface._buf), gbm_bo_get_modifier(_nativeSurface._buf)));
-
-            if (_nativeSurface.DMAComplete() != true) {
-                TRACE(Trace::Error, (_T ( "The created ClientSurface for %s is not suitable for DMA." ), name.c_str()));
-            }
-        }
-    }
-
-    ClientSurface::~ClientSurface()
-    {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-        // Part of the client is cleaned up via the detached (hook)
-        if (_nativeSurface._buf != ModeSet::GBM::InvalidBuf()) {
-            _modeSet.DestroyBufferObject(_nativeSurface._buf);
-        }
-
-        if (_nativeSurface._fd != ModeSet::GBM::InvalidFd()) {
-            int ret = close(_nativeSurface._fd);
-            ASSERT(ret != -1);
-        }
-
-        if (_nativeSurface._sync_fd != ModeSet::GBM::InvalidFd()) {
-            int ret = close(_nativeSurface._sync_fd);
-            ASSERT(ret != -1);
-        }
-
-        _nativeSurface = { ModeSet::GBM::InvalidBuf(), ModeSet::GBM::InvalidFd(), ModeSet::GBM::InvalidFd(), WPEFramework::Plugin::EGL::InvalidImage() };
-
-        _compositor.Release();
-    }
-
-    Core::instance_id ClientSurface::SyncPrimitive() const
-    {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-        return static_cast<Core::instance_id>(_nativeSurface._sync_fd);
-    }
-
-    bool ClientSurface::SyncPrimitiveStart() const
-    {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-
-        auto init = []() -> struct flock {
-            struct flock fl;
-            /* void * */ memset(&fl, 0, sizeof(fl));
-
-            fl.l_type = F_WRLCK;
-            fl.l_whence = SEEK_SET;
-            fl.l_start = 0;
-            fl.l_len = 0;
-
-            return fl;
-        };
-
-        static struct flock fl = init();
-
-        // Operates on i-node
-        bool ret = _nativeSurface._sync_fd != ModeSet::GBM::InvalidFd()
-            && fcntl(_nativeSurface._sync_fd, F_SETLKW, &fl) != -1;
-
-        ASSERT(ret != false);
-
-        return ret;
-    }
-
-    bool ClientSurface::SyncPrimitiveEnd() const
-    {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-
-        auto init = []() -> struct flock {
-            struct flock fl;
-            /* void * */ memset(&fl, 0, sizeof(fl));
-
-            fl.l_type = F_UNLCK;
-            fl.l_whence = SEEK_SET;
-            fl.l_start = 0;
-            fl.l_len = 0;
-
-            return fl;
-        };
-
-        static struct flock fl = init();
-
-        bool ret = _nativeSurface._sync_fd != ModeSet::GBM::InvalidFd()
-            && fcntl(_nativeSurface._sync_fd, F_SETLK, &fl) != -1;
-
-        ASSERT(ret != false);
-
-        return ret;
-    }
-
-    void ClientSurface::ScanOut()
-    {
-        bool composed = _compositor.CompositeFor(_name);
-        TRACE(Trace::Information, (_T("%s:%d %s for %s %s"), __FILE__, __LINE__, __FUNCTION__, _name.c_str(), (composed) ? "OK" : "Failed"));
-    }
-
-    ClientSurface::surf_t const& ClientSurface::Surface(EGL::img_t const& khr)
-    {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-        if (khr != EGL::InvalidImage()) {
-            _nativeSurface._khr = khr;
-        }
-
-        return _nativeSurface;
-    }
-
     CompositorImplementation::ExternalAccess::ExternalAccess(CompositorImplementation& parent, Core::NodeId const& source, string const& proxyStubPath, Core::ProxyType<RPC::InvokeServer> const& handler)
         : RPC::Communicator(source, proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
         , _parent(parent)
@@ -1018,72 +935,10 @@ namespace Plugin {
         }
     }
 
-    CompositorImplementation::ExternalAccess::~ExternalAccess()
-    {
-    }
-
     void* CompositorImplementation::ExternalAccess::Acquire(string const& /*className*/, uint32_t const interfaceId, uint32_t const /*version*/)
     {
         // Use the className to check for multiple HDMI's.
         return (_parent.QueryInterface(interfaceId));
-    }
-
-    CompositorImplementation::Natives::Natives(ModeSet& set)
-        : _set { set }
-        , _valid { Initialize() }
-    {
-    }
-
-    CompositorImplementation::Natives::~Natives()
-    {
-        DeInitialize();
-        _valid = false;
-    }
-
-    CompositorImplementation::Natives::valid_t CompositorImplementation::Natives::Invalidate()
-    {
-        valid_t ret = true;
-
-        DeInitialize();
-
-        return ret;
-    }
-
-    CompositorImplementation::Natives::valid_t CompositorImplementation::Natives::Initialize()
-    {
-        valid_t ret = false;
-
-        // TODO: return type Open
-        ret = _set.Open("") == Core::ERROR_NONE
-            && Display() != InvalidDisplay();
-
-        using width_t = decltype(std::declval<ModeSet>().Width());
-        using height_t = decltype(std::declval<ModeSet>().Height());
-
-        width_t width = _set.Width();
-        height_t height = _set.Height();
-
-        if (ret != false) {
-            _surf = _set.CreateRenderTarget(width, height);
-            ret = _surf != InvalidSurface();
-        }
-
-        if (ret != true) {
-            TRACE(Trace::Error, (_T ( "Unable to create a compositor surface of dimensions: %u x %u [width, height]))." ), width, height));
-        }
-
-        return ret;
-    }
-
-    void CompositorImplementation::Natives::DeInitialize()
-    {
-        _valid = false;
-
-        if (_surf != InvalidSurface()) {
-            _set.DestroyRenderTarget(_surf);
-        }
-
-        _set.Close();
     }
 
 #define GL_ERROR_WITH_RETURN() (glGetError() == GL_NO_ERROR)
@@ -1179,23 +1034,22 @@ namespace Plugin {
     }
 
     CompositorImplementation::GLES::GLES()
-        : _offset { InitialOffset() }
-        , _scale { InitialScale() }
-        , _opacity { InitialOpacity() }
-        , _valid { Initialize() }
+        : _offset(InitialOffset())
+        , _scale(InitialScale())
+        , _opacity(InitialOpacity())
+        , _valid(Initialize())
     {
     }
 
     CompositorImplementation::GLES::~GLES()
     {
         _valid = false;
-
-        /* valid_t */ Deinitialize();
+        Deinitialize();
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::UpdateOffset(CompositorImplementation::GLES::offset_t const& off)
+    bool CompositorImplementation::GLES::UpdateOffset(CompositorImplementation::GLES::offset_t const& off)
     {
-        valid_t ret = false;
+        bool ret = false;
 
         // Range check without taking into account rounding errors
         if (off._x >= offset_t::_left
@@ -1211,9 +1065,9 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::UpdateScale(CompositorImplementation::GLES::scale_t const& scale)
+    bool CompositorImplementation::GLES::UpdateScale(CompositorImplementation::GLES::scale_t const& scale)
     {
-        valid_t ret = false;
+        bool ret = false;
 
         // Range check without taking into account rounding errors
         if (scale._horiz >= scale_t::_min
@@ -1227,12 +1081,11 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::UpdateOpacity(CompositorImplementation::GLES::opacity_t const& opacity)
+    bool CompositorImplementation::GLES::UpdateOpacity(CompositorImplementation::GLES::opacity_t const& opacity)
     {
-        valid_t ret = false;
+        bool ret = false;
 
-        if (opacity._alpha >= opacity_t::_min
-            && _opacity._alpha <= opacity_t::_max) {
+        if (opacity._alpha >= opacity_t::_min && _opacity._alpha <= opacity_t::_max) {
             _opacity = opacity;
             ret = true;
         }
@@ -1240,7 +1093,7 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderColor(bool const red, bool const green, bool const blue, bool const alpha)
+    bool CompositorImplementation::GLES::RenderColor(bool const red, bool const green, bool const blue, bool const alpha)
     {
         static uint16_t degree = 0;
 
@@ -1248,7 +1101,7 @@ namespace Plugin {
 
         constexpr float const OMEGA = 3.14159265 / 180;
 
-        valid_t ret = Valid();
+        bool ret = Valid();
 
         if (ret != false) {
             GLfloat rad = static_cast<GLfloat>(cos(static_cast<float>(degree) * OMEGA));
@@ -1265,21 +1118,21 @@ namespace Plugin {
             degree = (degree + 1) % ROTATION;
         }
 
-        ret = ret
-            && GL_ERROR_WITH_RETURN();
+        ret = ret && GL_ERROR_WITH_RETURN();
 
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderEGLImage(
-        EGL::img_t const& img, EGLint const x, EGLint const y, EGL::width_t const width,
-        EGL::height_t const height, EGLint const zorder, EGLint const opacity)
+    bool CompositorImplementation::GLES::RenderEGLImage(
+        EGLImage const& img, EGLint const x, EGLint const y, EGLint const width,
+        EGLint const height, EGLint const zorder, EGLint const opacity)
     {
         EGLDisplay dpy = EGL::InvalidDpy();
         EGLDisplay ctx = EGL::InvalidCtx();
 
-        auto DestroyTexture = [this](texture_t& tex) -> valid_t {
-            valid_t ret = tex._tex != InvalidTex();
+#ifdef _RESIZE_TEXTURE
+        auto DestroyTexture = [this](texture_t& tex) -> bool {
+            bool ret = tex._tex != InvalidTex();
 
             // Delete the previously created texture
             glDeleteTextures(1, &(tex._tex));
@@ -1291,9 +1144,9 @@ namespace Plugin {
 
             return ret;
         };
-
-        auto SetupTexture = [this, &dpy, &ctx](texture_t& tex, EGL::img_t const& img, EGL::width_t const width, EGL::height_t const height, bool const quick) -> valid_t {
-            valid_t ret = GL_ERROR_WITH_RETURN();
+#endif
+        auto SetupTexture = [this, &dpy, &ctx](texture_t& tex, EGLImage const& img, EGLint const width, EGLint const height, bool const quick) -> bool {
+            bool ret = GL_ERROR_WITH_RETURN();
 
             if (quick != true) {
                 glGenTextures(1, &(tex._tex));
@@ -1325,9 +1178,9 @@ namespace Plugin {
                 ret = dpy != EGL::InvalidDpy()
                     && ctx != EGL::InvalidCtx();
 
-                static valid_t supported = (GLES::Supported("GL_OES_EGL_image")
-                                               && (EGL::Supported(dpy, "EGL_KHR_image")
-                                                   || EGL::Supported(dpy, "EGL_KHR_image_base")))
+                static bool supported = (GLES::Supported("GL_OES_EGL_image")
+                                            && (EGL::Supported(dpy, "EGL_KHR_image")
+                                                || EGL::Supported(dpy, "EGL_KHR_image_base")))
                     != false;
 
                 if ((ret && supported) != false) {
@@ -1367,7 +1220,7 @@ namespace Plugin {
             return ret;
         };
 
-        valid_t ret = GL_ERROR_WITH_RETURN()
+        bool ret = GL_ERROR_WITH_RETURN()
             && img != EGL::InvalidImage()
             && width > 0
             && height > 0;
@@ -1484,7 +1337,7 @@ namespace Plugin {
                     }
 
                     if (ret != false) {
-                        auto it = _scene.insert(std::pair<EGL::img_t, texture_t>(img, tex_fbo));
+                        auto it = _scene.insert(std::pair<EGLImage, texture_t>(img, tex_fbo));
                         ret = it.second != false;
                     }
                 }
@@ -1562,9 +1415,9 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderScene(CompositorImplementation::GLES::width_t const width, CompositorImplementation::GLES::height_t const height, std::function<CompositorImplementation::GLES::valid_t(CompositorImplementation::GLES::texture_t const& left, CompositorImplementation::GLES::texture_t const& right)> sortfunc)
+    bool CompositorImplementation::GLES::RenderScene(CompositorImplementation::GLES::width_t const width, CompositorImplementation::GLES::height_t const height, std::function<bool(CompositorImplementation::GLES::texture_t const& left, CompositorImplementation::GLES::texture_t const& right)> sortfunc)
     {
-        valid_t ret = GL_ERROR_WITH_RETURN();
+        bool ret = GL_ERROR_WITH_RETURN();
 
         if (ret != false) {
 
@@ -1703,9 +1556,9 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SkipEGLImageFromScene(EGL::img_t const& img)
+    bool CompositorImplementation::GLES::SkipEGLImageFromScene(EGLImage const& img)
     {
-        valid_t ret = false;
+        bool ret = false;
 
         std::lock_guard<decltype(_token)> const lock(_token);
 
@@ -1730,15 +1583,15 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::Initialize()
+    bool CompositorImplementation::GLES::Initialize()
     {
-        valid_t ret = GL_ERROR_WITH_RETURN();
+        bool ret = GL_ERROR_WITH_RETURN();
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::Deinitialize()
+    bool CompositorImplementation::GLES::Deinitialize()
     {
-        valid_t ret = GL_ERROR_WITH_RETURN();
+        bool ret = GL_ERROR_WITH_RETURN();
 
         glBindTexture(GL_TEXTURE_2D, InvalidTex());
         GL_ERROR();
@@ -1761,13 +1614,13 @@ namespace Plugin {
 
     // TODO: precompile programs at initialization stage
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SetupProgram(char const vtx_src[], char const frag_src[], prog_t& prog)
+    bool CompositorImplementation::GLES::SetupProgram(char const vtx_src[], char const frag_src[], prog_t& prog)
     {
         auto LoadShader = [](GLuint const type, GLchar const code[]) -> GLuint {
             GLuint shader = glCreateShader(type);
             GL_ERROR();
 
-            valid_t ret = (GL_ERROR_WITH_RETURN() && shader != 0) != false;
+            bool ret = (GL_ERROR_WITH_RETURN() && shader != 0) != false;
 
             if (ret != false) {
                 glShaderSource(shader, 1, &code, nullptr);
@@ -1812,11 +1665,11 @@ namespace Plugin {
             return shader;
         };
 
-        auto ShadersToProgram = [](GLuint const vertex, GLuint const fragment, prog_t& prog) -> valid_t {
+        auto ShadersToProgram = [](GLuint const vertex, GLuint const fragment, prog_t& prog) -> bool {
             prog = glCreateProgram();
             GL_ERROR();
 
-            valid_t ret = (GL_ERROR_WITH_RETURN() && prog != InvalidProg()) != false;
+            bool ret = (GL_ERROR_WITH_RETURN() && prog != InvalidProg()) != false;
 
             if (ret != false) {
                 glAttachShader(prog, vertex);
@@ -1859,21 +1712,20 @@ namespace Plugin {
                 }
 #endif
 
-                ret = ret
-                    && GL_ERROR_WITH_RETURN();
+                ret = ret && GL_ERROR_WITH_RETURN();
             }
 
             return ret;
         };
 
-        auto DeleteCurrentProgram = []() -> valid_t {
+        auto DeleteCurrentProgram = []() -> bool {
             GLuint prog = InvalidProg();
 
             glGetIntegerv(GL_CURRENT_PROGRAM, reinterpret_cast<GLint*>(&prog));
             GL_ERROR();
 
-            valid_t ret = (GL_ERROR_WITH_RETURN()
-                              && prog != InvalidProg())
+            bool ret = (GL_ERROR_WITH_RETURN()
+                           && prog != InvalidProg())
                 != false;
 
             if (ret != false) {
@@ -1903,8 +1755,7 @@ namespace Plugin {
                     }
                 }
 
-                ret = ret
-                    && GL_ERROR_WITH_RETURN();
+                ret = ret && GL_ERROR_WITH_RETURN();
             }
 
             return ret;
@@ -1928,7 +1779,7 @@ namespace Plugin {
             ret = GL_ERROR_WITH_RETURN();
 
             if (ret != true) {
-                /* valid_t */ DeleteCurrentProgram();
+                /* bool */ DeleteCurrentProgram();
                 GL_ERROR();
 
                 prog = InvalidProg();
@@ -1944,9 +1795,9 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderTileOES()
+    bool CompositorImplementation::GLES::RenderTileOES()
     {
-        valid_t ret = GL_ERROR_WITH_RETURN();
+        bool ret = GL_ERROR_WITH_RETURN();
 
         constexpr char const vtx_src[] = "#version 100                                  \n"
                                          "attribute vec3 position;                      \n"
@@ -1979,7 +1830,7 @@ namespace Plugin {
 
             static prog_t prog = InvalidProg();
 
-            static valid_t supported = Supported("GL_OES_EGL_image_external") != false;
+            static bool supported = Supported("GL_OES_EGL_image_external") != false;
 
             ret = (ret
                       && RenderColor(false, false, false)
@@ -1992,9 +1843,9 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderTile()
+    bool CompositorImplementation::GLES::RenderTile()
     {
-        valid_t ret = GL_ERROR_WITH_RETURN();
+        bool ret = GL_ERROR_WITH_RETURN();
 
         constexpr char const vtx_src[] = "#version 100                                   \n"
                                          "attribute vec3 position;                       \n"
@@ -2028,7 +1879,7 @@ namespace Plugin {
             using string_t = std::string::value_type;
             string_t const* ext = reinterpret_cast<string_t const*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-            valid_t ret = GL_ERROR_WITH_RETURN();
+            bool ret = GL_ERROR_WITH_RETURN();
 #endif
 
             static prog_t prog = InvalidProg();
@@ -2040,16 +1891,14 @@ namespace Plugin {
     }
 
     template <size_t N>
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::RenderPolygon(std::array<GLfloat const, N> const& vert)
+    bool CompositorImplementation::GLES::RenderPolygon(std::array<GLfloat const, N> const& vert)
     {
         GLuint prog = InvalidProg();
 
         glGetIntegerv(GL_CURRENT_PROGRAM, reinterpret_cast<GLint*>(&prog));
         GL_ERROR();
 
-        valid_t ret = (GL_ERROR_WITH_RETURN()
-                          && prog != InvalidProg())
-            != false;
+        bool ret = (GL_ERROR_WITH_RETURN() && prog != InvalidProg()) != false;
 
         if (ret != false) {
             GLint loc_vert = 0, loc_op = 0;
@@ -2075,35 +1924,25 @@ namespace Plugin {
             glDisableVertexAttribArray(loc_vert);
             GL_ERROR();
 
-            ret = ret
-                && GL_ERROR_WITH_RETURN();
+            ret = ret && GL_ERROR_WITH_RETURN();
         }
 
         return ret;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::Supported(std::string const& name)
+    bool CompositorImplementation::GLES::Supported(std::string const& name)
     {
-        valid_t ret = false;
-
         using string_t = std::string::value_type;
-        using ustring_t = std::make_unsigned<string_t>::type;
 
         string_t const* ext = reinterpret_cast<string_t const*>(glGetString(GL_EXTENSIONS));
         GL_ERROR();
 
-        ret = (GL_ERROR_WITH_RETURN() != false
-                  && ext != nullptr
-                  && name.size() > 0
-                  && (std::string(ext).find(name) != std::string::npos))
-            != false;
-
-        return ret;
+        return ((GL_ERROR_WITH_RETURN() != false) && (ext != nullptr) && (name.size() > 0) && (std::string(ext).find(name) != std::string::npos)) != false;
     }
 
-    CompositorImplementation::GLES::valid_t CompositorImplementation::GLES::SetupViewport(EGLint const /*x*/, EGLint const /*y*/, EGL::width_t const width, EGL::height_t const height)
+    bool CompositorImplementation::GLES::SetupViewport(EGLint const /*x*/, EGLint const /*y*/, EGLint const width, EGLint const height)
     {
-        valid_t ret = GL_ERROR_WITH_RETURN();
+        bool ret = GL_ERROR_WITH_RETURN();
 
         GLint dims[2] = { 0, 0 };
 
@@ -2251,16 +2090,16 @@ namespace Plugin {
             }
 
             // Consume the (possible) error(s)
-            /* EGLint */ glGetError();
-            /* EGLint */ eglGetError();
+            glGetError();
+            eglGetError();
         }
     }
 
     CompositorImplementation::EGL::RenderThread::RenderThread(EGL& egl, GLES& gles)
         : Core::Thread()
-        , _sharing { Instance() }
-        , _egl { egl }
-        , _gles { gles }
+        , _sharing(Instance())
+        , _egl(egl)
+        , _gles(gles)
     {
     }
 
@@ -2284,24 +2123,20 @@ namespace Plugin {
 
     CompositorImplementation::EGL::SceneRenderer::SceneRenderer(EGL& egl, GLES& gles, CompositorImplementation& compositor)
         : RenderThread(egl, gles)
-        , _compositor { compositor }
+        , _compositor(compositor)
     {
     }
 
     CompositorImplementation::EGL::SceneRenderer::~SceneRenderer()
     {
         Stop();
-
-        /* bool */ Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+        Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
     }
 
     CompositorImplementation::EGL::SceneRenderer::timeout_t CompositorImplementation::EGL::SceneRenderer::Worker()
     {
-        // 'Lightning speed' frame flipping
-        constexpr timeout_t const ret = 0;
-        // TODO: frame flipping should limit the rate
-
-        EGL::valid_t status = (Render() && _compositor.FrameFlip()) != false;
+        TRACE(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        bool status = (Render() && _compositor.FrameFlip()) != false;
 
         if (status != false) {
             Block();
@@ -2309,17 +2144,18 @@ namespace Plugin {
             Stop();
         }
 
-        return ret;
+        return 0;
     }
 
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::SceneRenderer::Render()
+    bool CompositorImplementation::EGL::SceneRenderer::Render()
     {
+        TRACE(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         // No resize supported
         static Exchange::IComposition::ScreenResolution resolution = _compositor.Resolution();
 
         std::lock_guard<decltype(_sharing)> const sharing(_sharing);
 
-        EGL::valid_t ret = _egl.Render(std::bind(&GLES::RenderScene, &_gles, static_cast<GLES::width_t>(WidthFromResolution(resolution)), static_cast<GLES::height_t>(HeightFromResolution(resolution)), [](GLES::texture_t const& left, GLES::texture_t const& right) -> GLES::valid_t { GLES::valid_t ret = left . _z > right . _z ; return ret ; }), true) != false;
+        bool ret = _egl.Render(std::bind(&GLES::RenderScene, &_gles, static_cast<GLES::width_t>(WidthFromResolution(resolution)), static_cast<GLES::height_t>(HeightFromResolution(resolution)), [](GLES::texture_t const& left, GLES::texture_t const& right) -> bool { bool ret = left . _z > right . _z ; return ret ; }), true) != false;
 
         return ret;
     }
@@ -2337,8 +2173,7 @@ namespace Plugin {
     CompositorImplementation::EGL::TextureRenderer::~TextureRenderer()
     {
         Stop();
-
-        /* bool */ Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+        Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
     }
 
     void CompositorImplementation::EGL::TextureRenderer::SetClientName(std::string const& name)
@@ -2352,17 +2187,17 @@ namespace Plugin {
         } else {
             // Add element to the queue
             queue.push(element_t(name));
-            TRACE(Trace::Information, (_T("%s:%d %s Queued: %s"), __FILE__, __LINE__, __FUNCTION__, name.c_str()));
+            TRACE(CompositorTrace::Render, (_T("%s:%d %s Queued: %s"), __FILE__, __LINE__, __FUNCTION__, name.c_str()));
         }
     }
 
     CompositorImplementation::EGL::TextureRenderer::timeout_t CompositorImplementation::EGL::TextureRenderer::Worker()
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        TRACE(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
 
         timeout_t ret = WPEFramework::Core::infinite;
 
-        EGL::valid_t status = Render() != false;
+        bool status = Render() != false;
 
         Block();
 
@@ -2378,17 +2213,17 @@ namespace Plugin {
             // TODO: Stop () implies no state change possible anymore.
             //            Stop ();
         }
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        TRACE(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
 
         return ret;
     }
 
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::TextureRenderer::Render()
+    bool CompositorImplementation::EGL::TextureRenderer::Render()
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-        EGL::valid_t ret = false;
+        TRACE(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        bool ret = false;
 
-        Core::ProxyType<ClientSurface> client;
+        Core::ProxyType<Client> client;
 
         {
             std::lock_guard<decltype(_access)> const lock(_access);
@@ -2401,65 +2236,20 @@ namespace Plugin {
         if (client.IsValid() != true) {
             TRACE(Trace::Error, (_T ( "%s does not appear to be a valid client." ), client->Name()));
         } else {
-            ClientSurface::surf_t const& surf = client->Surface();
+            Client::SurfaceType const& surf = client->Surface();
 
-            ret = (surf.RenderComplete()
-                      && _egl.Valid()
-                      && _gles.Valid()
-                      && client->SyncPrimitiveStart())
-                != false;
-
-            TRACE(Trace::Information,
-                (_T ( "Client RenderComplete=%s _egl=%s _gles=%s SyncPrimitiveStart=%s ." ), surf.RenderComplete() ? "True" : "False", _egl.Valid() ? "True" : "False", _gles.Valid() ? "True" : "False", client->SyncPrimitiveStart() ? "True" : "False"));
+            ret = (surf.IsValid() && _egl.Valid() && _gles.Valid()) != false;
 
             if (ret != false) {
-                TRACE(Trace::Information, (_T ( "Client has an associated EGL image." )));
+                TRACE(CompositorTrace::Render, (_T ( "Client has an associated EGL image." )));
 
-                using geom_t = decltype(std::declval<WPEFramework::Exchange::IComposition::IClient>().Geometry());
-                geom_t geom = client->Geometry();
-
-                //  Geom values should not exceed buf dimensions
-                auto width = gbm_bo_get_width(surf._buf);
-                auto height = gbm_bo_get_height(surf._buf);
-
-                using buf_w_t = decltype(width);
-                using buf_h_t = decltype(height);
-                using geom_w_t = decltype(geom.width);
-                using geom_h_t = decltype(geom.height);
-
-                // TODO:
-                constexpr bool const enable = true;
-
-                // Narrowing, but not necessarily a problem
-                // TODO minimum value
-                using common_w_t = std::common_type<buf_w_t, geom_w_t>::type;
-                ASSERT(static_cast<common_w_t>(geom.width) <= static_cast<common_w_t>(width));
-
-                using common_h_t = std::common_type<buf_h_t, geom_h_t>::type;
-                ASSERT(static_cast<common_h_t>(geom.height) <= static_cast<common_h_t>(height));
-
-                // Opacity value should be within expected ranges
+                auto geom = client->Geometry();
                 auto opa = client->Opacity();
-
-                using opacity_t = decltype(opa);
-
-                using common_opacity_t = std::common_type<opacity_t, EGLint, decltype(WPEFramework::Exchange::IComposition::minOpacity), decltype(WPEFramework::Exchange::IComposition::maxOpacity)>::type;
-
-                ASSERT(static_cast<common_opacity_t>(opa) >= static_cast<common_opacity_t>(std::numeric_limits<EGLint>::min())
-                    || static_cast<common_opacity_t>(opa) <= static_cast<common_opacity_t>(std::numeric_limits<EGLint>::max()));
-
                 auto zorder = client->ZOrder();
 
-                using zorder_t = decltype(zorder);
-                using common_zorder_t = std::common_type<zorder_t, EGLint>::type;
-
-                ASSERT(static_cast<common_zorder_t>(zorder) >= static_cast<common_zorder_t>(std::numeric_limits<EGLint>::min())
-                    || static_cast<common_zorder_t>(zorder) <= static_cast<common_zorder_t>(std::numeric_limits<EGLint>::max()));
                 std::lock_guard<decltype(_sharing)> const sharing(_sharing);
 
-                ret = (_egl.RenderWithoutSwap(std::bind(&GLES::RenderEGLImage, &_gles, std::cref(surf._khr), geom.x, geom.y, geom.width, geom.height, static_cast<EGLint>(zorder), static_cast<EGLint>(opa)))) != false;
-
-                ret = client->SyncPrimitiveEnd() && ret;
+                ret = (_egl.RenderWithoutSwap(std::bind(&GLES::RenderEGLImage, &_gles, std::cref(surf._image), geom.x, geom.y, geom.width, geom.height, static_cast<EGLint>(zorder), static_cast<EGLint>(opa)))) != false;
             }
 
             client.Release();
@@ -2467,35 +2257,35 @@ namespace Plugin {
 
         {
             std::lock_guard<decltype(_access)> const lock(_access);
-
-            /**/ set.erase(queue.front());
-            /* void */ queue.pop();
+            set.erase(queue.front());
+            queue.pop();
         }
 
         return ret;
     }
 
     CompositorImplementation::EGL::EGL(Natives const& natives)
-        : _natives { natives }
-        , _valid { Initialize() }
+        : _natives(natives)
+        , _valid(Initialize())
     {
     }
 
     CompositorImplementation::EGL::~EGL()
     {
-        DeInitialize();
+        Deinitialize();
         _valid = false;
     }
 
-    EGL::img_t CompositorImplementation::EGL::CreateImage(EGL const& egl, ClientSurface::surf_t const& surf)
+    EGLImage CompositorImplementation::EGL::CreateImage(EGL const& egl, Client::SurfaceType const& surf)
     {
-        TRACE_GLOBAL(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+
         img_t ret = InvalidImage();
 
-        static valid_t supported = (Supported(egl.Display(), "EGL_KHR_image")
-                                       && Supported(egl.Display(), "EGL_KHR_image_base")
-                                       && Supported(egl.Display(), "EGL_EXT_image_dma_buf_import")
-                                       && Supported(egl.Display(), "EGL_EXT_image_dma_buf_import_modifiers"))
+        static bool supported = (Supported(egl.Display(), "EGL_KHR_image")
+                                    && Supported(egl.Display(), "EGL_KHR_image_base")
+                                    && Supported(egl.Display(), "EGL_EXT_image_dma_buf_import")
+                                    && Supported(egl.Display(), "EGL_EXT_image_dma_buf_import_modifiers"))
             != false;
 
         if ((egl.Valid() && supported) != false) {
@@ -2504,32 +2294,19 @@ namespace Plugin {
             static KHRFIX(EGLImage) (*peglCreateImage)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const*) = reinterpret_cast<KHRFIX(EGLImage) (*)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const*)>(eglGetProcAddress(methodName));
 
             if (peglCreateImage != nullptr) {
-                TRACE_GLOBAL(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_bo_get_* props"), __FILE__, __LINE__, __FUNCTION__));
-
                 auto width = gbm_bo_get_width(surf._buf);
                 auto height = gbm_bo_get_height(surf._buf);
                 auto stride = gbm_bo_get_stride(surf._buf);
                 auto format = gbm_bo_get_format(surf._buf);
                 auto modifier = gbm_bo_get_modifier(surf._buf);
 
-                using width_t = decltype(width);
-                using height_t = decltype(height);
-                using stride_t = decltype(stride);
-                using format_t = decltype(format);
-                using fd_t = decltype(surf._fd);
-                using modifier_t = decltype(modifier);
-
                 // Does it already exist ?
-                ASSERT(surf._fd != ModeSet::GBM::InvalidFd());
+                ASSERT(surf._fd != InvalidFd);
 
                 // Test our initial assumption
                 ASSERT(format == ModeSet::SupportedBufferType());
                 ASSERT(modifier == ModeSet::FormatModifier());
 
-                // TODO:
-                constexpr bool const enable = false;
-
-                TRACE_GLOBAL(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_bo_get_device gbm_bo_get_fd"), __FILE__, __LINE__, __FUNCTION__));
                 // EGL may report differently than DRM
                 ModeSet::GBM::dev_t dev = gbm_bo_get_device(surf._buf);
                 ModeSet::GBM::fd_t fd = gbm_device_get_fd(dev);
@@ -2549,8 +2326,6 @@ namespace Plugin {
                     && peglQueryDmaBufModifiersEXT != nullptr;
 
                 EGLint count = 0;
-
-                valid = valid && peglQueryDmaBufFormatsEXT(egl.Display(), 0, nullptr, &count) != EGL_FALSE;
 
                 valid = valid && peglQueryDmaBufFormatsEXT(egl.Display(), 0, nullptr, &count) != EGL_FALSE;
 
@@ -2612,20 +2387,20 @@ namespace Plugin {
         return ret;
     }
 
-    EGL::img_t CompositorImplementation::EGL::DestroyImage(EGL const& egl, ClientSurface::surf_t const& surf)
+    EGLImage CompositorImplementation::EGL::DestroyImage(EGL const& egl, Client::SurfaceType const& surf)
     {
-        TRACE_GLOBAL(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-        img_t ret = surf._khr;
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        img_t ret = surf._image;
 
-        static valid_t supported = (Supported(egl.Display(), "EGL_KHR_image") && Supported(egl.Display(), "EGL_KHR_image_base")) != false;
+        static bool supported = (Supported(egl.Display(), "EGL_KHR_image") && Supported(egl.Display(), "EGL_KHR_image_base")) != false;
 
         if ((egl.Valid() && supported) != false) {
             constexpr char const methodName[] = XSTRINGIFY(KHRFIX(eglDestroyImage));
 
             static EGLBoolean (*peglDestroyImage)(EGLDisplay, KHRFIX(EGLImage)) = reinterpret_cast<EGLBoolean (*)(EGLDisplay, KHRFIX(EGLImage))>(eglGetProcAddress(KHRFIX("eglDestroyImage")));
 
-            if (peglDestroyImage != nullptr && surf.RenderComplete() != false) {
-                ret = peglDestroyImage(egl.Display(), surf._khr) != EGL_FALSE ? EGL::InvalidImage() : ret;
+            if (peglDestroyImage != nullptr && surf.IsValid() != false) {
+                ret = peglDestroyImage(egl.Display(), surf._image) != EGL_FALSE ? EGL::InvalidImage() : ret;
             } else {
                 TRACE_GLOBAL(Trace::Error, (_T ( "%s is unavailable or invalid parameters are provided." ), methodName));
             }
@@ -2636,18 +2411,18 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Invalidate()
+    bool CompositorImplementation::EGL::Invalidate()
     {
-        valid_t ret = true;
+        bool ret = true;
 
-        DeInitialize();
+        Deinitialize();
 
         return ret;
     }
 
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Initialize()
+    bool CompositorImplementation::EGL::Initialize()
     {
-        valid_t ret = _natives.Valid();
+        bool ret = _natives.Valid();
 
         if (ret != false) {
             if (_dpy != InvalidDpy()) {
@@ -2730,25 +2505,21 @@ namespace Plugin {
         }
 
         if (ret != true) {
-            DeInitialize();
+            Deinitialize();
         }
 
         return ret;
     }
 
-    void CompositorImplementation::EGL::DeInitialize()
+    void CompositorImplementation::EGL::Deinitialize()
     {
-        valid_t ret = _valid != false
-            && eglMakeCurrent(_dpy, EGL::InvalidSurf(), EGL::InvalidSurf(), EGL::InvalidCtx()) != EGL_FALSE
-            && eglGetError() == EGL_SUCCESS
-            && eglDestroySurface(_dpy, _surf) != FALSE
-            && eglGetError() == EGL_SUCCESS
-            && eglDestroyContext(_dpy, _ctx) != EGL_FALSE
-            && eglGetError() == EGL_SUCCESS
-            && eglTerminate(_dpy) != EGL_FALSE
-            && eglGetError() == EGL_SUCCESS;
-
-        _valid = false;
+        if (_valid == true) {
+            eglMakeCurrent(_dpy, EGL::InvalidSurf(), EGL::InvalidSurf(), EGL::InvalidCtx());
+            eglDestroySurface(_dpy, _surf);
+            eglDestroyContext(_dpy, _ctx);
+            eglTerminate(_dpy);
+            _valid = false;
+        }
     }
 
     // Although compile / build time may succeed, runtime checks are also mandatory
@@ -2778,10 +2549,12 @@ namespace Plugin {
         return ret;
     }
 
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render(CompositorImplementation::GLES& /*gles*/)
+    bool CompositorImplementation::EGL::Render(CompositorImplementation::GLES& /*gles*/)
     {
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid() != false
+        bool ret = Valid() != false
             && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE
             && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE;
 
@@ -2794,8 +2567,7 @@ namespace Plugin {
             }
 
             // Avoid any memory leak if the local thread is stopped (by another thread)
-            ret = eglMakeCurrent(_dpy, EGL::InvalidSurf(), EGL::InvalidSurf(), EGL::InvalidCtx()) != EGL_FALSE
-                && ret;
+            ret = eglMakeCurrent(_dpy, EGL::InvalidSurf(), EGL::InvalidSurf(), EGL::InvalidCtx()) != EGL_FALSE && ret;
         }
 
         if (ret != true) {
@@ -2806,10 +2578,11 @@ namespace Plugin {
     }
 
     template <typename FUNC, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render(std::false_type const, FUNC&& func, bool const post, ARG&&... arg)
+    bool CompositorImplementation::EGL::Render(std::false_type const, FUNC&& func, bool const post, ARG&&... arg)
     {
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid() != false
+        bool ret = Valid() != false
             && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE
             && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE;
 
@@ -2846,10 +2619,11 @@ namespace Plugin {
     }
 
     template <typename FUNC, typename ARG0, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render(std::true_type const, FUNC&& func, bool const post, ARG0&& arg0, ARG&&... arg)
+    bool CompositorImplementation::EGL::Render(std::true_type const, FUNC&& func, bool const post, ARG0&& arg0, ARG&&... arg)
     {
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid() != false
+        bool ret = Valid() != false
             && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE
             && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE;
 
@@ -2886,17 +2660,19 @@ namespace Plugin {
     }
 
     template <typename FUNC, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render(FUNC&& func, bool const post, ARG&&... arg)
+    bool CompositorImplementation::EGL::Render(FUNC&& func, bool const post, ARG&&... arg)
     {
-        valid_t ret = Render(typename std::is_member_pointer<FUNC>::type(), func, post, std::forward<ARG>(arg)...);
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        bool ret = Render(typename std::is_member_pointer<FUNC>::type(), func, post, std::forward<ARG>(arg)...);
         return ret;
     }
 
     template <typename FUNC, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render(std::false_type const, FUNC&& prefunc, FUNC&& postfunc, ARG&&... arg)
+    bool CompositorImplementation::EGL::Render(std::false_type const, FUNC&& prefunc, FUNC&& postfunc, ARG&&... arg)
     {
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid() != false
+        bool ret = Valid() != false
             && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE
             && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE;
 
@@ -2930,10 +2706,11 @@ namespace Plugin {
     }
 
     template <typename FUNC, typename ARG0, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render(std::true_type const, FUNC&& prefunc, FUNC&& postfunc, ARG0&& arg0, ARG&&... arg)
+    bool CompositorImplementation::EGL::Render(std::true_type const, FUNC&& prefunc, FUNC&& postfunc, ARG0&& arg0, ARG&&... arg)
     {
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         // Ensure the client API is set per thread basis
-        valid_t ret = Valid() != false
+        bool ret = Valid() != false
             && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE
             && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE;
 
@@ -2967,19 +2744,20 @@ namespace Plugin {
     }
 
     template <typename FUNC, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::Render(FUNC&& prefunc, FUNC&& postfunc, ARG&&... arg)
+    bool CompositorImplementation::EGL::Render(FUNC&& prefunc, FUNC&& postfunc, ARG&&... arg)
     {
-        valid_t ret = Render(typename std::is_member_pointer<FUNC>::type(), prefunc, postfunc, std::forward<ARG>(arg)...);
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        bool ret = Render(typename std::is_member_pointer<FUNC>::type(), prefunc, postfunc, std::forward<ARG>(arg)...);
         return ret;
     }
 
     template <typename FUNC, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap(std::false_type const, FUNC&& func, ARG&&... arg)
+    bool CompositorImplementation::EGL::RenderWithoutSwap(std::false_type const, FUNC&& func, ARG&&... arg)
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
 
         // Ensure the client API is set per thread basis
-        CompositorImplementation::EGL::valid_t ret = Valid() != false
+        bool ret = Valid() != false
             && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE
             && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE;
 
@@ -3004,10 +2782,11 @@ namespace Plugin {
     }
 
     template <typename FUNC, typename ARG0, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap(std::true_type const, FUNC&& func, ARG0&& arg0, ARG&&... arg)
+    bool CompositorImplementation::EGL::RenderWithoutSwap(std::true_type const, FUNC&& func, ARG0&& arg0, ARG&&... arg)
     {
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         // Ensure the client API is set per thread basis
-        CompositorImplementation::EGL::valid_t ret = Valid() != false
+        bool ret = Valid() != false
             && eglMakeCurrent(_dpy, _surf, _surf, _ctx) != EGL_FALSE
             && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE;
 
@@ -3032,9 +2811,10 @@ namespace Plugin {
     }
 
     template <typename FUNC, typename... ARG>
-    CompositorImplementation::EGL::valid_t CompositorImplementation::EGL::RenderWithoutSwap(FUNC&& func, ARG&&... arg)
+    bool CompositorImplementation::EGL::RenderWithoutSwap(FUNC&& func, ARG&&... arg)
     {
-        valid_t ret = RenderWithoutSwap(typename std::is_member_pointer<FUNC>::type(), func, std::forward<ARG>(arg)...);
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        bool ret = RenderWithoutSwap(typename std::is_member_pointer<FUNC>::type(), func, std::forward<ARG>(arg)...);
         return ret;
     }
 
@@ -3097,23 +2877,18 @@ namespace Plugin {
         , _textureRenderer(_egl, _gles, _clients)
         , _sceneRenderer(_egl, _gles, *this)
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
     }
 
     CompositorImplementation::~CompositorImplementation()
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         _textureRenderer.Stop();
-
-        /* bool */ _textureRenderer.Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+        _textureRenderer.Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
 
         _sceneRenderer.Stop();
+        _sceneRenderer.Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
 
-        /* bool */ _sceneRenderer.Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
-
-        /* valid_t ret = */ _egl.Invalidate();
-
-        /* valid_t ret = */ _natives.Invalidate();
+        _egl.Invalidate();
+        _natives.Invalidate();
 
         _dmaFdServer.Close();
 
@@ -3134,16 +2909,14 @@ namespace Plugin {
     // TODO:  run the _textureRenderer as a job on the ThreadPool
     bool CompositorImplementation::CompositeFor(std::string const& name)
     {
-        TRACE(Trace::Information, (_T("%s:%d %s %s"), __FILE__, __LINE__, __FUNCTION__, name.c_str()));
-
         // One client at a time
-        std::lock_guard<decltype(_clientLock)> const lock(_clientLock);
+        Core::SafeSyncType<Core::CriticalSection> scopedLock(_clientLock);
 
-        /* void */ _textureRenderer.SetClientName(name);
+        _textureRenderer.SetClientName(name);
 
         // Skip the request to create a frame texture if the rate is too high to be processed
         if (_textureRenderer.IsRunning() != true) {
-            /* void */ _textureRenderer.Run();
+            _textureRenderer.Run();
         }
 
         return true;
@@ -3151,7 +2924,7 @@ namespace Plugin {
 
     bool CompositorImplementation::FrameFlip()
     {
-        // TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
+        TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         using milli_t = int64_t;
 
         auto RefreshRateFromResolution = [](Exchange::IComposition::ScreenResolution const resolution) -> milli_t {
@@ -3207,7 +2980,7 @@ namespace Plugin {
         static auto start = std::chrono::steady_clock::now();
 
         ModeSet::BufferInfo bufferInfo(_natives.Surface(), ModeSet::GBM::InvalidBuf(), ModeSet::DRM::InvalidFb());
-        /* void */ _platform.Swap(bufferInfo);
+        _platform.Swap(bufferInfo);
 
         auto finish = std::chrono::steady_clock::now();
 
@@ -3324,8 +3097,6 @@ namespace Plugin {
 
     uint32_t CompositorImplementation::Configure(PluginHost::IShell* service)
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
-
         uint32_t result = Core::ERROR_NONE;
 
         _service = service;
@@ -3372,7 +3143,7 @@ namespace Plugin {
         _observers.push_back(notification);
 
         _clients.Visit(
-            [=](string const& name, Core::ProxyType<ClientSurface> const& element) { notification->Attached(name, &(*element)); });
+            [=](string const& name, Core::ProxyType<Client> const& element) { notification->Attached(name, &(*element)); });
 
         _adminLock.Unlock();
     }
@@ -3389,7 +3160,7 @@ namespace Plugin {
         if (index != _observers.end()) {
 
             _clients.Visit(
-                [=](string const& name, Core::ProxyType<ClientSurface> const& /*element*/) {
+                [=](string const& name, Core::ProxyType<Client> const& /*element*/) {
                     notification->Detached(name);
                 });
 
@@ -3403,11 +3174,11 @@ namespace Plugin {
 
     void CompositorImplementation::Attached(string const& name, IClient* client)
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         _adminLock.Lock();
 
         for (auto& observer : _observers) {
             observer->Attached(name, client);
+            TRACE(Trace::Information, (_T("Client %s attached"), name.c_str()));
         }
 
         _adminLock.Unlock();
@@ -3415,11 +3186,11 @@ namespace Plugin {
 
     void CompositorImplementation::Detached(string const& name)
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         _adminLock.Lock();
 
         for (auto& observer : _observers) {
             observer->Detached(name);
+            TRACE(Trace::Information, (_T("Client %s detached"), name.c_str()));
         }
 
         _adminLock.Unlock();
@@ -3436,8 +3207,6 @@ namespace Plugin {
             TRACE(Trace::Error, (_T ( "The native display (id) might be invalid / unsupported. Using the EGL default display instead!" )));
         }
 
-        TRACE(Trace::Information, (_T("%s:%d %s Display Native id=%d"), __FILE__, __LINE__, __FUNCTION__, reinterpret_cast<Core::instance_id>(result)));
-
         return reinterpret_cast<Core::instance_id>(result);
     }
 
@@ -3448,27 +3217,24 @@ namespace Plugin {
 
     WPEFramework::Exchange::IComposition::IClient* CompositorImplementation::CreateClient(string const& name, uint32_t const width, uint32_t const height)
     {
-        TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
         IClient* client = nullptr;
 
-        Core::ProxyType<ClientSurface> object = _clients.Instance<ClientSurface>(name, _platform, *this, name, width, height);
+        Core::ProxyType<Client> object = _clients.Instance<Client>(name, _platform, *this, name, width, height);
 
         ASSERT(object.IsValid() == true);
 
         if (object.IsValid() == true) {
             client = &(*object);
-
             Attached(name, client);
-
             client->AddRef();
         }
 
         if (client == nullptr) {
-            TRACE(Trace::Error, (_T ( "Unable to create the ClientSurface with name %s" ), name.c_str()));
+            TRACE(Trace::Error, (_T ( "Unable to create the Client with name %s" ), name.c_str()));
         } else {
 
             if (_sceneRenderer.IsRunning() != true) {
-                /* void */ _sceneRenderer.Run();
+                _sceneRenderer.Run();
             }
         }
 
@@ -3479,18 +3245,18 @@ namespace Plugin {
     {
         TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
 
-        Core::ProxyType<ClientSurface> object = _clients.Find(name);
+        Core::ProxyType<Client> object = _clients.Find(name);
 
         if (object.IsValid() != false) {
 
             Detached(object->Name());
 
-            ClientSurface::surf_t const& surf = object->Surface();
+            Client::SurfaceType const& surf = object->Surface();
 
-            _gles.SkipEGLImageFromScene(surf._khr);
+            _gles.SkipEGLImageFromScene(surf._image);
 
             // TODO: Const object contains invalid member
-            /*  surf . _khr = */ EGL::DestroyImage(_egl, surf);
+            /*  surf . _image = */ EGL::DestroyImage(_egl, surf);
         }
     }
 
