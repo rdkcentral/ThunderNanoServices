@@ -254,8 +254,8 @@ namespace Plugin {
        using HDRIteratorImpl = RPC::IteratorType<Exchange::IHDRProperties::IHDRIterator>;
 
     public:
-        HDRProperties(const std::string& hdrLevelFilepath, const displayinfo_edid_hdr_licensor_map_t& hdrLicensors)
-            : _hdrLevelFilepath(hdrLevelFilepath), _hdrLicensors(hdrLicensors)
+        HDRProperties(const std::string& hdrLevelFilepath, const displayinfo_edid_hdr_licensor_map_t& hdrLicensors, displayinfo_edid_hdr_type_map_t& hdrProfiles)
+            : _hdrLevelFilepath{hdrLevelFilepath}, _hdrLicensors{hdrLicensors}, _hdrProfiles{hdrProfiles}
         {
         }
 
@@ -268,30 +268,61 @@ namespace Plugin {
 
             if (((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_NONE) == DISPLAYINFO_EDID_HDR_LICENSOR_NONE)
                 || ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_UNKNOWN) == DISPLAYINFO_EDID_HDR_LICENSOR_UNKNOWN)) {
-                capabilities.push_back (HDR_OFF);
+                capabilities.push_back(HDR_OFF);
             }
 
             if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_LICENSING_LLC) == DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_LICENSING_LLC) {
-                // HDMI 1.4
-                capabilities.push_back (HDR_OFF);
+                capabilities.push_back(HDR_OFF);
             }
 
+// TODO: DisplayPort
+
             if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_FORUM) == DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_FORUM) {
-                // HDMI 2.0
-                capabilities.push_back (HDR_OFF);
+                // HDMI 2.0, HDMI2.0A added HDR support
+
+                if ((_hdrProfiles & DISPLAYINFO_HDR_10) == DISPLAYINFO_HDR_10) {
+                    capabilities.push_back(HDR_10);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_HLG) == DISPLAYINFO_HDR_HLG) {
+                    capabilities.push_back(HDR_HLG);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_400) == DISPLAYINFO_HDR_400) {
+                    capabilities.push_back(HDR_400);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_500) == DISPLAYINFO_HDR_500) {
+                    capabilities.push_back(HDR_500);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_600) == DISPLAYINFO_HDR_600) {
+                    capabilities.push_back(HDR_600);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_1000) == DISPLAYINFO_HDR_1000) {
+                    capabilities.push_back(HDR_1000);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_1400) == DISPLAYINFO_HDR_1400) {
+                    capabilities.push_back(HDR_1400);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_TB_400) == DISPLAYINFO_HDR_TB_400) {
+                    capabilities.push_back(HDR_TB_400);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_TB_500) == DISPLAYINFO_HDR_TB_500) {
+                    capabilities.push_back(HDR_TB_500);
+                }
+                if ((_hdrProfiles & DISPLAYINFO_HDR_TB_600) == DISPLAYINFO_HDR_TB_600) {
+                    capabilities.push_back(HDR_TB_600);
+                }
             }
 
             if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_HDR10PLUS_LLC) == DISPLAYINFO_EDID_HDR_LICENSOR_HDR10PLUS_LLC) {
-                // Assume full implementation
-                capabilities.push_back(HDR_10PLUS);
+                if ((_hdrProfiles & DISPLAYINFO_HDR_10PLUS) == DISPLAYINFO_HDR_10PLUS) {
+                    capabilities.push_back(HDR_10PLUS);
+                }
             }
 
             if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_DOLBY_LABORATORIES_INC) == DISPLAYINFO_EDID_HDR_LICENSOR_DOLBY_LABORATORIES_INC) {
-                // Assume full implementation
-                capabilities.push_back(HDR_DOLBYVISION);
+                if ((_hdrProfiles & DISPLAYINFO_HDR_DOLBYVISION) == DISPLAYINFO_HDR_DOLBYVISION) {
+                    capabilities.push_back(HDR_DOLBYVISION);
+                }
             }
-
-// TODO: check other properties, such as expected profile
 
             type = Core::Service<HDRIteratorImpl>::Create<IHDRIterator>(capabilities);
 
@@ -312,15 +343,24 @@ namespace Plugin {
             if (TVCapabilities(it) == Core::ERROR_NONE && it != nullptr) {
                 type = HDR_OFF;
 
-                while (it->Next(type) != false) {
+                while (type == HDR_OFF && it->Next(type) != false) {
                         switch (type) {
                             case HDR_10          :
                             case HDR_10PLUS      :
                             case HDR_HLG         :
                             case HDR_DOLBYVISION :
                             case HDR_TECHNICOLOR :
-                                                    // What is currently  set out of all options that are available
+                            case HDR_400         :
+                            case HDR_500         :
+                            case HDR_600         :
+                            case HDR_1000        :
+                            case HDR_1400        :
+                            case HDR_TB_400      :
+                            case HDR_TB_500      :
+                            case HDR_TB_600      :
+                                                    // What is currently set out of all options that are available
                                                     type = GetHDRLevel();
+                                                    __attribute__((fallthrough));
                             case HDR_OFF         :
                                                     result = Core::ERROR_NONE;
                                                     break;
@@ -336,7 +376,7 @@ namespace Plugin {
 
         Exchange::IHDRProperties::HDRType GetHDRLevel() const
         {
-            Exchange::IHDRProperties::HDRType hdrType;
+            Exchange::IHDRProperties::HDRType hdrType = Exchange::IHDRProperties::HDRType::HDR_OFF;
             std::string hdrStr = getLine(_hdrLevelFilepath);
 
             if (hdrStr == "SDR") {
@@ -367,6 +407,7 @@ namespace Plugin {
     private:
         std::string _hdrLevelFilepath;
         displayinfo_edid_hdr_licensor_map_t _hdrLicensors;
+        displayinfo_edid_hdr_type_map_t _hdrProfiles;
     };
 
     class DisplayProperties {
@@ -558,8 +599,12 @@ namespace Plugin {
         {
             _activity.Revoke();
             _eventQueue.Stop();
+            if (_graphics != nullptr) {
             _graphics->Release();
-            _hdr->Release();
+            }
+            if (_hdr != nullptr) {
+                _hdr->Release();
+            }
         }
 
         DisplayInfoImplementation()
@@ -604,22 +649,45 @@ namespace Plugin {
                 , _config.gpuMemoryTotalPattern.Value()
                 , _config.gpuMemoryUnitMultiplier.Value());
 
+
+            displayinfo_edid_hdr_licensor_map_t licensors{static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)};
+            displayinfo_edid_hdr_type_map_t profiles{static_cast<displayinfo_edid_hdr_type_map_t>(DISPLAYINFO_HDR_OFF)};
+
+
             if (_graphics != nullptr) {
                 ExtendedDisplayIdentification const & edid = _display->EDID();
 
-                auto it = edid.CEASegment();
+                if (edid.IsValid() != false) {
+                    auto it = edid.CEASegment();
 
-                while (it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() == static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)) {
-                    it = edid.CEASegment(it);
+                    // Mutliple CEA segments possible
+
+                    while (it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() == static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)) {
+                        it = edid.CEASegment(it);
+                    }
+
+                    if (it.IsValid() != false) {
+                        licensors |= ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors();
+                    }
+
+                    profiles =   (edid.HDRProfileSupport(DISPLAYINFO_HDR_10)          != false ? DISPLAYINFO_HDR_10          : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_10PLUS)      != false ? DISPLAYINFO_HDR_10PLUS      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_DOLBYVISION) != false ? DISPLAYINFO_HDR_DOLBYVISION : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TECHNICOLOR) != false ? DISPLAYINFO_HDR_TECHNICOLOR : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_HLG)         != false ? DISPLAYINFO_HDR_HLG         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_400)         != false ? DISPLAYINFO_HDR_400         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_500)         != false ? DISPLAYINFO_HDR_500         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_600)         != false ? DISPLAYINFO_HDR_600         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_1000)        != false ? DISPLAYINFO_HDR_1000        : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_1400)        != false ? DISPLAYINFO_HDR_1400        : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_400)      != false ? DISPLAYINFO_HDR_TB_400      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_500)      != false ? DISPLAYINFO_HDR_TB_500      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_600)      != false ? DISPLAYINFO_HDR_TB_600      : DISPLAYINFO_HDR_OFF)
+                               ;
                 }
+            }
 
-                _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value()
-                    , it.IsValid() != false ? ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() : static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE));
-            }
-            else {
-                _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value()
-                    , static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE));
-            }
+            _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value(), licensors, profiles);
 
             return Core::ERROR_NONE;
         }
