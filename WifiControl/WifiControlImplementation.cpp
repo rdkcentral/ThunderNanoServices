@@ -697,8 +697,10 @@ namespace Plugin
         public:
             SsidConfigs()
                 : Core::JSON::Container()
+                , Preferred()
                 , Configs()
             {
+                Add(_T("preferred"), &Preferred);
                 Add(_T("configs"), &Configs);
             }
 
@@ -714,6 +716,7 @@ namespace Plugin
                 }
             }
 
+            Core::JSON::String Preferred;
             Core::JSON::ArrayType<ConfigData> Configs;
         };
 
@@ -852,6 +855,7 @@ namespace Plugin
             , _walkTime(0)
             , _maxRetries(Core::NumberType<uint32_t>::Max())
             , _configurationStore()
+            , _preferredSsid()
             , _sink(*this)
             , _wpaSupplicant()
             , _controller()
@@ -977,6 +981,7 @@ namespace Plugin
                         result = Core::ERROR_GENERAL;
                     } else {
                         _controller->Callback(&_sink);
+                        _preferredSsid = config.Preferred.Value();
                         Core::File configFile(_configurationStore);
 
                         if (configFile.Open(true) == true) {
@@ -987,6 +992,7 @@ namespace Plugin
                                 SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
                             }
 
+                            _preferredSsid = configs.Preferred.Value();
                             // iterator over the list and write back
                             Core::JSON::ArrayType<ConfigData>::Iterator configIterator(configs.Configs.Elements());
 
@@ -1009,7 +1015,7 @@ namespace Plugin
                             _maxRetries = config.MaxRetries.Value() == -1 ? 
                                           Core::NumberType<uint32_t>::Max() : 
                                           config.MaxRetries.Value();
-                            _autoConnect.Connect(config.Preferred.Value(), _retryInterval, _maxRetries);
+                            _autoConnect.Connect(_preferredSsid, _retryInterval, _maxRetries);
                         }
                     }
                 }
@@ -1103,9 +1109,13 @@ namespace Plugin
             result = _controller->Connect(ssid);
             if (result != Core::ERROR_INPROGRESS) {
                 _adminLock.Lock();
+                if (_preferredSsid != ssid) {
+                    _preferredSsid = ssid;
+                    StoreUpdatedSsidConfig();
+                }
                 if (_autoConnectEnabled == true) {
                     _autoConnect.SetPreferred(result == Core::ERROR_UNKNOWN_KEY ?
-                                                       _T("") : ssid, _retryInterval, _maxRetries);
+                                                       _T("") : _preferredSsid, _retryInterval, _maxRetries);
                     _autoConnect.UpdateStatus(result);
                 }
                 _adminLock.Unlock();
@@ -1157,6 +1167,7 @@ namespace Plugin
             Core::File configFile(_configurationStore);
             WPASupplicant::Config::Iterator list(_controller->Configs());
             SsidConfigs configs;
+            configs.Preferred = _preferredSsid;
             configs.Set(list);
             if (configs.Configs.IsSet()) {
                 if (configFile.Create() == true) {
@@ -1438,6 +1449,7 @@ namespace Plugin
         uint32_t _walkTime;
         uint32_t _maxRetries;
         string _configurationStore;
+        string _preferredSsid;
         Sink _sink;
         WifiDriver _wpaSupplicant;
         Core::ProxyType<WPASupplicant::Controller> _controller;
