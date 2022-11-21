@@ -92,10 +92,10 @@ namespace Plugin {
 
         public:
             Client() = delete;
-            Client(Client const&) = delete;
-            Client& operator=(Client const&) = delete;
+            Client(const Client&) = delete;
+            Client& operator=(const Client&) = delete;
 
-            Client(ModeSet& modeSet, CompositorImplementation& compositor, string const& name, uint32_t const width, uint32_t const height)
+            Client(ModeSet& modeSet, CompositorImplementation& compositor, const string& name, const uint32_t width, const uint32_t height)
                 : _nativeSurface()
                 , _modeSet(modeSet)
                 , _compositor(compositor)
@@ -147,11 +147,11 @@ namespace Plugin {
             }
 
             // Opacity
-            void Opacity(uint32_t const value) override { _opacity = value; }
+            void Opacity(const uint32_t value) override { _opacity = value; }
             uint32_t Opacity() const override { return _opacity; }
 
             // Geometry
-            uint32_t Geometry(Exchange::IComposition::Rectangle const& rectangle) override
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
             {
                 _destination = rectangle;
                 return static_cast<uint32_t>(Core::ERROR_NONE);
@@ -162,7 +162,7 @@ namespace Plugin {
             }
 
             // Z-ordering within multiple surfaces
-            uint32_t ZOrder(uint16_t const zorder) override
+            uint32_t ZOrder(const uint16_t zorder) override
             {
                 _layer = zorder;
                 return static_cast<uint32_t>(Core::ERROR_NONE);
@@ -176,7 +176,7 @@ namespace Plugin {
                 TRACE(CompositorTrace::Client, (_T("%s:%d %s for %s %s"), __FILE__, __LINE__, __FUNCTION__, _name.c_str(), (composed) ? "OK" : "Failed"));
             }
 
-            SurfaceType const& Surface(EGLImage const& khr = EGL_NO_IMAGE)
+            const SurfaceType& Surface(const EGLImage& khr = EGL_NO_IMAGE)
             {
                 TRACE(CompositorTrace::Client, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
                 if (khr != EGL_NO_IMAGE) {
@@ -227,8 +227,8 @@ namespace Plugin {
 
         using ClientContainer = Core::ProxyMapType<string, Client>;
 
-        CompositorImplementation(CompositorImplementation const&) = delete;
-        CompositorImplementation& operator=(CompositorImplementation const&) = delete;
+        CompositorImplementation(const CompositorImplementation&) = delete;
+        CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
     private:
         class DmaFdServer : public Core::PrivilegedRequest {
@@ -260,14 +260,14 @@ namespace Plugin {
         class ExternalAccess : public RPC::Communicator {
         public:
             ExternalAccess() = delete;
-            ExternalAccess(ExternalAccess const&) = delete;
-            ExternalAccess& operator=(ExternalAccess const&) = delete;
+            ExternalAccess(const ExternalAccess&) = delete;
+            ExternalAccess& operator=(const ExternalAccess&) = delete;
 
-            ExternalAccess(CompositorImplementation&, Core::NodeId const&, string const&, Core::ProxyType<RPC::InvokeServer> const&);
+            ExternalAccess(CompositorImplementation&, const Core::NodeId&, const string&, const Core::ProxyType<RPC::InvokeServer>&);
             ~ExternalAccess() override = default;
 
         private:
-            void* Acquire(string const&, uint32_t const, uint32_t const) override;
+            void* Acquire(const string&, uint32_t const, uint32_t const) override;
 
             CompositorImplementation& _parent;
         };
@@ -278,8 +278,8 @@ namespace Plugin {
             static constexpr ModeSet::GBM::surf_t InvalidSurface = nullptr;
 
             Natives() = delete;
-            Natives(Natives const&) = delete;
-            Natives& operator=(Natives const&) = delete;
+            Natives(const Natives&) = delete;
+            Natives& operator=(const Natives&) = delete;
 
             explicit Natives(ModeSet& modeSet)
                 : _set(modeSet)
@@ -341,66 +341,64 @@ namespace Plugin {
         class GLES final {
         private:
             // x, y, z
-            static constexpr uint8_t const VerticeDimensions = 3;
+            static constexpr const uint8_t VerticeDimensions = 3;
 
             struct offset {
                 // using GLfloat = GLfloat;
 
                 // Each coordinate in the range [-1.0f, 1.0f]
-                static constexpr GLfloat const _left = static_cast<GLfloat>(-1.0f);
-                static constexpr GLfloat const _right = static_cast<GLfloat>(1.0f);
-                static constexpr GLfloat const _bottom = static_cast<GLfloat>(-1.0f);
-                static constexpr GLfloat const _top = static_cast<GLfloat>(1.0f);
-                static constexpr GLfloat const _near = static_cast<GLfloat>(-1.0f);
-                static constexpr GLfloat const _far = static_cast<GLfloat>(1.0f);
+                static constexpr const GLfloat _left = static_cast<GLfloat>(-1.0f);
+                static constexpr const GLfloat _right = static_cast<GLfloat>(1.0f);
+                static constexpr const GLfloat _bottom = static_cast<GLfloat>(-1.0f);
+                static constexpr const GLfloat _top = static_cast<GLfloat>(1.0f);
+                static constexpr const GLfloat _near = static_cast<GLfloat>(-1.0f);
+                static constexpr const GLfloat _far = static_cast<GLfloat>(1.0f);
 
                 GLfloat _x;
                 GLfloat _y;
                 GLfloat _z;
 
                 offset();
-                explicit offset(GLfloat const&, GLfloat const&, GLfloat const&);
+                explicit offset(const GLfloat&, const GLfloat&, const GLfloat&);
             } _offset;
 
             struct scale {
-                static constexpr GLclampf const _identity = static_cast<GLclampf>(1.0f);
-                static constexpr GLclampf const _min = static_cast<GLclampf>(0.0f);
-                static constexpr GLclampf const _max = static_cast<GLclampf>(1.0f);
+                static constexpr const GLclampf _identity = static_cast<GLclampf>(1.0f);
+                static constexpr const GLclampf _min = static_cast<GLclampf>(0.0f);
+                static constexpr const GLclampf _max = static_cast<GLclampf>(1.0f);
 
                 GLclampf _horiz;
                 GLclampf _vert;
 
                 scale();
-                explicit scale(GLclampf const&, GLclampf const&);
+                explicit scale(const GLclampf&, const GLclampf&);
             } _scale;
 
             struct opacity {
-                using alpha_t = GLfloat;
+                static constexpr const GLfloat _min = static_cast<GLfloat>(0.0f);
+                static constexpr const GLfloat _max = static_cast<GLfloat>(1.0f);
 
-                static constexpr alpha_t const _min = static_cast<alpha_t>(0.0f);
-                static constexpr alpha_t const _max = static_cast<alpha_t>(1.0f);
-
-                alpha_t _alpha;
+                GLfloat _alpha;
 
                 opacity();
-                explicit opacity(alpha_t const&);
-                explicit opacity(opacity const&);
+                explicit opacity(const GLfloat&);
+                explicit opacity(const opacity&);
 
-                opacity& operator=(alpha_t const& alpha)
+                opacity& operator=(const GLfloat& alpha)
                 {
                     _alpha = alpha;
                     return *this;
                 }
 
-                opacity& operator=(opacity const& rhs)
+                opacity& operator=(const opacity& rhs)
                 {
                     _alpha = rhs._alpha;
                     return *this;
                 }
 
-                static opacity const& InitialOpacity()
+                static const opacity& InitialOpacity()
                 {
-                    static opacity const op(_max);
+                    static const opacity op(_max);
                     return op;
                 }
             } _opacity;
@@ -424,10 +422,10 @@ namespace Plugin {
                 GLuint _height;
 
                 texture();
-                explicit texture(GLuint const, GLES::opacity const&);
-                explicit texture(texture const&);
+                explicit texture(GLuint const, const GLES::opacity&);
+                explicit texture(const texture&);
 
-                texture& operator=(texture const& rhs)
+                texture& operator=(const texture& rhs)
                 {
                     _tex = rhs._tex;
                     _target = rhs._target;
@@ -459,14 +457,14 @@ namespace Plugin {
             GLES();
             ~GLES();
 
-            static offset const InitialOffset() { return offset(); }
-            bool UpdateOffset(offset const&);
+            static const offset InitialOffset() { return offset(); }
+            bool UpdateOffset(const offset&);
 
-            static scale const InitialScale() { return scale(); }
-            bool UpdateScale(scale const&);
+            static const scale InitialScale() { return scale(); }
+            bool UpdateScale(const scale&);
 
-            static opacity const& InitialOpacity() { return CompositorImplementation::GLES::opacity::InitialOpacity(); }
-            bool UpdateOpacity(opacity const&);
+            static const opacity& InitialOpacity() { return CompositorImplementation::GLES::opacity::InitialOpacity(); }
+            bool UpdateOpacity(const opacity&);
 
             static constexpr GLuint InvalidTex() { return static_cast<GLuint>(0); }
 
@@ -476,11 +474,11 @@ namespace Plugin {
             bool Valid() const { return _valid; }
 
             bool Render() { return Valid(); }
-            bool RenderColor(bool const, bool const, bool const, bool const alpha = true);
-            bool RenderEGLImage(EGLImage const&, EGLint const, EGLint const, EGLint const, EGLint const, EGLint, EGLint const);
-            bool RenderScene(GLuint const, GLuint const, std::function<bool(texture const&, texture const&)>);
+            bool RenderColor(const bool, const bool, const bool, const bool alpha = true);
+            bool RenderEGLImage(const EGLImage&, EGLint const, EGLint const, EGLint const, EGLint const, EGLint, EGLint const);
+            bool RenderScene(GLuint const, GLuint const, std::function<bool(const texture&, const texture&)>);
 
-            bool SkipEGLImageFromScene(EGLImage const&);
+            bool SkipEGLImageFromScene(const EGLImage&);
 
         private:
             bool Initialize();
@@ -488,15 +486,15 @@ namespace Plugin {
 
             // TODO: precompile programs at initialization stage
 
-            bool SetupProgram(char const[], char const[], GLuint&);
+            bool SetupProgram(const char[], const char[], GLuint&);
 
             bool RenderTileOES();
             bool RenderTile();
 
             template <size_t N>
-            bool RenderPolygon(std::array<GLfloat const, N> const&);
+            bool RenderPolygon(const std::array<const GLfloat, N>&);
 
-            bool Supported(std::string const&);
+            bool Supported(const std::string&);
 
             bool SetupViewport(EGLint const, EGLint const, EGLint const, EGLint const);
         };
@@ -540,10 +538,10 @@ namespace Plugin {
             class Sync final {
             public:
                 Sync() = delete;
-                Sync(Sync const&) = delete;
+                Sync(const Sync&) = delete;
                 Sync(Sync&&) = delete;
 
-                Sync& operator=(Sync const&) = delete;
+                Sync& operator=(const Sync&) = delete;
                 Sync& operator=(Sync&&) = delete;
 
                 void* operator new(size_t) = delete;
@@ -576,8 +574,8 @@ namespace Plugin {
                 explicit RenderThread(EGL&, GLES&);
 
             public:
-                RenderThread(RenderThread const&) = delete;
-                RenderThread& operator=(RenderThread const&) = delete;
+                RenderThread(const RenderThread&) = delete;
+                RenderThread& operator=(const RenderThread&) = delete;
 
                 virtual ~RenderThread();
 
@@ -598,8 +596,8 @@ namespace Plugin {
 
             public:
                 SceneRenderer() = delete;
-                SceneRenderer(SceneRenderer const&) = delete;
-                SceneRenderer& operator=(SceneRenderer const&) = delete;
+                SceneRenderer(const SceneRenderer&) = delete;
+                SceneRenderer& operator=(const SceneRenderer&) = delete;
 
                 explicit SceneRenderer(EGL&, GLES&, CompositorImplementation&);
                 ~SceneRenderer() override;
@@ -621,11 +619,11 @@ namespace Plugin {
 
                 struct element {
                 public:
-                    std::string const& _name;
+                    const std::string& _name;
 
                     element() = delete;
 
-                    explicit element(std::string const& name)
+                    explicit element(const std::string& name)
                         : _name(name)
                     {
                     }
@@ -634,7 +632,7 @@ namespace Plugin {
 
                 using element_t = struct element;
 
-                using function_t = std::function<bool(element_t const&, element_t const&)>;
+                using function_t = std::function<bool(const element_t&, const element_t&)>;
 
                 // Unique elements, to prevent queue from growing beyond N
                 std::set<element_t, function_t> set;
@@ -643,13 +641,13 @@ namespace Plugin {
 
             public:
                 TextureRenderer() = delete;
-                TextureRenderer(TextureRenderer const&) = delete;
-                TextureRenderer& operator=(TextureRenderer const&) = delete;
+                TextureRenderer(const TextureRenderer&) = delete;
+                TextureRenderer& operator=(const TextureRenderer&) = delete;
 
                 explicit TextureRenderer(EGL&, GLES&, CompositorImplementation::ClientContainer&);
                 ~TextureRenderer();
 
-                void SetClientName(std::string const&);
+                void SetClientName(const std::string&);
 
                 uint32_t Worker() override;
 
@@ -662,7 +660,7 @@ namespace Plugin {
             EGL(EGL const&) = delete;
             EGL& operator=(EGL const&) = delete;
 
-            EGL(Natives const& natives)
+            EGL(const Natives& natives)
                 : _dpy(EGL_NO_DISPLAY)
                 , _conf(EGL_NO_CONFIG)
                 , _surf(EGL_NO_SURFACE)
@@ -696,8 +694,8 @@ namespace Plugin {
             EGLint Height() const { return _height; }
             EGLint Width() const { return _width; }
 
-            static EGLImage CreateImage(EGL const&, Client::SurfaceType const&);
-            static EGLImage DestroyImage(EGL const&, Client::SurfaceType const&);
+            static EGLImage CreateImage(EGL const&, const Client::SurfaceType&);
+            static EGLImage DestroyImage(EGL const&, const Client::SurfaceType&);
 
             bool Invalidate();
             bool IsValid() const
@@ -710,10 +708,10 @@ namespace Plugin {
             void Deinitialize();
 
             template <typename FUNC, typename... ARG>
-            bool Render(std::false_type const, FUNC&&, bool const, ARG&&...);
+            bool Render(std::false_type const, FUNC&&, const bool, ARG&&...);
 
             template <typename FUNC, typename ARG0, typename... ARG>
-            bool Render(std::true_type const, FUNC&&, bool const, ARG0&&, ARG&&...);
+            bool Render(std::true_type const, FUNC&&, const bool, ARG0&&, ARG&&...);
 
             // TODO: two different signatures for callables
             template <typename FUNC, typename... ARG>
@@ -730,12 +728,12 @@ namespace Plugin {
 
         public:
             // Although compile / build time may succeed, runtime checks are also mandatory
-            static bool Supported(EGLDisplay const, std::string const&);
+            static bool Supported(EGLDisplay const, const std::string&);
 
             bool Render(GLES&);
 
             template <typename FUNC, typename... ARG>
-            bool Render(FUNC&&, bool const, ARG&&...);
+            bool Render(FUNC&&, const bool, ARG&&...);
 
             template <typename FUNC, typename... ARG>
             bool Render(FUNC&&, FUNC&&, ARG&&...);
@@ -749,7 +747,7 @@ namespace Plugin {
             EGLSurface _surf;
             EGLint _width;
             EGLint _height;
-            Natives const& _natives;
+            const Natives& _natives;
 
 #undef STRINGIFY
 #ifdef _KHRFIX
@@ -770,8 +768,8 @@ namespace Plugin {
     private:
         class Config : public Core::JSON::Container {
         public:
-            Config(Config const&) = delete;
-            Config& operator=(Config const&) = delete;
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
 
             Config();
             ~Config();
@@ -844,7 +842,7 @@ namespace Plugin {
         CompositorImplementation();
         ~CompositorImplementation();
 
-        bool CompositeFor(std::string const&);
+        bool CompositeFor(const std::string&);
 
         bool FrameFlip();
 
@@ -861,8 +859,8 @@ namespace Plugin {
         void Register(Exchange::IComposition::INotification*) override;
         void Unregister(Exchange::IComposition::INotification*) override;
 
-        void Attached(string const&, IClient*);
-        void Detached(string const&);
+        void Attached(const string&, IClient*);
+        void Detached(const string&);
 
         //
         // Exchange::IComposition::IDisplay
@@ -871,8 +869,8 @@ namespace Plugin {
 
         string Port() const override;
 
-        IClient* CreateClient(string const&, uint32_t const, uint32_t const) override;
-        void InvalidateClient(string const&) /*override*/;
+        IClient* CreateClient(const string&, uint32_t const, uint32_t const) override;
+        void InvalidateClient(const string&) /*override*/;
 
         Exchange::IComposition::ScreenResolution Resolution() const override;
         uint32_t Resolution(Exchange::IComposition::ScreenResolution const) override;
@@ -883,7 +881,7 @@ namespace Plugin {
         END_INTERFACE_MAP
     };
 
-    CompositorImplementation::ExternalAccess::ExternalAccess(CompositorImplementation& parent, Core::NodeId const& source, string const& proxyStubPath, Core::ProxyType<RPC::InvokeServer> const& handler)
+    CompositorImplementation::ExternalAccess::ExternalAccess(CompositorImplementation& parent, const Core::NodeId& source, const string& proxyStubPath, const Core::ProxyType<RPC::InvokeServer>& handler)
         : RPC::Communicator(source, proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
         , _parent(parent)
     {
@@ -901,7 +899,7 @@ namespace Plugin {
         }
     }
 
-    void* CompositorImplementation::ExternalAccess::Acquire(string const& /*className*/, uint32_t const interfaceId, uint32_t const /*version*/)
+    void* CompositorImplementation::ExternalAccess::Acquire(const string& /*className*/, const uint32_t interfaceId, uint32_t const /*version*/)
     {
         // Use the className to check for multiple HDMI's.
         return (_parent.QueryInterface(interfaceId));
@@ -921,7 +919,7 @@ namespace Plugin {
     {
     }
 
-    CompositorImplementation::GLES::offset::offset(GLfloat const& x, GLfloat const& y, GLfloat const& z)
+    CompositorImplementation::GLES::offset::offset(const GLfloat& x, const GLfloat& y, const GLfloat& z)
         : _x(x)
         , _y(y)
         , _z(z)
@@ -930,42 +928,42 @@ namespace Plugin {
 
     // ODR use
 
-    /* static */ constexpr GLfloat const CompositorImplementation::GLES::offset::_left;
-    /* static */ constexpr GLfloat const CompositorImplementation::GLES::offset::_right;
-    /* static */ constexpr GLfloat const CompositorImplementation::GLES::offset::_bottom;
-    /* static */ constexpr GLfloat const CompositorImplementation::GLES::offset::_top;
-    /* static */ constexpr GLfloat const CompositorImplementation::GLES::offset::_near;
-    /* static */ constexpr GLfloat const CompositorImplementation::GLES::offset::_far;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::offset::_left;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::offset::_right;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::offset::_bottom;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::offset::_top;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::offset::_near;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::offset::_far;
 
-    /* static */ constexpr GLclampf const CompositorImplementation::GLES::scale::_identity;
-    /* static */ constexpr GLclampf const CompositorImplementation::GLES::scale::_min;
-    /* static */ constexpr GLclampf const CompositorImplementation::GLES::scale::_max;
+    /* static */ constexpr const GLclampf CompositorImplementation::GLES::scale::_identity;
+    /* static */ constexpr const GLclampf CompositorImplementation::GLES::scale::_min;
+    /* static */ constexpr const GLclampf CompositorImplementation::GLES::scale::_max;
 
     CompositorImplementation::GLES::scale::scale()
         : scale(CompositorImplementation::GLES::scale::_identity, CompositorImplementation::GLES::scale::_identity)
     {
     }
 
-    CompositorImplementation::GLES::scale::scale(GLclampf const& horiz, GLclampf const& vert)
+    CompositorImplementation::GLES::scale::scale(const GLclampf& horiz, const GLclampf& vert)
         : _horiz(horiz)
         , _vert(vert)
     {
     }
 
-    /* static */ constexpr CompositorImplementation::GLES::opacity::alpha_t const CompositorImplementation::GLES::opacity::_min;
-    /* static */ constexpr CompositorImplementation::GLES::opacity::alpha_t const CompositorImplementation::GLES::opacity::_max;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::opacity::_min;
+    /* static */ constexpr const GLfloat CompositorImplementation::GLES::opacity::_max;
 
     CompositorImplementation::GLES::opacity::opacity()
         : opacity(_max)
     {
     }
 
-    CompositorImplementation::GLES::opacity::opacity(CompositorImplementation::GLES::opacity::alpha_t const& alpha)
+    CompositorImplementation::GLES::opacity::opacity(const GLfloat& alpha)
         : _alpha(alpha)
     {
     }
 
-    CompositorImplementation::GLES::opacity::opacity(CompositorImplementation::GLES::opacity const& other)
+    CompositorImplementation::GLES::opacity::opacity(const CompositorImplementation::GLES::opacity& other)
         : _alpha(other._alpha)
     {
     }
@@ -975,7 +973,7 @@ namespace Plugin {
     {
     }
 
-    CompositorImplementation::GLES::texture::texture(GLuint const target, CompositorImplementation::GLES::opacity const& opacity)
+    CompositorImplementation::GLES::texture::texture(const GLuint target, const CompositorImplementation::GLES::opacity& opacity)
         : _tex(0)
         , _target(target)
         , _opacity(opacity)
@@ -987,7 +985,7 @@ namespace Plugin {
     {
     }
 
-    CompositorImplementation::GLES::texture::texture(CompositorImplementation::GLES::texture const& other)
+    CompositorImplementation::GLES::texture::texture(const CompositorImplementation::GLES::texture& other)
         : _tex(other._tex)
         , _target(other._target)
         , _opacity(other._opacity)
@@ -1013,7 +1011,7 @@ namespace Plugin {
         Deinitialize();
     }
 
-    bool CompositorImplementation::GLES::UpdateOffset(CompositorImplementation::GLES::offset const& off)
+    bool CompositorImplementation::GLES::UpdateOffset(const CompositorImplementation::GLES::offset& off)
     {
         bool ret = false;
 
@@ -1031,7 +1029,7 @@ namespace Plugin {
         return ret;
     }
 
-    bool CompositorImplementation::GLES::UpdateScale(CompositorImplementation::GLES::scale const& scale)
+    bool CompositorImplementation::GLES::UpdateScale(const CompositorImplementation::GLES::scale& scale)
     {
         bool ret = false;
 
@@ -1047,7 +1045,7 @@ namespace Plugin {
         return ret;
     }
 
-    bool CompositorImplementation::GLES::UpdateOpacity(CompositorImplementation::GLES::opacity const& opacity)
+    bool CompositorImplementation::GLES::UpdateOpacity(const CompositorImplementation::GLES::opacity& opacity)
     {
         bool ret = false;
 
@@ -1059,13 +1057,13 @@ namespace Plugin {
         return ret;
     }
 
-    bool CompositorImplementation::GLES::RenderColor(bool const red, bool const green, bool const blue, bool const alpha)
+    bool CompositorImplementation::GLES::RenderColor(const bool red, const bool green, const bool blue, const bool alpha)
     {
         static uint16_t degree = 0;
 
         constexpr decltype(degree) const ROTATION = 360;
 
-        constexpr float const OMEGA = 3.14159265 / 180;
+        constexpr const float OMEGA = 3.14159265 / 180;
 
         bool ret = Valid();
 
@@ -1090,8 +1088,8 @@ namespace Plugin {
     }
 
     bool CompositorImplementation::GLES::RenderEGLImage(
-        EGLImage const& img, EGLint const x, EGLint const y, EGLint const width,
-        EGLint const height, EGLint const zorder, EGLint const opacity)
+        const EGLImage& img, const EGLint x, const EGLint y, const EGLint width,
+        const EGLint height, const EGLint zorder, const EGLint opacity)
     {
         EGLDisplay dpy = EGL_NO_DISPLAY;
         EGLDisplay ctx = EGL_NO_CONTEXT;
@@ -1111,7 +1109,7 @@ namespace Plugin {
             return ret;
         };
 #endif
-        auto SetupTexture = [this, &dpy, &ctx](texture& tex, EGLImage const& img, EGLint const width, EGLint const height, bool const quick) -> bool {
+        auto SetupTexture = [this, &dpy, &ctx](texture& tex, const EGLImage& img, const EGLint width, const EGLint height, const bool quick) -> bool {
             bool ret = GL_ERROR_WITH_RETURN();
 
             if (quick != true) {
@@ -1255,7 +1253,7 @@ namespace Plugin {
                 reuse = ret;
 
                 {
-                    std::lock_guard<decltype(_token)> const lock(_token);
+                    const std::lock_guard<decltype(_token)> lock(_token);
 
                     auto it = _scene.find(img);
 
@@ -1307,11 +1305,9 @@ namespace Plugin {
 
                     // Update
                     if (ret != false) {
-                        using opacity_a_t = GLES::opacity::alpha_t;
+                        using common_opacity_t = std::common_type<decltype(opacity), decltype(GLES::opacity::_alpha), decltype(Exchange::IComposition::minOpacity), decltype(Exchange::IComposition::maxOpacity)>::type;
 
-                        using common_opacity_t = std::common_type<decltype(opacity), opacity_a_t, decltype(WPEFramework::Exchange::IComposition::minOpacity), decltype(WPEFramework::Exchange::IComposition::maxOpacity)>::type;
-
-                        tex_fbo._opacity = (static_cast<opacity_a_t>(static_cast<common_opacity_t>(opacity) / (static_cast<common_opacity_t>(WPEFramework::Exchange::IComposition::maxOpacity) - static_cast<common_opacity_t>(WPEFramework::Exchange::IComposition::minOpacity))));
+                        tex_fbo._opacity = (static_cast<GLfloat>(static_cast<common_opacity_t>(opacity) / (static_cast<common_opacity_t>(Exchange::IComposition::maxOpacity) - static_cast<common_opacity_t>(Exchange::IComposition::minOpacity))));
                         tex_fbo._x = x;
                         tex_fbo._y = y;
                         tex_fbo._z = zorder;
@@ -1375,7 +1371,7 @@ namespace Plugin {
             return ret;
         }
 
-        bool CompositorImplementation::GLES::RenderScene(GLuint const width, GLuint const height, std::function<bool(CompositorImplementation::GLES::texture const& left, CompositorImplementation::GLES::texture const& right)> sortfunc)
+        bool CompositorImplementation::GLES::RenderScene(const GLuint width, const GLuint height, std::function<bool(const CompositorImplementation::GLES::texture& left, const CompositorImplementation::GLES::texture& right)> sortfunc)
         {
             bool ret = GL_ERROR_WITH_RETURN();
 
@@ -1385,7 +1381,7 @@ namespace Plugin {
                 std::list<texture> sorted;
 
                 {
-                    std::lock_guard<decltype(_token)> const lock(_token);
+                    const std::lock_guard<decltype(_token)> lock(_token);
 
                     for (auto begin = _scene.begin(), it = begin, end = _scene.end(); it != end; it++) {
                         sorted.push_back(it->second);
@@ -1465,7 +1461,7 @@ namespace Plugin {
                         GLES::offset g_offset(
                             static_cast<GLfloat>(static_cast<GLfloat>(g_scale._horiz) * static_cast<GLfloat>(tex._x) / static_cast<GLfloat>(tex._width)),
                             static_cast<GLfloat>(static_cast<GLfloat>(g_scale._vert) * static_cast<GLfloat>(tex._y) / static_cast<GLfloat>(tex._height)),
-                            static_cast<GLfloat>(static_cast<GLuint>(tex._z) / (static_cast<GLuint>(WPEFramework::Exchange::IComposition::maxZOrder - WPEFramework::Exchange::IComposition::minZOrder))));
+                            static_cast<GLfloat>(static_cast<GLuint>(tex._z) / (static_cast<GLuint>(Exchange::IComposition::maxZOrder - Exchange::IComposition::minZOrder))));
 
                         // Width and height are screen dimensions, eg the geometry values are in this space
                         ret = (ret
@@ -1501,11 +1497,11 @@ namespace Plugin {
             return ret;
         }
 
-        bool CompositorImplementation::GLES::SkipEGLImageFromScene(EGLImage const& img)
+        bool CompositorImplementation::GLES::SkipEGLImageFromScene(const EGLImage& img)
         {
             bool ret = false;
 
-            std::lock_guard<decltype(_token)> const lock(_token);
+            const std::lock_guard<decltype(_token)> lock(_token);
 
             auto it = _scene.find(img);
 
@@ -1544,7 +1540,7 @@ namespace Plugin {
             glBindTexture(GL_TEXTURE_EXTERNAL_OES, InvalidTex());
             GL_ERROR();
 
-            std::lock_guard<decltype(_token)> const lock(_token);
+            const std::lock_guard<decltype(_token)> lock(_token);
 
             for (auto begin = _scene.begin(), it = begin, end = _scene.end(); it != end; it++) {
                 GLuint& tex = it->second._tex;
@@ -1559,9 +1555,9 @@ namespace Plugin {
 
         // TODO: precompile programs at initialization stage
 
-        bool CompositorImplementation::GLES::SetupProgram(char const vtx_src[], char const frag_src[], GLuint& prog)
+        bool CompositorImplementation::GLES::SetupProgram(const char vtx_src[], const char frag_src[], GLuint& prog)
         {
-            auto LoadShader = [](GLuint const type, GLchar const code[]) -> GLuint {
+            auto LoadShader = [](const GLuint type, const GLchar code[]) -> GLuint {
                 GLuint shader = glCreateShader(type);
                 GL_ERROR();
 
@@ -1610,7 +1606,7 @@ namespace Plugin {
                 return shader;
             };
 
-            auto ShadersToProgram = [](GLuint const vertex, GLuint const fragment, GLuint& prog) -> bool {
+            auto ShadersToProgram = [](const GLuint vertex, const GLuint fragment, GLuint& prog) -> bool {
                 prog = glCreateProgram();
                 GL_ERROR();
 
@@ -1744,7 +1740,7 @@ namespace Plugin {
         {
             bool ret = GL_ERROR_WITH_RETURN();
 
-            constexpr char const vtx_src[] = "#version 100                                  \n"
+            constexpr const char vtx_src[] = "#version 100                                  \n"
                                              "attribute vec3 position;                      \n"
                                              "varying vec2 coordinates;                     \n"
                                              "void main () {                                \n"
@@ -1752,7 +1748,7 @@ namespace Plugin {
                                              "coordinates = position . xy;              \n"
                                              "}                                             \n";
 
-            constexpr char const frag_src[] = "#version 100                                                                     \n"
+            constexpr const char frag_src[] = "#version 100                                                                     \n"
                                               "#extension GL_OES_EGL_image_external : require                                   \n"
                                               "precision mediump float;                                                         \n"
                                               "uniform samplerExternalOES sampler;                                              \n"
@@ -1762,7 +1758,7 @@ namespace Plugin {
                                               "gl_FragColor = vec4 ( texture2D ( sampler , coordinates ) . rgb , opacity ); \n"
                                               "}                                                                                \n";
 
-            std::array<GLfloat const, 4 * VerticeDimensions> const vert = {
+            const std::array<const GLfloat, 4 * VerticeDimensions> vert = {
                 0.0f, 0.0f, 0.0f /* v0 */,
                 1.0f, 0.0f, 0.0f /* v1 */,
                 0.0f, 1.0f, 0.0f /* v2 */,
@@ -1792,7 +1788,7 @@ namespace Plugin {
         {
             bool ret = GL_ERROR_WITH_RETURN();
 
-            constexpr char const vtx_src[] = "#version 100                                   \n"
+            constexpr const char vtx_src[] = "#version 100                                   \n"
                                              "attribute vec3 position;                       \n"
                                              "varying vec2 coordinates;                      \n"
                                              "void main () {                                 \n"
@@ -1800,7 +1796,7 @@ namespace Plugin {
                                              "coordinates = position . xy;               \n"
                                              "}                                              \n";
 
-            constexpr char const frag_src[] = "#version 100                                                            \n"
+            constexpr const char frag_src[] = "#version 100                                                            \n"
                                               "precision mediump float;                                                \n"
                                               "uniform sampler2D sampler;                                              \n"
                                               // Required by RenderPolygon
@@ -1810,7 +1806,7 @@ namespace Plugin {
                                               "gl_FragColor = vec4 ( texture2D ( sampler , coordinates ) . rgba ); \n"
                                               "}                                                                       \n";
 
-            std::array<GLfloat const, 4 * VerticeDimensions> const vert = {
+            const std::array<const GLfloat, 4 * VerticeDimensions> vert = {
                 0.0f, 0.0f, _offset._z /* v0 */,
                 1.0f, 0.0f, _offset._z /* v1 */,
                 0.0f, 1.0f, _offset._z /* v2 */,
@@ -1822,7 +1818,7 @@ namespace Plugin {
 #ifdef _0
                 // TODO: type check GL_SHADING_LANGUAGE_VERSION
                 using string_t = std::string::value_type;
-                string_t const* ext = reinterpret_cast<string_t const*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+                const string_t* ext = reinterpret_cast<const string_t*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
 
                 bool ret = GL_ERROR_WITH_RETURN();
 #endif
@@ -1836,7 +1832,7 @@ namespace Plugin {
         }
 
         template <size_t N>
-        bool CompositorImplementation::GLES::RenderPolygon(std::array<GLfloat const, N> const& vert)
+        bool CompositorImplementation::GLES::RenderPolygon(const std::array<const GLfloat, N>& vert)
         {
             GLuint prog = InvalidProg();
 
@@ -1875,17 +1871,17 @@ namespace Plugin {
             return ret;
         }
 
-        bool CompositorImplementation::GLES::Supported(std::string const& name)
+        bool CompositorImplementation::GLES::Supported(const std::string& name)
         {
             using string_t = std::string::value_type;
 
-            string_t const* ext = reinterpret_cast<string_t const*>(glGetString(GL_EXTENSIONS));
+            const string_t* ext = reinterpret_cast<const string_t*>(glGetString(GL_EXTENSIONS));
             GL_ERROR();
 
             return ((GL_ERROR_WITH_RETURN() != false) && (ext != nullptr) && (name.size() > 0) && (std::string(ext).find(name) != std::string::npos)) != false;
         }
 
-        bool CompositorImplementation::GLES::SetupViewport(EGLint const /*x*/, EGLint const /*y*/, EGLint const width, EGLint const height)
+        bool CompositorImplementation::GLES::SetupViewport(EGLint const /*x*/, EGLint const /*y*/, const EGLint width, const EGLint height)
         {
             bool ret = GL_ERROR_WITH_RETURN();
 
@@ -1908,7 +1904,7 @@ namespace Plugin {
             //
             // _offset is in the range -1..1 wrt to origin, so the effective value maps to -width to width, -height to height
 
-            constexpr uint8_t const mult = 2;
+            constexpr const uint8_t mult = 2;
 
             using common_t = std::common_type<
                 decltype(width), decltype(height), decltype(mult),
@@ -2052,7 +2048,7 @@ namespace Plugin {
         {
             Stop();
 
-            /* bool */ Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+            /* bool */ Wait(Core::Thread::STOPPED, Core::infinite);
         }
 
         uint32_t CompositorImplementation::EGL::RenderThread::Worker()
@@ -2075,7 +2071,7 @@ namespace Plugin {
         CompositorImplementation::EGL::SceneRenderer::~SceneRenderer()
         {
             Stop();
-            Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+            Wait(Core::Thread::STOPPED, Core::infinite);
         }
 
         uint32_t CompositorImplementation::EGL::SceneRenderer::Worker()
@@ -2098,9 +2094,9 @@ namespace Plugin {
             // No resize supported
             static Exchange::IComposition::ScreenResolution resolution = _compositor.Resolution();
 
-            std::lock_guard<decltype(_sharing)> const sharing(_sharing);
+            const std::lock_guard<decltype(_sharing)> sharing(_sharing);
 
-            bool ret = _egl.Render(std::bind(&GLES::RenderScene, &_gles, static_cast<GLuint>(WidthFromResolution(resolution)), static_cast<GLuint>(HeightFromResolution(resolution)), [](GLES::texture const& left, GLES::texture const& right) -> bool { bool ret = left . _z > right . _z ; return ret ; }), true) != false;
+            bool ret = _egl.Render(std::bind(&GLES::RenderScene, &_gles, static_cast<GLuint>(WidthFromResolution(resolution)), static_cast<GLuint>(HeightFromResolution(resolution)), [](const GLES::texture& left, const GLES::texture& right) -> bool { bool ret = left . _z > right . _z ; return ret ; }), true) != false;
 
             return ret;
         }
@@ -2108,7 +2104,7 @@ namespace Plugin {
         CompositorImplementation::EGL::TextureRenderer::TextureRenderer(EGL & egl, GLES & gles, CompositorImplementation::ClientContainer & clients)
             : RenderThread(egl, gles)
             , _clients(clients)
-            , set { [](element_t const& lhs, element_t const& rhs) -> bool {
+            , set { [](const element_t& lhs, const element_t& rhs) -> bool {
                 bool ret = !(!(lhs._name < rhs._name) && !(lhs._name > rhs._name));
                 return ret;
             } }
@@ -2118,12 +2114,12 @@ namespace Plugin {
         CompositorImplementation::EGL::TextureRenderer::~TextureRenderer()
         {
             Stop();
-            Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+            Wait(Core::Thread::STOPPED, Core::infinite);
         }
 
-        void CompositorImplementation::EGL::TextureRenderer::SetClientName(std::string const& name)
+        void CompositorImplementation::EGL::TextureRenderer::SetClientName(const std::string& name)
         {
-            std::lock_guard<decltype(_access)> const lock(_access);
+            const std::lock_guard<decltype(_access)> lock(_access);
 
             auto result = set.insert(element_t(name));
 
@@ -2140,7 +2136,7 @@ namespace Plugin {
         {
             TRACE(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
 
-            uint32_t ret = WPEFramework::Core::infinite;
+            uint32_t ret = Core::infinite;
 
             bool status = Render() != false;
 
@@ -2149,7 +2145,7 @@ namespace Plugin {
             if (status != false) {
                 // TODO: do not exceed a single frame time for multiple
 
-                std::lock_guard<decltype(_access)> const lock(_access);
+                const std::lock_guard<decltype(_access)> lock(_access);
                 if (queue.size() > 0) {
                     ret = 0;
                 }
@@ -2171,7 +2167,7 @@ namespace Plugin {
             Core::ProxyType<Client> client;
 
             {
-                std::lock_guard<decltype(_access)> const lock(_access);
+                const std::lock_guard<decltype(_access)> lock(_access);
 
                 if (queue.size() > 0) {
                     client = _clients.Find(queue.front()._name);
@@ -2181,7 +2177,7 @@ namespace Plugin {
             if (client.IsValid() != true) {
                 TRACE(Trace::Error, (_T ( "%s does not appear to be a valid client." ), client->Name()));
             } else {
-                Client::SurfaceType const& surf = client->Surface();
+                const Client::SurfaceType& surf = client->Surface();
 
                 ret = (surf.IsValid() && _egl.IsValid() && _gles.Valid()) != false;
 
@@ -2192,7 +2188,7 @@ namespace Plugin {
                     auto opa = client->Opacity();
                     auto zorder = client->ZOrder();
 
-                    std::lock_guard<decltype(_sharing)> const sharing(_sharing);
+                    const std::lock_guard<decltype(_sharing)> sharing(_sharing);
 
                     ret = (_egl.RenderWithoutSwap(std::bind(&GLES::RenderEGLImage, &_gles, std::cref(surf._image), geom.x, geom.y, geom.width, geom.height, static_cast<EGLint>(zorder), static_cast<EGLint>(opa)))) != false;
                 }
@@ -2201,7 +2197,7 @@ namespace Plugin {
             }
 
             {
-                std::lock_guard<decltype(_access)> const lock(_access);
+                const std::lock_guard<decltype(_access)> lock(_access);
                 set.erase(queue.front());
                 queue.pop();
             }
@@ -2209,7 +2205,7 @@ namespace Plugin {
             return ret;
         }
 
-        EGLImage CompositorImplementation::EGL::CreateImage(EGL const& egl, Client::SurfaceType const& surf)
+        EGLImage CompositorImplementation::EGL::CreateImage(EGL const& egl, const Client::SurfaceType& surf)
         {
             TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
 
@@ -2224,7 +2220,7 @@ namespace Plugin {
             if ((egl.IsValid() && supported) != false) {
                 constexpr char methodName[] = XSTRINGIFY(KHRFIX(eglCreateImage));
 
-                static KHRFIX(EGLImage) (*peglCreateImage)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const*) = reinterpret_cast<KHRFIX(EGLImage) (*)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, EGLAttrib const*)>(eglGetProcAddress(methodName));
+                static KHRFIX(EGLImage) (*peglCreateImage)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, const EGLAttrib*) = reinterpret_cast<KHRFIX(EGLImage) (*)(EGLDisplay, EGLContext, EGLenum, EGLClientBuffer, const EGLAttrib*)>(eglGetProcAddress(methodName));
 
                 if (peglCreateImage != nullptr) {
                     auto width = gbm_bo_get_width(surf._buf);
@@ -2293,7 +2289,7 @@ namespace Plugin {
                     }
 
                     if (valid != false) {
-                        EGLAttrib const _attrs[] = {
+                        const EGLAttrib _attrs[] = {
                             EGL_WIDTH, static_cast<EGLAttrib>(width),
                             EGL_HEIGHT, static_cast<EGLAttrib>(height),
                             EGL_LINUX_DRM_FOURCC_EXT, static_cast<EGLAttrib>(format),
@@ -2320,7 +2316,7 @@ namespace Plugin {
             return ret;
         }
 
-        EGLImage CompositorImplementation::EGL::DestroyImage(EGL const& egl, Client::SurfaceType const& surf)
+        EGLImage CompositorImplementation::EGL::DestroyImage(EGL const& egl, const Client::SurfaceType& surf)
         {
             TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
             EGLImage ret = surf._image;
@@ -2328,7 +2324,7 @@ namespace Plugin {
             static bool supported = (Supported(egl.Display(), "EGL_KHR_image") && Supported(egl.Display(), "EGL_KHR_image_base")) != false;
 
             if ((egl.IsValid() && supported) != false) {
-                constexpr char const methodName[] = XSTRINGIFY(KHRFIX(eglDestroyImage));
+                constexpr const char methodName[] = XSTRINGIFY(KHRFIX(eglDestroyImage));
 
                 static EGLBoolean (*peglDestroyImage)(EGLDisplay, KHRFIX(EGLImage)) = reinterpret_cast<EGLBoolean (*)(EGLDisplay, KHRFIX(EGLImage))>(eglGetProcAddress(KHRFIX("eglDestroyImage")));
 
@@ -2380,7 +2376,7 @@ namespace Plugin {
             }
 
             if (ret != false) {
-                constexpr EGLint const attr[] = {
+                constexpr const EGLint attr[] = {
                     EGL_SURFACE_TYPE, static_cast<EGLint>(EGL_WINDOW_BIT),
                     EGL_RED_SIZE, RedBufferSize,
                     EGL_GREEN_SIZE, GreenBufferSize,
@@ -2419,7 +2415,7 @@ namespace Plugin {
             }
 
             if (ret != false) {
-                constexpr EGLint const attr[] = {
+                constexpr const EGLint attr[] = {
                     EGL_CONTEXT_CLIENT_VERSION, static_cast<EGLint>(GLES::MajorVersion()),
                     EGL_NONE
                 };
@@ -2429,7 +2425,7 @@ namespace Plugin {
             }
 
             if (ret != false) {
-                constexpr EGLint const attr[] = {
+                constexpr const EGLint attr[] = {
                     EGL_NONE
                 };
 
@@ -2465,7 +2461,7 @@ namespace Plugin {
         }
 
         // Although compile / build time may succeed, runtime checks are also mandatory
-        bool CompositorImplementation::EGL::Supported(EGLDisplay const dpy, std::string const& name)
+        bool CompositorImplementation::EGL::Supported(const EGLDisplay dpy, const std::string& name)
         {
             bool ret = false;
 
@@ -2480,7 +2476,7 @@ namespace Plugin {
 #endif
 
             if (ret != true) {
-                char const* ext = eglQueryString(dpy, EGL_EXTENSIONS);
+                const char* ext = eglQueryString(dpy, EGL_EXTENSIONS);
 
                 ret = ext != nullptr
                     && name.size() > 0
@@ -2505,7 +2501,7 @@ namespace Plugin {
 
                 // Guarantee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 // Avoid any memory leak if the local thread is stopped (by another thread)
@@ -2520,7 +2516,7 @@ namespace Plugin {
         }
 
         template <typename FUNC, typename... ARG>
-        bool CompositorImplementation::EGL::Render(std::false_type const, FUNC&& func, bool const post, ARG&&... arg)
+        bool CompositorImplementation::EGL::Render(std::false_type const, FUNC&& func, const bool post, ARG&&... arg)
         {
             TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
             // Ensure the client API is set per thread basis
@@ -2533,7 +2529,7 @@ namespace Plugin {
                     ret = func(std::forward<ARG>(arg)...) != false;
 
                     {
-                        WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                        Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                     }
 
                     ret = ret
@@ -2545,7 +2541,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
@@ -2561,7 +2557,7 @@ namespace Plugin {
         }
 
         template <typename FUNC, typename ARG0, typename... ARG>
-        bool CompositorImplementation::EGL::Render(std::true_type const, FUNC&& func, bool const post, ARG0&& arg0, ARG&&... arg)
+        bool CompositorImplementation::EGL::Render(std::true_type const, FUNC&& func, const bool post, ARG0&& arg0, ARG&&... arg)
         {
             TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
             // Ensure the client API is set per thread basis
@@ -2574,7 +2570,7 @@ namespace Plugin {
                     ret = (std::forward<ARG0>(arg0).*func)(std::forward<ARG>(arg)...) != false;
 
                     {
-                        WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                        Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                     }
 
                     ret = ret
@@ -2586,7 +2582,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 // Expensive, but it avoids any memory leak if the local thread is stopped (by another thread)
@@ -2602,7 +2598,7 @@ namespace Plugin {
         }
 
         template <typename FUNC, typename... ARG>
-        bool CompositorImplementation::EGL::Render(FUNC && func, bool const post, ARG&&... arg)
+        bool CompositorImplementation::EGL::Render(FUNC && func, const bool post, ARG&&... arg)
         {
             TRACE_GLOBAL(CompositorTrace::Render, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
             bool ret = Render(typename std::is_member_pointer<FUNC>::type(), func, post, std::forward<ARG>(arg)...);
@@ -2623,7 +2619,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 ret = ret
@@ -2632,7 +2628,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
@@ -2661,7 +2657,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 ret = ret
@@ -2670,7 +2666,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
@@ -2708,7 +2704,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
@@ -2737,7 +2733,7 @@ namespace Plugin {
 
                 // Guarantuee all (previous) effects of client API and frame buffer state are realized
                 {
-                    WPEFramework::Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
+                    Plugin::CompositorImplementation::EGL::Sync sync(_dpy);
                 }
 
                 // Expensive, but avoids any memory leak if the local thread is stopped (by another thread)
@@ -2824,10 +2820,10 @@ namespace Plugin {
         CompositorImplementation::~CompositorImplementation()
         {
             _textureRenderer.Stop();
-            _textureRenderer.Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+            _textureRenderer.Wait(Core::Thread::STOPPED, Core::infinite);
 
             _sceneRenderer.Stop();
-            _sceneRenderer.Wait(WPEFramework::Core::Thread::STOPPED, WPEFramework::Core::infinite);
+            _sceneRenderer.Wait(Core::Thread::STOPPED, Core::infinite);
 
             _egl.Invalidate();
             _natives.Invalidate();
@@ -2849,7 +2845,7 @@ namespace Plugin {
         }
 
         // TODO:  run the _textureRenderer as a job on the ThreadPool
-        bool CompositorImplementation::CompositeFor(std::string const& name)
+        bool CompositorImplementation::CompositeFor(const std::string& name)
         {
             // One client at a time
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_clientLock);
@@ -2941,7 +2937,7 @@ namespace Plugin {
             return ret;
         }
 
-        uint32_t CompositorImplementation::WidthFromResolution(ScreenResolution const resolution)
+        uint32_t CompositorImplementation::WidthFromResolution(const ScreenResolution resolution)
         {
             // Assume an invalid width equals 0
             uint32_t width = 0;
@@ -2986,7 +2982,7 @@ namespace Plugin {
             return width;
         }
 
-        uint32_t CompositorImplementation::HeightFromResolution(ScreenResolution const resolution)
+        uint32_t CompositorImplementation::HeightFromResolution(const ScreenResolution resolution)
         {
             // Assume an invalid height equals 0
             uint32_t height = 0;
@@ -3085,7 +3081,7 @@ namespace Plugin {
             _observers.push_back(notification);
 
             _clients.Visit(
-                [=](string const& name, Core::ProxyType<Client> const& element) { notification->Attached(name, &(*element)); });
+                [=](const string& name, const Core::ProxyType<Client>& element) { notification->Attached(name, &(*element)); });
 
             _adminLock.Unlock();
         }
@@ -3102,7 +3098,7 @@ namespace Plugin {
             if (index != _observers.end()) {
 
                 _clients.Visit(
-                    [=](string const& name, Core::ProxyType<Client> const& /*element*/) {
+                    [=](const string& name, const Core::ProxyType<Client>& /*element*/) {
                         notification->Detached(name);
                     });
 
@@ -3114,7 +3110,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        void CompositorImplementation::Attached(string const& name, IClient* client)
+        void CompositorImplementation::Attached(const string& name, IClient* client)
         {
             _adminLock.Lock();
 
@@ -3126,7 +3122,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        void CompositorImplementation::Detached(string const& name)
+        void CompositorImplementation::Detached(const string& name)
         {
             _adminLock.Lock();
 
@@ -3157,7 +3153,7 @@ namespace Plugin {
             return (_port);
         }
 
-        WPEFramework::Exchange::IComposition::IClient* CompositorImplementation::CreateClient(string const& name, uint32_t const width, uint32_t const height)
+        Exchange::IComposition::IClient* CompositorImplementation::CreateClient(const string& name, const uint32_t width, const uint32_t height)
         {
             IClient* client = nullptr;
 
@@ -3183,7 +3179,7 @@ namespace Plugin {
             return client;
         }
 
-        void CompositorImplementation::InvalidateClient(string const& name)
+        void CompositorImplementation::InvalidateClient(const string& name)
         {
             TRACE(Trace::Information, (_T("%s:%d %s BRAM DEBUG"), __FILE__, __LINE__, __FUNCTION__));
 
@@ -3193,7 +3189,7 @@ namespace Plugin {
 
                 Detached(object->Name());
 
-                Client::SurfaceType const& surf = object->Surface();
+                const Client::SurfaceType& surf = object->Surface();
 
                 _gles.SkipEGLImageFromScene(surf._image);
 
@@ -3204,7 +3200,7 @@ namespace Plugin {
 
         Exchange::IComposition::ScreenResolution CompositorImplementation::Resolution() const
         {
-            Exchange::IComposition::ScreenResolution resolution = WPEFramework::Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
+            Exchange::IComposition::ScreenResolution resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
 
             // decltype(std::declval<ModeSet>().Width()) width = _platform.Width();
             decltype(std::declval<ModeSet>().Height()) height = _platform.Height();
