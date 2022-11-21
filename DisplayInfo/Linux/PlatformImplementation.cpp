@@ -316,6 +316,9 @@ namespace Plugin {
                 if ((_hdrProfiles & DISPLAYINFO_HDR_10PLUS) == DISPLAYINFO_HDR_10PLUS) {
                     capabilities.push_back(HDR_10PLUS);
                 }
+                if ((_hdrProfiles & DISPLAYINFO_DISPLAYHDR_400) == DISPLAYINFO_DISPLAYHDR_400) {
+                    capabilities.push_back(HDR_DISPLAYHDR_400);
+                }
             }
 
             if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_DOLBY_LABORATORIES_INC) == DISPLAYINFO_EDID_HDR_LICENSOR_DOLBY_LABORATORIES_INC) {
@@ -345,27 +348,28 @@ namespace Plugin {
 
                 while (type == HDR_OFF && it->Next(type) != false) {
                         switch (type) {
-                            case HDR_10          :
-                            case HDR_10PLUS      :
-                            case HDR_HLG         :
-                            case HDR_DOLBYVISION :
-                            case HDR_TECHNICOLOR :
-                            case HDR_400         :
-                            case HDR_500         :
-                            case HDR_600         :
-                            case HDR_1000        :
-                            case HDR_1400        :
-                            case HDR_TB_400      :
-                            case HDR_TB_500      :
-                            case HDR_TB_600      :
-                                                    // What is currently set out of all options that are available
-                                                    type = GetHDRLevel();
-                                                    __attribute__((fallthrough));
-                            case HDR_OFF         :
-                                                    result = Core::ERROR_NONE;
-                                                    break;
-                            default              :
-                                                    result = Core::ERROR_INVALID_RANGE;
+                            case HDR_10             :
+                            case HDR_10PLUS         :
+                            case HDR_HLG            :
+                            case HDR_DOLBYVISION    :
+                            case HDR_TECHNICOLOR    :
+                            case HDR_400            :
+                            case HDR_500            :
+                            case HDR_600            :
+                            case HDR_1000           :
+                            case HDR_1400           :
+                            case HDR_TB_400         :
+                            case HDR_TB_500         :
+                            case HDR_TB_600         :
+                            case HDR_DISPLAYHDR_400 :
+                                                        // What is currently set out of all options that are available
+                                                        type = GetHDRLevel();
+                                                        __attribute__((fallthrough));
+                            case HDR_OFF            :
+                                                        result = Core::ERROR_NONE;
+                                                        break;
+                            default                 :
+                                                        result = Core::ERROR_INVALID_RANGE;
                         }
 
                 }
@@ -683,6 +687,7 @@ namespace Plugin {
                                | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_400)      != false ? DISPLAYINFO_HDR_TB_400      : DISPLAYINFO_HDR_OFF)
                                | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_500)      != false ? DISPLAYINFO_HDR_TB_500      : DISPLAYINFO_HDR_OFF)
                                | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_600)      != false ? DISPLAYINFO_HDR_TB_600      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_DISPLAYHDR_400)  != false ? DISPLAYINFO_DISPLAYHDR_400  : DISPLAYINFO_HDR_OFF)
                                ;
                 }
             }
