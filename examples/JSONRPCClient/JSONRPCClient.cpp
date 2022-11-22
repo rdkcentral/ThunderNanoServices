@@ -401,7 +401,7 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
         printf("Can not measure the performance of COMRPC, there is no connection.\n");
     } else {
         Core::StopWatch measurement;
-        Exchange::IPerformance* perf = client->Aquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
+        Exchange::IPerformance* perf = client->Acquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
         if (perf == nullptr) {
             printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
         } else {
@@ -841,7 +841,7 @@ int main(int argc, char** argv)
             }
             case '@':
             {
-                Exchange::IMath* math = client->Aquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
+                Exchange::IMath* math = client->Acquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
                 if (math != nullptr) {
                     uint16_t A = 10;
                     uint16_t B = 5;
@@ -858,7 +858,7 @@ int main(int argc, char** argv)
                 const uint32_t PerformanceRuns = 100;
                 Plugin::MeasurementClock theClock;
                 Exchange::IMath* local = localPerformance.IUnknown::QueryInterface<Exchange::IMath>();
-                Exchange::IMath* comrpc = client->Aquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
+                Exchange::IMath* comrpc = client->Acquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
                 JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(_T("JSONRPCPlugin.1"));
 
                 if (local != nullptr) {

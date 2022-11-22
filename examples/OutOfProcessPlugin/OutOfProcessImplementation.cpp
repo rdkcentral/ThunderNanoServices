@@ -183,7 +183,7 @@ POP_WARNING()
             }
 
         private:
-            virtual void* Aquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
+            virtual void* Acquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
@@ -191,7 +191,7 @@ POP_WARNING()
                 if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IBrowser::ID) || (interfaceId == Core::IUnknown::ID))) {
                     // Reference count our parent
                     _parentInterface->AddRef();
-                    TRACE(Trace::Information, ("Browser interface aquired => %p", this));
+                    TRACE(Trace::Information, ("Browser interface acquired => %p", this));
                     // Allright, respond with the interface.
                     result = _parentInterface;
                 }
