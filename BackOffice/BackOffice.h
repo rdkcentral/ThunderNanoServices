@@ -114,7 +114,7 @@ namespace Plugin {
                 }
             }
             // Notification of a Partial Request received, time to attach a body..
-            void LinkBody(Core::ProxyType<WPEFramework::Web::Response>& element) override {
+            void LinkBody(Core::ProxyType<WPEFramework::Web::Response>& element VARIABLE_IS_NOT_USED) override {
                 // We are not expected to receive Bodies with the incoming message, so drop it...
             }
             void Received(Core::ProxyType<WPEFramework::Web::Response>& element) override {
@@ -137,7 +137,7 @@ namespace Plugin {
 
                 _lock.Unlock();
             }
-            void Send(const Core::ProxyType<WPEFramework::Web::Request>& request) override
+            void Send(const Core::ProxyType<WPEFramework::Web::Request>& request VARIABLE_IS_NOT_USED) override
             {
                 // Oke the request has been send, lets wait for the response..
             }
