@@ -39,8 +39,8 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
-    WifiControl.cpp  
-    WifiControlJsonRpc.cpp
+    WifiControl.cpp
+    WifiControlImplementation.cpp
     Network.cpp      
     Module.cpp)
 
