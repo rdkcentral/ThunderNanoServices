@@ -81,7 +81,7 @@ public:
         : BaseClass()
     {
         BaseClass::Open(waitTime, node, callsign);
-        BaseClass::Aquire<Thunder::Exchange::IDictionary>(waitTime, node, callsign);
+        BaseClass::Acquire<Thunder::Exchange::IDictionary>(waitTime, node, callsign);
     }
     ~Dictionary() override
     {
