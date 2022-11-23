@@ -188,10 +188,10 @@ int main(int argc, char* argv[])
                         break;
                     } else {
                         if (type == ServerType::STANDALONE_SERVER) {
-                            clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
+                            clock = client->Acquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
                         }
                         else {
-                            WPEFramework::PluginHost::IShell* controller = client->Aquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            WPEFramework::PluginHost::IShell* controller = client->Acquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
                             if (controller == nullptr) {
                                 printf("Could not get the IShell* interface from the controller to execute the QueryInterfaceByCallsign!\n");
                             }
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
 
                         }
                     } else {
-                        printf("Aquired the IWallclock, ready for use\n");
+                        printf("Acquired the IWallclock, ready for use\n");
                     }
                 }
                 break;
