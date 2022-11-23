@@ -45,6 +45,6 @@
     }
   },
   "interface": {
-    "$ref": "{interfacedir}/WifiControl.json#"
+    "$ref": "{cppinterfacedir}/IWifiControl.h"
   }
 }
