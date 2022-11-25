@@ -76,8 +76,15 @@ namespace GPIO {
 
             if (pressed == true) {
                 _pressedTime = now;
+                return (reached);
             }
-            else if ((_markers.size() != 0) && (now > (_pressedTime + BounceThreshold))) {
+
+            if (_pressedTime == 0) {
+                TRACE(Trace::Error, (_T("Detected key release without key press")));
+                return (reached);
+            }
+
+            if ((_markers.size() != 0) && (now > (_pressedTime + BounceThreshold))) {
                 uint32_t elapsedTime = static_cast<uint32_t>( (now - _pressedTime) / Core::Time::TicksPerMillisecond );
 
                 // See which marker we have reached..
@@ -88,6 +95,7 @@ namespace GPIO {
                     reached = true;
                 }
             }
+            _pressedTime = 0;
 
             return(reached);
         }
