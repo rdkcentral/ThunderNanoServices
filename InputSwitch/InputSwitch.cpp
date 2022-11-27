@@ -58,7 +58,7 @@ namespace Plugin {
         return (EMPTY_STRING);
     }
 
-    /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         _handler = nullptr;
     }

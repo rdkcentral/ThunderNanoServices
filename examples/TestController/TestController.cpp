@@ -94,7 +94,7 @@ namespace Plugin {
                 TRACE(Trace::Warning, (_T("Colud not get Remote connection")));
             }
         } else {
-            TRACE(Trace::Fatal, (_T("*** TestController could not be instantiated ***")))
+            TRACE(Trace::Fatal, (_T("*** TestController could not be instantiated ***")));
             message = _T("TestUtility could not be instantiated.");
         }
 
@@ -413,7 +413,7 @@ namespace Plugin {
         }
 
         if (!executed) {
-            TRACE(Trace::Fatal, (_T("*** Wrong request !!! ***")))
+            TRACE(Trace::Fatal, (_T("*** Wrong request !!! ***")));
         }
 
         return response;
