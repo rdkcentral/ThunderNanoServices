@@ -32,7 +32,7 @@ namespace Plugin {
 
     void TestController::RegisterAll()
     {
-        Register<RunParamsData,Core::JSON::ArrayType<RunResultData>>(_T("run"), &TestController::endpoint_run, this);
+        Register<RunParamsData,Core::JSON::ArrayType<RunResultDataElem>>(_T("run"), &TestController::endpoint_run, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("categories"), &TestController::get_categories, nullptr, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("tests"), &TestController::get_tests, nullptr, this);
         Property<DescriptionData>(_T("description"), &TestController::get_description, nullptr, this);
@@ -46,16 +46,16 @@ namespace Plugin {
         Unregister(_T("categories"));
     }
 
-    Core::JSON::ArrayType<RunResultData> TestController::TestResults(const string& results)
+    Core::JSON::ArrayType<RunResultDataElem> TestController::TestResults(const string& results)
     {
-        Core::JSON::ArrayType<RunResultData> testResultsData;
+        Core::JSON::ArrayType<RunResultDataElem> testResultsData;
 
         OverallTestResults overallResults;
         if (overallResults.FromString(results)) {
             auto testResults = overallResults.Results.Elements();
             if (testResults.Count() != 0) {
                 while (testResults.Next()) {
-                    RunResultData testData;
+                    RunResultDataElem testData;
                     testData.Test = testResults.Current().Name;
                     testData.Status = testResults.Current().OverallStatus;
                     testResultsData.Add(testData);
@@ -76,7 +76,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Unknown category/test
     //  - ERROR_BAD_REQUEST: Bad json param data format
-    uint32_t TestController::endpoint_run(const RunParamsData& params, Core::JSON::ArrayType<RunResultData>& response)
+    uint32_t TestController::endpoint_run(const RunParamsData& params, Core::JSON::ArrayType<RunResultDataElem>& response)
     {
         uint32_t result = Core::ERROR_NONE;
         string ret = EMPTY_STRING;

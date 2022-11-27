@@ -232,7 +232,7 @@ namespace CEC {
                     result = UpdateSettings(&settings);
                 } else {
                     result = HDMI_CEC_ADAPTER_ERROR_EXHAUSTED;
-                    TRACE(Trace::Error, ("%s adapter[%p], No more logical adresses available [%d/%d]", __FUNCTION__, this, settings.num_log_addrs, caps.available_log_addrs))
+                    TRACE(Trace::Error, ("%s adapter[%p], No more logical adresses available [%d/%d]", __FUNCTION__, this, settings.num_log_addrs, caps.available_log_addrs));
                 }
 
                 TRACE(Trace::Information, ("%s adapter[%p], result: %d", __FUNCTION__, this, result));
@@ -370,7 +370,7 @@ namespace CEC {
 
                 index->second.AddRef();
 
-                TRACE(Trace::Information, ("%s adapter[%p]", __FUNCTION__, index->second.operator->()));
+                TRACE_GLOBAL(Trace::Information, ("%s adapter[%p]", __FUNCTION__, index->second.operator->()));
 
                 return index->second.operator->();
             }
