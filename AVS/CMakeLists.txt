@@ -34,6 +34,10 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(GStreamer REQUIRED)
 
+#remove the -as-needed flag to ensure linking with AVSDevice and SmartScreen libs
+string(REPLACE "-Wl,--as-needed" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-as-needed")
+
 set(PLUGIN_AVS_NAME "AVS" CACHE STRING "The plugin name")
 set(PLUGIN_AVS_AUTOSTART "false" CACHE STRING "Autostart plugin (true/false)")
 set(PLUGIN_AVS_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
@@ -61,6 +65,7 @@ add_library(${MODULE_NAME} SHARED
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
+        LINK_WHAT_YOU_USE TRUE
         CXX_STANDARD_REQUIRED YES)
 
 add_subdirectory("Impl/AVSDevice/")
