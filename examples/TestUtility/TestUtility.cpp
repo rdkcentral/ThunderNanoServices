@@ -95,7 +95,7 @@ namespace Plugin {
             }
 
         } else {
-            TRACE(Trace::Fatal, (_T("*** TestUtility could not be instantiated ***")))
+            TRACE(Trace::Fatal, (_T("*** TestUtility could not be instantiated ***")));
             message = _T("TestUtility could not be instantiated.");
         }
 
@@ -253,7 +253,7 @@ namespace Plugin {
         }
 
         if (!executed) {
-            TRACE(Trace::Fatal, (_T("*** Test case method not found !!! ***")))
+            TRACE(Trace::Fatal, (_T("*** Test case method not found !!! ***")));
         }
 
         return response;

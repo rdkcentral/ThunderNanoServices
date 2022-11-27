@@ -21,7 +21,7 @@ namespace CEC {
             virtual ~Sink() = default;
 
         public:
-            uint8_t Received(const cec_adapter_role_t follower, const logical_address_t initiator, const uint8_t length, const uint8_t data[]) override
+            uint8_t Received(const cec_adapter_role_t follower VARIABLE_IS_NOT_USED, const logical_address_t initiator, const uint8_t length, const uint8_t data[]) override
             {
                 return _parent.Received(initiator, length, data);
             }
