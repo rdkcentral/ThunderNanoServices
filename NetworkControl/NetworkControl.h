@@ -24,6 +24,7 @@
 #include "DHCPClient.h"
 
 #include <interfaces/IIPNetwork.h>
+#include <interfaces/INetworkControl.h>
 #include <interfaces/json/JNetworkControl.h>
 
 namespace WPEFramework {
