@@ -18,7 +18,6 @@
  */
 
 #include "BluetoothControl.h"
-#include "JBluetoothControl.h"
 
 namespace WPEFramework {
 

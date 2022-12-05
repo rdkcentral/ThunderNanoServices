@@ -24,12 +24,14 @@ BluetoothControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the BluetoothControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the BluetoothControl plugin. It includes detailed specification about its configuration,
+         methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties,
+         relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -47,7 +49,8 @@ The table below provides and overview of terms and abbreviations used in this do
 
 | Term | Description |
 | :-------- | :-------- |
-| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
+| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times,
+         but each instance the instance name, callsign, must be unique. |
 
 <a name="head.References"></a>
 ## References
@@ -122,7 +125,6 @@ BluetoothControl interface methods:
 | [getdevicelist](#method.getdevicelist) | Retrieves a list of known remote Bluetooth devices |
 | [getdeviceinfo](#method.getdeviceinfo) | Retrieves detailed information about a known Bluetooth device |
 
-
 <a name="method.setdiscoverable"></a>
 ## *setdiscoverable [<sup>method</sup>](#head.Methods)*
 
@@ -168,6 +170,7 @@ Also see: [discoverablestarted](#event.discoverablestarted), [discoverablecomple
     "method": "BluetoothControl.1.setdiscoverable",
     "params": {
         "type": "LowEnergy",
+        
         "mode": "General",
         "connectable": false,
         "duration": 30
@@ -279,6 +282,7 @@ Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
     "params": {
         "type": "LowEnergy",
         "mode": "General",
+        
         "duration": 60
     }
 }
@@ -392,6 +396,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "method": "BluetoothControl.1.connect",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy"
     }
 }
@@ -451,6 +456,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "method": "BluetoothControl.1.disconnect",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy"
     }
 }
@@ -475,7 +481,8 @@ Pairs a Bluetooth device.
 
 PIN-code or passkey requests may appear during the pairing process. The process can be cancelled any time by calling the *abortpairing* method.
 
-Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event.pincoderequest), [passkeyrequest](#event.passkeyrequest), [passkeyconfirmrequest](#event.passkeyconfirmrequest)
+Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event.pincoderequest), [passkeyrequest](#event.passkeyrequest),
+         [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 
 ### Parameters
 
@@ -484,7 +491,8 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 | params | object |  |
 | params.address | string | Bluetooth address |
 | params?.type | string | <sup>*(optional)*</sup> Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) (default: *LowEnergy*) |
-| params?.capabilities | string | <sup>*(optional)*</sup> Pairing capabilities (must be one of the following: *DisplayOnly*, *DisplayYesNo*, *KeyboardOnly*, *NoInputNoOutput*, *KeyboardDisplay*) (default: *NoInputNoOutput*) |
+| params?.capabilities | string | <sup>*(optional)*</sup> Pairing capabilities (must be one of the following: *DisplayOnly*, *DisplayYesNo*, *KeyboardOnly*,
+         *NoInputNoOutput*, *KeyboardDisplay*) (default: *NoInputNoOutput*) |
 | params?.timeout | integer | <sup>*(optional)*</sup> Maximum time allowed for the pairing process to complete (in seconds) (default: *20*) |
 
 ### Result
@@ -512,6 +520,7 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
     "method": "BluetoothControl.1.pair",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy",
         "capabilities": "NoInputNoOutput",
         "timeout": 60
@@ -568,6 +577,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "method": "BluetoothControl.1.unpair",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy"
     }
 }
@@ -622,6 +632,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "method": "BluetoothControl.1.abortpairing",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy"
     }
 }
@@ -681,6 +692,7 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
     "method": "BluetoothControl.1.providepincode",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "Classic",
         "secret": "0000"
     }
@@ -741,6 +753,7 @@ Also see: [devicestatechange](#event.devicestatechange), [passkeyrequest](#event
     "method": "BluetoothControl.1.providepasskey",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "Classic",
         "secret": 123456
     }
@@ -801,6 +814,7 @@ Also see: [devicestatechange](#event.devicestatechange), [passkeyconfirmrequest]
     "method": "BluetoothControl.1.confirmpasskey",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "Classic",
         "iscorrect": true
     }
@@ -859,6 +873,7 @@ Also see: [devicestatechange](#event.devicestatechange)
     "method": "BluetoothControl.1.forget",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy"
     }
 }
@@ -964,6 +979,7 @@ Retrieves detailed information about a known Bluetooth device.
     "method": "BluetoothControl.1.getdeviceinfo",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy"
     }
 }
@@ -978,6 +994,7 @@ Retrieves detailed information about a known Bluetooth device.
     "result": {
         "address": "81:6F:B0:91:9B:FE",
         "type": "Classic",
+        
         "name": "Thunder Bluetooth Speaker",
         "class": 2360324,
         "appearance": 2113,
@@ -985,6 +1002,7 @@ Retrieves detailed information about a known Bluetooth device.
             "110a"
         ],
         "connected": true,
+        
         "paired": true
     }
 }
@@ -1002,8 +1020,7 @@ BluetoothControl interface properties:
 | [adapters](#property.adapters) <sup>RO</sup> | List of local Bluetooth adapters |
 | [adapter](#property.adapter) <sup>RO</sup> | Local Bluetooth adapter information |
 | <sup>deprecated</sup> [devices](#property.devices) <sup>RO</sup> | List of known remote Bluetooth devices |
-| <sup>deprecated</sup> [device](#property.device) | Remote Bluetooth device information |
-
+| <sup>deprecated</sup> [device](#property.device) <sup>RO</sup> | Remote Bluetooth device information |
 
 <a name="property.adapters"></a>
 ## *adapters [<sup>property</sup>](#head.Properties)*
@@ -1099,11 +1116,13 @@ Provides access to the local Bluetooth adapter information.
         "id": 0,
         "interface": "hci0",
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "Dual",
         "version": 8,
         "manufacturer": 15,
         "class": 1060,
         "name": "Thunder Bluetooth Controller",
+        
         "shortname": "Thunder"
     }
 }
@@ -1156,22 +1175,11 @@ Provides access to the list of known remote Bluetooth devices.
 
 Provides access to the remote Bluetooth device information.
 
+> This property is **read-only**.
+
 > This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
 
 ### Value
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Remote Bluetooth device information |
-| (property).address | string | Bluetooth address |
-| (property).type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
-| (property)?.name | string | <sup>*(optional)*</sup> Name of the device |
-| (property)?.class | integer | <sup>*(optional)*</sup> Class of device |
-| (property)?.appearance | integer | <sup>*(optional)*</sup> Appearance value |
-| (property)?.services | array | <sup>*(optional)*</sup> List of supported services |
-| (property)?.services[#] | string | <sup>*(optional)*</sup> Service UUID |
-| (property).connected | boolean | Indicates if the device is currently connected |
-| (property).paired | boolean | Indicates if the device is currently paired |
 
 > The *device address* argument shall be passed as the index to the property, e.g. *BluetoothControl.1.device@81:6F:B0:91:9B:FE*.
 
@@ -1179,7 +1187,7 @@ Provides access to the remote Bluetooth device information.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| result | object |  |
+| result | object | Remote Bluetooth device information |
 | result.address | string | Bluetooth address |
 | result.type | string | Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) |
 | result?.name | string | <sup>*(optional)*</sup> Name of the device |
@@ -1216,29 +1224,8 @@ Provides access to the remote Bluetooth device information.
     "id": 42,
     "result": {
         "address": "81:6F:B0:91:9B:FE",
-        "type": "LowEnergy",
-        "name": "Thunder Bluetooth Speaker",
-        "class": 2360324,
-        "appearance": 2113,
-        "services": [
-            "110a"
-        ],
-        "connected": true,
-        "paired": true
-    }
-}
-```
-
-#### Set Request
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.device@81:6F:B0:91:9B:FE",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
         "type": "Classic",
+        
         "name": "Thunder Bluetooth Speaker",
         "class": 2360324,
         "appearance": 2113,
@@ -1246,25 +1233,16 @@ Provides access to the remote Bluetooth device information.
             "110a"
         ],
         "connected": true,
+        
         "paired": true
     }
-}
-```
-
-#### Set Response
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "null"
 }
 ```
 
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the BluetoothControl plugin:
 
@@ -1281,7 +1259,6 @@ BluetoothControl interface events:
 | [passkeyrequest](#event.passkeyrequest) | Notifies of a passkey request |
 | [passkeyconfirmrequest](#event.passkeyconfirmrequest) | Notifies of a passkey confirmation request |
 
-
 <a name="event.discoverablestarted"></a>
 ## *discoverablestarted [<sup>event</sup>](#head.Notifications)*
 
@@ -1291,6 +1268,8 @@ Notifies of entering the discoverable state.
 
 Register to this event to be notified about entering the discoverable state
 
+> If applicable, this notification may be sent out during registration, reflecting the current status.
+
 ### Parameters
 
 | Name | Type | Description |
@@ -1298,6 +1277,7 @@ Register to this event to be notified about entering the discoverable state
 | params | object |  |
 | params.type | string | Discoverable type (must be one of the following: *Classic*, *LowEnergy*) |
 | params.mode | string | Discoverable mode (must be one of the following: *General*, *Limited*) |
+| params?.connectable | boolean | <sup>*(optional)*</sup> Indicates connectable advertising (true, *LowEnergy* only) (default: *False*) |
 
 ### Example
 
@@ -1307,7 +1287,9 @@ Register to this event to be notified about entering the discoverable state
     "method": "client.events.1.discoverablestarted",
     "params": {
         "type": "LowEnergy",
-        "mode": "General"
+        "mode": "General",
+        
+        "connectable": false
     }
 }
 ```
@@ -1348,6 +1330,8 @@ Notifies of scan start.
 ### Description
 
 Register to this event to be notified about device scan start
+
+> If applicable, this notification may be sent out during registration, reflecting the current status.
 
 ### Parameters
 
@@ -1407,6 +1391,8 @@ Notifies of device state changes.
 
 Register to this event to be notified about device state changes
 
+> If applicable, this notification may be sent out during registration, reflecting the current status.
+
 ### Parameters
 
 | Name | Type | Description |
@@ -1427,6 +1413,7 @@ Register to this event to be notified about device state changes
     "method": "LowEnergy.client.events.1.devicestatechange",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "LowEnergy",
         "state": "Disconnected",
         "disconnectreason": "ConnectionTimeout"
@@ -1459,6 +1446,7 @@ Register to this event to be notified about PIN code requests during a legacy pa
     "method": "client.events.1.pincoderequest",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "Classic"
     }
 }
@@ -1489,6 +1477,7 @@ Register to this event to be notified about passkey requests that may be require
     "method": "client.events.1.passkeyrequest",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "Classic"
     }
 }
@@ -1520,6 +1509,7 @@ Register to this event to be notified about passkey confirmation requests that m
     "method": "client.events.1.passkeyconfirmrequest",
     "params": {
         "address": "81:6F:B0:91:9B:FE",
+        
         "type": "Classic",
         "secret": 123456
     }

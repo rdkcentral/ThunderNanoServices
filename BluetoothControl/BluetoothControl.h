@@ -21,7 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/IBluetooth.h>
-#include "JBluetoothControl.h"
+#include <interfaces/json/JBluetoothControl.h>
 
 #include "Tracing.h"
 
@@ -813,6 +813,8 @@ class BluetoothControl : public PluginHost::IPlugin
         public:
             void DiscoverableChanged(const bool started, const bool lowEnergy, const bool limited, const bool connectable)
             {
+                // TODO: This is currently not called from anywhere. Need to detect discoverable state change somehow.
+
                 TRACE(ControlFlow, (_T("%s discoverable state %s (%s)"), (lowEnergy? "BLE" : "BR/EDR"), (started? "started" : "ended"), Core::Time::Now().ToRFC1123().c_str()));
 
                 Application()->Update();
@@ -2815,7 +2817,32 @@ protected:
             }
             ~JSONRPCImplementation() = default;
 
+        private:
+            template<typename INTERFACE>
+            INTERFACE* QueryInterface()
+            {
+                return (static_cast<Core::IUnknown&>(_parent).QueryInterface<INTERFACE>());
+            }
+
+            template<typename INTERFACE>
+            const INTERFACE* QueryInterface() const
+            {
+                return (static_cast<Core::IUnknown&>(_parent).QueryInterface<INTERFACE>());
+            }
+
+            Exchange::IBluetooth::IDevice* Device(const Core::JSON::String& address, const Core::JSON::EnumType<Exchange::IBluetooth::IDevice::type>& type)
+            {
+                // For backwards compatibility allow omitting the type of device.
+
+                Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
+                    (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+
+                return (device);
+            }
+
         public:
+            // Methods from this class will be called from the generated JSON-RPC glue code.
+
             uint32_t SetDiscoverable(const Core::JSON::EnumType<JsonData::BluetoothControl::scantype>& type,
                         const Core::JSON::EnumType<JsonData::BluetoothControl::scanmode>& mode,
                         const Core::JSON::Boolean& connectable,
@@ -2823,24 +2850,24 @@ protected:
             {
                 uint32_t result = Core::ERROR_BAD_REQUEST;
 
-                // If duration is not given, default to 30 seconds
-                const uint16_t period = ((duration.IsSet() == true)? duration.Value() : 30);
-
-                if ((type.IsSet() == true)) {
+                if (type.IsSet() == true) {
                     result = Core::ERROR_UNAVAILABLE;
 
+                    // If duration is not given, default to 30 seconds.
+                    const uint16_t period = ((duration.IsSet() == true)? duration.Value() : 30);
+                    const bool limited = ((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED));
+
                     if (type == JBluetoothControl::scantype::CLASSIC) {
-                        Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                        Exchange::IBluetooth::IClassic* adapter = QueryInterface<Exchange::IBluetooth::IClassic>();
                         if (adapter != nullptr) {
-                            result = adapter->InquiryScan(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)), period);
+                            result = adapter->InquiryScan(limited, period);
                             adapter->Release();
                         }
                     }
                     else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
-                        Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                        Exchange::IBluetooth::ILowEnergy* adapter = QueryInterface<Exchange::IBluetooth::ILowEnergy>();
                         if (adapter != nullptr) {
-                            result = adapter->Advertise(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)),
-                                ((connectable.IsSet() == false) || connectable), period);
+                            result = adapter->Advertise(limited, ((connectable.IsSet() == false) || connectable), period);
                             adapter->Release();
                         }
                     }
@@ -2856,14 +2883,14 @@ protected:
                     result = Core::ERROR_UNAVAILABLE;
 
                     if (type == JBluetoothControl::scantype::CLASSIC) {
-                        Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                        Exchange::IBluetooth::IClassic* adapter = QueryInterface<Exchange::IBluetooth::IClassic>();
                         if (adapter != nullptr) {
                             result = adapter->StopInquiryScanning();
                             adapter->Release();
                         }
                     }
                     else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
-                        Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                        Exchange::IBluetooth::ILowEnergy* adapter = QueryInterface<Exchange::IBluetooth::ILowEnergy>();
                         if (adapter != nullptr) {
                             result = adapter->StopAdvertising();
                             adapter->Release();
@@ -2882,22 +2909,25 @@ protected:
 
                 result = Core::ERROR_UNAVAILABLE;
 
-                // For backwards compatibility both timeout and duration are accepted.
-                // If neither is set, scan for 12 seconds
-                const uint16_t period = (((duration.IsSet() == true) || (timeout.IsSet() == true))? std::max(timeout.Value(), duration.Value()) : 12);
+                const bool limited = ((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED));
 
-                // For backwards compatibility allow omitting the type of scan
+                // For backwards compatibility both timeout and duration parameters are accepted.
+                // If neither is set, scan for 12 seconds.
+                const uint16_t period = (duration.IsSet() == true? duration.Value() : (timeout.IsSet() == true? timeout.Value() : 12));
+
+                // For backwards compatibility allow omitting the type of scan.
+
                 if ((type.IsSet() == true) && (type == JBluetoothControl::scantype::CLASSIC)) {
-                    Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                    Exchange::IBluetooth::IClassic* adapter = QueryInterface<Exchange::IBluetooth::IClassic>();
                     if (adapter != nullptr) {
-                        result = adapter->Scan(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)), period);
+                        result = adapter->Scan(limited, period);
                         adapter->Release();
                     }
                 }
-                else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
-                    Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                else {
+                    Exchange::IBluetooth::ILowEnergy* adapter = QueryInterface<Exchange::IBluetooth::ILowEnergy>();
                     if (adapter != nullptr) {
-                        result = adapter->Scan(((mode.IsSet() == true) && (mode == JBluetoothControl::scanmode::LIMITED)), period);
+                        result = adapter->Scan(limited, period);
                         adapter->Release();
                     }
                 }
@@ -2908,16 +2938,15 @@ protected:
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
-                // For backwards compatibility allow omitting the type of scan
                 if ((type.IsSet() == true) && (type == JBluetoothControl::scantype::CLASSIC)) {
-                    Exchange::IBluetooth::IClassic* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::IClassic>();
+                    Exchange::IBluetooth::IClassic* adapter = QueryInterface<Exchange::IBluetooth::IClassic>();
                     if (adapter != nullptr) {
                         result = adapter->StopScanning();
                         adapter->Release();
                     }
                 }
-                else if (type == JBluetoothControl::scantype::LOW_ENERGY) {
-                    Exchange::IBluetooth::ILowEnergy* adapter = static_cast<Exchange::IBluetooth&>(_parent).QueryInterface<Exchange::IBluetooth::ILowEnergy>();
+                else {
+                    Exchange::IBluetooth::ILowEnergy* adapter = QueryInterface<Exchange::IBluetooth::ILowEnergy>();
                     if (adapter != nullptr) {
                         result = adapter->StopScanning();
                         adapter->Release();
@@ -2934,9 +2963,7 @@ protected:
                 if (address.IsSet() == true) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    // For backwards compatibility allow omitting the type of device
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
-                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    Exchange::IBluetooth::IDevice* device = Device(address, type);
                     if (device != nullptr) {
                         result = device->Connect();
                         device->Release();
@@ -2953,8 +2980,7 @@ protected:
                 if (address.IsSet() == true) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
-                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    Exchange::IBluetooth::IDevice* device = Device(address, type);
                     if (device != nullptr) {
                         result = device->Disconnect();
                         device->Release();
@@ -2973,11 +2999,14 @@ protected:
                 if (address.IsSet() == true) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
-                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    Exchange::IBluetooth::IDevice* device = Device(address, type);
                     if (device != nullptr) {
-                        result = device->Pair((capabilities.IsSet() == true? capabilities.Value() : Exchange::IBluetooth::IDevice::pairingcapabilities::NO_INPUT_NO_OUTPUT),
-                                    ((timeout.IsSet() == true) ? timeout.Value() : 10));
+                        const auto caps = ((capabilities.IsSet() == true)? capabilities.Value() :
+                                                Exchange::IBluetooth::IDevice::pairingcapabilities::NO_INPUT_NO_OUTPUT);
+                        const uint16_t period = ((timeout.IsSet() == true) ? timeout.Value() : 10);
+
+                        result = device->Pair(caps, period);
+
                         device->Release();
                     }
                 }
@@ -2992,8 +3021,7 @@ protected:
                 if (address.IsSet() == true) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
-                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    Exchange::IBluetooth::IDevice* device = Device(address, type);
                     if (device != nullptr) {
                         result = device->Unpair();
                         device->Release();
@@ -3010,8 +3038,7 @@ protected:
                 if (address.IsSet() == true) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(),
-                        (type.IsSet() == false? Exchange::IBluetooth::IDevice::type::ADDRESS_LE_PUBLIC : type.Value()));
+                    Exchange::IBluetooth::IDevice* device = Device(address, type);
                     if (device != nullptr) {
                         result = device->AbortPairing();
                         device->Release();
@@ -3029,11 +3056,12 @@ protected:
                 if ((address.IsSet() == true) && (type.IsSet() == true)) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address, type);
                     if (device != nullptr) {
                         Exchange::IBluetooth::IDevice::IClassic* classic = device->QueryInterface<Exchange::IBluetooth::IDevice::IClassic>();
+
                         if (classic != nullptr) {
-                            classic->PINCode(secret.Value());
+                            classic->PINCode(secret);
                             classic->Release();
                             result = Core::ERROR_NONE;
                         }
@@ -3053,9 +3081,9 @@ protected:
                 if ((address.IsSet() == true) && (type.IsSet() == true) && (secret.IsSet() == true)) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address, type);
                     if (device != nullptr) {
-                        device->Passkey(secret.Value());
+                        device->Passkey(secret);
                         device->Release();
                         result = Core::ERROR_NONE;
                     }
@@ -3072,7 +3100,7 @@ protected:
                 if ((address.IsSet() == true) && (type.IsSet() == true) && (iscorrect.IsSet() == true)) {
                     result = Core::ERROR_UNKNOWN_KEY;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address, type);
                     if (device != nullptr) {
                         device->ConfirmPasskey(iscorrect);
                         device->Release();
@@ -3088,7 +3116,7 @@ protected:
                 uint32_t result = Core::ERROR_BAD_REQUEST;
 
                 if ((address.IsSet() == true) && (type.IsSet() == true)) {
-                    result = (_parent.ForgetDevice(address.Value(), type));
+                    result = (_parent.ForgetDevice(address, type));
                 }
 
                 return (result);
@@ -3118,7 +3146,8 @@ protected:
                 if ((address.IsSet() == true) && (type.IsSet() == true)) {
                     result = Core::ERROR_UNAVAILABLE;
 
-                    Exchange::IBluetooth::IDevice* device = _parent.Device(address.Value(), type);
+                    Exchange::IBluetooth::IDevice* device = _parent.Device(address, type);
+
                     if (device != nullptr) {
                         address = device->RemoteId();
                         type = device->Type();
@@ -3139,16 +3168,16 @@ protected:
                             element = uuid.ToString();
                         }
 
-                        const Exchange::IBluetooth::IDevice::ILowEnergy* lowEnergy = device->QueryInterface<const Exchange::IBluetooth::IDevice::ILowEnergy>();
+                        const Exchange::IBluetooth::IDevice::ILowEnergy* lowEnergy = QueryInterface<Exchange::IBluetooth::IDevice::ILowEnergy>();
                         if (lowEnergy != nullptr) {
                             if (lowEnergy->Appearance() != 0) {
                                 appearance = lowEnergy->Appearance();
                             }
+
                             lowEnergy->Release();
                         }
 
                         device->Release();
-
                         result = Core::ERROR_NONE;
                     }
                 }
@@ -3312,6 +3341,8 @@ protected:
             }
 
         public:
+            // Convenience methods that facilitate calling the event notifyiers from the generated JSON-RPC glue code.
+
             void DiscoverableStarted(const bool lowEnergy, const bool limited, const bool connectable = false, const string& clientId = string{})
             {
                 Core::JSON::EnumType<JBluetoothControl::scantype> Type;
