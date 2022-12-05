@@ -182,7 +182,7 @@
     <ClCompile Include="DHCPClient.cpp" />
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="NetworkControl.cpp" />
-    <ClCompile Include="NetworkControlJsonRpc.cpp" />
+    <ClCompile Include="NetworkControlImplementation.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DHCPClient.h" />
