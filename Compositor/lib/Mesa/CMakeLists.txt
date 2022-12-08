@@ -17,7 +17,7 @@
 
 set(TARGET ${PLATFORM_COMPOSITOR})
 
-message(STATUS "Setting up ${TARGET} for RPI platfrom")
+message(STATUS "Setting up ${TARGET} for Mesa platfrom")
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -26,28 +26,38 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
 find_package(libdrm REQUIRED)
+
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
 
-add_library(${TARGET}
-    ModeSet.cpp
-    Mesa.cpp)
+set(COMPOSITOR_DISPLAY_IMPLEMENTATION "DRM" CACHE STRING "Defines which display implementation is used")
+set(COMPOSITOR_RENDERER_IMPLEMENTATION "GL" CACHE STRING "Defines which renderer implementation is used")
 
-target_link_libraries(${TARGET}
-    PRIVATE
-        ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        CompileSettingsDebug::CompileSettingsDebug
-        libdrm::libdrm
-        libgbm::libgbm
-        EGL::EGL
-        GLESv2::GLESv2)
+# TODO 
+#add_subdirectory(backend)
 
-set_target_properties(${TARGET} PROPERTIES
-        CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES
-        FRAMEWORK FALSE)
+add_subdirectory(renderer)
 
-install(TARGETS ${TARGET}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor)
+# add_library(${TARGET} SHARED
+#     ModeSet.cpp
+#     Mesa.cpp)
+
+# target_link_libraries(${TARGET}
+#     PRIVATE
+#         ${NAMESPACE}Core::${NAMESPACE}Core
+#         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+#         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+#         CompileSettingsDebug::CompileSettingsDebug
+#         ${COMPOSITOR_DISPLAY_IMPLEMENTATION}::${COMPOSITOR_DISPLAY_IMPLEMENTATION}
+#         libdrm::libdrm
+#         gbm::gbm
+#         EGL::EGL
+#         GLESv2::GLESv2)
+
+# set_target_properties(${TARGET} PROPERTIES
+#         CXX_STANDARD 11
+#         CXX_STANDARD_REQUIRED YES
+#         FRAMEWORK FALSE)
+
+# install(TARGETS ${TARGET}
+#         DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor)

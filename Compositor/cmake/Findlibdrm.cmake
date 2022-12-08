@@ -21,7 +21,7 @@ if(${PKG_CONFIG_FOUND})
 
     # Just check if the libdrm.pc exist, and create the PkgConfig::libdrm target
     # No version requirement (yet)
-    pkg_check_modules(LIBDRM QUIET IMPORTED_TARGET libdrm)
+    pkg_check_modules(libdrm QUIET IMPORTED_TARGET libdrm)
 
     include(FindPackageHandleStandardArgs)
 
@@ -29,30 +29,30 @@ if(${PKG_CONFIG_FOUND})
     find_package_handle_standard_args(
         libdrm
         REQUIRED_VARS
-            LIBDRM_INCLUDE_DIRS
-            LIBDRM_CFLAGS
-            LIBDRM_LDFLAGS
-            LIBDRM_LIBRARIES
+            libdrm_INCLUDE_DIRS
+            libdrm_CFLAGS
+            libdrm_LDFLAGS
+            libdrm_LIBRARIES
         VERSION_VAR
-            LIBDRM_VERSION
+            libdrm_VERSION
     )
 
-    find_library(LIBDRM_ACTUAL_LIBRARY NAMES drm
-        HINTS ${LIBDRM_LIBRARY_DIRS} )
+    find_library(libdrm_ACTUAL_LIBRARY NAMES drm
+        HINTS ${libdrm_LIBRARY_DIRS} )
 
-    if(LIBDRM_FOUND AND NOT TARGET libdrm::libdrm)
+    if(libdrm_FOUND AND NOT TARGET libdrm::libdrm)
         add_library(libdrm::libdrm UNKNOWN IMPORTED)
         set_target_properties(libdrm::libdrm PROPERTIES
-            IMPORTED_LOCATION "${LIBDRM_ACTUAL_LIBRARY}"
-            INTERFACE_LINK_LIBRARIES "${LIBDRM_LIBRARIES}"
-            INTERFACE_COMPILE_OPTIONS "${LIBDRM_CFLAGS}"
-            INTERFACE_INCLUDE_DIRECTORIES "${LIBDRM_INCLUDE_DIRS}"
+            IMPORTED_LOCATION "${libdrm_ACTUAL_LIBRARY}"
+            INTERFACE_LINK_LIBRARIES "${libdrm_LIBRARIES}"
+            INTERFACE_COMPILE_OPTIONS "${libdrm_CFLAGS}"
+            INTERFACE_INCLUDE_DIRECTORIES "${libdrm_INCLUDE_DIRS}"
             )
     else()
         message(STATUS "Some required variable(s) is (are) not found / set! Does libdrm.pc exist?")
     endif()
 
-    mark_as_advanced(LIBDRM_INCLUDE_DIRS LIBDRM_LIBRARIES)
+    mark_as_advanced(libdrm_INCLUDE_DIRS libdrm_LIBRARIES)
 
 else()
 

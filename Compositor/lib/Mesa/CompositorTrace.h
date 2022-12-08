@@ -172,15 +172,13 @@ public:
     ContextTracer(const std::string& text)
         : _text(text)
     {
-        std::cout << std::string(IndentDepth, IndentationChar) << (" >> Enter: "), << _text << std::endl));
-
+        std::cout << std::string(IndentDepth, IndentationChar) << (" >> Enter: ") << _text << std::endl << std::flush;
         ++IndentDepth;
     }
     ~ContextTracer()
     {
         --IndentDepth;
-        std::cout << std::string(IndentDepth, IndentationChar) << (" << Exit: "), << _text << std::endl));
-        std::fflush
+        std::cout << std::string(IndentDepth, IndentationChar) << (" << Exit: ") << _text << std::endl << std::flush;
     }
 
 private:

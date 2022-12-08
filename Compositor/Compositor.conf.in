@@ -71,6 +71,9 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
                     output_configs_list.append(output_config_dict)
             configuration.add("outputs", output_configs_list)
 
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
+    configuration.add("port", "HDMI-A")
+
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")
 rootconfig.add("locator", "@PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB@")

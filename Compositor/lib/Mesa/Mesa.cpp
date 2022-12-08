@@ -38,6 +38,8 @@ extern "C" {
 #include <gbm.h>
 #include <sys/socket.h>
 
+#include <IBackend.h>
+
 #ifdef __cplusplus
 }
 #endif
@@ -67,7 +69,7 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 namespace WPEFramework {
 namespace Plugin {
     constexpr char DmaFdConnector[] = "/tmp/Compositor/DmaFdConnector";
-    constexpr int InvalidFd = ModeSet::GBM::InvalidFd();
+    constexpr int InvalidFd = -1;
 
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
     public:
@@ -97,8 +99,7 @@ namespace Plugin {
             using RemoteSurfaceType = RemoteSurface;
 
         public:
-            Client()
-                = delete;
+            Client() = delete;
             Client(const Client&) = delete;
             Client& operator=(const Client&) = delete;
 
@@ -244,12 +245,11 @@ namespace Plugin {
             DmaFdServer(CompositorImplementation& parent)
                 : _parent(parent)
             {
-                CompositorTrace::ContextTracer trace(__FUNCTION__);
             }
 
             ~DmaFdServer()
             {
-                CompositorTrace::ContextTracer trace(__FUNCTION__);
+
                 Core::PrivilegedRequest::Close();
             }
 
@@ -291,7 +291,7 @@ namespace Plugin {
         private:
             void* Acquire(const string& /*className*/, const uint32_t interfaceId, uint32_t const /*version*/) override
             {
-                CompositorTrace::ContextTracer trace(__FUNCTION__);
+
                 // Use the className to check for multiple HDMI's.
                 return (_parent.QueryInterface(interfaceId));
             }
@@ -321,8 +321,8 @@ namespace Plugin {
 
         class Natives final {
         public:
-            static constexpr ModeSet::GBM::dev_t InvalidDisplay = nullptr;
-            static constexpr ModeSet::GBM::surf_t InvalidSurface = nullptr;
+            static constexpr gbm_device* InvalidDisplay = nullptr;
+            static constexpr gbm_surface* InvalidSurface = nullptr;
 
             Natives() = delete;
             Natives(const Natives&) = delete;
@@ -340,8 +340,8 @@ namespace Plugin {
                 Deinitialize();
             }
 
-            ModeSet::GBM::dev_t Display() const { return _modeSet.UnderlyingHandle(); }
-            ModeSet::GBM::surf_t Surface() const { return _gbmSurface; }
+            gbm_device* Display() const { return _modeSet.UnderlyingHandle(); }
+            gbm_surface* Surface() const { return _gbmSurface; }
 
             void Invalidate()
             {
@@ -382,14 +382,13 @@ namespace Plugin {
 
         private:
             ModeSet& _modeSet;
-            ModeSet::GBM::surf_t _gbmSurface;
+            gbm_surface* _gbmSurface;
         };
 
         void PlatformReady();
 
         int SurfaceDmaFd(const uint32_t id)
         {
-            CompositorTrace::ContextTracer trace(__FUNCTION__);
 
             class Find : public ClientContainer::IFind {
             public:
@@ -402,7 +401,6 @@ namespace Plugin {
 
                 bool Check(const string& /*key*/, const Core::ProxyType<Client>& client) const override
                 {
-                    CompositorTrace::ContextTracer trace(__FUNCTION__);
 
                     bool isValid(false);
 
@@ -436,7 +434,6 @@ namespace Plugin {
 
         bool Compose(const std::string& client)
         {
-            CompositorTrace::ContextTracer trace(__FUNCTION__);
 
             // One client at a time
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_clientLock);
@@ -446,7 +443,7 @@ namespace Plugin {
 
         bool FrameFlip()
         {
-            CompositorTrace::ContextTracer trace(__FUNCTION__);
+
             using milli_t = int64_t;
 
             auto RefreshRateFromResolution = [](Exchange::IComposition::ScreenResolution const resolution) -> milli_t {
@@ -569,6 +566,8 @@ namespace Plugin {
         Core::CriticalSection _clientLock;
         ClientContainer _clients;
 
+        Compositor::Interfaces::IBackend* _backend;
+
         string _port;
         ModeSet _platform;
         Natives _natives;
@@ -576,7 +575,6 @@ namespace Plugin {
 
     void CompositorImplementation::PlatformReady()
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         PluginHost::ISubSystem* subSystems(_service->SubSystems());
 
@@ -599,15 +597,14 @@ namespace Plugin {
         , _dmaFdServer(*this)
         , _clientLock()
         , _clients()
+        , _backend(nullptr)
         , _platform()
         , _natives(_platform)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
     }
 
     CompositorImplementation::~CompositorImplementation()
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         _dmaFdServer.Close();
 
@@ -723,8 +720,6 @@ namespace Plugin {
 
     uint32_t CompositorImplementation::Configure(PluginHost::IShell* service)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
-
         uint32_t result = Core::ERROR_NONE;
 
         _service = service;
@@ -744,6 +739,12 @@ namespace Plugin {
 
         if ((_externalAccess->IsListening() == true)) {
             _port = config._port.Value();
+            _backend = Compositor::Interfaces::IBackend::Instance(_port);
+
+            ASSERT(_backend != nullptr);
+
+            _backend->Initialize(service->ConfigLine());
+
             PlatformReady();
         } else {
             delete _externalAccess;
@@ -761,7 +762,6 @@ namespace Plugin {
 
     void CompositorImplementation::Register(Exchange::IComposition::INotification* notification)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         _adminLock.Lock();
 
@@ -779,7 +779,6 @@ namespace Plugin {
 
     void CompositorImplementation::Unregister(Exchange::IComposition::INotification* notification)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         _adminLock.Lock();
 
@@ -804,7 +803,6 @@ namespace Plugin {
 
     void CompositorImplementation::Attached(const string& name, IClient* client)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         _adminLock.Lock();
 
@@ -818,7 +816,6 @@ namespace Plugin {
 
     void CompositorImplementation::Detached(const string& name)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         _adminLock.Lock();
 
@@ -832,7 +829,6 @@ namespace Plugin {
 
     Core::instance_id CompositorImplementation::Native() const
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         EGLNativeDisplayType result(EGL_DEFAULT_DISPLAY);
 
@@ -848,14 +844,12 @@ namespace Plugin {
 
     string CompositorImplementation::Port() const
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         return (_port);
     }
 
     Exchange::IComposition::IClient* CompositorImplementation::CreateClient(const string& name, const uint32_t width, const uint32_t height)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         IClient* client = nullptr;
 
@@ -880,7 +874,6 @@ namespace Plugin {
 
     void CompositorImplementation::InvalidateClient(const string& name)
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         Core::ProxyType<Client> object = _clients.Find(name);
 
@@ -894,7 +887,6 @@ namespace Plugin {
 
     Exchange::IComposition::ScreenResolution CompositorImplementation::Resolution() const
     {
-        CompositorTrace::ContextTracer trace(__FUNCTION__);
 
         Exchange::IComposition::ScreenResolution resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
 

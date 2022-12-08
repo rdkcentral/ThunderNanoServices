@@ -20,10 +20,10 @@ cmake_minimum_required(VERSION 3.7)
 # Be compatible even if a newer CMake version is available
 cmake_policy(VERSION 3.7...3.12)
 
-if(GBM_FIND_QUIETLY)
-    set(_GBM_MODE QUIET)
-elseif(GBM_FIND_REQUIRED)
-    set(_GBM_MODE REQUIRED)
+if(gbm_FIND_QUIETLY)
+    set(_gbm_MODE QUIET)
+elseif(gbm_FIND_REQUIRED)
+    set(_gbm_MODE REQUIRED)
 endif()
 
 find_package(PkgConfig)
@@ -31,12 +31,12 @@ if(${PKG_CONFIG_FOUND})
 
     # Just check if the gbm.pc exist, and create the PkgConfig::gbm target
     # No version requirement (yet)
-    pkg_check_modules(PC_GBM ${_GBM_MODE} IMPORTED_TARGET gbm)
-    find_library(GBM_ACTUAL_LIBRARY NAMES gbm
-        HINTS ${PC_GBM_LIBRARY_DIRS})
+    pkg_check_modules(gbm ${_gbm_MODE} IMPORTED_TARGET gbm)
+    find_library(gbm_ACTUAL_LIBRARY NAMES gbm
+        HINTS ${gbm_LIBRARY_DIRS})
 
-    find_path(GBM_INCLUDE_DIR NAMES gbm.h
-        HINTS ${PC_GBM_INCLUDEDIR} ${PC_GBM_INCLUDE_DIRS})
+    find_path(gbm_INCLUDE_DIR NAMES gbm.h
+        HINTS ${gbm_INCLUDEDIR} ${gbm_INCLUDE_DIRS})
 else()
     message(FATAL_ERROR "Unable to locate PkgConfig")
 endif()
@@ -44,22 +44,22 @@ endif()
 include(FindPackageHandleStandardArgs)
 # Sets the FOUND variable to TRUE if all required variables are present and set
 find_package_handle_standard_args(
-    GBM
+    gbm
     REQUIRED_VARS
-        GBM_ACTUAL_LIBRARY
-        PC_GBM_LIBRARIES
-        GBM_INCLUDE_DIR
+        gbm_ACTUAL_LIBRARY
+        gbm_LIBRARIES
+        gbm_INCLUDE_DIR
     VERSION_VAR
-        GBM_VERSION
+        gbm_VERSION
 )
-mark_as_advanced(GBM_INCLUDE_DIR PC_GBM_LIBRARIES GBM_ACTUAL_LIBRARY)
+mark_as_advanced(gbm_INCLUDE_DIR gbm_LIBRARIES gbm_ACTUAL_LIBRARY)
 
-if(GBM_FOUND AND NOT TARGET libgbm::libgbm)
-    add_library(libgbm::libgbm UNKNOWN IMPORTED)
-    set_target_properties(libgbm::libgbm PROPERTIES
-        IMPORTED_LOCATION "${GBM_ACTUAL_LIBRARY}"
-        INTERFACE_LINK_LIBRARIES "${PC_GBM_LIBRARIES}"
-        INTERFACE_COMPILE_OPTIONS "${PC_GBM_CFLAGS}"
-        INTERFACE_INCLUDE_DIRECTORIES "${GBM_INCLUDE_DIR}"
+if(gbm_FOUND AND NOT TARGET gbm::gbm)
+    add_library(gbm::gbm UNKNOWN IMPORTED)
+    set_target_properties(gbm::gbm PROPERTIES
+        IMPORTED_LOCATION "${gbm_ACTUAL_LIBRARY}"
+        INTERFACE_LINK_LIBRARIES "${gbm_LIBRARIES}"
+        INTERFACE_COMPILE_OPTIONS "${gbm_CFLAGS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${gbm_INCLUDE_DIR}"
     )
 endif()

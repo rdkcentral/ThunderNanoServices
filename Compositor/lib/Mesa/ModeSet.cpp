@@ -189,7 +189,9 @@ static bool CreateBuffer(WPEFramework::ModeSet::DRM::fd_t const fd, WPEFramework
     bool created = false;
     buffer = WPEFramework::ModeSet::GBM::InvalidBuf();
     modeIndex = 0;
+    
     id = WPEFramework::ModeSet::DRM::InvalidFb();
+    
     TRACE_GLOBAL(Trace::Information, (_T("%s:%d %s BRAM DEBUG gbm_create_device"), __FILE__, __LINE__, __FUNCTION__));
     device = gbm_create_device(fd);
 
