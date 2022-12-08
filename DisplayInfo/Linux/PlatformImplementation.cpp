@@ -254,8 +254,13 @@ namespace Plugin {
        using HDRIteratorImpl = RPC::IteratorType<Exchange::IHDRProperties::IHDRIterator>;
 
     public:
-        HDRProperties(const std::string& hdrLevelFilepath, const displayinfo_edid_hdr_licensor_map_t& hdrLicensors, displayinfo_edid_hdr_type_map_t& hdrProfiles)
+        HDRProperties(const std::string& hdrLevelFilepath, const displayinfo_edid_hdr_licensor_map_t& hdrLicensors, const displayinfo_edid_hdr_type_map_t& hdrProfiles)
             : _hdrLevelFilepath{hdrLevelFilepath}, _hdrLicensors{hdrLicensors}, _hdrProfiles{hdrProfiles}
+        {
+        }
+
+        HDRProperties(const std::string& hdrLevelFilepath, const displayinfo_edid_hdr_licensor_map_t& hdrLicensors, const displayinfo_edid_hdr_multitype_map_t& hdrProfiles)
+            : _hdrLevelFilepath{hdrLevelFilepath}, _hdrLicensors{hdrLicensors}, _hdrProfiles{hdrProfiles.legacy}
         {
         }
 
@@ -326,6 +331,8 @@ namespace Plugin {
                     capabilities.push_back(HDR_DOLBYVISION);
                 }
             }
+
+// TODO: check multitype
 
             type = Core::Service<HDRIteratorImpl>::Create<IHDRIterator>(capabilities);
 
@@ -657,14 +664,13 @@ namespace Plugin {
             displayinfo_edid_hdr_licensor_map_t licensors{static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)};
             displayinfo_edid_hdr_type_map_t profiles{static_cast<displayinfo_edid_hdr_type_map_t>(DISPLAYINFO_HDR_OFF)};
 
-
             if (_graphics != nullptr) {
                 ExtendedDisplayIdentification const & edid = _display->EDID();
 
                 if (edid.IsValid() != false) {
                     auto it = edid.CEASegment();
 
-                    // Mutliple CEA segments possible
+                    // Multiple CEA segments possible
 
                     while (it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() == static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)) {
                         it = edid.CEASegment(it);
@@ -692,7 +698,38 @@ namespace Plugin {
                 }
             }
 
-            _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value(), licensors, profiles);
+
+            displayinfo_edid_hdr_multitype_map_t data;
+
+            data.legacy = profiles;
+#ifdef _0
+            data.legacy = (profiles | DISPLAYINFO_HDR_MULTITYPE | DISPLAYINFO_HDR_COMMONTYPE | DISPLAYINFO_HR_PSEUDOTYPE | DISPLAYINFO_HDR_VESATYPE);
+#endif
+            data.version |= static_cast<uint8_t>(0x1);
+
+            using common_t = std::common_type<displayinfo_hdr_t, displayinfo_hdr_common_t, displayinfo_hdr_pseudo_t, displayinfo_hdr_vesa_t>::type;
+
+            data.count = sizeof(common_t);
+            data.common = new uint8_t[data.count];
+            data.pseudo = new uint8_t[data.count];
+            data.vesa = new uint8_t[data.count];
+
+            common_t type = DISPLAYINFO_HDR_COMMON_OFF;
+            /* void * */ memcpy(data.common, &type, data.count);
+
+            type = DISPLAYINFO_HDR_PSEUDO_OFF;
+            /* void * */ memcpy(data.pseudo, &type, data.count);
+
+            type = DISPLAYINFO_HDR_VESA_OFF;
+            /* void * */ memcpy(data.vesa, &type, data.count);
+
+            if (data.common != nullptr && data.pseudo != nullptr && data.vesa != nullptr) {
+                _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value(), licensors, data);
+            }
+            else {
+                // Legacy
+                _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value(), licensors, profiles);
+            }
 
             return Core::ERROR_NONE;
         }
