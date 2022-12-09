@@ -27,44 +27,52 @@ using namespace WPEFramework;
 
 namespace Compositor {
 namespace Interfaces {
-
-    template <const uin32_t TYPE>
-    class ITexture : public IBuffer<TYPE> {
-    };
-
     struct IRenderer {
-        using Box = Exchange::IComposition::Rectangle;
-        using Matrix = float matrix[9];
-        using Color = float color[4];
-
-        enum class Type : uint8_t {
-            Pixman = 0x01, // Generic (Software)
-            Gles2 = 0x02,  // Hardware
-            Vulkan = 0x03, // Hardware
-        };
+        using Box = WPEFramework::Exchange::IComposition::Rectangle;
+        using Matrix = float[9];
+        using Color = float[4];
 
         virtual ~IRenderer() = default;
 
-        static IRenderer* Create(const Exchange::IComposition* compositor);
+        /**
+         * @brief A factory for renderer, callee needs to call Free() when done. 
+         *
+         * @param identifier ID for this Renderer, allows for reuse.
+         * @return Core::ProxyType<IAllocator>
+         */
+        static Core::ProxyType<IRenderer> Instance(WPEFramework::Core::instance_id identifier);
 
         virtual uint32_t Initialize(const string& config) = 0;
         virtual uint32_t Deinitialize() = 0;
 
-        virtual bool Bind(Interfaces::IBuffer* buffer) = 0;
+        /**
+         * @brief Binds a buffer to the renderer, all render related actions will be done using this buffer.
+         *
+         * @param buffer A preallocated buffer to be used or ```nullptr``` to clear. 
+         * @return uint32_t Core::ERROR_NONE upon success, error otherwise. 
+         */
+        virtual uint32_t Bind(Interfaces::IBuffer* buffer) = 0;
 
         /**
-         * @brief
+         * @brief Start a render pass with the provided viewport.
          *
-         * @param width
-         * @param height
-         * @return true
-         * @return false
+         * This should be called after a binding a buffer, callee must call
+         * End() when they are done rendering.
+         *
+         * @param width Viewport width in pixels
+         * @param height Viewport height in pixels
+         * @return false on failure, in which case compositors shouldn't try rendering.
          */
         virtual bool Begin(uint32_t width, uint32_t height) = 0;
+
+        /**
+         * @brief Ends a render pass.
+         *
+         */
         virtual void End() = 0;
 
         /**
-         * @brief Renders a solid colour.
+         * @brief Clear the viewport with the provided color
          *
          * @param color
          */
@@ -80,35 +88,48 @@ namespace Interfaces {
         virtual void Scissor(const Box* box) = 0;
 
         /**
-         * @brief Renders a texture on a surface.
+         * @brief   Renders a texture on the bound buffer at the given region with 
+         *          transforming and transparency info.
          *
          * @param texture           Texture object to render
          * @param region            The coordinates and size where to render.
          * @param transformation    A transformation matrix
          * @param alpha             The opacity of the render
          *
+         *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
          */
-        virtual uint32_t RenderTexture(ITexture* texture, const Box region, const Matrix transform, float alpha) = 0;
+        virtual uint32_t Render(IBuffer* texture, const Box region, const Matrix transform, float alpha) = 0;
 
         /**
-         * @brief Renderer a
-         *
+         * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.
+         *          
          * @param region            The coordinates and size where to render.
          * @param transformation    A transformation matrix
          *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
+         * 
+         *  * A geometric shape with four angles and four straight sides; 
+         *    a four-sided polygon.
+         *
          */
-        virtual uint32_t RenderQuad(const Box region, const Matrix transformation) = 0;
-
-        virtual int Handle() const = 0;
+        virtual uint32_t Quadrangle(const Color color, const Matrix transformation) = 0;
 
         /**
-         * @brief Get a list of supported buffer types
-         *
-         * @return uint32_t
+         * @brief  Returns the buffer currently bound to the renderer
+         *          
+         * @return IBuffer* or nullptr if no buffer is bound.
+         * 
+         */  
+        virtual IBuffer* Bound() = 0;
+
+        /** 
+         * TODO: We probably want this so we can do screen dumps
+         * 
+         * @brief Reads out of pixels of the currently bound buffer into data. 
+         *        `stride` is in bytes.
          */
-        // virtual std::list<uint32_t> BufferCapabilities() const = 0;
+        // virtual uint32_t DumpPixels(uint32_t sourceX, uint32_t sourceY, uint32_t destinationX, uint32_t destinationY, IBuffer* data) = 0;
 
         /**
          * @brief Returns a list of pixel @PixelFormat valid for rendering.
@@ -123,17 +144,6 @@ namespace Interfaces {
          * @return const std::vector<PixelFormat>& the list of @Formats
          */
         virtual const std::vector<PixelFormat>& TextureFormats() const = 0;
-
-        /**
-         * @brief
-         *
-         * @param buffer
-         * @return ITexture*
-         */
-        // static ITexture* ToTexture(Interfaces::IBuffer* buffer)
-        // {
-        //     return dynamic_cast<ITexture*>(buffer);
-        // }
     }; // struct IRenderer
 }
 } // namespace Compositor

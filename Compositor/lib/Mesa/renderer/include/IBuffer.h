@@ -29,57 +29,23 @@ using namespace WPEFramework;
 namespace Compositor {
 namespace Interfaces {
     struct EXTERNAL IBuffer {
-        enum class Usage : uint8_t {
-            USE_FOR_RENDERING = 0x01,
-            USE_FOR_DISPLAYING = 0x02,
-            USELESS = 0xFF
-        };
-
-        enum class Type : uint8_t {
-            SharedMemory = 0x01, // Generic (Software)
-            DirectRenderingManager = 0x02, // Linux (Hardware)
-            GenericBufferManagement = 0x03, // Mesa (Hardware)
-        };
-
-        struct EXTERNAL IAllocator {
-            virtual ~IAllocator() = default;
-
-            /**
-             * @brief A factory for buffers
-             *
-             * @param flags the @usage for the
-             * @return IAllocator*
-             */
-            static Core::ProxyType<IAllocator> Instance(int drmFd);
-
-            /**
-             * @brief  Allocate a new buffer.
-             *         When the caller is done with the buffer, they must release it.
-             *
-             *
-             * @param width  Width in pixels
-             * @param height Height in pixels
-             * @param format Pixel layout for this buffer
-             *
-             * @return Core::ProxyType<IBuffer*> The allocated buffer
-             */
-            virtual Core::ProxyType<IBuffer> Create(uint32_t width, uint32_t height, const PixelFormat& format) = 0;
-        };
-
-        /**
-         * @brief Buffer capabilities.
-         *
-         * These bits indicate the features supported by a struct wlr_buffer. There is
-         * one bit per function in struct wlr_buffer_impl.
-         */
-        // enum Capability : uint32_t {
-        //     DATA_PTR = 1 << 0,
-        //     DMABUF = 1 << 1,
-        //     SHM = 1 << 2,
-        // };
-
         virtual ~IBuffer() = default;
-    }; // struct IBuffer
 
+        virtual uint32_t Lock(uint32_t timeout) = 0;
+        virtual uint32_t Unlock(uint32_t timeout) = 0;
+
+        virtual WPEFramework::Core::instance_id Accessor() = 0; // Access to the buffer
+
+        virtual int Handle() = 0;
+
+        virtual uint32_t Width() = 0; // Width of the allocated buffer in pixels
+        virtual uint32_t Height() = 0; // Height of the allocated buffer in pixels
+        virtual uint32_t Format() = 0; // Layout of a pixel according the fourcc format
+        virtual uint64_t Modifier() = 0; // Pixel arrangement in the buffer, used to optimize for hardware
+        virtual uint8_t Planes() = 0; // The amount of graphic planes available in the buffer.
+
+        virtual uint32_t Stride(const uint8_t PlaneId) = 0; // Bytes per row for a plane [(bit-per-pixel/8) * width]
+        virtual uint32_t Offset(const uint8_t PlaneId) = 0; // Offset of the plane from where the pixel data starts in the buffer.
+    }; // struct IBuffer
 } // namespace Interfaces
 } // namespace Compositor
