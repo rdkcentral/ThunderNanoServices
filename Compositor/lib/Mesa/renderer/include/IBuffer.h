@@ -31,8 +31,8 @@ namespace Interfaces {
     struct EXTERNAL IBuffer {
         virtual ~IBuffer() = default;
 
-        virtual uint32_t Lock(uint32_t timeout) = 0;
-        virtual uint32_t Unlock(uint32_t timeout) = 0;
+        virtual uint32_t Lock(uint32_t timeout) const = 0;
+        virtual uint32_t Unlock(uint32_t timeout) const = 0;
 
         virtual WPEFramework::Core::instance_id Accessor() = 0; // Access to the buffer
 
