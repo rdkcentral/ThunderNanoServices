@@ -24,15 +24,9 @@
 #include <PixelFormat.h>
 
 #include <drm/drm_fourcc.h>
-#include <gbm.h>
+#include <sys/mman.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-
-#if HAVE_GBM_MODIFIERS
-#ifndef GBM_MAX_PLANES
-#define GBM_MAX_PLANES 4
-#endif
-#endif
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
@@ -41,64 +35,59 @@ namespace Compositor {
 constexpr int InvalidFileDescriptor = -1;
 
 namespace Renderer {
-    class GBM : public Interfaces::IBuffer {
-#if HAVE_GBM_MODIFIERS
-        static constexpr uint8_t DmaBufferMaxPlanes = GBM_MAX_PLANES;
-#else
-        static constexpr uint8_t DmaBufferMaxPlanes = 1;
-#endif
-
+    class DRMDumb : public Interfaces::IBuffer {
     public:
-        GBM() = delete;
-        GBM(const GBM&) = delete;
-        GBM& operator=(const GBM&) = delete;
+        DRMDumb() = delete;
+        DRMDumb(const DRMDumb&) = delete;
+        DRMDumb& operator=(const DRMDumb&) = delete;
 
-        GBM(gbm_device* device, uint32_t width, uint32_t height, const PixelFormat& format, uint32_t usage)
-            : _bo(nullptr)
-            , _adminLock()
-            , _fds()
+        DRMDumb(const int fdPrimary, uint32_t width, uint32_t height, const PixelFormat& format)
+            : _adminLock()
+            , _fd(InvalidFileDescriptor)
+            , _ptr(nullptr)
+            , _size(0)
+            , _pitch(0)
+            , _handle(0)
+            , _offset(0)
+            , _width(width)
+            , _height(height)
+            , _format(format.Type())
         {
-            _bo = gbm_bo_create_with_modifiers(device, width, height,
-                format.Type(), format.Modifiers().data(), format.Modifiers().size());
+            ASSERT(fdPrimary != InvalidFileDescriptor);
 
-            if (_bo == nullptr) {
-                _bo = gbm_bo_create(device, width, height, format.Type(), usage);
+            const unsigned int bpp(32); // TODO: derive from _format...
+
+            if (CreateDumbBuffer(fdPrimary, _width, _height, bpp, _handle, _pitch, _size) == 0) {
+
+                // TODO: use Core stuff and error handling here...
+
+                MapDumbBuffer(fdPrimary, _handle, _offset);
+
+                _ptr = mmap(nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED, fdPrimary, _offset);
+                memset(_ptr, 0, _size);
+
+                drmPrimeHandleToFD(fdPrimary, _handle, DRM_CLOEXEC, &_fd);
             }
 
-            ASSERT(_bo != nullptr);
+            ASSERT(_fd > 0);
+            ASSERT(_ptr != nullptr);
 
-            if (_bo != nullptr) {
-                TRACE(Trace::Buffer, ("GBM buffer %p constructed with %d plane%s", this, Planes(), (Planes() == 1) ? "" : "s"));
-
-                _fds.clear();
-
-                if (Export() == true) {
-                    gbm_bo_destroy(_bo);
-                    _bo = nullptr;
-                    TRACE(WPEFramework::Trace::Error, (_T("Failed to export buffer object.")));
-                }
-            } else {
-                TRACE(WPEFramework::Trace::Error, (_T("Failed to allocate buffer object.")));
-            }
+            TRACE(Trace::Buffer, ("DRMDumb buffer %p constructed fd=%d data=%p [%dbytes]", this, _fd, _ptr, _size));
         }
 
-        virtual ~GBM()
+        virtual ~DRMDumb()
         {
-            for (auto& fd : _fds) {
-                if (fd > 0) {
-                    close(fd);
-                    fd = InvalidFileDescriptor;
-                }
+            if (_ptr != nullptr) {
+                munmap(_ptr, _size);
+                _ptr = nullptr;
             }
 
-            _fds.clear();
+            DestroyDumbBuffer(_fd, _handle);
 
-            if (_bo != nullptr) {
-                gbm_bo_destroy(_bo);
-                _bo = nullptr;
-            }
+            _fd = InvalidFileDescriptor;
+            _handle = 0;
 
-            TRACE(Trace::Buffer, ("GBM buffer %p destructed", this));
+            TRACE(Trace::Buffer, ("DRMDumb buffer %p destructed", this));
         }
 
         uint32_t Lock(uint32_t timeout) const override
@@ -115,63 +104,47 @@ namespace Renderer {
 
         bool IsValid() const
         {
-            return (_bo != nullptr);
+            return (_fd != InvalidFileDescriptor);
         }
 
         uint32_t Width() const override
         {
             ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_width(_bo) : 0;
+            return IsValid() ? _width : 0;
         }
 
         uint32_t Height() const override
         {
             ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_height(_bo) : 0;
+            return IsValid() ? _height : 0;
         }
 
         uint32_t Format() const override
         {
             ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_format(_bo) : DRM_FORMAT_INVALID;
+            return IsValid() ? _format : DRM_FORMAT_INVALID;
         }
 
         uint64_t Modifier() const override
         {
             ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_modifier(_bo) : DRM_FORMAT_MOD_INVALID;
+            return IsValid() ? DRM_FORMAT_MOD_LINEAR : DRM_FORMAT_MOD_INVALID;
         }
 
         uint8_t Planes() const override
         {
-#ifdef HAVE_GBM_MODIFIERS
-            ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_plane_count(_bo) : 0;
-#else
             return 1;
-#endif
         }
 
-        uint32_t Offset(const uint8_t planeId = 0) const override
+        uint32_t Offset(const uint8_t) const override
         {
-#ifdef HAVE_GBM_MODIFIERS
-            ASSERT(IsValid() == true);
-            ASSERT(planeId < Planes());
-            return ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) ? gbm_bo_get_offset(_bo, planeId) : 0;
-#else
-            return 0;
-#endif
+            return _offset;
         }
 
-        uint32_t Stride(const uint8_t planeId = 0) const override
+        uint32_t Stride(const uint8_t) const override
         {
             ASSERT(IsValid() == true);
-#ifdef HAVE_GBM_MODIFIERS
-            ASSERT(planeId < Planes());
-            return ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) ? gbm_bo_get_stride_for_plane(_bo, planeId) : 0;
-#else
-            return IsValid() ? gbm_bo_get_stride(_bo) : 0;
-#endif
+            return IsValid() ? _pitch : 0;
         }
 
         int Handle()
@@ -179,54 +152,87 @@ namespace Renderer {
             return InvalidFileDescriptor;
         }
 
-        WPEFramework::Core::instance_id Accessor(const uint8_t planeId)
+        WPEFramework::Core::instance_id Accessor(const uint8_t)
         {
-            ASSERT(planeId < Planes());
-            return (planeId < Planes()) ? _fds[planeId] : InvalidFileDescriptor;
+            return reinterpret_cast<WPEFramework::Core::instance_id>(_ptr);
         }
 
     private:
-        bool Export()
+        int CreateDumbBuffer(const int fd,
+            const uint32_t width, const uint32_t height, const uint32_t bpp,
+            uint32_t& handle, uint32_t& pitch, uint64_t& size)
         {
-            bool result(false);
+#ifndef LIBDRM_DUMB_BUFFER_HELPERS
+            int result(0);
 
-            ASSERT((IsValid() == true) && (Planes() > 0));
+            struct drm_mode_create_dumb create;
+            memset(&create, 0, sizeof(create));
 
-            int32_t handle = InvalidFileDescriptor;
+            create.width = width;
+            create.height = height;
+            create.bpp = bpp;
 
-            const uint8_t maxPlanes(Planes());
+            if (result = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create) != 0) {
+                ASSERT(width == create.width);
+                ASSERT(height == create.height);
 
-            for (int i = 0; i < maxPlanes; i++) {
-#if HAS_GBM_BO_GET_FD_FOR_PLANE
-                _fds.push_back(gbm_bo_get_fd_for_plane(_bo, i));
-#else
-                // GBM is lacking a function to get a FD for a given plane. Instead,
-                // check all planes have the same handle. We can't use
-                // drmPrimeHandleToFD because that messes up handle ref'counting in
-                // the user-space driver.
-                union gbm_bo_handle plane_handle = gbm_bo_get_handle_for_plane(_bo, i);
-
-                ASSERT(plane_handle.s32 > 0);
-
-                if (i == 0) {
-                    handle = plane_handle.s32;
-                }
-
-                ASSERT(plane_handle.s32 == handle); // all planes should have the same GEM handle
-
-                _fds.push_back(gbm_bo_get_fd(_bo));
-#endif
-                TRACE(Trace::Buffer, ("GBM plane %d exported to fd=%d", i, _fds.at(i)));
+                pitch = create.pitch;
+                handle = create.handle;
+                size = create.size;
             }
 
             return result;
+#else
+            return drmModeCreateDumbBuffer(fd, width, height, bpp, 0, &handle, &pitch, &size);
+#endif
         }
 
-    private:
+        int MapDumbBuffer(const int fd, const uint32_t handle, uint64_t& offset)
+        {
+#ifndef LIBDRM_DUMB_BUFFER_HELPERS
+            int result(0);
+
+            struct drm_mode_map_dumb map = { 0 };
+            memset(&map, 0, sizeof(map));
+
+            map.handle = handle;
+
+            if (result = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &map) != 0) {
+                offset = map.offset;
+            }
+            return result;
+#else
+            return drmModeMapDumbBuffer(fd, handle, offset);
+#endif
+        }
+
+        int DestroyDumbBuffer(const int fd, const uint32_t handle)
+        {
+#ifndef LIBDRM_DUMB_BUFFER_HELPERS
+            struct drm_mode_destroy_dumb destroy;
+            memset(&destroy, 0, sizeof(destroy));
+
+            destroy.handle = handle;
+
+            return drmIoctl(fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
+#else
+            return drmModeDestroyDumbBuffer(fd, handle);
+#endif
+        }
+
         mutable WPEFramework::Core::CriticalSection _adminLock;
-        gbm_bo* _bo;
-        std::vector<int> _fds;
-    }; // class GBM
+
+        int _fd;
+        void* _ptr;
+        uint64_t _size;
+        uint32_t _pitch;
+        uint32_t _handle;
+        uint64_t _offset;
+
+        const uint32_t _width;
+        const uint32_t _height;
+        const uint32_t _format;
+    }; // class DRMDumb
 
     class GbmAllocator : public Interfaces::IAllocator {
     public:
@@ -235,47 +241,50 @@ namespace Renderer {
         GbmAllocator& operator=(const GbmAllocator&) = delete;
 
         GbmAllocator(const int drmFd)
-            : _gbmDevice(nullptr)
+            : _fdPrimary(-1)
         {
             ASSERT(drmFd != InvalidFileDescriptor);
+            ASSERT(drmGetNodeTypeFromFd(drmFd) == DRM_NODE_PRIMARY);
 
-            _gbmDevice = gbm_create_device(drmFd);
+            uint64_t dumbAvailable(0);
 
-            ASSERT(_gbmDevice != nullptr);
+            drmGetCap(drmFd, DRM_CAP_DUMB_BUFFER, &dumbAvailable);
 
-            TRACE(Trace::Buffer, ("GBM allocator %p constructed gbmDevice=%p fd=%d", this, _gbmDevice, drmFd));
+            ASSERT(dumbAvailable == 0);
+
+            _fdPrimary = drmFd;
+
+            TRACE(Trace::Buffer, ("DRMDumb allocator %p constructed _fdPrimary=%d", this, _fdPrimary));
         }
 
         ~GbmAllocator() override
         {
-            if (_gbmDevice != nullptr) {
-                gbm_device_destroy(_gbmDevice);
+            if (_fdPrimary != InvalidFileDescriptor) {
+                close(_fdPrimary);
+                _fdPrimary = InvalidFileDescriptor;
             }
 
-            TRACE(Trace::Buffer, ("GBM allocator %p destructed", this));
+            TRACE(Trace::Buffer, ("DRMDumb allocator %p destructed", this));
         }
 
         WPEFramework::Core::ProxyType<Interfaces::IBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) override
         {
-
             WPEFramework::Core::ProxyType<Interfaces::IBuffer> result;
 
-            uint32_t usage = GBM_BO_USE_RENDERING;
-
-            result = WPEFramework::Core::ProxyType<GBM>::Create(_gbmDevice, width, height, format, usage);
+            result = WPEFramework::Core::ProxyType<DRMDumb>::Create(_fdPrimary, width, height, format);
 
             return result;
         }
 
     private:
-        gbm_device* _gbmDevice;
+        int _fdPrimary;
     };
 
     /*
      * Re-open the DRM node to avoid GEM handle ref'counting issues.
      * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
-     *
      */
+
     static int ReopenNode(int fd, bool openRenderNode)
     {
         if (drmIsMaster(fd)) {
@@ -301,8 +310,7 @@ namespace Renderer {
         }
 
         if (name == nullptr) {
-            // Either the DRM device has no render node, either the caller wants
-            // a primary node
+            // Either the DRM device has no render node, either the caller wants a primary node
             name = drmGetDeviceNameFromFd2(fd);
 
             if (name == nullptr) {
@@ -331,6 +339,7 @@ namespace Renderer {
         // manipulate buffers.
         if (drmGetNodeTypeFromFd(newFd) == DRM_NODE_PRIMARY) {
             drm_magic_t magic;
+
             int ret(0);
 
             if (ret = drmGetMagic(newFd, &magic) < 0) {
@@ -348,16 +357,16 @@ namespace Renderer {
 
         return newFd;
     }
-
 } // namespace Renderer
 
-WPEFramework::Core::ProxyType<Interfaces::IAllocator> Interfaces::IAllocator::Instance(WPEFramework::Core::instance_id identifier)
+WPEFramework::Core::ProxyType<Interfaces::IAllocator>
+Interfaces::IAllocator::Instance(WPEFramework::Core::instance_id identifier)
 {
     ASSERT(drmAvailable() > 0);
 
     static WPEFramework::Core::ProxyMapType<WPEFramework::Core::instance_id, Interfaces::IAllocator> gbmAllocators;
 
-    int fd = Renderer::ReopenNode(static_cast<int>(identifier), true);
+    int fd = Renderer::ReopenNode(static_cast<int>(identifier), false);
 
     ASSERT(fd > 0);
 

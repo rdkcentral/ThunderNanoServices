@@ -25,7 +25,7 @@ find_package(libdrm REQUIRED)
 #define HAVE_GBM_MODIFIERS 1
 #define HAS_GBM_BO_GET_FD_FOR_PLANE 1
 
-add_library(${COMPOSITOR_BUFFER_IMPLEMENTATION} OBJECT GBM.cpp)
+add_library(${COMPOSITOR_BUFFER_IMPLEMENTATION} OBJECT DRMDumb.cpp)
 
 target_link_libraries(${COMPOSITOR_BUFFER_IMPLEMENTATION}
     PUBLIC
@@ -34,12 +34,6 @@ target_link_libraries(${COMPOSITOR_BUFFER_IMPLEMENTATION}
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         gbm::gbm
         libdrm::libdrm
-)
-
-target_compile_definitions(${COMPOSITOR_BUFFER_IMPLEMENTATION}
-    PRIVATE
-        HAVE_GBM_MODIFIERS=1
-        HAS_GBM_BO_GET_FD_FOR_PLANE=1
 )
 
 set_target_properties(${COMPOSITOR_BUFFER_IMPLEMENTATION} PROPERTIES
