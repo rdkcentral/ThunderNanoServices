@@ -21,7 +21,8 @@
 
 #include <core/core.h>
 
-#include <IBuffer.h>
+#include "PixelFormat.h"
+#include "IBuffer.h"
 
 namespace Compositor {
 namespace Interfaces {
@@ -34,7 +35,7 @@ namespace Interfaces {
          * @param identifier ID for this allocator, allows for reuse. 
          * @return Core::ProxyType<IAllocator>
          */
-        static Core::ProxyType<IAllocator> Instance(WPEFramework::Core::instance_id identifier);
+        static WPEFramework::Core::ProxyType<IAllocator> Instance(WPEFramework::Core::instance_id identifier);
 
         /**
          * @brief  Allocate a new buffer.
@@ -47,7 +48,7 @@ namespace Interfaces {
          *
          * @return Core::ProxyType<IBuffer> The allocated buffer
          */
-        virtual Core::ProxyType<IBuffer> Create(uint32_t width, uint32_t height, const PixelFormat& format) = 0;
+        virtual WPEFramework::Core::ProxyType<IBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) = 0;
     }; // struct EXTERNAL IAllocator
 } // namespace Interfaces
 } // namespace Compositor

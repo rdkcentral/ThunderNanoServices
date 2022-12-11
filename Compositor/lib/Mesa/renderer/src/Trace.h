@@ -19,7 +19,11 @@
 
 #pragma once
 
-#include "Module.h"
+#ifndef MODULE_NAME
+#define MODULE_NAME CompositorRenderer
+#endif
+
+#include <tracing/tracing.h>
 
 namespace Compositor {
 namespace Trace {
@@ -54,38 +58,5 @@ public:
 private:
     std::string _text;
 }; // class Renderer
-
-class Buffer {
-public:
-    ~Buffer() = default;
-    Buffer() = delete;
-    Buffer(const Buffer&) = delete;
-    Buffer& operator=(const Buffer&) = delete;
-    Buffer(const TCHAR formatter[], ...)
-    {
-        va_list ap;
-        va_start(ap, formatter);
-        WPEFramework::Trace::Format(_text, formatter, ap);
-        va_end(ap);
-    }
-    explicit Buffer(const string& text)
-        : _text(WPEFramework::Core::ToString(text))
-    {
-    }
-
-public:
-    const char* Data() const
-    {
-        return (_text.c_str());
-    }
-    uint16_t Length() const
-    {
-        return (static_cast<uint16_t>(_text.length()));
-    }
-
-private:
-    std::string _text;
-}; // class Buffer
-
 } // namespace Trace
 } // namespace Compositor
