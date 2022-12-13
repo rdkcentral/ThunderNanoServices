@@ -253,9 +253,9 @@ namespace Plugin {
                 Core::PrivilegedRequest::Close();
             }
 
-            int Service(const uint32_t id) override
+            uint8_t Service(const uint32_t id, Core::PrivilegedRequest::Container& container) override
             {
-                return _parent.SurfaceDmaFd(id);
+                return _parent.SurfaceDmaFd(id, container);
             }
 
         private:
@@ -387,7 +387,7 @@ namespace Plugin {
 
         void PlatformReady();
 
-        int SurfaceDmaFd(const uint32_t id)
+        int SurfaceDmaFd(const uint32_t id, Core::PrivilegedRequest::Container& container)
         {
 
             class Find : public ClientContainer::IFind {
@@ -425,7 +425,11 @@ namespace Plugin {
                 // const EGL& _egl;
             } callback(id /*, _egl*/);
 
-            return (_clients.Find(callback) == true) ? callback.Result() : -1;
+            if (_clients.Find(callback) == true) {
+                container.push_back(callback.Result());
+            }
+
+            return container.size();
         }
 
     public:
