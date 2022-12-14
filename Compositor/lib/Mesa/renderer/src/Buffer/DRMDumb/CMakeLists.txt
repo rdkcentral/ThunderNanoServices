@@ -29,6 +29,7 @@ add_library(${COMPOSITOR_BUFFER_IMPLEMENTATION} OBJECT DRMDumb.cpp)
 
 target_link_libraries(${COMPOSITOR_BUFFER_IMPLEMENTATION}
     PUBLIC
+        common::include
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
@@ -42,7 +43,3 @@ set_target_properties(${COMPOSITOR_BUFFER_IMPLEMENTATION} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
-
-target_include_directories(${COMPOSITOR_BUFFER_IMPLEMENTATION}
-    PUBLIC
-        "${CMAKE_CURRENT_LIST_DIR}/../../../include")

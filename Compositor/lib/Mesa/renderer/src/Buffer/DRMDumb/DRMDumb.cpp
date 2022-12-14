@@ -21,7 +21,7 @@
 
 #include <IAllocator.h>
 #include <IBuffer.h>
-#include <PixelFormat.h>
+#include <CompositorTypes.h>
 
 #include <drm/drm_fourcc.h>
 #include <sys/mman.h>

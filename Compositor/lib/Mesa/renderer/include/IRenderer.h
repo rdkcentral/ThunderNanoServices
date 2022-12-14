@@ -20,7 +20,7 @@
 #pragma once
 
 #include "IBuffer.h"
-#include "PixelFormat.h"
+#include <CompositorTypes.h>
 #include <interfaces/IComposition.h>
 
 using namespace WPEFramework;
@@ -28,14 +28,10 @@ using namespace WPEFramework;
 namespace Compositor {
 namespace Interfaces {
     struct IRenderer {
-        using Box = WPEFramework::Exchange::IComposition::Rectangle;
-        using Matrix = float[9];
-        using Color = float[4];
-
         virtual ~IRenderer() = default;
 
         /**
-         * @brief A factory for renderer, callee needs to call Free() when done. 
+         * @brief A factory for renderer, callee needs to call Free() when done.
          *
          * @param identifier ID for this Renderer, allows for reuse.
          * @return Core::ProxyType<IAllocator>
@@ -48,8 +44,8 @@ namespace Interfaces {
         /**
          * @brief Binds a buffer to the renderer, all render related actions will be done using this buffer.
          *
-         * @param buffer A preallocated buffer to be used or ```nullptr``` to clear. 
-         * @return uint32_t Core::ERROR_NONE upon success, error otherwise. 
+         * @param buffer A preallocated buffer to be used or ```nullptr``` to clear.
+         * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
          */
         virtual uint32_t Bind(Interfaces::IBuffer* buffer) = 0;
 
@@ -88,7 +84,7 @@ namespace Interfaces {
         virtual void Scissor(const Box* box) = 0;
 
         /**
-         * @brief   Renders a texture on the bound buffer at the given region with 
+         * @brief   Renders a texture on the bound buffer at the given region with
          *          transforming and transparency info.
          *
          * @param texture           Texture object to render
@@ -103,13 +99,13 @@ namespace Interfaces {
 
         /**
          * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.
-         *          
+         *
          * @param region            The coordinates and size where to render.
          * @param transformation    A transformation matrix
          *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
-         * 
-         *  * A geometric shape with four angles and four straight sides; 
+         *
+         *  * A geometric shape with four angles and four straight sides;
          *    a four-sided polygon.
          *
          */
@@ -117,16 +113,16 @@ namespace Interfaces {
 
         /**
          * @brief  Returns the buffer currently bound to the renderer
-         *          
+         *
          * @return IBuffer* or nullptr if no buffer is bound.
-         * 
-         */  
+         *
+         */
         virtual IBuffer* Bound() = 0;
 
-        /** 
+        /**
          * TODO: We probably want this so we can do screen dumps
-         * 
-         * @brief Reads out of pixels of the currently bound buffer into data. 
+         *
+         * @brief Reads out of pixels of the currently bound buffer into data.
          *        `stride` is in bytes.
          */
         // virtual uint32_t DumpPixels(uint32_t sourceX, uint32_t sourceY, uint32_t destinationX, uint32_t destinationY, IBuffer* data) = 0;

@@ -21,7 +21,7 @@
 
 #include <core/core.h>
 
-#include "PixelFormat.h"
+#include "CompositorTypes.h"
 #include "IBuffer.h"
 
 namespace Compositor {
