@@ -15,16 +15,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/src/${COMPOSITOR_RENDERER_IMPLEMENTATION}")
-    message(FATAL_ERROR "Missing a renderer implementation for ${COMPOSITOR_RENDERER_IMPLEMENTATION}")
-endif()
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Core CONFIG REQUIRED)
+find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
 
-message(STATUS "-- Buffer ${COMPOSITOR_BUFFER_IMPLEMENTATION}")
-message(STATUS "-- Renderer ${COMPOSITOR_RENDERER_IMPLEMENTATION}")
+add_executable(transformationtest main.cpp)
 
-add_subdirectory("include")
+set_target_properties(transformationtest PROPERTIES
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES
+    VERSION ${PROJECT_VERSION}
+)
 
-add_subdirectory("src/Buffer")
-add_subdirectory("src/Transformation")
+target_link_libraries(transformationtest
+    PRIVATE
+        common::include
+        common::transformation
+        ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
+)
 
-#add_subdirectory("src/${COMPOSITOR_RENDERER_IMPLEMENTATION}")
+install(TARGETS transformationtest DESTINATION bin)
