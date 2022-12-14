@@ -86,12 +86,14 @@ namespace Plugin {
                 return pair.second == devtype;
             });
 
+            bool result = false;
+
             if (found == _callbacks.end()) {
                 _callbacks.push_back({callback, devtype});
-                return true;
-            } else {
-                return false;
+                result = true;
             }
+
+            return result;
         }
 
         void Unregister(const std::string& devtype) 
@@ -103,7 +105,7 @@ namespace Plugin {
 
         ~UdevObserverType() override
         {
-            if(Core::SocketDatagram::IsOpen()) {
+            if (Core::SocketDatagram::IsOpen()) {
                 Core::SocketDatagram::Close(Core::infinite);
             }
         }
@@ -115,19 +117,21 @@ namespace Plugin {
             return 0;
         }
 
-        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
+        uint16_t ReceiveData(uint8_t* dataFrame, uint16_t receivedSize) override
         {
             udev_monitor_netlink_header* header = reinterpret_cast<udev_monitor_netlink_header*>(dataFrame);
 
-            if (header->filter_tag_bloom_hi == 0 && header->filter_tag_bloom_lo == 0) {
+            if (   header->filter_tag_bloom_hi == 0
+                && header->filter_tag_bloom_lo == 0
+               ) {
 
-                int data_index = header->properties_off / sizeof(uint8_t);
+                const int data_index = header->properties_off / sizeof(uint8_t);
                 auto data_ptr = reinterpret_cast<char*>(&(dataFrame[data_index]));
                 auto values = GetMessageValues(data_ptr, header->properties_len);
 
                 for (auto& callback : _callbacks) {
                     if (std::find(values.begin(), values.end(), "DEVTYPE=" + callback.second) != values.end()) {
-// TODO: inspect 'action'
+// FIXME: inspect 'action'
                        callback.first(callback.second);
                     }
                 }
@@ -190,7 +194,7 @@ namespace Plugin {
         }
 
         GraphicsProperties(const GraphicsProperties&) = delete;
-        const GraphicsProperties& operator=(const GraphicsProperties&) = delete;
+        GraphicsProperties& operator=(const GraphicsProperties&) = delete;
 
         uint32_t TotalGpuRam(uint64_t& total) const override
         {
@@ -213,12 +217,25 @@ namespace Plugin {
         {
             auto extractNumbers = [](const std::string& str) {
                 string value;
+
+                bool allnumber = false;
+
                 if (!str.empty()) {
                     auto first = str.find_first_of("0123456789");
                     auto last = str.find_last_of("0123456789");
-                    value = str.substr(first, last - first + 1);
+
+                    bool allnumber = first != std::string::npos;
+                    for (auto it = first; it != last; it++) {
+                        allnumber =    allnumber
+                                    && str.find_first_of("0123456789", it) != std::string::npos;
+                    }
+
+                    if (allnumber) {
+                        value = str.substr(first, last - first + 1);
+                    }
                 }
-                return std::stoul(!value.empty() ? value : "0");
+
+                return std::stoul(allnumber && !value.empty() ? value : "0");
             };
 
             auto value = GetValueForKey(_memoryStatsFile, key);
@@ -232,8 +249,9 @@ namespace Plugin {
 
             if (statusFile.is_open()) {
                 while (result.empty() && getline(statusFile, line)) {
-                    if (line.find(key) != std::string::npos)
+                    if (line.find(key) != std::string::npos) {
                         result = line;
+                    }
                 }
                 statusFile.close();
             } else {
@@ -271,7 +289,7 @@ namespace Plugin {
         {
             std::list<Exchange::IHDRProperties::HDRType> capabilities;
 
-            if (((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_NONE) == DISPLAYINFO_EDID_HDR_LICENSOR_NONE)
+            if (   ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_NONE) == DISPLAYINFO_EDID_HDR_LICENSOR_NONE)
                 || ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_UNKNOWN) == DISPLAYINFO_EDID_HDR_LICENSOR_UNKNOWN)) {
                 capabilities.push_back(HDR_OFF);
             }
@@ -280,7 +298,7 @@ namespace Plugin {
                 capabilities.push_back(HDR_OFF);
             }
 
-// TODO: DisplayPort
+// FIXME: DisplayPort
 
             if ((_hdrLicensors & DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_FORUM) == DISPLAYINFO_EDID_HDR_LICENSOR_HDMI_FORUM) {
                 // HDMI 2.0, HDMI2.0A added HDR support
@@ -332,11 +350,11 @@ namespace Plugin {
                 }
             }
 
-// TODO: check multitype
+// FIXME: check multitype
 
             type = Core::Service<HDRIteratorImpl>::Create<IHDRIterator>(capabilities);
 
-            return type != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE;
+            return (type != nullptr) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE;
         }
 
         uint32_t STBCapabilities(VARIABLE_IS_NOT_USED IHDRIterator*& type) const override
@@ -350,35 +368,33 @@ namespace Plugin {
 
             IHDRIterator* it = nullptr;
 
-            if (TVCapabilities(it) == Core::ERROR_NONE && it != nullptr) {
+            if (   TVCapabilities(it) == Core::ERROR_NONE
+                && it != nullptr
+               ) {
                 type = HDR_OFF;
 
-                while (type == HDR_OFF && it->Next(type) != false) {
-                        switch (type) {
-                            case HDR_10             :
-                            case HDR_10PLUS         :
-                            case HDR_HLG            :
-                            case HDR_DOLBYVISION    :
-                            case HDR_TECHNICOLOR    :
-                            case HDR_400            :
-                            case HDR_500            :
-                            case HDR_600            :
-                            case HDR_1000           :
-                            case HDR_1400           :
-                            case HDR_TB_400         :
-                            case HDR_TB_500         :
-                            case HDR_TB_600         :
-                            case HDR_DISPLAYHDR_400 :
-                                                        // What is currently set out of all options that are available
-                                                        type = GetHDRLevel();
-                                                        __attribute__((fallthrough));
-                            case HDR_OFF            :
-                                                        result = Core::ERROR_NONE;
-                                                        break;
-                            default                 :
-                                                        result = Core::ERROR_INVALID_RANGE;
-                        }
-
+                while (type == HDR_OFF && it->Next(type)) {
+                    switch (type) {
+                    case HDR_10             :   __attribute__((fallthrough));
+                    case HDR_10PLUS         :   __attribute__((fallthrough));
+                    case HDR_HLG            :   __attribute__((fallthrough));
+                    case HDR_DOLBYVISION    :   __attribute__((fallthrough));
+                    case HDR_TECHNICOLOR    :   __attribute__((fallthrough));
+                    case HDR_400            :   __attribute__((fallthrough));
+                    case HDR_500            :   __attribute__((fallthrough));
+                    case HDR_600            :   __attribute__((fallthrough));
+                    case HDR_1000           :   __attribute__((fallthrough));
+                    case HDR_1400           :   __attribute__((fallthrough));
+                    case HDR_TB_400         :   __attribute__((fallthrough));
+                    case HDR_TB_500         :   __attribute__((fallthrough));
+                    case HDR_TB_600         :   __attribute__((fallthrough));
+                    case HDR_DISPLAYHDR_400 :   // What is currently set out of all options that are available
+                                                type = GetHDRLevel();
+                                                __attribute__((fallthrough));
+                    case HDR_OFF            :   result = Core::ERROR_NONE;
+                                                break;
+                    default                 :   result = Core::ERROR_INVALID_RANGE;
+                    }
                 }
             }
 
@@ -388,7 +404,7 @@ namespace Plugin {
         Exchange::IHDRProperties::HDRType GetHDRLevel() const
         {
             Exchange::IHDRProperties::HDRType hdrType = Exchange::IHDRProperties::HDRType::HDR_OFF;
-            std::string hdrStr = getLine(_hdrLevelFilepath);
+            const std::string hdrStr = getLine(_hdrLevelFilepath);
 
             if (hdrStr == "SDR") {
                 hdrType = Exchange::IHDRProperties::HDRType::HDR_OFF;
@@ -436,7 +452,7 @@ namespace Plugin {
             , _hdcpLevel(Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted)
         {
             RequeryProperties();
-        };
+        }
 
         ~DisplayProperties() = default;
 
@@ -470,7 +486,8 @@ namespace Plugin {
 
             Exchange::IConnectionProperties::HDCPProtectionType value = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
 
-            return (_drmConnector != nullptr && _drmConnector->GetHDCPType(value) != false) ? value : Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
+            return (   _drmConnector != nullptr
+                    && _drmConnector->GetHDCPType(value)) ? value : Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
         }
 
         bool AudioPassthrough() const
@@ -479,14 +496,15 @@ namespace Plugin {
 
             auto it = _edid.CEASegment();
 
-            while (it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() == static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED)) {
+            while (it.IsValid() && ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() == static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED)) {
                 it = _edid.CEASegment(it);
             }
 
-            return it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() != static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED);
+            return    it.IsValid()
+                   && ExtendedDisplayIdentification::CEA(it.Current()).AudioFormats() != static_cast<displayinfo_edid_audio_format_map_t>(DISPLAYINFO_EDID_AUDIO_FORMAT_UNDEFINED);
         }
 
-        ExtendedDisplayIdentification const & EDID() const
+        const ExtendedDisplayIdentification& EDID() const
         {
             std::lock_guard<std::mutex> lock(_propertiesLock);
             return _edid;
@@ -501,8 +519,8 @@ namespace Plugin {
 
             _hdcpLevel = value;
 
-            if (Exchange::IConnectionProperties::HDCPProtectionType::HDCP_AUTO == _hdcpLevel) {
-                std::string hdcpStr = getLine(_hdcpLevelNode);
+            if (_hdcpLevel == Exchange::IConnectionProperties::HDCPProtectionType::HDCP_AUTO) {
+                const std::string hdcpStr = getLine(_hdcpLevelNode);
 
                 if (hdcpStr.find("succeed") != std::string::npos) {
                     if (hdcpStr.find("22") != std::string::npos) {
@@ -527,7 +545,9 @@ namespace Plugin {
             QueryDisplayProperties();
 
             // Next only when connected
-            if (_drmConnector != nullptr && _drmConnector->IsConnected() != false) {
+            if (   _drmConnector != nullptr
+                && _drmConnector->IsConnected()
+               ) {
                 Reauthenticate();
                 QueryEDID();
             }
@@ -555,10 +575,10 @@ namespace Plugin {
 
             std::vector<uint8_t> data = _drmConnector->EDID();
 
-            if (data.empty() != false) {
+            if (data.empty()) {
                 std::ifstream instream(_edidNode, std::ios::in);
                 data.reserve(512);
-                if(instream.is_open()) {
+                if (instream.is_open()) {
                     char asciiHexByte[2];
                     while(!instream.eof()) {
                         instream.read(asciiHexByte, 2);
@@ -575,11 +595,11 @@ namespace Plugin {
             uint8_t index = 0;
 
             // Multiple of segment size, just an EDID specification
-            ASSERT(0 == data.size() % _edid.Length());
+            ASSERT((data.size() % _edid.Length()) == 0);
 
             do {
                 // Forward pointer into underlying destination data placeholder
-                uint8_t * buffer = _edid.Segment(index);
+                uint8_t* buffer = _edid.Segment(index);
 
                 // Possibly trivial
                 static_assert(sizeof(uint8_t) == sizeof(unsigned char));
@@ -602,7 +622,6 @@ namespace Plugin {
     };
 
     class DisplayInfoImplementation : public Exchange::IConnectionProperties, public Exchange::IConfiguration {
-
     public:
         DisplayInfoImplementation(const DisplayInfoImplementation&) = delete;
         DisplayInfoImplementation& operator=(const DisplayInfoImplementation&) = delete;
@@ -610,8 +629,9 @@ namespace Plugin {
         {
             _activity.Revoke();
             _eventQueue.Stop();
+
             if (_graphics != nullptr) {
-            _graphics->Release();
+                _graphics->Release();
             }
             if (_hdr != nullptr) {
                 _hdr->Release();
@@ -622,12 +642,12 @@ namespace Plugin {
             : _config()
             , _udevObserver()
             , _callback([&](const std::string& devtype){
-                if(devtype == "hdcp") {
+                if (devtype == "hdcp") {
                     _eventQueue.Post(Exchange::IConnectionProperties::INotification::Source::HDCP_CHANGE);
                 } else {
                     _eventQueue.Post(Exchange::IConnectionProperties::INotification::Source::HDMI_CHANGE);
                 }
-            })
+              })
             , _eventQueue(4, *this)
             , _display(nullptr)
             , _graphics(nullptr)
@@ -646,54 +666,56 @@ namespace Plugin {
         {
             _config.FromString(framework->ConfigLine());
 
-// TODO: let compositor and displayinfo cooperate using the same node
+// FIXME: let compositor and displayinfo cooperate using the same node
 
             /* clang-format off */
-            _display.reset(new DisplayProperties(_config.drmDeviceName.Value()
-            , _config.edidFilepath.Value()
-            , _config.hdcpLevelFilepath.Value()
-            // Preferred negates Best, and, vice versa
-            , _config.usePreferredMode.Value()));
+            _display.reset(  new DisplayProperties(_config.drmDeviceName.Value()
+                           , _config.edidFilepath.Value()
+                           , _config.hdcpLevelFilepath.Value()
+                           // Preferred negates Best, and, vice versa
+                           , _config.usePreferredMode.Value())
+                          );
 
-            _graphics = Core::Service<GraphicsProperties>::Create<Exchange::IGraphicsProperties>(_config.gpuMemoryFile.Value()
-                , _config.gpuMemoryFreePattern.Value()
-                , _config.gpuMemoryTotalPattern.Value()
-                , _config.gpuMemoryUnitMultiplier.Value());
+            _graphics = Core::Service<GraphicsProperties>::Create<Exchange::IGraphicsProperties>(  _config.gpuMemoryFile.Value()
+                                                                                                 , _config.gpuMemoryFreePattern.Value()
+                                                                                                 , _config.gpuMemoryTotalPattern.Value()
+                                                                                                 , _config.gpuMemoryUnitMultiplier.Value()
+                                                                                                );
 
 
             displayinfo_edid_hdr_licensor_map_t licensors{static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)};
             displayinfo_edid_hdr_type_map_t profiles{static_cast<displayinfo_edid_hdr_type_map_t>(DISPLAYINFO_HDR_OFF)};
 
             if (_graphics != nullptr) {
-                ExtendedDisplayIdentification const & edid = _display->EDID();
+                const ExtendedDisplayIdentification& edid = _display->EDID();
 
-                if (edid.IsValid() != false) {
+                if (edid.IsValid()) {
                     auto it = edid.CEASegment();
 
                     // Multiple CEA segments possible
 
-                    while (it.IsValid() != false && ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() == static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)) {
+                    while (it.IsValid() && ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors() == static_cast<displayinfo_edid_hdr_licensor_map_t>(DISPLAYINFO_EDID_HDR_LICENSOR_NONE)) {
                         it = edid.CEASegment(it);
                     }
 
-                    if (it.IsValid() != false) {
+                    if (it.IsValid()) {
                         licensors |= ExtendedDisplayIdentification::CEA(it.Current()).HDRSupportLicensors();
                     }
 
-                    profiles =   (edid.HDRProfileSupport(DISPLAYINFO_HDR_10)          != false ? DISPLAYINFO_HDR_10          : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_10PLUS)      != false ? DISPLAYINFO_HDR_10PLUS      : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_DOLBYVISION) != false ? DISPLAYINFO_HDR_DOLBYVISION : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TECHNICOLOR) != false ? DISPLAYINFO_HDR_TECHNICOLOR : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_HLG)         != false ? DISPLAYINFO_HDR_HLG         : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_400)         != false ? DISPLAYINFO_HDR_400         : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_500)         != false ? DISPLAYINFO_HDR_500         : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_600)         != false ? DISPLAYINFO_HDR_600         : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_1000)        != false ? DISPLAYINFO_HDR_1000        : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_1400)        != false ? DISPLAYINFO_HDR_1400        : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_400)      != false ? DISPLAYINFO_HDR_TB_400      : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_500)      != false ? DISPLAYINFO_HDR_TB_500      : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_600)      != false ? DISPLAYINFO_HDR_TB_600      : DISPLAYINFO_HDR_OFF)
-                               | (edid.HDRProfileSupport(DISPLAYINFO_DISPLAYHDR_400)  != false ? DISPLAYINFO_DISPLAYHDR_400  : DISPLAYINFO_HDR_OFF)
+                    profiles =   (edid.HDRProfileSupport(DISPLAYINFO_HDR_10)          ? DISPLAYINFO_HDR_10          : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_10PLUS)      ? DISPLAYINFO_HDR_10PLUS      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_DOLBYVISION) ? DISPLAYINFO_HDR_DOLBYVISION : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TECHNICOLOR) ? DISPLAYINFO_HDR_TECHNICOLOR : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_HLG)         ? DISPLAYINFO_HDR_HLG         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_400)         ? DISPLAYINFO_HDR_400         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_500)         ? DISPLAYINFO_HDR_500         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_600)         ? DISPLAYINFO_HDR_600         : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_1000)        ? DISPLAYINFO_HDR_1000        : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_1400)        ? DISPLAYINFO_HDR_1400        : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_400)      ? DISPLAYINFO_HDR_TB_400      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_500)      ? DISPLAYINFO_HDR_TB_500      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_HDR_TB_600)      ? DISPLAYINFO_HDR_TB_600      : DISPLAYINFO_HDR_OFF)
+                               | (edid.HDRProfileSupport(DISPLAYINFO_DISPLAYHDR_400)  ? DISPLAYINFO_DISPLAYHDR_400  : DISPLAYINFO_HDR_OFF)
                                ;
                 }
             }
@@ -723,7 +745,10 @@ namespace Plugin {
             type = DISPLAYINFO_HDR_VESA_OFF;
             /* void * */ memcpy(data.vesa, &type, data.count);
 
-            if (data.common != nullptr && data.pseudo != nullptr && data.vesa != nullptr) {
+            if (   data.common != nullptr
+                && data.pseudo != nullptr
+                && data.vesa != nullptr
+               ) {
                 _hdr = Core::Service<HDRProperties>::Create<Exchange::IHDRProperties>(_config.hdrLevelFilepath.Value(), licensors, data);
             }
             else {
@@ -831,10 +856,12 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            if (_display != nullptr && length > 0) {
-                ExtendedDisplayIdentification const & edid = _display->EDID();
+            if (   _display != nullptr
+                && length > 0
+               ) {
+                const ExtendedDisplayIdentification& edid = _display->EDID();
 
-                if (edid.IsValid() != false) {
+                if (edid.IsValid()) {
                     length = edid.Raw(length, data);
 
                     result = Core::ERROR_NONE;
@@ -849,9 +876,9 @@ namespace Plugin {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
             if (_display != nullptr) {
-                ExtendedDisplayIdentification const & edid = _display->EDID();
+                const ExtendedDisplayIdentification& edid = _display->EDID();
 
-                if (edid.IsValid() != false) {
+                if (edid.IsValid()) {
                     width = edid.WidthInCentimeters();
 
                     result = Core::ERROR_NONE;
@@ -866,9 +893,9 @@ namespace Plugin {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
             if (_display != nullptr) {
-                ExtendedDisplayIdentification const & edid = _display->EDID();
+                const ExtendedDisplayIdentification& edid = _display->EDID();
 
-                if (edid.IsValid() != false) {
+                if (edid.IsValid()) {
                     heigth = edid.HeightInCentimeters();
 
                     result = Core::ERROR_NONE;
@@ -882,7 +909,7 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_NONE;
 
-            if (_display) {
+            if (_display != nullptr) {
                 value = _display->HDCP();
             } else {
                 result = Core::ERROR_UNAVAILABLE;
@@ -980,12 +1007,14 @@ namespace Plugin {
 
             bool Post(IConnectionProperties::INotification::Source type)
             {
-                if(_eventQueue.Post(type)) {
+                bool result = false;
+
+                if (_eventQueue.Post(type)) {
                     _arrived.SetEvent();
-                    return true;
-                } else {
-                    return false;
+                    result = true;
                 }
+
+                return result;
             }
 
             uint32_t Worker() override
@@ -993,16 +1022,24 @@ namespace Plugin {
                 // Wait until a registered udev event occurs
                 _arrived.Lock();
                 _arrived.ResetEvent();
+
                 if (IsRunning()) {
                     IConnectionProperties::INotification::Source eventType;
-                    bool isExtracted = _eventQueue.Extract(eventType, Core::infinite);
-                    if (isExtracted && eventType == IConnectionProperties::INotification::Source::HDCP_CHANGE) {
+
+                    const bool isExtracted = _eventQueue.Extract(eventType, Core::infinite);
+                    
+                    if (   isExtracted
+                        && eventType == IConnectionProperties::INotification::Source::HDCP_CHANGE
+                       ) {
                         _parent._display->Reauthenticate();
-                    } else if (isExtracted && eventType == IConnectionProperties::INotification::Source::HDMI_CHANGE) {
+                    } else if (   isExtracted
+                               && eventType == IConnectionProperties::INotification::Source::HDMI_CHANGE
+                              ) {
                         // This includes 'reauthenticate'
                         _parent._display->RequeryProperties();
                     }
                 }
+
                 return Core::infinite;
             }
 
