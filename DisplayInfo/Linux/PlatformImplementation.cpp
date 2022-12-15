@@ -119,20 +119,21 @@ namespace Plugin {
 
         uint16_t ReceiveData(uint8_t* dataFrame, uint16_t receivedSize) override
         {
-            udev_monitor_netlink_header* header = reinterpret_cast<udev_monitor_netlink_header*>(dataFrame);
+            const udev_monitor_netlink_header* const header = reinterpret_cast<const udev_monitor_netlink_header* const>(dataFrame);
 
             if (   header->filter_tag_bloom_hi == 0
                 && header->filter_tag_bloom_lo == 0
                ) {
 
                 const int data_index = header->properties_off / sizeof(uint8_t);
-                auto data_ptr = reinterpret_cast<char*>(&(dataFrame[data_index]));
-                auto values = GetMessageValues(data_ptr, header->properties_len);
+                auto data_ptr = reinterpret_cast<const char* const>(&(dataFrame[data_index]));
+
+                const string str(data_ptr, header->properties_len);
 
                 for (auto& callback : _callbacks) {
-                    if (std::find(values.begin(), values.end(), "DEVTYPE=" + callback.second) != values.end()) {
+                    if (str.find("DEVTYPE=" + callback.second) != std::string::npos) {
 // FIXME: inspect 'action'
-                       callback.first(callback.second);
+                        callback.first(callback.second);
                     }
                 }
             }
@@ -170,16 +171,6 @@ namespace Plugin {
             unsigned int filter_tag_bloom_lo;
         };
 
-        std::vector<std::string> GetMessageValues(char* values, uint32_t size)
-        {
-            std::vector<std::string> output;
-            for (uint32_t i = 0, output_index = 0; i < size; ++output_index) {
-                char* data = &values[i];
-                output.push_back(std::string(data));
-                i += (strlen(data) + 1);
-            }
-            return output;
-        }
         std::vector<CallbackDescriptor> _callbacks;
     };
 
