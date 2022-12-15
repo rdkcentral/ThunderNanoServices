@@ -31,7 +31,7 @@ add_custom_target (create-output-dir ALL
 foreach(SHADER ${SHADER_FILES})
     get_filename_component(TARGET ${SHADER} NAME_WE)
 
-    #message(FATAL_ERROR "${Python3_EXECUTABLE} convert.py --input ${SHADER} --output ${OUTPUT_SHADER_DIR}/${TARGET}-shader.h --symbol ${TARGET}_shader")
+    message(STATUS "Generating shader: ${TARGET}")
 
     add_custom_target (generate-${TARGET} ALL
         DEPENDS create-output-dir

@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 Metrological
+# Copyright 2022 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
 
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
+find_package(libdrm REQUIRED)
 
 add_subdirectory(shaders)
 
@@ -28,11 +29,14 @@ add_library(${COMPOSITOR_RENDERER_IMPLEMENTATION} OBJECT GLES2.cpp)
 
 target_link_libraries(${COMPOSITOR_RENDERER_IMPLEMENTATION}
     PUBLIC
+        common::include
+        common::transformation
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         EGL::EGL
         GLESv2::GLESv2
+        libdrm::libdrm
 )
 
 set_target_properties(${COMPOSITOR_RENDERER_IMPLEMENTATION} PROPERTIES
@@ -48,13 +52,3 @@ target_compile_definitions(${COMPOSITOR_RENDERER_IMPLEMENTATION}
     )
 
 
-    set_target_properties(${COMPOSITOR_RENDERER_IMPLEMENTATION} PROPERTIES
-        CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
-)
-
-target_include_directories(${COMPOSITOR_RENDERER_IMPLEMENTATION}
-    PUBLIC
-        "${CMAKE_CURRENT_LIST_DIR}/../include")

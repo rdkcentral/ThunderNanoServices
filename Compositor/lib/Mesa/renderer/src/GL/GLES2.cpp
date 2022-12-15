@@ -17,10 +17,10 @@
  * limitations under the License.
  */
 
-#include <Module.h>
+#include "../Trace.h"
 
+#include <IBuffer.h>
 #include <IRenderer.h>
-#include <Trace.h>
 
 #include "EGL.h"
 
@@ -28,20 +28,19 @@
 #include <GLES2/gl2ext.h>
 #include <drm_fourcc.h>
 
-using namespace WPEFramework;
+#include <core/core.h>
 
 namespace Compositor {
 namespace Renderer {
-
-    class GLES : virtual public Interfaces::IRender {
-        struct Buffer : virtual public Interfaces::IBuffer {
+    class GLES : public Interfaces::IRenderer {
+        struct Buffer {
             // struct wlr_gles2_renderer* renderer;
 
             EGLImageKHR image;
             GLuint rbo;
             GLuint fbo;
 
-            // struct wlr_addon addon;
+            WPEFramework::Core::ProxyType<Interfaces::IBuffer> realBuffer;
         };
 
         static constexpr GLfloat verts[] = {
@@ -52,9 +51,13 @@ namespace Renderer {
         };
 
     public:
-        GLES()
+        GLES() = delete;
+        GLES(GLES const&) = delete;
+        GLES& operator=(GLES const&) = delete;
+
+        GLES(int fd)
             : _formats()
-            , _fd(-1)
+            , _fd(fd)
             , _egl()
             , _current_buffer(nullptr)
             , _viewport_width(0)
@@ -66,18 +69,12 @@ namespace Renderer {
 
         virtual ~GLES() = default;
 
-        GLES(GLES const&) = delete;
-        GLES& operator=(GLES const&) = delete;
-
-        uint32_t Initialize(const string& config)
+        uint32_t Configure(const string& config)
         {
+            return WPEFramework::Core::ERROR_NONE;
         }
 
-        uint32_t Deinitialize()
-        {
-        }
-
-        bool Bind(IBuffer* buffer)
+        uint32_t Bind(Interfaces::IBuffer* buffer) override
         {
             if (_current_buffer != nullptr) {
                 ASSERT(_egl.IsCurrent() == true);
@@ -85,7 +82,7 @@ namespace Renderer {
                 glFlush();
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-                _current_buffer->Unlock();
+                _current_buffer->realBuffer->Unlock(100);
                 _current_buffer = nullptr;
             }
 
@@ -99,25 +96,25 @@ namespace Renderer {
             Buffer* glBuffer = dynamic_cast<Buffer*>(buffer);
 
             if (buffer == NULL) {
-                buffer = create_buffer(renderer, buffer);
+                // buffer = create_buffer(renderer, buffer);
             }
 
             if (buffer == NULL) {
                 return false;
             }
 
-            wlr_buffer_lock(buffer);
+            // buffer->realBuffer->Lock(100);
 
-            renderer->current_buffer = buffer;
+            //_current_buffer = buffer;
 
-            glBindFramebuffer(GL_FRAMEBUFFER, renderer->current_buffer->fbo);
+            glBindFramebuffer(GL_FRAMEBUFFER, _current_buffer->fbo);
 
             return true;
         }
 
-        bool Begin(uint32_t width, uint32_t height)
+        bool Begin(uint32_t width, uint32_t height) override
         {
-            gles2_get_renderer_in_context(wlr_renderer);
+            // gles2_get_renderer_in_context(wlr_renderer);
 
             // if (renderer->procs.glGetGraphicsResetStatusKHR) {
             //     GLenum status = renderer->procs.glGetGraphicsResetStatusKHR();
@@ -134,7 +131,7 @@ namespace Renderer {
             _viewport_height = height;
 
             // refresh projection matrix
-            _projection = matrix_projection(width, height, WL_OUTPUT_TRANSFORM_FLIPPED_180);
+            //_projection = matrix_projection(width, height, WL_OUTPUT_TRANSFORM_FLIPPED_180);
 
             glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -146,18 +143,18 @@ namespace Renderer {
             return true;
         }
 
-        void End()
+        void End() override
         {
             // nothing to do
         }
 
-        void Clear(const Color color)
+        void Clear(const Color color) override
         {
             glClearColor(color[0], color[1], color[2], color[3]);
-            glClear(GL_COLOR_BUFFER_BIT)
+            glClear(GL_COLOR_BUFFER_BIT);
         }
 
-        void Scissor(const Box* box)
+        void Scissor(const Box* box) override
         {
             if (box != nullptr) {
                 glScissor(box->x, box->y, box->width, box->height);
@@ -167,12 +164,19 @@ namespace Renderer {
             }
         }
 
-        bool RenderTexture(ITexture* texture, const Box region, const Matrix transform, float alpha)
+        uint32_t Render(Interfaces::IBuffer* texture, const Box region, const Matrix transform, float alpha) override
         {
+            return 0;
         }
 
-        void RenderQuad(const Box region, const Matrix transform)
+        uint32_t Quadrangle(const Color color, const Matrix transformation) override
         {
+            return 0;
+        }
+
+        Interfaces::IBuffer* Bound() const
+        {
+            return nullptr;
         }
 
         int Handle() const
@@ -180,49 +184,38 @@ namespace Renderer {
             return _fd;
         }
 
-        uint32_t BufferCapabilities() const
-        {
-            return IBuffer::Capability::DMABUF;
-        }
-
-        // ITexture* ToTexture(Interfaces::IBuffer* buffer);
-
-        const std::list<Format>& RenderFormats() const
+        const std::vector<PixelFormat>& RenderFormats() const override
         {
             return _formats;
         }
 
-        const std::list<Format>& TextureFormats() const
+        const std::vector<PixelFormat>& TextureFormats() const override
         {
             return _formats;
         }
 
     private:
-        void HasContext() const
+        bool HasContext() const
         {
-            return (_egl.IsCurrent()) && (_current_buffer != nullptr);
-        }
-
-        Core::ProxyType<Buffer> CreateBuffer()
-        {
+            return ((_egl.IsCurrent() == true) && (_current_buffer != nullptr));
         }
 
     private:
-        const std::list<Format> _formats;
+        const std::vector<PixelFormat> _formats;
         int _fd;
         EGL _egl;
         Buffer* _current_buffer;
         uint32_t _viewport_width;
         uint32_t _viewport_height;
-        IRenderer::Matrix _projection;
-
+        Matrix _projection;
     }; // class GLES
-
-    static IRenderer* Create(const Exchange::IComposition* compositor)
-    {
-        static GLES implementation;
-
-        return implementation;
-    }
 } // namespace Renderer
+
+WPEFramework::Core::ProxyType<Interfaces::IRenderer> Interfaces::IRenderer::Instance(WPEFramework::Core::instance_id identifier)
+{
+    static WPEFramework::Core::ProxyMapType<WPEFramework::Core::instance_id, Interfaces::IRenderer> glRenderers;
+
+    return glRenderers.Instance<Renderer::GLES>(identifier, static_cast<int>(identifier));
+}
+
 } // namespace Compositor

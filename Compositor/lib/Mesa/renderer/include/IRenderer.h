@@ -23,11 +23,9 @@
 #include <CompositorTypes.h>
 #include <interfaces/IComposition.h>
 
-using namespace WPEFramework;
-
 namespace Compositor {
 namespace Interfaces {
-    struct IRenderer {
+    struct EXTERNAL IRenderer {
         virtual ~IRenderer() = default;
 
         /**
@@ -36,10 +34,9 @@ namespace Interfaces {
          * @param identifier ID for this Renderer, allows for reuse.
          * @return Core::ProxyType<IAllocator>
          */
-        static Core::ProxyType<IRenderer> Instance(WPEFramework::Core::instance_id identifier);
+        static WPEFramework::Core::ProxyType<IRenderer> Instance(WPEFramework::Core::instance_id identifier);
 
-        virtual uint32_t Initialize(const string& config) = 0;
-        virtual uint32_t Deinitialize() = 0;
+        virtual uint32_t Configure(const string& config) = 0;
 
         /**
          * @brief Binds a buffer to the renderer, all render related actions will be done using this buffer.
@@ -117,7 +114,7 @@ namespace Interfaces {
          * @return IBuffer* or nullptr if no buffer is bound.
          *
          */
-        virtual IBuffer* Bound() = 0;
+        virtual IBuffer* Bound() const = 0;
 
         /**
          * TODO: We probably want this so we can do screen dumps
@@ -140,6 +137,6 @@ namespace Interfaces {
          * @return const std::vector<PixelFormat>& the list of @Formats
          */
         virtual const std::vector<PixelFormat>& TextureFormats() const = 0;
-    }; // struct IRenderer
-}
+    }; // struct EXTERNAL IRenderer
+} // namespace Interfaces
 } // namespace Compositor

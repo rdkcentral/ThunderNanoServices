@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <Module.h>
+// #include <Module.h>
 
 #ifndef EGL_NO_X11
 #define EGL_NO_X11
@@ -28,7 +28,7 @@
 #define EGL_NO_PLATFORM_SPECIFIC_TYPES
 #endif
 
-#include <core/core.h>
+// #include <core/core.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -41,6 +41,12 @@ namespace Renderer {
     public:
         EGL(EGL const&) = delete;
         EGL& operator=(EGL const&) = delete;
+
+        EGL()
+            : _display(EGL_NO_DISPLAY)
+            , _context(EGL_NO_CONTEXT)
+        {
+        }
 
     public:
         bool IsCurrent() const
@@ -60,7 +66,7 @@ namespace Renderer {
 
     private:
         EGLDisplay _display;
-        EGLContext _context:
+        EGLContext _context;
     }; // class EGL
 } // namespace Renderer
 } // namespace Compositor
