@@ -26,13 +26,6 @@ namespace Interfaces {
     struct EXTERNAL IBuffer {
         /**
          * @brief   Multi-plane frame buffer interface with hardware optimisation in mind
-         *
-         *          Good reads:
-         *          https://www.collabora.com/news-and-blog/blog/2018/03/20/a-new-era-for-linux-low-level-graphics-part-1/
-         *          https://www.collabora.com/news-and-blog/blog/2018/03/23/a-new-era-for-linux-low-level-graphics-part-2/
-         *          https://www.linux.com/training-tutorials/optimizing-graphics-memory-bandwidth-compression-and-tiling-notes-drm-format-modifiers/
-         *
-         *
          */
 
         static constexpr uint8_t PrimaryPlane = 0;
