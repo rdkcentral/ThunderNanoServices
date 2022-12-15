@@ -637,7 +637,7 @@ namespace Plugin {
                         if (device == _devices.end()) {
                             string deviceName;
                             ReadDeviceName(entry.Name(), deviceName);
-                            std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), std::ptr_fun<int, int>(std::toupper));
+                            std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), [](TCHAR c){ return std::toupper(c); });
 
                             for (auto& device : _inputDevices) {
                                 std::size_t found = deviceName.find(Core::EnumerateType<LinuxDevice::type>(device->Type()).Data());
