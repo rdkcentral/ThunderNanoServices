@@ -48,8 +48,6 @@ if(${PKG_CONFIG_FOUND})
             INTERFACE_COMPILE_OPTIONS "${libdrm_CFLAGS}"
             INTERFACE_INCLUDE_DIRECTORIES "${libdrm_INCLUDE_DIRS}"
             )
-    else()
-        message(STATUS "Some required variable(s) is (are) not found / set! Does libdrm.pc exist?")
     endif()
 
     mark_as_advanced(libdrm_INCLUDE_DIRS libdrm_LIBRARIES)
