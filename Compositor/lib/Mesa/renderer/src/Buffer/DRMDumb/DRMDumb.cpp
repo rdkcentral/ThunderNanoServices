@@ -23,7 +23,7 @@
 #include <IBuffer.h>
 #include <CompositorTypes.h>
 
-#include <drm/drm_fourcc.h>
+#include <drm_fourcc.h>
 #include <sys/mman.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
