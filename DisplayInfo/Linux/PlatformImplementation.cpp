@@ -82,15 +82,14 @@ namespace Plugin {
          */
         bool Register(std::function<void(const std::string&)>& callback, const std::string& devtype)
         {
-            auto found = std::find_if(_callbacks.begin(), _callbacks.end(), [&](CallbackDescriptor& pair){
+            const auto found = std::find_if(_callbacks.begin(), _callbacks.end(), [&](CallbackDescriptor& pair){
                 return pair.second == devtype;
             });
 
-            bool result = false;
+            const bool result = (found == _callbacks.end());
 
-            if (found == _callbacks.end()) {
+            if (result) {
                 _callbacks.push_back({callback, devtype});
-                result = true;
             }
 
             return result;
@@ -119,14 +118,14 @@ namespace Plugin {
 
         uint16_t ReceiveData(uint8_t* dataFrame, uint16_t receivedSize) override
         {
-            const udev_monitor_netlink_header* const header = reinterpret_cast<const udev_monitor_netlink_header* const>(dataFrame);
+            const udev_monitor_netlink_header * const header = reinterpret_cast<const udev_monitor_netlink_header*>(dataFrame);
 
             if (   header->filter_tag_bloom_hi == 0
                 && header->filter_tag_bloom_lo == 0
                ) {
 
-                const int data_index = header->properties_off / sizeof(uint8_t);
-                auto data_ptr = reinterpret_cast<const char* const>(&(dataFrame[data_index]));
+                const unsigned int data_index = header->properties_off / sizeof(uint8_t);
+                const auto data_ptr = reinterpret_cast<const char*>(&(dataFrame[data_index]));
 
                 const string str(data_ptr, header->properties_len);
 
@@ -206,16 +205,16 @@ namespace Plugin {
     private:
         uint64_t GetMemory(const std::string& key) const
         {
-            auto extractNumbers = [](const std::string& str) {
+            const auto extractNumbers = [](const std::string& str) {
                 string value;
 
                 bool allnumber = false;
 
                 if (!str.empty()) {
-                    auto first = str.find_first_of("0123456789");
-                    auto last = str.find_last_of("0123456789");
+                    const auto first = str.find_first_of("0123456789");
+                    const auto last = str.find_last_of("0123456789");
 
-                    bool allnumber = first != std::string::npos;
+                    allnumber = first != std::string::npos;
                     for (auto it = first; it != last; it++) {
                         allnumber =    allnumber
                                     && str.find_first_of("0123456789", it) != std::string::npos;
@@ -251,10 +250,10 @@ namespace Plugin {
             return result;
         }
 
-        std::string _memoryStatsFile;
-        std::string _memoryFreeKey;
-        std::string _memoryTotalKey;
-        uint32_t _unitMultiplier;
+        const std::string _memoryStatsFile;
+        const std::string _memoryFreeKey;
+        const std::string _memoryTotalKey;
+        const uint32_t _unitMultiplier;
     };
 
     class HDRProperties : public Exchange::IHDRProperties {
@@ -423,9 +422,9 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        std::string _hdrLevelFilepath;
-        displayinfo_edid_hdr_licensor_map_t _hdrLicensors;
-        displayinfo_edid_hdr_type_map_t _hdrProfiles;
+        const std::string _hdrLevelFilepath;
+        const displayinfo_edid_hdr_licensor_map_t _hdrLicensors;
+        const displayinfo_edid_hdr_type_map_t _hdrProfiles;
     };
 
     class DisplayProperties {
@@ -503,8 +502,8 @@ namespace Plugin {
 
         void Reauthenticate()
         {
-           // DisplayInfo does not set so only (re-)query
-            Exchange::IConnectionProperties::HDCPProtectionType value = HDCP();
+            // DisplayInfo does not set so only (re-)query
+            const Exchange::IConnectionProperties::HDCPProtectionType value = HDCP();
 
             std::lock_guard<std::mutex> lock(_propertiesLock);
 
@@ -568,7 +567,12 @@ namespace Plugin {
 
             if (data.empty()) {
                 std::ifstream instream(_edidNode, std::ios::in);
-                data.reserve(512);
+
+                // Allow for at least one extention, and, assume it is CEA
+                constexpr size_t size = ExtendedDisplayIdentification::Buffer::edid_block_size * 2;
+
+                data.reserve(size);
+
                 if (instream.is_open()) {
                     char asciiHexByte[2];
                     while(!instream.eof()) {
@@ -601,10 +605,10 @@ namespace Plugin {
             } while (index < _edid.Segments());
         }
 
-        bool _usePreferredMode;
-        std::string _drmDevice;
-        std::string _edidNode;
-        std::string _hdcpLevelNode;
+        const bool _usePreferredMode;
+        const std::string _drmDevice;
+        const std::string _edidNode;
+        const std::string _hdcpLevelNode;
 
         mutable std::mutex _propertiesLock;
         std::unique_ptr<Linux::DRMConnector> _drmConnector;
@@ -754,7 +758,7 @@ namespace Plugin {
         {
             std::lock_guard<std::mutex> lock(_observersLock);
 
-            auto index = std::find(_observers.begin(), _observers.end(), notification);
+            const auto index = std::find(_observers.begin(), _observers.end(), notification);
             ASSERT(index == _observers.end());
 
             if (index == _observers.end()) {
@@ -802,6 +806,7 @@ namespace Plugin {
             if (_display) {
                 isconnected = _display->Connected();
             } else {
+                isconnected = false;
                 result = Core::ERROR_UNAVAILABLE;
             }
             return result;
@@ -814,6 +819,7 @@ namespace Plugin {
             if (_display) {
                 width = _display->Width();
             } else {
+                width = 0;
                 result = Core::ERROR_UNAVAILABLE;
             }
             return result;
@@ -826,6 +832,7 @@ namespace Plugin {
             if (_display) {
                 height = _display->Height();
             } else {
+                height = 0;
                 result = Core::ERROR_UNAVAILABLE;
             }
             return result;
@@ -838,6 +845,7 @@ namespace Plugin {
             if (_display) {
                 vf = _display->RefreshRate();
             } else {
+                vf = 0;
                 result = Core::ERROR_UNAVAILABLE;
             }
             return result;
@@ -856,6 +864,8 @@ namespace Plugin {
                     length = edid.Raw(length, data);
 
                     result = Core::ERROR_NONE;
+                } else {
+                    length = 0;
                 }
             }
 
@@ -873,6 +883,8 @@ namespace Plugin {
                     width = edid.WidthInCentimeters();
 
                     result = Core::ERROR_NONE;
+                } else {
+                    width = 0;
                 }
             }
 
@@ -890,6 +902,8 @@ namespace Plugin {
                     heigth = edid.HeightInCentimeters();
 
                     result = Core::ERROR_NONE;
+                } else {
+                    heigth = 0;
                 }
             }
 
@@ -903,6 +917,7 @@ namespace Plugin {
             if (_display != nullptr) {
                 value = _display->HDCP();
             } else {
+                value = Exchange::IConnectionProperties::HDCPProtectionType::HDCP_Unencrypted;
                 result = Core::ERROR_UNAVAILABLE;
             }
 
