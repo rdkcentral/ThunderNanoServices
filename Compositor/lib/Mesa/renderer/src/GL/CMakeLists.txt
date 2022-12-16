@@ -31,6 +31,7 @@ target_link_libraries(${COMPOSITOR_RENDERER_IMPLEMENTATION}
     PUBLIC
         common::include
         common::transformation
+        gl::shaders
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing

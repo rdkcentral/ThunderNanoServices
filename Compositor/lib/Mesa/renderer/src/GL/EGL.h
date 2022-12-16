@@ -35,6 +35,9 @@
 #include <drm_fourcc.h>
 #include <gbm.h>
 
+#include <vertex-shader.h>
+#include <fragment-shader.h>
+
 namespace Compositor {
 namespace Renderer {
     class EGL {

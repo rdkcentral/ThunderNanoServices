@@ -31,12 +31,17 @@ add_custom_target (create-output-dir ALL
 foreach(SHADER ${SHADER_FILES})
     get_filename_component(TARGET ${SHADER} NAME_WE)
 
-    message(STATUS "Generating shader: ${TARGET}")
+    message(STATUS "Generating shader: ${TARGET}-shader.h")
 
     add_custom_target (generate-${TARGET} ALL
         DEPENDS create-output-dir
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-        COMMAND mkdir ${CMAKE_BINARY_DIR}/include/shaders && ${Python3_EXECUTABLE} convert.py --input ${SHADER} --output ${CMAKE_BINARY_DIR}/include/shaders/${TARGET}-shader.h --symbol ${TARGET}_shader 
+        COMMAND ${Python3_EXECUTABLE} convert.py --input ${SHADER} --output ${OUTPUT_SHADER_DIR}/${TARGET}-shader.h --symbol ${TARGET}_shader 
     )
 endforeach()
 
+add_library(GL_SHADERS INTERFACE)
+
+target_include_directories(GL_SHADERS INTERFACE ${OUTPUT_SHADER_DIR})
+
+add_library(gl::shaders ALIAS GL_SHADERS)
