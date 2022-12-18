@@ -28,12 +28,11 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
+#include <DrmCommon.h>
+
 MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace Compositor {
-
-constexpr int InvalidFileDescriptor = -1;
-
 namespace Renderer {
     class DRMDumb : public Interfaces::IBuffer {
     public:
@@ -279,84 +278,6 @@ namespace Renderer {
     private:
         int _fdPrimary;
     };
-
-    /*
-     * Re-open the DRM node to avoid GEM handle ref'counting issues.
-     * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
-     */
-
-    static int ReopenNode(int fd, bool openRenderNode)
-    {
-        if (drmIsMaster(fd)) {
-            // Only recent kernels support empty leases
-            uint32_t lessee_id;
-            int lease_fd = drmModeCreateLease(fd, nullptr, 0, O_CLOEXEC, &lessee_id);
-
-            if (lease_fd >= 0) {
-                return lease_fd;
-            } else if (lease_fd != -EINVAL && lease_fd != -EOPNOTSUPP) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmModeCreateLease failed"));
-                return InvalidFileDescriptor;
-            }
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("drmModeCreateLease failed, falling back to plain open"));
-        } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM is not in master mode"));
-        }
-
-        char* name = nullptr;
-
-        if (openRenderNode) {
-            name = drmGetRenderDeviceNameFromFd(fd);
-        }
-
-        if (name == nullptr) {
-            // Either the DRM device has no render node, either the caller wants a primary node
-            name = drmGetDeviceNameFromFd2(fd);
-
-            if (name == nullptr) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmGetDeviceNameFromFd2 failed"));
-                return InvalidFileDescriptor;
-            }
-        } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM Render Node: %s", name));
-        }
-
-        int newFd = open(name, O_RDWR | O_CLOEXEC);
-
-        if (newFd < 0) {
-            TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to open DRM node '%s'", name));
-            free(name);
-            return InvalidFileDescriptor;
-        } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM Render Node opened: %s", name));
-        }
-
-        free(name);
-
-        // If we're using a DRM primary node (e.g. because we're running under the
-        // DRM backend, or because we're on split render/display machine), we need
-        // to use the legacy DRM authentication mechanism to have the permission to
-        // manipulate buffers.
-        if (drmGetNodeTypeFromFd(newFd) == DRM_NODE_PRIMARY) {
-            drm_magic_t magic;
-
-            int ret(0);
-
-            if (ret = drmGetMagic(newFd, &magic) < 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmGetMagic failed: %s", strerror(ret)));
-                close(newFd);
-                return InvalidFileDescriptor;
-            }
-
-            if (ret = drmAuthMagic(fd, magic) < 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmAuthMagic failed: %s", strerror(ret)));
-                close(newFd);
-                return InvalidFileDescriptor;
-            }
-        }
-
-        return newFd;
-    }
 } // namespace Renderer
 
 WPEFramework::Core::ProxyType<Interfaces::IAllocator>
@@ -366,7 +287,7 @@ Interfaces::IAllocator::Instance(WPEFramework::Core::instance_id identifier)
 
     static WPEFramework::Core::ProxyMapType<WPEFramework::Core::instance_id, Interfaces::IAllocator> gbmAllocators;
 
-    int fd = Renderer::ReopenNode(static_cast<int>(identifier), false);
+    int fd = DRM::ReopenNode(static_cast<int>(identifier), false);
 
     ASSERT(fd > 0);
 
