@@ -22,8 +22,10 @@ find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
 find_package(libdrm REQUIRED)
+find_package(gbm REQUIRED)
 
 add_subdirectory(shaders)
+add_subdirectory(test)
 
 add_library(${COMPOSITOR_RENDERER_IMPLEMENTATION} OBJECT GLES2.cpp)
 

@@ -30,6 +30,8 @@
 
 #include <core/core.h>
 
+MODULE_NAME_ARCHIVE_DECLARATION
+
 namespace Compositor {
 namespace Renderer {
     class GLES : public Interfaces::IRenderer {
@@ -39,7 +41,7 @@ namespace Renderer {
             EGLImageKHR image;
             GLuint rbo;
             GLuint fbo;
-
+            
             WPEFramework::Core::ProxyType<Interfaces::IBuffer> realBuffer;
         };
 
@@ -56,15 +58,13 @@ namespace Renderer {
         GLES& operator=(GLES const&) = delete;
 
         GLES(int fd)
-            : _formats()
-            , _fd(fd)
-            , _egl()
+            : _fd(fd)
+            , _egl(fd) 
+            , _formats(_egl.Formats())
             , _current_buffer(nullptr)
             , _viewport_width(0)
             , _viewport_height(0)
         {
-            // Format format(DRM_);
-            // _formats.insert();
         }
 
         virtual ~GLES() = default;
@@ -201,9 +201,9 @@ namespace Renderer {
         }
 
     private:
-        const std::vector<PixelFormat> _formats;
         int _fd;
         EGL _egl;
+        const std::vector<PixelFormat> _formats;
         Buffer* _current_buffer;
         uint32_t _viewport_width;
         uint32_t _viewport_height;
