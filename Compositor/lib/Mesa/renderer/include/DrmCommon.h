@@ -19,8 +19,6 @@
 
 #pragma once
 
-#include <drm_fourcc.h>
-#include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -105,7 +103,7 @@ namespace DRM {
         return newFd;
     }
 
-    inline static void GetDRMNode(uint32_t const type, std::vector<std::string>& list)
+    inline static void GetDRMNode(const uint32_t type, std::vector<std::string>& list)
     {
         const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
 
@@ -140,7 +138,7 @@ namespace DRM {
         bool result(false);
         for (uint16_t i = 0; i < DRM_NODE_MAX; i++) {
             if ((drmDevice->available_nodes & (1 << i)) && (strcmp(drmDevice->nodes[i], deviceName) == 0)) {
-                result == true;
+                result = true;
                 break;
             }
         }
