@@ -22,13 +22,12 @@
 #include <IAllocator.h>
 #include <IBuffer.h>
 #include <CompositorTypes.h>
+#include <DrmCommon.h>
 
 #include <drm_fourcc.h>
 #include <sys/mman.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-
-#include <DrmCommon.h>
 
 MODULE_NAME_ARCHIVE_DECLARATION
 

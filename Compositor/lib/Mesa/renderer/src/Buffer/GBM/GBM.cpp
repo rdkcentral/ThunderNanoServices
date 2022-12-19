@@ -22,13 +22,12 @@
 #include <IAllocator.h>
 #include <IBuffer.h>
 #include <CompositorTypes.h>
+#include <DrmCommon.h>
 
 #include <drm_fourcc.h>
 #include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-
-#include <DrmCommon.h>
 
 #if HAVE_GBM_MODIFIERS
 #ifndef GBM_MAX_PLANES
