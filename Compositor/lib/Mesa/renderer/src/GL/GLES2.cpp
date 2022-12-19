@@ -17,7 +17,11 @@
  * limitations under the License.
  */
 
-#include "../Trace.h"
+#ifndef MODULE_NAME
+#define MODULE_NAME CompositorRendererGLES2
+#endif
+
+#include <tracing/tracing.h>
 
 #include <IBuffer.h>
 #include <IRenderer.h>
@@ -32,6 +36,42 @@
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
+namespace {
+namespace Trace {
+    class GL {
+    public:
+        ~GL() = default;
+        GL() = delete;
+        GL(const GL&) = delete;
+        GL& operator=(const GL&) = delete;
+        GL(const TCHAR formatter[], ...)
+        {
+            va_list ap;
+            va_start(ap, formatter);
+            WPEFramework::Trace::Format(_text, formatter, ap);
+            va_end(ap);
+        }
+        explicit GL(const string& text)
+            : _text(WPEFramework::Core::ToString(text))
+        {
+        }
+
+    public:
+        const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        std::string _text;
+    }; // class GL
+}
+}
+
 namespace Compositor {
 namespace Renderer {
     class GLES : public Interfaces::IRenderer {
@@ -41,7 +81,7 @@ namespace Renderer {
             EGLImageKHR image;
             GLuint rbo;
             GLuint fbo;
-            
+
             WPEFramework::Core::ProxyType<Interfaces::IBuffer> realBuffer;
         };
 
@@ -59,7 +99,7 @@ namespace Renderer {
 
         GLES(int fd)
             : _fd(fd)
-            , _egl(fd) 
+            , _egl(fd)
             , _formats(_egl.Formats())
             , _current_buffer(nullptr)
             , _viewport_width(0)
