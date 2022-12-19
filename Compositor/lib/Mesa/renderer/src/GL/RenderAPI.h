@@ -57,6 +57,40 @@ constexpr char eglClientWaitSyncProc[] = "eglClientWaitSync";
 #endif
 
 namespace API {
+    template <class TYPE>
+    class Attributes {
+    protected:
+        std::vector<TYPE> attributes;
+        typename std::vector<TYPE>::iterator pos;
+
+    public:
+        Attributes(TYPE terminator = EGL_NONE)
+        {
+            attributes.push_back(terminator);
+        }
+
+        void append(TYPE param)
+        {
+            attributes.insert(attributes.end() - 1, param);
+        }
+
+        void append(TYPE name, TYPE value)
+        {
+            append(name);
+            append(value);
+        }
+
+        operator TYPE*(void)
+        {
+            return &attributes[0];
+        }
+
+        operator const TYPE*(void) const
+        {
+            return &attributes[0];
+        }
+    };
+
     class GL {
     public:
         static inline std::string ShaderInfoLog(GLuint handle)
@@ -177,7 +211,7 @@ namespace API {
             return ((extention.size() > 0) && (extensions.find(extention) != std::string::npos));
         }
 
-        static inline bool HasClientEGL(const std::string& api, EGLDisplay dpy = eglGetCurrentDisplay())
+        static inline bool HasClientAPI(const std::string& api, EGLDisplay dpy = eglGetCurrentDisplay())
         {
             // ASSERT(dpy != EGL_NO_DISPLAY);
             static const std::string apis(eglQueryString(dpy, EGL_CLIENT_APIS));
@@ -195,6 +229,8 @@ namespace API {
             , eglQueryDeviceStringEXT(nullptr)
             , eglQueryDevicesEXT(nullptr)
             , eglDebugMessageControl(nullptr)
+            , eglQueryDebug(nullptr)
+            , eglLabelObject(nullptr)
             , eglCreateImage(nullptr)
             , eglDestroyImage(nullptr)
             , eglCreateSync(nullptr)
@@ -202,6 +238,7 @@ namespace API {
             , eglWaitSync(nullptr)
             , eglClientWaitSync(nullptr)
         {
+            eglGetPlatformDisplayEXT = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
             eglQueryDmaBufFormatsEXT = reinterpret_cast<PFNEGLQUERYDMABUFFORMATSEXTPROC>(eglGetProcAddress("eglQueryDmaBufFormatsEXT"));
             eglQueryDmaBufModifiersEXT = reinterpret_cast<PFNEGLQUERYDMABUFMODIFIERSEXTPROC>(eglGetProcAddress("eglQueryDmaBufModifiersEXT"));
             eglQueryDisplayAttribEXT = reinterpret_cast<PFNEGLQUERYDISPLAYATTRIBEXTPROC>(eglGetProcAddress("eglQueryDisplayAttribEXT"));
@@ -209,6 +246,8 @@ namespace API {
             eglQueryDevicesEXT = reinterpret_cast<PFNEGLQUERYDEVICESEXTPROC>(eglGetProcAddress("eglQueryDevicesEXT"));
 
             eglDebugMessageControl = reinterpret_cast<PFNEGLDEBUGMESSAGECONTROLKHRPROC>(eglGetProcAddress("eglDebugMessageControlKHR"));
+            eglQueryDebug = reinterpret_cast<PFNEGLQUERYDEBUGKHRPROC>(eglGetProcAddress("eglQueryDebugKHR"));
+            eglLabelObject = reinterpret_cast<PFNEGLLABELOBJECTKHRPROC>(eglGetProcAddress("eglLabelObjectKHR"));
             eglCreateImage = reinterpret_cast<PFNEGLCREATEIMAGEPROC>(eglGetProcAddress(eglCreateImageProc));
             eglDestroyImage = reinterpret_cast<PFNEGLDESTROYIMAGEPROC>(eglGetProcAddress(eglDestroyImageProc));
             eglCreateSync = reinterpret_cast<PFNEGLCREATESYNCPROC>(eglGetProcAddress(eglCreateSyncProc));
@@ -219,6 +258,7 @@ namespace API {
 
     public:
         PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT;
+
         PFNEGLQUERYDMABUFFORMATSEXTPROC eglQueryDmaBufFormatsEXT;
         PFNEGLQUERYDMABUFMODIFIERSEXTPROC eglQueryDmaBufModifiersEXT;
         PFNEGLQUERYDISPLAYATTRIBEXTPROC eglQueryDisplayAttribEXT;
@@ -226,6 +266,8 @@ namespace API {
         PFNEGLQUERYDEVICESEXTPROC eglQueryDevicesEXT;
 
         PFNEGLDEBUGMESSAGECONTROLKHRPROC eglDebugMessageControl;
+        PFNEGLQUERYDEBUGKHRPROC eglQueryDebug;
+        PFNEGLLABELOBJECTKHRPROC eglLabelObject;
         PFNEGLCREATEIMAGEPROC eglCreateImage;
         PFNEGLDESTROYIMAGEPROC eglDestroyImage;
         PFNEGLCREATESYNCPROC eglCreateSync;
