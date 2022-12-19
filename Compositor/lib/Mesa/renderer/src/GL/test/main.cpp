@@ -1,17 +1,30 @@
-#ifndef EGL_NO_X11
-#define EGL_NO_X11
-#endif
-#ifndef EGL_NO_PLATFORM_SPECIFIC_TYPES
-#define EGL_NO_PLATFORM_SPECIFIC_TYPES
-#endif
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2022 Metrological B.V.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef MODULE_NAME
-#define MODULE_NAME CompositorGLTest
+#define MODULE_NAME CompositorRenderTest
 #endif
 
-#include <algorithm>
-#include <fcntl.h>
-#include <iostream>
+#include <core/core.h>
+#include <localtracer/localtracer.h>
+#include <messaging/messaging.h>
+
 #include <iterator>
 #include <sstream>
 #include <string>
@@ -20,66 +33,87 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include "../Trace.h"
-#include <localtracer/localtracer.h>
-#include <tracing/tracing.h>
-
 #include "../EGL.h"
 #include "../RenderAPI.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
+using namespace WPEFramework;
+
+namespace {
 const std::vector<std::string> Parse(const std::string& input)
 {
     std::istringstream iss(input);
     return std::vector<std::string> { std::istream_iterator<std::string> { iss }, std::istream_iterator<std::string> {} };
 }
+}
 
-int main(int argc, const char* argv[])
+int main(int /*argc*/, const char* argv[])
 {
-    // EGLDisplay dpy = EGL_NO_DISPLAY;
 
-    // const std::string extensions(eglQueryString(dpy, EGL_EXTENSIONS));
-    // std::cout << "extensions:" << std::endl;
+    Messaging::MessageUnit::flush flushMode;
+    flushMode = Messaging::MessageUnit::flush::FLUSH;
 
-    // for (auto& s : Parse(extensions)) {
-    //     std::cout << " - " << s << std::endl;
-    // }
+    Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
 
-    WPEFramework::Messaging::LocalTracer& tracer = WPEFramework::Messaging::LocalTracer::Open();
-    WPEFramework::Messaging::ConsolePrinter printer(false);
+    const char* executableName(Core::FileNameOnly(argv[0]));
 
-    tracer.Callback(&printer);
+    {
+        Messaging::ConsolePrinter printer(true);
 
-    std::vector<string> modules = {
-        "Error",
-        "Information"
-        "EGL"
-    };
+        tracer.Callback(&printer);
 
-    for (auto module : modules) {
-        tracer.EnableMessage("CompositorGLTest", module, true);
-        tracer.EnableMessage("CompositorRendererGL", module, true);
+        const std::vector<string> modules = {
+            "Error",
+            "Information",
+            "EGL",
+            "GL"
+        };
+
+        for (auto module : modules) {
+            tracer.EnableMessage("CompositorRenderTest", module, true);
+            tracer.EnableMessage("CompositorRendererEGL", module, true);
+            tracer.EnableMessage("CompositorRendererGLES2", module, true);
+        }
+
+        TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
+
+        int drmFd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+
+        Compositor::Renderer::EGL egl(drmFd);
+
+        const std::string extensions(eglQueryString(egl.Display(), EGL_EXTENSIONS));
+
+        std::stringstream msg;
+
+        msg << std::endl
+            << "Extensions:" << std::endl;
+
+        for (auto& ext : Parse(extensions)) {
+            msg << " - " << ext << std::endl;
+        }
+        TRACE_GLOBAL(Trace::Information, ("%s", msg.str().c_str()));
+
+        const std::string apis(eglQueryString(egl.Display(), EGL_CLIENT_APIS));
+
+        msg.str("");
+        msg.clear();
+
+        msg << std::endl
+            << "API's:" << std::endl;
+        for (auto& s : Parse(apis)) {
+            msg << " - " << s << std::endl;
+        }
+
+        TRACE_GLOBAL(Trace::Information, ("%s", msg.str().c_str()));
+
+        close(drmFd);
+
+        TRACE_GLOBAL(Trace::Information, ("Exiting %s.... ", executableName));
     }
 
-    // Compositor::API::GL gl_api;
-    // Compositor::API::EGL egl_api;
-
-    int drmFd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
-
-    Compositor::Renderer::EGL egl(drmFd);
-
-    close(drmFd);
-
-    // dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    // EGLint major = 0, minor = 0;
-    // eglInitialize(dpy, &major, &minor) != EGL_FALSE;
-
-    // const std::string apis(eglQueryString(dpy, EGL_CLIENT_APIS));
-    // std::cout << "apis" << std::endl;
-    // for (auto& s : Parse(apis)) {
-    //     std::cout << " - " << s << std::endl;
-    // }
+    tracer.Close();
+    Core::Singleton::Dispose();
 
     return 0;
 }
