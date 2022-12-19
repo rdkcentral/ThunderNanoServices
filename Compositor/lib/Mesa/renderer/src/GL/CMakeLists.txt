@@ -21,13 +21,13 @@ find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
 
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
+
 find_package(libdrm REQUIRED)
 find_package(gbm REQUIRED)
 
 add_subdirectory(shaders)
-add_subdirectory(test)
 
-add_library(${COMPOSITOR_RENDERER_IMPLEMENTATION} OBJECT GLES2.cpp)
+add_library(${COMPOSITOR_RENDERER_IMPLEMENTATION} OBJECT GLES2.cpp EGL.cpp)
 
 target_link_libraries(${COMPOSITOR_RENDERER_IMPLEMENTATION}
     PUBLIC
@@ -40,6 +40,7 @@ target_link_libraries(${COMPOSITOR_RENDERER_IMPLEMENTATION}
         EGL::EGL
         GLESv2::GLESv2
         libdrm::libdrm
+        gbm::gbm
 )
 
 set_target_properties(${COMPOSITOR_RENDERER_IMPLEMENTATION} PROPERTIES
@@ -55,3 +56,4 @@ target_compile_definitions(${COMPOSITOR_RENDERER_IMPLEMENTATION}
     )
 
 
+add_subdirectory(test)
