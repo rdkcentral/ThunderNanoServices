@@ -25,23 +25,24 @@ file(GLOB SHADER_FILES *.glsl)
 
 set(OUTPUT_SHADER_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders")
 
-add_custom_target (create-output-dir ALL
-    COMMAND mkdir -p ${OUTPUT_SHADER_DIR}) 
+add_custom_target(generated_shaders)
 
 foreach(SHADER ${SHADER_FILES})
     get_filename_component(TARGET ${SHADER} NAME_WE)
 
-    message(STATUS "Generating shader: ${TARGET}-shader.h")
-
-    add_custom_target (generate-${TARGET} ALL
-        DEPENDS create-output-dir
+    add_custom_command (
+        TARGET generated_shaders
+        PRE_BUILD
+        VERBATIM
         WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+        COMMENT "Generating shader: ${TARGET}-shader.h"
+        COMMAND mkdir -p "${OUTPUT_SHADER_DIR}"
         COMMAND ${Python3_EXECUTABLE} convert.py --input ${SHADER} --output ${OUTPUT_SHADER_DIR}/${TARGET}-shader.h --symbol ${TARGET}_shader 
     )
-endforeach()
+endforeach(SHADER)
 
 add_library(GL_SHADERS INTERFACE)
-
+add_dependencies(GL_SHADERS generated_shaders)
 target_include_directories(GL_SHADERS INTERFACE ${OUTPUT_SHADER_DIR})
 
 add_library(gl::shaders ALIAS GL_SHADERS)

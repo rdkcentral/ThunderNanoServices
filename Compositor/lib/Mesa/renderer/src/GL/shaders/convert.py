@@ -60,7 +60,7 @@ def write_header(args):
             os.unlink(args.output)
             raise
 
-    print("Done")
+    print(f"Generated {args.output}")
 
 def main():
     argParser = argparse.ArgumentParser(
