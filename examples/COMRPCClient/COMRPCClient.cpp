@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
     // The code that follows now is pseudo code (might still require some changes) but 
     // will be operational next week
 
-    // SleepMs(4000);
+    SleepMs(4000);
 
     // client->Open<Thunder::Exchange::IDictionary>("Dictionary");
 
