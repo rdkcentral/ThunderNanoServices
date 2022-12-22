@@ -26,9 +26,15 @@
 #include <vector>
 
 namespace Compositor {
+
+namespace Interfaces {
+    class IBuffer;
+}
+
 using Box = WPEFramework::Exchange::IComposition::Rectangle;
 using Matrix = std::array<float, 9>;
 using Color = std::array<float, 4>;
+using Buffers = std::list<WPEFramework::Core::ProxyType<Interfaces::IBuffer>>;
 
 /**
  * @brief  A single DRM format, with a set of modifiers attached.
@@ -38,12 +44,25 @@ class PixelFormat {
 private:
     static constexpr uint8_t DefaultModifier = 0x00;
 
+    struct modifier {
+        uint64_t code;
+        bool external;
+    };
+
 public:
+    using ModifierType = modifier;
+
     PixelFormat() = delete;
 
     PixelFormat(const uint32_t fourcc, const uint16_t nModifiers, const uint64_t modifiers[])
         : _fourcc(fourcc)
         , _modifiers(modifiers, modifiers + nModifiers)
+    {
+    }
+
+    PixelFormat(const uint32_t fourcc, const std::vector<uint64_t>& modifiers)
+        : _fourcc(fourcc)
+        , _modifiers(modifiers)
     {
     }
 
@@ -58,6 +77,16 @@ public:
         return _fourcc;
     }
 
+    /*
+     * Format Modifiers:
+     *
+     * Format modifiers describe, typically, a re-ordering or modification
+     * of the data in a plane of an FB.  This can be used to express tiled/
+     * swizzled formats, or compression, or a combination of the two.
+     *
+     * The upper 8 bits of the format modifier are a vendor-id as assigned
+     * below.  The lower 56 bits are assigned as vendor sees fit.
+     */
     const std::vector<uint64_t>& Modifiers() const
     {
         return _modifiers;
