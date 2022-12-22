@@ -48,6 +48,7 @@ namespace Interfaces {
             virtual ~IIterator() = default;
 
             virtual bool IsValid() const = 0;
+
             virtual void Reset() = 0;
             virtual bool Next() = 0;
 
@@ -60,7 +61,7 @@ namespace Interfaces {
         virtual uint32_t Identifier() const = 0;
 
         virtual IIterator* Planes(const uint32_t timeoutMs) = 0; // Access the planes.
-        virtual uint32_t Release(const bool dirty) = 0; // Called by callee when is done with the planes.
+        virtual uint32_t Completed(const bool dirty) = 0; // Called by callee when is done with the planes.
 
         virtual void Render() = 0; // Mark for scanout.
 
