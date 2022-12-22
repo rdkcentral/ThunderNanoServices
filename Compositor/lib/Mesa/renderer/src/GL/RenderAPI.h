@@ -69,15 +69,15 @@ namespace API {
             attributes.push_back(terminator);
         }
 
-        void append(TYPE param)
+        void Append(TYPE param)
         {
             attributes.insert(attributes.end() - 1, param);
         }
 
-        void append(TYPE name, TYPE value)
+        void Append(TYPE name, TYPE value)
         {
-            append(name);
-            append(value);
+            Append(name);
+            Append(value);
         }
 
         operator TYPE*(void)
