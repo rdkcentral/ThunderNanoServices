@@ -30,7 +30,6 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 set(PLUGIN_WEBPROXY_AUTOSTART true CACHE STRING "Automatically start WebProxy plugin")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(${NAMESPACE}Core REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
@@ -45,7 +44,6 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Core::${NAMESPACE}Core
         )
 
 install(TARGETS ${MODULE_NAME} 

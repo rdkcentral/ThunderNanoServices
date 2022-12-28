@@ -31,6 +31,72 @@ namespace Plugin {
         CompositorImplementation(const CompositorImplementation&) = delete;
         CompositorImplementation& operator=(const CompositorImplementation&) = delete;
 
+        class ClientHandler {
+        private:
+            using Client = std::pair<const IUnknown*, bool>;
+            using Clients = std::list<Client>;
+
+        private:
+            ClientHandler() = delete;
+            ClientHandler(const ClientHandler&) = delete;
+            ClientHandler& operator=(const ClientHandler&) = delete;
+
+        public:
+            ClientHandler(CompositorImplementation& parent)
+                : _clients()
+                , _adminLock()
+                , _parent(parent)
+                , _job(*this)
+            {
+            }
+            ~ClientHandler()
+            {
+                _job.Revoke();
+                _clients.clear();
+            }
+
+        public:
+            void Offer(const Core::IUnknown* element)
+            {
+                _adminLock.Lock();
+                _clients.push_back({element, true});
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
+            void Revoke(const Core::IUnknown* element)
+            {
+                _adminLock.Lock();
+                _clients.push_back({element, false});
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
+            void Dispatch()
+            {
+                _adminLock.Lock();
+
+                while (_clients.size()) {
+                    Clients::iterator client(_clients.begin());
+                    _clients.erase(client);
+                    _adminLock.Unlock();
+                    if (client->second == true) {
+                        _parent.NewClientOffered(const_cast<IUnknown*>(client->first));
+                    } else {
+                        _parent.ClientRevoked(client->first);
+                    }
+                    _adminLock.Lock();
+                }
+                _adminLock.Unlock();
+            }
+
+        private:
+            Clients _clients;
+            Core::CriticalSection _adminLock;
+            CompositorImplementation& _parent;
+            Core::WorkerPool::JobType<ClientHandler&> _job;
+        };
+
         class ExternalAccess : public RPC::Communicator {
         private:
             ExternalAccess() = delete;
@@ -44,7 +110,7 @@ namespace Plugin {
                 const string& proxyStubPath, 
                 const Core::ProxyType<RPC::InvokeServer>& handler)
                 : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
-                , _parent(parent)
+                , _handler(parent)
             {
                 uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
 
@@ -59,26 +125,21 @@ namespace Plugin {
                 }
             }
 
-            virtual ~ExternalAccess() override = default;
+            ~ExternalAccess() override = default;
 
         private:
-            void Offer(Core::IUnknown* element, const uint32_t interfaceID) override
+            void Offer(Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
-                Exchange::IComposition::IClient* result = element->QueryInterface<Exchange::IComposition::IClient>();
-
-                if (result != nullptr) {
-                    _parent.NewClientOffered(result);
-                    result->Release();
-                }
+                _handler.Offer(element);
             }
 
-            void Revoke(const Core::IUnknown* element, const uint32_t interfaceID) override
+            void Revoke(const Core::IUnknown* element, const uint32_t interfaceID VARIABLE_IS_NOT_USED) override
             {
-                _parent.ClientRevoked(element);
+                _handler.Revoke(element);
             }
 
         private:
-            CompositorImplementation& _parent;
+            CompositorImplementation::ClientHandler _handler;
         };
 
     public:
@@ -92,7 +153,7 @@ namespace Plugin {
         {
         }
 
-        ~CompositorImplementation()
+        ~CompositorImplementation() override
         {
             if (_externalAccess != nullptr) {
                 delete _externalAccess;
@@ -118,9 +179,7 @@ namespace Plugin {
                 Add(_T("connector"), &Connector);
             }
 
-            ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::String Connector;
@@ -229,8 +288,10 @@ namespace Plugin {
             return _clients.find(callsign);
         }
 
-        void NewClientOffered(Exchange::IComposition::IClient* client)
+        void NewClientOffered(IUnknown* element)
         {
+            Exchange::IComposition::IClient* client = element->QueryInterface<Exchange::IComposition::IClient>();
+
             ASSERT(client != nullptr);
             if (client != nullptr) {
 
@@ -244,26 +305,30 @@ namespace Plugin {
                     ClientDataContainer::iterator element (_clients.find(name));
 
                     if (element != _clients.end()) {
+                        _adminLock.Unlock();
                         // as the old one may be dangling becayse of a crash let's remove that one, this is the most logical thing to do
                         ClientRevoked(element->second.clientInterface);
 
                         TRACE(Trace::Information, (_T("Replace client %s."), name.c_str()));
+                        _adminLock.Lock();
                     }
                     else {
                         TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
 
                     }
 
+                    client->AddRef();
                     _clients.emplace(std::piecewise_construct,
                                          std::forward_as_tuple(name),
                                          std::forward_as_tuple(client, Resolution()));
 
+                    _adminLock.Unlock();
                     for (auto&& index : _observers) {
                         index->Attached(name, client);
                     }
 
-                    _adminLock.Unlock();
                 }
+                client->Release();
             }
         }
 
@@ -277,23 +342,26 @@ namespace Plugin {
             while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
             if (it != _clients.end()) {
+                _clients.erase(it);
+                _adminLock.Unlock();
+
                 string name (it->first);
                 TRACE(Trace::Information, (_T("Remove client %s."), name.c_str()));
                 for (auto index : _observers) {
                     // note as we have the name here, we could more efficiently pass the name to the
                     // caller as it is not allowed to get it from the pointer passes, but we are going
                     // to restructure the interface anyway
-                    index->Detached(name.c_str());
+                    index->Detached(name);
                 }
 
-                _clients.erase(it);
+                it->second.clientInterface->Release();
+            } else {
+                _adminLock.Unlock();
             }
 
-            _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
-
 
         void PlatformReady()
         {

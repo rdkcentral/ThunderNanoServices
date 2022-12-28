@@ -26,21 +26,43 @@ namespace WPEFramework
 {
     namespace Plugin
     {
-        class ResourceMonitor : public PluginHost::IPlugin, public PluginHost::IWeb
-        {
+        class ResourceMonitor : public PluginHost::IPlugin, public PluginHost::IWeb {
         private:
-            ResourceMonitor(const ResourceMonitor &) = delete;
-            ResourceMonitor &operator=(const ResourceMonitor &) = delete;
+            class Notification : public RPC::IRemoteConnection::INotification {
+            public:
+                Notification() = delete;
+                Notification(const Notification&) = delete;
+                Notification& operator=(const Notification&) = delete;
+
+                explicit Notification(ResourceMonitor& parent)
+                    : _parent(parent) {
+                }
+                ~Notification() override = default;
+
+                public:
+                void Activated(RPC::IRemoteConnection*) override {
+                }
+                virtual void Deactivated(RPC::IRemoteConnection* connection) override {
+                    _parent.Deactivated(connection);
+                }
+
+                BEGIN_INTERFACE_MAP(Notification)
+                    INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                END_INTERFACE_MAP
+
+            private:
+                ResourceMonitor& _parent;
+            };
 
         public:
+            ResourceMonitor(const ResourceMonitor &) = delete;
+            ResourceMonitor &operator=(const ResourceMonitor &) = delete;
             ResourceMonitor()
-                : _service(nullptr), _monitor(nullptr), _connectionId(0)
+                : _service(nullptr), _monitor(nullptr), _connectionId(0), _notification(*this)
             {
             }
 
-            virtual ~ResourceMonitor()
-            {
-            }
+            ~ResourceMonitor() override = default;
 
             void Inbound(Web::Request&) override
             {
@@ -48,7 +70,7 @@ namespace WPEFramework
 
             Core::ProxyType<Web::Response> Process(const Web::Request &request) override
             {
-                Core::ProxyType<Web::Response> result = PluginHost::Factories::Instance().Response();
+                Core::ProxyType<Web::Response> result = PluginHost::IFactories::Instance().Response();
                 result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
                 result->Message = string(_T("Unknown request path specified."));
 
@@ -90,11 +112,15 @@ namespace WPEFramework
             string Information() const override;
 
         private:
+            void Deactivated(RPC::IRemoteConnection* connection);
+
+        private:
             PluginHost::IShell *_service;
             Exchange::IResourceMonitor *_monitor;
             uint32_t _connectionId;
             static Core::ProxyPoolType<Web::TextBody> webBodyFactory;
             uint32_t _skipURL;
+            Core::Sink<Notification> _notification;
         };
     } // namespace Plugin
 } // namespace WPEFramework

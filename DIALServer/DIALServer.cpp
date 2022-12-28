@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(DIALServer, 1, 0);
+    namespace {
+
+        static Metadata<DIALServer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM, subsystem::NETWORK },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static const string _SearchTarget(_T("urn:dial-multiscreen-org:service:dial:1"));
     static const string _DefaultAppInfoPath(_T("Apps"));
@@ -311,8 +323,6 @@ namespace Plugin {
             // Oops no way we can operate...
             result = _T("No DIALInterface available.");
         } else {
-            const uint8_t* rawId(Core::SystemInfo::Instance().RawDeviceId());
-            const string deviceId(Core::SystemInfo::Instance().Id(rawId, ~0));
 
             _service = service;
             _dialURL = Core::URL(service->Accessor());
@@ -321,6 +331,7 @@ namespace Plugin {
                 _dialURL.Port(80);
             }
 
+            const string deviceId = DeviceId();
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
             _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL, _DefaultAppInfoPath, selectedNode.IsAnyInterface());

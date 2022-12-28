@@ -23,7 +23,19 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Streamer, 1, 0);
+    namespace {
+
+        static Metadata<Streamer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {  subsystem::PLATFORM, subsystem::GRAPHICS },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::JSONBodyType<Streamer::Data>> jsonBodyDataFactory(2);
 
@@ -32,10 +44,13 @@ namespace Plugin {
         string message;
 
         ASSERT(_service == nullptr);
+        ASSERT(service != nullptr);
+        ASSERT(_player == nullptr);
+        ASSERT(_connectionId == 0);
 
         // Setup skip URL for right offset.
-        _connectionId = 0;
         _service = service;
+        _service->AddRef();
         _skipURL = _service->WebPrefix().length();
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
@@ -44,7 +59,8 @@ namespace Plugin {
 
         _player = _service->Root<Exchange::IPlayer>(_connectionId, 2000, _T("StreamerImplementation"));
 
-        if ((_player != nullptr) && (_service != nullptr)) {
+        if (_player != nullptr) {
+            RegisterAll();
             TRACE(Trace::Information, (_T("Successfully instantiated Streamer")));
             _player->Configure(_service);
 
@@ -61,7 +77,10 @@ namespace Plugin {
         } else {
             TRACE(Trace::Error, (_T("Streamer could not be initialized.")));
             message = _T("Streamer could not be initialized.");
-            _service->Unregister(&_notification);
+        }
+
+        if(message.length() != 0){
+            Deinitialize(service);
         }
 
         return message;
@@ -70,14 +89,15 @@ namespace Plugin {
     /* virtual */ void Streamer::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(_service == service);
-        ASSERT(_player != nullptr);
 
         service->Unregister(&_notification);
 
-        _player->Release();
-
-        if(_connectionId != 0){
+        if(_player != nullptr){
+            UnregisterAll();
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+            VARIABLE_IS_NOT_USED uint32_t result = _player->Release();
+            _player = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
             // The connection can disappear in the meantime...
             if (connection != nullptr) {
@@ -85,16 +105,20 @@ namespace Plugin {
                 connection->Terminate();
                 connection->Release();
             }
+
+            PluginHost::ISubSystem* subSystem = service->SubSystems();
+            if (subSystem != nullptr) {
+                if(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
+                    subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
+                    subSystem->Release();
+                }
+            }
         }
 
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-        if (subSystem != nullptr) {
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true);
-            subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
-            subSystem->Release();
-        }
-        _player = nullptr;
+
+        _service->Release();
         _service = nullptr;
+        _connectionId = 0;
     }
 
     /* virtual */ string Streamer::Information() const

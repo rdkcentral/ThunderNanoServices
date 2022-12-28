@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
     // Or 
     // 2)
     //    if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
-    //        controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
+    //        controller = client->Acquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
     //
     // Or
     // 3)

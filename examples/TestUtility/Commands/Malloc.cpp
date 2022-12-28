@@ -40,7 +40,7 @@ public:
         TestCore::TestCommandController::Instance().Announce(this);
     }
 
-    virtual ~Malloc()
+    ~Malloc() override
     {
         TestCore::TestCommandController::Instance().Revoke(this);
     }

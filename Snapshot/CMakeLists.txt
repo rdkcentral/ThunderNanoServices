@@ -32,7 +32,6 @@ set(PLUGIN_SNAPSHOT_AUTOSTART true CACHE STRING "Automatically start Snapshot pl
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(BCM_HOST QUIET)
@@ -47,7 +46,6 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE 
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         PNG::PNG)
 
 set_target_properties(${MODULE_NAME}

@@ -23,7 +23,20 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(BluetoothAudioSink, 1, 0);
+    namespace {
+
+        static Metadata<BluetoothAudioSink> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::BLUETOOTH },
+            // Terminations
+            { subsystem::NOT_BLUETOOTH },
+            // Controls
+            {}
+        );
+    }
+
 
     /* virtual */ const string BluetoothAudioSink::Initialize(PluginHost::IShell* service)
     {
@@ -39,26 +52,11 @@ namespace Plugin {
         config.FromString(_service->ConfigLine());
         _controller = config.Controller.Value();
         _codecSettings = config.Codecs.Value();
+        _latency = (config.Latency.Value() <= 10000? config.Latency.Value() : 10000);
 
         service->Register(&_comNotificationSink);
 
         Exchange::JBluetoothAudioSink::Register(*this, this);
-
-        if (config.SDPService.Enable.Value() == true) {
-            // Start the SDP server...
-            // Add an A2DP v1.3 AudioSource service, supporting AVDTP v1.2, transported via L2CAP connection using PSM 25.
-            namespace SDP = Bluetooth::SDP;
-            _sdpServer.Lock();
-            SDP::Service& audioSource = _sdpServer.Add();
-            audioSource.Description(config.SDPService.Name.Value(), config.SDPService.Description.Value(), config.SDPService.Provider.Value());
-            audioSource.BrowseGroupList()->Add(SDP::ClassID::PublicBrowseRoot);
-            audioSource.ServiceClassIDList()->Add(SDP::ClassID::AudioSource);
-            audioSource.ProfileDescriptorList()->Add(SDP::ClassID::AdvancedAudioDistribution, 0x0103);
-            audioSource.ProtocolDescriptorList()->Add(SDP::ClassID::L2CAP, SDP::Service::Protocol::L2CAP(25));
-            audioSource.ProtocolDescriptorList()->Add(SDP::ClassID::AVDTP, SDP::Service::Protocol::AVDTP(0x0102));
-            _sdpServer.Unlock();
-            _sdpServer.Start();
-        }
 
         if (Core::File(_service->PersistentPath()).IsDirectory() == false) {
             if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
@@ -109,8 +107,6 @@ namespace Plugin {
 
         delete _sink;
         _sink = nullptr;
-
-        _sdpServer.Stop();
 
         Exchange::JBluetoothAudioSink::Unregister(*this);
 
@@ -189,15 +185,20 @@ namespace Plugin {
         _lock.Lock();
 
         if (_sink != nullptr) {
-            Core::File file(_service->PersistentPath() + _sink->Address() + _T(".json"));
-            if (file.Destroy() == true) {
-                TRACE(Trace::Information, (_T("Revoked [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
-                result = Core::ERROR_NONE;
-                delete _sink;
-                _sink = nullptr;
+            if (_sink->State() == Exchange::IBluetoothAudioSink::DISCONNECTED) {
+                Core::File file(_service->PersistentPath() + _sink->Address() + _T(".json"));
+                if (file.Destroy() == true) {
+                    TRACE(Trace::Information, (_T("Revoked from Bluetooth audio sink assignment from [%s]"), _sink->Address().c_str()));
+                    result = Core::ERROR_NONE;
+                    delete _sink;
+                    _sink = nullptr;
+                } else {
+                    result = Core::ERROR_GENERAL;
+                    TRACE(Trace::Error, (_T("Failed to revoke Bluetooth audio sink assignment from [%s]"), _sink->Address().c_str()));
+                }
             } else {
-                result = Core::ERROR_GENERAL;
-                TRACE(Trace::Error, (_T("Failed to revoke [%s] from Bluetooth audio sink"), _sink->Address().c_str()));
+                result = Core::ERROR_ILLEGAL_STATE;
+                TRACE(Trace::Error, (_T("Sink in use, disconnect first")));
             }
         } else {
             TRACE(Trace::Error, (_T("Sink not assigned")));

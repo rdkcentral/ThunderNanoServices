@@ -38,7 +38,7 @@ namespace Plugin {
             RegisterAll();
         }
 
-        virtual ~Containers()
+        ~Containers() override
         {
             UnregisterAll();
         }
@@ -51,9 +51,9 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
     private:
         //   JSONRPC methods

@@ -1,0 +1,63 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "class": "AVS",
+    "title": "The Alexa Voice Service Headless Client",
+    "callsign": "AVS",
+    "locator": "libWPEFrameworkAVS.so",
+    "status": "alpha",
+    "description": "The Alexa Voice Service Headless Client serves as a personal assistant",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "properties": {
+          "alexaclientconfig": {
+            "type": "string",
+            "description": "The path to the AlexaClientSDKConfig.json (e.g /usr/share/WPEFramework/AVS/AlexaClientSDKConfig.json)"
+          },
+          "smartscreenconfig": {
+            "type": "string",
+            "description": "The path to the SmartScreenSDKConfig.json (e.g /usr/share/WPEFramework/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled"
+          },
+          "kwdmodelspath": {
+            "type": "string",
+            "description": "Path to the Keyword Detection models (e.g /usr/share/WPEFramework/AVS/models). The path mus contain the localeToModels.json file"
+          },
+          "loglevel": {
+            "type": "string",
+            "description": "Capitalized log level of the AVS components. Possible values: NONE, CRITICAL, ERROR, WARN, INFO. Debug log levels start from DEBUG0 up to DEBUG0"
+          },
+          "audiosource": {
+            "type": "string",
+            "description": "The callsign of the plugin that provides the voice audio input or PORTAUDIO, when the portaudio library should be used. (e.g BluetoothRemoteControll, PORTAUDIO)"
+          },
+          "enablesmartscreen": {
+            "type": "boolean",
+            "description": "Enable the SmartScreen support in the runtime. The SmartScreen functionality must be compiled in"
+          },
+          "enablekwd": {
+            "type": "boolean",
+            "description": "Enable the Keyword Detection engine in the runtime. The KWD functionality must be compiled in"
+          }
+        },
+        "required": [
+          "alexaclientconfig",
+          "logLevel",
+          "audiosource"
+        ]
+      }
+    },
+    "required": [
+      "callsign",
+      "classname",
+      "locator"
+    ]
+  },
+  "interface": {
+    "$cppref": "{cppinterfacedir}/IAVSClient.h"
+  }
+}

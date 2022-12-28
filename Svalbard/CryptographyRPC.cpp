@@ -49,13 +49,13 @@ namespace Plugin {
             }
 
         private:
-            void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+            void* Acquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
             {
                 void* result = nullptr;
 
                 if ((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) {
                     result = _parent.QueryInterface(interfaceId);
-                    TRACE(Trace::Information, ("Aquired interface(0x%08X) => %p", interfaceId, result));
+                    TRACE(Trace::Information, ("Acquired interface(0x%08X) => %p", interfaceId, result));
                 }
 
                 return (result);

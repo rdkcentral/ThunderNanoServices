@@ -31,6 +31,7 @@ namespace Implementation {
 
     namespace {
 
+        static constexpr uint32_t TimeToGetPlaybackPosition = 1;
         static class Config : public Core::JSON::Container {
         public:
             Config(const Config&) = delete;
@@ -52,7 +53,6 @@ namespace Implementation {
         class Aamp : public IPlayerPlatform, Core::Thread {
         private:
             typedef struct _GMainLoop GMainLoop;
-            static constexpr uint32_t TimeToGetPlaybackPosition = 1;
 
             class AampEventListener : public AAMPEventListener {
             public:
@@ -92,6 +92,7 @@ namespace Implementation {
                             _player->Speed(0);
                             _player->StateChange(Exchange::IStream::state::Prepared);
                             break;
+                        case eSTATE_BLOCKED:
                         case eSTATE_BUFFERING:
                         case eSTATE_PAUSED:
                         case eSTATE_SEEKING:
@@ -516,7 +517,6 @@ namespace Implementation {
                 _adminLock.Unlock();
                 return position;
             }
-
             void Position(const uint64_t absoluteTime) override
             {
                 _adminLock.Lock();
@@ -753,7 +753,6 @@ namespace Implementation {
 #endif
             mutable Core::CriticalSection _adminLock;
         }; // class Aamp
-
         static PlayerPlatformRegistrationType<Aamp, Exchange::IStream::streamtype::Unicast> Register(
             /*  Initialize */ [](const string& configuration) -> uint32_t {
                 config.FromString(configuration);

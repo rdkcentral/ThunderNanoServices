@@ -100,6 +100,8 @@ namespace WPASupplicant {
             KEY_CCMP = 0x04,
             KEY_TKIP = 0x08,
             KEY_PREAUTH = 0x10,
+            KEY_WPS_PBC = 0x20,
+            KEY_WPS_PIN = 0x40,
             KEY_NONE = 0x00
         };
 
@@ -116,6 +118,16 @@ namespace WPASupplicant {
         enum mode {
             MODE_STATION,
             MODE_AP
+        };
+
+        enum wpsauthtypes {
+            WPS_AUTH_NONE = 0,
+            WPS_AUTH_OPEN = 0x0001,
+            WPS_AUTH_WPAPSK = 0x0002,
+            WPS_AUTH_SHARED = 0x0004,
+            WPS_AUTH_WPA = 0x0008,
+            WPS_AUTH_WPA2 = 0x0010,
+            WPS_AUTH_WPA2PSK = 0x0020,
         };
 
         inline Network()

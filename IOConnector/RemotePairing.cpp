@@ -66,9 +66,7 @@ namespace Plugin {
             _state.Add(end);
             _marker = start;
         }
-        ~RemotePairing() override
-        {
-        }
+        ~RemotePairing() override = default;
 
     public:
         void Trigger(GPIO::Pin& pin) override

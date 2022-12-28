@@ -103,7 +103,7 @@ namespace Plugin {
             }
 
         private:
-            virtual void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId)
+            virtual void* Acquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
@@ -131,10 +131,8 @@ namespace Plugin {
             }
             JSONObjectFactory(const JSONObjectFactory&);
             JSONObjectFactory& operator=(const JSONObjectFactory&);
+            ~JSONObjectFactory() = default;
 
-            virtual ~JSONObjectFactory()
-            {
-            }
        public:
             static JSONObjectFactory& Instance()
             {
@@ -143,7 +141,7 @@ namespace Plugin {
                 return (_singleton);
             }
 
-            Core::ProxyType<INTERFACE> Element(const string& identifier)
+            Core::ProxyType<INTERFACE> Element(const string& identifier VARIABLE_IS_NOT_USED)
             {
                 Core::ProxyType<Web::JSONBodyType<Core::JSONRPC::Message>> message = _jsonRPCFactory.Element();
                 return Core::ProxyType<INTERFACE>(message);
@@ -171,9 +169,7 @@ namespace Plugin {
                 , _parent(static_cast<JSONRPCChannel<INTERFACE>&>(*parent))
             {
             }
-            virtual ~JSONRPCServer()
-            {
-            }
+            ~JSONRPCServer() override = default;
 
         public:
             virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
@@ -341,54 +337,17 @@ namespace Plugin {
             JSONRPCPlugin& _parent;
         };
 
-        // The next class is a helper class, just to trigger an a-synchronous callback every Period()
-        // amount of time.
-        class PeriodicSync : public Core::IDispatch {
-        private:
-            PeriodicSync() = delete;
-            PeriodicSync(const PeriodicSync&) = delete;
-            PeriodicSync& operator=(const PeriodicSync&) = delete;
-
-        public:
-            PeriodicSync(JSONRPCPlugin* parent)
-                : _parent(*parent)
-            {
-            }
-            ~PeriodicSync()
-            {
-            }
-
-        public:
-            void Period(const uint8_t time)
-            {
-                _nextSlot = (time * 1000);
-            }
-            // This method is called by the main process ThreadPool at the scheduled time.
-            // After the parent has been called to send out a-synchronous notifications, it
-            // will schedule itself again, to be triggered after the set period.
-            virtual void Dispatch() override
-            {
-                _parent.SendTime();
-
-                if (_nextSlot != 0) {
-                    Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(_nextSlot), Core::ProxyType<Core::IDispatch>(*this));
-                }
-            }
-
-        private:
-            uint32_t _nextSlot;
-            JSONRPCPlugin& _parent;
-        };
-        class Callback : public Core::IDispatch {
+        class Callback {
         private:
             Callback() = delete;
             Callback(const Callback&) = delete;
             Callback& operator=(const Callback&) = delete;
 
         public:
-            Callback(JSONRPCPlugin* parent, const Core::JSONRPC::Connection& channel)
+            Callback(JSONRPCPlugin* parent)
                 : _parent(*parent)
-                , _channel(channel)
+                , _channel()
+                , _job(*this)
             {
             }
             ~Callback()
@@ -396,17 +355,25 @@ namespace Plugin {
             }
 
         public:
+            void Submit(const Core::JSONRPC::Context& channel, const Core::Time& time)
+            {
+                _channel = &channel;
+                _job.Reschedule(time);
+            }
+        private:
             // This method is called by the main process ThreadPool at the scheduled time.
             // After the parent has been called to send out a-synchronous notifications, it
             // will schedule itself again, to be triggered after the set period.
-            virtual void Dispatch() override
+            friend Core::ThreadPool::JobType<Callback&>;
+            void Dispatch()
             {
-                _parent.SendTime(_channel);
+                _parent.SendTime(*_channel);
             }
 
         private:
             JSONRPCPlugin& _parent;
-            Core::JSONRPC::Connection _channel;
+            const Core::JSONRPC::Context* _channel;
+            Core::WorkerPool::JobType<Callback&> _job;
         };
 
         // Define a handler for incoming JSONRPC messages. This method does not take any
@@ -562,10 +529,9 @@ namespace Plugin {
             window = JsonObject({ { "x", _window.X }, { "y", _window.Y }, { "width", _window.Width }, { "height", _window.Height } });
             return (Core::ERROR_NONE);
         }
-        void async_callback(const Core::JSONRPC::Connection& connection, const Core::JSON::DecUInt8& seconds)
+        void async_callback(const Core::JSONRPC::Context& connection, const Core::JSON::DecUInt8& seconds)
         {
-            Core::ProxyType<Core::IDispatch> job(Core::ProxyType<Callback>::Create(this, connection));
-            Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(seconds * 1000), job);
+            _callback.Submit(connection, Core::Time::Now().Add(seconds * 1000));
         }
         uint32_t checkvalidation(Core::JSON::String& response)
         {
@@ -640,7 +606,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         void PostMessage(const string& recipient, const string& message);
         void SendTime();
-        void SendTime(Core::JSONRPC::Connection& channel);
+        void SendTime(const Core::JSONRPC::Context& channel);
 
         //   Exchange::IPerformance methods
         // -------------------------------------------------------------------------------------------------------
@@ -654,19 +620,39 @@ namespace Plugin {
         uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
 
     private:
+        // This method is called by the main process ThreadPool at the scheduled time.
+        // After the parent has been called to send out a-synchronous notifications, it
+        // will schedule itself again, to be triggered after the set period.
+        friend Core::ThreadPool::JobType<JSONRPCPlugin&>;
+        void Dispatch()
+        {
+            SendTime();
+
+            if (_nextSlot != 0) {
+                _job.Reschedule(Core::Time::Now().Add(_nextSlot));
+            }
+        }
+        inline void Period(const uint8_t time)
+        {
+            _nextSlot = (time * 1000);
+        }
+
         void RegisterAll();
         void UnregisterAll();
-        bool Validation(const string& token, const string& method, const string& parameters);
+        PluginHost::JSONRPC::classification Validation(const string& token, const string& method, const string& parameters);
 
 
     private:
-        Core::ProxyType<PeriodicSync> _job;
         Data::Window _window;
         string _data;
         std::vector<uint32_t> _array;
         COMServer* _rpcServer;
         JSONRPCChannel<Core::JSON::IElement>* _jsonServer;
         JSONRPCChannel<Core::JSON::IMessagePack>* _msgServer;
+
+        uint32_t _nextSlot;
+        Callback _callback;
+        Core::WorkerPool::JobType<JSONRPCPlugin&> _job;
     };
 
 } // namespace Plugin

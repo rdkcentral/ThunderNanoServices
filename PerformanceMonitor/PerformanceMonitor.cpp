@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(PerformanceMonitor, 1, 0);
+    namespace {
+
+        static Metadata<PerformanceMonitor> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     /* virtual */ const string PerformanceMonitor::Initialize(PluginHost::IShell* service)
     {
@@ -35,7 +48,7 @@ namespace Plugin {
         return string();
     }
 
-    /* virtual */ void PerformanceMonitor::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void PerformanceMonitor::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
     }
 

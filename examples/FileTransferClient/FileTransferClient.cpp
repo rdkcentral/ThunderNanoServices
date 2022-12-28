@@ -48,7 +48,7 @@ namespace WPEFramework {
                 {
                     Run();
                 }
-                virtual ~FileUpdate()
+                ~FileUpdate() override
                 {
                     Thread::Stop();
                     _lineQueue.Disable();
@@ -56,7 +56,7 @@ namespace WPEFramework {
                 }
 
             private:
-                virtual uint32_t Worker()
+                uint32_t Worker() override
                 {
                     string line;
                         while (_lineQueue.Extract(line, Core::infinite) == true) { _storeFile << line; }
@@ -84,7 +84,7 @@ namespace WPEFramework {
                 Open(0);
             }
 
-            virtual ~TextConnector()
+            ~TextConnector()
             {
                 Close(Core::infinite);
             }

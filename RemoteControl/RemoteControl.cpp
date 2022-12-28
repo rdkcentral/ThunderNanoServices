@@ -29,7 +29,20 @@ namespace Plugin {
     static Core::ProxyPoolType<Web::JSONBodyType<RemoteControl::Data>> jsonResponseFactory(4);
     static Core::ProxyPoolType<Web::JSONBodyType<PluginHost::VirtualInput::KeyMap::KeyMapEntry>> jsonCodeFactory(1);
 
-    SERVICE_REGISTRATION(RemoteControl, 1, 0);
+    namespace {
+
+        static Metadata<RemoteControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     class KeyActivity {
     private:
@@ -127,9 +140,7 @@ namespace Plugin {
         return (result);
     }
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     RemoteControl::RemoteControl()
         : _skipURL(0)
         , _virtualDevices()
@@ -141,9 +152,7 @@ namespace Plugin {
 
         RegisterAll();
     }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
 
     /* virtual */ RemoteControl::~RemoteControl()
     {
@@ -173,7 +182,7 @@ namespace Plugin {
 
                 map.PassThrough(config.PassOn.Value());
             } else {
-                if (map.Load(mappingFile) == Core::ERROR_NONE) {
+                if (Load(map, mappingFile) == Core::ERROR_NONE) {
 
                     map.PassThrough(config.PassOn.Value());
                 } else {
@@ -208,19 +217,21 @@ namespace Plugin {
                     loadName += _T(".json");
                 }
 
+                // Get a table for producer.
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
+
                 // See if we need to load a table.
                 string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
-
                 if ((specific.empty() == false) && (specific != mappingFile)) {
 
                     TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
 
-                    // Get our selves a table..
-                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
-                    map.Load(specific);
+                    Load(map, specific);
                     if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());
                     }
+                } else {
+                    map.PassThrough(true);
                 }
             }
 
@@ -242,7 +253,7 @@ namespace Plugin {
 
                     // Get our selves a table..de
                     PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(configList.Current().Name.Value()));
-                    map.Load(specific);
+                    Load(map, specific);
                     map.PassThrough(configList.Current().PassOn.Value());
                 }
 
@@ -301,8 +312,6 @@ namespace Plugin {
 
         // CLear the virtual devices.
         _virtualDevices.clear();
-
-        Remotes::RemoteAdministrator::Instance().RevokeAll();
     }
 
     /* virtual */ string RemoteControl::Information() const
@@ -684,7 +693,7 @@ namespace Plugin {
                             // Seems like we have a default mapping file. Load it..
                             PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
-                            if (map.Save(fileName) == Core::ERROR_NONE) {
+                            if (Save(map, fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = string(_T("File is created: " + fileName));
                             }
@@ -707,7 +716,7 @@ namespace Plugin {
                         if (fileName.empty() == false) {
                             PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(deviceName));
 
-                            if (map.Load(fileName) == Core::ERROR_NONE) {
+                            if (Load(map, fileName) == Core::ERROR_NONE) {
                                 result->ErrorCode = Web::STATUS_OK;
                                 result->Message = string(_T("File is reloaded: " + deviceName));
                             }
@@ -838,12 +847,12 @@ namespace Plugin {
         _eventLock.Lock();
 
         //Make sure a sink is not registered multiple times.
-        if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) != _notificationClients.end())
-            return;
+        if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end()) {
 
-        TRACE(Trace::Information , (_T("Registered a client with RemoteControl")));
-        _notificationClients.push_back(sink);
-        sink->AddRef();
+            TRACE(Trace::Information, (_T("Registered a client with RemoteControl")));
+            _notificationClients.push_back(sink);
+            sink->AddRef();
+        }
 
         _eventLock.Unlock();
     }
@@ -855,12 +864,12 @@ namespace Plugin {
         std::list<Exchange::IRemoteControl::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
 
         // Make sure you do not unregister something you did not register !!!
-        if (index == _notificationClients.end())
-            return;
-
         if (index != _notificationClients.end()) {
-            (*index)->Release();
-            _notificationClients.erase(index);
+
+            if (index != _notificationClients.end()) {
+                (*index)->Release();
+                _notificationClients.erase(index);
+            }
         }
 
         _eventLock.Unlock();
@@ -873,6 +882,51 @@ namespace Plugin {
             string keyCode (Core::NumberType<uint32_t>(code).Text());
             event_keypressed(keyCode, (type == IVirtualInput::KeyData::type::PRESSED));
         }
+    }
+
+    uint32_t RemoteControl::Load(PluginHost::VirtualInput::KeyMap& map, const string& keyMap)
+    {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        if ((keyMap.empty() == false) && (Core::File(keyMap).Exists() == true)) {
+            result = Core::ERROR_OPENING_FAILED;
+
+            Core::File mappingFile(keyMap);
+            Core::JSON::ArrayType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> mappingTable;
+
+            if (mappingFile.Open(true) == true) {
+                result = Core::ERROR_ILLEGAL_STATE;
+                Core::OptionalType<Core::JSON::Error> error;
+                mappingTable.IElement::FromFile(mappingFile, error);
+                if (error.IsSet() == true) {
+                    TRACE(Trace::Information, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+                } else {
+                    result = map.Import(mappingTable);
+                }
+                mappingFile.Close();
+            }
+        }
+
+        return (result);
+    }
+
+    uint32_t RemoteControl::Save(PluginHost::VirtualInput::KeyMap& map, const string& keyMap)
+    {
+        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+        Core::File mappingFile(keyMap);
+        Core::JSON::ArrayType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> mappingTable;
+
+        if (mappingFile.Create() == true) {
+            mappingFile.SetSize(0);
+
+            result = Core::ERROR_NONE;
+
+            map.Export(mappingTable);
+            mappingTable.IElement::ToFile(mappingFile);
+        }
+
+        return (result);
     }
 }
 }

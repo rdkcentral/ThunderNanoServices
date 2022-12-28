@@ -154,15 +154,11 @@ namespace Plugin {
             WallClockNotifier(const WallClockNotifier&) = delete;
             WallClockNotifier& operator=(const WallClockNotifier&) = delete;
 
-            #ifdef __WINDOWS__
-            #pragma warning(disable: 4355)
-            #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             WallClockNotifier()
                 : _job(*this) {
             }
-            #ifdef __WINDOWS__
-            #pragma warning(default: 4355)
-            #endif
+POP_WARNING()
             ~WallClockNotifier() {
                 Clear();
             }
@@ -252,7 +248,7 @@ namespace Plugin {
                 } while (nextSlot < timeSlot);
 
                 if (nextSlot != static_cast<uint64_t>(~0)) {
-                    _job.Schedule(Core::Time(nextSlot));
+                    _job.Reschedule(Core::Time(nextSlot));
                 }
 
                 _adminLock.Unlock();
@@ -269,18 +265,14 @@ namespace Plugin {
         SimpleCOMRPCPluginServer(const SimpleCOMRPCPluginServer&) = delete;
         SimpleCOMRPCPluginServer& operator=(const SimpleCOMRPCPluginServer&) = delete;
 
-        #ifdef __WINDOWS__
-        #pragma warning(disable: 4355)
-        #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         SimpleCOMRPCPluginServer()
             : _notifier()
             , _wallclock(nullptr)
             , _comNotificationSink(*this)
         {
         }
-        #ifdef __WINDOWS__
-        #pragma warning(default: 4355)
-        #endif
+POP_WARNING()
         ~SimpleCOMRPCPluginServer() override {
             printf("Shutting down\n");
         }

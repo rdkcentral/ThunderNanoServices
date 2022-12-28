@@ -25,9 +25,7 @@ namespace Plugin {
 
     constexpr uint32_t WaitForResponse = 2000;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     NTPClient::NTPClient()
         : Core::SocketDatagram(false, Core::NodeId(), Core::NodeId(), 128, 512)
         , _adminLock()
@@ -37,8 +35,8 @@ namespace Plugin {
         , _fired(true)
         , _WaitForNetwork(2000) // Wait for 2 Seconds for a new attempt
         , _retryAttempts(5)
-        , _activity(Core::ProxyType<Activity>::Create(this))
         , _clients()
+        , _job(*this)
     {
         _packet.LeapIndicator(0x03); // Unknown
         _packet.NTPVersion(0x04); // Version 4
@@ -50,13 +48,11 @@ namespace Plugin {
         _packet.RootDispersion(0x00010000); // Insignificant, 1 second
         _packet.ReferenceID(0x00000000);
     }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
 
     /* virtual */ NTPClient::~NTPClient()
     {
-        Core::IWorkerPool::Instance().Revoke(_activity);
+        _job.Revoke();
 
         Close(Core::infinite);
     }
@@ -100,7 +96,7 @@ namespace Plugin {
         if ((_state == INITIAL) || (_state == SUCCESS) || ((_state == FAILED) && (_serverIndex.IsValid() == false))) {
             result = Core::ERROR_NONE;
             _state = SENDREQUEST;
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Submit();
         } else if (_state == SENDREQUEST || _state == INPROGRESS) {
             result = Core::ERROR_INPROGRESS;
         }
@@ -123,8 +119,8 @@ namespace Plugin {
 
             _state = FAILED;
 
-            Core::IWorkerPool::Instance().Revoke(_activity);
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Revoke();
+            _job.Submit();
         }
         _adminLock.Unlock();
     }
@@ -254,10 +250,10 @@ namespace Plugin {
             Close(0);
 
             // Lets remove the watchdog subject, we do not want to wait anymore, we got an answer.
-            Core::IWorkerPool::Instance().Revoke(_activity);
+            _job.Revoke();
 
             // Schedule it again to broadcast the successfull update of the time.
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Submit();
         }
 
         _adminLock.Unlock();
@@ -270,8 +266,8 @@ namespace Plugin {
     {
         if (HasError() == true) {
             Close(0);
-            Core::IWorkerPool::Instance().Revoke(_activity);
-            Core::IWorkerPool::Instance().Submit(_activity);
+            _job.Revoke();
+            _job.Submit();
         }
     }
 
@@ -336,7 +332,6 @@ namespace Plugin {
 
     void NTPClient::Update()
     {
-
         // runs always in the context of the adminlock
 
         if(_state == FAILED){
@@ -356,6 +351,7 @@ namespace Plugin {
     {
         uint32_t result = Core::infinite;
 
+        TRACE(Trace::Information, (_T("NTPClient: job is dispatched")));
         _adminLock.Lock();
 
         if (_state == SENDREQUEST) {
@@ -396,7 +392,7 @@ namespace Plugin {
         if (result != Core::infinite) {
             Core::Time timestamp(Core::Time::Now());
             timestamp.Add(result);
-            Core::IWorkerPool::Instance().Schedule(timestamp, _activity);
+            _job.Reschedule(timestamp);
         }
    }
 

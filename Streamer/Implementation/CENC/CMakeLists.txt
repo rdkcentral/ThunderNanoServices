@@ -17,7 +17,6 @@
 
 set(PLAYER_NAME CENC)
 
-find_library(GSTCENCDECRYPTOR gstcencdecrypt PATH_SUFFIXES lib/gstreamer-1.0)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(PkgConfig REQUIRED)
 
@@ -32,7 +31,7 @@ pkg_check_modules(GST
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
 
 add_library(${LIB_NAME} STATIC
-     PlayerImplementation.cpp)
+    PlayerImplementation.cpp)
 
 set_target_properties(${LIB_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -46,8 +45,7 @@ target_include_directories(${LIB_NAME}
 target_link_libraries(${LIB_NAME}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${GST_LIBRARIES}
-        ${GSTCENCDECRYPTOR})
+        ${GST_LIBRARIES})
 
 install(TARGETS ${LIB_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)

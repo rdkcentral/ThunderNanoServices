@@ -33,7 +33,19 @@ namespace OutOfProcessPlugin {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(OutOfProcessPlugin, 1, 0);
+    namespace {
+
+        static Metadata<OutOfProcessPlugin> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<OutOfProcessPlugin::Data> jsonDataFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<OutOfProcessPlugin::Data>> jsonBodyDataFactory(4);
@@ -43,15 +55,21 @@ namespace Plugin {
 
     const string OutOfProcessPlugin::Initialize(PluginHost::IShell* service) /* override */
     {
-        string message;
-
+        ASSERT(service != nullptr);
         ASSERT(_browser == nullptr);
+        ASSERT(_browserresources == nullptr);
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
+        ASSERT(_connectionId == 0);
+        ASSERT(_state == nullptr);
 
-        _connectionId = 0;
+        string message;
+
         _service = service;
+        _service->AddRef();
+
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
+
         _service->EnableWebServer(_T("UI"), EMPTY_STRING);
         _service->Register(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _service->Register(static_cast<PluginHost::IPlugin::INotification*>(_notification));
@@ -59,13 +77,56 @@ namespace Plugin {
         _browser = service->Root<Exchange::IBrowser>(_connectionId, Core::infinite, _T("OutOfProcessImplementation"));
 
         if (_browser == nullptr) {
-            _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
-            _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-            _service = nullptr;
-
-            ConnectionTermination(_connectionId);
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
+            _browserresources = _browser->QueryInterface<Exchange::IBrowserResources>();
+            if( _browserresources != nullptr) {
+                Exchange::JBrowserResources::Register(*this, _browserresources);
+                Register("bigupdate", [this](const Core::JSONRPC::Context&, const string& params){ 
+                    uint32_t updates = 5000;
+                    string sleep("100");
+                    if(params.empty() == false) {
+                        class Params : public Core::JSON::Container {
+                        public:
+                            Params(const Params&) = delete;
+                            Params& operator=(const Params&) = delete;
+
+                            Params()
+                                : Core::JSON::Container()
+                                , Updates(5000)
+                                , Sleep("100")
+                            {
+                                Add(_T("updates"), &Updates);
+                                Add(_T("sleep"), &Sleep);
+                            }
+                            ~Params() override = default;
+
+                        public:
+                            Core::JSON::DecUInt32 Updates;
+                            Core::JSON::String Sleep;
+                        } paramscontainer;
+                        paramscontainer.FromString(params);
+                        updates = paramscontainer.Updates.Value();
+                        sleep = paramscontainer.Sleep.Value();
+                    }
+
+                    std::list<string> _elements;
+                    for(uint32_t i = 0; i<updates; ++i) {
+                        string s("UserScripts_Updated_");
+                        s += std::to_string(i);
+                        if( i == 0 ) {
+                            s = sleep;
+                        }
+                        _elements.push_back(s);
+                    }
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::Service<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
+                    if ((_params != nullptr)) {
+                        _browserresources->UserScripts(_params);
+                        _params->Release();
+                    }
+                }); 
+            }
+
             _browser->Register(_notification);
 
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
@@ -89,11 +150,17 @@ namespace Plugin {
                         ASSERT(_memory != nullptr);
                         remoteConnection->Release();
                     }
-                    else {
-                        message = _T("Failed to instantiate the Server.");
-                    }
+                } else {
+                    message = _T("Failed to register Notification sink.");
                 }
             }
+            else {
+                message = _T("OutOfProcessPlugin could not obtain state control.");
+            }
+        }
+        
+        if (message.length() != 0) {
+            Deinitialize(service);
         }
 
         return message;
@@ -102,37 +169,58 @@ namespace Plugin {
     /* virtual */ void OutOfProcessPlugin::Deinitialize(PluginHost::IShell* service)
     {
         ASSERT(service == _service);
-        ASSERT(_browser != nullptr);
 
-        _service->DisableWebServer();
         _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
         _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-        _browser->Unregister(_notification);
-        _memory->Release();
+        _service->DisableWebServer();
 
-        PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+        if(_browser != nullptr) {
+            if( _browserresources != nullptr) {
+                Exchange::JBrowserResources::Unregister(*this);
+                _browserresources->Release();
+                _browserresources = nullptr;
+            }
+            _browser->Unregister(_notification);
 
-        if (sink != nullptr) {
-            _service->Unregister(sink);
-            sink->Release();
+            if(_memory != nullptr) {
+                _memory->Release();
+                _memory = nullptr;
+            }
+
+            if (_state != nullptr) {
+                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+                if (sink != nullptr) {
+                    _service->Unregister(sink);
+                    sink->Release();
+                }
+                _state->Unregister(_notification);
+                _state->Release();
+                _state = nullptr;
+            }
+
+            // Stop processing:
+            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+            VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
+            _browser = nullptr;
+
+            // It should have been the last reference we are releasing, 
+            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+            // are leaking...
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+            // If this was running in a (container) process...
+            if (connection != nullptr) {
+                // Lets trigger the cleanup sequence for 
+                // out-of-process code. Which will guard 
+                // that unwilling processes, get shot if
+                // not stopped friendly :-)
+                connection->Terminate();
+                connection->Release();
+            }
         }
 
-        if (_state != nullptr) {
-
-            // No longer a need for the notfications..
-            _state->Unregister(_notification);
-            _state->Release();
-        }
-
-        // Stop processing of the browser:
-        _browser->Release();
-
-        if(_connectionId != 0){
-            ConnectionTermination(_connectionId);
-        }
-
-        _memory = nullptr;
-        _browser = nullptr;
+        _connectionId = 0;
+        _service->Release();
         _service = nullptr;
     }
 
@@ -329,15 +417,6 @@ namespace Plugin {
         string message = "{ \"state\": \"test\" }";
 
         _service->Notify(message);
-    }
-
-    void OutOfProcessPlugin::ConnectionTermination(uint32_t connectionId)
-    {
-        RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
-        if (connection != nullptr) {
-            connection->Terminate();
-            connection->Release();
-        }
     }
 
     void OutOfProcessPlugin::Deactivated(RPC::IRemoteConnection* connection)

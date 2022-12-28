@@ -30,9 +30,7 @@ namespace DIALHandlers {
         YouTube(const YouTube&) = delete;
         YouTube& operator=(const YouTube&) = delete;
 
-        #ifdef __WINDOWS__
-        #pragma warning(disable : 4355)
-        #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         YouTube(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
             : Default(service, config, parent)
             , _browser(nullptr)
@@ -41,9 +39,7 @@ namespace DIALHandlers {
             , _notification(this)
         {
         }
-        #ifdef __WINDOWS__
-        #pragma warning(default : 4355)
-        #endif
+POP_WARNING()
         ~YouTube() override
         {
             Stopped({}, {});
@@ -69,7 +65,7 @@ namespace DIALHandlers {
         {
             return _browser != nullptr;
         }
-        virtual void Stopped(const string& data, const string& payload)
+        virtual void Stopped(const string& data VARIABLE_IS_NOT_USED, const string& payload VARIABLE_IS_NOT_USED)
         {
             if (_browser != nullptr) {
                 _browser->Unregister(&_notification);
@@ -109,10 +105,10 @@ namespace DIALHandlers {
             {
                 _parent->_hidden = hidden;
             }
-            void LoadFinished(const string& URL) override
+            void LoadFinished(const string& URL VARIABLE_IS_NOT_USED) override
             {
             }
-            void URLChanged(const string& URL) override
+            void URLChanged(const string& URL VARIABLE_IS_NOT_USED) override
             {
             }
             void Closure() override

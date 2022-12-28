@@ -37,7 +37,20 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 namespace Plugin
 {
 
-    SERVICE_REGISTRATION(IOConnector, 1, 0);
+    namespace {
+
+        static Metadata<IOConnector> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<IOConnector::Data>> jsonBodyDataFactory(1);
 
@@ -211,7 +224,7 @@ namespace Plugin
         return (_pins.size() > 0 ? string() : _T("Could not instantiate the requested Pin"));
     }
 
-    /* virtual */ void IOConnector::Register(ICatalog::INotification* sink)
+    /* virtual */ void IOConnector::Register(Exchange::IExternal::ICatalog::INotification* sink)
     {
         _adminLock.Lock();
 
@@ -229,7 +242,7 @@ namespace Plugin
         _adminLock.Unlock();
     }
 
-    /* virtual */ void IOConnector::Unregister(ICatalog::INotification* sink)
+    /* virtual */ void IOConnector::Unregister(Exchange::IExternal::ICatalog::INotification* sink)
     {
         _adminLock.Lock();
 
@@ -248,6 +261,20 @@ namespace Plugin
     /* virtual */ Exchange::IExternal* IOConnector::Resource(const uint32_t id)
     {
         Exchange::IExternal* result = nullptr;
+
+        Pins::iterator index = _pins.find(id);
+
+        if (index != _pins.end()) {
+            result = index->second.Pin();
+            result->AddRef();
+        }
+
+        return (result);
+    }
+
+    /* virtual */ Exchange::IInputPin* IOConnector::IInputPinResource(const uint32_t id)
+    {
+        Exchange::IInputPin* result = nullptr;
 
         Pins::iterator index = _pins.find(id);
 

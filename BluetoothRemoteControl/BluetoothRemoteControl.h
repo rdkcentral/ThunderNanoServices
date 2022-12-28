@@ -95,9 +95,23 @@ namespace Plugin {
                     : _text(Core::ToString(text))
                 {
                 }
-                ~Flow()
+                explicit Flow(const uint16_t handle, const uint8_t length, const uint8_t buffer[])
                 {
+                    static const char hexArray[] = "0123456789ABCDEF";
+
+                    Core::Format(_text, _T("Received: [0x%04X], data: [0x%02X]:["), handle, length);
+                    std::string textData;
+                    for (uint8_t index = 0; index < length; index++) {
+                        if (index != 0) {
+                          textData += ':';
+                        }
+                        textData += hexArray[ ((buffer[index] >> 4) & 0x0F) ];
+                        textData += hexArray[ (buffer[index] & 0x0F) ];
+                    }
+                    _text += textData + ']';
+                   
                 }
+                ~Flow() = default;
 
             public:
                 const char* Data() const
@@ -229,8 +243,7 @@ namespace Plugin {
                     , _sampleRate(sampleRate)
                     , _resolution(resolution) {
                 }
-                virtual ~AudioProfile() {
-                }
+                ~AudioProfile() override = default;
 
             public:
                 Exchange::IVoiceProducer::IProfile::codec Codec() const override {
@@ -549,7 +562,7 @@ namespace Plugin {
                 Constructor(config);
             }
 
-            virtual ~GATTRemote()
+            ~GATTRemote() override
             {
                 if (_device != nullptr) {
                     if (_device->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr)) != Core::ERROR_NONE) {
@@ -711,6 +724,8 @@ namespace Plugin {
             }
             void Message(const uint16_t handle, const uint8_t length, const uint8_t buffer[])
             {
+                TRACE(Flow, (handle, length, buffer));
+
                 _adminLock.Lock();
 
                 if ( (handle == _voiceDataHandle) && (_decoder != nullptr) ) {
@@ -726,13 +741,19 @@ namespace Plugin {
                     }
                 }
                 else if ( (std::any_of(_keysDataHandles.cbegin(), _keysDataHandles.cend(), [handle](const uint16_t reportHandle) { return (reportHandle == handle); }))
-                           && (length >= 1) && (length <= 4) ) {
+                           && (length >= 1) && (length <= 8) ) {
 
                     uint32_t scancode = 0;
+                    // TODO: official spec allows for 6 keys to be pressed simultaneously. We only
+                    //       allow 2... Might require fixing if we want to support this.
+                    uint8_t endMarker = std::min(length, static_cast<uint8_t>(4));
 
-                    for (uint8_t i = 0; i < length; i++) {
-                        scancode |= (buffer[i] << (8 * i));
+                    for (uint8_t i = 2; i < endMarker; i++) {
+                        scancode |= (buffer[i] << (8 * (i - 2)));
                     }
+
+                    // Move the modifiers (actually only the first byte) to the higehr 16 bits)
+                    scancode |= (buffer[0] << 16) | (buffer[1] << 16);
 
                     bool pressed = (scancode != 0);
 
@@ -1231,7 +1252,7 @@ namespace Plugin {
             AudioProfile* _audioProfile;
             Decoders::IDecoder* _decoder;
             bool _startFrame;
-            uint16_t _currentKey;
+            uint32_t _currentKey;
 
             bool _voiceEnabled;
         };
@@ -1325,14 +1346,14 @@ namespace Plugin {
 
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)

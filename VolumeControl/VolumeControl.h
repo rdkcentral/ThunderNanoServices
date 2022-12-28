@@ -64,9 +64,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            ~ConnectionNotification() override
-            {
-            }
+            ~ConnectionNotification() override = default;
 
             ConnectionNotification() = delete;
             ConnectionNotification(const ConnectionNotification&) = delete;
@@ -97,9 +95,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            ~VolumeNotification() override
-            {
-            }
+            ~VolumeNotification() override = default;
 
             VolumeNotification() = delete;
             VolumeNotification(const VolumeNotification&) = delete;

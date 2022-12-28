@@ -183,9 +183,7 @@ namespace Plugin {
             };
 
         public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             PluginObserver(const string& configuration)
                 : _config()
                 , _waitEvent(true, false)
@@ -194,9 +192,7 @@ namespace Plugin {
 
                 _config.FromString(configuration);
             }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
             ~PluginObserver()
             {
             }

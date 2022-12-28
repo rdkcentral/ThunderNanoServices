@@ -24,7 +24,7 @@ namespace WPEFramework {
 
 namespace Implementation {
     struct ICallback {
-        virtual ~ICallback() {}
+        virtual ~ICallback() = default;
         virtual void NotifyEvent(const std::string& payload, const std::string& source, const std::string& destination) = 0;
     };
 } // Implementation
@@ -34,7 +34,7 @@ class IProfileControl;
 namespace WebPA {
 
     struct ICallback {
-        virtual ~ICallback() {}
+        virtual ~ICallback() = default;
         virtual void NotifyEvent() = 0;
     };
 
@@ -56,14 +56,14 @@ public:
         {
             Administrator::Instance().Announce(Core::ClassNameOnly(typeid(PROFILE).name()).Text(), this);
         }
-        virtual ~ProfileImplementationType()
+        ~ProfileImplementationType() override
         {
             Administrator::Instance().Revoke(Core::ClassNameOnly(typeid(PROFILE).name()).Text());
         }
     };
 
 public:
-    static Administrator& Instance()
+    EXTERNAL static Administrator& Instance()
     {
         static Administrator _singleton;
         return (_singleton);
@@ -112,7 +112,7 @@ IProfileControl*  WebPAProfileInstance(const char* name);
 struct IProfileControl {
 public:
     struct ICallback {
-        virtual ~ICallback() {}
+        virtual ~ICallback() = default;
         virtual void NotifyEvent(const EventId& eventId, const EventData& eventData) = 0;
     };
 
@@ -120,7 +120,7 @@ public:
         return (WebPAProfileInstance(profileName));
     }
 
-    virtual ~IProfileControl() {}
+    virtual ~IProfileControl() = default;
     virtual bool Initialize() = 0;
     virtual bool Deinitialize() = 0;
 

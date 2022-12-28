@@ -135,7 +135,7 @@ namespace Plugin {
             {
                 Add(_T("powerkey"), &PowerKey);
                 Add(_T("offmode"), &OffMode);
-                Add(_T("control"), &ControlClients);
+                Add(_T("controlclients"), &ControlClients);
             }
             ~Config()
             {
@@ -180,9 +180,7 @@ namespace Plugin {
         Power(const Power&) = delete;
         Power& operator=(const Power&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         Power()
             : _adminLock()
             , _skipURL(0)
@@ -193,12 +191,11 @@ namespace Plugin {
             , _powerKey(0)
             , _controlClients(true)
             , _powerOffMode(Exchange::IPower::PCState::SuspendToRAM)
+            , _currentState(Exchange::IPower::PCState::On)
         {
             RegisterAll();
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
         virtual ~Power()
         {
             UnregisterAll();
@@ -246,7 +243,7 @@ namespace Plugin {
         uint32_t SetState(const PCState, const uint32_t) override;
         void PowerKey() override;
 
-        void PowerChange(const Exchange::IPower::PCState state);
+        void PowerChange(const Exchange::IPower::PCState state, const Exchange::IPower::PCPhase phase);
 
     private:
         void KeyEvent(const uint32_t keyCode);
@@ -272,6 +269,7 @@ namespace Plugin {
         uint32_t _powerKey;
         bool _controlClients;
         Exchange::IPower::PCState _powerOffMode;
+        Exchange::IPower::PCState _currentState;
     };
 } //namespace Plugin
 } //namespace WPEFramework

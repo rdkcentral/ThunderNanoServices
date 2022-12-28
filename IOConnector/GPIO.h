@@ -34,9 +34,9 @@ namespace GPIO {
                 public Exchange::IInputPin,
                 public Core::IResource {
     private:
-        typedef Exchange::ExternalBase BaseClass;
+        using BaseClass = Exchange::ExternalBase;
 
-        class TimedPin  : public Core::IDispatch {
+        class TimedPin {
         private:
             typedef std::list<Exchange::IInputPin::INotification*> ObserverList;
             typedef std::map<uint32_t, ObserverList> MarkerMap;
@@ -49,27 +49,18 @@ namespace GPIO {
             TimedPin(Pin* parent)
                 : _parent(*parent)
                 , _marker(~0)
-                , _job()
                 , _observerList()
                 , _monitor()
+                , _job(*this)
             {
                 ASSERT(parent != nullptr);
             }
-            ~TimedPin() override
+            ~TimedPin()
             {
+                _job.Revoke();
             }
 
         public:
-            inline void AddReference()
-            {
-                _job = Core::ProxyType<Core::IDispatch>(static_cast<Core::IDispatch&>(*this));
-            }
-
-            inline void DropReference()
-            {
-                _job.Release();
-            }
-
             void Register(IInputPin::INotification* sink) 
             {
                 _parent.Lock();
@@ -121,14 +112,16 @@ namespace GPIO {
 
                     ASSERT(_marker == static_cast<uint32_t>(~0));
                     _marker = marker;
-                    _parent.Updated();
+                    _job.Submit();
                     _parent.Unlock();
                 }
             }
 
         private:
-            void Dispatch() override
+            friend Core::ThreadPool::JobType<TimedPin&>;
+            void Dispatch()
             {
+                TRACE(Trace::Information, (_T("TimedPin: job is dispatched")));
                 _parent.Lock();
 
                 uint32_t marker = _marker;
@@ -154,9 +147,10 @@ namespace GPIO {
         private:
             Pin& _parent;
             uint32_t _marker;
-            Core::ProxyType<Core::IDispatch> _job;
             ObserverList _observerList;
             TimedInput _monitor;
+
+            Core::WorkerPool::JobType<TimedPin&> _job;
         };
 
     public:

@@ -22,7 +22,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(FileTransfer, 1, 0);
+    namespace {
+
+        static Metadata<FileTransfer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     const string FileTransfer::Initialize(PluginHost::IShell* service)
     {
@@ -35,7 +48,7 @@ namespace Plugin {
         return string();
     }
 
-    void FileTransfer::Deinitialize(PluginHost::IShell* service)
+    void FileTransfer::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         _observer.Unregister();
     }

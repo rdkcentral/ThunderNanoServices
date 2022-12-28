@@ -28,7 +28,7 @@
 namespace WPEFramework {
 namespace TestCore {
 
-    class TestCategory1 : TestCore::TestCategoryBase {
+    class TestCategory1 : public TestCore::TestCategoryBase {
     protected:
         TestCategory1()
             : TestCategoryBase()
@@ -39,7 +39,10 @@ namespace TestCore {
     public:
         TestCategory1(const TestCategory1&) = delete;
         TestCategory1& operator=(const TestCategory1&) = delete;
-        virtual ~TestCategory1() = default;
+        ~TestCategory1() override
+        {
+            TestCore::TestAdministrator::Instance().Revoke(this);
+        }
 
         static Exchange::ITestController::ICategory& Instance()
         {
@@ -53,11 +56,13 @@ namespace TestCore {
             return _name;
         };
 
-        void Setup() override{
+        void Setup() override
+        {
             /*ToDo: Implement Setup for selected category */
         };
 
-        void TearDown() override{
+        void TearDown() override
+        {
             /*ToDo: Implement TearDown for selected category */
         };
 

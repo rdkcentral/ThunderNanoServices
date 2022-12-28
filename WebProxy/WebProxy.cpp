@@ -33,6 +33,20 @@ ENUM_CONVERSION_BEGIN(Core::SerialPort::Parity){ Core::SerialPort::EVEN, _TXT("e
 
 namespace Plugin {
 
+    namespace {
+
+        static Metadata<WebProxy> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
     class StreamChannel : public Core::StreamType<Core::SocketStream> {
     private:
         StreamChannel() = delete;
@@ -45,21 +59,19 @@ namespace Plugin {
             , _parent(parent)
         {
         }
-        virtual ~StreamChannel()
-        {
-        }
+        ~StreamChannel() override = default;
 
     public:
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
 
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
         }
-        virtual void StateChange()
+        void StateChange() override
         {
             return (_parent.StateChange());
         }
@@ -82,12 +94,10 @@ namespace Plugin {
             , _parent(parent)
         {
         }
-        virtual ~DatagramChannel()
-        {
-        }
+        ~DatagramChannel() override = default;
 
     public:
-        virtual uint32_t Open(const uint32_t waitTime)
+        uint32_t Open(const uint32_t waitTime) override
         {
             uint32_t result = BaseClass::Open(waitTime);
 
@@ -97,7 +107,7 @@ namespace Plugin {
 
             return (result);
         }
-        virtual uint32_t Close(const uint32_t waitTime)
+        uint32_t Close(const uint32_t waitTime) override
         {
             if (BaseClass::RemoteNode().IsMulticast() == true) {
                 BaseClass::Leave(BaseClass::RemoteNode());
@@ -105,16 +115,16 @@ namespace Plugin {
 
             return (BaseClass::Close(waitTime));
         }
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
 
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
         }
-        virtual void StateChange()
+        void StateChange() override
         {
             return (_parent.StateChange());
         }
@@ -143,21 +153,19 @@ namespace Plugin {
             , _parent(parent)
         {
         }
-        virtual ~DeviceChannel()
-        {
-        }
+        ~DeviceChannel() override = default;
 
     public:
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
 
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
         }
-        virtual void StateChange()
+        void StateChange() override
         {
             return (_parent.StateChange());
         }
@@ -174,9 +182,7 @@ namespace Plugin {
         ConnectorWrapper<STREAMTYPE>& operator=(const ConnectorWrapper<STREAMTYPE>&) = delete;
 
     public:
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         inline ConnectorWrapper(PluginHost::Channel& channel, const uint32_t bufferSize)
             : WebProxy::Connector(channel, &_streamType)
             , _streamType(*this, bufferSize)
@@ -200,12 +206,8 @@ namespace Plugin {
             , _streamType(*this, bufferSize, deviceName, baudrate, parityE, dataBits, stopBits, flowControl)
         {
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
-        virtual ~ConnectorWrapper()
-        {
-        }
+POP_WARNING()
+        ~ConnectorWrapper() override = default;
 
     public:
         inline STREAMTYPE& Stream()
@@ -216,8 +218,6 @@ namespace Plugin {
     private:
         STREAMTYPE _streamType;
     };
-
-    SERVICE_REGISTRATION(WebProxy, 1, 0);
 
     /* virtual */ const string WebProxy::Initialize(PluginHost::IShell* service)
     {

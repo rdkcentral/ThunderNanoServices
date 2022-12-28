@@ -29,9 +29,7 @@ namespace DIALHandlers {
         AmazonPrime(const AmazonPrime&) = delete;
         AmazonPrime& operator=(const AmazonPrime&) = delete;
 
-        #ifdef __WINDOWS__
-        #pragma warning(disable : 4355)
-        #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         AmazonPrime(PluginHost::IShell* service, const Plugin::DIALServer::Config::App& config, Plugin::DIALServer* parent)
             : Default(service, config, parent)
             , _prime(nullptr)
@@ -43,9 +41,7 @@ namespace DIALHandlers {
             ASSERT(parent != nullptr);
             service->Register(&_notification);
         }
-        #ifdef __WINDOWS__
-        #pragma warning(default : 4355)
-        #endif
+POP_WARNING()
 
         ~AmazonPrime() override
         {
