@@ -59,6 +59,8 @@ namespace Plugin {
 
         // Setup skip URL for right offset.
         _service = service;
+        _service->AddRef();
+
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
 
         Config config;
@@ -87,25 +89,28 @@ namespace Plugin {
 
     /* virtual */ void Power::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        // No need to monitor the Process::Notification anymore, we will kill it anyway.
-        if (_controlClients)
-            _service->Unregister(&_sink);
+            // No need to monitor the Process::Notification anymore, we will kill it anyway.
+            if (_controlClients)
+                _service->Unregister(&_sink);
 
-        // Remove all registered clients
-        _clients.clear();
+            // Remove all registered clients
+            _clients.clear();
 
-        if (_powerKey != KEY_RESERVED) {
-            // Also we are nolonger interested in the powerkey events, we have been requested to shut down our services!
-            PluginHost::VirtualInput* keyHandler(PluginHost::InputHandler::Handler());
+            if (_powerKey != KEY_RESERVED) {
+                // Also we are nolonger interested in the powerkey events, we have been requested to shut down our services!
+                PluginHost::VirtualInput* keyHandler(PluginHost::InputHandler::Handler());
 
-            ASSERT(keyHandler != nullptr);
-            keyHandler->Unregister(&_sink, _powerKey);
+                ASSERT(keyHandler != nullptr);
+                keyHandler->Unregister(&_sink, _powerKey);
+            }
+
+            power_deinitialize();
+            _service->Release();
+            _service = nullptr;
         }
-
-        power_deinitialize();
-        _service = nullptr;
     }
 
     /* virtual */ string Power::Information() const

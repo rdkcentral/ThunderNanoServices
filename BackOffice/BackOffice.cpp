@@ -51,8 +51,8 @@ namespace Plugin {
     const string BackOffice::Initialize(PluginHost::IShell* service)
     {
         ASSERT(service != nullptr);
-        string result;
 
+        string result;
         Config config;
         QueryParameters  queryParameters;
 

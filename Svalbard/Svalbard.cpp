@@ -59,39 +59,37 @@ namespace Plugin {
             _svalbard->Configure(_service);
         }
 
-        if (message.length() != 0) {
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     void Svalbard::Deinitialize(PluginHost::IShell* service)  /* override */
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service->Unregister(&_notification);
+            _service->Unregister(&_notification);
 
-        if (_svalbard != nullptr) {
+            if (_svalbard != nullptr) {
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            printf("Svalbard - Remote Connection  - %p\n",connection);
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                printf("Svalbard - Remote Connection  - %p\n",connection);
 
-            VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
-            _svalbard = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
+                _svalbard = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            if (connection != nullptr) {
-                TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
+                if (connection != nullptr) {
+                    TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
 
-                connection->Terminate();
-                connection->Release();
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
-        }
 
-        _connectionId = 0;
-        _service->Release();
-        _service = nullptr;
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
+        }
 
     }
 

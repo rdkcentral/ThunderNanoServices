@@ -211,65 +211,63 @@ namespace Plugin {
             _brightness = _composition->QueryInterface<Exchange::IBrightness>();
         }
 
-        if (message.length() != 0) {
-            Deinitialize(service);
-        }
-
         // On succes return empty, to indicate there is no error text.
         return message;
     }
     /* virtual */ void Compositor::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(service == _service);
+        if (_service != nullptr) {
+	    ASSERT(_service == service);
 
-        _service->Unregister(&_notification);
+            _service->Unregister(&_notification);
 
-        // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
-        PluginHost::ISubSystem* subSystems = _service->SubSystems();
+            // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
+            PluginHost::ISubSystem* subSystems = _service->SubSystems();
 
-        ASSERT(subSystems != nullptr);
+            ASSERT(subSystems != nullptr);
 
-        if (subSystems != nullptr) {
-            // Set Graphics event. We need to set up a handler for this at a later moment
-            subSystems->Set(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
-            subSystems->Release();
+            if (subSystems != nullptr) {
+                // Set Graphics event. We need to set up a handler for this at a later moment
+                subSystems->Set(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
+                subSystems->Release();
+            }
+
+            if (_composition != nullptr) {
+                UnregisterAll();
+                _composition->Unregister(&_notification);
+
+                if (_inputSwitch != nullptr) {
+                    _inputSwitch->Release();
+                    _inputSwitch = nullptr;
+                }
+                if (_brightness != nullptr) {
+                    _brightness->Release();
+                    _brightness = nullptr;
+                }
+
+                // Stop processing:
+                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+                VARIABLE_IS_NOT_USED uint32_t result = _composition->Release();
+                _composition = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger the cleanup sequence for
+                    // out-of-process code. Which will guard
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
+            }
+
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
         }
-
-        if (_composition != nullptr) {
-            UnregisterAll();
-            _composition->Unregister(&_notification);
-
-            if (_inputSwitch != nullptr) {
-                _inputSwitch->Release();
-                _inputSwitch = nullptr;
-            }
-            if (_brightness != nullptr) {
-                _brightness->Release();
-                _brightness = nullptr;
-            }
-
-            // Stop processing:
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-            VARIABLE_IS_NOT_USED uint32_t result = _composition->Release();
-            _composition = nullptr;
-            // It should have been the last reference we are releasing,
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-            // If this was running in a (container) process...
-            if (connection != nullptr) {
-                // Lets trigger the cleanup sequence for
-                // out-of-process code. Which will guard
-                // that unwilling processes, get shot if
-                // not stopped friendly :-)
-                connection->Terminate();
-                connection->Release();
-            }
-        }
-
-        _connectionId = 0;
-        _service->Release();
-        _service = nullptr;
     }
     /* virtual */ string Compositor::Information() const
     {

@@ -61,39 +61,37 @@ namespace Plugin {
             Exchange::JYang::Register(*this, _yangImplementation);
         }
 
-        if (message.empty() == false) {
-            Deinitialize(service);
-        }
-
         return (message);
     }
 
     void Yang::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        if (_yangImplementation != nullptr) {
-            _yangImplementation->Unregister(&_notification);
-            Exchange::JYang::Unregister(*this);
+            if (_yangImplementation != nullptr) {
+                _yangImplementation->Unregister(&_notification);
+                Exchange::JYang::Unregister(*this);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED const uint32_t result = _yangImplementation->Release();
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED const uint32_t result = _yangImplementation->Release();
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            _yangImplementation = nullptr;
+                _yangImplementation = nullptr;
 
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
+
+            _service->Unregister(&_notification);
+
+            _connectionId = 0;
+
+            _service->Release();
+            _service = nullptr;
         }
-
-        _service->Unregister(&_notification);
-
-        _connectionId = 0;
-
-        _service->Release();
-        _service = nullptr;
     }
 
     string Yang::Information() const

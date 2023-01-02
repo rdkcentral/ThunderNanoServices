@@ -142,15 +142,16 @@ namespace Plugin {
 
     /* virtual */ void BluetoothSDPServer::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(service != nullptr);
-        ASSERT(service == _service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        service->Unregister(this);
+            _service->Unregister(this);
 
-        _server.Stop();
+            _server.Stop();
 
-        service->Release();
-        _service = nullptr;
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ void BluetoothSDPServer::Activated(const string& callsign, PluginHost::IShell* /* service */)

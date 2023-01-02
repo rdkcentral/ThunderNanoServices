@@ -325,6 +325,7 @@ namespace Plugin {
         } else {
 
             _service = service;
+            _service->AddRef();
             _dialURL = Core::URL(service->Accessor());
             _dialURL.Host(selectedNode.HostAddress());
             if (_dialURL.Port().IsSet() == false) {
@@ -388,23 +389,26 @@ namespace Plugin {
 
     /* virtual */ void DIALServer::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service != NULL);
-        ASSERT(_dialServiceImpl != NULL);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
+            ASSERT(_dialServiceImpl != NULL);
 
-        UnregisterAll();
+            UnregisterAll();
 
-        _adminLock.Lock();
+            _adminLock.Lock();
 
-        _sink.Unregister(service);
+            _sink.Unregister(service);
 
-        _adminLock.Unlock();
+            _adminLock.Unlock();
 
-        delete _dialServiceImpl;
-        _dialServiceImpl = nullptr;
+            delete _dialServiceImpl;
+            _dialServiceImpl = nullptr;
 
-        _appInfo.clear();
+            _appInfo.clear();
 
-        _service = nullptr;
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ string DIALServer::Information() const

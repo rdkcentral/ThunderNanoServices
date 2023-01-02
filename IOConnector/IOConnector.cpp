@@ -113,6 +113,7 @@ namespace Plugin
         config.FromString(service->ConfigLine());
 
         _service = service;
+
         _skipURL = _service->WebPrefix().length();
 
         auto index(config.Pins.Elements());
@@ -288,23 +289,25 @@ namespace Plugin
 
     /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _adminLock.Lock();
+            _adminLock.Lock();
 
-        for (std::pair<const uint32_t, PinHandler>& product : _pins) {
-            product.second.Unsubscribe(&_sink);
+            for (std::pair<const uint32_t, PinHandler>& product : _pins) {
+                product.second.Unsubscribe(&_sink);
 
-            for (auto client : _notifications) {
-                client->Deactivated(product.second.Pin());
+                for (auto client : _notifications) {
+                    client->Deactivated(product.second.Pin());
+                }
             }
+
+            _adminLock.Unlock();
+
+            _pins.clear();
+
+            _service = nullptr;
         }
-
-        _adminLock.Unlock();
-
-        _pins.clear();
-
-        _service = nullptr;
     }
 
     /* virtual */ string IOConnector::Information() const
