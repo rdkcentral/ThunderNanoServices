@@ -64,10 +64,9 @@ namespace Plugin
         ASSERT(_connectionId == 0);
         ASSERT(_networkControl == nullptr);
         _service = service;
-        _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
-
-        _service = service;
         _service->AddRef();
+
+        _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         // Register the Process::Notification stuff. The Remote process might die before we get a
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_connectionNotification);
@@ -87,39 +86,38 @@ namespace Plugin
             message = _T("NetworkControl could not be instantiated.");
         }
 
-        if (message.length() != 0){
-            Deinitialize(service);
-        }
         // On success return empty, to indicate there is no error text.
         return (message);
     }
 
     /* virtual */ void NetworkControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(service == _service);
+        if (_service != nullptr) {
+	    ASSERT(_service == service);
 
-        _service->Unregister(&_connectionNotification);
+            _service->Unregister(&_connectionNotification);
 
-        if (_networkControl != nullptr) {
-            Exchange::JNetworkControl::Unregister(*this);
-            _networkControl->Unregister(&_networkNotification);
+            if (_networkControl != nullptr) {
+                Exchange::JNetworkControl::Unregister(*this);
+                _networkControl->Unregister(&_networkNotification);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED uint32_t result = _networkControl->Release();
-            _networkControl = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _networkControl->Release();
+                _networkControl = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            // The connection can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
+                // The connection can disappear in the meantime...
+                if (connection != nullptr) {
+                    // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
-        }
 
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
+        }
     }
 
     /* virtual */ string NetworkControl::Information() const

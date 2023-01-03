@@ -99,46 +99,44 @@ namespace Plugin {
             message = _T("TestUtility could not be instantiated.");
         }
 
-        if(message.length() != 0){
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     /* virtual */ void TestUtility::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service->Unregister(&_notification);
+            _service->Unregister(&_notification);
 
-        if(_testUtilityImp != nullptr) {
+            if (_testUtilityImp != nullptr) {
 
-            UnregisterAll();
-            if(_memory != nullptr){
-                if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-                    TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+                UnregisterAll();
+                if (_memory != nullptr) {
+                    if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                        TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+                    }
+                    _memory = nullptr;
                 }
-                _memory = nullptr;
+
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+                VARIABLE_IS_NOT_USED uint32_t result = _testUtilityImp->Release();
+                _testUtilityImp = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // The connection can disappear in the meantime...
+                if (connection != nullptr) {
+                    // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                    connection->Terminate();
+                    connection->Release();
+                }           
             }
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
-            VARIABLE_IS_NOT_USED uint32_t result = _testUtilityImp->Release();
-            _testUtilityImp = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // The connection can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
-            }           
+            _skipURL = 0;
+            _connection = 0;
+            _service->Release();
+            _service = nullptr;
         }
-
-        _skipURL = 0;
-        _connection = 0;
-        _service->Release();
-        _service = nullptr;
     }
 
     /* virtual */ string TestUtility::Information() const

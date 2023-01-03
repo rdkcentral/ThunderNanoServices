@@ -88,13 +88,15 @@ POP_WARNING()
 
     /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        _job.Revoke();
-        _sink.Deinitialize();
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        ASSERT(_service != nullptr);
-        ASSERT(_service == service);
-        _service->Release();
-        _service = nullptr;
+            _job.Revoke();
+            _sink.Deinitialize();
+
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ string TimeSync::Information() const
