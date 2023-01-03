@@ -103,17 +103,19 @@ namespace Plugin {
 
     /* virtual */ void BluetoothAudioSink::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        delete _sink;
-        _sink = nullptr;
+            delete _sink;
+            _sink = nullptr;
 
-        Exchange::JBluetoothAudioSink::Unregister(*this);
+            Exchange::JBluetoothAudioSink::Unregister(*this);
 
-        service->Unregister(&_comNotificationSink);
+            service->Unregister(&_comNotificationSink);
 
-        service->Release();
-        _service = nullptr;
+            service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ uint32_t BluetoothAudioSink::Callback(Exchange::IBluetoothAudioSink::ICallback* callback)

@@ -150,14 +150,12 @@ namespace Plugin {
         int32_t count = get_active_sessions_count();
         TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
 
-	if (count>0)
-	{
+	if (count > 0) {
             struct client_info *info = static_cast<struct client_info*>(::malloc(sizeof(struct client_info) * count));
 
             get_active_sessions_info(info, count);
 
-            for(int32_t i=0; i<count; i++)
-            {
+            for (int32_t i = 0;  i< count; i++) {
                 TRACE(Trace::Information, (_T("Count: %d index: %d pid: %d IP: %s Timestamp: %s"),
                                             count, i, info[i].pid, info[i].ipaddress, info[i].timestamp));
 
@@ -181,13 +179,11 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
 
-	if (iter != nullptr)
-	{
+	if (iter != nullptr) {
 	    uint32_t index = 0;
 
 	    iter->Reset();
-            while(iter->Next())
-            {
+            while(iter->Next()) {
                 TRACE(Trace::Information, (_T("Count: %d index:%d pid: %s IP: %s Timestamp: %s"),
                                          iter->Count(), index++, iter->Current()->RemoteId().c_str(), iter->Current()->IpAddress().c_str(),
 					 iter->Current()->TimeStamp().c_str()));

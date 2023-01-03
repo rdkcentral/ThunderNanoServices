@@ -94,39 +94,38 @@ namespace Plugin
             message = _T("WifiControl could not be instantiated.");
         }
 
-        if (message.length() != 0){
-            Deinitialize(service);
-        }
         // On success return empty, to indicate there is no error text.
         return (message);
     }
 
     /* virtual */ void WifiControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service->Unregister(&_connectionNotification);
+            _service->Unregister(&_connectionNotification);
 
-        if (_wifiControl != nullptr) {
-            Exchange::JWifiControl::Unregister(*this);
-            _wifiControl->Unregister(&_wifiNotification);
+            if (_wifiControl != nullptr) {
+                Exchange::JWifiControl::Unregister(*this);
+                _wifiControl->Unregister(&_wifiNotification);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED uint32_t result = _wifiControl->Release();
-            _wifiControl = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _wifiControl->Release();
+                _wifiControl = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            // The connection can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
+                // The connection can disappear in the meantime...
+                if (connection != nullptr) {
+                    // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
-        }
 
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
+        }
     }
 
     /* virtual */ string WifiControl::Information() const

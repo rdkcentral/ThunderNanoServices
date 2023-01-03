@@ -61,39 +61,37 @@ namespace Plugin {
             Exchange::JYin::Register(*this, _yinImplementation);
         }
 
-        if (message.empty() == false) {
-            Deinitialize(service);
-        }
-
         return (message);
     }
 
     void Yin::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        if (_yinImplementation != nullptr) {
-            _yinImplementation->Unregister(&_notification);
-            Exchange::JYin::Unregister(*this);
+            if (_yinImplementation != nullptr) {
+                _yinImplementation->Unregister(&_notification);
+                Exchange::JYin::Unregister(*this);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED const uint32_t result = _yinImplementation->Release();
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED const uint32_t result = _yinImplementation->Release();
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            _yinImplementation = nullptr;
+                _yinImplementation = nullptr;
 
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
+
+            _service->Unregister(&_notification);
+
+            _connectionId = 0;
+
+            _service->Release();
+            _service = nullptr;
         }
-
-        _service->Unregister(&_notification);
-
-        _connectionId = 0;
-
-        _service->Release();
-        _service = nullptr;
     }
 
     string Yin::Information() const
