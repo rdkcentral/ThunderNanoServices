@@ -113,6 +113,7 @@ namespace Plugin
         config.FromString(service->ConfigLine());
 
         _service = service;
+        _service->AddRef();
 
         _skipURL = _service->WebPrefix().length();
 
@@ -306,6 +307,7 @@ namespace Plugin
 
             _pins.clear();
 
+            _service->Release();
             _service = nullptr;
         }
     }

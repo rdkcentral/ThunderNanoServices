@@ -419,6 +419,7 @@ POP_WARNING()
         ASSERT(_service == nullptr);
 
         _service = service->SubSystems();
+        _service->AddRef();
 
         ASSERT(_service != nullptr);
 
