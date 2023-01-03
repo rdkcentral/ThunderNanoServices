@@ -256,8 +256,7 @@ namespace WPEFramework {
 			RustBridgeImplementation& operator= (const RustBridgeImplementation&) = delete;
 			
 			RustBridgeImplementation()
-				: _service(nullptr)
-				, _connector(*this)
+				: _connector(*this)
 				, _callback(nullptr) {
 			}
 			~RustBridgeImplementation() {
@@ -265,11 +264,6 @@ namespace WPEFramework {
 				if (_callback != nullptr) {
 					_callback->Release();
 					_callback = nullptr;
-				}
-
-				if (_service != nullptr) {
-					_service->Release();
-					_service = nullptr;
 				}
 			}
 
@@ -306,8 +300,6 @@ namespace WPEFramework {
 					}
 					else {
 						_callback->AddRef();		
-						_service = framework;
-						_service->AddRef();
 					}
 				}
 				
@@ -343,7 +335,6 @@ namespace WPEFramework {
 			END_INTERFACE_MAP
 
 		private:
-			PluginHost::IShell* _service;
 			Connector _connector;
 			ICallback* _callback;
 		};
