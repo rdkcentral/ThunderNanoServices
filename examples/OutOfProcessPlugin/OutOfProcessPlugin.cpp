@@ -159,72 +159,70 @@ namespace Plugin {
             }
         }
         
-        if (message.length() != 0) {
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     /* virtual */ void OutOfProcessPlugin::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(service == _service);
+        if (_service != nullptr) {
+	    ASSERT(_service == service);
 
-        _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
-        _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-        _service->DisableWebServer();
+            _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
+            _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
+            _service->DisableWebServer();
 
-        if(_browser != nullptr) {
-            if( _browserresources != nullptr) {
-                Exchange::JBrowserResources::Unregister(*this);
-                _browserresources->Release();
-                _browserresources = nullptr;
-            }
-            _browser->Unregister(_notification);
-
-            if(_memory != nullptr) {
-                _memory->Release();
-                _memory = nullptr;
-            }
-
-            if (_state != nullptr) {
-                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
-                if (sink != nullptr) {
-                    _service->Unregister(sink);
-                    sink->Release();
+            if (_browser != nullptr) {
+                if (_browserresources != nullptr) {
+                    Exchange::JBrowserResources::Unregister(*this);
+                    _browserresources->Release();
+                    _browserresources = nullptr;
                 }
-                _state->Unregister(_notification);
-                _state->Release();
-                _state = nullptr;
+                _browser->Unregister(_notification);
+
+                if (_memory != nullptr) {
+                    _memory->Release();
+                    _memory = nullptr;
+                }
+
+                if (_state != nullptr) {
+                    PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+                    if (sink != nullptr) {
+                        _service->Unregister(sink);
+                        sink->Release();
+                    }
+                    _state->Unregister(_notification);
+                    _state->Release();
+                    _state = nullptr;
+                }
+
+                // Stop processing:
+                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+                VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
+                _browser = nullptr;
+
+                // It should have been the last reference we are releasing, 
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger the cleanup sequence for 
+                    // out-of-process code. Which will guard 
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
 
-            // Stop processing:
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-            VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
-            _browser = nullptr;
-
-            // It should have been the last reference we are releasing, 
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // If this was running in a (container) process...
-            if (connection != nullptr) {
-                // Lets trigger the cleanup sequence for 
-                // out-of-process code. Which will guard 
-                // that unwilling processes, get shot if
-                // not stopped friendly :-)
-                connection->Terminate();
-                connection->Release();
-            }
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
         }
-
-        _connectionId = 0;
-        _service->Release();
-        _service = nullptr;
     }
 
-       /* static */ const char* OutOfProcessPlugin::PluginStateStr(const PluginHost::IShell::state state)
+    /* static */ const char* OutOfProcessPlugin::PluginStateStr(const PluginHost::IShell::state state)
     {
         switch (state) {
         case PluginHost::IShell::DEACTIVATED:

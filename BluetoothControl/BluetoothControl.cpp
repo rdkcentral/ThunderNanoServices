@@ -56,6 +56,8 @@ namespace Plugin {
         ASSERT(_service == nullptr);
 
         _service = service;
+        _service->AddRef();
+
         _skipURL = _service->WebPrefix().length();
         _persistentStoragePath = _service->PersistentPath() + "Devices/";
 
@@ -232,55 +234,58 @@ namespace Plugin {
 
     /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        PluginHost::ISubSystem* subSystems(_service->SubSystems());
-        ASSERT(subSystems != nullptr);
-        if (subSystems != nullptr) {
-            subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
-            subSystems->Release();
-        }
-
-        Exchange::JBluetoothControl::Unregister(*this);
-
-        _service->Unregister(this);
-
-        // Deinitialize what we initialized..
-        _service = nullptr;
-
-        Connector().BackgroundScan(false);
-
-        IterateDevices([this](DeviceImpl& device) {
-            device.AbortPairing();
-
-            if (device.IsConnected() == true) {
-                device.Disconnect();
+            PluginHost::ISubSystem* subSystems(_service->SubSystems());
+            ASSERT(subSystems != nullptr);
+            if (subSystems != nullptr) {
+                subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
+                subSystems->Release();
             }
 
-            return (false);
-        });
+            Exchange::JBluetoothControl::Unregister(*this);
 
-        RemoveDevices([](DeviceImpl*) -> bool {
-            // all of them
-            return (true);
-        });
+            _service->Unregister(this);
 
-        if (_lowEnergyAdapter != nullptr) {
-            _lowEnergyAdapter->Release();
+            // Deinitialize what we initialized..
+            _service->Release();
+            _service = nullptr;
+
+            Connector().BackgroundScan(false);
+
+            IterateDevices([this](DeviceImpl& device) {
+                device.AbortPairing();
+
+                if (device.IsConnected() == true) {
+                    device.Disconnect();
+                }
+
+                return (false);
+            });
+
+            RemoveDevices([](DeviceImpl*) -> bool {
+                // all of them
+                return (true);
+            });
+
+            if (_lowEnergyAdapter != nullptr) {
+                _lowEnergyAdapter->Release();
+            }
+
+            if (_classicAdapter != nullptr) {
+                _classicAdapter->Release();
+            }
+
+            // We bring the interface up, so we should bring it down as well..
+            Connector().Close();
+
+            Bluetooth::ManagementSocket& administrator = Connector().Administrator();
+            Bluetooth::ManagementSocket::Down(administrator.DeviceId());
+            administrator.DeviceId(HCI_DEV_NONE);
+
+            ::destruct_bluetooth_driver();
         }
-
-        if (_classicAdapter != nullptr) {
-            _classicAdapter->Release();
-        }
-
-        // We bring the interface up, so we should bring it down as well..
-        Connector().Close();
-
-        Bluetooth::ManagementSocket& administrator = Connector().Administrator();
-        Bluetooth::ManagementSocket::Down(administrator.DeviceId());
-        administrator.DeviceId(HCI_DEV_NONE);
-
-        ::destruct_bluetooth_driver();
     }
 
     /* virtual */ string BluetoothControl::Information() const

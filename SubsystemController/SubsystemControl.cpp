@@ -431,11 +431,12 @@ POP_WARNING()
 
     void SubsystemControl::Deinitialize(PluginHost::IShell* /* service */)  /* override */
     {
-        ASSERT(_service != nullptr);
+        if (_service != nullptr) {
 
-        _service->Unregister(&_notification);
-        _service->Release();
-        _service = nullptr;
+            _service->Unregister(&_notification);
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     string SubsystemControl::Information() const /* override */
