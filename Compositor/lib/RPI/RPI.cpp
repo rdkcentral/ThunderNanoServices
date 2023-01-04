@@ -145,7 +145,6 @@ namespace Plugin {
     public:
         CompositorImplementation()
             : _adminLock()
-            , _service(nullptr)
             , _engine()
             , _externalAccess(nullptr)
             , _observers()
@@ -215,7 +214,6 @@ namespace Plugin {
         uint32_t Configure(PluginHost::IShell* service) override
         {
             uint32_t result = Core::ERROR_NONE;
-            _service = service;
 
             string configuration(service->ConfigLine());
             Config config;
@@ -225,14 +223,15 @@ namespace Plugin {
             _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine);
 
             if (_externalAccess->IsListening() == true) {
-                PlatformReady();
-                
+                PlatformReady(service);
+
             } else {
                 delete _externalAccess;
                 _externalAccess = nullptr;
                 _engine.Release();
                 TRACE(Trace::Error, (_T("Could not report PlatformReady as there was a problem starting the Compositor RPC %s"), _T("server")));
                 result = Core::ERROR_OPENING_FAILED;
+
             }
             return result;
         }
@@ -363,9 +362,9 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
 
-        void PlatformReady()
+        void PlatformReady(PluginHost::IShell* service)
         {
-            PluginHost::ISubSystem* subSystems(_service->SubSystems());
+            PluginHost::ISubSystem* subSystems(service->SubSystems());
             ASSERT(subSystems != nullptr);
             if (subSystems != nullptr) {
                 subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
@@ -442,7 +441,6 @@ namespace Plugin {
         }
 
         mutable Core::CriticalSection _adminLock;
-        PluginHost::IShell* _service;
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
         std::list<Exchange::IComposition::INotification*> _observers;

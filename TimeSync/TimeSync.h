@@ -222,7 +222,7 @@ namespace Plugin {
         uint32_t _periodicity;
         Exchange::ITimeSync* _client;
         Core::Sink<Notification> _sink;
-        PluginHost::IShell* _service;
+        PluginHost::ISubSystem* _subSystem;
 
         Core::WorkerPool::JobType<TimeSync&> _job;
     };

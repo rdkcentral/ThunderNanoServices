@@ -1316,6 +1316,7 @@ namespace Weston {
             ASSERT(_instance == nullptr);
             _instance = this;
             _service = service;
+            _service->AddRef();
 
             string runtimeDir;
             Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), runtimeDir);
@@ -1360,6 +1361,8 @@ namespace Weston {
             wl_display_destroy(_display);
 
             _instance = nullptr;
+
+            _service->Release();
             _service = nullptr;
         }
         uint32_t StartComposition()
@@ -1408,8 +1411,7 @@ namespace Weston {
         }
         inline bool LoadBackend(PluginHost::IShell* service)
         {
-            ASSERT(service == _service);
-            _backend = Create<DRM>(_service);
+            _backend = Create<DRM>(service);
             _backend->Load(this);
             weston_compositor_flush_heads_changed(_compositor);
             ASSERT(_backendLoaded == true);

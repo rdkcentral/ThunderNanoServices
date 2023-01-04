@@ -49,7 +49,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         , _periodicity(0)
         , _client(Core::Service<NTPClient>::Create<Exchange::ITimeSync>())
         , _sink(this)
-        , _service(nullptr)
+        , _subSystem(nullptr)
         , _job(*this)
     {
         RegisterAll();
@@ -76,9 +76,7 @@ POP_WARNING()
         static_cast<NTPClient*>(_client)->Initialize(index, config.Retries.Value(), config.Interval.Value());
 
         ASSERT(service != nullptr);
-        ASSERT(_service == nullptr);
-        _service = service;
-        _service->AddRef();
+        _subSystem = service->SubSystems();
 
         _sink.Initialize(_client, start);
 
@@ -86,16 +84,17 @@ POP_WARNING()
         return _T("");
     }
 
-    /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service)
     {
-        if (_service != nullptr) {
-            ASSERT(_service == service);
+        if (service != nullptr) {
 
             _job.Revoke();
             _sink.Deinitialize();
 
-            _service->Release();
-            _service = nullptr;
+            if (_subSystem != nullptr) {
+                _subSystem->Release();
+                _subSystem = nullptr;
+            }
         }
     }
 
@@ -204,16 +203,12 @@ POP_WARNING()
 
     void TimeSync::EnsureSubsystemIsActive()
     {
-        ASSERT(_service != nullptr);
-        PluginHost::ISubSystem* subSystem = _service->SubSystems();
         ASSERT(subSystem != nullptr);
 
-        if (subSystem != nullptr) {
-            if (subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
-                subSystem->Set(PluginHost::ISubSystem::TIME, _client);
+        if (_subSystem != nullptr) {
+            if (_subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
+                _subSystem->Set(PluginHost::ISubSystem::TIME, _client);
             }
-
-            subSystem->Release();
         }
     }
 
