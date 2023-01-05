@@ -75,6 +75,7 @@ namespace Plugin {
     {
         ASSERT(_service == nullptr);
         _service = service;
+        _service->AddRef();
 
         // Setup skip URL for right offset.
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
@@ -118,6 +119,7 @@ namespace Plugin {
             _sequencers.clear();
 
             // Deinitialize what we initialized..
+            _service->Release();
             _service = nullptr;
         }
     }

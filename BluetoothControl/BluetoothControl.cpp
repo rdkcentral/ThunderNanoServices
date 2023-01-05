@@ -51,19 +51,15 @@ namespace Plugin {
 
     /* virtual */ const string BluetoothControl::Initialize(PluginHost::IShell* service)
     {
+        ASSERT(service != nullptr);
         string result;
 
-        ASSERT(_service == nullptr);
+        _skipURL = service->WebPrefix().length();
+        _persistentStoragePath = service->PersistentPath() + "Devices/";
 
-        _service = service;
-        _service->AddRef();
+        _config.FromString(service->ConfigLine());
 
-        _skipURL = _service->WebPrefix().length();
-        _persistentStoragePath = _service->PersistentPath() + "Devices/";
-
-        _config.FromString(_service->ConfigLine());
-
-        const char* driverMessage = ::construct_bluetooth_driver(_service->ConfigLine().c_str());
+        const char* driverMessage = ::construct_bluetooth_driver(service->ConfigLine().c_str());
 
         // First see if we can bring up the Driver....
         if (driverMessage != nullptr) {
@@ -82,7 +78,7 @@ namespace Plugin {
             Bluetooth::ManagementSocket::Devices(_adapters);
 
             Data controllerData;
-            LoadController(_service->PersistentPath(), controllerData);
+            LoadController(service->PersistentPath(), controllerData);
 
             if ((_config.PersistMAC.Value() == true) && (controllerData.MAC.Value().empty() == false)
                     && (administrator.PublicAddress(Bluetooth::Address(controllerData.MAC.Value().c_str())) != Core::ERROR_NONE)) {
@@ -180,7 +176,7 @@ namespace Plugin {
 
                 if (controllerData.MAC.Value().empty() == true) {
                     controllerData.MAC = info.Address().ToString();
-                    SaveController(_service->PersistentPath(), controllerData);
+                    SaveController(service->PersistentPath(), controllerData);
                 }
 
                 SYSLOG(Logging::Startup, (_T("        Name:              %s"), info.Name().c_str()));
@@ -214,12 +210,12 @@ namespace Plugin {
 
                 Connector().BackgroundScan(true); // Maybe enable background scan already
 
-                _service->Register(this);
+                service->Register(this);
 
                 Exchange::JBluetoothControl::Register<JSONRPCImplementation>(*this, _jsonrpcImplementation);
 
                 // Bluetooth is ready!
-                PluginHost::ISubSystem* subSystems(_service->SubSystems());
+                PluginHost::ISubSystem* subSystems(service->SubSystems());
                 ASSERT(subSystems != nullptr);
 
                 if (subSystems != nullptr) {
@@ -234,10 +230,9 @@ namespace Plugin {
 
     /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        if (_service != nullptr) {
-            ASSERT(_service == service);
+        if (service != nullptr) {
 
-            PluginHost::ISubSystem* subSystems(_service->SubSystems());
+            PluginHost::ISubSystem* subSystems(service->SubSystems());
             ASSERT(subSystems != nullptr);
             if (subSystems != nullptr) {
                 subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
@@ -246,11 +241,7 @@ namespace Plugin {
 
             Exchange::JBluetoothControl::Unregister(*this);
 
-            _service->Unregister(this);
-
-            // Deinitialize what we initialized..
-            _service->Release();
-            _service = nullptr;
+            service->Unregister(this);
 
             Connector().BackgroundScan(false);
 

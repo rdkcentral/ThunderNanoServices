@@ -52,20 +52,15 @@ namespace Plugin {
 
     /* virtual */ const string Power::Initialize(PluginHost::IShell* service)
     {
+        ASSERT(service != nullptr);
         string message;
         WPEFramework::Exchange::IPower::PCState persistedState = power_get_persisted_state();
 
-        ASSERT(_service == nullptr);
-
-        // Setup skip URL for right offset.
-        _service = service;
-        _service->AddRef();
-
-        _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
+        _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         Config config;
 
-        config.FromString(_service->ConfigLine());
+        config.FromString(service->ConfigLine());
 
         _powerKey = config.PowerKey.Value();
         _powerOffMode = config.OffMode.Value();
@@ -80,21 +75,20 @@ namespace Plugin {
 
         // Receive all plugin information on state changes.
         if (_controlClients)
-            _service->Register(&_sink);
+            service->Register(&_sink);
 
-        power_initialize(PowerStateChange, this, _service->ConfigLine().c_str(), persistedState);
+        power_initialize(PowerStateChange, this, service->ConfigLine().c_str(), persistedState);
 
         return message;
     }
 
     /* virtual */ void Power::Deinitialize(PluginHost::IShell* service)
     {
-        if (_service != nullptr) {
-            ASSERT(_service == service);
+        if (service != nullptr) {
 
             // No need to monitor the Process::Notification anymore, we will kill it anyway.
             if (_controlClients)
-                _service->Unregister(&_sink);
+                service->Unregister(&_sink);
 
             // Remove all registered clients
             _clients.clear();
@@ -108,8 +102,6 @@ namespace Plugin {
             }
 
             power_deinitialize();
-            _service->Release();
-            _service = nullptr;
         }
     }
 

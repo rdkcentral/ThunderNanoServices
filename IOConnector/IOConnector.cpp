@@ -113,6 +113,7 @@ namespace Plugin
         config.FromString(service->ConfigLine());
 
         _service = service;
+        _service->AddRef();
 
         _skipURL = _service->WebPrefix().length();
 
@@ -287,7 +288,7 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service)
+    /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service VARIABLE_IS_NOT_USED)
     {
         if (_service != nullptr) {
             ASSERT(_service == service);
@@ -306,6 +307,7 @@ namespace Plugin
 
             _pins.clear();
 
+            _service->Release();
             _service = nullptr;
         }
     }
