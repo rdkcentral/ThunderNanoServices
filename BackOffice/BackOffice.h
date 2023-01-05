@@ -383,7 +383,6 @@ namespace Plugin {
         PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST);
         BackOffice()
             : _stateChangeObserver(*this)
-            , _service(nullptr)
             , _requestSender() {
         }
         POP_WARNING();
@@ -405,7 +404,6 @@ namespace Plugin {
 
     private:
         Core::Sink<Observer> _stateChangeObserver;
-        PluginHost::IShell* _service;
         WebClient _requestSender;
     };
 

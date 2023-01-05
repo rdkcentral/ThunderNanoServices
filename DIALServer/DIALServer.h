@@ -238,7 +238,7 @@ namespace Plugin {
                 if (_passiveMode == false) {
                     // We are in active mode, no need to do reporting from DIALSserver, move
                     // to the required plugin
-                    _service = _service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
+                    _service = service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
 
                     if (_service == nullptr) {
                         // Oops the service we want to use does not exist, move to Passive more..
@@ -259,6 +259,7 @@ namespace Plugin {
                 }
                 if (_service != nullptr) {
                     _service->Release();
+                    _service = nullptr;
                 }
             }
 

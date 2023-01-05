@@ -3491,7 +3491,6 @@ protected:
             , _jsonrpcImplementation(*this)
             , _classicAdapter(nullptr)
             , _lowEnergyAdapter(nullptr)
-            , _service(nullptr)
             , _adapters()
             , _btInterface(0)
             , _btAddress()
@@ -3675,7 +3674,6 @@ POP_WARNING()
         JSONRPCImplementation _jsonrpcImplementation;
         ClassicImpl* _classicAdapter;
         LowEnergyImpl* _lowEnergyAdapter;
-        PluginHost::IShell* _service;
         std::list<uint16_t> _adapters;
         uint16_t _btInterface;
         Bluetooth::Address _btAddress;
