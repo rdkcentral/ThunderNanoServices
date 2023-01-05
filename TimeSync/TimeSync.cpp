@@ -93,10 +93,10 @@ POP_WARNING()
     {
         ASSERT(service != nullptr);
 
-        _job.Revoke();
-        _sink.Deinitialize();
-
         if (_subSystem != nullptr) {
+            _job.Revoke();
+            _sink.Deinitialize();
+
             _subSystem->Release();
             _subSystem = nullptr;
         }
