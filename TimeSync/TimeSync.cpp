@@ -64,37 +64,41 @@ POP_WARNING()
 
     /* virtual */ const string TimeSync::Initialize(PluginHost::IShell* service)
     {
-        Config config;
-        config.FromString(service->ConfigLine());
-        string version = service->Version();
-        _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
-        _periodicity = config.Periodicity.Value() * 60 /* minutes */ * 60 /* seconds */ * 1000 /* milliSeconds */;
-        bool start = (((config.Deferred.IsSet() == true) && (config.Deferred.Value() == true)) == false);
-
-        NTPClient::SourceIterator index(config.Sources.Elements());
-
-        static_cast<NTPClient*>(_client)->Initialize(index, config.Retries.Value(), config.Interval.Value());
-
         ASSERT(service != nullptr);
+
+        string message;
         _subSystem = service->SubSystems();
+        if (_subSystem != nullptr) {
 
-        _sink.Initialize(_client, start);
+            Config config;
+            config.FromString(service->ConfigLine());
+            string version = service->Version();
+            _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
+            _periodicity = config.Periodicity.Value() * 60 /* minutes */ * 60 /* seconds */ * 1000 /* milliSeconds */;
+            bool start = (((config.Deferred.IsSet() == true) && (config.Deferred.Value() == true)) == false);
 
-        // On success return empty, to indicate there is no error text.
-        return _T("");
+            NTPClient::SourceIterator index(config.Sources.Elements());
+
+            static_cast<NTPClient*>(_client)->Initialize(index, config.Retries.Value(), config.Interval.Value());
+
+            _sink.Initialize(_client, start);
+        } else {
+            message = _T("Subsystem could not be obtained, TimeSync init failed");
+        }
+
+        return message;
     }
 
-    /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        if (service != nullptr) {
+        ASSERT(service != nullptr);
 
-            _job.Revoke();
-            _sink.Deinitialize();
+        _job.Revoke();
+        _sink.Deinitialize();
 
-            if (_subSystem != nullptr) {
-                _subSystem->Release();
-                _subSystem = nullptr;
-            }
+        if (_subSystem != nullptr) {
+            _subSystem->Release();
+            _subSystem = nullptr;
         }
     }
 
@@ -203,12 +207,10 @@ POP_WARNING()
 
     void TimeSync::EnsureSubsystemIsActive()
     {
-        ASSERT(subSystem != nullptr);
+        ASSERT(_subSystem != nullptr);
 
-        if (_subSystem != nullptr) {
-            if (_subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
-                _subSystem->Set(PluginHost::ISubSystem::TIME, _client);
-            }
+        if (_subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
+            _subSystem->Set(PluginHost::ISubSystem::TIME, _client);
         }
     }
 
