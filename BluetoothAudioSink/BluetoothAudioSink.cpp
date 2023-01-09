@@ -106,8 +106,10 @@ namespace Plugin {
         if (_service != nullptr) {
             ASSERT(_service == service);
 
-            delete _sink;
-            _sink = nullptr;
+            if (_sink != nullptr) {
+                delete _sink;
+                _sink = nullptr;
+            }
 
             Exchange::JBluetoothAudioSink::Unregister(*this);
 
