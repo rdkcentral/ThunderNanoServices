@@ -401,8 +401,10 @@ namespace Plugin {
 
             _adminLock.Unlock();
 
-            delete _dialServiceImpl;
-            _dialServiceImpl = nullptr;
+            if (_dialServiceImpl != nullptr) {
+                delete _dialServiceImpl;
+                _dialServiceImpl = nullptr;
+            }
 
             _appInfo.clear();
 
