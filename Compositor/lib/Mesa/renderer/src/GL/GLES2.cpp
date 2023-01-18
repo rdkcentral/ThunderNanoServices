@@ -90,21 +90,6 @@ namespace Renderer {
             WPEFramework::Core::ProxyType<Interfaces::IBuffer> realBuffer;
         };
 
-        enum class ShaderVariant : uint8_t {
-            NONE = 0,
-            /* Keep the following in sync with fragment.glsl. */
-            SINGLE_COLOR = 1,
-            TEXTURE_EXTERNAL = 2, // 1 texture
-            TEXTURE_RGBA = 3, // 1 texture
-            TEXTURE_RGBX = 4, // 1 texture
-            TEXTURE_Y_U_V = 5, // 3 textures
-            TEXTURE_Y_UV = 6, // 2 textures
-            TEXTURE_Y_XUXV = 7, // 2 textures
-            TEXTURE_XYUV = 8 // 1 texture
-        };
-
-        using ShaderVariantType = ShaderVariant;
-
         static constexpr GLfloat verts[] = {
             1, 0, // top right
             0, 0, // top left
@@ -162,19 +147,32 @@ namespace Renderer {
             }
         }
 
-        // template <ShaderVariantType VARIANT>
-        class ShaderProgram {
+        class Program {
         public:
-            ShaderProgram(ShaderVariantType variant)
-                : _variant(variant)
-                , _id(Create(variant))
+            enum class Variant : uint8_t {
+                NONE = 0,
+                /* Keep the following in sync with fragment.glsl. */
+                SOLID = 1,
+                TEXTURE_EXTERNAL = 2, // 1 texture
+                TEXTURE_RGBA = 3, // 1 texture
+                TEXTURE_RGBX = 4, // 1 texture
+                TEXTURE_Y_U_V = 5, // 3 textures
+                TEXTURE_Y_UV = 6, // 2 textures
+                TEXTURE_Y_XUXV = 7, // 2 textures
+                TEXTURE_XYUV = 8 // 1 texture
+            };
+
+            using VariantType = Variant;
+
+            Program(const uint8_t variant)
+                : _id(Create(variant))
                 , _projection(glGetUniformLocation(_id, "projection"))
                 , _position(glGetAttribLocation(_id, "position"))
             {
                 ASSERT(_id != GL_FALSE);
             }
 
-            virtual ~ShaderProgram()
+            virtual ~Program()
             {
                 ASSERT(_id != GL_FALSE);
 
@@ -191,7 +189,7 @@ namespace Renderer {
                 GLint status(GL_FALSE);
                 GLuint handle = glCreateShader(type);
 
-                TRACE(Trace::GL, ("Shader[0x%02X]=%d source: \n%s", type, handle, source));
+                // TRACE(Trace::GL, ("Shader[0x%02X]=%d source: \n%s", type, handle, source));
 
                 glShaderSource(handle, 1, &source, NULL);
                 glCompileShader(handle);
@@ -208,16 +206,29 @@ namespace Renderer {
                 return handle;
             }
 
-            GLuint Create(const ShaderVariantType variant)
+            GLuint Create(const uint8_t variant)
             {
                 // PushDebug();
 
                 GLuint handle(GL_FALSE);
 
-                std::stringstream fragmentShaderSource;
+                const char* VariantStr[] = {
+                    "NONE",
+                    "SOLID",
+                    "TEXTURE_EXTERNAL",
+                    "TEXTURE_RGBA",
+                    "TEXTURE_RGBX",
+                    "TEXTURE_Y_U_V",
+                    "TEXTURE_Y_UV",
+                    "TEXTURE_Y_XUXV",
+                    "TEXTURE_XYUV"
+                };
 
+                TRACE(WPEFramework::Trace::Error, ("Creating Program for %s", VariantStr[variant]));
+
+                std::stringstream fragmentShaderSource;
                 fragmentShaderSource
-                    << "#define VARIANT " << static_cast<std::underlying_type<ShaderVariantType>::type>(variant) << std::endl
+                    << "#define VARIANT " << static_cast<uint16_t>(variant) << std::endl
                     << ::GLES::fragment_shader;
 
                 GLuint vs = Compile(GL_VERTEX_SHADER, ::GLES::vertex_shader);
@@ -255,11 +266,6 @@ namespace Renderer {
             }
 
         public:
-            ShaderVariantType Variant() const
-            {
-                return _variant; // VARIANT;
-            }
-
             GLuint Id() const
             {
                 return _id;
@@ -274,21 +280,23 @@ namespace Renderer {
             }
 
         private:
-            const ShaderVariantType _variant;
             GLuint _id;
             GLint _projection;
             GLint _position;
         };
 
-        class ColourShaderProgram : public ShaderProgram {
+        class ColourProgram : public Program {
         public:
-            ColourShaderProgram()
-                : ShaderProgram(ShaderVariant::SINGLE_COLOR)
+            enum { ID = static_cast<std::underlying_type<VariantType>::type>(Variant::SOLID) };
+
+        public:
+            ColourProgram()
+                : Program(ID)
                 , _color(glGetUniformLocation(Id(), "color"))
             {
             }
 
-            virtual ~ColourShaderProgram() = default;
+            virtual ~ColourProgram() = default;
 
             GLint Color() const
             {
@@ -299,12 +307,14 @@ namespace Renderer {
             GLint _color;
         };
 
-        template <uint8_t TEXTURE_COUNT>
-        class TextureShaderProgram : public ShaderProgram {
-        private:
+        template <const Program::VariantType VARIANT, const uint8_t TEXTURE_COUNT>
+        class TextureProgramType : public Program {
         public:
-            TextureShaderProgram(ShaderVariantType variant)
-                : ShaderProgram(variant)
+            enum { ID = static_cast<std::underlying_type<VariantType>::type>(VARIANT) };
+
+        public:
+            TextureProgramType()
+                : Program(ID)
                 , _textureIds()
                 , _coordinates(glGetAttribLocation(Id(), "texcoord"))
                 , _alpha(glGetUniformLocation(Id(), "alpha"))
@@ -320,7 +330,7 @@ namespace Renderer {
                 }
             }
 
-            virtual ~TextureShaderProgram() = default;
+            virtual ~TextureProgramType() = default;
 
             GLint TextureId(const uint8_t id) const
             {
@@ -348,7 +358,51 @@ namespace Renderer {
             GLuint _alpha;
         };
 
-        using ProgramRegister = std::vector<ShaderProgram>;
+        using ExternalProgram = TextureProgramType<Program::Variant::TEXTURE_EXTERNAL, 1>;
+        using RGBAProgram = TextureProgramType<Program::Variant::TEXTURE_RGBA, 1>;
+        using RGBXProgram = TextureProgramType<Program::Variant::TEXTURE_RGBX, 1>;
+        using XYUVProgram = TextureProgramType<Program::Variant::TEXTURE_XYUV, 1>;
+        using Y_UVProgram = TextureProgramType<Program::Variant::TEXTURE_Y_UV, 2>;
+        using Y_U_VProgram = TextureProgramType<Program::Variant::TEXTURE_Y_U_V, 3>;
+        using Y_XUXVProgram = TextureProgramType<Program::Variant::TEXTURE_Y_XUXV, 2>;
+
+        class ProgramRegistry {
+        private:
+            using Programs = std::unordered_map<Program::VariantType, Program*>;
+
+        public:
+            ProgramRegistry() = default;
+            ~ProgramRegistry()
+            {
+                for (auto& entry : _programs) {
+                    delete entry.second;
+                }
+            }
+
+            template <typename PROGRAM>
+            void Announce()
+            {
+                _programs.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(static_cast<Program::VariantType>(PROGRAM::ID)),
+                    std::forward_as_tuple(new PROGRAM()));
+            }
+
+            template <typename PROGRAM>
+            PROGRAM* QueryType()
+            {
+                PROGRAM* result = nullptr;
+                Programs::iterator index(_programs.find(static_cast<Program::VariantType>(PROGRAM::ID)));
+                if (index != _programs.end()) {
+                    Program* base = index->second;
+                    // ASSERT(dynamic_cast<PROGRAM*>(base) != nullptr);
+                    result = static_cast<PROGRAM*>(base);
+                }
+                return (result);
+            }
+
+        private:
+            Programs _programs;
+        };
 
     public:
         GLES() = delete;
@@ -385,17 +439,14 @@ namespace Renderer {
 
             PushDebug();
 
-            _programs.emplace_back(ColourShaderProgram());
-
-            _programs.emplace_back(TextureShaderProgram<1>(ShaderVariant::TEXTURE_EXTERNAL));
-
-            _programs.emplace_back(TextureShaderProgram<1>(ShaderVariant::TEXTURE_RGBA));
-            _programs.emplace_back(TextureShaderProgram<1>(ShaderVariant::TEXTURE_RGBX));
-
-            _programs.emplace_back(TextureShaderProgram<1>(ShaderVariant::TEXTURE_XYUV));
-            _programs.emplace_back(TextureShaderProgram<2>(ShaderVariant::TEXTURE_Y_UV));
-            _programs.emplace_back(TextureShaderProgram<2>(ShaderVariant::TEXTURE_Y_XUXV));
-            _programs.emplace_back(TextureShaderProgram<3>(ShaderVariant::TEXTURE_Y_U_V));
+            _programs.Announce<ColourProgram>();
+            _programs.Announce<ExternalProgram>();
+            _programs.Announce<RGBAProgram>();
+            _programs.Announce<RGBXProgram>();
+            _programs.Announce<XYUVProgram>();
+            _programs.Announce<Y_UVProgram>();
+            _programs.Announce<Y_U_VProgram>();
+            _programs.Announce<Y_XUXVProgram>();
 
             PopDebug();
 
@@ -571,7 +622,7 @@ namespace Renderer {
         uint32_t _viewport_width;
         uint32_t _viewport_height;
         Matrix _projection;
-        ProgramRegister _programs;
+        ProgramRegistry _programs;
     }; // class GLES
 
     API::GL GLES::_api;

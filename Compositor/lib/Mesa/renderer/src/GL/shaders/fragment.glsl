@@ -1,13 +1,13 @@
 
-/* enum class GLES::GlesShaderVariant */
-#define VARIANT_SINGLE_COLOR = 1,
-#define VARIANT_TEXTURE_EXTERNAL = 2,
-#define VARIANT_TEXTURE_RGBA = 3,
-#define VARIANT_TEXTURE_RGBX = 4,
-#define VARIANT_TEXTURE_Y_U_V = 5,
-#define VARIANT_TEXTURE_Y_UV = 6,
-#define VARIANT_TEXTURE_Y_XUXV = 7,
-#define VARIANT_TEXTURE_XYUV = 8,
+/* enum class GLES::Program::Variant */
+#define VARIANT_SOLID 				1
+#define VARIANT_TEXTURE_EXTERNAL 	2
+#define VARIANT_TEXTURE_RGBA 		3
+#define VARIANT_TEXTURE_RGBX 		4
+#define VARIANT_TEXTURE_Y_U_V 		5
+#define VARIANT_TEXTURE_Y_UV 		6
+#define VARIANT_TEXTURE_Y_XUXV 		7
+#define VARIANT_TEXTURE_XYUV 		8
 
 #if !defined(VARIANT)
 #error "Missing shader preamble"
@@ -51,25 +51,28 @@ vec4 yuva2rgba(vec4 yuva)
 
 #if VARIANT == VARIANT_TEXTURE_EXTERNAL
 uniform samplerExternalOES tex0;
-#elif VARIANT == SHADER_VARIANT_Y_U_V \
-   || VARIANT == SHADER_VARIANT_Y_UV \
-   || VARIANT == SHADER_VARIANT_Y_XUXV 
+#elif VARIANT == VARIANT_TEXTURE_RGBA \
+   || VARIANT == VARIANT_TEXTURE_RGBX \
+   || VARIANT == VARIANT_TEXTURE_Y_U_V \
+   || VARIANT == VARIANT_TEXTURE_Y_UV \
+   || VARIANT == VARIANT_TEXTURE_Y_XUXV \
+   || VARIANT == VARIANT_TEXTURE_XYUV 
 uniform sampler2D tex0;
 #endif
 
-#if VARIANT == SHADER_VARIANT_Y_U_V \
- || VARIANT == SHADER_VARIANT_Y_UV \
- || VARIANT == SHADER_VARIANT_Y_XUXV \
- || VARIANT == SHADER_VARIANT_XYUV
+#if VARIANT == VARIANT_TEXTURE_Y_U_V \
+ || VARIANT == VARIANT_TEXTURE_Y_UV \
+ || VARIANT == VARIANT_TEXTURE_Y_XUXV \
+ || VARIANT == VARIANT_TEXTURE_XYUV
 uniform sampler2D tex1;
 #endif
 
-#if VARIANT == SHADER_VARIANT_Y_U_V)
+#if VARIANT == VARIANT_TEXTURE_Y_U_V
 uniform sampler2D tex2;
 #endif
 
 
-#if VARIANT != VARIANT_SINGLE_COLOR
+#if VARIANT != VARIANT_SOLID
 uniform float alpha;
 #else
 const float alpha = 1.0;
@@ -81,23 +84,23 @@ vec4 sample_texture() {
 	return texture2D(tex0, v_texcoord);
 #elif VARIANT == VARIANT_TEXTURE_RGBX
 	return vec4(texture2D(tex0, v_texcoord).rgb, 1.0);
-#elif VARIANT == VARIANT_SINGLE_COLOR
+#elif VARIANT == VARIANT_SOLID
 	return color;
 #else
 	// RGB conversion
     vec4 yuva = vec4(0.0, 0.0, 0.0, 1.0);
 
-	#if VARIANT == SHADER_VARIANT_Y_U_V) {
+	#if VARIANT == VARIANT_TEXTURE_Y_U_V
 			yuva.x = texture2D(tex0, v_texcoord).x;
 			yuva.y = texture2D(tex1, v_texcoord).x;
 			yuva.z = texture2D(tex2, v_texcoord).x;
-	#elif VARIANT == SHADER_VARIANT_Y_UV) {
+	#elif VARIANT == VARIANT_TEXTURE_Y_UV
 			yuva.x = texture2D(tex0, v_texcoord).x;
 			yuva.yz = texture2D(tex1, v_texcoord).rg;
-	#elif VARIANT == SHADER_VARIANT_Y_XUXV) {
+	#elif VARIANT == VARIANT_TEXTURE_Y_XUXV
 			yuva.x = texture2D(tex0, v_texcoord).x;
 			yuva.yz = texture2D(tex1, v_texcoord).ga;
-	#elif VARIANT == SHADER_VARIANT_XYUV) {
+	#elif VARIANT == VARIANT_TEXTURE_XYUV
 			yuva.xyz = texture2D(tex0, v_texcoord).bgr;
 	#endif
 	
@@ -106,7 +109,7 @@ vec4 sample_texture() {
 }
 
 void main() {
-	vec4 color = sample_input_texture();
+	vec4 color = sample_texture();
 
 	color *= alpha;
 	
