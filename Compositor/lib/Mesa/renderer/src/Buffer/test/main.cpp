@@ -15,18 +15,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */ 
+ */
 
 #ifndef MODULE_NAME
 #define MODULE_NAME CompositorBufferTest
 #endif
 
+#include <compositorbuffer/IBuffer.h>
 #include <core/core.h>
 #include <localtracer/localtracer.h>
 #include <messaging/messaging.h>
 
 #include <IAllocator.h>
-#include <IBuffer.h>
 #include <IRenderer.h>
 
 #include <drm_fourcc.h>
@@ -144,6 +144,29 @@ int main(int argc, const char* argv[])
         assert(buffer->Width() == 1920);
         assert(buffer->Height() == 1080);
         assert(buffer->Format() == format.Type());
+
+        Compositor::Interfaces::IBuffer::IIterator* index = buffer->Planes(10);
+        assert(index != nullptr);
+
+        Compositor::Interfaces::IBuffer::IPlane* first_plane = nullptr;
+
+        while ((index->Next() == true) && (index->IsValid() == true)) {
+            Compositor::Interfaces::IBuffer::IPlane* plane = index->Plane();
+            assert(plane != nullptr);
+
+            if (first_plane == nullptr) {
+                first_plane = plane;
+            }
+
+            assert(plane->Accessor() >= 0);
+            assert(plane->Offset() == 0);
+            assert(plane->Stride() == 1920 * (32 / 8));
+        }
+
+        index->Reset();
+        index->Next();
+        
+        assert(first_plane == index->Plane());
 
         buffer.Release();
     }

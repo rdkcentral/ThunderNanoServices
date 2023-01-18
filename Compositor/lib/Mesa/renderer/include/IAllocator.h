@@ -22,7 +22,7 @@
 #include <core/core.h>
 
 #include "CompositorTypes.h"
-#include "IBuffer.h"
+#include "compositorbuffer/IBuffer.h"
 
 namespace Compositor {
 namespace Interfaces {
@@ -32,7 +32,7 @@ namespace Interfaces {
         /**
          * @brief A factory for buffers
          *
-         * @param identifier ID for this allocator, allows for reuse. 
+         * @param identifier ID for this allocator, allows for reuse.
          * @return Core::ProxyType<IAllocator>
          */
         static WPEFramework::Core::ProxyType<IAllocator> Instance(WPEFramework::Core::instance_id identifier);

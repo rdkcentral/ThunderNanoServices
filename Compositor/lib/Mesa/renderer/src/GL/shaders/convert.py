@@ -38,7 +38,9 @@ def write_header(args):
             with io.open(args.output, "wb") as output:
                 output.write(b"/*!! THIS FILE IS GENERATED !!*/\n\n")
                 output.write(b"#pragma once\n\n")
-                output.write("static const char {}[] = {{".format(
+                output.write(b"namespace {\n")
+                output.write(b"namespace GLES {\n")
+                output.write("    constexpr char {}[] = {{".format(
                     symbol).encode('utf-8'))
 
                 count = 0
@@ -50,12 +52,14 @@ def write_header(args):
                         break
 
                     if count % 32 == 0:
-                        output.write(b"\n    ")
+                        output.write(b"\n        ")
 
                     write_byte(output, char)
                     count += 1
 
-                output.write(b"0x00 };\n")
+                output.write(b"0x00\n    };\n")
+                output.write(b"} // namespace GLES\n")
+                output.write(b"}\n")
         except Exception:
             os.unlink(args.output)
             raise

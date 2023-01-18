@@ -4,7 +4,7 @@ find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
 
-add_executable(glextinfo main.cpp)
+add_executable(glextinfo glextinfo.cpp)
 
 target_link_libraries(glextinfo
     PUBLIC
@@ -17,13 +17,20 @@ target_link_libraries(glextinfo
         ${COMPOSITOR_RENDERER_IMPLEMENTATION}
 )
 
-add_executable(testapp testapp.cpp)
+install(TARGETS glextinfo DESTINATION bin)
 
-target_link_libraries(testapp
+
+add_executable(renderertest renderertest.cpp)
+
+target_link_libraries(renderertest
     PUBLIC
+        common::include
+        gl::shaders
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
+        ${COMPOSITOR_RENDERER_IMPLEMENTATION}
 )
 
+install(TARGETS glextinfo DESTINATION bin)

@@ -46,6 +46,7 @@ const std::vector<std::string> Parse(const std::string& input)
     std::istringstream iss(input);
     return std::vector<std::string> { std::istream_iterator<std::string> { iss }, std::istream_iterator<std::string> {} };
 }
+
 }
 
 int main(int /*argc*/, const char* argv[])
@@ -78,7 +79,7 @@ int main(int /*argc*/, const char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        int drmFd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+        int drmFd = open("/dev/dri/renderD129", O_RDWR | O_CLOEXEC);
 
         Compositor::Renderer::EGL egl(drmFd);
 

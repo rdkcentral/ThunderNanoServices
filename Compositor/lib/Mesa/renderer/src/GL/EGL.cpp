@@ -27,6 +27,7 @@
 
 #include <DrmCommon.h>
 
+#include <drm_fourcc.h>
 #include <gbm.h>
 
 MODULE_NAME_ARCHIVE_DECLARATION
@@ -159,6 +160,9 @@ namespace Renderer {
         : _api()
         , _display(EGL_NO_DISPLAY)
         , _context(EGL_NO_CONTEXT)
+        , _draw_surface(EGL_NO_SURFACE)
+        , _read_surface(EGL_NO_SURFACE)
+        , _formats()
     {
         constexpr EGLAttrib debugAttributes[] = {
             EGL_DEBUG_MSG_CRITICAL_KHR,
@@ -172,6 +176,8 @@ namespace Renderer {
             EGL_NONE,
         };
 
+        TRACE(Trace::EGL, ("%s - build: %s", __func__, __TIMESTAMP__));
+
         ASSERT(_api.eglDebugMessageControl != nullptr);
         _api.eglDebugMessageControl(DebugSink, debugAttributes);
 
@@ -179,11 +185,12 @@ namespace Renderer {
 
         ASSERT(eglBind == EGL_TRUE);
 
-        bool isMaster = drmIsMaster(drmFd);
+        const bool isMaster = drmIsMaster(drmFd);
 
         EGLDeviceEXT eglDevice = FindEGLDevice(drmFd);
 
         if (eglDevice != EGL_NO_DEVICE_EXT) {
+            TRACE(Trace::EGL, ("Initialize EGL using EGL device."));
             InitializeEgl(EGL_PLATFORM_DEVICE_EXT, eglDevice, isMaster);
         } else {
             int gbm_fd = DRM::ReopenNode(drmFd, true);
@@ -191,6 +198,7 @@ namespace Renderer {
             gbm_device* gbmDevice = gbm_create_device(gbm_fd);
 
             if (gbmDevice != nullptr) {
+                TRACE(Trace::EGL, ("Initialize EGL using GMB device."));
                 InitializeEgl(EGL_PLATFORM_GBM_KHR, gbmDevice, isMaster);
                 gbm_device_destroy(gbmDevice);
             }
@@ -200,6 +208,8 @@ namespace Renderer {
 
         ASSERT(_display != EGL_NO_DISPLAY);
         ASSERT(_context != EGL_NO_CONTEXT);
+
+        GetPixelFormats(_formats);
     }
 
     EGL::~EGL()
@@ -263,14 +273,14 @@ namespace Renderer {
         return result;
     }
 
-    uint32_t EGL::InitializeEgl(EGLenum platform, void* remote_display, bool isMaster)
+    uint32_t EGL::InitializeEgl(EGLenum platform, void* remote_display, const bool isMaster)
     {
         uint32_t result(WPEFramework::Core::ERROR_NONE);
 
         API::Attributes<EGLint> displayAttributes;
 
         if (API::EGL::HasExtension("EGL_KHR_display_reference") == true) {
-            displayAttributes.append(EGL_TRACK_REFERENCES_KHR, EGL_TRUE);
+            displayAttributes.Append(EGL_TRACK_REFERENCES_KHR, EGL_TRUE);
         }
 
         ASSERT(_api.eglGetPlatformDisplayEXT != nullptr);
@@ -335,5 +345,155 @@ namespace Renderer {
         return std::vector<PixelFormat>();
     }
 
+    void EGL::GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals)
+    {
+        if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
+            EGLint nModifiers(0);
+            _api.eglQueryDmaBufModifiersEXT(_display, format, 0, nullptr, nullptr, &nModifiers);
+            TRACE(Trace::EGL, ("Found %d modifiers", nModifiers));
+
+            modifiers.resize(nModifiers);
+            externals.resize(nModifiers);
+
+            _api.eglQueryDmaBufModifiersEXT(_display, format, nModifiers, modifiers.data(), externals.data(), &nModifiers);
+        } else {
+            modifiers = { DRM_FORMAT_MOD_LINEAR };
+            externals = { EGL_FALSE };
+        }
+    }
+
+    void EGL::GetPixelFormats(std::vector<PixelFormat>& pixelFormats)
+    {
+        pixelFormats.clear();
+
+        std::vector<int> formats;
+
+        if (_api.eglQueryDmaBufFormatsEXT != nullptr) {
+            EGLint nFormats(0);
+            _api.eglQueryDmaBufFormatsEXT(_display, 0, NULL, &nFormats);
+
+            formats.resize(nFormats);
+            _api.eglQueryDmaBufFormatsEXT(_display, formats.size(), formats.data(), &nFormats);
+        } else {
+            formats = { DRM_FORMAT_ARGB8888, DRM_FORMAT_XRGB8888 };
+        }
+
+        for (const auto& format : formats) {
+            TRACE(Trace::EGL, ("Scanning format \'%c\' \'%c\' \'%c\' \'%c\'", //
+                                  char(format & 0xff), char((format >> 8) & 0xff), //
+                                  char((format >> 16) & 0xff), char((format >> 24) & 0xff)));
+
+            std::vector<uint64_t> modifiers;
+
+            /**
+             * Indicates if the matching modifier is only supported for
+             * use with the GL_TEXTURE_EXTERNAL_OES texture target
+             */
+            std::vector<EGLBoolean> externals;
+
+            GetModifiers(format, modifiers, externals);
+
+            pixelFormats.emplace_back(format, modifiers);
+        }
+    }
+
+    bool EGL::IsExternOnly(const uint32_t format, const uint64_t modifier)
+    {
+        bool result(false);
+
+        if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
+
+            EGLint nModifiers(0);
+            std::vector<uint64_t> modifiers;
+            std::vector<EGLBoolean> externals;
+
+            GetModifiers(format, modifiers, externals);
+
+            auto it = std::find(modifiers.begin(), modifiers.end(), modifier);
+
+            if (it != modifiers.end()) {
+                result = externals[distance(modifiers.begin(), it)];
+            }
+        }
+
+        return result;
+    }
+
+    EGLImage EGL::CreateImage(/*const*/ Interfaces::IBuffer* buffer, bool& external)
+    {
+        ASSERT(buffer != nullptr);
+
+        Compositor::Interfaces::IBuffer::IIterator* planes = buffer->Planes(10);
+        ASSERT(planes != nullptr);
+
+        planes->Next();
+        ASSERT(planes->IsValid() == true);
+
+        Compositor::Interfaces::IBuffer::IPlane* plane = planes->Plane();
+        ASSERT(plane != nullptr); // we should atleast have 1 plane....
+
+        EGLImage result(EGL_NO_IMAGE);
+
+        if (_api.eglCreateImage != nullptr) {
+            API::Attributes<EGLAttrib> imageAttributes;
+
+            imageAttributes.Append(EGL_WIDTH, buffer->Width());
+            imageAttributes.Append(EGL_HEIGHT, buffer->Height());
+            imageAttributes.Append(EGL_LINUX_DRM_FOURCC_EXT, buffer->Format());
+
+            imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, plane->Accessor());
+            imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, plane->Offset());
+            imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, plane->Stride());
+            imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+            imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+
+            if (planes->Next() == true) {
+                plane = planes->Plane();
+                
+                ASSERT(plane != nullptr);
+
+                imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, plane->Accessor());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE1_OFFSET_EXT, plane->Offset());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE1_PITCH_EXT, plane->Stride());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+                imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+            }
+
+            if (planes->Next() == true) {
+                plane = planes->Plane();
+                
+                ASSERT(plane != nullptr);
+
+                imageAttributes.Append(EGL_DMA_BUF_PLANE2_FD_EXT, plane->Accessor());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE2_OFFSET_EXT, plane->Offset());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE2_PITCH_EXT, plane->Stride());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+                imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+            }
+
+            if (planes->Next() == true) {
+                plane = planes->Plane();
+
+                ASSERT(plane != nullptr);
+
+                imageAttributes.Append(EGL_DMA_BUF_PLANE3_FD_EXT, plane->Accessor());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE3_OFFSET_EXT, plane->Offset());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE3_PITCH_EXT, plane->Stride());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+                imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+            }
+
+            imageAttributes.Append(EGL_IMAGE_PRESERVED_KHR, EGL_TRUE);
+
+            result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, imageAttributes);
+        }
+
+        external = IsExternOnly(buffer->Format(), buffer->Modifier());
+
+        // just unlock and go, client still need to draw something,.
+        buffer->Completed(false);
+
+        return result;
+    }
 } // namespace Renderer
 } // namespace Compositor

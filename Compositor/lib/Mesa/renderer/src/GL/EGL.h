@@ -30,6 +30,7 @@
 #include <EGL/eglext.h>
 
 #include <CompositorTypes.h>
+#include <compositorbuffer/IBuffer.h>
 
 #include "RenderAPI.h"
 
@@ -37,8 +38,7 @@
 #include <vertex-shader.h>
 
 namespace Compositor {
-namespace Renderer
-{
+namespace Renderer {
     class EGL {
     public:
         struct EglContext {
@@ -58,6 +58,10 @@ namespace Renderer
     private:
         EGLDeviceEXT FindEGLDevice(const int drmFd);
         uint32_t InitializeEgl(EGLenum platform, void* remote_display, bool isMaster);
+        void GetPixelFormats(std::vector<PixelFormat>& formats);
+        void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals);
+        bool IsExternOnly(const uint32_t format, const uint64_t modifier);
+
     public:
         inline EGLDisplay Display() const
         {
@@ -107,6 +111,9 @@ namespace Renderer
         }
 
         std::vector<PixelFormat> Formats();
+
+        EGLImage CreateImage(/*const*/ Interfaces::IBuffer* buffer, bool&);
+
     private:
         API::EGL _api;
 
@@ -115,6 +122,8 @@ namespace Renderer
 
         EGLSurface _draw_surface;
         EGLSurface _read_surface;
+
+        std::vector<PixelFormat> _formats;
     }; // class EGL
 } // namespace Renderer
 } // namespace Compositor

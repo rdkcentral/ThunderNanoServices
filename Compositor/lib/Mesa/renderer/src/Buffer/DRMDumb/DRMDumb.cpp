@@ -20,7 +20,7 @@
 #include "../Trace.h"
 
 #include <IAllocator.h>
-#include <IBuffer.h>
+#include <compositorbuffer/IBuffer.h>
 #include <CompositorTypes.h>
 #include <DrmCommon.h>
 

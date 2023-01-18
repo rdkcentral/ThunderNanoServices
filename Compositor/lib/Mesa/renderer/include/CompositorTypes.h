@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <interfaces/IComposition.h>
+#include <core/core.h>
 
 #include <array>
 #include <cstdint>
@@ -27,14 +27,17 @@
 
 namespace Compositor {
 
-namespace Interfaces {
-    class IBuffer;
-}
+using Box = struct {
+    uint32_t x;
+    uint32_t y;
+    uint32_t width;
+    uint32_t height;
+};
 
-using Box = WPEFramework::Exchange::IComposition::Rectangle;
 using Matrix = std::array<float, 9>;
 using Color = std::array<float, 4>;
-using Buffers = std::list<WPEFramework::Core::ProxyType<Interfaces::IBuffer>>;
+// using Planes = std::list<Interfaces::IBuffer::IPlane*>;
+// using Planes = std::list<WPEFramework::Core::ProxyType<Interfaces::IBuffer>>;
 
 /**
  * @brief  A single DRM format, with a set of modifiers attached.

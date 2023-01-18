@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "IBuffer.h"
 #include <CompositorTypes.h>
+#include <compositorbuffer/IBuffer.h>
 #include <interfaces/IComposition.h>
 
 namespace Compositor {
@@ -29,7 +29,7 @@ namespace Interfaces {
         virtual ~IRenderer() = default;
 
         /**
-         * @brief A factory for renderer, callee needs to call Free() when done.
+         * @brief A factory for renderer, callee needs to call Release() when done.
          *
          * @param identifier ID for this Renderer, allows for reuse.
          * @return Core::ProxyType<IAllocator>

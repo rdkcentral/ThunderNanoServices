@@ -93,6 +93,42 @@ namespace API {
 
     class GL {
     public:
+#define CASE_STR(value) \
+    case value:         \
+        return #value;
+
+        static const char* SourceString(EGLint code)
+        {
+            switch (code) {
+                CASE_STR(GL_DEBUG_SOURCE_API_KHR)
+                CASE_STR(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR)
+                CASE_STR(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR)
+                CASE_STR(GL_DEBUG_SOURCE_THIRD_PARTY_KHR)
+                CASE_STR(GL_DEBUG_SOURCE_APPLICATION_KHR)
+                CASE_STR(GL_DEBUG_SOURCE_OTHER_KHR)
+            default:
+                return "Unknown";
+            }
+        }
+        
+        static const char* TypeString(EGLint code)
+        {
+            switch (code) {
+                CASE_STR(GL_DEBUG_TYPE_ERROR_KHR)
+                CASE_STR(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR)
+                CASE_STR(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR)
+                CASE_STR(GL_DEBUG_TYPE_PORTABILITY_KHR)
+                CASE_STR(GL_DEBUG_TYPE_PERFORMANCE_KHR)
+                CASE_STR(GL_DEBUG_TYPE_OTHER_KHR)
+                CASE_STR(GL_DEBUG_TYPE_MARKER_KHR)
+                CASE_STR(GL_DEBUG_TYPE_PUSH_GROUP_KHR)
+                CASE_STR(GL_DEBUG_TYPE_POP_GROUP_KHR)
+            default:
+                return "Unknown";
+            }
+        }
+#undef CASE_STR
+
         static inline std::string ShaderInfoLog(GLuint handle)
         {
 
@@ -141,8 +177,8 @@ namespace API {
 
         static inline bool HasExtension(const std::string& extention)
         {
-            static const std::string extensions(reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
-            return ((extention.size() > 0) && (extensions.find(extention) != std::string::npos));
+            static const char* glExtensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+            return ((extention.size() > 0) && (glExtensions != nullptr) && (std::string(glExtensions).find(extention) != std::string::npos));
         }
 
         GL(const GL&) = delete;
