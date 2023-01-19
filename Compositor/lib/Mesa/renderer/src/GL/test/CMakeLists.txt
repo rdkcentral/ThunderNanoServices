@@ -31,6 +31,7 @@ target_link_libraries(renderertest
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
         ${COMPOSITOR_RENDERER_IMPLEMENTATION}
+        ${COMPOSITOR_BUFFER_IMPLEMENTATION}
 )
 
 install(TARGETS glextinfo DESTINATION bin)

@@ -392,7 +392,7 @@ namespace Renderer {
 
 WPEFramework::Core::ProxyType<Interfaces::IAllocator> Interfaces::IAllocator::Instance(WPEFramework::Core::instance_id identifier)
 {
-    ASSERT(drmAvailable() > 0);
+    ASSERT(drmAvailable() == 1);
 
     static WPEFramework::Core::ProxyMapType<WPEFramework::Core::instance_id, Interfaces::IAllocator> gbmAllocators;
 

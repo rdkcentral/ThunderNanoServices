@@ -33,7 +33,9 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include <IAllocator.h>
 #include <IRenderer.h>
+#include <Transformation.h>
 
 #include <drm_fourcc.h>
 
@@ -100,7 +102,6 @@ void PrintFormat(const string& preamble, const Compositor::PixelFormat& format)
 
 int main(int /*argc*/, const char* argv[])
 {
-
     Messaging::MessageUnit::flush flushMode;
     flushMode = Messaging::MessageUnit::flush::FLUSH;
 
@@ -128,7 +129,11 @@ int main(int /*argc*/, const char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        int drmFd = open("/dev/dri/renderD129", O_RDWR | O_CLOEXEC);
+        int drmFd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+
+        Compositor::PixelFormat format(DRM_FORMAT_XRGB8888);
+
+        WPEFramework::Core::ProxyType<Compositor::Interfaces::IAllocator> allocator = Compositor::Interfaces::IAllocator::Instance(drmFd);
 
         WPEFramework::Core::ProxyType<Compositor::Interfaces::IRenderer> renderer = Compositor::Interfaces::IRenderer::Instance(drmFd);
 
@@ -142,7 +147,37 @@ int main(int /*argc*/, const char* argv[])
             PrintFormat("Texture", format);
         }
 
+        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = allocator->Create(1920, 1080, format);
+
+        std::string config = "{ \
+            \"width\": 1280, \
+            \"height\": 720, \
+        }";
         
+        // not used yet
+        renderer->Configure(config);
+
+        // Add a buffer to render on
+        renderer->Bind(buffer.operator->());
+
+        // uint32_t width, uint32_t height
+        renderer->Begin(1280, 720);
+
+        Compositor::Color gray = {0.2, 0.2, 0.2, 1.0};
+        Compositor::Color red = {1.0, 0.0, 0.0, 1.0};
+
+        renderer->Clear(gray);
+
+        // TODO make one object of this... 
+        Compositor::Matrix quad1;
+        Compositor::Transformation::Projection(quad1, 60, 120, Compositor::Transformation::TRANSFORM_NORMAL);
+        Compositor::Transformation::Translate(quad1, 20, 20);
+
+        renderer->Quadrangle(red, quad1);
+
+        renderer->End();
+
+        renderer->Bind(nullptr);
 
         close(drmFd);
 

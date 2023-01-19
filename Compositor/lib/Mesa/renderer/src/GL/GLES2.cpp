@@ -419,8 +419,7 @@ namespace Renderer {
         {
             _egl.SetCurrent();
 
-            TRACE(Trace::GL, ("%s - build: %s\n version: %s\n renderer: %s\n vendor: %s", 
-            __func__, __TIMESTAMP__, glGetString(GL_VERSION), glGetString(GL_RENDERER), glGetString(GL_VENDOR)));
+            TRACE(Trace::GL, ("%s - build: %s\n version: %s\n renderer: %s\n vendor: %s", __func__, __TIMESTAMP__, glGetString(GL_VERSION), glGetString(GL_RENDERER), glGetString(GL_VENDOR)));
 
             ASSERT(_egl.IsCurrent() == true);
 
