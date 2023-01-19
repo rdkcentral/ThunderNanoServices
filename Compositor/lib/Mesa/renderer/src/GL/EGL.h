@@ -110,7 +110,7 @@ namespace Renderer {
                                                : true;
         }
 
-        std::vector<PixelFormat> Formats();
+        const std::vector<PixelFormat>& Formats() const;
 
         EGLImage CreateImage(/*const*/ Interfaces::IBuffer* buffer, bool&);
 

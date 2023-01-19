@@ -340,9 +340,9 @@ namespace Renderer {
         return result;
     }
 
-    std::vector<PixelFormat> EGL::Formats()
+    const std::vector<PixelFormat>& EGL::Formats() const
     {
-        return std::vector<PixelFormat>();
+        return _formats;
     }
 
     void EGL::GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals)

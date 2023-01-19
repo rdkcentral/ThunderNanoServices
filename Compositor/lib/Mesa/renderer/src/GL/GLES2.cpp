@@ -412,15 +412,15 @@ namespace Renderer {
         GLES(int fd)
             : _fd(fd)
             , _egl(fd)
-            , _formats(_egl.Formats())
             , _current_buffer(nullptr)
             , _viewport_width(0)
             , _viewport_height(0)
             , _programs()
         {
-            TRACE(Trace::GL, ("%s - build: %s", __func__, __TIMESTAMP__));
-
             _egl.SetCurrent();
+
+            TRACE(Trace::GL, ("%s - build: %s\n version: %s\n renderer: %s\n vendor: %s", 
+            __func__, __TIMESTAMP__, glGetString(GL_VERSION), glGetString(GL_RENDERER), glGetString(GL_VENDOR)));
 
             ASSERT(_egl.IsCurrent() == true);
 
@@ -594,12 +594,12 @@ namespace Renderer {
 
         const std::vector<PixelFormat>& RenderFormats() const override
         {
-            return _formats;
+            return _egl.Formats();
         }
 
         const std::vector<PixelFormat>& TextureFormats() const override
         {
-            return _formats;
+            return _egl.Formats();
         }
 
     private:
@@ -617,7 +617,6 @@ namespace Renderer {
     private:
         int _fd;
         EGL _egl;
-        const std::vector<PixelFormat> _formats;
         Buffer* _current_buffer;
         uint32_t _viewport_width;
         uint32_t _viewport_height;
