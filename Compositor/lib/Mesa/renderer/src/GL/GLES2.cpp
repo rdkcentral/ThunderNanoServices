@@ -24,6 +24,7 @@
 #include <tracing/tracing.h>
 
 #include <IRenderer.h>
+#include <Transformation.h>
 #include <compositorbuffer/IBuffer.h>
 
 #include "EGL.h"
@@ -80,17 +81,10 @@ namespace Trace {
 namespace Compositor {
 namespace Renderer {
     class GLES : public Interfaces::IRenderer {
-        struct Buffer {
-            // struct wlr_gles2_renderer* renderer;
 
-            EGLImageKHR image;
-            GLuint rbo;
-            GLuint fbo;
+        using PointCoordinates = std::array<GLfloat, 8>;
 
-            WPEFramework::Core::ProxyType<Interfaces::IBuffer> realBuffer;
-        };
-
-        static constexpr GLfloat verts[] = {
+        static constexpr PointCoordinates Vertices = {
             1, 0, // top right
             0, 0, // top left
             1, 1, // bottom right
@@ -98,22 +92,22 @@ namespace Renderer {
         };
 
 #define PushDebug() RealPushDebug(__FILE__, __func__, __LINE__)
-        void RealPushDebug(const std::string& file, const std::string& func, const uint32_t line)
+        static void RealPushDebug(const std::string& file, const std::string& func, const uint32_t line)
         {
-            if (_api.glPushDebugGroupKHR == nullptr) {
+            if (_gles.glPushDebugGroupKHR == nullptr) {
                 return;
             }
 
             std::stringstream message;
             message << file << ":" << line << "[" << func << "]";
 
-            _api.glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 1, -1, message.str().c_str());
+            _gles.glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 1, -1, message.str().c_str());
         }
 
-        void PopDebug()
+        static void PopDebug()
         {
-            if (_api.glPopDebugGroupKHR != nullptr) {
-                _api.glPopDebugGroupKHR();
+            if (_gles.glPopDebugGroupKHR != nullptr) {
+                _gles.glPopDebugGroupKHR();
             }
         }
 
@@ -146,6 +140,186 @@ namespace Renderer {
             }
             }
         }
+
+        class FrameBuffer {
+        public:
+            FrameBuffer() = delete;
+            FrameBuffer(const FrameBuffer&) = delete;
+            FrameBuffer& operator=(const FrameBuffer&) = delete;
+
+            FrameBuffer(EGL& egl, WPEFramework::Core::ProxyType<Interfaces::IBuffer> buffer)
+                : _egl(egl)
+                , _buffer(buffer)
+                , _eglImage(EGL_NO_IMAGE)
+                , _glFrameBuffer(0)
+                , _glRenderBuffer(0)
+                , _external(false)
+            {
+                buffer.AddRef();
+
+                _eglImage = _egl.CreateImage(buffer.operator->(), _external);
+
+                ASSERT(_eglImage != EGL_NO_IMAGE);
+
+                // If this triggers the platform is very old (pre-2008) and not supporting OpenGL 3.0 or higher.
+                ASSERT(_gles.glEGLImageTargetRenderbufferStorageOES != nullptr);
+
+                PushDebug();
+                glGenRenderbuffers(1, &_glRenderBuffer);
+                glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
+
+                _gles.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
+
+                glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+                glGenFramebuffers(1, &_glFrameBuffer);
+                glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
+
+                glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
+
+                GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+                PopDebug();
+
+                ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
+
+                TRACE(Trace::GL, ("Created FrameBuffer %dpx x %dpx", buffer->Width(), buffer->Height()));
+            }
+
+            ~FrameBuffer()
+            {
+                EGL::EglContext previous_context;
+
+                _egl.SaveContext(previous_context);
+                _egl.SetCurrent();
+
+                Unbind();
+
+                PushDebug();
+
+                glDeleteFramebuffers(1, &_glFrameBuffer);
+                glDeleteRenderbuffers(1, &_glRenderBuffer);
+
+                PopDebug();
+
+                _egl.ResetCurrent();
+                _egl.RestoreContext(previous_context);
+
+                _buffer.Release();
+            }
+
+            void Unbind()
+            {
+                PushDebug();
+                glFlush();
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                PopDebug();
+            }
+
+            uint32_t Bind()
+            {
+                PushDebug();
+                glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
+                PopDebug();
+                return true;
+            }
+
+            bool External() const
+            {
+                return _external;
+            }
+
+        private:
+            EGL& _egl;
+            WPEFramework::Core::ProxyType<Interfaces::IBuffer> _buffer;
+
+            EGLImage _eglImage;
+            GLuint _glFrameBuffer;
+            GLuint _glRenderBuffer;
+
+            bool _external;
+        };
+
+
+        // TODO: 
+        // this is a texture for a External DMA buffer only...  we should make a factory for more kinds of textures. 
+        class Texture {
+        public:
+            Texture() = delete;
+            Texture(const Texture&) = delete;
+            Texture& operator=(const Texture&) = delete;
+
+            Texture(EGL& egl, WPEFramework::Core::ProxyType<Interfaces::IBuffer> buffer)
+                : _egl(egl)
+                , _external(false)
+                , _eglImage(_egl.CreateImage(buffer.operator->(), _external))
+                , _hasAlpha()
+                
+                {
+                ASSERT(_eglImage != EGL_NO_IMAGE);
+                ASSERT(_gles.glEGLImageTargetTexture2DOES != nullptr);
+
+                Renderer::EGL::EglContext previous_context;
+
+                _egl.SaveContext(previous_context);
+                _egl.SetCurrent();
+
+                PushDebug();
+
+                glGenTextures(1, &_texture);
+                glBindTexture(Target(), _texture);
+
+                glTexParameteri(Target(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(Target(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                _gles.glEGLImageTargetTexture2DOES(Target(), _eglImage);
+
+                glBindTexture(Target(), 0);
+
+                PopDebug();
+
+                _egl.RestoreContext(previous_context);
+            }
+
+            ~Texture() {
+                Renderer::EGL::EglContext previous_context;
+
+                _egl.SaveContext(previous_context);
+                _egl.SetCurrent();
+
+                PushDebug();
+
+                glDeleteTextures(1, &_texture);
+
+                PopDebug();
+
+                _egl.RestoreContext(previous_context);
+            }
+
+            GLenum Target() const
+            {
+                return _external ? GL_TEXTURE_EXTERNAL_OES : GL_TEXTURE_2D;
+            }
+
+            GLuint Id() const
+            {
+                return _texture;
+            }
+
+            bool HasAlpha() const
+            {
+                return _hasAlpha;
+            }
+
+        private:
+            EGL& _egl;
+            bool _external;
+            EGLImage _eglImage;
+            GLuint _texture;
+            bool _hasAlpha;
+        };
 
         class Program {
         public:
@@ -184,7 +358,7 @@ namespace Renderer {
         private:
             GLuint Compile(GLenum type, const char* source)
             {
-                // PushDebug();
+                PushDebug();
 
                 GLint status(GL_FALSE);
                 GLuint handle = glCreateShader(type);
@@ -202,13 +376,13 @@ namespace Renderer {
                     handle = GL_FALSE;
                 }
 
-                // PopDebug();
+                PopDebug();
                 return handle;
             }
 
             GLuint Create(const uint8_t variant)
             {
-                // PushDebug();
+                PushDebug();
 
                 GLuint handle(GL_FALSE);
 
@@ -260,7 +434,7 @@ namespace Renderer {
                     TRACE(WPEFramework::Trace::Error, ("Error Creating Program"));
                 }
 
-                // PopDebug();
+                PopDebug();
 
                 return handle;
             }
@@ -285,22 +459,49 @@ namespace Renderer {
             GLint _position;
         };
 
-        class ColourProgram : public Program {
+        class ColorProgram : public Program {
         public:
             enum { ID = static_cast<std::underlying_type<VariantType>::type>(Variant::SOLID) };
 
         public:
-            ColourProgram()
+            ColorProgram()
                 : Program(ID)
                 , _color(glGetUniformLocation(Id(), "color"))
             {
             }
 
-            virtual ~ColourProgram() = default;
+            virtual ~ColorProgram() = default;
 
             GLint Color() const
             {
                 return _color;
+            }
+
+            void Draw(const Compositor::Color& color, const Matrix& matrix)
+            {
+                PushDebug();
+
+                if (color[3] == 1.0) {
+                    glDisable(GL_BLEND);
+                } else {
+                    glEnable(GL_BLEND);
+                }
+
+                glUseProgram(Id());
+
+                glUniformMatrix3fv(Projection(), 1, GL_FALSE, &matrix[0]);
+
+                glUniform4f(_color, color[0], color[1], color[2], color[3]);
+
+                glVertexAttribPointer(Position(), 2, GL_FLOAT, GL_FALSE, 0, &Vertices[0]);
+
+                glEnableVertexAttribArray(Position());
+
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+                glDisableVertexAttribArray(Position());
+
+                PopDebug();
             }
 
         private:
@@ -350,6 +551,50 @@ namespace Renderer {
             GLuint Alpha() const
             {
                 return _alpha;
+            }
+
+            void Draw(const Texture& texture, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
+            {
+                PushDebug();
+
+                if ((texture.HasAlpha() == false) && (alpha == 1.0)) {
+                    glDisable(GL_BLEND);
+                } else {
+                    glEnable(GL_BLEND);
+                }
+
+                glUseProgram(Id());
+
+                glUniformMatrix3fv(Projection(), 1, GL_FALSE, &matrix[0]);
+
+                for (uint8_t i = 0; i < TextureCount(); i++) {
+                    glActiveTexture(GL_TEXTURE0 + i);
+
+                    glBindTexture(texture.Target(), texture.Id());
+                    glTexParameteri(texture.Target(), GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+                    glUniform1i(TextureId(i), i);
+                }
+
+                glUniform1f(Alpha(), alpha);
+
+                glVertexAttribPointer(Position(), 2, GL_FLOAT, GL_FALSE, 0, &Vertices[0]);
+                glVertexAttribPointer(Coordinates(), 2, GL_FLOAT, GL_FALSE, 0, &coordinates[0]);
+
+                glEnableVertexAttribArray(Position());
+                glEnableVertexAttribArray(Coordinates());
+
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+                glDisableVertexAttribArray(Position());
+                glDisableVertexAttribArray(Coordinates());
+
+                for (uint8_t i = 0; i < TextureCount(); i++) {
+                    glActiveTexture(GL_TEXTURE0 + i);
+                    glBindTexture(texture.Target(), 0);
+                }
+
+                PopDebug();
             }
 
         private:
@@ -409,10 +654,10 @@ namespace Renderer {
         GLES(GLES const&) = delete;
         GLES& operator=(GLES const&) = delete;
 
-        GLES(int fd)
-            : _fd(fd)
-            , _egl(fd)
-            , _current_buffer(nullptr)
+        GLES(int drmDevFd)
+            : _drmDevFd(drmDevFd)
+            , _egl(drmDevFd)
+            , _frameBuffer(nullptr)
             , _viewport_width(0)
             , _viewport_height(0)
             , _programs()
@@ -427,18 +672,18 @@ namespace Renderer {
                 glEnable(GL_DEBUG_OUTPUT_KHR);
                 glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_KHR);
 
-                _api.glDebugMessageCallbackKHR(DebugSink, this);
+                _gles.glDebugMessageCallbackKHR(DebugSink, this);
 
                 // Silence unwanted message types
-                _api.glDebugMessageControlKHR(GL_DONT_CARE,
+                _gles.glDebugMessageControlKHR(GL_DONT_CARE,
                     GL_DEBUG_TYPE_POP_GROUP_KHR, GL_DONT_CARE, 0, nullptr, GL_FALSE);
-                _api.glDebugMessageControlKHR(GL_DONT_CARE,
+                _gles.glDebugMessageControlKHR(GL_DONT_CARE,
                     GL_DEBUG_TYPE_PUSH_GROUP_KHR, GL_DONT_CARE, 0, nullptr, GL_FALSE);
             }
 
             PushDebug();
 
-            _programs.Announce<ColourProgram>();
+            _programs.Announce<ColorProgram>();
             _programs.Announce<ExternalProgram>();
             _programs.Announce<RGBAProgram>();
             _programs.Announce<RGBXProgram>();
@@ -456,73 +701,43 @@ namespace Renderer {
         {
             if (API::GL::HasExtension("GL_KHR_debug")) {
                 glDisable(GL_DEBUG_OUTPUT_KHR);
-                _api.glDebugMessageCallbackKHR(nullptr, nullptr);
+                _gles.glDebugMessageCallbackKHR(nullptr, nullptr);
             }
         };
 
-        uint32_t Configure(const string& config)
+        // uint32_t Configure(const string& config)
+        // {
+        //     return WPEFramework::Core::ERROR_NONE;
+        // }
+
+        void Unbind()
         {
-            return WPEFramework::Core::ERROR_NONE;
+            _frameBuffer.reset();
+            _egl.ResetCurrent();
         }
 
-        uint32_t Bind(Interfaces::IBuffer* buffer) override
+        uint32_t Bind(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer) override
         {
-
-            if (_current_buffer != nullptr) {
-                ASSERT(_egl.IsCurrent() == true);
-                PushDebug();
-
-                glFlush();
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-                PopDebug();
-
-                _current_buffer->realBuffer->Completed(false);
-                _current_buffer = nullptr;
-            }
-
-            if (buffer == nullptr) {
-                _egl.ResetCurrent();
-                return true;
-            }
+            _frameBuffer.reset(new FrameBuffer(_egl, buffer));
 
             _egl.SetCurrent();
 
-            Buffer* glBuffer = dynamic_cast<Buffer*>(buffer);
-
-            // if (glBuffer == NULL) {
-            //     // glBuffer = CreateBuffer(buffer);
-            // }
-
-            if (glBuffer == NULL) {
-                return false;
-            }
-
-            // buffer->realBuffer->Lock(100);
-
-            _current_buffer = glBuffer;
-
-            PushDebug();
-
-            glBindFramebuffer(GL_FRAMEBUFFER, _current_buffer->fbo);
-
-            PopDebug();
-            return true;
+            return WPEFramework::Core::ERROR_NONE;
         }
 
         bool Begin(uint32_t width, uint32_t height) override
         {
-            PushDebug();
-            // gles2_get_renderer_in_context(wlr_renderer);
+            ASSERT(InContext() == true);
 
-            // if (renderer->procs.glGetGraphicsResetStatusKHR) {
-            //     GLenum status = renderer->procs.glGetGraphicsResetStatusKHR();
-            //     if (status != GL_NO_ERROR) {
-            //         wlr_log(WLR_ERROR, "GPU reset (%s)", reset_status_str(status));
-            //         wl_signal_emit_mutable(&wlr_renderer->events.lost, NULL);
-            //         return false;
-            //     }
-            // }
+            if (_gles.glGetGraphicsResetStatusKHR != nullptr) {
+                GLenum status = _gles.glGetGraphicsResetStatusKHR();
+                if (status != GL_NO_ERROR) {
+                    TRACE(WPEFramework::Trace::Error, ("GPU reset (%s)", API::GL::ResetStatusString(status)));
+                    return false;
+                }
+            }
+
+            PushDebug();
 
             glViewport(0, 0, width, height);
 
@@ -530,12 +745,9 @@ namespace Renderer {
             _viewport_height = height;
 
             // refresh projection matrix
-            //_projection = matrix_projection(width, height, WL_OUTPUT_TRANSFORM_FLIPPED_180);
+            Transformation::Projection(_projection, width, height, Transformation::TRANSFORM_FLIPPED_180);
 
             glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-            // XXX: maybe we should save output projection and remove some of the need
-            // for users to sling matricies themselves
 
             PopDebug();
             return true;
@@ -543,12 +755,14 @@ namespace Renderer {
 
         void End() override
         {
+            ASSERT(InContext() == true);
             // nothing to do
-            _current_buffer->realBuffer->Completed(true);
         }
 
         void Clear(const Color color) override
         {
+            ASSERT(InContext() == true);
+
             PushDebug();
             glClearColor(color[0], color[1], color[2], color[3]);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -557,6 +771,8 @@ namespace Renderer {
 
         void Scissor(const Box* box) override
         {
+            ASSERT(InContext() == true);
+
             PushDebug();
             if (box != nullptr) {
                 glScissor(box->x, box->y, box->width, box->height);
@@ -567,28 +783,52 @@ namespace Renderer {
             PopDebug();
         }
 
-        uint32_t Render(Interfaces::IBuffer* texture, const Box region, const Matrix transform, float alpha) override
+        uint32_t Texture(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer, const Box region, const Matrix transformation, float alpha) override
         {
-            PushDebug();
-            PopDebug();
-            return 0;
+            ASSERT(InContext() == true);
+
+            Matrix gl_matrix;
+            Transformation::Multiply(gl_matrix, _projection, transformation);
+            Transformation::Transpose(gl_matrix, gl_matrix);
+
+            ExternalProgram* program = _programs.QueryType<ExternalProgram>();
+
+            ASSERT(program != nullptr);
+
+            Texture texture(_egl, buffer);
+
+            const GLfloat x1 = region.x / buffer->Width();
+            const GLfloat y1 = region.y / buffer->Height();
+            const GLfloat x2 = (region.x + region.width) / buffer->Width();
+            const GLfloat y2 = (region.y + region.height) / buffer->Height();
+
+            const PointCoordinates coordinates = {
+                x2, y1, // top right
+                x1, y1, // top left
+                x2, y2, // bottom right
+                x1, y2, // bottom left
+            };
+
+            program->Draw(texture, alpha, gl_matrix, coordinates);
+
+            return WPEFramework::Core::ERROR_NONE;
         }
 
         uint32_t Quadrangle(const Color color, const Matrix transformation) override
         {
-            PushDebug();
-            PopDebug();
-            return 0;
-        }
+            ASSERT(InContext() == true);
 
-        Interfaces::IBuffer* Bound() const
-        {
-            return nullptr;
-        }
+            Matrix gl_matrix;
+            Transformation::Multiply(gl_matrix, _projection, transformation);
+            Transformation::Transpose(gl_matrix, gl_matrix);
 
-        int Handle() const
-        {
-            return _fd;
+            ColorProgram* program = _programs.QueryType<ColorProgram>();
+
+            ASSERT(program != nullptr);
+
+            program->Draw(color, gl_matrix);
+
+            return WPEFramework::Core::ERROR_NONE;
         }
 
         const std::vector<PixelFormat>& RenderFormats() const override
@@ -602,29 +842,26 @@ namespace Renderer {
         }
 
     private:
-        bool HasContext() const
+        bool InContext() const
         {
-            return ((_egl.IsCurrent() == true) && (_current_buffer != nullptr));
+            return ((_egl.IsCurrent() == true) && (_frameBuffer != nullptr));
         }
 
-        void CreateBuffer()
-        {
-        }
-
-        static API::GL _api;
+        static API::GL _gles;
 
     private:
-        int _fd;
+        int _drmDevFd;
         EGL _egl;
-        Buffer* _current_buffer;
+        std::unique_ptr<FrameBuffer> _frameBuffer;
         uint32_t _viewport_width;
         uint32_t _viewport_height;
         Matrix _projection;
         ProgramRegistry _programs;
     }; // class GLES
 
-    API::GL GLES::_api;
+    API::GL GLES::_gles;
 
+    constexpr GLES::PointCoordinates GLES::Vertices;
 } // namespace Renderer
 
 WPEFramework::Core::ProxyType<Interfaces::IRenderer>

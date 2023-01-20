@@ -110,7 +110,7 @@ namespace API {
                 return "Unknown";
             }
         }
-        
+
         static const char* TypeString(EGLint code)
         {
             switch (code) {
@@ -125,6 +125,17 @@ namespace API {
                 CASE_STR(GL_DEBUG_TYPE_POP_GROUP_KHR)
             default:
                 return "Unknown";
+            }
+        }
+
+        static const char* ResetStatusString(GLenum status)
+        {
+            switch (status) {
+                CASE_STR(GL_GUILTY_CONTEXT_RESET_KHR)
+                CASE_STR(GL_INNOCENT_CONTEXT_RESET_KHR)
+                CASE_STR(GL_UNKNOWN_CONTEXT_RESET_KHR)
+            default:
+                return "Invalid";
             }
         }
 #undef CASE_STR

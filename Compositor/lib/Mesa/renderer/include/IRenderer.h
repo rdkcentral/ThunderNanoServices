@@ -36,15 +36,20 @@ namespace Interfaces {
          */
         static WPEFramework::Core::ProxyType<IRenderer> Instance(WPEFramework::Core::instance_id identifier);
 
-        virtual uint32_t Configure(const string& config) = 0;
+        // virtual uint32_t Configure(const string& config) = 0;
 
         /**
-         * @brief Binds a buffer to the renderer, all render related actions will be done using this buffer.
+         * @brief Binds a frame buffer to the renderer, all render related actions will be done using this buffer.
          *
          * @param buffer A preallocated buffer to be used or ```nullptr``` to clear.
          * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
          */
-        virtual uint32_t Bind(Interfaces::IBuffer* buffer) = 0;
+        virtual uint32_t Bind(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer) = 0;
+
+        /**
+         * @brief Clears the active frame buffer from the renderer.
+         */
+        virtual void Unbind() = 0;
 
         /**
          * @brief Start a render pass with the provided viewport.
@@ -92,7 +97,7 @@ namespace Interfaces {
          *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
          */
-        virtual uint32_t Render(IBuffer* texture, const Box region, const Matrix transform, float alpha) = 0;
+        virtual uint32_t Texture(WPEFramework::Core::ProxyType<IBuffer> buffer, const Box region, const Matrix transform, float alpha) = 0;
 
         /**
          * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.
@@ -114,7 +119,7 @@ namespace Interfaces {
          * @return IBuffer* or nullptr if no buffer is bound.
          *
          */
-        virtual IBuffer* Bound() const = 0;
+        // virtual WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> Bound() const = 0;
 
         /**
          * TODO: We probably want this so we can do screen dumps

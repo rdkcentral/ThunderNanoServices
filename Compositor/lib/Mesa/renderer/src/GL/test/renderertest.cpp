@@ -158,7 +158,7 @@ int main(int /*argc*/, const char* argv[])
         renderer->Configure(config);
 
         // Add a buffer to render on
-        renderer->Bind(buffer.operator->());
+        renderer->Bind(buffer);
 
         // uint32_t width, uint32_t height
         renderer->Begin(1280, 720);
@@ -177,7 +177,7 @@ int main(int /*argc*/, const char* argv[])
 
         renderer->End();
 
-        renderer->Bind(nullptr);
+        renderer->Unbind();
 
         close(drmFd);
 
