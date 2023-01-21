@@ -111,8 +111,8 @@ namespace Renderer {
             }
         }
 
-        static void DebugSink(GLenum src, GLenum type, GLuint id, GLenum severity,
-            GLsizei len, const GLchar* msg, const void* user)
+        static void DebugSink(GLenum src, GLenum type, GLuint /*id*/, GLenum severity,
+            GLsizei /*len*/, const GLchar* msg, const void* /*user*/)
         {
             std::stringstream line;
             line << ", source: " << Compositor::API::GL::SourceString(src)

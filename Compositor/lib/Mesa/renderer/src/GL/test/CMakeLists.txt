@@ -34,4 +34,4 @@ target_link_libraries(renderertest
         ${COMPOSITOR_BUFFER_IMPLEMENTATION}
 )
 
-install(TARGETS glextinfo DESTINATION bin)
+install(TARGETS renderertest DESTINATION bin)

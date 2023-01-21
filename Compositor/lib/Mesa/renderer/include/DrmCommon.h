@@ -87,13 +87,13 @@ namespace DRM {
             drm_magic_t magic;
             int ret(0);
 
-            if (ret = drmGetMagic(newFd, &magic) < 0) {
+            if ((ret = drmGetMagic(newFd, &magic)) < 0) {
                 TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmGetMagic failed: %s", strerror(ret)));
                 close(newFd);
                 return InvalidFileDescriptor;
             }
 
-            if (ret = drmAuthMagic(fd, magic) < 0) {
+            if ((ret = drmAuthMagic(fd, magic)) < 0) {
                 TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmAuthMagic failed: %s", strerror(ret)));
                 close(newFd);
                 return InvalidFileDescriptor;
