@@ -97,7 +97,7 @@ namespace Interfaces {
          *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
          */
-        virtual uint32_t Texture(WPEFramework::Core::ProxyType<IBuffer> buffer, const Box region, const Matrix transform, float alpha) = 0;
+        virtual uint32_t Render(WPEFramework::Core::ProxyType<IBuffer> buffer, const Box region, const Matrix transform, float alpha) = 0;
 
         /**
          * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.

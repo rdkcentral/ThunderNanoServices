@@ -783,7 +783,7 @@ namespace Renderer {
             PopDebug();
         }
 
-        uint32_t Texture(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer, const Box region, const Matrix transformation, float alpha) override
+        uint32_t Render(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer, const Box region, const Matrix transformation, float alpha) override
         {
             ASSERT(InContext() == true);
 

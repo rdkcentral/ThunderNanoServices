@@ -149,13 +149,13 @@ int main(int /*argc*/, const char* argv[])
 
         WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = allocator->Create(1920, 1080, format);
 
-        std::string config = "{ \
-            \"width\": 1280, \
-            \"height\": 720, \
-        }";
+        // std::string config = "{ \
+        //     \"width\": 1280, \
+        //     \"height\": 720, \
+        // }";
         
         // not used yet
-        renderer->Configure(config);
+        //renderer->Configure(config);
 
         // Add a buffer to render on
         renderer->Bind(buffer);
