@@ -81,7 +81,7 @@ namespace Plugin {
             INTERFACE_ENTRY(PluginHost::IShell::ICOMLink::INotification)
             END_INTERFACE_MAP
 
-            void CleanedUp(const Core::IUnknown* remote, const uint32_t interfaceId) override
+            void Dangling(const Core::IUnknown* remote, const uint32_t interfaceId) override
             {
                 //not interested in this notification
                 TRACE(Trace::Information, (_T("Cleanup an interface: %d [%X] on object: [%s]"), interfaceId, interfaceId, typeid(*remote).name()));
