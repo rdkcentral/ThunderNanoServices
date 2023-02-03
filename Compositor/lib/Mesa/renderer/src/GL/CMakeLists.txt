@@ -53,6 +53,7 @@ set_target_properties(${COMPOSITOR_RENDERER_IMPLEMENTATION} PROPERTIES
 target_compile_definitions(${COMPOSITOR_RENDERER_IMPLEMENTATION}
     PUBLIC
         EGL_NO_X11
+        __DEBUG__
     )
 
 

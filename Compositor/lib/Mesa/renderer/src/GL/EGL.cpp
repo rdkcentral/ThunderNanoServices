@@ -66,15 +66,15 @@ namespace Trace {
         std::string _text;
     }; // class EGL
 }
-
+#ifdef __DEBUG__
 void DebugSink(EGLenum error, const char* command, EGLint messageType, EGLLabelKHR /*threadLabel*/, EGLLabelKHR /*objectLabel*/, const char* message)
 {
     std::stringstream line;
-    line << "command: " << command
-         << ", result: " << Compositor::API::EGL::ErrorString(error)
+    line << command << "="
+         << Compositor::API::EGL::ErrorString(error)
          /*<< ", thread: \"" << threadLabel*/
          /*<< ", object: \"" << objectLabel */
-         << ", message: \"" << message << "\"";
+         << "  \"" << message << "\"";
 
     switch (messageType) {
     case EGL_DEBUG_MSG_CRITICAL_KHR: {
@@ -99,6 +99,7 @@ void DebugSink(EGLenum error, const char* command, EGLint messageType, EGLLabelK
     }
     }
 }
+#endif
 
 string ConfigInfoLog(EGLDisplay dpy, EGLConfig config)
 {
@@ -164,6 +165,8 @@ namespace Renderer {
         , _read_surface(EGL_NO_SURFACE)
         , _formats()
     {
+        TRACE(Trace::EGL, ("%s - build: %s", __func__, __TIMESTAMP__));
+#ifdef __DEBUG__
         constexpr EGLAttrib debugAttributes[] = {
             EGL_DEBUG_MSG_CRITICAL_KHR,
             EGL_TRUE, //
@@ -176,10 +179,10 @@ namespace Renderer {
             EGL_NONE,
         };
 
-        TRACE(Trace::EGL, ("%s - build: %s", __func__, __TIMESTAMP__));
-
         ASSERT(_api.eglDebugMessageControl != nullptr);
         _api.eglDebugMessageControl(DebugSink, debugAttributes);
+
+#endif
 
         EGLBoolean eglBind = eglBindAPI(EGL_OPENGL_ES_API);
 
@@ -237,6 +240,7 @@ namespace Renderer {
             _api.eglQueryDevicesEXT(0, nullptr, &nEglDevices);
 
             EGLDeviceEXT eglDevices[nEglDevices];
+            memset(eglDevices, 0, sizeof(eglDevices));
 
             _api.eglQueryDevicesEXT(nEglDevices, eglDevices, &nEglDevices);
 
@@ -244,7 +248,7 @@ namespace Renderer {
                 drmDevice* drmDevice = nullptr;
                 int ret = drmGetDevice(drmFd, &drmDevice);
 
-                if (drmDevice != nullptr) {
+                if ((ret == 0) && (drmDevice != nullptr)) {
                     for (int i = 0; i < nEglDevices; i++) {
                         const char* deviceName = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_DRM_DEVICE_FILE_EXT);
 
@@ -402,8 +406,6 @@ namespace Renderer {
         bool result(false);
 
         if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
-
-            EGLint nModifiers(0);
             std::vector<uint64_t> modifiers;
             std::vector<EGLBoolean> externals;
 
@@ -449,7 +451,7 @@ namespace Renderer {
 
             if (planes->Next() == true) {
                 plane = planes->Plane();
-                
+
                 ASSERT(plane != nullptr);
 
                 imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, plane->Accessor());
@@ -461,7 +463,7 @@ namespace Renderer {
 
             if (planes->Next() == true) {
                 plane = planes->Plane();
-                
+
                 ASSERT(plane != nullptr);
 
                 imageAttributes.Append(EGL_DMA_BUF_PLANE2_FD_EXT, plane->Accessor());
@@ -485,7 +487,7 @@ namespace Renderer {
 
             imageAttributes.Append(EGL_IMAGE_PRESERVED_KHR, EGL_TRUE);
 
-            result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, imageAttributes);
+            result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, imageAttributes);
         }
 
         external = IsExternOnly(buffer->Format(), buffer->Modifier());

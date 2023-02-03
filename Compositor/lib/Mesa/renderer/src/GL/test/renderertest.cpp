@@ -98,6 +98,9 @@ void PrintFormat(const string& preamble, const Compositor::PixelFormat& format)
 
     TRACE_GLOBAL(Trace::Information, ("%s", line.str().c_str()));
 }
+
+const Compositor::Color gray = { 0.2, 0.2, 0.2, 1.0 };
+const Compositor::Color red = { 1.0, 0.0, 0.0, 1.0 };
 }
 
 int main(int /*argc*/, const char* argv[])
@@ -118,13 +121,15 @@ int main(int /*argc*/, const char* argv[])
             "Error",
             "Information",
             "EGL",
-            "GL"
+            "GL",
+            "Buffer"
         };
 
         for (auto module : modules) {
             tracer.EnableMessage("CompositorRenderTest", module, true);
             tracer.EnableMessage("CompositorRendererEGL", module, true);
             tracer.EnableMessage("CompositorRendererGLES2", module, true);
+            tracer.EnableMessage("CompositorBuffer", module, true);
         }
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
@@ -137,38 +142,28 @@ int main(int /*argc*/, const char* argv[])
 
         WPEFramework::Core::ProxyType<Compositor::Interfaces::IRenderer> renderer = Compositor::Interfaces::IRenderer::Instance(drmFd);
 
-        const std::vector<Compositor::PixelFormat>& renderFormats(renderer->RenderFormats());
-        for (const auto& format : renderFormats) {
-            PrintFormat("Render", format);
-        }
+        // const std::vector<Compositor::PixelFormat>& renderFormats(renderer->RenderFormats());
+        // for (const auto& format : renderFormats) {
+        //     PrintFormat("Render", format);
+        // }
 
-        const std::vector<Compositor::PixelFormat>& textureFormats(renderer->TextureFormats());
-        for (const auto& format : textureFormats) {
-            PrintFormat("Texture", format);
-        }
+        // const std::vector<Compositor::PixelFormat>& textureFormats(renderer->TextureFormats());
+        // for (const auto& format : textureFormats) {
+        //     PrintFormat("Texture", format);
+        // }
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = allocator->Create(1920, 1080, format);
-
-        // std::string config = "{ \
-        //     \"width\": 1280, \
-        //     \"height\": 720, \
-        // }";
-        
-        // not used yet
-        //renderer->Configure(config);
+        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> frameBuffer = allocator->Create(1920, 1080, format);
 
         // Add a buffer to render on
-        renderer->Bind(buffer);
+        renderer->Bind(frameBuffer);
 
-        // uint32_t width, uint32_t height
-        renderer->Begin(1280, 720);
+        // wlr_output_attach_render(wlr_output, NULL);
 
-        Compositor::Color gray = {0.2, 0.2, 0.2, 1.0};
-        Compositor::Color red = {1.0, 0.0, 0.0, 1.0};
+        renderer->Begin(1920, 1080);
 
         renderer->Clear(gray);
 
-        // TODO make one object of this... 
+        // TODO make one object of this...
         Compositor::Matrix quad1;
         Compositor::Transformation::Projection(quad1, 60, 120, Compositor::Transformation::TRANSFORM_NORMAL);
         Compositor::Transformation::Translate(quad1, 20, 20);
@@ -177,12 +172,19 @@ int main(int /*argc*/, const char* argv[])
 
         renderer->End();
 
+        // wlr_output_commit(wlr_output);
+        // crtc_commit
+
         renderer->Unbind();
 
-        close(drmFd);
+        frameBuffer.Release();
+        renderer.Release();
+        allocator.Release();
 
-        TRACE_GLOBAL(Trace::Information, ("Exiting %s.... ", executableName));
+        close(drmFd);
     }
+    
+    TRACE_GLOBAL(Trace::Information, ("Exiting %s.... ", executableName));
 
     tracer.Close();
     Core::Singleton::Dispose();

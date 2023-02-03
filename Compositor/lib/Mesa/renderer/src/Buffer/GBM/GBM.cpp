@@ -75,7 +75,7 @@ namespace Renderer {
 
             WPEFramework::Core::instance_id Accessor() const override
             {
-                return reinterpret_cast<WPEFramework::Core::instance_id>(this);
+                return static_cast<WPEFramework::Core::instance_id>(_descriptor);
             }
 
             uint32_t Offset() const override
@@ -157,7 +157,7 @@ namespace Renderer {
 
         private:
             uint32_t _index;
-            int8_t _planeCount;
+            uint32_t _planeCount;
             std::array<WPEFramework::Core::ProxyType<GBM::Plane>, MAX_PLANES> _planes;
         }; // class PlaneIterator
 
@@ -214,7 +214,7 @@ namespace Renderer {
             return (nullptr);
         }
 
-        uint32_t Completed(const bool changed) override
+        uint32_t Completed(const bool /*changed*/) override
         {
             Unlock();
             // TODO, Implement me!

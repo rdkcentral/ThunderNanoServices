@@ -97,7 +97,23 @@ namespace API {
     case value:         \
         return #value;
 
-        static const char* SourceString(EGLint code)
+        static const char* ErrorString(GLenum code)
+        {
+            switch (code) {
+                CASE_STR(GL_NO_ERROR)
+                CASE_STR(GL_INVALID_ENUM)
+                CASE_STR(GL_INVALID_VALUE)
+                CASE_STR(GL_INVALID_OPERATION)
+                CASE_STR(GL_INVALID_FRAMEBUFFER_OPERATION)
+                CASE_STR(GL_OUT_OF_MEMORY)
+                CASE_STR(GL_STACK_UNDERFLOW_KHR)
+                CASE_STR(GL_STACK_OVERFLOW_KHR)
+            default:
+                return "Unknown";
+            }
+        }
+
+        static const char* SourceString(GLenum code)
         {
             switch (code) {
                 CASE_STR(GL_DEBUG_SOURCE_API_KHR)
@@ -111,7 +127,7 @@ namespace API {
             }
         }
 
-        static const char* TypeString(EGLint code)
+        static const char* TypeString(GLenum code)
         {
             switch (code) {
                 CASE_STR(GL_DEBUG_TYPE_ERROR_KHR)
