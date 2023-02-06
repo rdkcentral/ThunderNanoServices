@@ -77,8 +77,8 @@ namespace Plugin {
             ComNotificationSink(const ComNotificationSink&) = delete;
             ComNotificationSink& operator=(const ComNotificationSink&) = delete;
 
-            BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(PluginHost::IShell::ICOMLink::INotification)
+            BEGIN_INTERFACE_MAP(ComNotificationSink)
+                INTERFACE_ENTRY(PluginHost::IShell::ICOMLink::INotification)
             END_INTERFACE_MAP
 
             void Dangling(const Core::IUnknown* remote, const uint32_t interfaceId) override
