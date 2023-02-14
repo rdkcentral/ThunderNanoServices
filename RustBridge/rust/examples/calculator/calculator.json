@@ -1,6 +1,0 @@
-{
- "locator":"libWPEFrameworkRustAdapter.so",
- "classname":"RustAdapter",
- "callsign":"calculator",
- "autostart":true
-}
