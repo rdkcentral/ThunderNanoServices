@@ -204,7 +204,7 @@ POP_WARNING()
         Notify(_T("clock"), currentTime);
 
         // We are currently supporting more release, the old interface is expecting a bit a different response:
-        GetHandler(1)->Notify(_T("clock"), Data::Time(now.Hours(), now.Minutes(), now.Seconds()));
+        Notify(_T("clock"), Data::Time(now.Hours(), now.Minutes(), now.Seconds()));
     }
 
     void JSONRPCPlugin::SendTime(const Core::JSONRPC::Context& channel)
