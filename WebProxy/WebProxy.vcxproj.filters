@@ -1,6 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{75f65b5f-2248-4250-a477-6911fc78fa13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{00f59ec8-34dc-4464-a659-e605c1bdff25}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="Module.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -15,13 +23,5 @@
     <ClInclude Include="WebProxy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{afce6d61-8972-45d5-b490-6973935fb9e6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{9ffb5d1b-2635-48ff-b918-02e3e79eac7d}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
 </Project>

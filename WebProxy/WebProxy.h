@@ -17,38 +17,193 @@
  * limitations under the License.
  */
  
-#ifndef __PLUGINWEBPROXY_H
-#define __PLUGINWEBPROXY_H
+#pragma once
 
 #include "Module.h"
 
 namespace WPEFramework {
+    namespace PluginHost {
+        class ChannelDispatcher
+            : public PluginHost::IPluginExtended
+            , public PluginHost::IChannel {
+        private:
+            enum state : uint8_t {
+                OPERATIONAL       = 0x01,
+                HAS_INBOUND_DATA  = 0x02,
+                HAS_OUTBOUND_DATA = 0x04
+            };
+
+            class Connector {
+            public:
+                Connector(Connector&&) = delete;
+                Connector(const Connector&) = delete;
+                Connector& operator=(const Connector&) = delete;
+
+                Connector(PluginHost::Channel& channel, Core::IStream* link, const uint32_t length, uint8_t buffer[])
+                    : _adminLock()
+                    , _link(link)
+                    , _channel(&channel)
+                    , _buffer(length, buffer)
+                {
+                }
+                ~Connector() = default;
+
+            public:
+                uint32_t Id() const
+                {
+                    uint32_t result = 0;
+                    _adminLock.Lock();
+
+                    if (_channel != nullptr) {
+                        result = _channel->Id();
+                    }
+
+                    _adminLock.Unlock();
+
+                    return (result);
+                }
+                string RemoteId() const
+                {
+                    return (_link->RemoteId());
+                }
+                bool IsClosed() const
+                {
+                    return ((_channel == nullptr) && (_link->IsClosed()));
+                }
+                // Methods to extract and insert data into the socket buffers
+                uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
+                {
+                    _adminLock.Lock();
+
+                    uint16_t result = _buffer.Read(dataFrame, maxSendSize);
+
+                    _adminLock.Unlock();
+
+                    return (result);
+                }
+                uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
+                {
+                    _adminLock.Lock();
+
+                    bool wasEmpty = _buffer.IsEmpty();
+
+                    uint16_t result = _buffer.Write(dataFrame, receivedSize);
+
+                    if (wasEmpty == true) {
+                        // This is new data, there was nothing pending, trigger a request for a frambuffer.
+                        _channel->RequestOutbound();
+                    }
+
+                    _adminLock.Unlock();
+
+                    return (result);
+                }
+                // Signal a state change, Opened, Closed or Accepted
+                void StateChange()
+                {
+                    if (_link->IsOpen() == true) {
+                        TRACE(Trace::Information, (_T("Proxy connection for channel ID [%d] is Open"), Id()));
+                    }
+                    else if (IsClosed() == true) {
+                        TRACE(Trace::Information, (_T("Proxy connection for channel ID [%d] is Closed"), Id()));
+                    }
+                    else {
+                        TRACE(Trace::Information, (_T("Proxy connection for channel ID [%d] has reached an exceptional state"), Id()));
+                    }
+                }
+                void Open()
+                {
+                    _adminLock.Lock();
+                    _link->Open(0);
+                    _adminLock.Unlock();
+                }
+                void Close()
+                {
+                    _adminLock.Lock();
+                    _channel = nullptr;
+                    _link->Close(0);
+                    _adminLock.Unlock();
+                }
+
+            private:
+                mutable Core::CriticalSection _adminLock;
+                Core::IStream* _link;
+                PluginHost::Channel* _channel;
+                Core::CyclicDataBuffer _buffer;
+            };
+
+            template <typename STREAMTYPE, const uint32_t BUFFERSIZE>
+            class ConnectorType : public Connector {
+            public:
+                ConnectorType() = delete;
+                ConnectorType(ConnectorType<STREAMTYPE,BUFFERSIZE>&&) = delete;
+                ConnectorType(const ConnectorType<STREAMTYPE, BUFFERSIZE>&) = delete;
+                ConnectorType<STREAMTYPE, BUFFERSIZE>& operator=(const ConnectorType<STREAMTYPE, BUFFERSIZE>&) = delete;
+
+                PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST);
+                template <typename... Args>
+                ConnectorType(PluginHost::Channel& channel, Args&&... args)
+                    : Connector(channel, &_streamType, _buffer.Size(), _buffer.Buffer())
+                    , _streamType(*this, std::forward<Args>(args)...)
+                {
+                }
+                POP_WARNING();
+
+                ~ConnectorType() override = default;
+
+            private:
+                STREAMTYPE _streamType;
+                Core::ScopedStorage<BUFFERSIZE> _buffer;
+            };
+
+            using Connectors = std::unordered_map<uint32_t, Connector*>;
+
+            class ChannelAdministrator {
+
+            };
+
+        public:
+            bool IsOperational() const {
+                return (true);
+            }
+            bool HasInboundData() const {
+                return (true);
+            }
+            bool HasOutboundData() const {
+                return (true);
+            }
+            uint32_t Write(const uint32_t id, const uint32_t length, const uint8_t buffer[]);
+            uint32_t Read(const uint32_t id, const uint32_t length, uint8_t buffer[]);
+            uint32_t Activity(const uint32_t id);
+        };
+    }
+
 namespace Plugin {
 
-    class WebProxy : public PluginHost::IPluginExtended, public PluginHost::IChannel {
-    private:
-        WebProxy(const WebProxy&) = delete;
-        WebProxy& operator=(const WebProxy&) = delete;
-
+    class WebProxy 
+        : public PluginHost::IPluginExtended
+        , public PluginHost::IChannel {
     public:
         class Connector {
-        private:
+        public:
+            Connector(Connector&&) = delete;
             Connector(const Connector&) = delete;
             Connector& operator=(const Connector&) = delete;
 
-        public:
             Connector(PluginHost::Channel& channel, Core::IStream* link)
                 : _link(link)
                 , _channel(&channel)
                 , _adminLock()
-                , _channelBuffer()
-                , _socketBuffer()
+                , _buffer1()
+                , _buffer2()
+                , _channelBuffer(_buffer1.Size(), _buffer1.Buffer())
+                , _socketBuffer(_buffer2.Size(), _buffer2.Buffer())
             {
             }
             virtual ~Connector() = default;
 
         public:
-            inline uint32_t Id() const
+            uint32_t Id() const
             {
                 uint32_t result = 0;
                 _adminLock.Lock();
@@ -61,11 +216,11 @@ namespace Plugin {
 
                 return (result);
             }
-            inline string RemoteId() const
+            string RemoteId() const
             {
                 return (_link->RemoteId());
             }
-            inline bool IsClosed() const
+            bool IsClosed() const
             {
                 return ((_channel == nullptr) && (_link->IsClosed()));
             }
@@ -80,7 +235,6 @@ namespace Plugin {
 
                 return (result);
             }
-
             uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
             {
                 _adminLock.Lock();
@@ -98,7 +252,6 @@ namespace Plugin {
 
                 return (result);
             }
-
             uint16_t ChannelSend(uint8_t* dataFrame, const uint16_t maxSendSize) const
             {
                 _adminLock.Lock();
@@ -109,7 +262,6 @@ namespace Plugin {
 
                 return (result);
             }
-
             uint16_t ChannelReceive(const uint8_t* dataFrame, const uint16_t receivedSize)
             {
                 _adminLock.Lock();
@@ -127,7 +279,6 @@ namespace Plugin {
 
                 return (result);
             }
-
             // Signal a state change, Opened, Closed or Accepted
             void StateChange()
             {
@@ -139,15 +290,13 @@ namespace Plugin {
                     TRACE(Trace::Information, (_T("Proxy connection for channel ID [%d] has reached an exceptional state"), Id()));
                 }
             }
-
-            inline void Attach()
+            void Attach()
             {
                 _adminLock.Lock();
                 _link->Open(0);
                 _adminLock.Unlock();
             }
-
-            inline void Detach()
+            void Detach()
             {
                 _adminLock.Lock();
                 _channel = nullptr;
@@ -159,22 +308,20 @@ namespace Plugin {
             Core::IStream* _link;
             PluginHost::Channel* _channel;
             mutable Core::CriticalSection _adminLock;
-            Core::CyclicDataBuffer<Core::ScopedStorage<8192>> _channelBuffer;
-            Core::CyclicDataBuffer<Core::ScopedStorage<8192>> _socketBuffer;
+            Core::ScopedStorage<8192> _buffer1;
+            Core::ScopedStorage<8192> _buffer2;
+            Core::CyclicDataBuffer _channelBuffer;
+            Core::CyclicDataBuffer _socketBuffer;
         };
         class Config : public Core::JSON::Container {
         public:
             class Link : public Core::JSON::Container {
-            private:
-                Link& operator=(const Link&);
-
             public:
                 enum enumType {
                     TCP,
                     UDP,
                     SERIAL
                 };
-
                 class Settings : public Core::JSON::Container {
                 public:
                     Settings()
@@ -210,9 +357,7 @@ namespace Plugin {
                         Add(_T("data"), &Data);
                         Add(_T("stop"), &Stop);
                     }
-                    ~Settings()
-                    {
-                    }
+                    ~Settings() override = default;
 
                     Settings& operator=(const Settings& rhs)
                     {
@@ -295,9 +440,9 @@ namespace Plugin {
                     Add(_T("device"), &Device);
                     Add(_T("configuration"), &Configuration);
                 }
-                ~Link()
-                {
-                }
+                ~Link() override = default;
+
+                Link& operator=(const Link&) = delete;
 
             public:
                 Core::JSON::String Name;
@@ -308,11 +453,11 @@ namespace Plugin {
                 Settings Configuration;
             };
 
-        private:
-            Config(const Config&);
-            Config& operator=(const Config&);
-
         public:
+            Config(Config&&) = delete;
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
             Config()
                 : Core::JSON::Container()
                 , Connections(10)
@@ -320,26 +465,56 @@ namespace Plugin {
                 Add(_T("connections"), &Connections);
                 Add(_T("links"), &Links);
             }
-            ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::DecUInt16 Connections;
             Core::JSON::ArrayType<Link> Links;
         };
 
+        template <typename STREAMTYPE>
+        class ConnectorType : public WebProxy::Connector {
+        public:
+            ConnectorType() = delete;
+            ConnectorType(ConnectorType<STREAMTYPE>&&) = delete;
+            ConnectorType(const ConnectorType<STREAMTYPE>&) = delete;
+            ConnectorType<STREAMTYPE>& operator=(const ConnectorType<STREAMTYPE>&) = delete;
+
+            PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST);
+            template <typename... Args>
+            ConnectorType(PluginHost::Channel& channel, Args&&... args)
+                : WebProxy::Connector(channel, &_streamType)
+                , _streamType(*this, std::forward<Args>(args)...)
+            {
+            }
+            POP_WARNING();
+
+            ~ConnectorType() override = default;
+
+        private:
+            STREAMTYPE _streamType;
+        };
+
+        using Connectors = std::unordered_map<uint32_t, Connector*>;
+        using Links = std::unordered_map<string, Config::Link>;
+
     public:
+        WebProxy(WebProxy&&) = delete;
+        WebProxy(const WebProxy&) = delete;
+        WebProxy& operator=(const WebProxy&) = delete;
+
         WebProxy()
-            : _connectionMap()
-        {
+            : _prefix()
+            , _maxConnections(0)
+            , _connectionMap()
+            , _linkInfo() {
         }
         ~WebProxy() override = default;
 
         BEGIN_INTERFACE_MAP(WebProxy)
-        INTERFACE_ENTRY(PluginHost::IPlugin)
-        INTERFACE_ENTRY(PluginHost::IPluginExtended)
-        INTERFACE_ENTRY(PluginHost::IChannel)
+            INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IPluginExtended)
+            INTERFACE_ENTRY(PluginHost::IChannel)
         END_INTERFACE_MAP
 
     public:
@@ -385,10 +560,8 @@ namespace Plugin {
     private:
         string _prefix;
         uint32_t _maxConnections;
-        std::map<const uint32_t, Connector*> _connectionMap;
-        std::map<const string, Config::Link> _linkInfo;
+        Connectors _connectionMap;
+        Links _linkInfo;
     };
 }
 }
-
-#endif // __PLUGINWEBPROXY_H

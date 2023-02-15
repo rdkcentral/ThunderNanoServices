@@ -568,7 +568,7 @@ namespace Plugin {
 
                     string versionText;
                     Core::URL::KeyValue options(request.Query.Value());
-                    if (options.Exists(_VersionSupportedKey, true) == true) {
+                    if (options.HasKey(_VersionSupportedKey, true) != Core::URL::KeyValue::status::UNAVAILABLE) {
                         TCHAR destination[256];
                         versionText = options[_VersionSupportedKey].Text();
                         uint16_t length = Core::URL::Decode(versionText.c_str(), static_cast<uint16_t>(versionText.length()), destination, sizeof(destination));
@@ -578,7 +578,7 @@ namespace Plugin {
 
                     Version version(versionText);
 
-                    if (options.Exists(_ClientFriendlyName.c_str(), true) == true) {
+                    if (options.HasKey(_ClientFriendlyName.c_str(), true) != Core::URL::KeyValue::status::UNAVAILABLE) {
                         if ((version.IsValid() == false) || (version < Version(2, 1, 0))) {
                             // No version was specified but firendlyName was and this
                             // may only be sent to Server 2.1+
