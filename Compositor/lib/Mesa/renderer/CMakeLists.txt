@@ -19,12 +19,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/src/${COMPOSITOR_RENDERER_IMPLEMENTATIO
     message(FATAL_ERROR "Missing a renderer implementation for ${COMPOSITOR_RENDERER_IMPLEMENTATION}")
 endif()
 
-message(STATUS "-- Buffer ${COMPOSITOR_BUFFER_IMPLEMENTATION}")
 message(STATUS "-- Renderer ${COMPOSITOR_RENDERER_IMPLEMENTATION}")
 
-add_subdirectory("include")
-
-add_subdirectory("src/Buffer")
 add_subdirectory("src/Transformation")
-
 add_subdirectory("src/${COMPOSITOR_RENDERER_IMPLEMENTATION}")

@@ -32,10 +32,11 @@ find_package(GLESv2 REQUIRED)
 
 set(COMPOSITOR_DISPLAY_IMPLEMENTATION "DRM" CACHE STRING "Defines which display implementation is used")
 set(COMPOSITOR_RENDERER_IMPLEMENTATION "GL" CACHE STRING "Defines which renderer implementation is used")
+set(COMPOSITOR_BACKEND_IMPLEMENTATION "DRM" CACHE STRING "Defines which backend implementation is used")
 
-# TODO 
-#add_subdirectory(backend)
-
+add_subdirectory(include)
+add_subdirectory(buffer)
+add_subdirectory(backend)
 add_subdirectory(renderer)
 
 # add_library(${TARGET} SHARED

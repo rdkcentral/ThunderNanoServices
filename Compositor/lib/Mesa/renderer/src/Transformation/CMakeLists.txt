@@ -15,20 +15,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_library(LIB_TRANSFORM INTERFACE)
+add_library(TransformationLib INTERFACE)
 
-set_target_properties(LIB_TRANSFORM PROPERTIES
+set_target_properties(TransformationLib PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-target_include_directories(LIB_TRANSFORM
+target_include_directories(TransformationLib
     INTERFACE
         common::include
         "${CMAKE_CURRENT_LIST_DIR}")
 
-add_library(common::transformation ALIAS LIB_TRANSFORM)
+add_library(common::transformation ALIAS TransformationLib)
 
 add_subdirectory(test)

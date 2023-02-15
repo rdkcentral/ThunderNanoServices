@@ -27,9 +27,9 @@ find_package(gbm REQUIRED)
 
 add_subdirectory(shaders)
 
-add_library(${COMPOSITOR_RENDERER_IMPLEMENTATION} OBJECT GLES2.cpp EGL.cpp)
+add_library(GLES2RendererImplementation OBJECT GLES2.cpp EGL.cpp)
 
-target_link_libraries(${COMPOSITOR_RENDERER_IMPLEMENTATION}
+target_link_libraries(GLES2RendererImplementation
     PUBLIC
         common::include
         common::transformation
@@ -43,18 +43,19 @@ target_link_libraries(${COMPOSITOR_RENDERER_IMPLEMENTATION}
         gbm::gbm
 )
 
-set_target_properties(${COMPOSITOR_RENDERER_IMPLEMENTATION} PROPERTIES
+set_target_properties(GLES2RendererImplementation PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-target_compile_definitions(${COMPOSITOR_RENDERER_IMPLEMENTATION}
+target_compile_definitions(GLES2RendererImplementation
     PUBLIC
         EGL_NO_X11
         __DEBUG__
     )
 
+add_library(common::renderer ALIAS GLES2RendererImplementation)
 
 add_subdirectory(test)
