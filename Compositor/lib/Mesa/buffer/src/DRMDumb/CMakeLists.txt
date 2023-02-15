@@ -18,36 +18,27 @@
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
-find_package(${NAMESPACE}CompositorBuffer CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
 find_package(libdrm REQUIRED)
 
-#define HAVE_GBM_MODIFIERS 1
-#define HAS_GBM_BO_GET_FD_FOR_PLANE 1
+add_library(DRMDumbBufferImplentation OBJECT DRMDumb.cpp)
 
-add_library(${COMPOSITOR_BUFFER_IMPLEMENTATION} OBJECT GBM.cpp)
-
-target_link_libraries(${COMPOSITOR_BUFFER_IMPLEMENTATION}
+target_link_libraries(DRMDumbBufferImplentation
     PUBLIC
         common::include
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
-        ${NAMESPACE}CompositorBuffer::${NAMESPACE}CompositorBuffer
         gbm::gbm
         libdrm::libdrm
 )
 
-target_compile_definitions(${COMPOSITOR_BUFFER_IMPLEMENTATION}
-    PRIVATE
-        HAVE_GBM_MODIFIERS=1
-        HAS_GBM_BO_GET_FD_FOR_PLANE=1
-)
-
-set_target_properties(${COMPOSITOR_BUFFER_IMPLEMENTATION} PROPERTIES
+set_target_properties(DRMDumbBufferImplentation PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
+
+add_library(common::buffer ALIAS DRMDumbBufferImplentation)

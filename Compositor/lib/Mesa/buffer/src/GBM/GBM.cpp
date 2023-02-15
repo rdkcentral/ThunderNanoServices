@@ -165,9 +165,10 @@ namespace Renderer {
         GBM(const GBM&) = delete;
         GBM& operator=(const GBM&) = delete;
 
-        GBM(gbm_device* device, uint32_t width, uint32_t height, const PixelFormat& format, uint32_t usage)
+        GBM(gbm_device* device, uint32_t width, uint32_t height, const PixelFormat& format)
             : _adminLock()
             , _referenceCount(0)
+            , _device(device)
             , _bo(nullptr)
             , _iterator()
         {
@@ -182,6 +183,12 @@ namespace Renderer {
             _bo = gbm_bo_create_with_modifiers(device, width, height, format.Type(), format.Modifiers().data(), format.Modifiers().size());
 
             if (_bo == nullptr) {
+                uint32_t usage = GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING;
+
+                if ((format.Modifiers().size() == 1) && (format.Modifiers()[0] == DRM_FORMAT_MOD_LINEAR)) {
+                    usage |= GBM_BO_USE_LINEAR;
+                }
+
                 _bo = gbm_bo_create(device, width, height, format.Type(), usage);
             }
 
@@ -306,7 +313,7 @@ namespace Renderer {
 #if HAS_GBM_BO_GET_FD_FOR_PLANE
             handle = gbm_bo_get_fd_for_plane(_bo, planeId);
 #else
-            handel = gbm_bo_get_fd(_bo);
+            handle = gbm_bo_get_fd(_bo);
 #endif
             TRACE(Trace::Buffer, ("GBM plane %d exported to fd=%d", planeId, handle));
 
@@ -338,6 +345,7 @@ namespace Renderer {
     private:
         mutable WPEFramework::Core::CriticalSection _adminLock;
         mutable uint32_t _referenceCount;
+        gbm_device* _device;
         gbm_bo* _bo;
         PlaneIterator<DmaBufferMaxPlanes> _iterator;
         pthread_mutex_t _mutex;
@@ -350,45 +358,39 @@ namespace Renderer {
         GbmAllocator& operator=(const GbmAllocator&) = delete;
 
         GbmAllocator(const int drmFd)
-            : _gbmDevice(nullptr)
+            : _device(nullptr)
         {
             ASSERT(drmFd != InvalidFileDescriptor);
 
-            _gbmDevice = gbm_create_device(drmFd);
+            _device = gbm_create_device(drmFd);
 
-            ASSERT(_gbmDevice != nullptr);
+            ASSERT(_device != nullptr);
 
-            TRACE(Trace::Buffer, ("GBM allocator %p constructed gbmDevice=%p fd=%d", this, _gbmDevice, drmFd));
+            TRACE(Trace::Buffer, ("GBM allocator %p constructed gbmDevice=%p fd=%d", this, _device, drmFd));
         }
 
         ~GbmAllocator() override
         {
-            if (_gbmDevice != nullptr) {
-                gbm_device_destroy(_gbmDevice);
+            if (_device != nullptr) {
+                gbm_device_destroy(_device);
             }
 
             TRACE(Trace::Buffer, ("GBM allocator %p destructed", this));
         }
 
-        // Interfaces::IBuffer*
         WPEFramework::Core::ProxyType<Interfaces::IBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) override
         {
-            WPEFramework::Core::ProxyType<Interfaces::IBuffer> result;
-
-            uint32_t usage = GBM_BO_USE_RENDERING | GBM_BO_USE_SCANOUT;
-
-            result = WPEFramework::Core::ProxyType<GBM>::Create(_gbmDevice, width, height, format, usage);
-
-            // Interfaces::IBuffer* result = new GBM(_gbmDevice, width, height, format, usage);
-
+            WPEFramework::Core::ProxyType<Interfaces::IBuffer> result;;
+            result = WPEFramework::Core::ProxyType<GBM>::Create(_device, width, height, format);
             return result;
         }
 
     private:
-        gbm_device* _gbmDevice;
+        gbm_device* _device;
     };
 
 } // namespace Renderer
+
 
 WPEFramework::Core::ProxyType<Interfaces::IAllocator> Interfaces::IAllocator::Instance(WPEFramework::Core::instance_id identifier)
 {

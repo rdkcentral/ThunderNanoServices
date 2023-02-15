@@ -15,11 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_executable(buffertest main.cpp)
+project(CompositorBuffer)
 
-target_link_libraries(buffertest
-    PRIVATE
-        ${COMPOSITOR_BUFFER_IMPLEMENTATION}
-)
+cmake_minimum_required(VERSION 3.15)
 
-install(TARGETS buffertest DESTINATION bin)
+if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/src/${COMPOSITOR_BUFFER_IMPLEMENTATION}")
+    message(FATAL_ERROR "Missing a buffer implementation for ${COMPOSITOR_BUFFER_IMPLEMENTATION}")
+endif()
+
+message(STATUS "-- Buffer ${COMPOSITOR_BUFFER_IMPLEMENTATION}")
+
+add_subdirectory("src/${COMPOSITOR_BUFFER_IMPLEMENTATION}")
+add_subdirectory(test)

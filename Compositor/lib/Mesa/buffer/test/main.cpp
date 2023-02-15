@@ -36,7 +36,7 @@ using namespace WPEFramework;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-void GetDRMNodes(const uint32_t type, std::vector<std::string>& list)
+void GetNodess(const uint32_t type, std::vector<std::string>& list)
 {
     const int nDrmDevices(drmGetDevices2(0, nullptr, 0));
 
@@ -66,6 +66,47 @@ void GetDRMNodes(const uint32_t type, std::vector<std::string>& list)
     drmFreeDevices(devices, nDrmDevices);
 }
 
+// uint32_t GetConnectors(const int fd, const uint32_t type)
+// {
+//     uint32_t bitmask = 0;
+
+//     drmModeResPtr resources = drmModeGetResources(fd);
+
+//     if (nullptr != resources) {
+//         for (int i = 0; i < resources->count_connectors; i++) {
+
+//             drmModeConnectorPtr connector = drmModeGetConnector(fd, resources->connectors[i]);
+
+//             if (nullptr != connector) {
+//                 const char* conn_name = drmModeGetConnectorTypeName(connector->connector_type);
+
+//                 if (conn_name == NULL) {
+//                     conn_name = "Unknown";
+//                 }
+                
+//                 uint32_t possible_crtcs = drmModeConnectorGetPossibleCrtcs(fd, drm_conn);
+
+//                 if (possible_crtcs == 0) {
+//                     TRACE_GLOBAL(WPEFramework::Trace::Error, ("No crtcs found on %s", conn_name));
+//                 }
+
+//                 TRACE_GLOBAL(WPEFramework::Trace::Error, ("Connector type type=%s id=%d connection=0x%02X crtcs=0x%04X", 
+//                         conn_name, connector->connector_type_id, connector->connection, possible_crtcs));
+
+//                 if ((type == connector->connector_type) && (connector->connection == DRM_MODE_CONNECTED)) {
+//                     bitmask = bitmask | (1 << i);
+//                 }
+
+//                 drmModeFreeConnector(connector);
+//             }
+//         }
+
+//         drmModeFreeResources(resources);
+//     }
+
+//     return bitmask;
+// }
+
 int main(int argc, const char* argv[])
 {
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
@@ -74,46 +115,46 @@ int main(int argc, const char* argv[])
     tracer.Callback(&printer);
 
     const std::vector<string> modules = {
-        "Error",
-        "Information",
-        "Buffer"
+        "CompositorBufferTest",
+        "CompositorBuffer"
     };
 
     for (auto module : modules) {
-        tracer.EnableMessage("CompositorBufferTest", module, true);
-        tracer.EnableMessage("CompositorBuffer", module, true);
+        tracer.EnableMessage(module, "", true);
     }
 
     TRACE_GLOBAL(Trace::Information, ("Start %s build %s", argv[0], __TIMESTAMP__));
     uint16_t testNumber(1);
 
     std::vector<std::string> cards;
-    GetDRMNodes((DRM_NODE_PRIMARY), cards);
+    GetNodess((DRM_NODE_PRIMARY), cards);
 
     std::vector<std::string> renders;
-    GetDRMNodes((DRM_NODE_RENDER), renders);
+    GetNodess((DRM_NODE_RENDER), renders);
 
     int fdCard = open("/dev/dri/card0", O_RDWR);
     int fdRender = open("/dev/dri/renderD128", O_RDWR);
+
+    
 
     assert(fdCard > 0);
     assert(fdRender > 0);
 
     TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-    Core::ProxyType<Compositor::Interfaces::IAllocator> allocator1 = Compositor::Interfaces::IAllocator::Instance(fdCard);
-    assert(allocator1.operator->() != nullptr);
+    Core::ProxyType<Compositor::Interfaces::IAllocator> cardAllocator = Compositor::Interfaces::IAllocator::Instance(fdCard);
+    assert(cardAllocator.operator->() != nullptr);
 
     TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-    Core::ProxyType<Compositor::Interfaces::IAllocator> allocator2 = Compositor::Interfaces::IAllocator::Instance(fdRender);
-    assert(allocator2.operator->() != nullptr);
-    assert(allocator1.operator->() != allocator2.operator->());
+    Core::ProxyType<Compositor::Interfaces::IAllocator> renderAllocator = Compositor::Interfaces::IAllocator::Instance(fdRender);
+    assert(renderAllocator.operator->() != nullptr);
+    assert(cardAllocator.operator->() != renderAllocator.operator->());
 
     {
         TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-        Core::ProxyType<Compositor::Interfaces::IAllocator> allocator3 = Compositor::Interfaces::IAllocator::Instance(fdRender);
-        assert(allocator3.operator->() != nullptr);
-        assert(allocator3.operator->() == allocator2.operator->());
-        allocator3.Release();
+        Core::ProxyType<Compositor::Interfaces::IAllocator> renderAllocator2 = Compositor::Interfaces::IAllocator::Instance(fdRender);
+        assert(renderAllocator2.operator->() != nullptr);
+        assert(renderAllocator2.operator->() == renderAllocator.operator->());
+        renderAllocator2.Release();
     }
 
     {
@@ -122,7 +163,7 @@ int main(int argc, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = allocator2->Create(1920, 1080, format);
+        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = renderAllocator->Create(1920, 1080, format);
 
         assert(buffer.operator->());
         assert(buffer->Width() == 1920);
@@ -137,7 +178,7 @@ int main(int argc, const char* argv[])
 
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888);
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = allocator1->Create(1920, 1080, format);
+        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = cardAllocator->Create(1920, 1080, format);
 
         assert(buffer.operator->());
 
@@ -171,8 +212,8 @@ int main(int argc, const char* argv[])
         buffer.Release();
     }
 
-    allocator2.Release();
-    allocator1.Release();
+    renderAllocator.Release();
+    cardAllocator.Release();
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));
     tracer.Close();
