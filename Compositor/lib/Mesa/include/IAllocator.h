@@ -21,8 +21,8 @@
 
 #include <core/core.h>
 
-#include "CompositorTypes.h"
-#include "compositorbuffer/IBuffer.h"
+#include <CompositorTypes.h>
+#include <compositorbuffer/IBuffer.h>
 
 namespace Compositor {
 namespace Interfaces {

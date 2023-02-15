@@ -74,7 +74,7 @@ namespace DRM {
             free(name);
             return InvalidFileDescriptor;
         } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM Render Node opened: %s", name));
+            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM Node opened: %s", name));
         }
 
         free(name);
@@ -88,13 +88,13 @@ namespace DRM {
             int ret(0);
 
             if ((ret = drmGetMagic(newFd, &magic)) < 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmGetMagic failed: %s", strerror(ret)));
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmGetMagic failed: %s", strerror(-ret)));
                 close(newFd);
                 return InvalidFileDescriptor;
             }
 
             if ((ret = drmAuthMagic(fd, magic)) < 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmAuthMagic failed: %s", strerror(ret)));
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmAuthMagic failed: %s", strerror(-ret)));
                 close(newFd);
                 return InvalidFileDescriptor;
             }
@@ -103,7 +103,7 @@ namespace DRM {
         return newFd;
     }
 
-    inline static void GetDRMNode(const uint32_t type, std::vector<std::string>& list)
+    inline static void GetNodes(const uint32_t type, std::vector<std::string>& list)
     {
         const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
 
