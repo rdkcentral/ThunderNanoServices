@@ -1,9 +1,8 @@
 name: Build ThunderNanoServices on Windows
 
-# CHANGE TO MASTER
 on:
   push:
-    branches: ["development/actions-windows"]
+    branches: ["master"]
   pull_request:
     branches: ["master"]
   workflow_call:
@@ -31,7 +30,7 @@ env:
   webServer: ThunderNanoServices\WebServer\WebServer.vcxproj
 
 jobs:
-  NanoServices:
+  ThunderNanoServices:
     runs-on: windows-latest
 
     strategy:
