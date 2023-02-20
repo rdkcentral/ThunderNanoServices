@@ -1,4 +1,4 @@
-name: CMake ThunderNanoServices
+name: Build ThunderNanoServices on Windows
 
 on:
   push:
