@@ -7,11 +7,11 @@ on:
     branches: ["master"]
     
 jobs:
-  ThunderInterfaces:
+  Interfaces:
     uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master
     
-  Interfaces:
-    needs: ThunderInterfaces
+  NanoServices:
+    needs: Interfaces
     
     runs-on: ubuntu-latest
     
