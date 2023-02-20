@@ -1,4 +1,4 @@
-name: Build ThunderNanoServices on Windows
+name: Build ThunderNanoServices on Linux
 
 on:
   push:
