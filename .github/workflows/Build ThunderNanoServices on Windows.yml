@@ -102,7 +102,6 @@ jobs:
         tar -xvzf ${{matrix.type}}${{matrix.version}}.tar.gz
         rm ${{matrix.type}}${{matrix.version}}.tar.gz
 
-  solution: Thunder.sln
     - name: Build ThunderNanoServices
       shell: cmd
       run: |
