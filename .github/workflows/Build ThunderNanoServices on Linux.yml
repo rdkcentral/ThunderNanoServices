@@ -8,7 +8,7 @@ on:
     
 jobs:
   ThunderInterfaces:
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces.yml@master
+    uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master
     
   Interfaces:
     needs: ThunderInterfaces
