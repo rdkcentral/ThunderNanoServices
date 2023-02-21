@@ -387,7 +387,7 @@ namespace Plugin {
             {
                 if (type == EV_KEY) {
                     if (code == BTN_TOUCH) {
-                        _abs_latch[_abs_slot].Touch(value >= 0);
+                        _abs_latch[_abs_slot].Touch(value > 0);
                         _have_abs = true;
                         if (value == 0) {
                             _abs_slot = 0;
@@ -495,7 +495,7 @@ namespace Plugin {
                 }
                 void Touch(const bool touched)
                 {
-                    action = (touched? absaction::PRESSED : absaction::RELEASED);
+                    action = (touched ? absaction::PRESSED : absaction::RELEASED);
                 }
                 absaction Action()
                 {
