@@ -132,13 +132,11 @@ elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     endif(WESTEROS_SERVER_FOUND)
 endif()
 
-if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
-    find_package(${NAMESPACE}VirtualInput REQUIRED)
-    target_link_libraries(${TARGET} 
-        PRIVATE 
-           ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
-    )
-endif(PLUGIN_COMPOSITOR_VIRTUALINPUT)
+find_package(${NAMESPACE}VirtualInput REQUIRED)
+target_link_libraries(${TARGET} 
+    PRIVATE 
+        ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
+)
 
 install(
     TARGETS ${TARGET}
