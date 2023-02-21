@@ -1,4 +1,4 @@
-name: CMake ThunderNanoServices
+name: Build ThunderNanoServices on Linux
 
 on:
   push:
@@ -8,9 +8,9 @@ on:
     
 jobs:
   ThunderInterfaces:
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces.yml@master
+    uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master
     
-  Interfaces:
+  ThunderNanoServices:
     needs: ThunderInterfaces
     
     runs-on: ubuntu-latest
