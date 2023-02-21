@@ -65,7 +65,7 @@ namespace Plugin {
         if (_service != nullptr) {
             ASSERT(_service == service);
 
-            _service->Unregister(&_connectionNotification);
+            service->Unregister(&_connectionNotification);
 
             if (_implementation != nullptr) {
 
