@@ -1,9 +1,8 @@
 name: Build ThunderNanoServices on Windows
 
-# CHANGE TO MASTER
 on:
   push:
-    branches: ["development/actions-windows"]
+    branches: ["master"]
   pull_request:
     branches: ["master"]
 
