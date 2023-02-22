@@ -25,13 +25,13 @@
 
 #include <interfaces/IComposition.h>
 
-#include "compositorbuffer/IBuffer.h"
 #include "CompositorTypes.h"
+#include "compositorbuffer/IBuffer.h"
 
 namespace Compositor {
 
 namespace Interfaces {
-    struct IBackend {
+    struct EXTERNAL IBackend {
         virtual ~IBackend() = default;
         /**
          * @brief  Allocate a new output.

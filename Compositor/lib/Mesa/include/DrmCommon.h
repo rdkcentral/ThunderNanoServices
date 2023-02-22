@@ -19,12 +19,278 @@
 
 #pragma once
 
+#include <drm.h>
+#include <drm_fourcc.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+
+#include "IAllocator.h"
 
 namespace Compositor {
 constexpr int InvalidFileDescriptor = -1;
 namespace DRM {
+    using Identifier = uint32_t;
+    using Value = uint64_t;
+    using PropertyRegister = std::map<std::string, Identifier>;
+    using IdentifierRegister = std::vector<Identifier>;
+
+    constexpr Identifier InvalidIdentifier = 0;
+
+    enum class PlaneType : uint8_t {
+        Cursor = DRM_PLANE_TYPE_CURSOR,
+        Primary = DRM_PLANE_TYPE_PRIMARY,
+        Overlay = DRM_PLANE_TYPE_OVERLAY,
+    };
+
+    inline static std::string PropertyString(const PropertyRegister& properties, const bool pretty = false)
+    {
+        std::stringstream s;
+        s << '{';
+
+        if (pretty == true) {
+            s << std::endl;
+        }
+
+        for (auto iter = properties.cbegin(); iter != properties.cend(); ++iter) {
+
+            if (pretty == true) {
+                s << std::string(4, ' ');
+            }
+
+            s << iter->first << "[" << iter->second << "]";
+
+            if (std::next(iter) != properties.cend()) {
+                s << ", ";
+            }
+
+            if (pretty == true) {
+                s << std::endl;
+            }
+        }
+
+        s << '}';
+
+        return s.str();
+    }
+
+    inline static std::string IdentifierString(const std::vector<Identifier>& ids, const bool pretty = false)
+    {
+        std::stringstream s;
+        s << '{';
+
+        if (pretty == true) {
+            s << std::endl;
+        }
+
+        for (auto iter = ids.cbegin(); iter != ids.cend(); ++iter) {
+            if (pretty == true) {
+                s << std::string(4, ' ');
+            }
+
+            s << *iter;
+
+            if (std::next(iter) != ids.cend()) {
+                s << ", ";
+            }
+
+            if (pretty == true) {
+                s << std::endl;
+            }
+        }
+
+        s << '}';
+
+        return s.str();
+    }
+
+    inline static uint32_t GetPropertyId(PropertyRegister& registry, const std::string& name)
+    {
+        auto typeId = registry.find(name);
+
+        Identifier id(0);
+
+        if (typeId != registry.end()) {
+            id = typeId->second;
+        }
+        return id;
+    }
+
+    inline static uint32_t GetProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, Compositor::DRM::Value& value)
+    {
+        uint32_t result(WPEFramework::Core::ERROR_NOT_SUPPORTED);
+
+        drmModeObjectProperties* properties = drmModeObjectGetProperties(cardFd, object, DRM_MODE_OBJECT_ANY);
+
+        if (properties != nullptr) {
+            for (uint32_t i = 0; i < properties->count_props; ++i) {
+                if (properties->props[i] == property) {
+                    value = properties->prop_values[i];
+                    result = WPEFramework::Core::ERROR_NONE;
+                    break;
+                }
+            }
+
+            drmModeFreeObjectProperties(properties);
+        }
+
+        return result;
+    }
+
+    inline static uint16_t GetBlobProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, const uint16_t blobSize, uint8_t blob[])
+    {
+        uint16_t length(0);
+        uint64_t id;
+
+        if (GetProperty(cardFd, object, property, id) == true) {
+            drmModePropertyBlobRes* drmBlob = drmModeGetPropertyBlob(cardFd, id);
+            ASSERT(drmBlob != nullptr);
+            ASSERT(blobSize >= drmBlob->length);
+
+            memcpy(blob, drmBlob->data, drmBlob->length);
+            length = drmBlob->length;
+
+            drmModeFreePropertyBlob(drmBlob);
+        }
+
+        return length;
+    }
+
+    inline static void CloseDrmHandles(const int cardFd, std::array<uint32_t, 4>& handles)
+    {
+        for (uint8_t currentIndex = 0; currentIndex < handles.size(); ++currentIndex) {
+            if (handles.at(currentIndex) == 0) {
+                continue;
+            }
+
+            // If multiple planes share the same BO handle, avoid double-closing it
+            bool alreadyClosed = false;
+
+            for (uint8_t previousIndex = 0; previousIndex < currentIndex; ++previousIndex) {
+                if (handles.at(currentIndex) == handles.at(previousIndex)) {
+                    alreadyClosed = true;
+                    break;
+                }
+            }
+            if (alreadyClosed == true) {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
+                continue;
+            }
+
+            if (drmCloseBufferHandle(cardFd, handles.at(currentIndex)) != 0) {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
+            }
+        }
+
+        handles.fill(0);
+    }
+
+    inline static uint64_t Capability(const int cardFd, const uint64_t capability)
+    {
+        uint64_t value(0);
+
+        int result(drmGetCap(cardFd, capability, &value));
+
+        if (result != 0) {
+            TRACE_GLOBAL(WPEFramework::Trace::Error, (("Failed to query capability 0x%016" PRIx64), capability));
+        }
+
+        return (result == 0) ? value : 0;
+    }
+
+    inline uint32_t CreateFrameBuffer(const int cardFd, const WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer)
+    {
+        ASSERT(cardFd > 0);
+        ASSERT(buffer.IsValid() == true);
+
+        buffer.AddRef();
+
+        uint32_t framebufferId = 0;
+
+        bool modifierSupported = (Capability(cardFd, DRM_CAP_ADDFB2_MODIFIERS) == 1) ? true : false;
+
+        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Framebuffers with modifiers %s", modifierSupported ? "supported" : "unsupported"));
+
+        uint16_t nPlanes(0);
+
+        std::array<uint32_t, 4> handles = { 0, 0, 0, 0 };
+        std::array<uint32_t, 4> pitches = { 0, 0, 0, 0 };
+        std::array<uint32_t, 4> offsets = { 0, 0, 0, 0 };
+        std::array<uint64_t, 4> modifiers;
+
+        modifiers.fill(buffer->Modifier());
+
+        Compositor::Interfaces::IBuffer::IIterator* planes = buffer->Planes(10);
+        ASSERT(planes != nullptr);
+
+        while ((planes->Next() == true) && (planes->IsValid() == true)) {
+            ASSERT(planes->IsValid() == true);
+
+            Compositor::Interfaces::IBuffer::IPlane* plane = planes->Plane();
+            ASSERT(plane != nullptr);
+
+            if (drmPrimeFDToHandle(cardFd, plane->Accessor(), &handles[nPlanes]) != 0) {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
+                CloseDrmHandles(cardFd, handles);
+                break;
+            }
+
+            pitches[nPlanes] = plane->Stride();
+            offsets[nPlanes] = plane->Offset();
+
+            ++nPlanes;
+        }
+
+        if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
+
+            if (drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), modifiers.data(), &framebufferId, DRM_MODE_FB_MODIFIERS) != 0) {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate drm framebuffer with modifiers"));
+            }
+        } else {
+            if (buffer->Modifier() != DRM_FORMAT_MOD_INVALID && buffer->Modifier() != DRM_FORMAT_MOD_LINEAR) {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64, buffer->Modifier()));
+                return 0;
+            }
+
+            int ret = drmModeAddFB2(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), &framebufferId, 0);
+
+            if (ret != 0 && buffer->Format() == DRM_FORMAT_ARGB8888 /*&& nPlanes == 1*/ && offsets[0] == 0) {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate drm framebuffer (%s), falling back to old school drmModeAddFB", strerror(-ret)));
+
+                uint32_t depth = 32;
+                uint32_t bpp = 32;
+
+                if (drmModeAddFB(cardFd, buffer->Width(), buffer->Height(), depth, bpp, pitches[0], handles[0], &framebufferId) != 0) {
+                    TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate a drm framebuffer the old school way..."));
+                }
+
+            } else if (ret != 0) {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate a drm framebuffer..."));
+            }
+        }
+
+        CloseDrmHandles(cardFd, handles);
+
+        // just unlock and go, we still need to draw something,.
+        buffer->Completed(false);
+
+        buffer.Release();
+
+        TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
+
+        return framebufferId;
+    }
+
+    inline void DestroyFrameBuffer(const int cardFd, const uint32_t frameBufferId)
+    {
+        int drmResult(0);
+
+        if ((frameBufferId > 0) && (drmResult = drmModeRmFB(cardFd, frameBufferId) != 0)) {
+            TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to destroy framebuffer %u: %s", frameBufferId, strerror(drmResult)));
+        } else {
+            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM framebuffer object %u destroyed %s", frameBufferId, strerror(drmResult)));
+        }
+    }
+
     /*
      * Re-open the DRM node to avoid GEM handle ref'counting issues.
      * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
@@ -144,5 +410,30 @@ namespace DRM {
         }
         return result;
     }
+
+    static int OpenGPU(const std::string& gpuNode)
+    {
+        int fd(Compositor::InvalidFileDescriptor);
+
+        ASSERT(drmAvailable() > 0);
+
+        if (drmAvailable() > 0) {
+
+            std::vector<std::string> nodes;
+
+            Compositor::DRM::GetNodes(DRM_NODE_PRIMARY, nodes);
+
+            const auto& it = std::find(nodes.cbegin(), nodes.cend(), gpuNode);
+
+            if (it != nodes.end()) {
+                fd = open(it->c_str(), O_RDWR | O_CLOEXEC);
+            } else {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Could not find gpu %s", gpuNode.c_str()));
+            }
+        }
+
+        return fd;
+    }
+
 } // namespace Transformation
 } // namespace Compositor

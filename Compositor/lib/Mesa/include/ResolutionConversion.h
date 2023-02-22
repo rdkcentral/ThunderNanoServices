@@ -172,6 +172,7 @@ static inline uint16_t RefreshRateFromResolution(const WPEFramework::Exchange::I
     case WPEFramework::Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz: // 4K, 3840x2160 progressive @ 60 Hz
     case WPEFramework::Exchange::IComposition::ScreenResolution::ScreenResolution_4320p60Hz: // 8K, 7680x4320 progressive @ 60 Hz
         rate = 60000;
+        break;
     case WPEFramework::Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown:
     default:
         rate = 0;
