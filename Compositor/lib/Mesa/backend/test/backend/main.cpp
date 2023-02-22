@@ -38,7 +38,7 @@ using namespace WPEFramework;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-int main(int argc, const char* argv[])
+int main(int /* argc*/, const char* argv[])
 {
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
     Messaging::ConsolePrinter printer(false);
@@ -56,15 +56,12 @@ int main(int argc, const char* argv[])
     }
 
     {
-        TRACE_GLOBAL(Trace::Information, ("Start %s build %s", argv[0], __TIMESTAMP__));
+        TRACE_GLOBAL(Trace::Information, ("Starting %s build %s", argv[0], __TIMESTAMP__));
 
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> framebuffer1 = 
-            Compositor::Interfaces::IBackend::Connector("card0-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> framebuffer2 = 
-            Compositor::Interfaces::IBackend::Connector("card0-HDMI-A-2", Exchange::IComposition::ScreenResolution::ScreenResolution_720p, format, false);
+        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> framebuffer;
 
         char keyPress;
 
@@ -76,10 +73,32 @@ int main(int argc, const char* argv[])
                 break;
             }
 
-                // case '?': {
-                //     printHelp();
-                //     break;
-                // }
+            case 'S': {
+                if (framebuffer.IsValid() == true) {
+                    framebuffer->Render();
+                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped to id=%u", framebuffer->Identifier()));
+                    break;
+                }
+            }
+
+            case 'A': {
+                if (framebuffer.IsValid() == false) {
+                    framebuffer = Compositor::Interfaces::IBackend::Connector("card1-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+                    TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
+                } else {
+                    framebuffer->AddRef();
+                    TRACE_GLOBAL(Trace::Information, ("Add reffed framebuffer %u", framebuffer->Identifier()));
+                }
+                break;
+            }
+
+            case 'R': {
+                if (framebuffer.IsValid() == true) {
+                    TRACE_GLOBAL(Trace::Information, ("Releasing framebuffer", framebuffer->Identifier()));
+                    framebuffer.Release();
+                }
+                break;
+            }
 
             case '\n': {
                 break;
@@ -92,13 +111,10 @@ int main(int argc, const char* argv[])
             }
         } while (keyPress != 'Q');
 
-        framebuffer1.Release();
-        TRACE_GLOBAL(Trace::Information, ("framebuffer1 released..."));
-
-        sleep(1); // just for log checking
-
-        framebuffer2.Release();
-        TRACE_GLOBAL(Trace::Information, ("framebuffer2 released..."));
+        if (framebuffer.IsValid() == true) {
+            framebuffer.Release();
+            TRACE_GLOBAL(Trace::Information, ("framebuffer1 released..."));
+        }
     }
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));

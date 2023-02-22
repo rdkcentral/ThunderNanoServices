@@ -15,5 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory(backend)
-add_subdirectory(scandrm)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Core CONFIG REQUIRED)
+find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+
+find_package(gbm REQUIRED)
+find_package(libdrm REQUIRED)
+
+add_executable(scandrm main.cpp)
+
+target_link_libraries(scandrm
+    PUBLIC
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
+        common::include
+        libdrm::libdrm
+        gbm::gbm
+)
+
+install(TARGETS scandrm DESTINATION bin)

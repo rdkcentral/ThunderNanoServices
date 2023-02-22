@@ -74,61 +74,155 @@ namespace WPEFramework {
 }
 // clang-format on
 
+// good reads
+// https://docs.nvidia.com/jetson/l4t-multimedia/group__direct__rendering__manager.html
+// http://github.com/dvdhrm/docs
+//
+
 using namespace WPEFramework;
 
 namespace Compositor {
 namespace Backend {
     constexpr char drmDevicesRootPath[] = "/dev/dri/";
-    constexpr int InvalidFd = -1;
-
     class DRM : virtual public Interfaces::IBackend {
     public:
-        class ConnectorImplementation : virtual public Interfaces::IBuffer {
+        struct FrameBuffer {
+            WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> Data;
+            Compositor::DRM::Identifier Identifier;
+        };
+
+        class ConnectorImplementation : virtual public Interfaces::IBuffer, virtual public IOutput::IConnector {
+            class DoubleBuffer : virtual public Interfaces::IBuffer {
+            private:
+            public:
+                DoubleBuffer() = delete;
+
+                DoubleBuffer(WPEFramework::Core::ProxyType<DRM> backend, const WPEFramework::Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format)
+                    : _backend(backend)
+                    , _buffers()
+                    , _backBuffer(1)
+                    , _frontBuffer(0)
+                {
+                    WPEFramework::Core::ProxyType<Compositor::Interfaces::IAllocator> allocator = Compositor::Interfaces::IAllocator::Instance(_backend->Descriptor());
+
+                    for (auto& buffer : _buffers) {
+                        buffer.Data = allocator->Create(WidthFromResolution(resolution), HeightFromResolution(resolution), format);
+                        buffer.Identifier = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), buffer.Data);
+                    }
+
+                    allocator.Release();
+                }
+
+                virtual ~DoubleBuffer()
+                {
+                    for (auto& buffer : _buffers) {
+                        Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.Identifier);
+                        buffer.Data.Release();
+                    }
+
+                    _backend.Release();
+                }
+                /**
+                 * Interfaces::IBuffer implementation
+                 */
+                void AddRef() const override
+                {
+                }
+                uint32_t Release() const override
+                {
+                    return WPEFramework::Core::ERROR_NONE;
+                }
+                uint32_t Identifier() const override
+                {
+                    return _buffers.at(_backBuffer).Data->Identifier();
+                }
+                IIterator* Planes(const uint32_t timeoutMs) override
+                {
+                    return _buffers.at(_backBuffer).Data->Planes(timeoutMs);
+                }
+                uint32_t Completed(const bool dirty) override
+                {
+                    return _buffers.at(_backBuffer).Data->Completed(dirty);
+                }
+                void Render() override
+                {
+                    return _buffers.at(_backBuffer).Data->Render();
+                }
+                uint32_t Width() const override
+                {
+                    return _buffers.at(_backBuffer).Data->Width();
+                }
+                uint32_t Height() const override
+                {
+                    return _buffers.at(_backBuffer).Data->Height();
+                }
+                uint32_t Format() const
+                {
+                    return _buffers.at(_backBuffer).Data->Format();
+                }
+                uint64_t Modifier() const override
+                {
+                    return _buffers.at(_backBuffer).Data->Modifier();
+                }
+
+                Compositor::DRM::Identifier Swap()
+                {
+                    std::swap(_backBuffer, _frontBuffer);
+                    return _buffers.at(_frontBuffer).Identifier;
+                }
+
+            private:
+                WPEFramework::Core::ProxyType<DRM> _backend;
+                std::array<FrameBuffer, 2> _buffers;
+                uint8_t _backBuffer;
+                uint8_t _frontBuffer;
+            };
+
         public:
             ConnectorImplementation() = delete;
             ConnectorImplementation(WPEFramework::Core::ProxyType<DRM> backend, const std::string& connector, const WPEFramework::Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution)
-                : _referenceCount(0)
+                : _referenceCount(1)
                 , _backend(backend)
                 , _connectorId(_backend->FindConnectorId(connector))
-                , _buffer()
+                , _ctrController(Compositor::DRM::InvalidIdentifier)
+                , _primaryPlane(Compositor::DRM::InvalidIdentifier)
+                , _currentBuffer(Compositor::DRM::InvalidIdentifier)
+                , _buffer(backend, resolution, format)
                 , _refreshRate(RefreshRateFromResolution(resolution))
                 , _forceOutputResolution(forceResolution)
+                , _connectorProperties()
+                , _crtcProperties()
+                , _drmModeStatus()
+                , _dpmsPropertyId(Compositor::DRM::InvalidIdentifier)
             {
-                TRACE(Trace::Backend, ("Connector %p for Id=%d", this, _connectorId));
+                ASSERT(_connectorId != Compositor::DRM::InvalidIdentifier);
 
-                ASSERT(_connectorId != 0);
+                GetPropertyIds(_connectorId, DRM_MODE_OBJECT_CONNECTOR, _connectorProperties);
 
-                WPEFramework::Core::ProxyType<Compositor::Interfaces::IAllocator> allocator = _backend->Allocator();
+                _dpmsPropertyId = Compositor::DRM::GetPropertyId(_connectorProperties, "DPMS");
 
-                _buffer = allocator->Create(WidthFromResolution(resolution), HeightFromResolution(resolution), format);
+                Scan();
 
-                ASSERT(_buffer.IsValid() == true);
+                ASSERT(_ctrController != Compositor::DRM::InvalidIdentifier);
+                ASSERT(_primaryPlane != Compositor::DRM::InvalidIdentifier);
 
-                allocator.Release();
-                TRACE(Trace::Backend, ("Constructed connector %p for id=%d buffer=%p", this, _connectorId, _buffer.operator->()));
-
-                AddRef();
+                TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
             }
 
             ~ConnectorImplementation()
             {
-                // _backend->DestroyFrameBuffer(_frameBufferId);
-
-                _buffer.Release();
                 _backend.Release();
 
                 TRACE(Trace::Backend, ("Connector %p Destroyed", this));
             }
 
             /**
-             * @brief Interfaces::IBuffer implementation
-             *
+             * Interfaces::IBuffer implementation
              */
             void AddRef() const override
             {
                 WPEFramework::Core::InterlockedIncrement(_referenceCount);
             }
-
             uint32_t Release() const override
             {
                 ASSERT(_referenceCount > 0);
@@ -141,92 +235,228 @@ namespace Backend {
 
                 return result;
             }
-
             uint32_t Identifier() const override
             {
-                return _connectorId;
+                return _backend->Descriptor(); //_buffer.Identifier();
             }
-
             IIterator* Planes(const uint32_t timeoutMs) override
             {
-                ASSERT(_buffer.IsValid() == true);
-                return _buffer->Planes(timeoutMs);
+                return _buffer.Planes(timeoutMs);
             }
-
             uint32_t Completed(const bool dirty) override
             {
-                ASSERT(_buffer.IsValid() == true);
-                return _buffer->Completed(dirty);
+                return _buffer.Completed(dirty);
             }
-
             void Render() override
             {
-                ASSERT(_buffer.IsValid() == true);
-
+                _currentBuffer = _buffer.Swap();
                 if (IsConnected() == true) {
                     _backend->PageFlip(*this);
                 }
             }
-
             uint32_t Width() const override
             {
-                ASSERT(_buffer.IsValid() == true);
-                return _buffer->Width();
+                return _buffer.Width();
             }
             uint32_t Height() const override
             {
-                ASSERT(_buffer.IsValid() == true);
-                return _buffer->Height();
+                return _buffer.Height();
             }
             uint32_t Format() const
             {
-                ASSERT(_buffer.IsValid() == true);
-                return _buffer->Format();
+                return _buffer.Format();
             }
             uint64_t Modifier() const override
             {
-                ASSERT(_buffer.IsValid() == true);
-                return _buffer->Modifier();
+                return _buffer.Modifier();
             }
 
-            uint32_t ConnectorId() const
+            /**
+             * IOutput::IConnector implementation
+             */
+
+            bool IsEnabled() const
+            {
+                // Todo: this will control switching on or of the display by controlling the Display Power Management Signaling (DPMS)
+                return true;
+            }
+            Compositor::DRM::Identifier ConnectorId() const override
             {
                 return _connectorId;
-            };
-
-            uint32_t CrtcId() const
+            }
+            Compositor::DRM::Identifier CtrControllerId() const override
             {
-                return _crtcId;
-            };
-
-        private:
-            void SetPreferredMode()
+                return _ctrController;
+            }
+            Compositor::DRM::Identifier PrimaryPlaneId() const override
             {
+                return _primaryPlane;
+            }
+            Compositor::DRM::Identifier FrameBufferId() const override
+            {
+                return _currentBuffer;
+            }
+            const drmModeModeInfo& ModeInfo() const override
+            {
+                return _drmModeStatus;
+            }
+            Compositor::DRM::Identifier DpmsPropertyId() const override
+            {
+                return _dpmsPropertyId;
             }
 
+        private:
             bool IsConnected() const
             {
-                return (_crtcId > 0);
+                return (_ctrController > 0);
+            }
+
+            void Scan()
+            {
+                _ctrController = Compositor::DRM::InvalidIdentifier;
+                _primaryPlane = Compositor::DRM::InvalidIdentifier;
+
+                drmModeResPtr res = drmModeGetResources(_backend->Descriptor());
+                drmModePlaneResPtr plane_res = drmModeGetPlaneResources(_backend->Descriptor());
+
+                ASSERT(res != nullptr);
+                ASSERT(plane_res != nullptr);
+
+                drmModeEncoderPtr encoder = NULL;
+                drmModeCrtcPtr crtc = NULL;
+                drmModePlanePtr plane = NULL;
+
+                for (int c = 0; c < res->count_connectors; c++) {
+                    drmModeConnectorPtr connector = drmModeGetConnector(_backend->Descriptor(), res->connectors[c]);
+
+                    ASSERT(connector != nullptr);
+
+                    /* Find our connector if it's connected*/
+                    if ((connector->connector_id != _connectorId) && (connector->connection != DRM_MODE_CONNECTED)) {
+                        continue;
+                    }
+
+                    /* Find the encoder (a deprecated KMS object) for this connector. */
+                    ASSERT(connector->encoder_id != Compositor::DRM::InvalidIdentifier);
+
+                    for (uint8_t e = 0; e < res->count_encoders; e++) {
+                        if (res->encoders[e] == connector->encoder_id) {
+                            encoder = drmModeGetEncoder(_backend->Descriptor(), res->encoders[e]);
+                            break;
+                        }
+                    }
+
+                    /*
+                     * Find the CRTC currently used by this connector. It is possible to
+                     * use a different CRTC if desired, however unlike the pre-atomic API,
+                     * we have to explicitly change every object in the routing path.
+                     */
+
+                    ASSERT(encoder != nullptr);
+                    ASSERT(encoder->crtc_id != Compositor::DRM::InvalidIdentifier);
+
+                    for (uint8_t c = 0; c < res->count_crtcs; c++) {
+                        if (res->crtcs[c] == encoder->crtc_id) {
+                            crtc = drmModeGetCrtc(_backend->Descriptor(), res->crtcs[c]);
+                            break;
+                        }
+                    }
+
+                    /* Ensure the CRTC is active. */
+                    ASSERT(crtc != nullptr);
+                    ASSERT(crtc->buffer_id != 0);
+                    ASSERT(crtc->crtc_id != 0);
+
+                    /*
+                     * The kernel doesn't directly tell us what it considers to be the
+                     * single primary plane for this CRTC (i.e. what would be updated
+                     * by drmModeSetCrtc), but if it's already active then we can cheat
+                     * by looking for something displaying the same framebuffer ID,
+                     * since that information is duplicated.
+                     */
+                    for (uint8_t p = 0; p < plane_res->count_planes; p++) {
+                        plane = drmModeGetPlane(_backend->Descriptor(), plane_res->planes[p]);
+
+                        TRACE(Trace::Backend, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB %" PRIu32, plane->plane_id, plane->crtc_id, plane->fb_id));
+
+                        if ((plane->crtc_id == crtc->crtc_id) && (plane->fb_id == crtc->buffer_id)) {
+                            break;
+                        }
+                    }
+
+                    ASSERT(plane);
+
+                    _ctrController = crtc->crtc_id;
+                    _primaryPlane = plane->plane_id;
+                    _drmModeStatus = crtc->mode;
+
+                    uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
+
+                    TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, connector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
+
+                    drmModeFreeCrtc(crtc);
+                    drmModeFreeEncoder(encoder);
+                    drmModeFreePlane(plane);
+
+                    break;
+                }
+
+                drmModeFreeResources(res);
+
+                GetPropertyIds(_ctrController, DRM_MODE_OBJECT_CRTC, _crtcProperties);
+                GetPropertyIds(_primaryPlane, DRM_MODE_OBJECT_PLANE, _planeProperties);
+            }
+
+            bool GetPropertyIds(const Compositor::DRM::Identifier object, const uint32_t type, Compositor::DRM::PropertyRegister& registry)
+            {
+                registry.clear();
+
+                drmModeObjectProperties* properties = drmModeObjectGetProperties(_backend->Descriptor(), object, type);
+
+                if (properties != nullptr) {
+                    for (uint32_t i = 0; i < properties->count_props; ++i) {
+                        drmModePropertyRes* property = drmModeGetProperty(_backend->Descriptor(), properties->props[i]);
+
+                        registry.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(property->name),
+                            std::forward_as_tuple(property->prop_id));
+
+                        drmModeFreeProperty(property);
+                    }
+
+                    drmModeFreeObjectProperties(properties);
+                } else {
+                    TRACE(WPEFramework::Trace::Error, ("Failed to get DRM object properties"));
+                    return false;
+                }
+
+                return true;
             }
 
         private:
-            WPEFramework::Core::ProxyType<DRM> _backend;
             mutable uint32_t _referenceCount;
+            WPEFramework::Core::ProxyType<DRM> _backend;
 
-            const uint32_t _connectorId;
-            uint32_t _crtcId;
-            uint32_t _encoderId;
+            const Compositor::DRM::Identifier _connectorId;
+            Compositor::DRM::Identifier _ctrController;
+            Compositor::DRM::Identifier _primaryPlane;
 
-            WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> _buffer;
+            Compositor::DRM::Identifier _currentBuffer;
 
-            std::shared_ptr<IOutput> _output;
+            DoubleBuffer _buffer;
+
             const uint16_t _refreshRate;
             const bool _forceOutputResolution;
+
+            Compositor::DRM::PropertyRegister _connectorProperties;
+            Compositor::DRM::PropertyRegister _crtcProperties;
+            Compositor::DRM::PropertyRegister _planeProperties;
+
+            drmModeModeInfo _drmModeStatus;
+            Compositor::DRM::Identifier _dpmsPropertyId;
         };
 
     private:
-        friend class ConnectorImplementation;
-
         class Monitor : virtual public WPEFramework::Core::IResource {
         public:
             Monitor() = delete;
@@ -265,10 +495,9 @@ namespace Backend {
 
         DRM(const std::string& gpuNode)
             : _adminLock()
-            , _cardFd(OpenGPU(gpuNode))
+            , _cardFd(Compositor::DRM::OpenGPU(gpuNode))
             , _monitor(*this)
             , _output(IOutput::IOutputFactory::Instance()->Create())
-            , _allocator(Compositor::Interfaces::IAllocator::Instance(_cardFd))
         {
             ASSERT(_cardFd > 0);
 
@@ -285,34 +514,45 @@ namespace Backend {
 
         virtual ~DRM()
         {
+            WPEFramework::Core::ResourceMonitor::Instance().Unregister(_monitor);
+
             char* name = drmGetDeviceNameFromFd2(_cardFd);
             drmVersion* version = drmGetVersion(_cardFd);
             TRACE(WPEFramework::Trace::Information, ("Destructing DRM backend for %s (%s)", name, version->name));
             drmFreeVersion(version);
-
-            WPEFramework::Core::ResourceMonitor::Instance().Unregister(_monitor);
 
             if (_cardFd) {
                 close(_cardFd);
             }
         }
 
-        uint64_t Capability(const uint64_t capability) const
+    private:
+        uint32_t PageFlip(ConnectorImplementation& connector)
         {
-            uint64_t value(0);
+            if (connector.CtrControllerId() != Compositor::DRM::InvalidIdentifier) {
+                _adminLock.Lock();
 
-            int result(drmGetCap(_cardFd, capability, &value));
+                const auto index(_pendingCommits.find(connector.CtrControllerId()));
 
-            if (result != 0) {
-                TRACE(WPEFramework::Trace::Error, (("Failed to query capability 0x%016" PRIx64), capability));
+                if (index != _pendingCommits.end()) {
+                    connector.AddRef();
+
+                    _pendingCommits.emplace(std::piecewise_construct,
+                        std::forward_as_tuple(connector.CtrControllerId()),
+                        std::forward_as_tuple(&connector));
+
+                    _output->Commit(_cardFd, &connector, DRM_MODE_PAGE_FLIP_EVENT, this);
+                }
+
+                _adminLock.Unlock();
             }
 
-            return (result == 0) ? value : 0;
+            return 0;
         }
 
-        void FinishPageFlip(uint32_t crtc_id)
+        void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sec, const unsigned usec)
         {
-            CommitRegister::iterator index(_pendingCommits.find(crtc_id));
+            CommitRegister::iterator index(_pendingCommits.find(crtc));
 
             ConnectorImplementation* connector(nullptr);
 
@@ -321,188 +561,69 @@ namespace Backend {
                 _pendingCommits.erase(index);
             }
 
-            ASSERT(crtc_id == connector->CrtcId());
+            ASSERT(crtc == connector->CtrControllerId());
+
+            struct timespec presentationTimestamp {
+                .tv_sec = sec, .tv_nsec = usec * 1000
+            };
 
             connector->Completed(false);
             connector->Release();
         }
 
-    private:
-        inline uint32_t CreateFrameBuffer(ConnectorImplementation& connector)
-        {
-            uint32_t framebufferId = 0;
-
-            bool modifierSupported = (Capability(DRM_CAP_ADDFB2_MODIFIERS) == 1) ? true : false;
-
-            TRACE(Trace::Backend, ("Framebuffers with modifiers %s", modifierSupported ? "supported" : "unsupported"));
-
-            ASSERT(_cardFd > 0);
-
-            uint16_t nPlanes(0);
-
-            std::array<uint32_t, 4> handles = { 0, 0, 0, 0 };
-            std::array<uint32_t, 4> pitches = { 0, 0, 0, 0 };
-            std::array<uint32_t, 4> offsets = { 0, 0, 0, 0 };
-            std::array<uint64_t, 4> modifiers;
-
-            modifiers.fill(connector.Modifier());
-
-            Compositor::Interfaces::IBuffer::IIterator* planes = connector.Planes(10);
-            ASSERT(planes != nullptr);
-
-            while ((planes->Next() == true) && (planes->IsValid() == true)) {
-                ASSERT(planes->IsValid() == true);
-
-                Compositor::Interfaces::IBuffer::IPlane* plane = planes->Plane();
-                ASSERT(plane != nullptr);
-
-                if (drmPrimeFDToHandle(_cardFd, plane->Accessor(), &handles[nPlanes]) != 0) {
-                    TRACE(WPEFramework::Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
-                    CloseDrmHandles(handles);
-                    break;
-                }
-
-                pitches[nPlanes] = plane->Stride();
-                offsets[nPlanes] = plane->Offset();
-
-                ++nPlanes;
-            }
-
-            if (modifierSupported && connector.Modifier() != DRM_FORMAT_MOD_INVALID) {
-
-                if (drmModeAddFB2WithModifiers(_cardFd, connector.Width(), connector.Height(), connector.Format(), handles.data(), pitches.data(), offsets.data(), modifiers.data(), &framebufferId, DRM_MODE_FB_MODIFIERS) != 0) {
-                    TRACE(WPEFramework::Trace::Error, ("Failed to allocate drm framebuffer with modifiers"));
-                }
-            } else {
-                if (connector.Modifier() != DRM_FORMAT_MOD_INVALID && connector.Modifier() != DRM_FORMAT_MOD_LINEAR) {
-                    TRACE(WPEFramework::Trace::Error, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64, connector.Modifier()));
-                    return 0;
-                }
-
-                int ret = drmModeAddFB2(_cardFd, connector.Width(), connector.Height(), connector.Format(), handles.data(), pitches.data(), offsets.data(), &framebufferId, 0);
-
-                if (ret != 0 && connector.Format() == DRM_FORMAT_ARGB8888 /*&& nPlanes == 1*/ && offsets[0] == 0) {
-                    TRACE(WPEFramework::Trace::Error, ("Failed to allocate drm framebuffer (%s), falling back to old school drmModeAddFB", strerror(-ret)));
-
-                    uint32_t depth = 32;
-                    uint32_t bpp = 32;
-
-                    if (drmModeAddFB(_cardFd, connector.Width(), connector.Height(), depth, bpp, pitches[0], handles[0], &framebufferId) != 0) {
-                        TRACE(WPEFramework::Trace::Error, ("Failed to allocate a drm framebuffer the old school way..."));
-                    }
-
-                } else if (ret != 0) {
-                    TRACE(WPEFramework::Trace::Error, ("Failed to allocate a drm framebuffer..."));
-                }
-            }
-
-            CloseDrmHandles(handles);
-
-            // just unlock and go, we still need to draw something,.
-            connector.Completed(false);
-
-            TRACE(Trace::Backend, ("Framebuffer %u allocated for buffer %p", framebufferId, &connector));
-
-            return framebufferId;
-        }
-
-        inline void DestroyFrameBuffer(uint32_t frameBufferId)
-        {
-            if ((frameBufferId > 0) && (drmModeRmFB(_cardFd, frameBufferId) != 0)) {
-                TRACE(WPEFramework::Trace::Error, ("Failed to destroy framebuffer %u", frameBufferId));
-            }
-        }
-
-        inline uint32_t PageFlip(ConnectorImplementation& connector)
-        {
-            connector.AddRef();
-
-            uint32_t frameBufferId = CreateFrameBuffer(connector);
-            ASSERT(frameBufferId != 0);
-
-            _pendingCommits.emplace(std::piecewise_construct,
-                std::forward_as_tuple(connector.CrtcId()),
-                std::forward_as_tuple(&connector));
-
-            _output->Commit(_cardFd, connector.CrtcId(), connector.ConnectorId(), frameBufferId, DRM_MODE_PAGE_FLIP_EVENT, this);
-
-            return 0;
-        }
-
-        inline int DrmEventHandler() const
-        {
-            drmEventContext eventContext = {
-                .version = 3,
-                .page_flip_handler2 = PageFlipHandler,
-            };
-
-            if (drmHandleEvent(_cardFd, &eventContext) != 0) {
-                TRACE(WPEFramework::Trace::Error, ("Failed to handle drm event"));
-            }
-            return 1;
-        }
-
-        static void PageFlipHandler(int cardFd, unsigned seq, unsigned tv_sec, unsigned tv_usec, unsigned crtc_id, void* userData)
+        static void PageFlipHandler(int /*cardFd*/, unsigned /*seq*/, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
         {
             ASSERT(userData != nullptr);
 
             DRM* backend = reinterpret_cast<DRM*>(userData);
 
-            backend->FinishPageFlip(crtc_id);
+            backend->FinishPageFlip(crtc_id, sec, usec);
         }
 
-        static int OpenGPU(const std::string& gpuNode)
+        int DrmEventHandler() const
         {
-            int fd(InvalidFd);
+            drmEventContext eventContext = {
+                .version = 3,
+                .vblank_handler = nullptr,
+                .page_flip_handler = nullptr,
+                .page_flip_handler2 = PageFlipHandler,
+                .sequence_handler = nullptr
+            };
 
-            ASSERT(drmAvailable() > 0);
-
-            if (drmAvailable() > 0) {
-
-                std::vector<std::string> nodes;
-
-                Compositor::DRM::GetNodes(DRM_NODE_PRIMARY, nodes);
-
-                const auto& it = std::find(nodes.cbegin(), nodes.cend(), gpuNode);
-
-                if (it != nodes.end()) {
-                    // The node might be privileged and the call will fail.
-                    // Do not close fd with exec functions! No O_CLOEXEC!
-                    fd = open(it->c_str(), O_RDWR);
-                } else {
-                    TRACE_GLOBAL(WPEFramework::Trace::Error, ("Could not find gpu %s", gpuNode.c_str()));
-                }
+            if (drmHandleEvent(_cardFd, &eventContext) != 0) {
+                TRACE(WPEFramework::Trace::Error, ("Failed to handle drm event"));
             }
 
-            return fd;
+            return 1;
         }
 
-        int Descriptor() const
+        const int Descriptor() const
         {
             return _cardFd;
         }
 
         uint32_t FindConnectorId(const std::string& connectorName)
         {
+            ASSERT(_cardFd > 0);
+
+            drmModeResPtr resources = drmModeGetResources(_cardFd);
+
+            ASSERT(resources != nullptr);
+
             uint32_t connectorId = 0;
 
-            if (_cardFd > 0) {
-                drmModeResPtr resources = drmModeGetResources(_cardFd);
-
-                uint8_t i(0);
-
-                for (i = 0; i < resources->count_connectors; i++) {
+            if ((_cardFd > 0) && (resources != nullptr)) {
+                for (uint8_t i = 0; i < resources->count_connectors; i++) {
                     drmModeConnectorPtr connector = drmModeGetConnector(_cardFd, resources->connectors[i]);
 
                     if (nullptr != connector) {
                         char name[59];
                         int nameLength;
-                        nameLength = snprintf(name, sizeof(name), "%s-%u",
-                            drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id);
-
+                        nameLength = snprintf(name, sizeof(name), "%s-%u", drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id);
                         name[nameLength] = '\0';
 
                         if (connectorName.compare(name) == 0) {
+                            TRACE_GLOBAL(Trace::Backend, ("Found connector %s", name));
                             connectorId = connector->connector_id;
                             break;
                         }
@@ -511,53 +632,15 @@ namespace Backend {
                     }
                 }
             }
-
             return connectorId;
-        }
-
-        void CloseDrmHandles(std::array<uint32_t, 4>& handles)
-        {
-            for (uint8_t currentIndex = 0; currentIndex < handles.size(); ++currentIndex) {
-                if (handles.at(currentIndex) == 0) {
-                    continue;
-                }
-
-                // If multiple planes share the same BO handle, avoid double-closing it
-                bool alreadyClosed = false;
-
-                for (uint8_t previousIndex = 0; previousIndex < currentIndex; ++previousIndex) {
-                    if (handles.at(currentIndex) == handles.at(previousIndex)) {
-                        alreadyClosed = true;
-                        break;
-                    }
-                }
-                if (alreadyClosed == true) {
-                    TRACE(Trace::Backend, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
-                    continue;
-                }
-
-                if (drmCloseBufferHandle(_cardFd, handles.at(currentIndex)) != 0) {
-                    TRACE(WPEFramework::Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
-                }
-            }
-
-            handles.fill(0);
-        }
-
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IAllocator> Allocator()
-        {
-            _allocator.AddRef();
-            return _allocator;
         }
 
     private:
         mutable Core::CriticalSection _adminLock;
-        Monitor _monitor;
         int _cardFd;
+        Monitor _monitor;
         std::shared_ptr<IOutput> _output;
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IAllocator> _allocator;
         CommitRegister _pendingCommits;
-
     }; // class DRM
 
     static void ParseConnectorName(const std::string& name, std::string& card, std::string& connector)

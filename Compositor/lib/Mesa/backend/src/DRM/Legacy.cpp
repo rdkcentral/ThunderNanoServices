@@ -46,15 +46,67 @@ namespace Backend {
         LegacyCrtc() = default;
         ~LegacyCrtc() = default;
 
-        uint32_t Commit(const int fd, const uint32_t crtcId, const uint32_t connectorId, const uint32_t frameBufferId, const uint32_t flags, void* userData) override
+        uint32_t Commit(const int fd, const IConnector* connector, const uint32_t flags, void* userData) override
         {
             uint32_t result(WPEFramework::Core::ERROR_NONE);
 
+            ASSERT(connector != nullptr);
+
+            /*
+             * TODO: Before we commit ideally we should do a test if the current mode is matching the mode expected.
+             *       If this differs we need ask the kernel to modeset the gpu to the expected mode.
+             *
+             *       For now always modeset...
+             */
+            constexpr bool doModeSet = true;
+
             ASSERT((flags & ~DRM_MODE_PAGE_FLIP_FLAGS) == 0); // only allow page flip flags
 
-            if (flags & DRM_MODE_PAGE_FLIP_EVENT) {
-                if (drmModePageFlip(fd, crtcId, frameBufferId, flags, userData)) {
-                    TRACE(WPEFramework::Trace::Error, ("drmModePageFlip failed"));
+            int drmResult(0);
+
+            if (doModeSet == true) {
+                std::vector<uint32_t> connectorIds;
+
+                const drmModeModeInfo* mode(nullptr);
+
+                if (connector->IsEnabled() == true) {
+                    connectorIds.emplace_back(connector->ConnectorId());
+                    mode = &(connector->ModeInfo());
+                }
+
+                uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
+
+                if (drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms) != 0) {
+                    TRACE(WPEFramework::Trace::Error, ("drmModeSetCrtc failed: %s", strerror(-drmResult)));
+                    return false;
+                }
+
+                constexpr uint32_t X = 0;
+                constexpr uint32_t Y = 0;
+
+                /*
+                 * Use the same mode as the previous operation on the CRTC and specified connector(s)
+                 * New framebuffer Id, x, and y properties will set at vblank.
+                 */
+                if (drmResult = drmModeSetCrtc(fd, connector->CtrControllerId(), connector->FrameBufferId(), X, Y, connectorIds.empty() ? nullptr : connectorIds.data(), connectorIds.size(), const_cast<drmModeModeInfoPtr>(mode))) {
+                    TRACE(WPEFramework::Trace::Error, ("drmModeSetCrtc failed: %s", strerror(-drmResult)));
+                }
+
+                /*
+                 * clear cursor image
+                 */
+                if (drmResult = drmModeSetCursor(fd, connector->CtrControllerId(), 0, 0, 0)) {
+                    TRACE(WPEFramework::Trace::Error, ("drmModeSetCursor failed: %s", strerror(-drmResult)));
+                }
+            }
+
+            /*
+             * Request the kernel to do a page flip. The "DRM_MODE_PAGE_FLIP_EVENT" flags will notify us when the next vblank is active
+             */
+            if ((drmResult == 0) && ((flags & DRM_MODE_PAGE_FLIP_EVENT) > 0)) {
+
+                if (drmResult = drmModePageFlip(fd, connector->CtrControllerId(), connector->FrameBufferId(), flags, userData)) {
+                    TRACE(WPEFramework::Trace::Error, ("drmModePageFlip failed: %s", strerror(-drmResult)));
                     result = WPEFramework::Core::ERROR_GENERAL;
                 }
             }

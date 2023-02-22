@@ -17,44 +17,17 @@
  * limitations under the License.
  */
 
+#pragma once
+
+#include "../../Trace.h"
+
 #include <core/core.h>
+#include <libudev.h>
 
 namespace Compositor {
 namespace Backend {
-    struct node_t {
-        node_t(const std::string& node, const bool boot)
-            : Node(node)
-            , Boot(boot)
-        {
-        }
 
-        const std::string Node;
-        const bool Boot;
-    };
-
-    static struct udev_enumerate* enumerate_drm_cards(struct udev* udev)
-    {
-        struct udev_enumerate* en = udev_enumerate_new(udev);
-
-        if (!en) {
-            TRACE_GLOBAL(Trace::Error, ("udev_enumerate_new failed"));
-            return nullptr;
-        }
-
-        udev_enumerate_add_match_subsystem(en, "drm");
-        udev_enumerate_add_match_sysname(en, DRM_PRIMARY_MINOR_NAME "[0-9]*");
-
-        if (udev_enumerate_scan_devices(en) != 0) {
-            TRACE_GLOBAL(Trace::Error, ("udev_enumerate_scan_devices failed"));
-            udev_enumerate_unref(en);
-            return nullptr;
-        }
-
-        return en;
-    }
-
-    class DrmMonitor : WPEFramework::Core::IResource {
-    public:
+    class DrmMonitor {
         enum class action : uint8_t {
             ADDED = 1,
             CHANGED,
@@ -63,113 +36,238 @@ namespace Backend {
         };
         using action_t = action;
 
-        struct ICallback {
-            virtual ~ICallback() = default;
-            virtual void Reevaluate(const std::string& node) = 0;
+    public:
+        struct node_t {
+            node_t(const std::string& node, const bool boot)
+                : Node(node)
+                , Boot(boot)
+            {
+            }
+
+            const std::string Node;
+            const bool Boot;
         };
 
-        DrmMonitor() = delete;
+        struct INotification {
+            virtual ~INotification() = default;
+            virtual void Hotplug(const std::string& node) = 0;
+            virtual void PropertyChanged(const std::string& node, const uint32_t connectorId, const uint32_t propertyId) = 0;
+        };
+
+        class Monitor : virtual public WPEFramework::Core::IResource {
+        public:
+            Monitor() = delete;
+            virtual ~Monitor() = default;
+
+            Monitor(DrmMonitor& parent)
+                : _parent(parent)
+            {
+            }
+
+            uint16_t Events() override
+            {
+                return (POLLIN | POLLPRI);
+            }
+
+            handle Descriptor() const override
+            {
+                return _parent.Descriptor();
+            }
+
+            void Handle(const uint16_t events) override
+            {
+                if (((events & POLLIN) != 0) || ((events & POLLPRI) != 0)) {
+                    _parent.Handle();
+                }
+            }
+
+        private:
+            DrmMonitor& _parent;
+        };
+
         DrmMonitor(const DrmMonitor&) = delete;
         DrmMonitor& operator=(const DrmMonitor&) = delete;
 
-        DrmMonitor(ICallback* callback)
+    //private:
+        friend class WPEFramework::Core::ProxyObject<DrmMonitor>;
+        DrmMonitor()
             : _adminLock()
             , _udev(udev_new())
-            , _monitor(udev_monitor_new_from_netlink(_udev, "udev"))
-            , _callback(callback)
+            , _udevMonitor(udev_monitor_new_from_netlink(_udev, "udev"))
+            , _monitor(*this)
         {
-            // UpdateCards();
+            udev_monitor_filter_add_match_subsystem_devtype(_udevMonitor, "drm", NULL);
+            udev_monitor_enable_receiving(_udevMonitor);
 
-            udev_monitor_filter_add_match_subsystem_devtype(_monitor, "drm", NULL);
-            udev_monitor_enable_receiving(_monitor);
+            WPEFramework::Core::ResourceMonitor::Instance().Register(_monitor);
 
-            Core::ResourceMonitor::Instance().Register(*this);
+            TRACE(WPEFramework::Trace::Information, ("Constructed DrmMonitor"));
         }
 
-        ~DrmMonitor()
+        virtual ~DrmMonitor()
         {
-            Core::ResourceMonitor::Instance().Unregister(*this);
+            WPEFramework::Core::ResourceMonitor::Instance().Unregister(_monitor);
 
-            udev_monitor_unref(_monitor);
+            udev_monitor_unref(_udevMonitor);
             udev_unref(_udev);
+            TRACE(WPEFramework::Trace::Information, ("Destructed DrmMonitor"));
         }
 
-        handle Descriptor() const override
+    public:
+        static WPEFramework::Core::ProxyType<DrmMonitor> Instance()
         {
-            return (udev_monitor_get_fd(_monitor));
+            static WPEFramework::Core::ProxyType<DrmMonitor> instance = WPEFramework::Core::ProxyType<DrmMonitor>::Create();
+
+            return instance;
         }
-        uint16_t Events() override
+
+        uint32_t Register(INotification* notifcation)
         {
-            return (POLLIN | POLLPRI);
+            uint32_t result(WPEFramework::Core::ERROR_NONE);
+
+            WPEFramework::Core::SafeSyncType<WPEFramework::Core::CriticalSection> scopedLock(_adminLock);
+
+            NotificationRegister::iterator index(std::find(_notifications.begin(), _notifications.end(), notifcation));
+
+            if (index == _notifications.end()) {
+                _notifications.emplace_back(notifcation);
+            }
+
+            return result;
         }
 
-        void Handle(const uint16_t events) override
+        uint32_t Unregister(INotification* notifcation)
         {
-            if (((events & POLLIN) != 0) || ((events & POLLPRI) != 0)) {
-                struct udev_device* event;
+            uint32_t result(WPEFramework::Core::ERROR_NONE);
 
-                event = udev_monitor_receive_device(_monitor);
+            WPEFramework::Core::SafeSyncType<WPEFramework::Core::CriticalSection> scopedLock(_adminLock);
 
-                if (event != nullptr) {
-                    const action_t action(Action(event));
-                    uint32_t conn_id, prop_id;
+            NotificationRegister::iterator index(std::find( _notifications.begin(), _notifications.end(), notifcation));
 
-                    ASSERT(action != action::UNKNOWN);
+            if (index != _notifications.end()) {
+                _notifications.erase(index);
+            }
 
-                    const char* sysname = udev_device_get_sysname(event);
+            return result;
+        }
 
-                    switch (action) {
-                    case action::CHANGED: {
-                        TRACE_GLOBAL(Trace::Information, ("DRM device %s changed", sysname));
-                        if (IsHotplug(event)) {
-                            TRACE_GLOBAL(Trace::Information, ("Hotplug detected"));
+        void Cards(std::vector<node_t>& _nodes)
+        {
+            ASSERT(_udev != nullptr);
 
-                            if (IsPropertyChanged(event, conn_id, prop_id))
-                                UpdateConnectorProperty(conn_id, prop_id);
-                            else
-                                UpdateConnectors(event);
-                        } else if (IsLease(event)) {
-                            TRACE_GLOBAL(Trace::Information, ("DRM device lease detected"));
+            _nodes.clear();
+
+            struct udev_enumerate* cards = udev_enumerate_new(_udev);
+
+            if (cards != nullptr) {
+                udev_enumerate_add_match_subsystem(cards, "drm");
+                udev_enumerate_add_match_sysname(cards, DRM_PRIMARY_MINOR_NAME "[0-9]*");
+
+                if (udev_enumerate_scan_devices(cards) == 0) {
+                    struct udev_list_entry* entry;
+                    size_t i = 0;
+
+                    udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(cards))
+                    {
+                        bool is_boot_vga = false;
+                        const char* path = udev_list_entry_get_name(entry);
+                        struct udev_device* dev = udev_device_new_from_syspath(_udev, path);
+
+                        if (!dev) {
+                            continue;
                         }
-                        break;
-                    }
-                    case action::ADDED:
-                    case action::REMOVED: {
-                        TRACE_GLOBAL(Trace::Information, ("DRM device %s %s", sysname, action == action::ADDED ? "Added" : "Removed"));
-                        break;
-                    }
-                    default: {
-                        TRACE_GLOBAL(Trace::Information, ("DRM unknown action for %s", sysname));
-                        break;
-                    }
-                    }
 
-                    udev_device_unref(event);
+                        // This is owned by 'dev', so we don't need to free it
+                        struct udev_device* pci = udev_device_get_parent_with_subsystem_devtype(dev, "pci", NULL);
+
+                        if (pci) {
+                            const char* id = udev_device_get_sysattr_value(pci, "boot_vga");
+                            if (id && strcmp(id, "1") == 0) {
+                                is_boot_vga = true;
+                            }
+                        }
+
+                        if (udev_device_get_devnode(dev)) {
+                            TRACE(WPEFramework::Trace::Information, ("Found %s boot=%s", udev_device_get_devnode(dev), is_boot_vga ? "yes" : "no"));
+                            _nodes.emplace_back(udev_device_get_devnode(dev), is_boot_vga);
+                        }
+
+                        udev_device_unref(dev);
+
+                        i++;
+                    }
                 } else {
-                    TRACE_GLOBAL(Trace::Error, ("DRM device failed to get event"));
+                    TRACE(WPEFramework::Trace::Error, ("udev_enumerate_scan_devices failed"));
                 }
+
+                udev_enumerate_unref(cards);
+            } else {
+                TRACE(WPEFramework::Trace::Error, ("udev_enumerate_new failed"));
             }
         }
 
     private:
-        void UpdateConnectors(struct udev_device* event)
+        int Descriptor() const
         {
-            const std::string filename(udev_device_get_devnode(event));
-
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-            if (_callback != nullptr) {
-                _callback->Reevaluate(filename);
-            }
-
-            const char* sysnum = udev_device_get_sysnum(event);
-            const char* sysname = udev_device_get_sysname(event);
-            TRACE_GLOBAL(Trace::Information, ("Reevaluate connectors of %s, sysname=%s, sysnum=%s", filename.c_str(), sysname, sysnum));
+            return (udev_monitor_get_fd(_udevMonitor));
         }
 
-        void UpdateConnectorProperty(const uint32_t conn_id, const uint32_t prop_id)
+        void Handle()
         {
-            TRACE_GLOBAL(Trace::Information, ("Updated ConnectorId=%d PropertyId=%d", conn_id, prop_id));
+            struct udev_device* event;
+
+            event = udev_monitor_receive_device(_udevMonitor);
+
+            if (event != nullptr) {
+                const action_t action(Action(event));
+
+                ASSERT(action != action::UNKNOWN);
+
+                struct udev_list_entry* entry;
+                size_t i = 0;
+
+                const char *key, *str;
+                udev_list_entry_foreach(entry, udev_device_get_properties_list_entry(event))
+                {
+                    key = udev_list_entry_get_name(entry);
+                    str = udev_list_entry_get_value(entry);
+
+                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("Updated %s=%s", key, str));
+                }
+
+                const std::string sysName(udev_device_get_sysname(event));
+                const std::string devNode(udev_device_get_devnode(event));
+
+                switch (action) {
+                case action::CHANGED: {
+                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM device %s[%s] changed", sysName, devNode));
+
+                    if (IsHotplug(event)) {
+                        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Hotplug detected"));
+
+                        if (PropertyChanged(event) == false) {
+                            Hotplug(event);
+                        }
+                    } else if (IsLease(event)) {
+                        TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM device lease detected"));
+                    }
+                    break;
+                }
+                case action::ADDED:
+                case action::REMOVED: {
+                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM device %s %s", sysName, action == action::ADDED ? "Added" : "Removed"));
+                    break;
+                }
+                default: {
+                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM unknown action for %s", sysName));
+                    break;
+                }
+                }
+
+                udev_device_unref(event);
+            } else {
+                TRACE_GLOBAL(WPEFramework::Trace::Error, ("DRM device failed to get event"));
+            }
         }
 
         bool IsLease(struct udev_device* event) const
@@ -184,36 +282,60 @@ namespace Backend {
             return (value != NULL && strcmp(value, "1") == 0);
         }
 
-        bool IsPropertyChanged(struct udev_device* udev_device, uint32_t& connector_id, uint32_t& property_id)
+        bool Hotplug(struct udev_device* event) const
         {
-            const char* val;
+            ASSERT(event != nullptr);
 
-            struct udev_list_entry* entry;
-            size_t i = 0;
+            bool result(false);
 
-            const char *key, *str;
+            const char* value = udev_device_get_property_value(event, "HOTPLUG");
 
-            udev_list_entry_foreach(entry, udev_device_get_properties_list_entry(udev_device))
-            {
-                key = udev_list_entry_get_name(entry);
-                str = udev_list_entry_get_value(entry);
+            if (value != NULL && strcmp(value, "1") == 0) {
+                const std::string devNode(udev_device_get_devnode(event));
 
-                TRACE_GLOBAL(Trace::Information, ("Updated %s=%s", key, str));
+                TRACE(WPEFramework::Trace::Information, ("Hotplug detected on %s", devNode.c_str()));
+
+                _adminLock.Lock();
+
+                for (auto& index : _notifications) {
+                    index->Hotplug(devNode);
+                }
+
+                _adminLock.Unlock();
+
+                result = true;
+            }
+            return result;
+        }
+
+        bool PropertyChanged(struct udev_device* event) const
+        {
+            ASSERT(event != nullptr);
+
+            bool result(false);
+
+            const char* connectorStr = udev_device_get_property_value(event, "CONNECTOR");
+            const char* propertyStr = udev_device_get_property_value(event, "PROPERTY");
+
+            if ((connectorStr != nullptr) && (propertyStr != nullptr)) {
+                const std::string devNode(udev_device_get_devnode(event));
+                const uint32_t connectorId(atoi(connectorStr));
+                const uint32_t propertyId(atoi(propertyStr));
+
+                TRACE(WPEFramework::Trace::Information, ("Property changed on %s connectorId=%d propertyId=%d", devNode, connectorId, propertyId));
+
+                _adminLock.Lock();
+
+                for (auto& index : _notifications) {
+                    index->PropertyChanged(devNode, connectorId, propertyId);
+                }
+
+                _adminLock.Unlock();
+
+                result = true;
             }
 
-            val = udev_device_get_property_value(udev_device, "CONNECTOR");
-            if (!val)
-                return false;
-            else
-                connector_id = atoi(val);
-
-            val = udev_device_get_property_value(udev_device, "PROPERTY");
-            if (!val)
-                return false;
-            else
-                property_id = atoi(val);
-
-            return true;
+            return result;
         }
 
         action_t Action(struct udev_device* event) const
@@ -233,54 +355,14 @@ namespace Backend {
             return result;
         }
 
-        void Cards(std::vector<node_t>& _nodes)
-        {
-            _nodes.clear();
-            struct udev_enumerate* cards = enumerate_drm_cards(_udev);
-
-            if (cards != nullptr) {
-                struct udev_list_entry* entry;
-                size_t i = 0;
-
-                udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(cards))
-                {
-                    bool is_boot_vga = false;
-                    const char* path = udev_list_entry_get_name(entry);
-                    struct udev_device* dev = udev_device_new_from_syspath(_udev, path);
-
-                    if (!dev) {
-                        continue;
-                    }
-
-                    // This is owned by 'dev', so we don't need to free it
-                    struct udev_device* pci = udev_device_get_parent_with_subsystem_devtype(dev, "pci", NULL);
-
-                    if (pci) {
-                        const char* id = udev_device_get_sysattr_value(pci, "boot_vga");
-                        if (id && strcmp(id, "1") == 0) {
-                            is_boot_vga = true;
-                        }
-                    }
-
-                    if (udev_device_get_devnode(dev)) {
-                        TRACE_GLOBAL(Trace::Information, ("Found %s boot=%s", udev_device_get_devnode(dev), is_boot_vga ? "yes" : "no"));
-                        _nodes.emplace_back(udev_device_get_devnode(dev), is_boot_vga);
-                    }
-
-                    udev_device_unref(dev);
-
-                    i++;
-                }
-
-                udev_enumerate_unref(cards);
-            }
-        }
+        using NotificationRegister = std::list<INotification*>;
 
     private:
-        Core::CriticalSection _adminLock;
+        mutable WPEFramework::Core::CriticalSection _adminLock;
         udev* _udev;
-        udev_monitor* _monitor;
-        ICallback* _callback;
+        udev_monitor* _udevMonitor;
+        Monitor _monitor;
+        NotificationRegister _notifications;
     };
 
 } // namespace Compositor
