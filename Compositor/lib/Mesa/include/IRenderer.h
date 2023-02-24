@@ -20,11 +20,11 @@
 #pragma once
 
 #include <CompositorTypes.h>
-#include <compositorbuffer/IBuffer.h>
 #include <interfaces/IComposition.h>
+#include <interfaces/ICompositionBuffer.h>
 
+namespace WPEFramework {
 namespace Compositor {
-namespace Interfaces {
     struct EXTERNAL IRenderer {
         virtual ~IRenderer() = default;
 
@@ -34,7 +34,7 @@ namespace Interfaces {
          * @param identifier ID for this Renderer, allows for reuse.
          * @return Core::ProxyType<IAllocator>
          */
-        static WPEFramework::Core::ProxyType<IRenderer> Instance(WPEFramework::Core::instance_id identifier);
+        static Core::ProxyType<IRenderer> Instance(Identifier identifier);
 
         // virtual uint32_t Configure(const string& config) = 0;
 
@@ -44,7 +44,7 @@ namespace Interfaces {
          * @param buffer A preallocated buffer to be used or ```nullptr``` to clear.
          * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
          */
-        virtual uint32_t Bind(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer) = 0;
+        virtual uint32_t Bind(Core::ProxyType<Exchange::ICompositionBuffer> buffer) = 0;
 
         /**
          * @brief Clears the active frame buffer from the renderer.
@@ -97,7 +97,7 @@ namespace Interfaces {
          *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
          */
-        virtual uint32_t Render(WPEFramework::Core::ProxyType<IBuffer> buffer, const Box region, const Matrix transform, float alpha) = 0;
+        virtual uint32_t Render(Core::ProxyType<Exchange::ICompositionBuffer> buffer, const Box region, const Matrix transform, float alpha) = 0;
 
         /**
          * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.
@@ -116,10 +116,10 @@ namespace Interfaces {
         /**
          * @brief  Returns the buffer currently bound to the renderer
          *
-         * @return IBuffer* or nullptr if no buffer is bound.
+         * @return ICompositionBuffer* or nullptr if no buffer is bound.
          *
          */
-        // virtual WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> Bound() const = 0;
+        virtual Core::ProxyType<Exchange::ICompositionBuffer> Bound() const = 0;
 
         /**
          * TODO: We probably want this so we can do screen dumps
@@ -127,7 +127,7 @@ namespace Interfaces {
          * @brief Reads out of pixels of the currently bound buffer into data.
          *        `stride` is in bytes.
          */
-        // virtual uint32_t DumpPixels(uint32_t sourceX, uint32_t sourceY, uint32_t destinationX, uint32_t destinationY, IBuffer* data) = 0;
+        // virtual uint32_t DumpPixels(uint32_t sourceX, uint32_t sourceY, uint32_t destinationX, uint32_t destinationY, Exchange::ICompositionBuffer* data) = 0;
 
         /**
          * @brief Returns a list of pixel @PixelFormat valid for rendering.
@@ -142,6 +142,9 @@ namespace Interfaces {
          * @return const std::vector<PixelFormat>& the list of @Formats
          */
         virtual const std::vector<PixelFormat>& TextureFormats() const = 0;
+
     }; // struct EXTERNAL IRenderer
-} // namespace Interfaces
+
 } // namespace Compositor
+
+} // namespace WPEFramework

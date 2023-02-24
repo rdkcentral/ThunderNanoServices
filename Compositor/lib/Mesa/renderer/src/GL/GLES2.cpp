@@ -17,70 +17,19 @@
  * limitations under the License.
  */
 
-#ifndef MODULE_NAME
-#define MODULE_NAME CompositorRendererGLES2
-#endif
-
-#include <tracing/tracing.h>
-
-#include <IRenderer.h>
-#include <Transformation.h>
-#include <compositorbuffer/IBuffer.h>
+#include "../Module.h"
 
 #include "EGL.h"
 #include "RenderAPI.h"
-
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <drm_fourcc.h>
-
-#include <core/core.h>
 
 // these headers are generated
 #include <fragment-shader.h>
 #include <vertex-shader.h>
 
-MODULE_NAME_ARCHIVE_DECLARATION
-
-namespace {
-namespace Trace {
-    class GL {
-    public:
-        ~GL() = default;
-        GL() = delete;
-        GL(const GL&) = delete;
-        GL& operator=(const GL&) = delete;
-        GL(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            WPEFramework::Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit GL(const string& text)
-            : _text(WPEFramework::Core::ToString(text))
-        {
-        }
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class GL
-} // namespace Trace
-} // namespace
-
+namespace WPEFramework {
 namespace Compositor {
 namespace Renderer {
-    class GLES : public Interfaces::IRenderer {
+    class GLES : public IRenderer {
         using PointCoordinates = std::array<GLfloat, 8>;
 
         static constexpr PointCoordinates Vertices = {
@@ -122,15 +71,15 @@ namespace Renderer {
 
             switch (severity) {
             case GL_DEBUG_SEVERITY_HIGH_KHR: {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("%s", line.str().c_str()));
+                TRACE_GLOBAL(Trace::Error, ("%s", line.str().c_str()));
                 break;
             }
             case GL_DEBUG_SEVERITY_MEDIUM_KHR: {
-                TRACE_GLOBAL(WPEFramework::Trace::Warning, ("%s", line.str().c_str()));
+                TRACE_GLOBAL(Trace::Warning, ("%s", line.str().c_str()));
                 break;
             }
             case GL_DEBUG_SEVERITY_LOW_KHR: {
-                TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s", line.str().c_str()));
+                TRACE_GLOBAL(Trace::Information, ("%s", line.str().c_str()));
                 break;
             }
             case GL_DEBUG_SEVERITY_NOTIFICATION_KHR:
@@ -151,7 +100,7 @@ namespace Renderer {
             FrameBuffer(const FrameBuffer&) = delete;
             FrameBuffer& operator=(const FrameBuffer&) = delete;
 
-            FrameBuffer(EGL& egl, WPEFramework::Core::ProxyType<Interfaces::IBuffer>& buffer)
+            FrameBuffer(EGL& egl, Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
                 : _egl(egl)
                 , _buffer(buffer)
                 , _eglImage(EGL_NO_IMAGE)
@@ -240,7 +189,7 @@ namespace Renderer {
 
         private:
             EGL& _egl;
-            WPEFramework::Core::ProxyType<Interfaces::IBuffer>& _buffer;
+            Core::ProxyType<Exchange::ICompositionBuffer>& _buffer;
 
             EGLImage _eglImage;
             GLuint _glFrameBuffer;
@@ -257,7 +206,7 @@ namespace Renderer {
             Texture(const Texture&) = delete;
             Texture& operator=(const Texture&) = delete;
 
-            Texture(EGL& egl, WPEFramework::Core::ProxyType<Interfaces::IBuffer>& buffer)
+            Texture(EGL& egl, Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
                 : _egl(egl)
                 , _buffer(buffer)
                 , _external(false)
@@ -332,7 +281,7 @@ namespace Renderer {
 
         private:
             EGL& _egl;
-            WPEFramework::Core::ProxyType<Interfaces::IBuffer>& _buffer;
+            Core::ProxyType<Exchange::ICompositionBuffer>& _buffer;
 
             bool _external;
             EGLImage _eglImage;
@@ -390,7 +339,7 @@ namespace Renderer {
                 glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
 
                 if (status == GL_FALSE) {
-                    TRACE(WPEFramework::Trace::Error,
+                    TRACE(Trace::Error,
                         ("Shader %d compilation failed: %s", handle, API::GL::ShaderInfoLog(handle).c_str()));
                     glDeleteShader(handle);
                     handle = GL_FALSE;
@@ -410,7 +359,7 @@ namespace Renderer {
                     "TEXTURE_RGBA", "TEXTURE_RGBX", "TEXTURE_Y_U_V",
                     "TEXTURE_Y_UV", "TEXTURE_Y_XUXV", "TEXTURE_XYUV" };
 
-                TRACE(WPEFramework::Trace::Information, ("Creating Program for %s", VariantStr[variant]));
+                TRACE(Trace::Information, ("Creating Program for %s", VariantStr[variant]));
 
                 std::stringstream fragmentShaderSource;
                 fragmentShaderSource << "#define VARIANT " << static_cast<uint16_t>(variant) << std::endl
@@ -436,14 +385,14 @@ namespace Renderer {
                     glGetProgramiv(handle, GL_LINK_STATUS, &status);
 
                     if (status == GL_FALSE) {
-                        TRACE(WPEFramework::Trace::Error,
+                        TRACE(Trace::Error,
                             ("Program linking failed: %s", API::GL::ProgramInfoLog(handle).c_str()));
                         glDeleteProgram(handle);
                         handle = GL_FALSE;
                     }
 
                 } else {
-                    TRACE(WPEFramework::Trace::Error, ("Error Creating Program"));
+                    TRACE(Trace::Error, ("Error Creating Program"));
                 }
 
                 PopDebug();
@@ -726,7 +675,7 @@ namespace Renderer {
 
         // uint32_t Configure(const string& config)
         // {
-        //     return WPEFramework::Core::ERROR_NONE;
+        //     return Core::ERROR_NONE;
         // }
 
         void Unbind()
@@ -735,7 +684,7 @@ namespace Renderer {
             _egl.ResetCurrent();
         }
 
-        uint32_t Bind(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer) override
+        uint32_t Bind(Core::ProxyType<Exchange::ICompositionBuffer> buffer) override
         {
             _egl.SetCurrent();
 
@@ -743,7 +692,7 @@ namespace Renderer {
 
             _frameBuffer->Bind();
 
-            return WPEFramework::Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
         bool Begin(uint32_t width, uint32_t height) override
@@ -753,7 +702,7 @@ namespace Renderer {
             if (_gles.glGetGraphicsResetStatusKHR != nullptr) {
                 GLenum status = _gles.glGetGraphicsResetStatusKHR();
                 if (status != GL_NO_ERROR) {
-                    TRACE(WPEFramework::Trace::Error, ("GPU reset (%s)", API::GL::ResetStatusString(status)));
+                    TRACE(Trace::Error, ("GPU reset (%s)", API::GL::ResetStatusString(status)));
                     return false;
                 }
             }
@@ -804,7 +753,7 @@ namespace Renderer {
             PopDebug();
         }
 
-        uint32_t Render(WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer, const Box region,
+        uint32_t Render(Core::ProxyType<Exchange::ICompositionBuffer> buffer, const Box region,
             const Matrix transformation, float alpha) override
         {
             ASSERT(InContext() == true);
@@ -833,7 +782,7 @@ namespace Renderer {
 
             program->Draw(texture, alpha, gl_matrix, coordinates);
 
-            return WPEFramework::Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
         uint32_t Quadrangle(const Color color, const Matrix transformation) override
@@ -850,7 +799,7 @@ namespace Renderer {
 
             program->Draw(color, gl_matrix);
 
-            return WPEFramework::Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
         const std::vector<PixelFormat>& RenderFormats() const override
@@ -861,6 +810,10 @@ namespace Renderer {
         const std::vector<PixelFormat>& TextureFormats() const override
         {
             return _egl.Formats();
+        }
+        Core::ProxyType<Exchange::ICompositionBuffer> Bound() const override 
+        {
+            return (Core::ProxyType<Exchange::ICompositionBuffer>());
         }
 
     private:
@@ -886,11 +839,12 @@ namespace Renderer {
     constexpr GLES::PointCoordinates GLES::Vertices;
 } // namespace Renderer
 
-WPEFramework::Core::ProxyType<Interfaces::IRenderer> Interfaces::IRenderer::Instance(WPEFramework::Core::instance_id identifier)
+Core::ProxyType<IRenderer> IRenderer::Instance(Core::instance_id identifier)
 {
-    static WPEFramework::Core::ProxyMapType<WPEFramework::Core::instance_id, Interfaces::IRenderer> glRenderers;
+    static Core::ProxyMapType<Core::instance_id, IRenderer> glRenderers;
 
     return glRenderers.Instance<Renderer::GLES>(identifier, static_cast<int>(identifier));
 }
 
 } // namespace Compositor
+} // namespace WPEFramework

@@ -17,47 +17,38 @@
  * limitations under the License.
  */
 
-#include "../Trace.h"
 
-#include <CompositorTypes.h>
-#include <DrmCommon.h>
-#include <IAllocator.h>
-
-#include <compositorbuffer/IBuffer.h>
-
-#include <IOutput.h>
+#include "../Module.h"
+#include "IOutput.h"
 
 #include <drm_fourcc.h>
 #include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include <core/core.h>
-
-#if HAVE_GBM_MODIFIERS
-#ifndef GBM_MAX_PLANES
-#define GBM_MAX_PLANES 4
-#endif
-#endif
-
+namespace WPEFramework {
 namespace Compositor {
 namespace Backend {
-    class AtomicCrtc : virtual public IOutput {
 
+    class AtomicCrtc : public IOutput {
+    private:
         class Request {
         public:
             Request() = delete;
+            Request(Request&&) = delete;
+            Request(const Request&) = delete;
+            Request& operator= (const Request&) = delete;
 
-            Request(const uint32_t flags)
-                : _request(drmModeAtomicAlloc());
-
-            ~Request()
-            {
+            Request(const uint32_t /* flags */)
+                : _request(drmModeAtomicAlloc()) {
+            }
+            ~Request() {
                 if (_request != nullptr) {
                     drmModeAtomicFree(request);
                 }
             }
 
+        public:
             /**
              * @brief Adds a property and value to an atomic request.
              *
@@ -71,10 +62,10 @@ namespace Backend {
                 int result();
 
                 if ((request != nullptr) && (result = drmModeAtomicAddProperty(_request, objectId, propertyId, value) < 0)) {
-                    TRACE(Tracing::Error, "Failed to add atomic DRM property %u: %s", propertyId, strerror(-request));
+                    TRACE(Trace::Error, "Failed to add atomic DRM property %u: %s", propertyId, strerror(-request));
                 }
 
-                return (result == 0) ? WPEFramework::Core::ERROR_NONE : WPEFramework::Core::ERROR_GENERIC;
+                return (result == 0) ? Core::ERROR_NONE : Core::ERROR_GENERIC;
             }
 
             /**
@@ -89,10 +80,10 @@ namespace Backend {
                 int result();
 
                 if (result = drmModeAtomicCommit(fd, _request, _flags, userData) < 0) {
-                    TRACE(Tracing::Error, "Atomic commit failed: %s", strerror(-request));
+                    TRACE(Trace::Error, "Atomic commit failed: %s", strerror(-request));
                 }
 
-                return (result == 0) ? WPEFramework::Core::ERROR_NONE : WPEFramework::Core::ERROR_GENERIC;
+                return (result == 0) ? Core::ERROR_NONE : Core::ERROR_GENERIC;
             }
 
         private:
@@ -101,25 +92,25 @@ namespace Backend {
         };
 
     public:
-        AtomicCrtc(const IConnector* connector)
-            : _connector(connector)
+        AtomicCrtc(AtomicCrtc&&) = delete;
+        AtomicCrtc(const AtomicCrtc&) = delete;
+        AtomicCrtc& operator= (const AtomicCrtc&) = delete;
+
+        AtomicCrtc() = default;
+        ~AtomicCrtc() override = default;
+
+    public:
+        uint32_t Commit(const int fd, const IConnector* connector, const uint32_t flags, void* userData) override
         {
             ASSERT(connector->drmFd > 0);
 
             // switch on the Atomic API.
             int setAtomic = drmSetClientCap(connector->CardFd(), DRM_CLIENT_CAP_ATOMIC, 1);
             ASSERT(setAtomic == 0);
-        }
-
-        ~AtomicCrtc()
-        {
-        }
-
-        uint32_t Commit(const int fd, const uint32_t crtcId, const uint32_t connectorId, const  uint32_t frameBufferId, const uint32_t flags, void* userData) override
-        {
+ 
             ASSERT((data.Flags & ~DRM_MODE_PAGE_FLIP_FLAGS) == 0); // only allow page flip flags
 
-            WPEFramework::Core::ProxyType<Request> request = WPEFramework::Core::ProxyType<Request>::Create(flags);
+            Core::ProxyType<Request> request = Core::ProxyType<Request>::Create(flags);
 
             ASSERT(request.operator->() == nullptr);
 
@@ -127,7 +118,7 @@ namespace Backend {
 
             request->Commit(fd, userData);
 
-            return WPEFramework::Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
     private:
@@ -136,22 +127,13 @@ namespace Backend {
         uint32_t _gamma_lut;
     };
 
-    class AtomicCrtcFactory : virtual public IOutput::IOutputFactory {
-    public:
-        AtomicCrtcFactory() = default;
-        ~AtomicCrtcFactory() = default;
-
-        std::shared_ptr<IOutput> Create(const int connector)
-        {
-            return std::make_shared<AtomicCrtc>(connector);
-        }
-    };
-
-    IOutput::IOutputFactory* IOutput::IOutputFactory::Instance()
+    /* static */ IOutput* IOutput::Instance()
     {
-        static AtomicCrtcFactory backend;
-        return (&backend);
+        static AtomicCrtc transaction;
+        return (&transaction);
     }
+
 
 } // namespace Backend
 } // namespace Compositor
+} // namespace WPEFramework

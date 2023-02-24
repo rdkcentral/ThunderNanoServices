@@ -20,10 +20,10 @@
 #pragma once
 
 #include <core/core.h>
-
+#include <messaging/messaging.h>
 #include <array>
-#include <cstdint>
-#include <vector>
+
+namespace WPEFramework {
 
 namespace Compositor {
 
@@ -34,10 +34,9 @@ using Box = struct {
     uint32_t height;
 };
 
+using Identifier = uintptr_t;
 using Matrix = std::array<float, 9>;
 using Color = std::array<float, 4>;
-// using Planes = std::list<Interfaces::IBuffer::IPlane*>;
-// using Planes = std::list<WPEFramework::Core::ProxyType<Interfaces::IBuffer>>;
 
 /**
  * @brief  A single DRM format, with a set of modifiers attached.
@@ -100,3 +99,4 @@ private:
     const std::vector<uint64_t> _modifiers;
 }; // class PixelFormat
 } // namespace Compositor
+} // namespace WPEFramework

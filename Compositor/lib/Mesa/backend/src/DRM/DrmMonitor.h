@@ -19,11 +19,11 @@
 
 #pragma once
 
-#include "../../Trace.h"
+#include "../Module.h"
 
-#include <core/core.h>
 #include <libudev.h>
 
+namespace WPEFramework {
 namespace Compositor {
 namespace Backend {
 
@@ -54,7 +54,7 @@ namespace Backend {
             virtual void PropertyChanged(const std::string& node, const uint32_t connectorId, const uint32_t propertyId) = 0;
         };
 
-        class Monitor : virtual public WPEFramework::Core::IResource {
+        class Monitor : public Core::IResource {
         public:
             Monitor() = delete;
             virtual ~Monitor() = default;
@@ -89,7 +89,7 @@ namespace Backend {
         DrmMonitor& operator=(const DrmMonitor&) = delete;
 
     //private:
-        friend class WPEFramework::Core::ProxyObject<DrmMonitor>;
+        friend class Core::ProxyObject<DrmMonitor>;
         DrmMonitor()
             : _adminLock()
             , _udev(udev_new())
@@ -99,33 +99,33 @@ namespace Backend {
             udev_monitor_filter_add_match_subsystem_devtype(_udevMonitor, "drm", NULL);
             udev_monitor_enable_receiving(_udevMonitor);
 
-            WPEFramework::Core::ResourceMonitor::Instance().Register(_monitor);
+            Core::ResourceMonitor::Instance().Register(_monitor);
 
-            TRACE(WPEFramework::Trace::Information, ("Constructed DrmMonitor"));
+            TRACE(Trace::Information, ("Constructed DrmMonitor"));
         }
 
         virtual ~DrmMonitor()
         {
-            WPEFramework::Core::ResourceMonitor::Instance().Unregister(_monitor);
+            Core::ResourceMonitor::Instance().Unregister(_monitor);
 
             udev_monitor_unref(_udevMonitor);
             udev_unref(_udev);
-            TRACE(WPEFramework::Trace::Information, ("Destructed DrmMonitor"));
+            TRACE(Trace::Information, ("Destructed DrmMonitor"));
         }
 
     public:
-        static WPEFramework::Core::ProxyType<DrmMonitor> Instance()
+        static Core::ProxyType<DrmMonitor> Instance()
         {
-            static WPEFramework::Core::ProxyType<DrmMonitor> instance = WPEFramework::Core::ProxyType<DrmMonitor>::Create();
+            static Core::ProxyType<DrmMonitor> instance = Core::ProxyType<DrmMonitor>::Create();
 
             return instance;
         }
 
         uint32_t Register(INotification* notifcation)
         {
-            uint32_t result(WPEFramework::Core::ERROR_NONE);
+            uint32_t result(Core::ERROR_NONE);
 
-            WPEFramework::Core::SafeSyncType<WPEFramework::Core::CriticalSection> scopedLock(_adminLock);
+            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
             NotificationRegister::iterator index(std::find(_notifications.begin(), _notifications.end(), notifcation));
 
@@ -138,9 +138,9 @@ namespace Backend {
 
         uint32_t Unregister(INotification* notifcation)
         {
-            uint32_t result(WPEFramework::Core::ERROR_NONE);
+            uint32_t result(Core::ERROR_NONE);
 
-            WPEFramework::Core::SafeSyncType<WPEFramework::Core::CriticalSection> scopedLock(_adminLock);
+            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
             NotificationRegister::iterator index(std::find( _notifications.begin(), _notifications.end(), notifcation));
 
@@ -188,7 +188,7 @@ namespace Backend {
                         }
 
                         if (udev_device_get_devnode(dev)) {
-                            TRACE(WPEFramework::Trace::Information, ("Found %s boot=%s", udev_device_get_devnode(dev), is_boot_vga ? "yes" : "no"));
+                            TRACE(Trace::Information, ("Found %s boot=%s", udev_device_get_devnode(dev), is_boot_vga ? "yes" : "no"));
                             _nodes.emplace_back(udev_device_get_devnode(dev), is_boot_vga);
                         }
 
@@ -197,12 +197,12 @@ namespace Backend {
                         i++;
                     }
                 } else {
-                    TRACE(WPEFramework::Trace::Error, ("udev_enumerate_scan_devices failed"));
+                    TRACE(Trace::Error, ("udev_enumerate_scan_devices failed"));
                 }
 
                 udev_enumerate_unref(cards);
             } else {
-                TRACE(WPEFramework::Trace::Error, ("udev_enumerate_new failed"));
+                TRACE(Trace::Error, ("udev_enumerate_new failed"));
             }
         }
 
@@ -232,7 +232,7 @@ namespace Backend {
                     key = udev_list_entry_get_name(entry);
                     str = udev_list_entry_get_value(entry);
 
-                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("Updated %s=%s", key, str));
+                    TRACE_GLOBAL(Trace::Information, ("Updated %s=%s", key, str));
                 }
 
                 const std::string sysName(udev_device_get_sysname(event));
@@ -240,33 +240,33 @@ namespace Backend {
 
                 switch (action) {
                 case action::CHANGED: {
-                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM device %s[%s] changed", sysName, devNode));
+                    TRACE_GLOBAL(Trace::Information, ("DRM device %s[%s] changed", sysName, devNode));
 
                     if (IsHotplug(event)) {
-                        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Hotplug detected"));
+                        TRACE_GLOBAL(Trace::Information, ("Hotplug detected"));
 
                         if (PropertyChanged(event) == false) {
                             Hotplug(event);
                         }
                     } else if (IsLease(event)) {
-                        TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM device lease detected"));
+                        TRACE_GLOBAL(Trace::Information, ("DRM device lease detected"));
                     }
                     break;
                 }
                 case action::ADDED:
                 case action::REMOVED: {
-                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM device %s %s", sysName, action == action::ADDED ? "Added" : "Removed"));
+                    TRACE_GLOBAL(Trace::Information, ("DRM device %s %s", sysName, action == action::ADDED ? "Added" : "Removed"));
                     break;
                 }
                 default: {
-                    TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM unknown action for %s", sysName));
+                    TRACE_GLOBAL(Trace::Information, ("DRM unknown action for %s", sysName));
                     break;
                 }
                 }
 
                 udev_device_unref(event);
             } else {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("DRM device failed to get event"));
+                TRACE_GLOBAL(Trace::Error, ("DRM device failed to get event"));
             }
         }
 
@@ -293,7 +293,7 @@ namespace Backend {
             if (value != NULL && strcmp(value, "1") == 0) {
                 const std::string devNode(udev_device_get_devnode(event));
 
-                TRACE(WPEFramework::Trace::Information, ("Hotplug detected on %s", devNode.c_str()));
+                TRACE(Trace::Information, ("Hotplug detected on %s", devNode.c_str()));
 
                 _adminLock.Lock();
 
@@ -322,7 +322,7 @@ namespace Backend {
                 const uint32_t connectorId(atoi(connectorStr));
                 const uint32_t propertyId(atoi(propertyStr));
 
-                TRACE(WPEFramework::Trace::Information, ("Property changed on %s connectorId=%d propertyId=%d", devNode, connectorId, propertyId));
+                TRACE(Trace::Information, ("Property changed on %s connectorId=%d propertyId=%d", devNode, connectorId, propertyId));
 
                 _adminLock.Lock();
 
@@ -358,7 +358,7 @@ namespace Backend {
         using NotificationRegister = std::list<INotification*>;
 
     private:
-        mutable WPEFramework::Core::CriticalSection _adminLock;
+        mutable Core::CriticalSection _adminLock;
         udev* _udev;
         udev_monitor* _udevMonitor;
         Monitor _monitor;
@@ -367,3 +367,4 @@ namespace Backend {
 
 } // namespace Compositor
 } // namespace Backend
+} // namespace WPEFramework

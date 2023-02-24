@@ -23,27 +23,42 @@
 #define MODULE_NAME CompositorBackend
 #endif
 
-#include <tracing/tracing.h>
+#include <core/core.h>
+#include <messaging/messaging.h>
+#include <libudev.h>
+#include <CompositorTypes.h>
+#include <DrmCommon.h>
+#include <IAllocator.h>
 
-namespace Compositor {
+#if HAVE_GBM_MODIFIERS
+#ifndef GBM_MAX_PLANES
+#define GBM_MAX_PLANES 4
+#endif
+#endif
+
+namespace WPEFramework {
+
 namespace Trace {
+
     class Backend {
     public:
-        ~Backend() = default;
         Backend() = delete;
+        Backend(Backend&&) = delete;
         Backend(const Backend&) = delete;
         Backend& operator=(const Backend&) = delete;
+
         Backend(const TCHAR formatter[], ...)
         {
             va_list ap;
             va_start(ap, formatter);
-            WPEFramework::Trace::Format(_text, formatter, ap);
+            Core::Format(_text, formatter, ap);
             va_end(ap);
         }
         explicit Backend(const string& text)
-            : _text(WPEFramework::Core::ToString(text))
+            : _text(Core::ToString(text))
         {
         }
+        ~Backend() = default;
 
     public:
         const char* Data() const
@@ -58,5 +73,7 @@ namespace Trace {
     private:
         std::string _text;
     }; // class Backend
+
 } // namespace Trace
-} // namespace Compositor
+
+} // namespace WPEFramework

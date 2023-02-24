@@ -19,18 +19,17 @@
 
 #pragma once
 
-#include "../../Trace.h"
+#include "../Module.h"
 
-#include <DrmCommon.h>
-
+namespace WPEFramework {
 namespace Compositor {
 namespace Backend {
+
     class CrtControllerAdministration {
     public:
         struct IObject {
         public:
             virtual ~IObject() = default;
-
             virtual DRM::Identifier Identifier() const = 0;
         };
 
@@ -41,7 +40,7 @@ namespace Backend {
             virtual const IObject* Property(TYPE) const = 0;
         };
 
-        struct IConnector : virtual public IObject {
+        struct IConnector : public IObject {
             enum class PropertyType {
                 BroadcastRgb = 0x00,
                 Colorspace,

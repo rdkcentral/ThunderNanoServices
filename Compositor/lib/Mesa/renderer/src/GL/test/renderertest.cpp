@@ -122,8 +122,7 @@ int main(int /*argc*/, const char* argv[])
             "CompositorRenderTest",
             "CompositorBuffer",
             "CompositorBackend",
-            "CompositorRendererEGL",
-            "CompositorRendererGLES2",
+            "CompositorRenderer",
         };
 
         for (auto module : modules) {
@@ -135,13 +134,13 @@ int main(int /*argc*/, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> framebuffer = Compositor::Interfaces::IBackend::Connector("card1-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer = Compositor::IBackend::Connector("card1-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
 
         // int drmFd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
 
-        // WPEFramework::Core::ProxyType<Compositor::Interfaces::IAllocator> allocator = Compositor::Interfaces::IAllocator::Instance(framebuffer->Identifier());
+        // Core::ProxyType<Compositor::IAllocator> allocator = Compositor::IAllocator::Instance(framebuffer->Identifier());
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IRenderer> renderer = Compositor::Interfaces::IRenderer::Instance(framebuffer->Identifier());
+        Core::ProxyType<Compositor::IRenderer> renderer = Compositor::IRenderer::Instance(framebuffer->Identifier());
 
         // const std::vector<Compositor::PixelFormat>& renderFormats(renderer->RenderFormats());
         // for (const auto& format : renderFormats) {

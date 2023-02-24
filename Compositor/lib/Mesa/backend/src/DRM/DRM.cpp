@@ -17,103 +17,68 @@
  * limitations under the License.
  */
 
-#include "../Trace.h"
+#include "../Module.h"
+#include "IOutput.h"
 
 #include <IBackend.h>
-
-#include <CompositorTypes.h>
-#include <DrmCommon.h>
-
-#include <IAllocator.h>
-#include <IOutput.h>
 #include <interfaces/IComposition.h>
 
-#include <ResolutionConversion.h>
 // #define __GBM__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include <drm_fourcc.h>
 #include <gbm.h>
 #include <libudev.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-#ifdef __cplusplus
-}
-#endif
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
-// clang-format off
-namespace WPEFramework {
-    ENUM_CONVERSION_BEGIN(Exchange::IComposition::ScreenResolution)
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown,   _TXT("Unknown") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_480i,      _TXT("480i") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_480p,      _TXT("480p") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_576i,      _TXT("576i") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_576p,      _TXT("576p") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_576p50Hz,  _TXT("576p50") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_720p,      _TXT("720p") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz,  _TXT("720p50") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i,     _TXT("1080i") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i25Hz, _TXT("1080i25") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz, _TXT("1080i50") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,     _TXT("1080p") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz, _TXT("1080p24") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p25Hz, _TXT("1080p25") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p30Hz, _TXT("1080p30") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz, _TXT("1080p50") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz, _TXT("1080p60") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p30Hz, _TXT("2160p30") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz, _TXT("2160p50") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz, _TXT("2160p60") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_4320p30Hz, _TXT("4320p30") },
-    { Exchange::IComposition::ScreenResolution::ScreenResolution_4320p60Hz, _TXT("4320p60") },
-    ENUM_CONVERSION_END(Exchange::IComposition::ScreenResolution)
-}
 // clang-format on
-
 // good reads
 // https://docs.nvidia.com/jetson/l4t-multimedia/group__direct__rendering__manager.html
 // http://github.com/dvdhrm/docs
 //
 
-using namespace WPEFramework;
+namespace WPEFramework {
 
 namespace Compositor {
+
 namespace Backend {
-    constexpr char drmDevicesRootPath[] = "/dev/dri/";
-    class DRM : virtual public Interfaces::IBackend {
+
+    constexpr TCHAR drmDevicesRootPath[] = _T("/dev/dri/");
+
+    class DRM {
     public:
         struct FrameBuffer {
-            WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> Data;
+            Core::ProxyType<Exchange::ICompositionBuffer> Data;
             Compositor::DRM::Identifier Identifier;
         };
 
-        class ConnectorImplementation : virtual public Interfaces::IBuffer, virtual public IOutput::IConnector {
-            class DoubleBuffer : virtual public Interfaces::IBuffer {
-            private:
+        class ConnectorImplementation : public Exchange::ICompositionBuffer, public IOutput::IConnector {
+        private:
+            class DoubleBuffer : public Exchange::ICompositionBuffer {
             public:
                 DoubleBuffer() = delete;
+                DoubleBuffer(DoubleBuffer&&) = delete;
+                DoubleBuffer(const DoubleBuffer&) = delete;
+                DoubleBuffer& operator= (const DoubleBuffer&) = delete;
 
-                DoubleBuffer(WPEFramework::Core::ProxyType<DRM> backend, const WPEFramework::Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format)
+                DoubleBuffer(Core::ProxyType<DRM> backend, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format)
                     : _backend(backend)
                     , _buffers()
                     , _backBuffer(1)
                     , _frontBuffer(0)
                 {
-                    WPEFramework::Core::ProxyType<Compositor::Interfaces::IAllocator> allocator = Compositor::Interfaces::IAllocator::Instance(_backend->Descriptor());
+                    Core::ProxyType<Compositor::IAllocator> allocator = Compositor::IAllocator::Instance(_backend->Descriptor());
 
                     for (auto& buffer : _buffers) {
-                        buffer.Data = allocator->Create(WidthFromResolution(resolution), HeightFromResolution(resolution), format);
+                        buffer.Data = allocator->Create(Exchange::IComposition::WidthFromResolution(resolution), Exchange::IComposition::HeightFromResolution(resolution), format);
                         buffer.Identifier = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), buffer.Data);
                     }
 
                     allocator.Release();
                 }
-
-                virtual ~DoubleBuffer()
+                ~DoubleBuffer() override
                 {
                     for (auto& buffer : _buffers) {
                         Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.Identifier);
@@ -123,15 +88,8 @@ namespace Backend {
                     _backend.Release();
                 }
                 /**
-                 * Interfaces::IBuffer implementation
+                 * Exchange::ICompositionBuffer implementation
                  */
-                void AddRef() const override
-                {
-                }
-                uint32_t Release() const override
-                {
-                    return WPEFramework::Core::ERROR_NONE;
-                }
                 uint32_t Identifier() const override
                 {
                     return _buffers.at(_backBuffer).Data->Identifier();
@@ -172,7 +130,7 @@ namespace Backend {
                 }
 
             private:
-                WPEFramework::Core::ProxyType<DRM> _backend;
+                Core::ProxyType<DRM> _backend;
                 std::array<FrameBuffer, 2> _buffers;
                 uint8_t _backBuffer;
                 uint8_t _frontBuffer;
@@ -180,7 +138,7 @@ namespace Backend {
 
         public:
             ConnectorImplementation() = delete;
-            ConnectorImplementation(WPEFramework::Core::ProxyType<DRM> backend, const std::string& connector, const WPEFramework::Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution)
+            ConnectorImplementation(Core::ProxyType<DRM> backend, const string& connector, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution)
                 : _referenceCount(1)
                 , _backend(backend)
                 , _connectorId(_backend->FindConnectorId(connector))
@@ -188,7 +146,7 @@ namespace Backend {
                 , _primaryPlane(Compositor::DRM::InvalidIdentifier)
                 , _currentBuffer(Compositor::DRM::InvalidIdentifier)
                 , _buffer(backend, resolution, format)
-                , _refreshRate(RefreshRateFromResolution(resolution))
+                , _refreshRate(Exchange::IComposition::RefreshRateFromResolution(resolution))
                 , _forceOutputResolution(forceResolution)
                 , _connectorProperties()
                 , _crtcProperties()
@@ -196,6 +154,8 @@ namespace Backend {
                 , _dpmsPropertyId(Compositor::DRM::InvalidIdentifier)
             {
                 ASSERT(_connectorId != Compositor::DRM::InvalidIdentifier);
+
+                _buffer.AddRef();
 
                 GetPropertyIds(_connectorId, DRM_MODE_OBJECT_CONNECTOR, _connectorProperties);
 
@@ -212,25 +172,26 @@ namespace Backend {
             ~ConnectorImplementation()
             {
                 _backend.Release();
+                _buffer.CompositRelease();
 
                 TRACE(Trace::Backend, ("Connector %p Destroyed", this));
             }
 
             /**
-             * Interfaces::IBuffer implementation
+             * Exchange::ICompositionBuffer implementation
              */
             void AddRef() const override
             {
-                WPEFramework::Core::InterlockedIncrement(_referenceCount);
+                Core::InterlockedIncrement(_referenceCount);
             }
             uint32_t Release() const override
             {
                 ASSERT(_referenceCount > 0);
-                uint32_t result(WPEFramework::Core::ERROR_NONE);
+                uint32_t result(Core::ERROR_NONE);
 
-                if (WPEFramework::Core::InterlockedDecrement(_referenceCount) == 0) {
+                if (Core::InterlockedDecrement(_referenceCount) == 0) {
                     delete this;
-                    result = WPEFramework::Core::ERROR_DESTRUCTION_SUCCEEDED;
+                    result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                 }
 
                 return result;
@@ -426,7 +387,7 @@ namespace Backend {
 
                     drmModeFreeObjectProperties(properties);
                 } else {
-                    TRACE(WPEFramework::Trace::Error, ("Failed to get DRM object properties"));
+                    TRACE(Trace::Error, ("Failed to get DRM object properties"));
                     return false;
                 }
 
@@ -435,7 +396,7 @@ namespace Backend {
 
         private:
             mutable uint32_t _referenceCount;
-            WPEFramework::Core::ProxyType<DRM> _backend;
+            Core::ProxyType<DRM> _backend;
 
             const Compositor::DRM::Identifier _connectorId;
             Compositor::DRM::Identifier _ctrController;
@@ -443,7 +404,7 @@ namespace Backend {
 
             Compositor::DRM::Identifier _currentBuffer;
 
-            DoubleBuffer _buffer;
+            Core::ProxyObject<DoubleBuffer> _buffer;
 
             const uint16_t _refreshRate;
             const bool _forceOutputResolution;
@@ -457,7 +418,7 @@ namespace Backend {
         };
 
     private:
-        class Monitor : virtual public WPEFramework::Core::IResource {
+        class Monitor : virtual public Core::IResource {
         public:
             Monitor() = delete;
             Monitor(const DRM& parent)
@@ -493,32 +454,32 @@ namespace Backend {
 
         DRM() = delete;
 
-        DRM(const std::string& gpuNode)
+        DRM(const string& gpuNode)
             : _adminLock()
             , _cardFd(Compositor::DRM::OpenGPU(gpuNode))
             , _monitor(*this)
-            , _output(IOutput::IOutputFactory::Instance()->Create())
+            , _output(IOutput::Instance())
         {
             ASSERT(_cardFd > 0);
 
             int setUniversalPlanes(drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1));
             ASSERT(setUniversalPlanes == 0);
 
-            WPEFramework::Core::ResourceMonitor::Instance().Register(_monitor);
+            Core::ResourceMonitor::Instance().Register(_monitor);
 
             char* name = drmGetDeviceNameFromFd2(_cardFd);
             drmVersion* version = drmGetVersion(_cardFd);
-            TRACE(WPEFramework::Trace::Information, ("Initialized DRM backend for %s (%s)", name, version->name));
+            TRACE(Trace::Information, ("Initialized DRM backend for %s (%s)", name, version->name));
             drmFreeVersion(version);
         }
 
         virtual ~DRM()
         {
-            WPEFramework::Core::ResourceMonitor::Instance().Unregister(_monitor);
+            Core::ResourceMonitor::Instance().Unregister(_monitor);
 
             char* name = drmGetDeviceNameFromFd2(_cardFd);
             drmVersion* version = drmGetVersion(_cardFd);
-            TRACE(WPEFramework::Trace::Information, ("Destructing DRM backend for %s (%s)", name, version->name));
+            TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", name, version->name));
             drmFreeVersion(version);
 
             if (_cardFd) {
@@ -591,7 +552,7 @@ namespace Backend {
             };
 
             if (drmHandleEvent(_cardFd, &eventContext) != 0) {
-                TRACE(WPEFramework::Trace::Error, ("Failed to handle drm event"));
+                TRACE(Trace::Error, ("Failed to handle drm event"));
             }
 
             return 1;
@@ -602,7 +563,7 @@ namespace Backend {
             return _cardFd;
         }
 
-        uint32_t FindConnectorId(const std::string& connectorName)
+        uint32_t FindConnectorId(const string& connectorName)
         {
             ASSERT(_cardFd > 0);
 
@@ -643,7 +604,7 @@ namespace Backend {
         CommitRegister _pendingCommits;
     }; // class DRM
 
-    static void ParseConnectorName(const std::string& name, std::string& card, std::string& connector)
+    static void ParseConnectorName(const string& name, string& card, string& connector)
     {
         card.clear();
         connector.clear();
@@ -659,24 +620,29 @@ namespace Backend {
 
         TRACE_GLOBAL(Trace::Backend, ("Card='%s' ConnectorId='%s'", card.c_str(), connector.c_str()));
     }
+
 } // namespace Backend
 
-WPEFramework::Core::ProxyType<Interfaces::IBuffer> Interfaces::IBackend::Connector(const std::string& connectorName, const WPEFramework::Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force)
+namespace IBackend {
+
+/* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force)
 {
     ASSERT(drmAvailable() == 1);
 
-    TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s' %uhx%uw", connectorName.c_str(), HeightFromResolution(resolution), WidthFromResolution(resolution)));
+    TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s' %uhx%uw", connectorName.c_str(), Exchange::IComposition::HeightFromResolution(resolution), Exchange::IComposition::WidthFromResolution(resolution)));
 
-    std::string gpu;
-    std::string connector;
+    string gpu;
+    string connector;
 
     Backend::ParseConnectorName(connectorName, gpu, connector);
 
     ASSERT((gpu.empty() == false) && (connector.empty() == false));
 
-    static WPEFramework::Core::ProxyMapType<std::string, Backend::DRM> backends;
-    static WPEFramework::Core::ProxyMapType<std::string, Interfaces::IBuffer> gbmConnectors;
+    static Core::ProxyMapType<string, Backend::DRM> backends;
+    static Core::ProxyMapType<string, Exchange::ICompositionBuffer> gbmConnectors;
 
     return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connector, backends.Instance<Backend::DRM>(gpu, gpu), connector, resolution, format, force);
 }
+} // namespace IBackend
 } // namespace Compositor
+} // WPEFramework

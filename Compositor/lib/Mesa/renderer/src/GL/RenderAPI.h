@@ -31,6 +31,7 @@
 
 #include <string>
 
+namespace WPEFramework {
 namespace Compositor {
 
 #ifndef EGL_VERSION_1_5
@@ -341,3 +342,4 @@ namespace API {
 
 } // namespace API
 } // namespace Compositor
+} // namespace WPEFramework

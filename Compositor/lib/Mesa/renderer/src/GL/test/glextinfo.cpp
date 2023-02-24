@@ -73,8 +73,7 @@ int main(int /*argc*/, const char* argv[])
 
         for (auto module : modules) {
             tracer.EnableMessage("CompositorRenderTest", module, true);
-            tracer.EnableMessage("CompositorRendererEGL", module, true);
-            tracer.EnableMessage("CompositorRendererGLES2", module, true);
+            tracer.EnableMessage("CompositorRenderer", module, true);
         }
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));

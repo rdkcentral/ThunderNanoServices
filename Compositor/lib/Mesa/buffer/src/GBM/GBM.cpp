@@ -17,74 +17,62 @@
  * limitations under the License.
  */
 
-#include "../Trace.h"
-
-#include <CompositorTypes.h>
-#include <DrmCommon.h>
-#include <IAllocator.h>
-
-#include <compositorbuffer/IBuffer.h>
+#include "../Module.h"
 
 #include <drm_fourcc.h>
 #include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#if HAVE_GBM_MODIFIERS
-#ifndef GBM_MAX_PLANES
-#define GBM_MAX_PLANES 4
-#endif
-#endif
-
 MODULE_NAME_ARCHIVE_DECLARATION
+
+namespace WPEFramework {
 
 namespace Compositor {
 
 namespace Renderer {
-    class GBM : public Interfaces::IBuffer {
-#if HAVE_GBM_MODIFIERS
+
+    class GBM : public Exchange::ICompositionBuffer {
+	#if HAVE_GBM_MODIFIERS
         static constexpr uint8_t DmaBufferMaxPlanes = GBM_MAX_PLANES;
-#else
+	#else
         static constexpr uint8_t DmaBufferMaxPlanes = 1;
-#endif
-        // using Iterator = WPEFramework::Core::IteratorType<Planes, Interfaces::IBuffer*, Planes::iterator>;
-        class Plane : public Interfaces::IBuffer::IPlane {
+	#endif
+
+        // using Iterator = Core::IteratorType<Planes, Exchange::ICompositionBuffer*, Planes::iterator>;
+        class Plane : public Exchange::ICompositionBuffer::IPlane {
         public:
             Plane() = delete;
+            Plane(Plane&&) = delete;
             Plane(const Plane&) = delete;
             Plane& operator=(const Plane&) = delete;
 
             Plane(const GBM& parent, const uint8_t index)
                 : _parent(parent)
                 , _index(index)
-                , _descriptor(InvalidFileDescriptor)
-            {
+                , _descriptor(InvalidFileDescriptor) {
                 _descriptor = parent.Export(_index);
-                TRACE(Trace::Buffer, ("Plane[%d] %p constructed", _index, this));
+                TRACE(Trace::Buffer, (_T("Plane[%d] %p constructed"), _index, this));
             }
-
-            virtual ~Plane()
-            {
+            ~Plane() override {
                 if (_descriptor > 0) {
                     close(_descriptor);
                     _descriptor = InvalidFileDescriptor;
                 }
 
-                TRACE(Trace::Buffer, ("Plane[%d] %p destructed", _index, this));
+                TRACE(Trace::Buffer, (_T("Plane[%d] %p destructed"), _index, this));
             }
 
-            WPEFramework::Core::instance_id Accessor() const override
-            {
-                return static_cast<WPEFramework::Core::instance_id>(_descriptor);
+        public:
+            Exchange::ICompositionBuffer::buffer_id Accessor() const override {
+                return (static_cast<Exchange::ICompositionBuffer::buffer_id>(_descriptor));
             }
 
-            uint32_t Offset() const override
-            {
+            uint32_t Offset() const override {
                 return _parent.Offset(_index);
             }
 
-            uint32_t Stride() const override
-            {
+            uint32_t Stride() const override {
                 return _parent.Stride(_index);
             }
 
@@ -96,21 +84,18 @@ namespace Renderer {
 
     public:
         template <const uint8_t MAX_PLANES>
-        class PlaneIterator : public Interfaces::IBuffer::IIterator {
-
+        class PlaneIterator : public Exchange::ICompositionBuffer::IIterator {
         public:
+            PlaneIterator(PlaneIterator&&) = delete;
             PlaneIterator(const PlaneIterator&) = delete;
             PlaneIterator& operator=(const PlaneIterator&) = delete;
 
             PlaneIterator()
                 : _index(0)
                 , _planeCount(0)
-                , _planes()
-            {
+                , _planes() {
             }
-
-            ~PlaneIterator() override
-            {
+            ~PlaneIterator() override {
                 for (auto plane : _planes) {
                     if (plane.IsValid()) {
                         plane.Release();
@@ -118,30 +103,27 @@ namespace Renderer {
                 }
             }
 
-            uint8_t Init(GBM& buffer)
-            {
+        public:
+            uint8_t Init(GBM& buffer) {
                 _planeCount = buffer.PlaneCount();
 
                 for (uint8_t index = 0; index < _planeCount; index++) {
-                    _planes.at(index) = WPEFramework::Core::ProxyType<GBM::Plane>::Create(buffer, index);
+                    _planes.at(index) = Core::ProxyType<GBM::Plane>::Create(buffer, index);
                 }
 
-                TRACE(Trace::Buffer, ("GBM buffer %p constructed with %d plane%s", this, _planeCount, (_planeCount == 1) ? "" : "s"));
+                TRACE(Trace::Buffer, (_T("GBM buffer %p constructed with %d plane%s"), this, _planeCount, (_planeCount == 1) ? "" : "s"));
 
                 return _planeCount;
             }
 
         public:
-            void Reset() override
-            {
+            void Reset() override {
                 _index = 0;
             }
-            bool IsValid() const override
-            {
+            bool IsValid() const override {
                 return ((_index != 0) && (_index <= _planeCount));
             }
-            bool Next() override
-            {
+            bool Next() override {
                 if (_index == 0) {
                     _index = 1;
                 } else if (_index <= _planeCount) {
@@ -149,8 +131,7 @@ namespace Renderer {
                 }
                 return (IsValid());
             }
-            Interfaces::IBuffer::IPlane* Plane() override
-            {
+            Exchange::ICompositionBuffer::IPlane* Plane() override {
                 ASSERT(IsValid() == true);
                 return _planes.at(_index - 1).operator->();
             }
@@ -158,27 +139,23 @@ namespace Renderer {
         private:
             uint32_t _index;
             uint32_t _planeCount;
-            std::array<WPEFramework::Core::ProxyType<GBM::Plane>, MAX_PLANES> _planes;
+            std::array<Core::ProxyType<GBM::Plane>, MAX_PLANES> _planes;
         }; // class PlaneIterator
 
         GBM() = delete;
+        GBM(GBM&&) = delete;
         GBM(const GBM&) = delete;
         GBM& operator=(const GBM&) = delete;
 
         GBM(gbm_device* device, uint32_t width, uint32_t height, const PixelFormat& format)
             : _adminLock()
-            , _referenceCount(0)
             , _device(device)
             , _bo(nullptr)
-            , _iterator()
-        {
-
+            , _iterator() {
             if (::pthread_mutex_init(&_mutex, nullptr) != 0) {
                 // That will be the day, if this fails...
                 ASSERT(false);
             }
-
-            AddRef();
 
             _bo = gbm_bo_create_with_modifiers(device, width, height, format.Type(), format.Modifiers().data(), format.Modifiers().size());
 
@@ -194,140 +171,102 @@ namespace Renderer {
 
             ASSERT(_bo != nullptr);
 
-            if ((_bo == nullptr) || (_iterator.Init(*this)) == 0) {
-                TRACE(WPEFramework::Trace::Error, (_T("Failed to allocate GBM buffer object.")));
-                Release();
+            if (_bo != nullptr) {
+                if (_iterator.Init(*this) == 0) {
+                    TRACE(Trace::Buffer, (_T("Failed to allocate GBM buffer object.")));
+                    gbm_bo_destroy(_bo);
+                    _bo = nullptr;
+                }
             }
         }
-
-        virtual ~GBM()
-        {
-
+        ~GBM() override {
             if (_bo != nullptr) {
                 gbm_bo_destroy(_bo);
                 _bo = nullptr;
             }
 
-            TRACE(Trace::Buffer, ("GBM buffer %p destructed", this));
+            TRACE(Trace::Buffer, (_T("GBM buffer %p destructed"), this));
         }
 
     public:
-        Interfaces::IBuffer::IIterator* Planes(const uint32_t timeoutMs) override
-        {
-            if (Lock(timeoutMs) == WPEFramework::Core::ERROR_NONE) {
+        bool IsValid() const {
+            return (_bo != nullptr);
+        }
+        //
+        // Implementation Exchange::ICompositionBuffer
+        // ---------------------------------------------------------------------------------------
+        uint32_t Identifier() const override {
+            // TODO, Implement me!
+            return ~0;
+        }
+        uint32_t Width() const override {
+            ASSERT(IsValid() == true);
+            return IsValid() ? gbm_bo_get_width(_bo) : 0;
+        }
+        uint32_t Height() const override {
+            ASSERT(IsValid() == true);
+            return IsValid() ? gbm_bo_get_height(_bo) : 0;
+        }
+        uint32_t Format() const override {
+            ASSERT(IsValid() == true);
+            return IsValid() ? gbm_bo_get_format(_bo) : DRM_FORMAT_INVALID;
+        }
+        uint64_t Modifier() const override {
+            ASSERT(IsValid() == true);
+            return IsValid() ? gbm_bo_get_modifier(_bo) : DRM_FORMAT_MOD_INVALID;
+        }
+        Exchange::ICompositionBuffer::IIterator* Planes(const uint32_t timeoutMs) override {
+            if (Lock(timeoutMs) == Core::ERROR_NONE) {
                 _iterator.Reset();
                 return (&_iterator);
             }
             return (nullptr);
         }
-
-        uint32_t Completed(const bool /*changed*/) override
-        {
+        uint32_t Completed(const bool /*changed*/) override {
             Unlock();
             // TODO, Implement me!
             return ~0;
         }
-
-        void AddRef() const override
-        {
-            WPEFramework::Core::InterlockedIncrement(_referenceCount);
+        void Render() override { 
         }
-
-        uint32_t Release() const override
-        {
-            ASSERT(_referenceCount > 0);
-            uint32_t result(WPEFramework::Core::ERROR_NONE);
-
-            if (WPEFramework::Core::InterlockedDecrement(_referenceCount) == 0) {
-                delete this;
-                result = WPEFramework::Core::ERROR_DESTRUCTION_SUCCEEDED;
-            }
-
-            return result;
-        }
-
-        uint32_t Identifier() const override
-        {
-            // TODO, Implement me!
-            return ~0;
-        }
-
-        void Render() override { }
-
-        uint32_t Width() const override
-        {
-            ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_width(_bo) : 0;
-        }
-
-        uint32_t Height() const override
-        {
-            ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_height(_bo) : 0;
-        }
-
-        uint32_t Format() const override
-        {
-            ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_format(_bo) : DRM_FORMAT_INVALID;
-        }
-
-        uint64_t Modifier() const override
-        {
-            ASSERT(IsValid() == true);
-            return IsValid() ? gbm_bo_get_modifier(_bo) : DRM_FORMAT_MOD_INVALID;
-        }
-
+ 
     private:
-        bool IsValid() const
-        {
-            return (_bo != nullptr);
-        }
-
-        uint32_t Offset(const uint8_t planeId) const
-        {
+        uint32_t Offset(const uint8_t planeId) const {
             ASSERT(IsValid() == true);
-#ifdef HAVE_GBM_MODIFIERS
+            #ifdef HAVE_GBM_MODIFIERS
             return ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) ? gbm_bo_get_offset(_bo, planeId) : 0;
-#else
+            #else
             return 0;
-#endif
+            #endif
         }
-
-        uint32_t Stride(const uint8_t planeId) const
-        {
+        uint32_t Stride(const uint8_t planeId) const {
             ASSERT(IsValid() == true);
-#ifdef HAVE_GBM_MODIFIERS
+            #ifdef HAVE_GBM_MODIFIERS
             return ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) ? gbm_bo_get_stride_for_plane(_bo, planeId) : 0;
-#else
+            #else
             return IsValid() ? gbm_bo_get_stride(_bo) : 0;
-#endif
+            #endif
         }
-
-        int Export(uint8_t planeId) const
-        {
+        int Export(const uint8_t planeId) const {
             ASSERT(IsValid() == true);
 
             int handle(InvalidFileDescriptor);
 
-#if HAS_GBM_BO_GET_FD_FOR_PLANE
+            #if HAS_GBM_BO_GET_FD_FOR_PLANE
             handle = gbm_bo_get_fd_for_plane(_bo, planeId);
-#else
+            #else
             handle = gbm_bo_get_fd(_bo);
-#endif
-            TRACE(Trace::Buffer, ("GBM plane %d exported to fd=%d", planeId, handle));
+            #endif
+
+            TRACE(Trace::Buffer, (_T("GBM plane %d exported to fd=%d"), planeId, handle));
 
             return handle;
         }
-
-        uint32_t PlaneCount() const
-        {
+        uint32_t PlaneCount() const {
             ASSERT(_bo != nullptr);
             return (_bo != nullptr) ? gbm_bo_get_plane_count(_bo) : 0;
         }
-
-        uint32_t Lock(uint32_t timeout)
-        {
+        uint32_t Lock(uint32_t timeout) {
             timespec structTime;
 
             clock_gettime(CLOCK_MONOTONIC, &structTime);
@@ -335,15 +274,14 @@ namespace Renderer {
             structTime.tv_sec += (timeout / 1000) + (structTime.tv_nsec / 1000000000); /* milliseconds to seconds */
             structTime.tv_nsec = structTime.tv_nsec % 1000000000;
             int result = pthread_mutex_timedlock(&_mutex, &structTime);
-            return (result == 0 ? WPEFramework::Core::ERROR_NONE : WPEFramework::Core::ERROR_TIMEDOUT);
+            return (result == 0 ? Core::ERROR_NONE : Core::ERROR_TIMEDOUT);
         }
-        uint32_t Unlock()
-        {
-            return (pthread_mutex_unlock(&_mutex) == 0) ? WPEFramework::Core::ERROR_NONE : WPEFramework::Core::ERROR_GENERAL;
+        uint32_t Unlock() {
+            return (pthread_mutex_unlock(&_mutex) == 0) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
         }
 
     private:
-        mutable WPEFramework::Core::CriticalSection _adminLock;
+        mutable Core::CriticalSection _adminLock;
         mutable uint32_t _referenceCount;
         gbm_device* _device;
         gbm_bo* _bo;
@@ -351,37 +289,50 @@ namespace Renderer {
         pthread_mutex_t _mutex;
     }; // class GBM
 
-    class GbmAllocator : public Interfaces::IAllocator {
+} // namespace Renderer
+
+
+/* static */ Core::ProxyType<IAllocator> IAllocator::Instance(Core::instance_id identifier)
+{
+    class GbmAllocator : public IAllocator {
     public:
         GbmAllocator() = delete;
+        GbmAllocator(GbmAllocator&&) = delete;
         GbmAllocator(const GbmAllocator&) = delete;
         GbmAllocator& operator=(const GbmAllocator&) = delete;
 
-        GbmAllocator(const int drmFd)
+        GbmAllocator(const int identifier)
             : _device(nullptr)
         {
+            int drmFd = DRM::ReopenNode(identifier, true);
+
             ASSERT(drmFd != InvalidFileDescriptor);
 
-            _device = gbm_create_device(drmFd);
+            if (drmFd != InvalidFileDescriptor) {
+                _device = gbm_create_device(drmFd);
 
-            ASSERT(_device != nullptr);
+                ASSERT(_device != nullptr);
+            }
 
-            TRACE(Trace::Buffer, ("GBM allocator %p constructed gbmDevice=%p fd=%d", this, _device, drmFd));
+            TRACE(Trace::Buffer, (_T("GBM allocator %p constructed gbmDevice=%p fd=%d"), this, _device, drmFd));
         }
-
         ~GbmAllocator() override
         {
             if (_device != nullptr) {
                 gbm_device_destroy(_device);
             }
 
-            TRACE(Trace::Buffer, ("GBM allocator %p destructed", this));
+            TRACE(Trace::Buffer, (_T("GBM allocator %p destructed"), this));
         }
 
-        WPEFramework::Core::ProxyType<Interfaces::IBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) override
+    public:
+        bool IsValid() const {
+            return (_device != nullptr);
+        }
+        Core::ProxyType<Exchange::ICompositionBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) override
         {
-            WPEFramework::Core::ProxyType<Interfaces::IBuffer> result;;
-            result = WPEFramework::Core::ProxyType<GBM>::Create(_device, width, height, format);
+            Core::ProxyType<Exchange::ICompositionBuffer> result;;
+            result = Core::ProxyType<Renderer::GBM>::Create(_device, width, height, format);
             return result;
         }
 
@@ -389,19 +340,16 @@ namespace Renderer {
         gbm_device* _device;
     };
 
-} // namespace Renderer
 
-
-WPEFramework::Core::ProxyType<Interfaces::IAllocator> Interfaces::IAllocator::Instance(WPEFramework::Core::instance_id identifier)
-{
     ASSERT(drmAvailable() == 1);
 
-    static WPEFramework::Core::ProxyMapType<WPEFramework::Core::instance_id, Interfaces::IAllocator> gbmAllocators;
+    static Core::ProxyMapType<Core::instance_id, IAllocator> gbmAllocators;
 
-    int fd = DRM::ReopenNode(static_cast<int>(identifier), true);
+    Core::ProxyType<GbmAllocator> result (gbmAllocators.Instance<GbmAllocator>(identifier, static_cast<int>(identifier)));
 
-    ASSERT(fd > 0);
-
-    return gbmAllocators.Instance<Renderer::GbmAllocator>(identifier, fd);
+    return (result->IsValid() ? Core::ProxyType<IAllocator>(result) : Core::ProxyType<IAllocator>());
 }
+
 } // namespace Compositor
+
+} // namespace WPEFramework

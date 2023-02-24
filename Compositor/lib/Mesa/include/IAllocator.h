@@ -20,12 +20,11 @@
 #pragma once
 
 #include <core/core.h>
-
 #include <CompositorTypes.h>
-#include <compositorbuffer/IBuffer.h>
+#include <interfaces/ICompositionBuffer.h>
 
+namespace WPEFramework {
 namespace Compositor {
-namespace Interfaces {
     struct EXTERNAL IAllocator {
         virtual ~IAllocator() = default;
 
@@ -35,7 +34,7 @@ namespace Interfaces {
          * @param identifier ID for this allocator, allows for reuse.
          * @return Core::ProxyType<IAllocator>
          */
-        static WPEFramework::Core::ProxyType<IAllocator> Instance(WPEFramework::Core::instance_id identifier);
+        static Core::ProxyType<IAllocator> Instance(Identifier identifier);
 
         /**
          * @brief  Allocate a new buffer.
@@ -46,9 +45,12 @@ namespace Interfaces {
          * @param height Height in pixels
          * @param format Pixel layout for this buffer
          *
-         * @return Core::ProxyType<IBuffer> The allocated buffer
+         * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
          */
-        virtual WPEFramework::Core::ProxyType<IBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) = 0;
+        virtual Core::ProxyType<Exchange::ICompositionBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) = 0;
+
     }; // struct EXTERNAL IAllocator
-} // namespace Interfaces
+
 } // namespace Compositor
+
+} // namespace WPEFramework

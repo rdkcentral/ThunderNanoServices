@@ -26,9 +26,14 @@
 
 #include "IAllocator.h"
 
+namespace WPEFramework {
+
 namespace Compositor {
+
 constexpr int InvalidFileDescriptor = -1;
+
 namespace DRM {
+
     using Identifier = uint32_t;
     using Value = uint64_t;
     using PropertyRegister = std::map<std::string, Identifier>;
@@ -117,7 +122,7 @@ namespace DRM {
 
     inline static uint32_t GetProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, Compositor::DRM::Value& value)
     {
-        uint32_t result(WPEFramework::Core::ERROR_NOT_SUPPORTED);
+        uint32_t result(Core::ERROR_NOT_SUPPORTED);
 
         drmModeObjectProperties* properties = drmModeObjectGetProperties(cardFd, object, DRM_MODE_OBJECT_ANY);
 
@@ -125,7 +130,7 @@ namespace DRM {
             for (uint32_t i = 0; i < properties->count_props; ++i) {
                 if (properties->props[i] == property) {
                     value = properties->prop_values[i];
-                    result = WPEFramework::Core::ERROR_NONE;
+                    result = Core::ERROR_NONE;
                     break;
                 }
             }
@@ -172,12 +177,12 @@ namespace DRM {
                 }
             }
             if (alreadyClosed == true) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
+                TRACE_GLOBAL(Trace::Error, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
                 continue;
             }
 
             if (drmCloseBufferHandle(cardFd, handles.at(currentIndex)) != 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
+                TRACE_GLOBAL(Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
             }
         }
 
@@ -191,13 +196,13 @@ namespace DRM {
         int result(drmGetCap(cardFd, capability, &value));
 
         if (result != 0) {
-            TRACE_GLOBAL(WPEFramework::Trace::Error, (("Failed to query capability 0x%016" PRIx64), capability));
+            TRACE_GLOBAL(Trace::Error, (("Failed to query capability 0x%016" PRIx64), capability));
         }
 
         return (result == 0) ? value : 0;
     }
 
-    inline uint32_t CreateFrameBuffer(const int cardFd, const WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer)
+    inline uint32_t CreateFrameBuffer(const int cardFd, const Core::ProxyType<Exchange::ICompositionBuffer> buffer)
     {
         ASSERT(cardFd > 0);
         ASSERT(buffer.IsValid() == true);
@@ -208,7 +213,7 @@ namespace DRM {
 
         bool modifierSupported = (Capability(cardFd, DRM_CAP_ADDFB2_MODIFIERS) == 1) ? true : false;
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Framebuffers with modifiers %s", modifierSupported ? "supported" : "unsupported"));
+        TRACE_GLOBAL(Trace::Information, ("Framebuffers with modifiers %s", modifierSupported ? "supported" : "unsupported"));
 
         uint16_t nPlanes(0);
 
@@ -219,17 +224,17 @@ namespace DRM {
 
         modifiers.fill(buffer->Modifier());
 
-        Compositor::Interfaces::IBuffer::IIterator* planes = buffer->Planes(10);
+        Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
         ASSERT(planes != nullptr);
 
         while ((planes->Next() == true) && (planes->IsValid() == true)) {
             ASSERT(planes->IsValid() == true);
 
-            Compositor::Interfaces::IBuffer::IPlane* plane = planes->Plane();
+            Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
             ASSERT(plane != nullptr);
 
             if (drmPrimeFDToHandle(cardFd, plane->Accessor(), &handles[nPlanes]) != 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
+                TRACE_GLOBAL(Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
                 CloseDrmHandles(cardFd, handles);
                 break;
             }
@@ -243,28 +248,28 @@ namespace DRM {
         if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
 
             if (drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), modifiers.data(), &framebufferId, DRM_MODE_FB_MODIFIERS) != 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate drm framebuffer with modifiers"));
+                TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer with modifiers"));
             }
         } else {
             if (buffer->Modifier() != DRM_FORMAT_MOD_INVALID && buffer->Modifier() != DRM_FORMAT_MOD_LINEAR) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64, buffer->Modifier()));
+                TRACE_GLOBAL(Trace::Error, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64, buffer->Modifier()));
                 return 0;
             }
 
             int ret = drmModeAddFB2(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), &framebufferId, 0);
 
             if (ret != 0 && buffer->Format() == DRM_FORMAT_ARGB8888 /*&& nPlanes == 1*/ && offsets[0] == 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate drm framebuffer (%s), falling back to old school drmModeAddFB", strerror(-ret)));
+                TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer (%s), falling back to old school drmModeAddFB", strerror(-ret)));
 
                 uint32_t depth = 32;
                 uint32_t bpp = 32;
 
                 if (drmModeAddFB(cardFd, buffer->Width(), buffer->Height(), depth, bpp, pitches[0], handles[0], &framebufferId) != 0) {
-                    TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate a drm framebuffer the old school way..."));
+                    TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer the old school way..."));
                 }
 
             } else if (ret != 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to allocate a drm framebuffer..."));
+                TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer..."));
             }
         }
 
@@ -275,7 +280,7 @@ namespace DRM {
 
         buffer.Release();
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
+        TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
 
         return framebufferId;
     }
@@ -285,9 +290,9 @@ namespace DRM {
         int drmResult(0);
 
         if ((frameBufferId > 0) && (drmResult = drmModeRmFB(cardFd, frameBufferId) != 0)) {
-            TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to destroy framebuffer %u: %s", frameBufferId, strerror(drmResult)));
+            TRACE_GLOBAL(Trace::Error, ("Failed to destroy framebuffer %u: %s", frameBufferId, strerror(drmResult)));
         } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM framebuffer object %u destroyed %s", frameBufferId, strerror(drmResult)));
+            TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u destroyed %s", frameBufferId, strerror(drmResult)));
         }
     }
 
@@ -306,12 +311,12 @@ namespace DRM {
             if (lease_fd >= 0) {
                 return lease_fd;
             } else if (lease_fd != -EINVAL && lease_fd != -EOPNOTSUPP) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmModeCreateLease failed"));
+                TRACE_GLOBAL(Trace::Error, ("drmModeCreateLease failed"));
                 return InvalidFileDescriptor;
             }
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("drmModeCreateLease failed, falling back to plain open"));
+            TRACE_GLOBAL(Trace::Information, ("drmModeCreateLease failed, falling back to plain open"));
         } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM is not in master mode"));
+            TRACE_GLOBAL(Trace::Information, ("DRM is not in master mode"));
         }
 
         char* name = nullptr;
@@ -326,21 +331,21 @@ namespace DRM {
             name = drmGetDeviceNameFromFd2(fd);
 
             if (name == nullptr) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmGetDeviceNameFromFd2 failed"));
+                TRACE_GLOBAL(Trace::Error, ("drmGetDeviceNameFromFd2 failed"));
                 return InvalidFileDescriptor;
             }
         } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM Render Node: %s", name));
+            TRACE_GLOBAL(Trace::Information, ("DRM Render Node: %s", name));
         }
 
         int newFd = open(name, O_RDWR | O_CLOEXEC);
 
         if (newFd < 0) {
-            TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to open DRM node '%s'", name));
+            TRACE_GLOBAL(Trace::Error, ("Failed to open DRM node '%s'", name));
             free(name);
             return InvalidFileDescriptor;
         } else {
-            TRACE_GLOBAL(WPEFramework::Trace::Information, ("DRM Node opened: %s", name));
+            TRACE_GLOBAL(Trace::Information, ("DRM Node opened: %s", name));
         }
 
         free(name);
@@ -354,13 +359,13 @@ namespace DRM {
             int ret(0);
 
             if ((ret = drmGetMagic(newFd, &magic)) < 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmGetMagic failed: %s", strerror(-ret)));
+                TRACE_GLOBAL(Trace::Error, ("drmGetMagic failed: %s", strerror(-ret)));
                 close(newFd);
                 return InvalidFileDescriptor;
             }
 
             if ((ret = drmAuthMagic(fd, magic)) < 0) {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("drmAuthMagic failed: %s", strerror(-ret)));
+                TRACE_GLOBAL(Trace::Error, ("drmAuthMagic failed: %s", strerror(-ret)));
                 close(newFd);
                 return InvalidFileDescriptor;
             }
@@ -428,7 +433,7 @@ namespace DRM {
             if (it != nodes.end()) {
                 fd = open(it->c_str(), O_RDWR | O_CLOEXEC);
             } else {
-                TRACE_GLOBAL(WPEFramework::Trace::Error, ("Could not find gpu %s", gpuNode.c_str()));
+                TRACE_GLOBAL(Trace::Error, ("Could not find gpu %s", gpuNode.c_str()));
             }
         }
 
@@ -437,3 +442,4 @@ namespace DRM {
 
 } // namespace Transformation
 } // namespace Compositor
+} // namespace WPEFramework

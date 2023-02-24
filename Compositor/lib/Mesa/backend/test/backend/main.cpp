@@ -61,7 +61,7 @@ int main(int /* argc*/, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> framebuffer;
+        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer;
 
         char keyPress;
 
@@ -83,7 +83,7 @@ int main(int /* argc*/, const char* argv[])
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::Interfaces::IBackend::Connector("card1-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+                    framebuffer = Compositor::IBackend::Connector("card1-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
                 } else {
                     framebuffer->AddRef();
@@ -119,7 +119,7 @@ int main(int /* argc*/, const char* argv[])
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));
     tracer.Close();
-    WPEFramework::Core::Singleton::Dispose();
+    Core::Singleton::Dispose();
 
     return 0;
 }

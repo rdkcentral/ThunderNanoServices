@@ -23,10 +23,19 @@
 #define MODULE_NAME CompositorRenderer
 #endif
 
+#include <core/core.h>
 #include <tracing/tracing.h>
 
-namespace Compositor {
+#include <IRenderer.h>
+#include <Transformation.h>
+#include <interfaces/ICompositionBuffer.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <drm_fourcc.h>
+
+namespace WPEFramework {
 namespace Trace {
+
 class Renderer {
 public:
     ~Renderer() = default;
@@ -58,5 +67,66 @@ public:
 private:
     std::string _text;
 }; // class Renderer
+
+class EGL {
+public:
+    ~EGL() = default;
+    EGL() = delete;
+    EGL(const EGL&) = delete;
+    EGL& operator=(const EGL&) = delete;
+    EGL(const TCHAR formatter[], ...)
+    {
+        va_list ap;
+        va_start(ap, formatter);
+        WPEFramework::Core::Format(_text, formatter, ap);
+        va_end(ap);
+    }
+    explicit EGL(const string& text)
+        : _text(WPEFramework::Core::ToString(text))
+    {
+    }
+
+public:
+    const char* Data() const
+    {
+        return (_text.c_str());
+    }
+    uint16_t Length() const
+    {
+        return (static_cast<uint16_t>(_text.length()));
+    }
+
+private:
+    std::string _text;
+}; // class EGL
+
+class GL {
+public:
+    ~GL() = default;
+    GL() = delete;
+    GL(const GL&) = delete;
+    GL& operator=(const GL&) = delete;
+    GL(const TCHAR formatter[], ...) {
+        va_list ap;
+        va_start(ap, formatter);
+        WPEFramework::Core::Format(_text, formatter, ap);
+        va_end(ap);
+    }
+    explicit GL(const string& text)
+        : _text(WPEFramework::Core::ToString(text)) {
+    }
+
+public:
+    const char* Data() const {
+        return (_text.c_str());
+    }
+    uint16_t Length() const {
+        return (static_cast<uint16_t>(_text.length()));
+    }
+
+private:
+    std::string _text;
+}; // class GL
+
 } // namespace Trace
-} // namespace Compositor
+} // namespace WPEFramework

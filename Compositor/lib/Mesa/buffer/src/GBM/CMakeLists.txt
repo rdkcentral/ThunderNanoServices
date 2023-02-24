@@ -18,7 +18,6 @@
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
-find_package(${NAMESPACE}CompositorBuffer CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
 find_package(libdrm REQUIRED)
@@ -31,7 +30,6 @@ target_link_libraries(GBMBufferImplentation
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
-        ${NAMESPACE}CompositorBuffer::${NAMESPACE}CompositorBuffer
         gbm::gbm
         libdrm::libdrm
 )

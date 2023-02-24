@@ -28,6 +28,7 @@ set(OUTPUT_SHADER_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/shaders")
 add_custom_target(generated_shaders)
 
 foreach(SHADER ${SHADER_FILES})
+    message(STATUS "Converting ${SHADER} to a source file: ${OUTPUT_SHADER_DIR}/${TARGET}-shader.h")
     get_filename_component(TARGET ${SHADER} NAME_WE)
 
     add_custom_command (

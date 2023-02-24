@@ -19,20 +19,17 @@
  */
 #pragma once
 
-#include <cstdint>
-
 #include <core/core.h>
-
 #include <interfaces/IComposition.h>
+#include <interfaces/ICompositionBuffer.h>
 
 #include "CompositorTypes.h"
-#include "compositorbuffer/IBuffer.h"
+
+namespace WPEFramework {
 
 namespace Compositor {
 
-namespace Interfaces {
-    struct EXTERNAL IBackend {
-        virtual ~IBackend() = default;
+    namespace IBackend {
         /**
          * @brief  Allocate a new output.
          *         When the callee is done with the output, they must release it.
@@ -43,9 +40,13 @@ namespace Interfaces {
          * @param height Height in pixels
          * @param format Pixel layout for this buffer
          *
-         * @return Core::ProxyType<IBuffer> The allocated buffer
+         * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
          */
-        static WPEFramework::Core::ProxyType<IBuffer> Connector(const std::string& connector, const WPEFramework::Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, bool forceResolution);
-    };
-} // namespace Interfaces
+        extern Core::ProxyType<Exchange::ICompositionBuffer> Connector(
+            const string& connector, 
+            const Exchange::IComposition::ScreenResolution resolution, 
+            const Compositor::PixelFormat& format, 
+            bool forceResolution);
+    }
 } // namespace Compositor
+} // namespace WPEFramework 

@@ -23,17 +23,30 @@
 #define MODULE_NAME CompositorBuffer
 #endif
 
+#include <core/core.h>
 #include <tracing/tracing.h>
+#include <CompositorTypes.h>
+#include <DrmCommon.h>
+#include <IAllocator.h>
 
-namespace Compositor {
+#include <interfaces/ICompositionBuffer.h>
+
+#if HAVE_GBM_MODIFIERS
+#ifndef GBM_MAX_PLANES
+#define GBM_MAX_PLANES 4
+#endif
+#endif
+
+namespace WPEFramework {
 namespace Trace {
 
 class Buffer {
 public:
-    ~Buffer() = default;
     Buffer() = delete;
+    Buffer(Buffer&&) = delete;
     Buffer(const Buffer&) = delete;
     Buffer& operator=(const Buffer&) = delete;
+
     Buffer(const TCHAR formatter[], ...)
     {
         va_list ap;
@@ -45,6 +58,7 @@ public:
         : _text(WPEFramework::Core::ToString(text))
     {
     }
+    ~Buffer() = default;
 
 public:
     const char* Data() const
@@ -61,4 +75,4 @@ private:
 }; // class Buffer
 
 } // namespace Trace
-} // namespace Compositor
+} // namespace WPEFramework

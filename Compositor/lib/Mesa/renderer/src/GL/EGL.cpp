@@ -17,55 +17,18 @@
  * limitations under the License.
  */
 
-#ifndef MODULE_NAME
-#define MODULE_NAME CompositorRendererEGL
-#endif
-
+#include "../Module.h"
 #include "EGL.h"
 
 #include <tracing/tracing.h>
-
 #include <DrmCommon.h>
-
 #include <drm_fourcc.h>
 #include <gbm.h>
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
-namespace {
-namespace Trace {
-    class EGL {
-    public:
-        ~EGL() = default;
-        EGL() = delete;
-        EGL(const EGL&) = delete;
-        EGL& operator=(const EGL&) = delete;
-        EGL(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            WPEFramework::Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit EGL(const string& text)
-            : _text(WPEFramework::Core::ToString(text))
-        {
-        }
+namespace WPEFramework {
 
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class EGL
-}
 #ifdef __DEBUG__
 void DebugSink(EGLenum error, const char* command, EGLint messageType, EGLLabelKHR /*threadLabel*/, EGLLabelKHR /*objectLabel*/, const char* message)
 {
@@ -78,19 +41,19 @@ void DebugSink(EGLenum error, const char* command, EGLint messageType, EGLLabelK
 
     switch (messageType) {
     case EGL_DEBUG_MSG_CRITICAL_KHR: {
-        TRACE_GLOBAL(WPEFramework::Trace::Fatal, ("%s", line.str().c_str()));
+        TRACE_GLOBAL(Trace::Fatal, ("%s", line.str().c_str()));
         break;
     }
     case EGL_DEBUG_MSG_ERROR_KHR: {
-        TRACE_GLOBAL(WPEFramework::Trace::Error, ("%s", line.str().c_str()));
+        TRACE_GLOBAL(Trace::Error, ("%s", line.str().c_str()));
         break;
     }
     case EGL_DEBUG_MSG_WARN_KHR: {
-        TRACE_GLOBAL(WPEFramework::Trace::Warning, ("%s", line.str().c_str()));
+        TRACE_GLOBAL(Trace::Warning, ("%s", line.str().c_str()));
         break;
     }
     case EGL_DEBUG_MSG_INFO_KHR: {
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s", line.str().c_str()));
+        TRACE_GLOBAL(Trace::Information, ("%s", line.str().c_str()));
         break;
     }
     default: {
@@ -126,7 +89,7 @@ std::vector<EGLConfig> MatchConfigs(EGLDisplay dpy, const EGLint attrib_list[])
     EGLint count(0);
 
     if (eglGetConfigs(dpy, nullptr, 0, &count) != EGL_TRUE) {
-        TRACE_GLOBAL(WPEFramework::Trace::Error, ("Unable to get EGL configs 0x%x", eglGetError()));
+        TRACE_GLOBAL(Trace::Error, ("Unable to get EGL configs 0x%x", eglGetError()));
     }
 
     TRACE_GLOBAL(Trace::EGL, ("Got a total of %d EGL configs.", count));
@@ -136,7 +99,7 @@ std::vector<EGLConfig> MatchConfigs(EGLDisplay dpy, const EGLint attrib_list[])
     EGLint matches(0);
 
     if (eglChooseConfig(dpy, attrib_list, configs.data(), configs.size(), &matches) != EGL_TRUE) {
-        TRACE_GLOBAL(WPEFramework::Trace::Error, ("No EGL configs with appropriate attributes: 0x%x", eglGetError()));
+        TRACE_GLOBAL(Trace::Error, ("No EGL configs with appropriate attributes: 0x%x", eglGetError()));
     }
 
     TRACE_GLOBAL(Trace::EGL, ("Found %d matching EGL configs", matches));
@@ -153,10 +116,10 @@ std::vector<EGLConfig> MatchConfigs(EGLDisplay dpy, const EGLint attrib_list[])
 
     return configs;
 }
-}
 
 namespace Compositor {
 namespace Renderer {
+
     EGL::EGL(const int drmFd)
         : _api()
         , _display(EGL_NO_DISPLAY)
@@ -265,13 +228,13 @@ namespace Renderer {
 
                     drmFreeDevice(&drmDevice);
                 } else {
-                    TRACE(WPEFramework::Trace::Error, ("No DRM devices found"));
+                    TRACE(Trace::Error, ("No DRM devices found"));
                 }
             } else {
-                TRACE(WPEFramework::Trace::Error, ("No EGL devices found"));
+                TRACE(Trace::Error, ("No EGL devices found"));
             }
         } else {
-            TRACE(WPEFramework::Trace::Error, ("EGL device enumeration not supported"));
+            TRACE(Trace::Error, ("EGL device enumeration not supported"));
         }
 
         return result;
@@ -279,7 +242,7 @@ namespace Renderer {
 
     uint32_t EGL::InitializeEgl(EGLenum platform, void* remote_display, const bool isMaster)
     {
-        uint32_t result(WPEFramework::Core::ERROR_NONE);
+        uint32_t result(Core::ERROR_NONE);
 
         API::Attributes<EGLint> displayAttributes;
 
@@ -323,22 +286,22 @@ namespace Renderer {
                         eglQueryContext(_display, _context, EGL_CONTEXT_PRIORITY_LEVEL_IMG, &priority);
 
                         if (priority != EGL_CONTEXT_PRIORITY_HIGH_IMG) {
-                            TRACE(WPEFramework::Trace::Error, ("Failed to obtain a high priority context"));
+                            TRACE(Trace::Error, ("Failed to obtain a high priority context"));
                         } else {
                             TRACE(Trace::EGL, ("Obtained high priority context"));
                         }
                     }
                 } else {
-                    TRACE(WPEFramework::Trace::Error, ("eglCreateContext failed: %s", API::EGL::ErrorString(eglGetError())));
-                    result = WPEFramework::Core::ERROR_UNAVAILABLE;
+                    TRACE(Trace::Error, ("eglCreateContext failed: %s", API::EGL::ErrorString(eglGetError())));
+                    result = Core::ERROR_UNAVAILABLE;
                 }
             } else {
-                TRACE(WPEFramework::Trace::Error, ("eglInitialize failed: %s", API::EGL::ErrorString(eglGetError())));
-                result = WPEFramework::Core::ERROR_UNAVAILABLE;
+                TRACE(Trace::Error, ("eglInitialize failed: %s", API::EGL::ErrorString(eglGetError())));
+                result = Core::ERROR_UNAVAILABLE;
             }
         } else {
-            TRACE(WPEFramework::Trace::Error, ("eglGetPlatformDisplayEXT failed: %s", API::EGL::ErrorString(eglGetError())));
-            result = WPEFramework::Core::ERROR_UNAVAILABLE;
+            TRACE(Trace::Error, ("eglGetPlatformDisplayEXT failed: %s", API::EGL::ErrorString(eglGetError())));
+            result = Core::ERROR_UNAVAILABLE;
         }
 
         return result;
@@ -421,17 +384,17 @@ namespace Renderer {
         return result;
     }
 
-    EGLImage EGL::CreateImage(/*const*/ Interfaces::IBuffer* buffer, bool& external)
+    EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external)
     {
         ASSERT(buffer != nullptr);
 
-        Compositor::Interfaces::IBuffer::IIterator* planes = buffer->Planes(10);
+        Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
         ASSERT(planes != nullptr);
 
         planes->Next();
         ASSERT(planes->IsValid() == true);
 
-        Compositor::Interfaces::IBuffer::IPlane* plane = planes->Plane();
+        Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
         ASSERT(plane != nullptr); // we should atleast have 1 plane....
 
         EGLImage result(EGL_NO_IMAGE);
@@ -499,3 +462,4 @@ namespace Renderer {
     }
 } // namespace Renderer
 } // namespace Compositor
+} // namespace WPEFramework

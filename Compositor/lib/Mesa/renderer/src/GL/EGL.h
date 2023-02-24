@@ -30,13 +30,14 @@
 #include <EGL/eglext.h>
 
 #include <CompositorTypes.h>
-#include <compositorbuffer/IBuffer.h>
+#include <interfaces/ICompositionBuffer.h>
 
 #include "RenderAPI.h"
 
 #include <fragment-shader.h>
 #include <vertex-shader.h>
 
+namespace WPEFramework {
 namespace Compositor {
 namespace Renderer {
     class EGL {
@@ -112,7 +113,7 @@ namespace Renderer {
 
         const std::vector<PixelFormat>& Formats() const;
 
-        EGLImage CreateImage(/*const*/ Interfaces::IBuffer* buffer, bool&);
+        EGLImage CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool&);
 
     private:
         API::EGL _api;
@@ -127,3 +128,4 @@ namespace Renderer {
     }; // class EGL
 } // namespace Renderer
 } // namespace Compositor
+} // namespace WPEFramework

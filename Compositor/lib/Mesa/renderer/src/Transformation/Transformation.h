@@ -23,8 +23,7 @@
 #include <array>
 #include <math.h>
 
-using namespace Compositor::Interfaces;
-
+namespace WPEFramework {
 namespace Compositor {
 namespace Transformation {
     /**
@@ -258,3 +257,4 @@ namespace Transformation {
     }
 } // namespace Transformation
 } // namespace Compositor
+} // namespace WPEFramework

@@ -3,6 +3,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
+find_package(EGL REQUIRED)
 
 add_executable(glextinfo glextinfo.cpp)
 
@@ -15,6 +16,8 @@ target_link_libraries(glextinfo
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
         ${COMPOSITOR_RENDERER_IMPLEMENTATION}
+        common::renderer
+        EGL::EGL
 )
 
 install(TARGETS glextinfo DESTINATION bin)

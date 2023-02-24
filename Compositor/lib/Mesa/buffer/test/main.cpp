@@ -21,9 +21,9 @@
 #define MODULE_NAME CompositorBufferTest
 #endif
 
-#include <compositorbuffer/IBuffer.h>
 #include <core/core.h>
 #include <localtracer/localtracer.h>
+#include <interfaces/ICompositionBuffer.h>
 #include <messaging/messaging.h>
 
 #include <IAllocator.h>
@@ -87,10 +87,10 @@ void GetNodess(const uint32_t type, std::vector<std::string>& list)
 //                 uint32_t possible_crtcs = drmModeConnectorGetPossibleCrtcs(fd, drm_conn);
 
 //                 if (possible_crtcs == 0) {
-//                     TRACE_GLOBAL(WPEFramework::Trace::Error, ("No crtcs found on %s", conn_name));
+//                     TRACE_GLOBAL(Trace::Error, ("No crtcs found on %s", conn_name));
 //                 }
 
-//                 TRACE_GLOBAL(WPEFramework::Trace::Error, ("Connector type type=%s id=%d connection=0x%02X crtcs=0x%04X", 
+//                 TRACE_GLOBAL(Trace::Error, ("Connector type type=%s id=%d connection=0x%02X crtcs=0x%04X", 
 //                         conn_name, connector->connector_type_id, connector->connection, possible_crtcs));
 
 //                 if ((type == connector->connector_type) && (connector->connection == DRM_MODE_CONNECTED)) {
@@ -141,17 +141,17 @@ int main(int argc, const char* argv[])
     assert(fdRender > 0);
 
     TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-    Core::ProxyType<Compositor::Interfaces::IAllocator> cardAllocator = Compositor::Interfaces::IAllocator::Instance(fdCard);
+    Core::ProxyType<Compositor::IAllocator> cardAllocator = Compositor::IAllocator::Instance(fdCard);
     assert(cardAllocator.operator->() != nullptr);
 
     TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-    Core::ProxyType<Compositor::Interfaces::IAllocator> renderAllocator = Compositor::Interfaces::IAllocator::Instance(fdRender);
+    Core::ProxyType<Compositor::IAllocator> renderAllocator = Compositor::IAllocator::Instance(fdRender);
     assert(renderAllocator.operator->() != nullptr);
     assert(cardAllocator.operator->() != renderAllocator.operator->());
 
     {
         TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-        Core::ProxyType<Compositor::Interfaces::IAllocator> renderAllocator2 = Compositor::Interfaces::IAllocator::Instance(fdRender);
+        Core::ProxyType<Compositor::IAllocator> renderAllocator2 = Compositor::IAllocator::Instance(fdRender);
         assert(renderAllocator2.operator->() != nullptr);
         assert(renderAllocator2.operator->() == renderAllocator.operator->());
         renderAllocator2.Release();
@@ -163,7 +163,7 @@ int main(int argc, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = renderAllocator->Create(1920, 1080, format);
+        Core::ProxyType<Exchange::ICompositionBuffer> buffer = renderAllocator->Create(1920, 1080, format);
 
         assert(buffer.operator->());
         assert(buffer->Width() == 1920);
@@ -178,7 +178,7 @@ int main(int argc, const char* argv[])
 
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888);
 
-        WPEFramework::Core::ProxyType<Compositor::Interfaces::IBuffer> buffer = cardAllocator->Create(1920, 1080, format);
+        Core::ProxyType<Exchange::ICompositionBuffer> buffer = cardAllocator->Create(1920, 1080, format);
 
         assert(buffer.operator->());
 
@@ -186,13 +186,13 @@ int main(int argc, const char* argv[])
         assert(buffer->Height() == 1080);
         assert(buffer->Format() == format.Type());
 
-        Compositor::Interfaces::IBuffer::IIterator* index = buffer->Planes(10);
+        Exchange::ICompositionBuffer::IIterator* index = buffer->Planes(10);
         assert(index != nullptr);
 
-        Compositor::Interfaces::IBuffer::IPlane* first_plane = nullptr;
+        Exchange::ICompositionBuffer::IPlane* first_plane = nullptr;
 
         while ((index->Next() == true) && (index->IsValid() == true)) {
-            Compositor::Interfaces::IBuffer::IPlane* plane = index->Plane();
+            Exchange::ICompositionBuffer::IPlane* plane = index->Plane();
             assert(plane != nullptr);
 
             if (first_plane == nullptr) {
@@ -217,7 +217,7 @@ int main(int argc, const char* argv[])
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));
     tracer.Close();
-    WPEFramework::Core::Singleton::Dispose();
+    Core::Singleton::Dispose();
 
     return 0;
 }

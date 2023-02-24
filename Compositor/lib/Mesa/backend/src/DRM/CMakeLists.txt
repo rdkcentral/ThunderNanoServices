@@ -18,6 +18,7 @@
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+find_package(${NAMESPACE}Definitions CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
 find_package(libdrm REQUIRED)
@@ -46,15 +47,10 @@ target_link_libraries(DRMBackendImplentation
         common::buffer
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         libdrm::libdrm
         gbm::gbm
-        udev
 )
-
-target_include_directories(DRMBackendImplentation
-    PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
-    )
 
 add_library(common::backend ALIAS DRMBackendImplentation)

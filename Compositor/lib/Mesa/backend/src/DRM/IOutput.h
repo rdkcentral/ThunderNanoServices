@@ -19,17 +19,19 @@
  */
 #pragma once
 
-#include <cstdint>
+#include "../Module.h"
 
-#include <core/core.h>
+namespace WPEFramework {
 
 namespace Compositor {
 
 namespace Backend {
+
     struct EXTERNAL IOutput {
 
         struct EXTERNAL IConnector {
             virtual ~IConnector() = default;
+
 
             virtual bool IsEnabled() const = 0; 
 
@@ -43,20 +45,7 @@ namespace Backend {
             virtual const drmModeModeInfo& ModeInfo() const = 0;
         };
 
-        struct EXTERNAL IOutputFactory {
-            virtual ~IOutputFactory() = default;
-
-            static IOutputFactory* Instance();
-
-            /**
-             * @brief Create a output using a opened drm card/gpu, callee takes ownership.
-             *
-             * @param _cardFd   File descriptor of a opened drm card.
-             * 
-             * @return IOutput* A Output interface to commit buffers
-             */
-            virtual std::shared_ptr<IOutput> Create() = 0;
-        };
+        static IOutput* Instance();
 
         virtual ~IOutput() = default;
 
@@ -74,3 +63,4 @@ namespace Backend {
     };
 } // namespace Backend
 } // namespace Compositor
+} // namespace WPEFramework
