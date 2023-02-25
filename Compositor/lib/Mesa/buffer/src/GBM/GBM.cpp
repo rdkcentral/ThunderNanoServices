@@ -52,7 +52,7 @@ namespace Renderer {
                 , _index(index)
                 , _descriptor(InvalidFileDescriptor) {
                 _descriptor = parent.Export(_index);
-                TRACE(Trace::Buffer, (_T("Plane[%d] %p constructed"), _index, this));
+                TRACE(Trace::Buffer, (_T("Plane[%d] %p constructed [%d, %p]"), _index, this, _descriptor, &_parent));
             }
             ~Plane() override {
                 if (_descriptor > 0) {
@@ -69,7 +69,10 @@ namespace Renderer {
             }
 
             uint32_t Offset() const override {
-                return _parent.Offset(_index);
+                fprintf(stderr, "--------------------- %s ---------------- %d [%p]---------\n", __FUNCTION__, __LINE__, &_parent); fflush (stderr);
+                uint32_t result = _parent.Offset(_index);
+                fprintf(stderr, "--------------------- %s ---------------- %d ---------\n", __FUNCTION__, __LINE__); fflush (stderr);
+                return (result);
             }
 
             uint32_t Stride() const override {
@@ -147,26 +150,36 @@ namespace Renderer {
         GBM(const GBM&) = delete;
         GBM& operator=(const GBM&) = delete;
 
-        GBM(gbm_device* device, uint32_t width, uint32_t height, const PixelFormat& format)
+        GBM(const int drmFd, const uint32_t width, const uint32_t height, const PixelFormat& format)
             : _adminLock()
-            , _device(device)
+            , _device(nullptr)
             , _bo(nullptr)
             , _iterator() {
-            if (::pthread_mutex_init(&_mutex, nullptr) != 0) {
-                // That will be the day, if this fails...
-                ASSERT(false);
+            ASSERT(drmFd != InvalidFileDescriptor);
+
+            if (drmFd != InvalidFileDescriptor) {
+                _device = gbm_create_device(drmFd);
+
+                ASSERT(_device != nullptr);
             }
 
-            _bo = gbm_bo_create_with_modifiers(device, width, height, format.Type(), format.Modifiers().data(), format.Modifiers().size());
-
-            if (_bo == nullptr) {
-                uint32_t usage = GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING;
-
-                if ((format.Modifiers().size() == 1) && (format.Modifiers()[0] == DRM_FORMAT_MOD_LINEAR)) {
-                    usage |= GBM_BO_USE_LINEAR;
+            if (_device != nullptr) { 
+                if (::pthread_mutex_init(&_mutex, nullptr) != 0) {
+                    // That will be the day, if this fails...
+                    ASSERT(false);
                 }
 
-                _bo = gbm_bo_create(device, width, height, format.Type(), usage);
+                _bo = gbm_bo_create_with_modifiers(_device, width, height, format.Type(), format.Modifiers().data(), format.Modifiers().size());
+
+                if (_bo == nullptr) {
+                    uint32_t usage = GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING;
+
+                    if ((format.Modifiers().size() == 1) && (format.Modifiers()[0] == DRM_FORMAT_MOD_LINEAR)) {
+                        usage |= GBM_BO_USE_LINEAR;
+                    }
+
+                    _bo = gbm_bo_create(_device, width, height, format.Type(), usage);
+                }
             }
 
             ASSERT(_bo != nullptr);
@@ -183,6 +196,10 @@ namespace Renderer {
             if (_bo != nullptr) {
                 gbm_bo_destroy(_bo);
                 _bo = nullptr;
+            }
+
+            if (_device != nullptr) {
+                gbm_device_destroy(_device);
             }
 
             TRACE(Trace::Buffer, (_T("GBM buffer %p destructed"), this));
@@ -232,12 +249,17 @@ namespace Renderer {
  
     private:
         uint32_t Offset(const uint8_t planeId) const {
+            uint32_t result = 0;
+
             ASSERT(IsValid() == true);
+
             #ifdef HAVE_GBM_MODIFIERS
-            return ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) ? gbm_bo_get_offset(_bo, planeId) : 0;
-            #else
-            return 0;
+            if ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) {
+                result = gbm_bo_get_offset(_bo, planeId);
+            }
             #endif
+
+            return result;
         }
         uint32_t Stride(const uint8_t planeId) const {
             ASSERT(IsValid() == true);
@@ -291,63 +313,25 @@ namespace Renderer {
 
 } // namespace Renderer
 
-
-/* static */ Core::ProxyType<IAllocator> IAllocator::Instance(Core::instance_id identifier)
-{
-    class GbmAllocator : public IAllocator {
-    public:
-        GbmAllocator() = delete;
-        GbmAllocator(GbmAllocator&&) = delete;
-        GbmAllocator(const GbmAllocator&) = delete;
-        GbmAllocator& operator=(const GbmAllocator&) = delete;
-
-        GbmAllocator(const int identifier)
-            : _device(nullptr)
-        {
-            int drmFd = DRM::ReopenNode(identifier, true);
-
-            ASSERT(drmFd != InvalidFileDescriptor);
-
-            if (drmFd != InvalidFileDescriptor) {
-                _device = gbm_create_device(drmFd);
-
-                ASSERT(_device != nullptr);
-            }
-
-            TRACE(Trace::Buffer, (_T("GBM allocator %p constructed gbmDevice=%p fd=%d"), this, _device, drmFd));
-        }
-        ~GbmAllocator() override
-        {
-            if (_device != nullptr) {
-                gbm_device_destroy(_device);
-            }
-
-            TRACE(Trace::Buffer, (_T("GBM allocator %p destructed"), this));
-        }
-
-    public:
-        bool IsValid() const {
-            return (_device != nullptr);
-        }
-        Core::ProxyType<Exchange::ICompositionBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) override
-        {
-            Core::ProxyType<Exchange::ICompositionBuffer> result;;
-            result = Core::ProxyType<Renderer::GBM>::Create(_device, width, height, format);
-            return result;
-        }
-
-    private:
-        gbm_device* _device;
-    };
-
+/* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(const DRM::Identifier identifier, const uint32_t width, const uint32_t height, const PixelFormat& format) {
 
     ASSERT(drmAvailable() == 1);
 
-    static Core::ProxyMapType<Core::instance_id, IAllocator> gbmAllocators;
+    Core::ProxyType<Exchange::ICompositionBuffer> result;
 
-    Core::ProxyType<GbmAllocator> result (gbmAllocators.Instance<GbmAllocator>(identifier, static_cast<int>(identifier)));
+    int drmFd = DRM::ReopenNode(identifier, true);
 
-    return (result->IsValid() ? Core::ProxyType<IAllocator>(result) : Core::ProxyType<IAllocator>());
+    ASSERT (drmFd >= 0);
+
+    if (drmFd >= 0) {
+        Core::ProxyType<Renderer::GBM> entry = Core::ProxyType<Renderer::GBM>::Create(drmFd, width, height, format);
+
+        if (entry->IsValid() == false) {
+            result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
+        }
+    }
+
+    return (result);
 }
 
 } // namespace Compositor

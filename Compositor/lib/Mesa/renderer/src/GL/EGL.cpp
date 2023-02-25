@@ -387,7 +387,6 @@ namespace Renderer {
     EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external)
     {
         ASSERT(buffer != nullptr);
-
         Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
         ASSERT(planes != nullptr);
 
@@ -405,8 +404,14 @@ namespace Renderer {
             imageAttributes.Append(EGL_WIDTH, buffer->Width());
             imageAttributes.Append(EGL_HEIGHT, buffer->Height());
             imageAttributes.Append(EGL_LINUX_DRM_FOURCC_EXT, buffer->Format());
-
+fprintf(stderr, "%s -- %d -----------------------------\n", __FUNCTION__, __LINE__); fflush(stderr);
+fprintf(stderr, "%s -- %p -----------------------------\n", typeid(*plane).name(), plane); fflush(stderr);
+fprintf(stderr, "%s -- %d -----------------------------\n", __FUNCTION__, __LINE__); fflush(stderr);
             imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, plane->Accessor());
+fprintf(stderr, "%s -- %d -----------------------------\n", __FUNCTION__, __LINE__); fflush(stderr);
+            uint32_t value = plane->Offset();
+fprintf(stderr, "%s -- %d -----------------------------\n", __FUNCTION__, __LINE__); fflush(stderr);
+
             imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, plane->Offset());
             imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, plane->Stride());
             imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));

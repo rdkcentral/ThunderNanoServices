@@ -19,12 +19,12 @@
 
 #pragma once
 
+#include <interfaces/ICompositionBuffer.h>
+
 #include <drm.h>
 #include <drm_fourcc.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-
-#include "IAllocator.h"
 
 namespace WPEFramework {
 
@@ -36,7 +36,7 @@ namespace DRM {
 
     using Identifier = uint32_t;
     using Value = uint64_t;
-    using PropertyRegister = std::map<std::string, Identifier>;
+    using PropertyRegister = std::map<string, Identifier>;
     using IdentifierRegister = std::vector<Identifier>;
 
     constexpr Identifier InvalidIdentifier = 0;
@@ -47,7 +47,7 @@ namespace DRM {
         Overlay = DRM_PLANE_TYPE_OVERLAY,
     };
 
-    inline static std::string PropertyString(const PropertyRegister& properties, const bool pretty = false)
+    inline string PropertyString(const PropertyRegister& properties, const bool pretty = false)
     {
         std::stringstream s;
         s << '{';
@@ -59,7 +59,7 @@ namespace DRM {
         for (auto iter = properties.cbegin(); iter != properties.cend(); ++iter) {
 
             if (pretty == true) {
-                s << std::string(4, ' ');
+                s << string(4, ' ');
             }
 
             s << iter->first << "[" << iter->second << "]";
@@ -78,7 +78,7 @@ namespace DRM {
         return s.str();
     }
 
-    inline static std::string IdentifierString(const std::vector<Identifier>& ids, const bool pretty = false)
+    inline string IdentifierString(const std::vector<Identifier>& ids, const bool pretty = false)
     {
         std::stringstream s;
         s << '{';
@@ -89,7 +89,7 @@ namespace DRM {
 
         for (auto iter = ids.cbegin(); iter != ids.cend(); ++iter) {
             if (pretty == true) {
-                s << std::string(4, ' ');
+                s << string(4, ' ');
             }
 
             s << *iter;
@@ -108,7 +108,7 @@ namespace DRM {
         return s.str();
     }
 
-    inline static uint32_t GetPropertyId(PropertyRegister& registry, const std::string& name)
+    inline uint32_t GetPropertyId(PropertyRegister& registry, const string& name)
     {
         auto typeId = registry.find(name);
 
@@ -120,7 +120,7 @@ namespace DRM {
         return id;
     }
 
-    inline static uint32_t GetProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, Compositor::DRM::Value& value)
+    inline uint32_t GetProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, Compositor::DRM::Value& value)
     {
         uint32_t result(Core::ERROR_NOT_SUPPORTED);
 
@@ -141,7 +141,7 @@ namespace DRM {
         return result;
     }
 
-    inline static uint16_t GetBlobProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, const uint16_t blobSize, uint8_t blob[])
+    inline uint16_t GetBlobProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, const uint16_t blobSize, uint8_t blob[])
     {
         uint16_t length(0);
         uint64_t id;
@@ -160,36 +160,32 @@ namespace DRM {
         return length;
     }
 
-    inline static void CloseDrmHandles(const int cardFd, std::array<uint32_t, 4>& handles)
+    inline void CloseDrmHandles(const int cardFd, std::array<uint32_t, 4>& handles)
     {
         for (uint8_t currentIndex = 0; currentIndex < handles.size(); ++currentIndex) {
-            if (handles.at(currentIndex) == 0) {
-                continue;
-            }
+            if (handles.at(currentIndex) != 0) {
+                // If multiple planes share the same BO handle, avoid double-closing it
+                bool alreadyClosed = false;
 
-            // If multiple planes share the same BO handle, avoid double-closing it
-            bool alreadyClosed = false;
-
-            for (uint8_t previousIndex = 0; previousIndex < currentIndex; ++previousIndex) {
-                if (handles.at(currentIndex) == handles.at(previousIndex)) {
-                    alreadyClosed = true;
-                    break;
+                for (uint8_t previousIndex = 0; previousIndex < currentIndex; ++previousIndex) {
+                    if (handles.at(currentIndex) == handles.at(previousIndex)) {
+                        alreadyClosed = true;
+                        break;
+                    }
                 }
-            }
-            if (alreadyClosed == true) {
-                TRACE_GLOBAL(Trace::Error, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
-                continue;
-            }
-
-            if (drmCloseBufferHandle(cardFd, handles.at(currentIndex)) != 0) {
-                TRACE_GLOBAL(Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
+                if (alreadyClosed == true) {
+                    TRACE_GLOBAL(Trace::Error, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
+                }
+                else if (drmCloseBufferHandle(cardFd, handles.at(currentIndex)) != 0) {
+                    TRACE_GLOBAL(Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
+                }
             }
         }
 
         handles.fill(0);
     }
 
-    inline static uint64_t Capability(const int cardFd, const uint64_t capability)
+    inline uint64_t Capability(const int cardFd, const uint64_t capability)
     {
         uint64_t value(0);
 
@@ -301,7 +297,7 @@ namespace DRM {
      * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
      *
      */
-    inline static int ReopenNode(int fd, bool openRenderNode)
+    inline int ReopenNode(int fd, bool openRenderNode)
     {
         if (drmIsMaster(fd)) {
             // Only recent kernels support empty leases
@@ -374,7 +370,7 @@ namespace DRM {
         return newFd;
     }
 
-    inline static void GetNodes(const uint32_t type, std::vector<std::string>& list)
+    inline void GetNodes(const uint32_t type, std::vector<string>& list)
     {
         const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
 
@@ -390,7 +386,7 @@ namespace DRM {
                 case DRM_NODE_RENDER: // Solely for render clients, unprivileged
                 {
                     if ((1 << type) == (devices[i]->available_nodes & (1 << type))) {
-                        list.push_back(std::string(devices[i]->nodes[type]));
+                        list.push_back(string(devices[i]->nodes[type]));
                     }
                     break;
                 }
@@ -404,7 +400,7 @@ namespace DRM {
         }
     }
 
-    inline static bool HasNode(const drmDevice* drmDevice, const char* deviceName)
+    inline bool HasNode(const drmDevice* drmDevice, const char* deviceName)
     {
         bool result(false);
         for (uint16_t i = 0; i < DRM_NODE_MAX; i++) {
@@ -416,7 +412,7 @@ namespace DRM {
         return result;
     }
 
-    static int OpenGPU(const std::string& gpuNode)
+    static int OpenGPU(const string& gpuNode)
     {
         int fd(Compositor::InvalidFileDescriptor);
 
@@ -424,7 +420,7 @@ namespace DRM {
 
         if (drmAvailable() > 0) {
 
-            std::vector<std::string> nodes;
+            std::vector<string> nodes;
 
             Compositor::DRM::GetNodes(DRM_NODE_PRIMARY, nodes);
 
@@ -440,6 +436,6 @@ namespace DRM {
         return fd;
     }
 
-} // namespace Transformation
+} // namespace DRM
 } // namespace Compositor
 } // namespace WPEFramework

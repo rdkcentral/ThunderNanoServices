@@ -33,8 +33,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include <IAllocator.h>
-#include <IBackend.h>
+#include <IBuffer.h>
 #include <IRenderer.h>
 #include <Transformation.h>
 
@@ -134,11 +133,9 @@ int main(int /*argc*/, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer = Compositor::IBackend::Connector("card1-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer = Compositor::Connector("card0-Virtual-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
 
         // int drmFd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
-
-        // Core::ProxyType<Compositor::IAllocator> allocator = Compositor::IAllocator::Instance(framebuffer->Identifier());
 
         Core::ProxyType<Compositor::IRenderer> renderer = Compositor::IRenderer::Instance(framebuffer->Identifier());
 
@@ -154,7 +151,6 @@ int main(int /*argc*/, const char* argv[])
 
         // Add a buffer to render on
         renderer->Bind(framebuffer);
-
 
         {
             renderer->Begin(1920, 1080);
@@ -177,7 +173,6 @@ int main(int /*argc*/, const char* argv[])
 
         framebuffer.Release();
         renderer.Release();
-        // allocator.Release();
 
         // close(drmFd);
     }

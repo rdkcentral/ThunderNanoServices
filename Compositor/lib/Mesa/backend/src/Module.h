@@ -28,7 +28,7 @@
 #include <libudev.h>
 #include <CompositorTypes.h>
 #include <DrmCommon.h>
-#include <IAllocator.h>
+#include <IBuffer.h>
 
 #if HAVE_GBM_MODIFIERS
 #ifndef GBM_MAX_PLANES

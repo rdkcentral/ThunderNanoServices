@@ -25,14 +25,14 @@
 #include <localtracer/localtracer.h>
 #include <messaging/messaging.h>
 
-#include <IBackend.h>
-
 #include <drm_fourcc.h>
 #include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
 #include <libudev.h>
+
+#include <IBuffer.h>
 
 using namespace WPEFramework;
 
@@ -83,7 +83,7 @@ int main(int /* argc*/, const char* argv[])
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::IBackend::Connector("card1-HDMI-A-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+                    framebuffer = Compositor::Connector("card0-Virtual-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
                 } else {
                     framebuffer->AddRef();
@@ -101,6 +101,14 @@ int main(int /* argc*/, const char* argv[])
             }
 
             case '\n': {
+                break;
+            }
+
+            case '?': {
+                printf("[S]wap buffers\n");
+                printf("[A]llocate a frame buffer\n");
+                printf("[R]elease a frame buffer\n");
+                printf("[Q]uit application \n");
                 break;
             }
 

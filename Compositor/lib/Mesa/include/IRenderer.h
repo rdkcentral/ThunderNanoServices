@@ -32,7 +32,7 @@ namespace Compositor {
          * @brief A factory for renderer, callee needs to call Release() when done.
          *
          * @param identifier ID for this Renderer, allows for reuse.
-         * @return Core::ProxyType<IAllocator>
+         * @return Core::ProxyType<IRenderer>
          */
         static Core::ProxyType<IRenderer> Instance(Identifier identifier);
 

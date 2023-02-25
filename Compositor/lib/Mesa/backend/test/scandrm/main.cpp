@@ -312,6 +312,12 @@ int main(int /*argc*/, const char* argv[])
                 break;
             }
 
+            case '?': {
+                printf("[S]can for info.\n");
+                printf("[Q]uit application.\n");
+                break;
+            }
+
             default: {
                 printf("Not known. Press '?' for help.\n");
                 break;

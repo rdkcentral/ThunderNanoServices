@@ -20,7 +20,7 @@
 #include "../Module.h"
 #include "IOutput.h"
 
-#include <IBackend.h>
+#include <IBuffer.h>
 #include <interfaces/IComposition.h>
 
 // #define __GBM__
@@ -69,14 +69,14 @@ namespace Backend {
                     , _backBuffer(1)
                     , _frontBuffer(0)
                 {
-                    Core::ProxyType<Compositor::IAllocator> allocator = Compositor::IAllocator::Instance(_backend->Descriptor());
+                    Compositor::DRM::Identifier id = _backend->Descriptor();
+                    uint32_t width  = Exchange::IComposition::WidthFromResolution(resolution);
+                    uint32_t height = Exchange::IComposition::HeightFromResolution(resolution);
 
                     for (auto& buffer : _buffers) {
-                        buffer.Data = allocator->Create(Exchange::IComposition::WidthFromResolution(resolution), Exchange::IComposition::HeightFromResolution(resolution), format);
-                        buffer.Identifier = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), buffer.Data);
+                        buffer.Data = Compositor::CreateBuffer(id, width, height, format);
+                        buffer.Identifier = Compositor::DRM::CreateFrameBuffer(id, buffer.Data);
                     }
-
-                    allocator.Release();
                 }
                 ~DoubleBuffer() override
                 {
@@ -138,14 +138,17 @@ namespace Backend {
 
         public:
             ConnectorImplementation() = delete;
-            ConnectorImplementation(Core::ProxyType<DRM> backend, const string& connector, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution)
-                : _referenceCount(1)
-                , _backend(backend)
+            ConnectorImplementation(ConnectorImplementation&&) = delete;
+            ConnectorImplementation(const ConnectorImplementation&) = delete;
+            ConnectorImplementation& operator= (const ConnectorImplementation&) = delete;
+
+            ConnectorImplementation(string gpu, const string& connector, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution)
+                : _backend(_backends.Instance<Backend::DRM>(gpu, gpu))
                 , _connectorId(_backend->FindConnectorId(connector))
                 , _ctrController(Compositor::DRM::InvalidIdentifier)
                 , _primaryPlane(Compositor::DRM::InvalidIdentifier)
                 , _currentBuffer(Compositor::DRM::InvalidIdentifier)
-                , _buffer(backend, resolution, format)
+                , _buffer(_backend, resolution, format)
                 , _refreshRate(Exchange::IComposition::RefreshRateFromResolution(resolution))
                 , _forceOutputResolution(forceResolution)
                 , _connectorProperties()
@@ -169,7 +172,7 @@ namespace Backend {
                 TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
             }
 
-            ~ConnectorImplementation()
+            ~ConnectorImplementation() override
             {
                 _backend.Release();
                 _buffer.CompositRelease();
@@ -177,25 +180,10 @@ namespace Backend {
                 TRACE(Trace::Backend, ("Connector %p Destroyed", this));
             }
 
+        public:
             /**
              * Exchange::ICompositionBuffer implementation
              */
-            void AddRef() const override
-            {
-                Core::InterlockedIncrement(_referenceCount);
-            }
-            uint32_t Release() const override
-            {
-                ASSERT(_referenceCount > 0);
-                uint32_t result(Core::ERROR_NONE);
-
-                if (Core::InterlockedDecrement(_referenceCount) == 0) {
-                    delete this;
-                    result = Core::ERROR_DESTRUCTION_SUCCEEDED;
-                }
-
-                return result;
-            }
             uint32_t Identifier() const override
             {
                 return _backend->Descriptor(); //_buffer.Identifier();
@@ -395,7 +383,6 @@ namespace Backend {
             }
 
         private:
-            mutable uint32_t _referenceCount;
             Core::ProxyType<DRM> _backend;
 
             const Compositor::DRM::Identifier _connectorId;
@@ -415,6 +402,8 @@ namespace Backend {
 
             drmModeModeInfo _drmModeStatus;
             Compositor::DRM::Identifier _dpmsPropertyId;
+
+            static Core::ProxyMapType<string, Backend::DRM> _backends;
         };
 
     private:
@@ -573,6 +562,8 @@ namespace Backend {
 
             uint32_t connectorId = 0;
 
+            TRACE_GLOBAL(Trace::Backend, ("Lets see if we can find connector: %s", connectorName.c_str()));
+
             if ((_cardFd > 0) && (resources != nullptr)) {
                 for (uint8_t i = 0; i < resources->count_connectors; i++) {
                     drmModeConnectorPtr connector = drmModeGetConnector(_cardFd, resources->connectors[i]);
@@ -587,6 +578,9 @@ namespace Backend {
                             TRACE_GLOBAL(Trace::Backend, ("Found connector %s", name));
                             connectorId = connector->connector_id;
                             break;
+                        }
+                        else {
+                            TRACE_GLOBAL(Trace::Backend, ("Passed out on connector %s", name));
                         }
 
                         drmModeFreeConnector(connector);
@@ -603,6 +597,9 @@ namespace Backend {
         std::shared_ptr<IOutput> _output;
         CommitRegister _pendingCommits;
     }; // class DRM
+
+
+    /* static */ Core::ProxyMapType<string, DRM> DRM::ConnectorImplementation::_backends;
 
     static void ParseConnectorName(const string& name, string& card, string& connector)
     {
@@ -623,8 +620,6 @@ namespace Backend {
 
 } // namespace Backend
 
-namespace IBackend {
-
 /* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force)
 {
     ASSERT(drmAvailable() == 1);
@@ -638,11 +633,9 @@ namespace IBackend {
 
     ASSERT((gpu.empty() == false) && (connector.empty() == false));
 
-    static Core::ProxyMapType<string, Backend::DRM> backends;
     static Core::ProxyMapType<string, Exchange::ICompositionBuffer> gbmConnectors;
 
-    return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connector, backends.Instance<Backend::DRM>(gpu, gpu), connector, resolution, format, force);
+    return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connector, gpu, connector, resolution, format, force);
 }
-} // namespace IBackend
 } // namespace Compositor
 } // WPEFramework

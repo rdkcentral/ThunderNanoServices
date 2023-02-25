@@ -17,10 +17,10 @@
  * limitations under the License.
  */
 
-#include "../Trace.h"
+#include "../Module.h"
 
-#include <IAllocator.h>
-#include <compositorbuffer/IBuffer.h>
+#include <IBuffer.h>
+#include <interfaces/ICompositionBuffer.h>
 #include <CompositorTypes.h>
 #include <DrmCommon.h>
 
@@ -31,17 +31,20 @@
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
+namespace WPEFramework {
 namespace Compositor {
 namespace Renderer {
-    class DRMDumb : public Interfaces::IBuffer {
+    class DRMDumb : public Exchange::ICompositionBuffer {
     public:
         DRMDumb() = delete;
+        DRMDumb(DRMDumb&&) = delete;
         DRMDumb(const DRMDumb&) = delete;
         DRMDumb& operator=(const DRMDumb&) = delete;
 
-        DRMDumb(const int fdPrimary, uint32_t width, uint32_t height, const PixelFormat& format)
+        DRMDumb(const int drmFd, uint32_t width, uint32_t height, const PixelFormat& format)
             : _adminLock()
             , _fd(InvalidFileDescriptor)
+            , _fdPrimary(drmFd)
             , _ptr(nullptr)
             , _size(0)
             , _pitch(0)
@@ -51,20 +54,31 @@ namespace Renderer {
             , _height(height)
             , _format(format.Type())
         {
-            ASSERT(fdPrimary != InvalidFileDescriptor);
+            ASSERT(drmFd != InvalidFileDescriptor);
+            ASSERT(drmGetNodeTypeFromFd(drmFd) == DRM_NODE_PRIMARY);
 
-            const unsigned int bpp(32); // TODO: derive from _format...
+            if (_fdPrimary != InvalidFileDescriptor) {
+                uint64_t dumbAvailable(0);
 
-            if (CreateDumbBuffer(fdPrimary, _width, _height, bpp, _handle, _pitch, _size) == 0) {
+                drmGetCap(_fdPrimary, DRM_CAP_DUMB_BUFFER, &dumbAvailable);
 
-                // TODO: use Core stuff and error handling here...
+                ASSERT(dumbAvailable != 0);
 
-                MapDumbBuffer(fdPrimary, _handle, _offset);
+                if (dumbAvailable != 0) {
+                    const unsigned int bpp(32); // TODO: derive from _format...
 
-                _ptr = mmap(nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED, fdPrimary, _offset);
-                memset(_ptr, 0, _size);
+                    if (CreateDumbBuffer(_fdPrimary, _width, _height, bpp, _handle, _pitch, _size) == 0) {
 
-                drmPrimeHandleToFD(fdPrimary, _handle, DRM_CLOEXEC, &_fd);
+                        // TODO: use Core stuff and error handling here...
+
+                        MapDumbBuffer(_fdPrimary, _handle, _offset);
+
+                        _ptr = mmap(nullptr, _size, PROT_READ | PROT_WRITE, MAP_SHARED, _fdPrimary, _offset);
+                        memset(_ptr, 0, _size);
+
+                        drmPrimeHandleToFD(_fdPrimary, _handle, DRM_CLOEXEC, &_fd);
+                    }
+                }
             }
 
             ASSERT(_fd > 0);
@@ -72,32 +86,41 @@ namespace Renderer {
 
             TRACE(Trace::Buffer, ("DRMDumb buffer %p constructed fd=%d data=%p [%dbytes]", this, _fd, _ptr, _size));
         }
-
-        virtual ~DRMDumb()
+        ~DRMDumb() override
         {
             if (_ptr != nullptr) {
                 munmap(_ptr, _size);
                 _ptr = nullptr;
             }
 
-            DestroyDumbBuffer(_fd, _handle);
+            if (_fd != InvalidFileDescriptor) {
+                DestroyDumbBuffer(_fd, _handle);
+                _fd = InvalidFileDescriptor;
+                _handle = 0;
+            }
 
-            _fd = InvalidFileDescriptor;
-            _handle = 0;
-
+            if (_fdPrimary != InvalidFileDescriptor) {
+                close(_fdPrimary);
+                _fdPrimary = InvalidFileDescriptor;
+            }
+ 
             TRACE(Trace::Buffer, ("DRMDumb buffer %p destructed", this));
         }
 
+    public:
+        bool IsValid() const {
+            return (_ptr != nullptr);
+        }
         uint32_t Lock(uint32_t timeout) const override
         {
             _adminLock.Lock();
-            return WPEFramework::Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
         uint32_t Unlock(uint32_t timeout) const override
         {
             _adminLock.Unlock();
-            return WPEFramework::Core::ERROR_NONE;
+            return Core::ERROR_NONE;
         }
 
         bool IsValid() const
@@ -150,9 +173,9 @@ namespace Renderer {
             return InvalidFileDescriptor;
         }
 
-        WPEFramework::Core::instance_id Accessor(const uint8_t)
+        Core::instance_id Accessor(const uint8_t)
         {
-            return reinterpret_cast<WPEFramework::Core::instance_id>(_ptr);
+            return reinterpret_cast<Core::instance_id>(_ptr);
         }
 
     private:
@@ -218,9 +241,10 @@ namespace Renderer {
 #endif
         }
 
-        mutable WPEFramework::Core::CriticalSection _adminLock;
+        mutable Core::CriticalSection _adminLock;
 
         int _fd;
+        int _fdPrimary;
         void* _ptr;
         uint64_t _size;
         uint32_t _pitch;
@@ -232,64 +256,26 @@ namespace Renderer {
         const uint32_t _format;
     }; // class DRMDumb
 
-    class GbmAllocator : public Interfaces::IAllocator {
-    public:
-        GbmAllocator() = delete;
-        GbmAllocator(const GbmAllocator&) = delete;
-        GbmAllocator& operator=(const GbmAllocator&) = delete;
-
-        GbmAllocator(const int drmFd)
-            : _fdPrimary(-1)
-        {
-            ASSERT(drmFd != InvalidFileDescriptor);
-            ASSERT(drmGetNodeTypeFromFd(drmFd) == DRM_NODE_PRIMARY);
-
-            uint64_t dumbAvailable(0);
-
-            drmGetCap(drmFd, DRM_CAP_DUMB_BUFFER, &dumbAvailable);
-
-            ASSERT(dumbAvailable == 0);
-
-            _fdPrimary = drmFd;
-
-            TRACE(Trace::Buffer, ("DRMDumb allocator %p constructed _fdPrimary=%d", this, _fdPrimary));
-        }
-
-        ~GbmAllocator() override
-        {
-            if (_fdPrimary != InvalidFileDescriptor) {
-                close(_fdPrimary);
-                _fdPrimary = InvalidFileDescriptor;
-            }
-
-            TRACE(Trace::Buffer, ("DRMDumb allocator %p destructed", this));
-        }
-
-        WPEFramework::Core::ProxyType<Interfaces::IBuffer> Create(const uint32_t width, const uint32_t height, const PixelFormat& format) override
-        {
-            WPEFramework::Core::ProxyType<Interfaces::IBuffer> result;
-
-            result = WPEFramework::Core::ProxyType<DRMDumb>::Create(_fdPrimary, width, height, format);
-
-            return result;
-        }
-
-    private:
-        int _fdPrimary;
-    };
 } // namespace Renderer
 
-WPEFramework::Core::ProxyType<Interfaces::IAllocator>
-Interfaces::IAllocator::Instance(WPEFramework::Core::instance_id identifier)
+Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer (DRM::Identifier identifier, const uint32_t width, const uint32_t height, const PixelFormat& format)
 {
     ASSERT(drmAvailable() > 0);
 
-    static WPEFramework::Core::ProxyMapType<WPEFramework::Core::instance_id, Interfaces::IAllocator> gbmAllocators;
-
+    Core::ProxyType<Exchange::ICompositionBuffer> result;
     int fd = DRM::ReopenNode(static_cast<int>(identifier), false);
 
-    ASSERT(fd > 0);
+    ASSERT(fd >= 0);
 
-    return gbmAllocators.Instance<Renderer::GbmAllocator>(identifier, fd);
+    if (fd >= 0) {
+        Core::ProxyType<DRMDumb> entry = Core::ProxyType<DRMDumb>::Create(fd, width, height, format);
+        if (entry->IsValid() == false) {
+            result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
+        }
+    }
+
+    return (result);
 }
+
 } // namespace Compositor
+} //namespace WPEFramework

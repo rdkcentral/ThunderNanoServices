@@ -26,8 +26,8 @@
 #include <interfaces/ICompositionBuffer.h>
 #include <messaging/messaging.h>
 
-#include <IAllocator.h>
 #include <IRenderer.h>
+#include <IBuffer.h>
 
 #include <drm_fourcc.h>
 #include <xf86drm.h>
@@ -140,30 +140,13 @@ int main(int argc, const char* argv[])
     assert(fdCard > 0);
     assert(fdRender > 0);
 
-    TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-    Core::ProxyType<Compositor::IAllocator> cardAllocator = Compositor::IAllocator::Instance(fdCard);
-    assert(cardAllocator.operator->() != nullptr);
-
-    TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-    Core::ProxyType<Compositor::IAllocator> renderAllocator = Compositor::IAllocator::Instance(fdRender);
-    assert(renderAllocator.operator->() != nullptr);
-    assert(cardAllocator.operator->() != renderAllocator.operator->());
-
-    {
-        TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-        Core::ProxyType<Compositor::IAllocator> renderAllocator2 = Compositor::IAllocator::Instance(fdRender);
-        assert(renderAllocator2.operator->() != nullptr);
-        assert(renderAllocator2.operator->() == renderAllocator.operator->());
-        renderAllocator2.Release();
-    }
-
     {
         TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
 
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> buffer = renderAllocator->Create(1920, 1080, format);
+        Core::ProxyType<Exchange::ICompositionBuffer> buffer = Compositor::CreateBuffer(fdRender, 1920, 1080, format);
 
         assert(buffer.operator->());
         assert(buffer->Width() == 1920);
@@ -178,7 +161,7 @@ int main(int argc, const char* argv[])
 
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> buffer = cardAllocator->Create(1920, 1080, format);
+        Core::ProxyType<Exchange::ICompositionBuffer> buffer = Compositor::CreateBuffer(fdCard, 1920, 1080, format);
 
         assert(buffer.operator->());
 
@@ -211,9 +194,6 @@ int main(int argc, const char* argv[])
 
         buffer.Release();
     }
-
-    renderAllocator.Release();
-    cardAllocator.Release();
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));
     tracer.Close();
