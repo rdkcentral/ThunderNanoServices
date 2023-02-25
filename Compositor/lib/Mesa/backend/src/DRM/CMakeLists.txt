@@ -17,40 +17,39 @@
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
-find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 find_package(${NAMESPACE}Definitions CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
-find_package(libdrm REQUIRED)
 
 set(ENABLE_ATOMIC OFF CACHE BOOL "Enable the atomic API for KMS/DRM Backend")
 
-add_library(DRMBackendImplentation OBJECT DRM.cpp)
+add_library(CommonBackendDRM STATIC DRM.cpp)
 
 if(ENABLE_ATOMIC)
-target_sources(DRMBackendImplentation PRIVATE Atomic.cpp)
+    target_sources(CommonBackendDRM PRIVATE Atomic.cpp)
 else()
-target_sources(DRMBackendImplentation PRIVATE Legacy.cpp)
+    target_sources(CommonBackendDRM PRIVATE Legacy.cpp)
 endif()
 
+target_link_libraries(CommonBackendDRM
+    PUBLIC
+        common::include
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        common::buffer
+        common::drm
+        gbm::gbm
+)
 
-set_target_properties(DRMBackendImplentation PROPERTIES
+set_target_properties(CommonBackendDRM PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-target_link_libraries(DRMBackendImplentation
-    PUBLIC
-        common::include
-        common::buffer
-        CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        libdrm::libdrm
-        gbm::gbm
-)
-
-add_library(common::backend ALIAS DRMBackendImplentation)
+add_library(common::backend ALIAS CommonBackendDRM)

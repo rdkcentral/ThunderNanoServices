@@ -27,6 +27,7 @@ namespace WPEFramework {
 
 namespace Compositor {
 
+
 using Box = struct {
     uint32_t x;
     uint32_t y;
@@ -37,6 +38,9 @@ using Box = struct {
 using Identifier = uintptr_t;
 using Matrix = std::array<float, 9>;
 using Color = std::array<float, 4>;
+
+constexpr int InvalidFileDescriptor = -1;
+constexpr Identifier InvalidIdentifier = static_cast<Identifier>(~0);
 
 /**
  * @brief  A single DRM format, with a set of modifiers attached.

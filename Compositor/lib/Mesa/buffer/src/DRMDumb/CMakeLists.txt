@@ -17,28 +17,28 @@
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
-find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
-find_package(libdrm REQUIRED)
 
-add_library(DRMDumbBufferImplentation OBJECT DRMDumb.cpp)
+add_library(CommonBufferDumb STATIC DRMDumb.cpp)
 
-target_link_libraries(DRMDumbBufferImplentation
+target_link_libraries(CommonBufferDumb
     PUBLIC
         common::include
+    PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         gbm::gbm
-        libdrm::libdrm
+        common::drm
 )
 
-set_target_properties(DRMDumbBufferImplentation PROPERTIES
+set_target_properties(CommonBufferDumb PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-add_library(common::buffer ALIAS DRMDumbBufferImplentation)
+add_library(common::buffer ALIAS CommonBufferDumb)

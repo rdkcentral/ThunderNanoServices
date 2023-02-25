@@ -25,6 +25,8 @@
 
 // #define __GBM__
 
+#include <DRM.h>
+#include <drm.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
 #include <libudev.h>
@@ -38,7 +40,6 @@ MODULE_NAME_ARCHIVE_DECLARATION
 // https://docs.nvidia.com/jetson/l4t-multimedia/group__direct__rendering__manager.html
 // http://github.com/dvdhrm/docs
 //
-
 namespace WPEFramework {
 
 namespace Compositor {
@@ -50,8 +51,8 @@ namespace Backend {
     class DRM {
     public:
         struct FrameBuffer {
-            Core::ProxyType<Exchange::ICompositionBuffer> Data;
-            Compositor::DRM::Identifier Identifier;
+            Core::ProxyType<Exchange::ICompositionBuffer> data;
+            Compositor::Identifier identifier;
         };
 
         class ConnectorImplementation : public Exchange::ICompositionBuffer, public IOutput::IConnector {
@@ -69,20 +70,20 @@ namespace Backend {
                     , _backBuffer(1)
                     , _frontBuffer(0)
                 {
-                    Compositor::DRM::Identifier id = _backend->Descriptor();
+                    Compositor::Identifier id = _backend->Descriptor();
                     uint32_t width  = Exchange::IComposition::WidthFromResolution(resolution);
                     uint32_t height = Exchange::IComposition::HeightFromResolution(resolution);
 
                     for (auto& buffer : _buffers) {
-                        buffer.Data = Compositor::CreateBuffer(id, width, height, format);
-                        buffer.Identifier = Compositor::DRM::CreateFrameBuffer(id, buffer.Data);
+                        buffer.data = Compositor::CreateBuffer(id, width, height, format);
+                        buffer.identifier = Compositor::DRM::CreateFrameBuffer(id, buffer.data.operator->());
                     }
                 }
                 ~DoubleBuffer() override
                 {
                     for (auto& buffer : _buffers) {
-                        Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.Identifier);
-                        buffer.Data.Release();
+                        Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.identifier);
+                        buffer.data.Release();
                     }
 
                     _backend.Release();
@@ -92,41 +93,41 @@ namespace Backend {
                  */
                 uint32_t Identifier() const override
                 {
-                    return _buffers.at(_backBuffer).Data->Identifier();
+                    return _buffers.at(_backBuffer).data->Identifier();
                 }
                 IIterator* Planes(const uint32_t timeoutMs) override
                 {
-                    return _buffers.at(_backBuffer).Data->Planes(timeoutMs);
+                    return _buffers.at(_backBuffer).data->Planes(timeoutMs);
                 }
                 uint32_t Completed(const bool dirty) override
                 {
-                    return _buffers.at(_backBuffer).Data->Completed(dirty);
+                    return _buffers.at(_backBuffer).data->Completed(dirty);
                 }
                 void Render() override
                 {
-                    return _buffers.at(_backBuffer).Data->Render();
+                    return _buffers.at(_backBuffer).data->Render();
                 }
                 uint32_t Width() const override
                 {
-                    return _buffers.at(_backBuffer).Data->Width();
+                    return _buffers.at(_backBuffer).data->Width();
                 }
                 uint32_t Height() const override
                 {
-                    return _buffers.at(_backBuffer).Data->Height();
+                    return _buffers.at(_backBuffer).data->Height();
                 }
                 uint32_t Format() const
                 {
-                    return _buffers.at(_backBuffer).Data->Format();
+                    return _buffers.at(_backBuffer).data->Format();
                 }
                 uint64_t Modifier() const override
                 {
-                    return _buffers.at(_backBuffer).Data->Modifier();
+                    return _buffers.at(_backBuffer).data->Modifier();
                 }
 
-                Compositor::DRM::Identifier Swap()
+                Compositor::Identifier Swap()
                 {
                     std::swap(_backBuffer, _frontBuffer);
-                    return _buffers.at(_frontBuffer).Identifier;
+                    return _buffers.at(_frontBuffer).identifier;
                 }
 
             private:
@@ -145,18 +146,18 @@ namespace Backend {
             ConnectorImplementation(string gpu, const string& connector, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution)
                 : _backend(_backends.Instance<Backend::DRM>(gpu, gpu))
                 , _connectorId(_backend->FindConnectorId(connector))
-                , _ctrController(Compositor::DRM::InvalidIdentifier)
-                , _primaryPlane(Compositor::DRM::InvalidIdentifier)
-                , _currentBuffer(Compositor::DRM::InvalidIdentifier)
+                , _ctrController(InvalidIdentifier)
+                , _primaryPlane(InvalidIdentifier)
+                , _currentBuffer(InvalidIdentifier)
                 , _buffer(_backend, resolution, format)
                 , _refreshRate(Exchange::IComposition::RefreshRateFromResolution(resolution))
                 , _forceOutputResolution(forceResolution)
                 , _connectorProperties()
                 , _crtcProperties()
                 , _drmModeStatus()
-                , _dpmsPropertyId(Compositor::DRM::InvalidIdentifier)
+                , _dpmsPropertyId(InvalidIdentifier)
             {
-                ASSERT(_connectorId != Compositor::DRM::InvalidIdentifier);
+                ASSERT(_connectorId != InvalidIdentifier);
 
                 _buffer.AddRef();
 
@@ -166,8 +167,8 @@ namespace Backend {
 
                 Scan();
 
-                ASSERT(_ctrController != Compositor::DRM::InvalidIdentifier);
-                ASSERT(_primaryPlane != Compositor::DRM::InvalidIdentifier);
+                ASSERT(_ctrController != InvalidIdentifier);
+                ASSERT(_primaryPlane != InvalidIdentifier);
 
                 TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
             }
@@ -229,28 +230,22 @@ namespace Backend {
                 // Todo: this will control switching on or of the display by controlling the Display Power Management Signaling (DPMS)
                 return true;
             }
-            Compositor::DRM::Identifier ConnectorId() const override
-            {
+            Compositor::Identifier ConnectorId() const override {
                 return _connectorId;
             }
-            Compositor::DRM::Identifier CtrControllerId() const override
-            {
+            Compositor::Identifier CtrControllerId() const override {
                 return _ctrController;
             }
-            Compositor::DRM::Identifier PrimaryPlaneId() const override
-            {
+            Compositor::Identifier PrimaryPlaneId() const override {
                 return _primaryPlane;
             }
-            Compositor::DRM::Identifier FrameBufferId() const override
-            {
+            Compositor::Identifier FrameBufferId() const override {
                 return _currentBuffer;
             }
-            const drmModeModeInfo& ModeInfo() const override
-            {
+            const drmModeModeInfo& ModeInfo() const override {
                 return _drmModeStatus;
             }
-            Compositor::DRM::Identifier DpmsPropertyId() const override
-            {
+            Compositor::Identifier DpmsPropertyId() const override {
                 return _dpmsPropertyId;
             }
 
@@ -262,8 +257,8 @@ namespace Backend {
 
             void Scan()
             {
-                _ctrController = Compositor::DRM::InvalidIdentifier;
-                _primaryPlane = Compositor::DRM::InvalidIdentifier;
+                _ctrController = Compositor::InvalidIdentifier;
+                _primaryPlane = Compositor::InvalidIdentifier;
 
                 drmModeResPtr res = drmModeGetResources(_backend->Descriptor());
                 drmModePlaneResPtr plane_res = drmModeGetPlaneResources(_backend->Descriptor());
@@ -286,7 +281,7 @@ namespace Backend {
                     }
 
                     /* Find the encoder (a deprecated KMS object) for this connector. */
-                    ASSERT(connector->encoder_id != Compositor::DRM::InvalidIdentifier);
+                    ASSERT(connector->encoder_id != Compositor::InvalidIdentifier);
 
                     for (uint8_t e = 0; e < res->count_encoders; e++) {
                         if (res->encoders[e] == connector->encoder_id) {
@@ -302,7 +297,7 @@ namespace Backend {
                      */
 
                     ASSERT(encoder != nullptr);
-                    ASSERT(encoder->crtc_id != Compositor::DRM::InvalidIdentifier);
+                    ASSERT(encoder->crtc_id != Compositor::InvalidIdentifier);
 
                     for (uint8_t c = 0; c < res->count_crtcs; c++) {
                         if (res->crtcs[c] == encoder->crtc_id) {
@@ -356,7 +351,7 @@ namespace Backend {
                 GetPropertyIds(_primaryPlane, DRM_MODE_OBJECT_PLANE, _planeProperties);
             }
 
-            bool GetPropertyIds(const Compositor::DRM::Identifier object, const uint32_t type, Compositor::DRM::PropertyRegister& registry)
+            bool GetPropertyIds(const Compositor::Identifier object, const uint32_t type, Compositor::DRM::PropertyRegister& registry)
             {
                 registry.clear();
 
@@ -385,11 +380,11 @@ namespace Backend {
         private:
             Core::ProxyType<DRM> _backend;
 
-            const Compositor::DRM::Identifier _connectorId;
-            Compositor::DRM::Identifier _ctrController;
-            Compositor::DRM::Identifier _primaryPlane;
+            const Compositor::Identifier _connectorId;
+            Compositor::Identifier _ctrController;
+            Compositor::Identifier _primaryPlane;
 
-            Compositor::DRM::Identifier _currentBuffer;
+            Compositor::Identifier _currentBuffer;
 
             Core::ProxyObject<DoubleBuffer> _buffer;
 
@@ -401,7 +396,7 @@ namespace Backend {
             Compositor::DRM::PropertyRegister _planeProperties;
 
             drmModeModeInfo _drmModeStatus;
-            Compositor::DRM::Identifier _dpmsPropertyId;
+            Compositor::Identifier _dpmsPropertyId;
 
             static Core::ProxyMapType<string, Backend::DRM> _backends;
         };
@@ -479,7 +474,7 @@ namespace Backend {
     private:
         uint32_t PageFlip(ConnectorImplementation& connector)
         {
-            if (connector.CtrControllerId() != Compositor::DRM::InvalidIdentifier) {
+            if (connector.CtrControllerId() != Compositor::InvalidIdentifier) {
                 _adminLock.Lock();
 
                 const auto index(_pendingCommits.find(connector.CtrControllerId()));
@@ -500,7 +495,7 @@ namespace Backend {
             return 0;
         }
 
-        void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sec, const unsigned usec)
+        void FinishPageFlip(const Compositor::Identifier crtc, const unsigned sec, const unsigned usec)
         {
             CommitRegister::iterator index(_pendingCommits.find(crtc));
 

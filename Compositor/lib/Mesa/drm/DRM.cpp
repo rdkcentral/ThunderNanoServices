@@ -17,37 +17,32 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "DRM.h"
 
+#ifndef MODULE_NAME
+#define MODULE_NAME DRMCommon
+#endif
+
+#include <core/core.h>
+#include <messaging/messaging.h>
 #include <interfaces/ICompositionBuffer.h>
-
-#include <drm.h>
 #include <drm_fourcc.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+
+MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace WPEFramework {
 
 namespace Compositor {
 
-constexpr int InvalidFileDescriptor = -1;
+using Identifier = uintptr_t;
 
 namespace DRM {
 
-    using Identifier = uint32_t;
-    using Value = uint64_t;
-    using PropertyRegister = std::map<string, Identifier>;
-    using IdentifierRegister = std::vector<Identifier>;
+    constexpr int InvalidFileDescriptor = -1;
 
-    constexpr Identifier InvalidIdentifier = 0;
-
-    enum class PlaneType : uint8_t {
-        Cursor = DRM_PLANE_TYPE_CURSOR,
-        Primary = DRM_PLANE_TYPE_PRIMARY,
-        Overlay = DRM_PLANE_TYPE_OVERLAY,
-    };
-
-    inline string PropertyString(const PropertyRegister& properties, const bool pretty = false)
+    string PropertyString(const PropertyRegister& properties, const bool pretty)
     {
         std::stringstream s;
         s << '{';
@@ -78,7 +73,7 @@ namespace DRM {
         return s.str();
     }
 
-    inline string IdentifierString(const std::vector<Identifier>& ids, const bool pretty = false)
+    string IdentifierString(const std::vector<Identifier>& ids, const bool pretty)
     {
         std::stringstream s;
         s << '{';
@@ -108,7 +103,7 @@ namespace DRM {
         return s.str();
     }
 
-    inline uint32_t GetPropertyId(PropertyRegister& registry, const string& name)
+    uint32_t GetPropertyId(PropertyRegister& registry, const string& name)
     {
         auto typeId = registry.find(name);
 
@@ -120,7 +115,7 @@ namespace DRM {
         return id;
     }
 
-    inline uint32_t GetProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, Compositor::DRM::Value& value)
+    uint32_t GetProperty(const int cardFd, const Identifier object, const Identifier property, Compositor::DRM::Value& value)
     {
         uint32_t result(Core::ERROR_NOT_SUPPORTED);
 
@@ -141,7 +136,7 @@ namespace DRM {
         return result;
     }
 
-    inline uint16_t GetBlobProperty(const int cardFd, const Compositor::DRM::Identifier object, const Compositor::DRM::Identifier property, const uint16_t blobSize, uint8_t blob[])
+    uint16_t GetBlobProperty(const int cardFd, const Identifier object, const Identifier property, const uint16_t blobSize, uint8_t blob[])
     {
         uint16_t length(0);
         uint64_t id;
@@ -160,135 +155,33 @@ namespace DRM {
         return length;
     }
 
-    inline void CloseDrmHandles(const int cardFd, std::array<uint32_t, 4>& handles)
+    void GetNodes(const uint32_t type, std::vector<string>& list)
     {
-        for (uint8_t currentIndex = 0; currentIndex < handles.size(); ++currentIndex) {
-            if (handles.at(currentIndex) != 0) {
-                // If multiple planes share the same BO handle, avoid double-closing it
-                bool alreadyClosed = false;
+        const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
 
-                for (uint8_t previousIndex = 0; previousIndex < currentIndex; ++previousIndex) {
-                    if (handles.at(currentIndex) == handles.at(previousIndex)) {
-                        alreadyClosed = true;
-                        break;
+        drmDevicePtr devices[nDrmDevices];
+
+        int device_count = drmGetDevices2(0 /* flags */, &devices[0], nDrmDevices);
+
+        if (device_count > 0) {
+            for (decltype(device_count) i = 0; i < device_count; i++) {
+                switch (type) {
+                case DRM_NODE_PRIMARY: // card<num>, always created, KMS, privileged
+                case DRM_NODE_CONTROL: // ControlD<num>, currently unused
+                case DRM_NODE_RENDER: // Solely for render clients, unprivileged
+                {
+                    if ((1 << type) == (devices[i]->available_nodes & (1 << type))) {
+                        list.push_back(string(devices[i]->nodes[type]));
                     }
+                    break;
                 }
-                if (alreadyClosed == true) {
-                    TRACE_GLOBAL(Trace::Error, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
-                }
-                else if (drmCloseBufferHandle(cardFd, handles.at(currentIndex)) != 0) {
-                    TRACE_GLOBAL(Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
+                case DRM_NODE_MAX:
+                default: // Unknown (new) node type
+                    break;
                 }
             }
-        }
 
-        handles.fill(0);
-    }
-
-    inline uint64_t Capability(const int cardFd, const uint64_t capability)
-    {
-        uint64_t value(0);
-
-        int result(drmGetCap(cardFd, capability, &value));
-
-        if (result != 0) {
-            TRACE_GLOBAL(Trace::Error, (("Failed to query capability 0x%016" PRIx64), capability));
-        }
-
-        return (result == 0) ? value : 0;
-    }
-
-    inline uint32_t CreateFrameBuffer(const int cardFd, const Core::ProxyType<Exchange::ICompositionBuffer> buffer)
-    {
-        ASSERT(cardFd > 0);
-        ASSERT(buffer.IsValid() == true);
-
-        buffer.AddRef();
-
-        uint32_t framebufferId = 0;
-
-        bool modifierSupported = (Capability(cardFd, DRM_CAP_ADDFB2_MODIFIERS) == 1) ? true : false;
-
-        TRACE_GLOBAL(Trace::Information, ("Framebuffers with modifiers %s", modifierSupported ? "supported" : "unsupported"));
-
-        uint16_t nPlanes(0);
-
-        std::array<uint32_t, 4> handles = { 0, 0, 0, 0 };
-        std::array<uint32_t, 4> pitches = { 0, 0, 0, 0 };
-        std::array<uint32_t, 4> offsets = { 0, 0, 0, 0 };
-        std::array<uint64_t, 4> modifiers;
-
-        modifiers.fill(buffer->Modifier());
-
-        Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
-        ASSERT(planes != nullptr);
-
-        while ((planes->Next() == true) && (planes->IsValid() == true)) {
-            ASSERT(planes->IsValid() == true);
-
-            Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
-            ASSERT(plane != nullptr);
-
-            if (drmPrimeFDToHandle(cardFd, plane->Accessor(), &handles[nPlanes]) != 0) {
-                TRACE_GLOBAL(Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
-                CloseDrmHandles(cardFd, handles);
-                break;
-            }
-
-            pitches[nPlanes] = plane->Stride();
-            offsets[nPlanes] = plane->Offset();
-
-            ++nPlanes;
-        }
-
-        if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
-
-            if (drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), modifiers.data(), &framebufferId, DRM_MODE_FB_MODIFIERS) != 0) {
-                TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer with modifiers"));
-            }
-        } else {
-            if (buffer->Modifier() != DRM_FORMAT_MOD_INVALID && buffer->Modifier() != DRM_FORMAT_MOD_LINEAR) {
-                TRACE_GLOBAL(Trace::Error, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64, buffer->Modifier()));
-                return 0;
-            }
-
-            int ret = drmModeAddFB2(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), &framebufferId, 0);
-
-            if (ret != 0 && buffer->Format() == DRM_FORMAT_ARGB8888 /*&& nPlanes == 1*/ && offsets[0] == 0) {
-                TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer (%s), falling back to old school drmModeAddFB", strerror(-ret)));
-
-                uint32_t depth = 32;
-                uint32_t bpp = 32;
-
-                if (drmModeAddFB(cardFd, buffer->Width(), buffer->Height(), depth, bpp, pitches[0], handles[0], &framebufferId) != 0) {
-                    TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer the old school way..."));
-                }
-
-            } else if (ret != 0) {
-                TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer..."));
-            }
-        }
-
-        CloseDrmHandles(cardFd, handles);
-
-        // just unlock and go, we still need to draw something,.
-        buffer->Completed(false);
-
-        buffer.Release();
-
-        TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
-
-        return framebufferId;
-    }
-
-    inline void DestroyFrameBuffer(const int cardFd, const uint32_t frameBufferId)
-    {
-        int drmResult(0);
-
-        if ((frameBufferId > 0) && (drmResult = drmModeRmFB(cardFd, frameBufferId) != 0)) {
-            TRACE_GLOBAL(Trace::Error, ("Failed to destroy framebuffer %u: %s", frameBufferId, strerror(drmResult)));
-        } else {
-            TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u destroyed %s", frameBufferId, strerror(drmResult)));
+            drmFreeDevices(&devices[0], device_count);
         }
     }
 
@@ -297,7 +190,7 @@ namespace DRM {
      * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
      *
      */
-    inline int ReopenNode(int fd, bool openRenderNode)
+    int ReopenNode(int fd, bool openRenderNode)
     {
         if (drmIsMaster(fd)) {
             // Only recent kernels support empty leases
@@ -370,37 +263,137 @@ namespace DRM {
         return newFd;
     }
 
-    inline void GetNodes(const uint32_t type, std::vector<string>& list)
+   static void CloseDrmHandles(const int cardFd, std::array<uint32_t, 4>& handles)
     {
-        const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
+        for (uint8_t currentIndex = 0; currentIndex < handles.size(); ++currentIndex) {
+            if (handles.at(currentIndex) != 0) {
+                // If multiple planes share the same BO handle, avoid double-closing it
+                bool alreadyClosed = false;
 
-        drmDevicePtr devices[nDrmDevices];
-
-        int device_count = drmGetDevices2(0 /* flags */, &devices[0], nDrmDevices);
-
-        if (device_count > 0) {
-            for (decltype(device_count) i = 0; i < device_count; i++) {
-                switch (type) {
-                case DRM_NODE_PRIMARY: // card<num>, always created, KMS, privileged
-                case DRM_NODE_CONTROL: // ControlD<num>, currently unused
-                case DRM_NODE_RENDER: // Solely for render clients, unprivileged
-                {
-                    if ((1 << type) == (devices[i]->available_nodes & (1 << type))) {
-                        list.push_back(string(devices[i]->nodes[type]));
+                for (uint8_t previousIndex = 0; previousIndex < currentIndex; ++previousIndex) {
+                    if (handles.at(currentIndex) == handles.at(previousIndex)) {
+                        alreadyClosed = true;
+                        break;
                     }
-                    break;
                 }
-                case DRM_NODE_MAX:
-                default: // Unknown (new) node type
-                    break;
+                if (alreadyClosed == true) {
+                    TRACE_GLOBAL(Trace::Error, ("Skipping DRM handle %u, already closed.", handles.at(currentIndex)));
+                }
+                else if (drmCloseBufferHandle(cardFd, handles.at(currentIndex)) != 0) {
+                    TRACE_GLOBAL(Trace::Error, ("Failed to close drm handle %u", handles.at(currentIndex)));
                 }
             }
+        }
 
-            drmFreeDevices(&devices[0], device_count);
+        handles.fill(0);
+    }
+
+    static uint64_t Capability(const int cardFd, const uint64_t capability)
+    {
+        uint64_t value(0);
+
+        int result(drmGetCap(cardFd, capability, &value));
+
+        if (result != 0) {
+            TRACE_GLOBAL(Trace::Error, (("Failed to query capability 0x%016" PRIx64), capability));
+        }
+
+        return (result == 0) ? value : 0;
+    }
+
+    uint32_t CreateFrameBuffer(const int cardFd, Exchange::ICompositionBuffer* buffer)
+    {
+        ASSERT(cardFd > 0);
+        ASSERT(buffer != nullptr);
+
+        uint32_t framebufferId = 0;
+
+        bool modifierSupported = (Capability(cardFd, DRM_CAP_ADDFB2_MODIFIERS) == 1) ? true : false;
+
+        TRACE_GLOBAL(Trace::Information, ("Framebuffers with modifiers %s", modifierSupported ? "supported" : "unsupported"));
+
+        uint16_t nPlanes(0);
+
+        // buffer->Lock();
+
+        std::array<uint32_t, 4> handles = { 0, 0, 0, 0 };
+        std::array<uint32_t, 4> pitches = { 0, 0, 0, 0 };
+        std::array<uint32_t, 4> offsets = { 0, 0, 0, 0 };
+        std::array<uint64_t, 4> modifiers;
+
+        modifiers.fill(buffer->Modifier());
+
+        Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
+        ASSERT(planes != nullptr);
+
+        while ((planes->Next() == true) && (planes->IsValid() == true)) {
+            ASSERT(planes->IsValid() == true);
+
+            Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
+            ASSERT(plane != nullptr);
+
+            if (drmPrimeFDToHandle(cardFd, plane->Accessor(), &handles[nPlanes]) != 0) {
+                TRACE_GLOBAL(Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
+                CloseDrmHandles(cardFd, handles);
+                break;
+            }
+
+            pitches[nPlanes] = plane->Stride();
+            offsets[nPlanes] = plane->Offset();
+
+            ++nPlanes;
+        }
+
+        if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
+
+            if (drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), modifiers.data(), &framebufferId, DRM_MODE_FB_MODIFIERS) != 0) {
+                TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer with modifiers"));
+            }
+        } else {
+            if (buffer->Modifier() != DRM_FORMAT_MOD_INVALID && buffer->Modifier() != DRM_FORMAT_MOD_LINEAR) {
+                TRACE_GLOBAL(Trace::Error, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64, buffer->Modifier()));
+                return 0;
+            }
+
+            int ret = drmModeAddFB2(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), &framebufferId, 0);
+
+            if (ret != 0 && buffer->Format() == DRM_FORMAT_ARGB8888 /*&& nPlanes == 1*/ && offsets[0] == 0) {
+                TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer (%s), falling back to old school drmModeAddFB", strerror(-ret)));
+
+                uint32_t depth = 32;
+                uint32_t bpp = 32;
+
+                if (drmModeAddFB(cardFd, buffer->Width(), buffer->Height(), depth, bpp, pitches[0], handles[0], &framebufferId) != 0) {
+                    TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer the old school way..."));
+                }
+
+            } else if (ret != 0) {
+                TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer..."));
+            }
+        }
+
+        CloseDrmHandles(cardFd, handles);
+
+        // just unlock and go, we still need to draw something,.
+        // buffer->Completed(false);
+
+        TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
+
+        return framebufferId;
+    }
+
+    void DestroyFrameBuffer(const int cardFd, const uint32_t frameBufferId)
+    {
+        int drmResult(0);
+
+        if ((frameBufferId > 0) && (drmResult = drmModeRmFB(cardFd, frameBufferId) != 0)) {
+            TRACE_GLOBAL(Trace::Error, ("Failed to destroy framebuffer %u: %s", frameBufferId, strerror(drmResult)));
+        } else {
+            TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u destroyed %s", frameBufferId, strerror(drmResult)));
         }
     }
 
-    inline bool HasNode(const drmDevice* drmDevice, const char* deviceName)
+    bool HasNode(const drmDevice* drmDevice, const char* deviceName)
     {
         bool result(false);
         for (uint16_t i = 0; i < DRM_NODE_MAX; i++) {
@@ -412,9 +405,9 @@ namespace DRM {
         return result;
     }
 
-    static int OpenGPU(const string& gpuNode)
+    int OpenGPU(const string& gpuNode)
     {
-        int fd(Compositor::InvalidFileDescriptor);
+        int fd(Compositor::DRM::InvalidFileDescriptor);
 
         ASSERT(drmAvailable() > 0);
 
@@ -422,7 +415,7 @@ namespace DRM {
 
             std::vector<string> nodes;
 
-            Compositor::DRM::GetNodes(DRM_NODE_PRIMARY, nodes);
+            GetNodes(DRM_NODE_PRIMARY, nodes);
 
             const auto& it = std::find(nodes.cbegin(), nodes.cend(), gpuNode);
 

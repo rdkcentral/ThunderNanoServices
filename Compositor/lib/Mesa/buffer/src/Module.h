@@ -26,7 +26,6 @@
 #include <core/core.h>
 #include <tracing/tracing.h>
 #include <CompositorTypes.h>
-#include <DrmCommon.h>
 #include <IBuffer.h>
 
 #include <interfaces/ICompositionBuffer.h>

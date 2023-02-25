@@ -23,6 +23,7 @@
 #include <gbm.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include <DRM.h>
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
@@ -313,7 +314,7 @@ namespace Renderer {
 
 } // namespace Renderer
 
-/* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(const DRM::Identifier identifier, const uint32_t width, const uint32_t height, const PixelFormat& format) {
+/* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(const Compositor::Identifier identifier, const uint32_t width, const uint32_t height, const PixelFormat& format) {
 
     ASSERT(drmAvailable() == 1);
 

@@ -20,6 +20,7 @@ add_executable(buffertest main.cpp)
 target_link_libraries(buffertest
     PRIVATE
         common::buffer
+        common::drm
 )
 
 install(TARGETS buffertest DESTINATION bin)

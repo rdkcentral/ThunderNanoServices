@@ -15,27 +15,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(TARGET ${PLATFORM_COMPOSITOR})
-
-message(STATUS "Setting up ${TARGET} for Mesa platfrom")
-
-find_package(${NAMESPACE}Core REQUIRED)
-find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Core CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 
-find_package(gbm REQUIRED)
 find_package(libdrm REQUIRED)
 
-find_package(EGL REQUIRED)
-find_package(GLESv2 REQUIRED)
+add_library(CommonDRM STATIC DRM.cpp)
 
-set(COMPOSITOR_DISPLAY_IMPLEMENTATION  "DRM" CACHE STRING "Defines which display implementation is used")
-set(COMPOSITOR_RENDERER_IMPLEMENTATION "GL" CACHE STRING "Defines which renderer implementation is used")
-set(COMPOSITOR_BACKEND_IMPLEMENTATION  "DRM" CACHE STRING "Defines which backend implementation is used")
+target_link_libraries(CommonDRM
+    PUBLIC
+        libdrm::libdrm
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
+)
 
-add_subdirectory(include)
-add_subdirectory(drm)
-add_subdirectory(buffer)
-add_subdirectory(backend)
-add_subdirectory(renderer)
+set_target_properties(CommonDRM
+    PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
+target_include_directories(CommonDRM
+    INTERFACE
+        "${CMAKE_CURRENT_LIST_DIR}")
+
+
+add_library(common::drm ALIAS CommonDRM)

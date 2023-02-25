@@ -21,13 +21,17 @@
 #include "EGL.h"
 
 #include <tracing/tracing.h>
-#include <DrmCommon.h>
+#include <DRM.h>
+#include <drm.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
+#include <xf86drm.h>
+#include <xf86drmMode.h>
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace WPEFramework {
+
 
 #ifdef __DEBUG__
 void DebugSink(EGLenum error, const char* command, EGLint messageType, EGLLabelKHR /*threadLabel*/, EGLLabelKHR /*objectLabel*/, const char* message)
@@ -217,7 +221,14 @@ namespace Renderer {
 
                         TRACE(Trace::EGL, ("Found EGL device %s", deviceName));
 
-                        bool nodePresent = DRM::HasNode(drmDevice, deviceName);
+                        bool nodePresent(false);
+
+                        for (uint16_t i = 0; i < DRM_NODE_MAX; i++) {
+                            if ((drmDevice->available_nodes & (1 << i)) && (strcmp(drmDevice->nodes[i], deviceName) == 0)) {
+                                nodePresent = true;
+                                break;
+                            }
+                        }
 
                         if ((deviceName != nullptr) && (nodePresent == true)) {
                             TRACE(Trace::EGL, ("Using EGL device %s", deviceName));

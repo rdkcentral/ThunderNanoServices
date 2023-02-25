@@ -17,7 +17,7 @@
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
-find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
 find_package(libdrm REQUIRED)
@@ -28,9 +28,9 @@ target_link_libraries(scandrm
     PUBLIC
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         common::include
-        libdrm::libdrm
+        common::drm
         gbm::gbm
 )
 

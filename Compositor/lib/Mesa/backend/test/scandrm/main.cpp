@@ -25,7 +25,7 @@
 #include <localtracer/localtracer.h>
 #include <messaging/messaging.h>
 
-#include <DrmCommon.h>
+#include <DRM.h>
 
 #include <drm_fourcc.h>
 #include <gbm.h>

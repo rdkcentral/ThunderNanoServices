@@ -27,7 +27,6 @@
 #include <messaging/messaging.h>
 #include <libudev.h>
 #include <CompositorTypes.h>
-#include <DrmCommon.h>
 #include <IBuffer.h>
 
 #if HAVE_GBM_MODIFIERS

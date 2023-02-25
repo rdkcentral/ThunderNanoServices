@@ -15,10 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_library(COMMON_INCLUDE_DIR INTERFACE)
+add_library(CommonInclude INTERFACE)
 
-target_include_directories(COMMON_INCLUDE_DIR
+target_include_directories(CommonInclude
     INTERFACE
         "${CMAKE_CURRENT_LIST_DIR}")
 
-add_library(common::include ALIAS COMMON_INCLUDE_DIR)
+add_library(common::include ALIAS CommonInclude)

@@ -20,6 +20,7 @@
 #include "../Module.h"
 #include "IOutput.h"
 
+#include <DRM.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
 #include <xf86drm.h>

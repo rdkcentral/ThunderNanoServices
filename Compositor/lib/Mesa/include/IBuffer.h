@@ -19,7 +19,6 @@
  */
 #pragma once
 
-#include "DrmCommon.h"
 #include "CompositorTypes.h"
 
 #include <interfaces/IComposition.h>
@@ -58,7 +57,7 @@ namespace Compositor {
      * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
      */
     extern Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer (
-        const DRM::Identifier identifier, 
+        const Identifier identifier, 
         const uint32_t width, 
         const uint32_t height, 
         const PixelFormat& format);

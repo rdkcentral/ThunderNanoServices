@@ -17,45 +17,46 @@
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
-find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
 
-find_package(libdrm REQUIRED)
 find_package(gbm REQUIRED)
 
 add_subdirectory(shaders)
 
-add_library(GLES2RendererImplementation OBJECT GLES2.cpp EGL.cpp)
+add_library(CommonRendererGLES STATIC GLES2.cpp EGL.cpp)
 
-target_link_libraries(GLES2RendererImplementation
+target_link_libraries(CommonRendererGLES
     PUBLIC
         common::include
         common::transformation
+    PRIVATE
+        common::drm
         gl::shaders
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         EGL::EGL
         GLESv2::GLESv2
         libdrm::libdrm
         gbm::gbm
 )
 
-set_target_properties(GLES2RendererImplementation PROPERTIES
+set_target_properties(CommonRendererGLES PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-target_compile_definitions(GLES2RendererImplementation
+target_compile_definitions(CommonRendererGLES
     PUBLIC
         EGL_NO_X11
         __DEBUG__
     )
 
-add_library(common::renderer ALIAS GLES2RendererImplementation)
+add_library(common::renderer ALIAS CommonRendererGLES)
 
 add_subdirectory(test)

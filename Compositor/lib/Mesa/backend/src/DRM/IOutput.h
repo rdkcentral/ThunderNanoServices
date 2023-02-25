@@ -21,6 +21,8 @@
 
 #include "../Module.h"
 
+#include <xf86drmMode.h>
+
 namespace WPEFramework {
 
 namespace Compositor {
@@ -35,12 +37,12 @@ namespace Backend {
 
             virtual bool IsEnabled() const = 0; 
 
-            virtual DRM::Identifier ConnectorId() const = 0;
-            virtual DRM::Identifier CtrControllerId() const = 0;
-            virtual DRM::Identifier PrimaryPlaneId() const = 0;
-            virtual DRM::Identifier FrameBufferId() const = 0;
+            virtual Identifier ConnectorId() const = 0;
+            virtual Identifier CtrControllerId() const = 0;
+            virtual Identifier PrimaryPlaneId() const = 0;
+            virtual Identifier FrameBufferId() const = 0;
 
-            virtual DRM::Identifier DpmsPropertyId() const = 0;
+            virtual Identifier DpmsPropertyId() const = 0;
 
             virtual const drmModeModeInfo& ModeInfo() const = 0;
         };

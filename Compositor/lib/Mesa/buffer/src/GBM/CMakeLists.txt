@@ -17,34 +17,34 @@
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
-find_package(${NAMESPACE}Tracing CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
-find_package(libdrm REQUIRED)
 
-add_library(GBMBufferImplentation OBJECT GBM.cpp)
+add_library(CommonBufferGBM STATIC GBM.cpp)
 
-target_link_libraries(GBMBufferImplentation
+target_link_libraries(CommonBufferGBM 
     PUBLIC
         common::include
+    PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         gbm::gbm
-        libdrm::libdrm
+        common::drm
 )
 
-target_compile_definitions(GBMBufferImplentation
+target_compile_definitions(CommonBufferGBM
     PRIVATE
         HAVE_GBM_MODIFIERS=1
         HAS_GBM_BO_GET_FD_FOR_PLANE=1
 )
 
-set_target_properties(GBMBufferImplentation PROPERTIES
+set_target_properties(CommonBufferGBM PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
-add_library(common::buffer ALIAS GBMBufferImplentation)
+add_library(common::buffer ALIAS CommonBufferGBM)
