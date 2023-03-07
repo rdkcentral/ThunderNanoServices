@@ -913,7 +913,7 @@ namespace Plugin
             ASSERT(service != nullptr);
             ASSERT(_controller.IsValid() == false);
 
-            uint32_t result = Core::GENERAL;
+            uint32_t result = Core::ERROR_GENERAL;
 
 #ifdef USE_WIFI_HAL
             _controller = WPASupplicant::WifiHAL::Create();
@@ -927,7 +927,7 @@ namespace Plugin
 
             if (PrepareWPASupplicant(service, config) == Core::ERROR_NONE) {
 
-                _controller = WPASupplicant::Controller::Create(connectorFullDirectory, config.Interface.Value(), 10);
+                _controller = WPASupplicant::Controller::Create(service->VolatilePath() + config.ConnectorDirectory.Value(), config.Interface.Value(), 10);
 
                 ASSERT(_controller.IsValid() == false);
 
@@ -1106,8 +1106,9 @@ namespace Plugin
         END_INTERFACE_MAP
 
     private:
-        uint32_t PrepareWPASupplicant(const IService* service, const Setting& config) {
-            uint32_t result = Core::GENERAL;
+<<<<<<< HEAD
+        uint32_t PrepareWPASupplicant(const PluginHost::IShell* service, const Setting& config) {
+            uint32_t result = Core::ERROR_GENERAL;
 
             if ((config.Application.Value().empty() == true) && (config.Application.IsNull() == false)) {
                 SYSLOG(Logging::Error, (_T("WPA_SUPPLICANT application path is not set")));
