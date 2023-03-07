@@ -1106,7 +1106,6 @@ namespace Plugin
         END_INTERFACE_MAP
 
     private:
-<<<<<<< HEAD
         uint32_t PrepareWPASupplicant(const PluginHost::IShell* service, const Setting& config) {
             uint32_t result = Core::ERROR_GENERAL;
 
