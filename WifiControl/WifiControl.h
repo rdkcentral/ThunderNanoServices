@@ -57,7 +57,6 @@ namespace Plugin {
         private:
             WifiControl& _parent;
         };
-
         class WifiNotification : public Exchange::IWifiControl::INotification {
         public:
             explicit WifiNotification(WifiControl* parent)

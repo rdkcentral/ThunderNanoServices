@@ -22,161 +22,6 @@
 #include "Module.h"
 
 namespace WPEFramework {
-    namespace PluginHost {
-        class ChannelDispatcher
-            : public PluginHost::IPluginExtended
-            , public PluginHost::IChannel {
-        private:
-            enum state : uint8_t {
-                OPERATIONAL       = 0x01,
-                HAS_INBOUND_DATA  = 0x02,
-                HAS_OUTBOUND_DATA = 0x04
-            };
-
-            class Connector {
-            public:
-                Connector(Connector&&) = delete;
-                Connector(const Connector&) = delete;
-                Connector& operator=(const Connector&) = delete;
-
-                Connector(PluginHost::Channel& channel, Core::IStream* link, const uint32_t length, uint8_t buffer[])
-                    : _adminLock()
-                    , _link(link)
-                    , _channel(&channel)
-                    , _buffer(length, buffer)
-                {
-                }
-                ~Connector() = default;
-
-            public:
-                uint32_t Id() const
-                {
-                    uint32_t result = 0;
-                    _adminLock.Lock();
-
-                    if (_channel != nullptr) {
-                        result = _channel->Id();
-                    }
-
-                    _adminLock.Unlock();
-
-                    return (result);
-                }
-                string RemoteId() const
-                {
-                    return (_link->RemoteId());
-                }
-                bool IsClosed() const
-                {
-                    return ((_channel == nullptr) && (_link->IsClosed()));
-                }
-                // Methods to extract and insert data into the socket buffers
-                uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
-                {
-                    _adminLock.Lock();
-
-                    uint16_t result = _buffer.Read(dataFrame, maxSendSize);
-
-                    _adminLock.Unlock();
-
-                    return (result);
-                }
-                uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
-                {
-                    _adminLock.Lock();
-
-                    bool wasEmpty = _buffer.IsEmpty();
-
-                    uint16_t result = _buffer.Write(dataFrame, receivedSize);
-
-                    if (wasEmpty == true) {
-                        // This is new data, there was nothing pending, trigger a request for a frambuffer.
-                        _channel->RequestOutbound();
-                    }
-
-                    _adminLock.Unlock();
-
-                    return (result);
-                }
-                // Signal a state change, Opened, Closed or Accepted
-                void StateChange()
-                {
-                    if (_link->IsOpen() == true) {
-                        TRACE(Trace::Information, (_T("Proxy connection for channel ID [%d] is Open"), Id()));
-                    }
-                    else if (IsClosed() == true) {
-                        TRACE(Trace::Information, (_T("Proxy connection for channel ID [%d] is Closed"), Id()));
-                    }
-                    else {
-                        TRACE(Trace::Information, (_T("Proxy connection for channel ID [%d] has reached an exceptional state"), Id()));
-                    }
-                }
-                void Open()
-                {
-                    _adminLock.Lock();
-                    _link->Open(0);
-                    _adminLock.Unlock();
-                }
-                void Close()
-                {
-                    _adminLock.Lock();
-                    _channel = nullptr;
-                    _link->Close(0);
-                    _adminLock.Unlock();
-                }
-
-            private:
-                mutable Core::CriticalSection _adminLock;
-                Core::IStream* _link;
-                PluginHost::Channel* _channel;
-                Core::CyclicDataBuffer _buffer;
-            };
-
-            template <typename STREAMTYPE, const uint32_t BUFFERSIZE>
-            class ConnectorType : public Connector {
-            public:
-                ConnectorType() = delete;
-                ConnectorType(ConnectorType<STREAMTYPE,BUFFERSIZE>&&) = delete;
-                ConnectorType(const ConnectorType<STREAMTYPE, BUFFERSIZE>&) = delete;
-                ConnectorType<STREAMTYPE, BUFFERSIZE>& operator=(const ConnectorType<STREAMTYPE, BUFFERSIZE>&) = delete;
-
-                PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST);
-                template <typename... Args>
-                ConnectorType(PluginHost::Channel& channel, Args&&... args)
-                    : Connector(channel, &_streamType, _buffer.Size(), _buffer.Buffer())
-                    , _streamType(*this, std::forward<Args>(args)...)
-                {
-                }
-                POP_WARNING();
-
-                ~ConnectorType() override = default;
-
-            private:
-                STREAMTYPE _streamType;
-                Core::ScopedStorage<BUFFERSIZE> _buffer;
-            };
-
-            using Connectors = std::unordered_map<uint32_t, Connector*>;
-
-            class ChannelAdministrator {
-
-            };
-
-        public:
-            bool IsOperational() const {
-                return (true);
-            }
-            bool HasInboundData() const {
-                return (true);
-            }
-            bool HasOutboundData() const {
-                return (true);
-            }
-            uint32_t Write(const uint32_t id, const uint32_t length, const uint8_t buffer[]);
-            uint32_t Read(const uint32_t id, const uint32_t length, uint8_t buffer[]);
-            uint32_t Activity(const uint32_t id);
-        };
-    }
 
 namespace Plugin {
 
@@ -185,6 +30,89 @@ namespace Plugin {
         , public PluginHost::IChannel {
     public:
         class Connector {
+        private:
+            class EXTERNAL CyclicDataBuffer {
+            public:
+                CyclicDataBuffer() = delete;
+                CyclicDataBuffer(CyclicDataBuffer&&) = delete;
+                CyclicDataBuffer(const CyclicDataBuffer&) = delete;
+                CyclicDataBuffer& operator=(const CyclicDataBuffer&) = delete;
+
+                CyclicDataBuffer(const uint32_t size, uint8_t buffer[])
+                    : _head(0)
+                    , _tail(0)
+                    , _size(size)
+                    , _buffer(buffer) {
+                }
+                ~CyclicDataBuffer() = default;
+
+            public:
+                inline uint32_t Filled() const
+                {
+                    return ((_head >= _tail) ? (_head - _tail) : _size - (_tail - _head));
+                }
+                inline uint32_t Free() const
+                {
+                    return ((_head >= _tail) ? (_size - (_head - _tail)) : (_tail - _head));
+                }
+                inline bool IsEmpty() const
+                {
+                    return (_head == _tail);
+                }
+                uint16_t Read(uint8_t* dataFrame, const uint16_t maxSendSize) const
+                {
+                    uint16_t result = 0;
+
+                    if (_head != _tail) {
+                        if (_tail > _head) {
+                            result = ((_size - _tail) < maxSendSize ? (_size - _tail) : maxSendSize);
+                            ::memcpy(dataFrame, &(_buffer[_tail]), result);
+                            _tail = (_size == (_tail + result) ? 0 : (_tail + result));
+                        }
+
+                        if ((_tail < _head) && (result < maxSendSize)) {
+                            uint16_t copySize = (static_cast<uint16_t>(_head - _tail) < static_cast<uint16_t>(maxSendSize - result) ? (_head - _tail) : (maxSendSize - result));
+                            ::memcpy(&dataFrame[result], &(_buffer[_tail]), copySize);
+                            _tail += copySize;
+                            result += copySize;
+                        }
+                    }
+
+                    return (result);
+                }
+                uint16_t Write(const uint8_t* dataFrame, const uint16_t receivedSize)
+                {
+                    ASSERT(receivedSize < _size);
+                    uint32_t freeBuffer = Free();
+                    uint32_t result = ((receivedSize + _head) > _size ? (_size - _head) : receivedSize);
+
+                    ::memcpy(&(_buffer[_head]), dataFrame, result);
+                    _head = ((_head + result) < _size ? (_head + result) : 0);
+
+                    while (result < receivedSize) {
+                        // we continue at the beginning.
+                        uint32_t copySize = ((receivedSize - result) > static_cast<uint16_t>(_size) ? _size : (receivedSize - result));
+
+                        ::memcpy(_buffer, &(dataFrame[result]), copySize);
+                        _head = ((_head + copySize) < _size ? (_head + copySize) : 0);
+                        result += copySize;
+                    }
+
+                    if (freeBuffer < receivedSize) {
+                        // We have an override, adapt the tail.
+                        _tail = ((_head + 1) < static_cast<uint16_t>(_size) ? (_head + 1) : 0);
+                    }
+
+                    return (result);
+                }
+
+            private:
+                uint32_t _head;
+                mutable uint32_t _tail;
+                const uint32_t _size;
+                uint8_t* _buffer;
+            };
+
         public:
             Connector(Connector&&) = delete;
             Connector(const Connector&) = delete;
@@ -310,8 +238,8 @@ namespace Plugin {
             mutable Core::CriticalSection _adminLock;
             Core::ScopedStorage<8192> _buffer1;
             Core::ScopedStorage<8192> _buffer2;
-            Core::CyclicDataBuffer _channelBuffer;
-            Core::CyclicDataBuffer _socketBuffer;
+            CyclicDataBuffer _channelBuffer;
+            CyclicDataBuffer _socketBuffer;
         };
         class Config : public Core::JSON::Container {
         public:
