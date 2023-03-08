@@ -26,7 +26,7 @@
 #include <interfaces/IKeyHandler.h>
 #include <plugins/plugins.h>
 #include <tracing/tracing.h>
-#include <interfaces/definitions.h>
+#include <definitions/definitions.h>
 
 #undef EXTERNAL
 #define EXTERNAL
