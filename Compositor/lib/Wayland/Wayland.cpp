@@ -166,6 +166,7 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
+                , RefreshLock(false)
                 , Join(false)
                 , Display("wayland-0")
                 , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
@@ -173,6 +174,7 @@ namespace Plugin {
                 Add(_T("join"), &Join);
                 Add(_T("display"), &Display);
                 Add(_T("resolution"), &Resolution);
+                Add(_T("refreshlock"), &RefreshLock);
 
             }
             ~Config()
@@ -180,6 +182,7 @@ namespace Plugin {
             }
 
         public:
+            Core::JSON::Boolean RefreshLock;
             Core::JSON::Boolean Join;
             Core::JSON::String Display;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
@@ -327,6 +330,9 @@ namespace Plugin {
             ASSERT(_nxserver != nullptr);
             return (((_nxserver != nullptr) || (_server != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #else
+            if (_config.RefreshLock.Value() == true) {
+                ::setenv("WESTEROS_GL_USE_REFRESH_LOCK", "1", 1);
+            }
             StartImplementation();
             return ((_server != nullptr) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #endif

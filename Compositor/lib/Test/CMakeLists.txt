@@ -19,6 +19,9 @@ find_package(GLESv2 REQUIRED)
 find_package(EGL REQUIRED)
 find_package(PNG REQUIRED)
 
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(compositorclient CONFIG REQUIRED)
+
 add_executable(CompositorTest Test.cpp)
 
 set_target_properties(CompositorTest PROPERTIES
@@ -28,7 +31,8 @@ set_target_properties(CompositorTest PROPERTIES
 
 target_link_libraries(CompositorTest
     PRIVATE
-        compositorclient
+    CompileSettingsDebug::CompileSettingsDebug
+    compositorclient::compositorclient
         PNG::PNG       
          ${EGL_LIBRARIES}
          ${GLESV2_LIBRARIES}
