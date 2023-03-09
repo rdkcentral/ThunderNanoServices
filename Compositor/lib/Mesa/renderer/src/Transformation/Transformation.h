@@ -26,21 +26,6 @@
 namespace WPEFramework {
 namespace Compositor {
 namespace Transformation {
-    /**
-     * transform from framebuffer to output
-     *
-     * This describes the transform that a compositor will apply to a
-     * surface to compensate for the rotation or mirroring of an
-     * output device.
-     *
-     * The flipped values correspond to an initial flip around a
-     * vertical axis followed by rotation.
-     *
-     * The purpose is mainly to allow clients to render accordingly and
-     * tell the compositor, so that for full screen surfaces, the
-     * compositor will still be able to scan out directly from client
-     * surfaces.
-     */
     using TransformType = enum : uint8_t {
         TRANSFORM_NORMAL = 0, // No transform
         TRANSFORM_90 = 1, // 90 degrees counter-clockwise
