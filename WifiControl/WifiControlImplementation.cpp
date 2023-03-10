@@ -871,12 +871,13 @@ namespace Plugin
         {
 #ifndef USE_WIFI_HAL
 
-            _autoConnect.Revoke();
-            _wpsConnect.Revoke();
-            _controller->Callback(nullptr);
-            _controller->Terminate();
-            _controller.Release();
-
+            if (_controller.IsValid()) {
+                _autoConnect.Revoke();
+                _wpsConnect.Revoke();
+                _controller->Callback(nullptr);
+                _controller->Terminate();
+                _controller.Release();
+            }
             _wpaSupplicant.Terminate();
 #endif
             _job.Revoke();
