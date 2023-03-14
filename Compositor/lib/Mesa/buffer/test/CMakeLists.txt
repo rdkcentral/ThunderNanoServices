@@ -15,10 +15,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Core CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
+find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
+
 add_executable(buffertest main.cpp)
 
 target_link_libraries(buffertest
     PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
+        ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
         common::buffer
         common::drm
 )
