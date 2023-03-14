@@ -15,7 +15,6 @@ target_link_libraries(glextinfo
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
-        ${COMPOSITOR_RENDERER_IMPLEMENTATION}
         common::renderer
         EGL::EGL
 )
