@@ -39,21 +39,22 @@ using namespace WPEFramework;
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace {
-#define CASE_STR(value) \
+/* simple stringification operator to make errorcodes human readable */
+#define CASE_TO_STRING(value) \
     case value:         \
         return #value;
 
 static const char* PlaneTypeString(uint64_t type)
 {
     switch (type) {
-        CASE_STR(DRM_PLANE_TYPE_OVERLAY)
-        CASE_STR(DRM_PLANE_TYPE_PRIMARY)
-        CASE_STR(DRM_PLANE_TYPE_CURSOR)
+        CASE_TO_STRING(DRM_PLANE_TYPE_OVERLAY)
+        CASE_TO_STRING(DRM_PLANE_TYPE_PRIMARY)
+        CASE_TO_STRING(DRM_PLANE_TYPE_CURSOR)
     default:
         return "Unknown";
     }
 }
-#undef CASE_STR
+#undef CASE_TO_STRING
 
 uint32_t GetProperty(const int cardFd, const uint32_t objectId, const uint32_t propertyId, uint64_t& value)
 {

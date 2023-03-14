@@ -56,29 +56,30 @@ const std::vector<std::string> Parse(const std::string& input)
     return std::vector<std::string>{ std::istream_iterator<std::string>{ iss }, std::istream_iterator<std::string>{} };
 }
 
-#define CASE_STR(value) \
+/* simple stringification operator to make errorcodes human readable */
+#define CASE_TO_STRING(value) \
     case value:         \
         return #value;
 
 static const char* DrmVendorString(uint64_t modifier)
 {
     switch (fourcc_mod_get_vendor(modifier)) {
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_NONE)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_INTEL)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_AMD)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_NVIDIA)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_SAMSUNG)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_QCOM)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_VIVANTE)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_BROADCOM)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_ARM)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_ALLWINNER)
-        CASE_STR(DRM_FORMAT_MOD_VENDOR_AMLOGIC)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_NONE)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_INTEL)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_AMD)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_NVIDIA)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_SAMSUNG)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_QCOM)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_VIVANTE)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_BROADCOM)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_ARM)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_ALLWINNER)
+        CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_AMLOGIC)
     default:
         return "Unknown";
     }
 }
-#undef CASE_STR
+#undef CASE_TO_STRING
 
 void PrintFormat(const string& preamble, const Compositor::PixelFormat& format)
 {

@@ -94,21 +94,23 @@ namespace API {
 
     class GL {
     public:
-#define CASE_STR(value) \
+
+/* simple stringification operator to make errorcodes human readable */
+#define CASE_TO_STRING(value) \
     case value:         \
         return #value;
 
         static const char* ErrorString(GLenum code)
         {
             switch (code) {
-                CASE_STR(GL_NO_ERROR)
-                CASE_STR(GL_INVALID_ENUM)
-                CASE_STR(GL_INVALID_VALUE)
-                CASE_STR(GL_INVALID_OPERATION)
-                CASE_STR(GL_INVALID_FRAMEBUFFER_OPERATION)
-                CASE_STR(GL_OUT_OF_MEMORY)
-                CASE_STR(GL_STACK_UNDERFLOW_KHR)
-                CASE_STR(GL_STACK_OVERFLOW_KHR)
+                CASE_TO_STRING(GL_NO_ERROR)
+                CASE_TO_STRING(GL_INVALID_ENUM)
+                CASE_TO_STRING(GL_INVALID_VALUE)
+                CASE_TO_STRING(GL_INVALID_OPERATION)
+                CASE_TO_STRING(GL_INVALID_FRAMEBUFFER_OPERATION)
+                CASE_TO_STRING(GL_OUT_OF_MEMORY)
+                CASE_TO_STRING(GL_STACK_UNDERFLOW_KHR)
+                CASE_TO_STRING(GL_STACK_OVERFLOW_KHR)
             default:
                 return "Unknown";
             }
@@ -117,12 +119,12 @@ namespace API {
         static const char* SourceString(GLenum code)
         {
             switch (code) {
-                CASE_STR(GL_DEBUG_SOURCE_API_KHR)
-                CASE_STR(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR)
-                CASE_STR(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR)
-                CASE_STR(GL_DEBUG_SOURCE_THIRD_PARTY_KHR)
-                CASE_STR(GL_DEBUG_SOURCE_APPLICATION_KHR)
-                CASE_STR(GL_DEBUG_SOURCE_OTHER_KHR)
+                CASE_TO_STRING(GL_DEBUG_SOURCE_API_KHR)
+                CASE_TO_STRING(GL_DEBUG_SOURCE_WINDOW_SYSTEM_KHR)
+                CASE_TO_STRING(GL_DEBUG_SOURCE_SHADER_COMPILER_KHR)
+                CASE_TO_STRING(GL_DEBUG_SOURCE_THIRD_PARTY_KHR)
+                CASE_TO_STRING(GL_DEBUG_SOURCE_APPLICATION_KHR)
+                CASE_TO_STRING(GL_DEBUG_SOURCE_OTHER_KHR)
             default:
                 return "Unknown";
             }
@@ -131,15 +133,15 @@ namespace API {
         static const char* TypeString(GLenum code)
         {
             switch (code) {
-                CASE_STR(GL_DEBUG_TYPE_ERROR_KHR)
-                CASE_STR(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR)
-                CASE_STR(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR)
-                CASE_STR(GL_DEBUG_TYPE_PORTABILITY_KHR)
-                CASE_STR(GL_DEBUG_TYPE_PERFORMANCE_KHR)
-                CASE_STR(GL_DEBUG_TYPE_OTHER_KHR)
-                CASE_STR(GL_DEBUG_TYPE_MARKER_KHR)
-                CASE_STR(GL_DEBUG_TYPE_PUSH_GROUP_KHR)
-                CASE_STR(GL_DEBUG_TYPE_POP_GROUP_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_ERROR_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_PORTABILITY_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_PERFORMANCE_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_OTHER_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_MARKER_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_PUSH_GROUP_KHR)
+                CASE_TO_STRING(GL_DEBUG_TYPE_POP_GROUP_KHR)
             default:
                 return "Unknown";
             }
@@ -148,14 +150,14 @@ namespace API {
         static const char* ResetStatusString(GLenum status)
         {
             switch (status) {
-                CASE_STR(GL_GUILTY_CONTEXT_RESET_KHR)
-                CASE_STR(GL_INNOCENT_CONTEXT_RESET_KHR)
-                CASE_STR(GL_UNKNOWN_CONTEXT_RESET_KHR)
+                CASE_TO_STRING(GL_GUILTY_CONTEXT_RESET_KHR)
+                CASE_TO_STRING(GL_INNOCENT_CONTEXT_RESET_KHR)
+                CASE_TO_STRING(GL_UNKNOWN_CONTEXT_RESET_KHR)
             default:
                 return "Invalid";
             }
         }
-#undef CASE_STR
+#undef CASE_TO_STRING
 
         static inline std::string ShaderInfoLog(GLuint handle)
         {
@@ -241,33 +243,35 @@ namespace API {
 
     class EGL {
     public:
-#define CASE_STR(value) \
+
+/* simple stringification operator to make errorcodes human readable */
+#define CASE_TO_STRING(value) \
     case value:         \
         return #value;
 
         static const char* ErrorString(EGLint code)
         {
             switch (code) {
-                CASE_STR(EGL_SUCCESS)
-                CASE_STR(EGL_NOT_INITIALIZED)
-                CASE_STR(EGL_BAD_ACCESS)
-                CASE_STR(EGL_BAD_ALLOC)
-                CASE_STR(EGL_BAD_ATTRIBUTE)
-                CASE_STR(EGL_BAD_CONTEXT)
-                CASE_STR(EGL_BAD_CONFIG)
-                CASE_STR(EGL_BAD_CURRENT_SURFACE)
-                CASE_STR(EGL_BAD_DISPLAY)
-                CASE_STR(EGL_BAD_SURFACE)
-                CASE_STR(EGL_BAD_MATCH)
-                CASE_STR(EGL_BAD_PARAMETER)
-                CASE_STR(EGL_BAD_NATIVE_PIXMAP)
-                CASE_STR(EGL_BAD_NATIVE_WINDOW)
-                CASE_STR(EGL_CONTEXT_LOST)
+                CASE_TO_STRING(EGL_SUCCESS)
+                CASE_TO_STRING(EGL_NOT_INITIALIZED)
+                CASE_TO_STRING(EGL_BAD_ACCESS)
+                CASE_TO_STRING(EGL_BAD_ALLOC)
+                CASE_TO_STRING(EGL_BAD_ATTRIBUTE)
+                CASE_TO_STRING(EGL_BAD_CONTEXT)
+                CASE_TO_STRING(EGL_BAD_CONFIG)
+                CASE_TO_STRING(EGL_BAD_CURRENT_SURFACE)
+                CASE_TO_STRING(EGL_BAD_DISPLAY)
+                CASE_TO_STRING(EGL_BAD_SURFACE)
+                CASE_TO_STRING(EGL_BAD_MATCH)
+                CASE_TO_STRING(EGL_BAD_PARAMETER)
+                CASE_TO_STRING(EGL_BAD_NATIVE_PIXMAP)
+                CASE_TO_STRING(EGL_BAD_NATIVE_WINDOW)
+                CASE_TO_STRING(EGL_CONTEXT_LOST)
             default:
                 return "Unknown";
             }
         }
-#undef CASE_STR
+#undef CASE_TO_STRING
 
         static inline bool HasExtension(const std::string& extention, EGLDisplay dpy = eglGetCurrentDisplay())
         {
