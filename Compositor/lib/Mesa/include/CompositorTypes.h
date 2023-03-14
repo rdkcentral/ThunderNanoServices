@@ -84,14 +84,7 @@ public:
     }
 
     /*
-     * Format Modifiers:
-     *
-     * Format modifiers describe, typically, a re-ordering or modification
-     * of the data in a plane of an FB.  This can be used to express tiled/
-     * swizzled formats, or compression, or a combination of the two.
-     *
-     * The upper 8 bits of the format modifier are a vendor-id as assigned
-     * below.  The lower 56 bits are assigned as vendor sees fit.
+     * For details about the format modifiers see `drm_fourcc.h` 
      */
     const std::vector<uint64_t>& Modifiers() const
     {
