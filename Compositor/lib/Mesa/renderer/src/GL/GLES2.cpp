@@ -108,57 +108,36 @@ namespace Renderer {
                 , _glRenderBuffer(0)
                 , _external(false)
             {
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
                 buffer.AddRef();
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 _eglImage = _egl.CreateImage(buffer.operator->(), _external);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 ASSERT(_eglImage != EGL_NO_IMAGE);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
-
                 // If this triggers the platform is very old (pre-2008) and not supporting OpenGL 3.0 or higher.
                 ASSERT(_gles.glEGLImageTargetRenderbufferStorageOES != nullptr);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
                 PushDebug();
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
+            
                 glGenRenderbuffers(1, &_glRenderBuffer);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
                 glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
-
+            
                 _gles.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 glBindRenderbuffer(GL_RENDERBUFFER, 0);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
-
                 glGenFramebuffers(1, &_glFrameBuffer);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 Bind();
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 Unbind();
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 PopDebug();
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
                 ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
-
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
                 TRACE(Trace::GL, ("Created FrameBuffer %dpx x %dpx", _buffer->Width(), _buffer->Height()));
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
             }
 
             ~FrameBuffer()
@@ -696,15 +675,11 @@ namespace Renderer {
 
         uint32_t Bind(Core::ProxyType<Exchange::ICompositionBuffer> buffer) override
         {
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
             _egl.SetCurrent();
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
             _frameBuffer.reset(new FrameBuffer(_egl, buffer));
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
             _frameBuffer->Bind();
-            fprintf(stderr, " ---------------------- %s --------------- %d ----------------\n", __FUNCTION__, __LINE__);
 
             return Core::ERROR_NONE;
         }

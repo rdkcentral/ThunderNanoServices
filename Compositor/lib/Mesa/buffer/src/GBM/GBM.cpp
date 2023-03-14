@@ -70,9 +70,7 @@ namespace Renderer {
             }
 
             uint32_t Offset() const override {
-                fprintf(stderr, "--------------------- %s ---------------- %d [%p]---------\n", __FUNCTION__, __LINE__, &_parent); fflush (stderr);
                 uint32_t result = _parent.Offset(_index);
-                fprintf(stderr, "--------------------- %s ---------------- %d ---------\n", __FUNCTION__, __LINE__); fflush (stderr);
                 return (result);
             }
 
