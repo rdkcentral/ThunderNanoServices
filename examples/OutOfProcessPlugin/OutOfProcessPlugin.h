@@ -78,6 +78,9 @@ namespace Plugin {
             {
                 _parent.Deactivated(connection);
             }
+            void Terminated(RPC::IRemoteConnection* /* connection */) override
+            {
+            }
             void Closure() override
             {
             }
