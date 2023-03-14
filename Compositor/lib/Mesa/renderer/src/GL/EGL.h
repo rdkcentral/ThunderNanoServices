@@ -39,93 +39,89 @@
 
 namespace WPEFramework {
 namespace Compositor {
-namespace Renderer {
-    class EGL {
-    public:
-        struct EglContext {
-            EGLDisplay display;
-            EGLContext context;
-            EGLSurface draw_surface;
-            EGLSurface read_surface;
-        };
+    namespace Renderer {
+        class EGL {
+        public:
+            EGL() = delete;
+            EGL(EGL const&) = delete;
+            EGL& operator=(EGL const&) = delete;
 
-        EGL() = delete;
-        EGL(EGL const&) = delete;
-        EGL& operator=(EGL const&) = delete;
+            EGL(const int drmFd);
+            ~EGL();
 
-        EGL(const int drmFd);
-        ~EGL();
+        private:
+            EGLDeviceEXT FindEGLDevice(const int drmFd);
+            uint32_t InitializeEgl(EGLenum platform, void* remote_display, bool isMaster);
+            void GetPixelFormats(std::vector<PixelFormat>& formats);
+            void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals);
+            bool IsExternOnly(const uint32_t format, const uint64_t modifier);
 
-    private:
-        EGLDeviceEXT FindEGLDevice(const int drmFd);
-        uint32_t InitializeEgl(EGLenum platform, void* remote_display, bool isMaster);
-        void GetPixelFormats(std::vector<PixelFormat>& formats);
-        void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals);
-        bool IsExternOnly(const uint32_t format, const uint64_t modifier);
+        public:
+            inline EGLDisplay Display() const
+            {
+                return _display;
+            }
 
-    public:
-        inline EGLDisplay Display() const
-        {
-            return _display;
-        }
+            inline EGLContext Context() const
+            {
+                return _context;
+            }
 
-        inline EGLContext Context() const
-        {
-            return _context;
-        }
+            inline bool IsCurrent() const
+            {
+                return eglGetCurrentContext() == _context;
+            }
 
-        inline bool IsCurrent() const
-        {
-            return eglGetCurrentContext() == _context;
-        }
+            inline bool SetCurrent()
+            {
+                return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, _context) == EGL_TRUE);
+            }
 
-        inline bool SetCurrent()
-        {
-            return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, _context) == EGL_TRUE);
-        }
+            inline bool ResetCurrent()
+            {
+                return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE);
+            }
 
-        inline bool ResetCurrent()
-        {
-            return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE);
-        }
+            const std::vector<PixelFormat>& Formats() const;
 
-        inline static void SaveContext(EglContext& context)
-        {
-            context.display = eglGetCurrentDisplay();
-            context.context = eglGetCurrentContext();
-            context.draw_surface = eglGetCurrentSurface(EGL_DRAW);
-            context.read_surface = eglGetCurrentSurface(EGL_READ);
-        }
+            EGLImage CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool&);
 
-        inline static bool RestoreContext(const EglContext& context)
-        {
-            // If the saved context is a null-context, we must use the current
-            // display instead of the saved display because eglMakeCurrent() can't
-            // handle EGL_NO_DISPLAY.
-            EGLDisplay display = context.display == EGL_NO_DISPLAY ? eglGetCurrentDisplay() : context.display;
+            class ContextBackup {
+            public:
+                ContextBackup(const ContextBackup&) = delete;
+                ContextBackup& operator=(const ContextBackup&) = delete;
 
-            // If the current display is also EGL_NO_DISPLAY, we assume that there
-            // is currently no context set and no action needs to be taken to unset
-            // the context.
-            return (display != EGL_NO_DISPLAY) ? eglMakeCurrent(display, context.draw_surface, context.read_surface, context.context)
-                                               : true;
-        }
+                ContextBackup()
+                    : _display(eglGetCurrentDisplay())
+                    , _context(eglGetCurrentContext())
+                    , _drawSurface(eglGetCurrentSurface(EGL_DRAW))
+                    , _readSurface(eglGetCurrentSurface(EGL_READ))
+                {
+                }
 
-        const std::vector<PixelFormat>& Formats() const;
+                ~ContextBackup()
+                {
+                    eglMakeCurrent((_display == EGL_NO_DISPLAY) ? eglGetCurrentDisplay() : _display, _drawSurface, _readSurface, _context);
+                }
 
-        EGLImage CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool&);
+            private:
+                EGLDisplay _display;
+                EGLContext _context;
+                EGLSurface _drawSurface;
+                EGLSurface _readSurface;
+            };
 
-    private:
-        API::EGL _api;
+        private:
+            API::EGL _api;
 
-        EGLDisplay _display;
-        EGLContext _context;
+            EGLDisplay _display;
+            EGLContext _context;
 
-        EGLSurface _draw_surface;
-        EGLSurface _read_surface;
+            EGLSurface _draw_surface;
+            EGLSurface _read_surface;
 
-        std::vector<PixelFormat> _formats;
-    }; // class EGL
-} // namespace Renderer
+            std::vector<PixelFormat> _formats;
+        }; // class EGL
+    } // namespace Renderer
 } // namespace Compositor
 } // namespace WPEFramework

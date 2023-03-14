@@ -163,9 +163,8 @@ namespace Renderer {
 
             ~FrameBuffer()
             {
-                EGL::EglContext previous_context;
+                Renderer::EGL::ContextBackup backup;
 
-                _egl.SaveContext(previous_context);
                 _egl.SetCurrent();
 
                 Unbind();
@@ -178,7 +177,6 @@ namespace Renderer {
                 PopDebug();
 
                 _egl.ResetCurrent();
-                _egl.RestoreContext(previous_context);
 
                 _buffer.Release();
 
@@ -239,9 +237,8 @@ namespace Renderer {
                 ASSERT(_eglImage != EGL_NO_IMAGE);
                 ASSERT(_gles.glEGLImageTargetTexture2DOES != nullptr);
 
-                Renderer::EGL::EglContext previous_context;
+                Renderer::EGL::ContextBackup backup;
 
-                _egl.SaveContext(previous_context);
                 _egl.SetCurrent();
 
                 PushDebug();
@@ -258,16 +255,13 @@ namespace Renderer {
 
                 PopDebug();
 
-                _egl.RestoreContext(previous_context);
-
                 TRACE(Trace::GL, ("Created Texture %dpx x %dpx", _buffer->Width(), _buffer->Height()));
             }
 
             ~Texture()
             {
-                Renderer::EGL::EglContext previous_context;
+                Renderer::EGL::ContextBackup backup;
 
-                _egl.SaveContext(previous_context);
                 _egl.SetCurrent();
 
                 PushDebug();
@@ -275,9 +269,6 @@ namespace Renderer {
                 glDeleteTextures(1, &_texture);
 
                 PopDebug();
-
-                _egl.RestoreContext(previous_context);
-
                 _buffer.Release();
 
                 TRACE(Trace::GL, ("Texture %p destructed", this));
