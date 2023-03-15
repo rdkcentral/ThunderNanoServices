@@ -48,12 +48,15 @@ namespace Plugin {
             ~ConnectionNotification() override = default;
 
         public:
-            void Activated(RPC::IRemoteConnection*) override
+            void Activated(RPC::IRemoteConnection*  /* connection */) override
             {
             }
             void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
+            }
+            void Terminated (RPC::IRemoteConnection* /* connection */) override
+            {
             }
 
             BEGIN_INTERFACE_MAP(ConnectionNotification)

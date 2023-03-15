@@ -47,6 +47,7 @@ namespace Plugin
         class Sink : public Core::IDispatchType<const WPASupplicant::Controller::events> {
         public:
             Sink() = delete;
+            Sink(Sink&&) = delete;
             Sink(const Sink&) = delete;
             Sink& operator=(const Sink&) = delete;
 
@@ -54,9 +55,7 @@ namespace Plugin
                 : _parent(parent)
             {
             }
-            ~Sink() override
-            {
-            }
+            ~Sink() override = default;
 
         private:
             void Dispatch(const WPASupplicant::Controller::events& event) override
@@ -68,8 +67,9 @@ namespace Plugin
             WifiControlImplementation& _parent;
         };
 
-    class WifiDriver {
+        class WifiDriver {
         public:
+            WifiDriver(WifiDriver&&) = delete;
             WifiDriver(const WifiDriver&) = delete;
             WifiDriver& operator=(const WifiDriver&) = delete;
 
@@ -79,9 +79,7 @@ namespace Plugin
                 , _process(true)
             {
             }
-            ~WifiDriver()
-            {
-            }
+            ~WifiDriver() = default;
 
         public:
             uint32_t Launch(const string& application, const string& connector, const string& interfaceName, const uint16_t waitTime, const string& logFile)
@@ -148,6 +146,7 @@ namespace Plugin
             {
             public:
                 AccessPoint() = delete;
+                AccessPoint(AccessPoint&&) = delete;
                 AccessPoint(const AccessPoint&) = delete;
                 AccessPoint& operator= (const AccessPoint&) = delete;
 
@@ -156,8 +155,7 @@ namespace Plugin
                     , _bssid(bssid)
                     , _ssid(SSID) {
                 }
-                ~AccessPoint() {
-                }
+                ~AccessPoint() = default;
 
             public:
                 const string& SSID() const {
@@ -189,6 +187,7 @@ namespace Plugin
 
         public:
             AutoConnect() = delete;
+            AutoConnect(AutoConnect&&) = delete;
             AutoConnect(const AutoConnect&) = delete;
             AutoConnect& operator=(const AutoConnect&) = delete;
 
@@ -203,9 +202,7 @@ namespace Plugin
                 , _preferred()
             {
             }
-            ~AutoConnect() override
-            {
-            }
+            ~AutoConnect() override = default;
 
         public:
             uint32_t Connect(const string& SSID, const uint8_t scheduleInterval, const uint32_t attempts)
@@ -428,7 +425,7 @@ namespace Plugin
             string _preferred;
         };
 
-        class WpsConnect {
+        class WPSConnect {
         private:
             enum class states : uint8_t
             {
@@ -437,14 +434,15 @@ namespace Plugin
                 SUCCESS
             };
 
-         using Job = Core::WorkerPool::JobType<WpsConnect&>;
+         using Job = Core::WorkerPool::JobType<WPSConnect&>;
 
          public:
-            WpsConnect() = delete;
-            WpsConnect(const WpsConnect&) = delete;
-            WpsConnect& operator=(const WpsConnect&) = delete;
+            WPSConnect() = delete;
+            WPSConnect(WPSConnect&&) = delete;
+            WPSConnect(const WPSConnect&) = delete;
+            WPSConnect& operator=(const WPSConnect&) = delete;
 
-            WpsConnect(WifiControlImplementation& parent, Core::ProxyType<WPASupplicant::Controller>& controller)
+            WPSConnect(WifiControlImplementation& parent, Core::ProxyType<WPASupplicant::Controller>& controller)
                 : _adminLock()
                 , _parent(parent)
                 , _controller(controller)
@@ -453,7 +451,7 @@ namespace Plugin
                 , _ssid()
             {
             }
-            virtual ~WpsConnect() = default;
+            virtual ~WPSConnect() = default;
 
             uint32_t Invoke(const string& ssid, const SecurityInfo::Key key, const string& pin, const uint32_t walkTime)
             {
@@ -623,6 +621,7 @@ namespace Plugin
     public:
         class Setting : public Core::JSON::Container {
         public:
+            Setting(Setting&&) = delete;
             Setting(const Setting&) = delete;
             Setting& operator=(const Setting&) = delete;
 
@@ -666,7 +665,6 @@ namespace Plugin
             Core::JSON::DecSInt32 WpsWalkTime;
             Core::JSON::Boolean WpsDisabled;
         };
-
         class ConfigData : public JsonData::WifiControl::ConfigInfoInfo {
         public:
             ConfigData()
@@ -689,13 +687,13 @@ namespace Plugin
                 return (*this);
             }
         };
-        class SsidConfigs : public Core::JSON::Container {
-        private:
-            SsidConfigs(const SsidConfigs&) = delete;
-            SsidConfigs& operator=(const SsidConfigs&) = delete;
-
+        class SSIDConfigs : public Core::JSON::Container {
         public:
-            SsidConfigs()
+            SSIDConfigs(SSIDConfigs&&) = delete;
+            SSIDConfigs(const SSIDConfigs&) = delete;
+            SSIDConfigs& operator=(const SSIDConfigs&) = delete;
+
+            SSIDConfigs()
                 : Core::JSON::Container()
                 , Preferred()
                 , Configs()
@@ -704,7 +702,7 @@ namespace Plugin
                 Add(_T("configs"), &Configs);
             }
 
-            ~SsidConfigs() override = default;
+            ~SSIDConfigs() override = default;
 
         public:
             void Set(WPASupplicant::Config::Iterator& list)
@@ -847,6 +845,7 @@ namespace Plugin
         }
 
     public:
+        WifiControlImplementation(WifiControlImplementation&&) = delete;
         WifiControlImplementation(const WifiControlImplementation&) = delete;
         WifiControlImplementation& operator=(const WifiControlImplementation&) = delete;
 
@@ -868,17 +867,17 @@ namespace Plugin
             , _job(*this)
         {
         }
-
         ~WifiControlImplementation() override
         {
 #ifndef USE_WIFI_HAL
 
-            _autoConnect.Revoke();
-            _wpsConnect.Revoke();
-            _controller->Callback(nullptr);
-            _controller->Terminate();
-            _controller.Release();
-
+            if (_controller.IsValid()) {
+                _autoConnect.Revoke();
+                _wpsConnect.Revoke();
+                _controller->Callback(nullptr);
+                _controller->Terminate();
+                _controller.Release();
+            }
             _wpaSupplicant.Terminate();
 #endif
             _job.Revoke();
@@ -910,114 +909,75 @@ namespace Plugin
             return Core::ERROR_NONE;
         }
 
-        uint32_t Configure(PluginHost::IShell * service) override
+        uint32_t Configure(PluginHost::IShell* service) override
         {
             ASSERT(service != nullptr);
             ASSERT(_controller.IsValid() == false);
 
-            uint32_t result = Core::ERROR_NONE;
-            Setting config;
-            config.FromString(service->ConfigLine());
+            uint32_t result = Core::ERROR_GENERAL;
 
-            if (Core::Directory(service->PersistentPath().c_str()).CreatePath()) {
-                _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
-            } else {
-                SYSLOG(Logging::Startup, ("Config directory %s doesn't exist and could not be created!\n", service->PersistentPath().c_str()));
-            }
-
-            TRACE(Trace::Information, (_T("Starting the application for wifi called: [%s]"), config.Application.Value().c_str()));
 #ifdef USE_WIFI_HAL
             _controller = WPASupplicant::WifiHAL::Create();
             if ((_controller.IsValid() == true) && (_controller->IsOperational() == true)) {
                 _controller->Scan();
+                result = Core::ERROR_NONE;
             }
 #else
-            string logFile;
-            string connectorFullDirectory;
-            if (config.LogFile.IsSet()) {
-                logFile = service->VolatilePath() + config.LogFile.Value();
-            }
+            Setting config;
+            config.FromString(service->ConfigLine());
 
-            if ((config.Application.Value().empty() == false) && (::strncmp(config.Application.Value().c_str(), _TXT("null")) != 0)) {
-                if (!config.ConnectorDirectory.Value().empty()) {
-                    connectorFullDirectory = service->VolatilePath() + config.ConnectorDirectory.Value();
-                    if (Core::File(connectorFullDirectory).IsDirectory()) {
-                        //if directory exists remove it to clear data (eg. sockets) that can remain after previous plugin run
-                        Core::Directory(connectorFullDirectory.c_str()).Destroy();
-                    }
+            if (PrepareWPASupplicant(service, config) == Core::ERROR_NONE) {
 
-                    if (Core::Directory(connectorFullDirectory.c_str()).CreatePath()) {
-                        if (!config.Interface.Value().empty() && config.WaitTime.Value() > 0) {
+                _controller = WPASupplicant::Controller::Create(service->VolatilePath() + config.ConnectorDirectory.Value(), config.Interface.Value(), 10);
 
-                            if (_wpaSupplicant.Launch(config.Application.Value(), connectorFullDirectory,
-                                                      config.Interface.Value(), config.WaitTime.Value(), logFile) != Core::ERROR_NONE) {
-                                TRACE(Trace::Warning, (_T("Could not start WPA_SUPPLICANT")));
-      
-                                result = Core::ERROR_GENERAL;
-                            }
-                        }
-                    } else {
-                        TRACE(Trace::Warning, (_T("Could not create connector path")));
-                        result = Core::ERROR_GENERAL;
-                    }
-                }
+                ASSERT(_controller.IsValid() == false);
+
+                if (_controller->IsOperational() == false) {
+                    SYSLOG(Logging::Error, (_T("Could not establish a link with WPA_SUPPLICANT")));
+                    _controller.Release();
+                } 
                 else {
-                    TRACE(Trace::Warning, (_T("WPA_SUPPLICANT connector path is not set")));
-                    result = Core::ERROR_GENERAL;
-                }
-            }
-            else {
-                TRACE(Trace::Warning, (_T("WPA_SUPPLICANT application path is not set")));
-                result = Core::ERROR_GENERAL;
-            }
+                    // The initialize prepared our path...
+                    _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
 
-            if (result == Core::ERROR_NONE) {
-                _controller = WPASupplicant::Controller::Create(connectorFullDirectory, config.Interface.Value(), 10);
+                    _controller->Callback(&_sink);
+                    _preferredSsid = config.Preferred.Value();
+                    Core::File configFile(_configurationStore);
 
-                if (_controller.IsValid() == true) {
-                    if (_controller->IsOperational() == false) {
-                        _controller.Release();
-                        TRACE(Trace::Warning, (_T("Could not establish a link with WPA_SUPPLICANT")));
-                        result = Core::ERROR_GENERAL;
-                    } else {
-                        _controller->Callback(&_sink);
-                        _preferredSsid = config.Preferred.Value();
-                        Core::File configFile(_configurationStore);
-
-                        if (configFile.Open(true) == true) {
-                            SsidConfigs configs;
-                            Core::OptionalType<Core::JSON::Error> error;
-                            configs.IElement::FromFile(configFile, error);
-                            if (error.IsSet() == true) {
-                                SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
-                            }
-
-                            _preferredSsid = configs.Preferred.Value();
-                            // iterator over the list and write back
-                            Core::JSON::ArrayType<ConfigData>::Iterator configIterator(configs.Configs.Elements());
-
-                            while (configIterator.Next()) {
-                                ASSERT(configIterator.Current().Ssid.Value().empty() == false);
-
-                                UpdateConfig(configIterator.Current().Ssid.Value(), configIterator.Current());
-                            }
+                    if (configFile.Open(true) == true) {
+                        SSIDConfigs configs;
+                        Core::OptionalType<Core::JSON::Error> error;
+                        configs.IElement::FromFile(configFile, error);
+                        if (error.IsSet() == true) {
+                            SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
                         }
 
-                        _walkTime = config.WpsWalkTime.Value();
-                        _wpsDisabled = config.WpsDisabled.Value();
+                        _preferredSsid = configs.Preferred.Value();
+                        // iterator over the list and write back
+                        Core::JSON::ArrayType<ConfigData>::Iterator configIterator(configs.Configs.Elements());
 
-                        if (config.AutoConnect.Value() == false) {
-                            _controller->Scan();
-                        }
-                        else {
-                            _autoConnectEnabled = true;
-                            _retryInterval = config.RetryInterval.Value();
-                            _maxRetries = config.MaxRetries.Value() == -1 ? 
-                                          Core::NumberType<uint32_t>::Max() : 
-                                          config.MaxRetries.Value();
-                            _autoConnect.Connect(_preferredSsid, _retryInterval, _maxRetries);
+                        while (configIterator.Next()) {
+                            ASSERT(configIterator.Current().Ssid.Value().empty() == false);
+
+                            UpdateConfig(configIterator.Current().Ssid.Value(), configIterator.Current());
                         }
                     }
+
+                    _walkTime = config.WpsWalkTime.Value();
+                    _wpsDisabled = config.WpsDisabled.Value();
+
+                    if (config.AutoConnect.Value() == false) {
+                        _controller->Scan();
+                    }
+                    else {
+                        _autoConnectEnabled = true;
+                        _retryInterval = config.RetryInterval.Value();
+                        _maxRetries = config.MaxRetries.Value() == -1 ? 
+                                        Core::NumberType<uint32_t>::Max() : 
+                                        config.MaxRetries.Value();
+                        _autoConnect.Connect(_preferredSsid, _retryInterval, _maxRetries);
+                    }
+                    result = Core::ERROR_NONE;
                 }
             }
 #endif
@@ -1147,6 +1107,53 @@ namespace Plugin
         END_INTERFACE_MAP
 
     private:
+        uint32_t PrepareWPASupplicant(const PluginHost::IShell* service, const Setting& config) {
+            uint32_t result = Core::ERROR_GENERAL;
+
+            if ((config.Application.Value().empty() == true) && (config.Application.IsNull() == false)) {
+                SYSLOG(Logging::Error, (_T("WPA_SUPPLICANT application path is not set")));
+            }
+            else if (config.ConnectorDirectory.Value().empty() == true) {
+                SYSLOG(Logging::Error, (_T("WPA_SUPPLICANT application path is not set")));
+            }
+            else if (config.Interface.Value().empty() == true) {
+                SYSLOG(Logging::Error, (_T("No interface defines for the Wifi")));
+            }
+            else if (config.Application.IsNull() == true) {
+                TRACE(Trace::Information, (_T("Using the WPA_SUPPLICANT that is already running")));
+                result = Core::ERROR_NONE;
+            }
+            else if (config.WaitTime.Value() == 0) {
+                SYSLOG(Logging::Error, (_T("No waiting time specified for WPA_SUPPLICANT startup")));
+            }
+            else {
+                string connectorFullDirectory = service->VolatilePath() + config.ConnectorDirectory.Value();
+
+                if (Core::File(connectorFullDirectory).IsDirectory()) {
+                    // if directory exists remove it to clear data (eg. sockets) that can remain after previous plugin run
+                    Core::Directory(connectorFullDirectory.c_str()).Destroy();
+                }
+
+                if (Core::Directory(connectorFullDirectory.c_str()).CreatePath() == false) {
+                    SYSLOG(Logging::Error, (_T("Could not create connector path")));
+                }
+                else {
+                    string logFile;
+
+                    if (config.LogFile.IsSet()) {
+                        logFile = service->VolatilePath() + config.LogFile.Value();
+                    }
+
+                    result = _wpaSupplicant.Launch(config.Application.Value(), connectorFullDirectory,
+                                    config.Interface.Value(), config.WaitTime.Value(), logFile);
+                                    
+                    if (result != Core::ERROR_NONE) {
+                        SYSLOG(Logging::Error,  (_T("Could not start WPA_SUPPLICANT")));
+                    }
+                }
+            }
+            return (result);
+        }
         inline uint32_t StoreUpdatedSsidConfig()
         {
             uint32_t result = Core::ERROR_NONE;
@@ -1166,7 +1173,7 @@ namespace Plugin
 
             Core::File configFile(_configurationStore);
             WPASupplicant::Config::Iterator list(_controller->Configs());
-            SsidConfigs configs;
+            SSIDConfigs configs;
             configs.Preferred = _preferredSsid;
             configs.Set(list);
             if (configs.Configs.IsSet()) {
@@ -1455,7 +1462,7 @@ namespace Plugin
         Core::ProxyType<WPASupplicant::Controller> _controller;
         AutoConnect _autoConnect;
         bool _autoConnectEnabled;
-        WpsConnect _wpsConnect;
+        WPSConnect _wpsConnect;
         std::list<NetworkInfo> _networks;
         ConfigMap _configs;
         SecurityMap _securities;

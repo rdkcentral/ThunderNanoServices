@@ -75,23 +75,31 @@ namespace Plugin
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
         _service->Register(&_connectionNotification);
 
-        _wifiControl = service->Root<Exchange::IWifiControl>(_connectionId, 2000, _T("WifiControlImplementation"));
-        if (_wifiControl != nullptr) {
-            _wifiControl->Register(&_wifiNotification);
-            Exchange::JWifiControl::Register(*this, _wifiControl);
+        Config config;
+        config.FromString(service->ConfigLine());
 
-            Exchange::IConfiguration* configWifi = _wifiControl->QueryInterface<Exchange::IConfiguration>();
-            if (configWifi != nullptr) {
-                if (configWifi->Configure(service) != Core::ERROR_NONE) {
-                    message = _T("WifiControl could not be configured.");
-                }
-                configWifi->Release();
-            } else {
-                message = _T("WifiControl do not have configure interface");
-            }
-        }
+        if (Core::Directory(service->PersistentPath().c_str()).CreatePath() == false) {
+            message = Core::Format(_T("Config directory %s doesn't exist and could not be created!"), service->PersistentPath().c_str());
+        } 
         else {
-            message = _T("WifiControl could not be instantiated.");
+            _wifiControl = service->Root<Exchange::IWifiControl>(_connectionId, 2000, _T("WifiControlImplementation"));
+            if (_wifiControl == nullptr) {
+                message = _T("WifiControl could not be instantiated.");
+            }
+            else {
+                _wifiControl->Register(&_wifiNotification);
+                Exchange::JWifiControl::Register(*this, _wifiControl);
+
+                Exchange::IConfiguration* configWifi = _wifiControl->QueryInterface<Exchange::IConfiguration>();
+                ASSERT (configWifi != nullptr);
+
+                if (configWifi != nullptr) {
+                    if (configWifi->Configure(service) != Core::ERROR_NONE) {
+                        message = _T("WifiControl could not be configured.");
+                    }
+                    configWifi->Release();
+                }
+            }
         }
 
         // On success return empty, to indicate there is no error text.
@@ -100,32 +108,35 @@ namespace Plugin
 
     /* virtual */ void WifiControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        if (_service != nullptr) {
-            ASSERT(_service == service);
+        RPC::IRemoteConnection* connection = nullptr;
 
-            _service->Unregister(&_connectionNotification);
+        ASSERT(_service == service);
 
-            if (_wifiControl != nullptr) {
-                Exchange::JWifiControl::Unregister(*this);
-                _wifiControl->Unregister(&_wifiNotification);
+        _service->Unregister(&_connectionNotification);
 
-                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-                VARIABLE_IS_NOT_USED uint32_t result = _wifiControl->Release();
-                _wifiControl = nullptr;
-                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+        if (_wifiControl != nullptr) {
 
-                // The connection can disappear in the meantime...
-                if (connection != nullptr) {
-                    // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                    connection->Terminate();
-                    connection->Release();
-                }
-            }
+            connection = _service->RemoteConnection(_connectionId);
+            
+            Exchange::JWifiControl::Unregister(*this);
+            _wifiControl->Unregister(&_wifiNotification);
 
-            _service->Release();
-            _service = nullptr;
-            _connectionId = 0;
+            VARIABLE_IS_NOT_USED uint32_t result = _wifiControl->Release();
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            _wifiControl = nullptr;
         }
+
+
+        // The connection can disappear in the meantime...
+        if (connection != nullptr) {
+            // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+            connection->Terminate();
+            connection->Release();
+        }
+
+        _service->Release();
+        _service = nullptr;
+        _connectionId = 0;
     }
 
     /* virtual */ string WifiControl::Information() const
