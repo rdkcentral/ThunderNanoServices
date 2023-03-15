@@ -912,7 +912,6 @@ namespace Plugin
         uint32_t Configure(PluginHost::IShell* service) override
         {
             ASSERT(service != nullptr);
-
             ASSERT(_controller.IsValid() == false);
 
             uint32_t result = Core::ERROR_GENERAL;
@@ -925,7 +924,6 @@ namespace Plugin
             }
 #else
             Setting config;
-
             config.FromString(service->ConfigLine());
 
             if (PrepareWPASupplicant(service, config) == Core::ERROR_NONE) {
