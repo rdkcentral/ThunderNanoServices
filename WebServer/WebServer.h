@@ -45,12 +45,15 @@ namespace Plugin {
             }
 
         public:
-            void Activated(RPC::IRemoteConnection* /* connection */)
+            void Activated(RPC::IRemoteConnection* /* connection */) override
             {
             }
-            void Deactivated(RPC::IRemoteConnection* connectionId)
+            void Deactivated(RPC::IRemoteConnection* connectionId) override
             {
                 _parent.Deactivated(connectionId);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */) override
+            {
             }
 
             BEGIN_INTERFACE_MAP(Notification)
