@@ -930,7 +930,7 @@ namespace Plugin
 
                 _controller = WPASupplicant::Controller::Create(service->VolatilePath() + config.ConnectorDirectory.Value(), config.Interface.Value(), 10);
 
-                ASSERT(_controller.IsValid() == false);
+                ASSERT(_controller.IsValid() == true);
 
                 if (_controller->IsOperational() == false) {
                     SYSLOG(Logging::Error, (_T("Could not establish a link with WPA_SUPPLICANT")));
