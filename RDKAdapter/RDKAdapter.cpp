@@ -51,9 +51,10 @@ namespace Plugin {
         return (EMPTY_STRING);
     }
 
-    void RDKAdapter::Test() const 
+    uint32_t RDKAdapter::Test() const 
     {
         TRACE(Trace::Information, (_T("RDKAdapter test called") ));
+        return Core::ERROR_NONE;
     }
 
 } // namespace Plugin

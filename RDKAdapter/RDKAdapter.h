@@ -54,7 +54,7 @@ namespace Plugin {
 
         //   IRDKAdapter methods
         // -------------------------------------------------------------------------------------------------------
-        void Test() const override;
+        uint32_t Test() const override;
 
     private:
     };
