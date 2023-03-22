@@ -1,6 +1,7 @@
 # ThunderNanoServices
 * [BluetoothAudioSink](BluetoothAudioSink/doc/BluetoothAudioSinkPlugin.md)
 * [BluetoothControl](BluetoothControl/doc/BluetoothControlPlugin.md)
+* [BluetoothSDPServer](BluetoothAudioSink/doc/BluetoothSDPServerPlugin.md)
 * [BluetoothRemoteControl](BluetoothRemoteControl/doc/BluetoothRemoteControlPlugin.md)
 * [Cobalt](Cobalt/doc/CobaltPlugin.md)
 * [Commander](Commnader/doc/CommanderPlugin.md)
