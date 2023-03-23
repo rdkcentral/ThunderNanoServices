@@ -56,6 +56,7 @@ namespace Plugin {
         if(_subsystems != nullptr) {
             _subsystems->Unregister(&_sink);
             _subsystems->Release();
+            _subsystems = nullptr;
         }
     }
 
