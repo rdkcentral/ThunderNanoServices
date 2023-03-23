@@ -36,14 +36,27 @@ namespace Plugin {
         );
     }
 
-    const string RDKAdapter::Initialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    const string RDKAdapter::Initialize(PluginHost::IShell* service)
     {
+        ASSERT(service != nullptr);
+
+        _subsystems = service->SubSystems();
+
+        if(_subsystems != nullptr) {
+            _subsystems->Register(&_sink);
+            _connected = _subsystems->IsActive(PluginHost::ISubSystem::INTERNET);
+        }
+
         // On success return empty, to indicate there is no error text.
         return (EMPTY_STRING);
     }
 
     void RDKAdapter::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
+        if(_subsystems != nullptr) {
+            _subsystems->Unregister(&_sink);
+            _subsystems->Release();
+        }
     }
 
     string RDKAdapter::Information() const
@@ -51,10 +64,52 @@ namespace Plugin {
         return (EMPTY_STRING);
     }
 
-    uint32_t RDKAdapter::Test() const 
-    {
-        TRACE(Trace::Information, (_T("RDKAdapter test called") ));
+    Core::hresult RDKAdapter::Register(Exchange::IRDKAdapter::INotification* sink) {
+        _adminLock.Lock();
+
+        ASSERT(std::find(_listeners.begin(), _listeners.end(), sink) == _listeners.end());
+
+        _listeners.emplace_back(sink);
+
+        _adminLock.Unlock();
+
         return Core::ERROR_NONE;
+    }
+
+    Core::hresult RDKAdapter::Unregister(Exchange::IRDKAdapter::INotification* sink) {
+        _adminLock.Lock();
+
+        auto item = std::find(_listeners.begin(), _listeners.end(), sink);
+
+        ASSERT(item != _listeners.end());
+
+        _listeners.erase(item);
+
+        _adminLock.Unlock();
+
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult RDKAdapter::Connected(bool& connected) const {
+        connected = _connected;
+        return Core::ERROR_NONE;
+    }
+
+    void RDKAdapter::SubsystemUpdate() {
+        _adminLock.Lock();
+
+        bool connected = _subsystems->IsActive(PluginHost::ISubSystem::INTERNET);
+
+        if(connected != _connected) {
+            _connected = connected;
+
+            for (auto l : _listeners) {
+                l->ConnectionUpdate(_connected);
+            }
+        }
+
+        _adminLock.Unlock();
+       
     }
 
 } // namespace Plugin

@@ -35,6 +35,11 @@ namespace Plugin {
         RDKAdapter()
             : PluginHost::IPlugin()
             , Exchange::IRDKAdapter()
+            , _adminLock()
+            , _listeners()
+            , _sink(*this)
+            , _subsystems(nullptr)
+            , _connected(false)
         {
         }
 
@@ -54,9 +59,40 @@ namespace Plugin {
 
         //   IRDKAdapter methods
         // -------------------------------------------------------------------------------------------------------
-        uint32_t Test() const override;
+        Core::hresult Register(Exchange::IRDKAdapter::INotification* sink) override;
+        Core::hresult Unregister(Exchange::IRDKAdapter::INotification* sink) override;
+        Core::hresult Connected(bool& connected) const override;
 
     private:
+    class Notification : public PluginHost::ISubSystem::INotification {
+    public:
+        explicit Notification(RDKAdapter& parent) : PluginHost::ISubSystem::INotification(), _parent(parent) {}
+        ~Notification() override = default;
+
+        void Updated() override {
+            _parent.SubsystemUpdate();
+        }
+
+    public:
+        BEGIN_INTERFACE_MAP(Notification)
+        INTERFACE_ENTRY(PluginHost::ISubSystem::INotification)
+        END_INTERFACE_MAP
+
+    private:
+        RDKAdapter& _parent;
+    };
+
+    private:
+        void SubsystemUpdate();
+
+    private:
+        using NotificationContainer = std::list<Exchange::IRDKAdapter::IRDKAdapter::INotification*>;
+
+        mutable Core::CriticalSection _adminLock;
+        NotificationContainer _listeners;
+        Core::Sink<RDKAdapter::Notification> _sink;
+        PluginHost::ISubSystem* _subsystems;
+        std::atomic<bool> _connected;
     };
 
 } // namespace Plugin
