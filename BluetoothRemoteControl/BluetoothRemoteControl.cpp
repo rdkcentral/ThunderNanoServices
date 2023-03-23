@@ -161,7 +161,7 @@ namespace Plugin {
                     Bluetooth::Address address (filename.c_str());
 
                     if (address.IsValid() == true)  {
-                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
+                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                         Core::File fileData(storageDir.Current().c_str());
 
                         if (device != nullptr) {
@@ -352,7 +352,7 @@ namespace Plugin {
             ASSERT(_service != nullptr);
             Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
             if (bluetoothCtl != nullptr) {
-                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
+                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                 if (device != nullptr) {
                     _gattRemote = new GATTRemote(this, device, _configLine);
                     if (_gattRemote != nullptr) {
