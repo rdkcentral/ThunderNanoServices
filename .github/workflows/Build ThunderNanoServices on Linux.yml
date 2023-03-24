@@ -5,20 +5,20 @@ on:
     branches: ["master"]
   pull_request:
     branches: ["master"]
-    
+
 jobs:
   ThunderInterfaces:
     uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master
-    
+
   ThunderNanoServices:
     needs: ThunderInterfaces
-    
+
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         build_type: [Debug, Release, MinSizeRel]
-    
+
     name: Build type - ${{matrix.build_type}}
     steps:
     - name: Install necessary packages
@@ -33,37 +33,56 @@ jobs:
           sudo apt install python3-pip
           pip install jsonref
           sudo apt install build-essential cmake ninja-build libusb-1.0-0-dev zlib1g-dev libssl-dev
-    
+
     - name: Checkout Thunder
       uses: actions/checkout@v3
       with:
         path: Thunder
         repository: ${{github.repository_owner}}/Thunder
-       
+
     - name: Checkout ThunderInterfaces
       uses: actions/checkout@v3
       with:
         path: ThunderInterfaces
         repository: ${{github.repository_owner}}/ThunderInterfaces
-   
+
     - name: Download artifacts
       uses: actions/download-artifact@v3
       with:
         name: ThunderInterfaces-${{matrix.build_type}}-artifact
         path: ${{matrix.build_type}}
-        
+
     - name: Unpack files
       run: |
         tar -xvzf ${{matrix.build_type}}/${{matrix.build_type}}.tar.gz
         rm ${{matrix.build_type}}/${{matrix.build_type}}.tar.gz
-        
+
     - name: Checkout ThunderNanoServices
       uses: actions/checkout@v3
       with:
         path: ThunderNanoServices
         repository: ${{github.repository_owner}}/ThunderNanoServices
 
-    - name: Build ThunderNanoServices
+    - name: Regex ThunderNanoServices
+      if: contains(github.event.pull_request.body, '[Plugins:')
+      id: plugins
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[Plugins:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Build ThunderNanoServices - custom plugins
+      if: contains(github.event.pull_request.body, '[Plugins:')
+      run: |
+        cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
+        -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
+        -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
+        ${{steps.thunder.outputs.first_match}}
+        cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
+
+    - name: Build ThunderNanoServices - default
+      if: ${{ !contains(github.event.pull_request.body, '[Plugins:') }}
       run: |
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
@@ -86,7 +105,7 @@ jobs:
         -DPLUGIN_WEBSHELL=ON \
         -DPLUGIN_WIFICONTROL=ON
         cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
-        
+
     - name: Tar files
       run: tar -czvf ${{matrix.build_type}}.tar.gz ${{matrix.build_type}}
 
