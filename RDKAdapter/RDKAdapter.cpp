@@ -96,6 +96,17 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
+    Core::hresult RDKAdapter::PublicIP(string& ipaddress /* @out */) const {
+        Core::hresult result = Core::ERROR_UNAVAILABLE;
+        const PluginHost::ISubSystem::IInternet* internet = _subsystems->Get<PluginHost::ISubSystem::IInternet>();
+        if( internet != nullptr ) {
+            result = Core::ERROR_NONE;
+            ipaddress = internet->PublicIPAddress();
+            internet->Release();
+       }
+       return result;
+    }
+
     void RDKAdapter::SubsystemUpdate() {
         _adminLock.Lock();
 

@@ -62,6 +62,8 @@ namespace Plugin {
         Core::hresult Register(Exchange::IRDKAdapter::INotification* sink) override;
         Core::hresult Unregister(Exchange::IRDKAdapter::INotification* sink) override;
         Core::hresult Connected(bool& connected) const override;
+        Core::hresult PublicIP(string& ipaddress /* @out */) const override;
+
 
     private:
     class Notification : public PluginHost::ISubSystem::INotification {
