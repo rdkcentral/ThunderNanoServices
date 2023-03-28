@@ -64,25 +64,15 @@ jobs:
         repository: ${{github.repository_owner}}/ThunderNanoServices
 
     - name: Regex ThunderNanoServices
-      if: contains(github.event.pull_request.body, '[Plugins:')
+      if: contains(github.event.pull_request.body, '[Options:')
       id: plugins
       uses: AsasInnab/regex-action@v1
       with:
-        regex_pattern: '(?<=\[Plugins:).*(?=\])'
+        regex_pattern: '(?<=\[Options:).*(?=\])'
         regex_flags: 'gim'
         search_string: ${{github.event.pull_request.body}}
 
-    - name: Build ThunderNanoServices - custom plugins
-      if: contains(github.event.pull_request.body, '[Plugins:')
-      run: |
-        cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
-        -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
-        -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
-        ${{steps.plugins.outputs.first_match}}
-        cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
-
-    - name: Build ThunderNanoServices - default
-      if: ${{ !contains(github.event.pull_request.body, '[Plugins:') }}
+    - name: Build ThunderNanoServices
       run: |
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
@@ -103,7 +93,8 @@ jobs:
         -DPLUGIN_WEBPROXY=ON \
         -DPLUGIN_WEBSERVER=ON \
         -DPLUGIN_WEBSHELL=ON \
-        -DPLUGIN_WIFICONTROL=ON
+        -DPLUGIN_WIFICONTROL=ON \
+        ${{steps.plugins.outputs.first_match}}
         cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
 
     - name: Tar files
