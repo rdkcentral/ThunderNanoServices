@@ -37,9 +37,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 set(PLUGIN_BLUETOOTHSDPSERVER_AUTOSTART true CACHE STRING "Autostart")
 
 set(PLUGIN_BLUETOOTHSDPSERVER_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
-set(PLUGIN_BLUETOOTHSDPSERVER_PROVIDER "Thunder" CACHE STRING "Default service provider name")
-
-set(PLUGIN_BLUETOOTHSDPSERVER_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
 set(PLUGIN_BLUETOOTHSDPSERVER_PROVIDER "Thunder" CACHE STRING "SDP service provider name")
 
 set(PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SOURCE "" CACHE STRING "Callsign of the service providing A2DP Audio Source (if any)")

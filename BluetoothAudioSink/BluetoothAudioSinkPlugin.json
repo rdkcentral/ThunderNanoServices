@@ -11,7 +11,6 @@
     "version": "1.0",
     "acronyms": {
       "BR/EDR": "Basic Rate/Enhanced Data Rate",
-      "SDP": "Service Discovery Protocol",
       "LC-SBC": "Low-Complexity SubBand Coding"
     },
     "terms": {
@@ -25,34 +24,11 @@
     "properties": {
       "configuration": {
         "type": "object",
-        "required": [ "controller", "sdpservice", "codecs" ],
+        "required": [ "controller", "codecs" ],
         "properties": {
           "controller": {
             "type": "string",
             "description": "Callsign of the Bluetooth controller service (typically *BluetoothControl*)"
-          },
-          "sdpservice": {
-            "type": "object",
-            "required": [ "enable" ],
-            "description": "Configuration of the related SDP service",
-            "properties": {
-              "enable": {
-                "type": "bool",
-                "description": "Determines if the SDP server shall advertise an audio source service"
-              },
-              "name": {
-                "type": "string",
-                "description": "Friendly name of the service"
-              },
-              "description": {
-                "type": "string",
-                "description": "Description of the service"
-              },
-              "provider": {
-                "type": "string",
-                "description": "Name of the service provider/vendor"
-              }
-            }
           },
           "codecs": {
             "type": "object",
