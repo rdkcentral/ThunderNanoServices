@@ -72,7 +72,7 @@ namespace Plugin {
 
             ASSERT(supportsClassic || supportsLowEnergy);
 
-            Bluetooth::ManagementSocket& administrator = _application.Administrator();
+            Bluetooth::ManagementSocket& administrator = Connector().Administrator();
             administrator.DeviceId(_config.Interface.Value());
 
             Bluetooth::ManagementSocket::Devices(_adapters);
@@ -130,13 +130,14 @@ namespace Plugin {
             else if (administrator.Power(true) != Core::ERROR_NONE) {
                 result = "Failed to power up the bluetooth interface";
             }
-            else if (_application.Open(*this) != Core::ERROR_NONE) {
+            else if (Connector().Open(*this) != Core::ERROR_NONE) {
                 result = "Could not open the bluetooth application channel";
             }
 
             if (result.empty() == false) {
+                Connector().Close();
                 Bluetooth::ManagementSocket::Down(administrator.DeviceId());
-                _application.Close();
+                administrator.DeviceId(HCI_DEV_NONE);
                 ::destruct_bluetooth_driver();
             }
             else {
@@ -162,7 +163,7 @@ namespace Plugin {
                         if (callsign.empty() == true) {
                             // A static UUID, let's set it now
                             TRACE(Trace::Information, (_T("Adding UUID %s to EIR"), uuid.ToString().c_str()));
-                            _application.AddUUID(uuid, svc);
+                            Connector().AddUUID(uuid, svc);
                         }
                         else {
                             _uuids.emplace_back(callsign, uuid, svc);
@@ -228,16 +229,18 @@ namespace Plugin {
         return (result);
     }
 
-    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    /*virtual*/ void BluetoothControl::Deinitialize(PluginHost::IShell* service)
     {
-        if (service != nullptr) {
+        ASSERT(service != nullptr);
 
-            PluginHost::ISubSystem* subSystems(service->SubSystems());
-            ASSERT(subSystems != nullptr);
-            if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
-                subSystems->Release();
-            }
+        PluginHost::ISubSystem* subSystems(service->SubSystems());
+        ASSERT(subSystems != nullptr);
+        if (subSystems != nullptr) {
+            subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
+            subSystems->Release();
+        }
+
+        if (Connector().IsOpen() == true) {
 
             Exchange::JBluetoothControl::Unregister(*this);
 
@@ -268,15 +271,18 @@ namespace Plugin {
                 _classicAdapter->Release();
             }
 
-            // We bring the interface up, so we should bring it down as well..
             Connector().Close();
+        }
 
-            Bluetooth::ManagementSocket& administrator = Connector().Administrator();
+        // We bring the interface up, so we should bring it down as well..
+        Bluetooth::ManagementSocket& administrator = Connector().Administrator();
+
+        if (administrator.DeviceId() != HCI_DEV_NONE) {
             Bluetooth::ManagementSocket::Down(administrator.DeviceId());
             administrator.DeviceId(HCI_DEV_NONE);
-
-            ::destruct_bluetooth_driver();
         }
+
+        ::destruct_bluetooth_driver();
     }
 
     /* virtual */ string BluetoothControl::Information() const
@@ -295,7 +301,7 @@ namespace Plugin {
 
         for (auto& entry : _uuids) {
             if (std::get<0>(entry) == callsign) {
-                _application.AddUUID(std::get<1>(entry), std::get<2>(entry));
+                Connector().AddUUID(std::get<1>(entry), std::get<2>(entry));
                 // no break!
             }
         }
@@ -309,7 +315,7 @@ namespace Plugin {
 
         for (auto& entry : _uuids) {
             if (std::get<0>(entry) == callsign) {
-                _application.RemoveUUID(std::get<1>(entry));
+                Connector().RemoveUUID(std::get<1>(entry));
                 // no break!
             }
         }
@@ -393,7 +399,7 @@ namespace Plugin {
         } else {
             if (index.Current().Text() == _T("Properties")) {
                 Core::ProxyType<Web::JSONBodyType<Status>> response(jsonResponseFactoryStatus.Element());
-                Bluetooth::ManagementSocket& administrator = _application.Administrator();
+                Bluetooth::ManagementSocket& administrator = Connector().Administrator();
                 Bluetooth::ManagementSocket::Info info(administrator.Settings());
                 Bluetooth::ManagementSocket::Info::Properties actuals(info.Actuals());
                 Bluetooth::ManagementSocket::Info::Properties supported(info.Supported());
@@ -608,7 +614,7 @@ namespace Plugin {
     /* virtual */ /* DEPRECATED */ bool BluetoothControl::IsScanning() const
     {
         VARIABLE_IS_NOT_USED bool limited;
-        return (_application.IsScanning(limited) | _application.IsInquiring(limited));
+        return ((Connector().IsScanning(limited) == true) || (Connector().IsInquiring(limited) == true));
     }
 
     /* virtual */ /* DEPRECATED */ uint32_t BluetoothControl::Scan(const bool lowEnergy, const uint16_t duration)
@@ -616,9 +622,9 @@ namespace Plugin {
         uint32_t result;
 
         if (lowEnergy == true) {
-            result = _application.Scan(duration, false, false);
+            result = Connector().Scan(duration, false, false);
         } else {
-            result = _application.Inquiry(duration, false);
+            result = Connector().Inquiry(duration, false);
         }
 
         return (result);
@@ -629,13 +635,13 @@ namespace Plugin {
         uint32_t result = Core::ERROR_ILLEGAL_STATE;
         VARIABLE_IS_NOT_USED bool limited;
 
-        if (_application.IsScanning(limited) == true) {
-            _application.AbortScan();
+        if (Connector().IsScanning(limited) == true) {
+            Connector().AbortScan();
             result = Core::ERROR_NONE;
         }
 
-        if (_application.IsInquiring(limited) == true) {
-            _application.AbortInquiry();
+        if (Connector().IsInquiring(limited) == true) {
+            Connector().AbortInquiry();
             result = Core::ERROR_NONE;
         }
 
