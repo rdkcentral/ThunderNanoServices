@@ -45,6 +45,12 @@ find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
+#[[ 
+    Enable PIC by default for this project to fix 
+    dangerous relocation of symbols.
+#]]
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_subdirectory(simpleworker)
 add_subdirectory(adapter)
 
