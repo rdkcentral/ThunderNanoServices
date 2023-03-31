@@ -59,6 +59,7 @@ namespace Plugin {
             void Offer(const Core::IUnknown* element)
             {
                 _adminLock.Lock();
+                element->AddRef();
                 _clients.push_back({element, true});
                 _job.Submit();
                 _adminLock.Unlock();
@@ -67,6 +68,7 @@ namespace Plugin {
             void Revoke(const Core::IUnknown* element)
             {
                 _adminLock.Lock();
+                element->AddRef();
                 _clients.push_back({element, false});
                 _job.Submit();
                 _adminLock.Unlock();
@@ -85,6 +87,7 @@ namespace Plugin {
                     } else {
                         _parent.ClientRevoked(client->first);
                     }
+                    client->first->Release();
                     _adminLock.Lock();
                 }
                 _adminLock.Unlock();
