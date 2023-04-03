@@ -80,7 +80,6 @@ namespace Plugin {
 
                 while (_clients.size()) {
                     Clients::iterator client(_clients.begin());
-                    _clients.erase(client);
                     _adminLock.Unlock();
                     if (client->second == true) {
                         _parent.NewClientOffered(const_cast<IUnknown*>(client->first));
@@ -89,6 +88,7 @@ namespace Plugin {
                     }
                     client->first->Release();
                     _adminLock.Lock();
+                    _clients.erase(client);
                 }
                 _adminLock.Unlock();
             }
@@ -344,7 +344,6 @@ namespace Plugin {
             while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
             if (it != _clients.end()) {
-                _clients.erase(it);
                 _adminLock.Unlock();
 
                 string name (it->first);
@@ -357,10 +356,11 @@ namespace Plugin {
                 }
 
                 it->second.clientInterface->Release();
-            } else {
-                _adminLock.Unlock();
-            }
 
+                _adminLock.Lock();
+                _clients.erase(it);
+            }
+            _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
