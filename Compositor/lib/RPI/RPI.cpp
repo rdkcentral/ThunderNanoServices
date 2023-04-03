@@ -79,16 +79,20 @@ namespace Plugin {
                 _adminLock.Lock();
 
                 while (_clients.size()) {
-                    Clients::iterator client(_clients.begin());
+                    Clients::iterator index(_clients.begin());
+                    const Core::IUnknown* client = index->first;
+                    bool offer = index->second;
+                    _clients.erase(index);
                     _adminLock.Unlock();
-                    if (client->second == true) {
-                        _parent.NewClientOffered(const_cast<IUnknown*>(client->first));
+
+                    if (offer == true) {
+                        _parent.NewClientOffered(const_cast<IUnknown*>(client));
                     } else {
-                        _parent.ClientRevoked(client->first);
+                        _parent.ClientRevoked(client);
                     }
-                    client->first->Release();
+                    client->Release();
+
                     _adminLock.Lock();
-                    _clients.erase(client);
                 }
                 _adminLock.Unlock();
             }
@@ -242,8 +246,7 @@ namespace Plugin {
         void Register(Exchange::IComposition::INotification* notification) override
         {
             _adminLock.Lock();
-            ASSERT(std::find(_observers.begin(),
-                       _observers.end(), notification)
+            ASSERT(std::find(_observers.begin(), _observers.end(), notification)
                 == _observers.end());
             notification->AddRef();
             _observers.push_back(notification);
@@ -344,9 +347,11 @@ namespace Plugin {
             while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
 
             if (it != _clients.end()) {
+                string name(it->first);
+                Core::IUnknown* client =  it->second.clientInterface;;
+                _clients.erase(it);
                 _adminLock.Unlock();
 
-                string name (it->first);
                 TRACE(Trace::Information, (_T("Remove client %s."), name.c_str()));
                 for (auto index : _observers) {
                     // note as we have the name here, we could more efficiently pass the name to the
@@ -355,12 +360,11 @@ namespace Plugin {
                     index->Detached(name);
                 }
 
-                it->second.clientInterface->Release();
+                client->Release();
 
-                _adminLock.Lock();
-                _clients.erase(it);
+            } else {
+                _adminLock.Unlock();
             }
-            _adminLock.Unlock();
 
             TRACE(Trace::Information, (_T("Client detached completed")));
         }
