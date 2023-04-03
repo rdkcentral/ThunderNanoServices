@@ -34,7 +34,7 @@ namespace Plugin {
         class ClientHandler {
         private:
             using Client = std::pair<const IUnknown*, bool>;
-            using Clients = std::list<Client>;
+            using Clients = std::vector<Client>;
 
         private:
             ClientHandler() = delete;
@@ -79,18 +79,16 @@ namespace Plugin {
                 _adminLock.Lock();
 
                 while (_clients.size()) {
-                    Clients::iterator index(_clients.begin());
-                    const Core::IUnknown* client = index->first;
-                    bool offer = index->second;
-                    _clients.erase(index);
+                    Client client = _clients.back();
+                    _clients.pop_back();
                     _adminLock.Unlock();
 
-                    if (offer == true) {
-                        _parent.NewClientOffered(const_cast<IUnknown*>(client));
+                    if (client.second == true) {
+                        _parent.NewClientOffered(const_cast<IUnknown*>(client.first));
                     } else {
-                        _parent.ClientRevoked(client);
+                        _parent.ClientRevoked(client.first);
                     }
-                    client->Release();
+                    client.first->Release();
 
                     _adminLock.Lock();
                 }
