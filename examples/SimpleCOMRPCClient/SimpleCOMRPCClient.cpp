@@ -175,6 +175,19 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
+            case 'R':
+                printf("Revoking our IMath interface to te otherside..!\n");
+                if (client->IsOpen() == true) {
+                    uint32_t result = client->Revoke<Exchange::IMath>(outbound);
+
+                    if (result == Core::ERROR_NONE) {
+                        printf("Our IMath nterface has been Revoked from the other side!\n");
+                    }
+                    else {
+                        printf("Our revoke has not been accepted, Error: %d!\n", result);
+                    }
+                }
+                break;
             case 'C':
                 if (clock != nullptr) {
                     printf("There is no need to create a clock, we already have one!\n");
