@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+find_package(${NAMESPACE}Core)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -27,6 +28,7 @@ set_target_properties(SimpleCOMRPCClient PROPERTIES
 
 target_link_libraries(SimpleCOMRPCClient 
         PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}COM::${NAMESPACE}COM
         CompileSettingsDebug::CompileSettingsDebug
     )
