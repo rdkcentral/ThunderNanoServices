@@ -3565,6 +3565,10 @@ protected:
         {
             return (_application);
         }
+        const ControlSocket& Connector() const
+        {
+            return (_application);
+        }
         void Update()
         {
             _adminLock.Lock();

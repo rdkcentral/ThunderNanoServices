@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A BluetoothAudioSink plugin for Thunder framework.
+BluetoothAudioSink plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -24,12 +24,14 @@ A BluetoothAudioSink plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the BluetoothAudioSink plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the BluetoothAudioSink plugin. It includes detailed specification about its configuration,
+         methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties,
+         relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -44,14 +46,14 @@ The table below provides and overview of acronyms used in this document and thei
 | <a name="acronym.JSON">JSON</a> | JavaScript Object Notation; a data interchange format |
 | <a name="acronym.JSON-RPC">JSON-RPC</a> | A remote procedure call protocol encoded in JSON |
 | <a name="acronym.LC-SBC">LC-SBC</a> | Low-Complexity SubBand Coding |
-| <a name="acronym.SDP">SDP</a> | Service Discovery Protocol |
 
 The table below provides and overview of terms and abbreviations used in this document and their definitions.
 
 | Term | Description |
 | :-------- | :-------- |
 | <a name="term.bitpool">bitpool</a> | A parameter to the LC-SBC codec that changes the encoding bitrate; the higher it is the higher the bitrate and thus the audio quality |
-| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
+| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times,
+         but each instance the instance name, callsign, must be unique. |
 
 <a name="head.References"></a>
 ## References
@@ -83,14 +85,10 @@ The table below lists configuration options of the plugin.
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object |  |
 | configuration.controller | string | Callsign of the Bluetooth controller service (typically *BluetoothControl*) |
-| configuration.sdpservice | object | Configuration of the related SDP service |
-| configuration.sdpservice.enable | bool | Determines if the SDP server shall advertise an audio source service |
-| configuration.sdpservice?.name | string | <sup>*(optional)*</sup> Friendly name of the service |
-| configuration.sdpservice?.description | string | <sup>*(optional)*</sup> Description of the service |
-| configuration.sdpservice?.provider | string | <sup>*(optional)*</sup> Name of the service provider/vendor |
 | configuration.codecs | object | Codec settings |
 | configuration.codecs.LC-SBC | object | Settings for the LC-SBC codec |
-| configuration.codecs.LC-SBC?.preset | string | <sup>*(optional)*</sup> Predefined audio quality setting (must be one of the following: *Compatible*, *LQ*, *MQ*, *HQ*, *XQ*) |
+| configuration.codecs.LC-SBC?.preset | string | <sup>*(optional)*</sup> Predefined audio quality setting (must be one of the following: *Compatible*, *LQ*,
+         *MQ*, *HQ*, *XQ*) |
 | configuration.codecs.LC-SBC?.bitpool | number | <sup>*(optional)*</sup> Custom audio quality based on bitpool value (used when *preset* is not specified) |
 | configuration.codecs.LC-SBC?.channelmode | string | <sup>*(optional)*</sup> Channel mode for custom audio quality (used when *preset* is not specified) (must be one of the following: *Mono*, *Stereo*, *JointStereo*, *DualChannel*) |
 
@@ -99,7 +97,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- Exchange::IBluetoothAudioSink ([IBluetoothAudio.h](https://github.com/rdkcentral/ThunderInterfaces/tree/master/interfaces/IBluetoothAudio.h))
+- Exchange::IBluetoothAudioSink ([IBluetoothAudio.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IBluetoothAudio.h)) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -113,7 +111,6 @@ BluetoothAudioSink interface methods:
 | [assign](#method.assign) | Assigns a Bluetooth device for audio playback |
 | [revoke](#method.revoke) | Revokes a Bluetooth device from audio playback |
 
-
 <a name="method.assign"></a>
 ## *assign [<sup>method</sup>](#head.Methods)*
 
@@ -123,7 +120,8 @@ Assigns a Bluetooth device for audio playback.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| address | string | Address of the bluetooth device to assign |
+| params | object |  |
+| params.address | string | Address of the bluetooth device to assign |
 
 ### Result
 
@@ -143,10 +141,12 @@ Assigns a Bluetooth device for audio playback.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.assign",
-    "params": "..."
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.assign",
+  "params": {
+    "address": "..."
+  }
 }
 ```
 
@@ -154,9 +154,9 @@ Assigns a Bluetooth device for audio playback.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -187,9 +187,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.revoke"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.revoke"
 }
 ```
 
@@ -197,9 +197,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -212,6 +212,7 @@ BluetoothAudioSink interface properties:
 
 | Property | Description |
 | :-------- | :-------- |
+| [latency](#property.latency) | Sink audio latency |
 | [state](#property.state) <sup>RO</sup> | Current audio sink state |
 | [type](#property.type) <sup>RO</sup> | Audio sink type |
 | [supportedcodecs](#property.supportedcodecs) <sup>RO</sup> | Audio codecs supported by the sink |
@@ -220,6 +221,74 @@ BluetoothAudioSink interface properties:
 | [drm](#property.drm) <sup>RO</sup> | Properties of the currently used DRM scheme |
 | [stream](#property.stream) <sup>RO</sup> | Properties of the current output stream |
 
+<a name="property.latency"></a>
+## *latency [<sup>property</sup>](#head.Properties)*
+
+Provides access to the sink audio latency.
+
+### Value
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| (property) | object | Sink audio latency |
+| (property).value | integer | Audio latency of the sink in milliseconds |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | integer |  |
+
+### Errors
+
+| Code | Message | Description |
+| :-------- | :-------- | :-------- |
+|  | ```ERROR_ILLEGAL_STATE``` | No device is currently assigned |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.latency"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.latency",
+  "params": {
+    "value": 20
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
 
 <a name="property.state"></a>
 ## *state [<sup>property</sup>](#head.Properties)*
@@ -230,9 +299,12 @@ Provides access to the current audio sink state.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| sinkstate | string | Current audio sink state (must be one of the following: *Unassigned*, *Disconnected*, *ConnectedBadDevice*, *ConnectedRestricted*, *Connected*, *Ready*, *Streaming*) |
+| result | string | Current audio sink state (must be one of the following: *Unassigned*, *Disconnected*, *ConnectedBadDevice*, *ConnectedRestricted*,
+         *Connected*, *Ready*, *Streaming*) |
 
 ### Example
 
@@ -240,9 +312,9 @@ Provides access to the current audio sink state.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.state"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.state"
 }
 ```
 
@@ -250,9 +322,9 @@ Provides access to the current audio sink state.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "Unassigned"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "Unassigned"
 }
 ```
 
@@ -265,9 +337,11 @@ Provides access to the audio sink type.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| type | string | Audio sink type (must be one of the following: *Unknown*, *Headphone*, *Speaker*, *Recorder*, *Amplifier*) |
+| result | string | Audio sink type (must be one of the following: *Unknown*, *Headphone*, *Speaker*, *Recorder*, *Amplifier*) |
 
 ### Errors
 
@@ -281,9 +355,9 @@ Provides access to the audio sink type.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.type"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.type"
 }
 ```
 
@@ -291,9 +365,9 @@ Provides access to the audio sink type.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "Unknown"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "Unknown"
 }
 ```
 
@@ -306,10 +380,12 @@ Provides access to the audio codecs supported by the sink.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| codecs | array | Audio codecs supported by the sink |
-| codecs[#] | string |  (must be one of the following: *LC-SBC*) |
+| result | array | Audio codecs supported by the sink |
+| result[#] | string |  (must be one of the following: *LC-SBC*) |
 
 ### Errors
 
@@ -323,9 +399,9 @@ Provides access to the audio codecs supported by the sink.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.supportedcodecs"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.supportedcodecs"
 }
 ```
 
@@ -333,11 +409,11 @@ Provides access to the audio codecs supported by the sink.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "LC-SBC"
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "LC-SBC"
+  ]
 }
 ```
 
@@ -350,10 +426,12 @@ Provides access to the DRM schemes supported by the sink.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| drms | array | DRM schemes supported by the sink |
-| drms[#] | string |  (must be one of the following: *None*, *DTCP*, *SCMS-T*) |
+| result | array | DRM schemes supported by the sink |
+| result[#] | string |  (must be one of the following: *None*, *DTCP*, *SCMS-T*) |
 
 ### Errors
 
@@ -367,9 +445,9 @@ Provides access to the DRM schemes supported by the sink.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.supporteddrms"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.supporteddrms"
 }
 ```
 
@@ -377,11 +455,11 @@ Provides access to the DRM schemes supported by the sink.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "None"
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "None"
+  ]
 }
 ```
 
@@ -394,11 +472,13 @@ Provides access to the properites of the currently used codec.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| properties | object | Properites of the currently used codec |
-| properties.codec | string | Audio codec used (must be one of the following: *LC-SBC*) |
-| properties.settings | string | Codec-specific audio quality preset, compression profile, etc |
+| result | object | Properites of the currently used codec |
+| result.codec | string | Audio codec used (must be one of the following: *LC-SBC*) |
+| result.settings | string | Codec-specific audio quality preset, compression profile, etc |
 
 ### Errors
 
@@ -412,9 +492,9 @@ Provides access to the properites of the currently used codec.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.codec"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.codec"
 }
 ```
 
@@ -422,12 +502,12 @@ Provides access to the properites of the currently used codec.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "codec": "LC-SBC",
-        "settings": "..."
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "codec": "LC-SBC",
+    "settings": "..."
+  }
 }
 ```
 
@@ -440,11 +520,13 @@ Provides access to the properties of the currently used DRM scheme.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| properties | object | Properties of the currently used DRM scheme |
-| properties.drm | string | Content protection scheme used (must be one of the following: *None*, *DTCP*, *SCMS-T*) |
-| properties.settings | string | DRM-specific content protection level, encoding rules, etc |
+| result | object | Properties of the currently used DRM scheme |
+| result.drm | string | Content protection scheme used (must be one of the following: *None*, *DTCP*, *SCMS-T*) |
+| result.settings | string | DRM-specific content protection level, encoding rules, etc |
 
 ### Errors
 
@@ -458,9 +540,9 @@ Provides access to the properties of the currently used DRM scheme.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.drm"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.drm"
 }
 ```
 
@@ -468,12 +550,12 @@ Provides access to the properties of the currently used DRM scheme.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "drm": "None",
-        "settings": "..."
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "drm": "None",
+    "settings": "..."
+  }
 }
 ```
 
@@ -486,14 +568,16 @@ Provides access to the properties of the current output stream.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| properties | object | Properties of the current output stream |
-| properties.samplerate | integer | Sample rate in Hz |
-| properties.bitrate | integer | Target bitrate in bits per second (eg. 320000) |
-| properties.channels | integer | Number of audio channels |
-| properties.resolution | integer | Sampling resolution in bits per sample |
-| properties.isresampling | boolean | Indicates if the sink is resampling the input stream |
+| result | object | Properties of the current output stream |
+| result.samplerate | integer | Sample rate in Hz |
+| result.bitrate | integer | Target bitrate in bits per second (eg. 320000) |
+| result.channels | integer | Number of audio channels |
+| result.resolution | integer | Sampling resolution in bits per sample |
+| result.isresampling | boolean | Indicates if the sink is resampling the input stream |
 
 ### Errors
 
@@ -507,9 +591,9 @@ Provides access to the properties of the current output stream.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothAudioSink.1.stream"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothAudioSink.1.stream"
 }
 ```
 
@@ -517,22 +601,23 @@ Provides access to the properties of the current output stream.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "samplerate": 44100,
-        "bitrate": 0,
-        "channels": 2,
-        "resolution": 16,
-        "isresampling": false
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "samplerate": 44100,
+    "bitrate": 0,
+    "channels": 2,
+    "resolution": 16,
+        
+    "isresampling": false
+  }
 }
 ```
 
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the BluetoothAudioSink plugin:
 
@@ -541,7 +626,6 @@ BluetoothAudioSink interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [updated](#event.updated) | Signals audio sink state change or stream properties update |
-
 
 <a name="event.updated"></a>
 ## *updated [<sup>event</sup>](#head.Notifications)*
@@ -556,8 +640,8 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.updated"
+  "jsonrpc": "2.0",
+  "method": "client.events.1.updated"
 }
 ```
 
