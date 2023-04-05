@@ -3,7 +3,7 @@
 #endif
 
 #include <localtracer/localtracer.h>
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 
 #include <IRenderer.h>
 #include <Transformation.h>
