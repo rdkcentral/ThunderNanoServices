@@ -12,7 +12,7 @@
 
 #include <CECTypes.h>
 #include <core/core.h>
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 
 #include <localtracer/localtracer.h>
 
