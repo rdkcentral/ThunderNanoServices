@@ -35,11 +35,11 @@ namespace Plugin {
             // Version
             1, 0, 0,
             // Preconditions
-            {  subsystem::NETWORK },
+            { subsystem::NETWORK },
             // Terminations
             {},
             // Controls
-            {}
+            { subsystem::WEBSOURCE }
         );
     }
 
