@@ -36,6 +36,7 @@ option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" OFF)
 option(EXAMPLE_IOCONNECTOR_TEST "Include IOConnector test suite" OFF)
 option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message control" OFF)
 option(EXAMPLE_DYNAMICLOADING "Include dynamic loading examples" OFF)
+option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -85,4 +86,9 @@ endif()
 
 if (EXAMPLE_DYNAMICLOADING)
     add_subdirectory(DynamicLoading)
+endif()
+
+if (EXAMPLE_SIMPLECOMRPC_TEST)
+    add_subdirectory(SimpleCOMRPCPluginServer)
+    add_subdirectory(SimpleCOMRPCClient)
 endif()

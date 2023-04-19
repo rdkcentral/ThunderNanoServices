@@ -669,15 +669,17 @@ namespace Plugin {
 
     /* virtual */ uint32_t BluetoothControl::ForgetDevice(const string& address, const IBluetooth::IDevice::type type)
     {
-        const uint16_t count = RemoveDevices([&address, &type](DeviceImpl* device) -> bool {
+        bool found = false;
+
+        const uint16_t count = RemoveDevices([&address, &type, &found](DeviceImpl* device) -> bool {
             ASSERT(device != nullptr);
 
             if ((device->Address().ToString() == address) && (device->Type() == type)) {
-                if (device->IsPaired() == true) {
-                    device->Unpair();
-                }
+                found = true;
 
-                return (true);
+                if ((device->IsConnected() == false) && (device->IsPaired() == false)) {
+                    return (true);
+                }
             }
 
             return (false);
@@ -685,7 +687,7 @@ namespace Plugin {
 
         ASSERT(count <= 1);
 
-        return (count == 0? Core::ERROR_UNKNOWN_KEY : Core::ERROR_NONE);
+        return (count == 0? (found? Core::ERROR_ILLEGAL_STATE : Core::ERROR_UNKNOWN_KEY) : Core::ERROR_NONE);
     }
 
     //

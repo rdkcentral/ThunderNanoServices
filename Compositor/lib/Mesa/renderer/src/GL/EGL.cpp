@@ -20,7 +20,7 @@
 #include "../Module.h"
 #include "EGL.h"
 
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 #include <DRM.h>
 #include <drm.h>
 #include <drm_fourcc.h>

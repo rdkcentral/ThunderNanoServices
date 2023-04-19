@@ -856,15 +856,14 @@ POP_WARNING()
 
         uint32_t Network(const string& interface, Exchange::INetworkControl::INetworkInfoIterator*& networks) const override
         {
-            uint32_t result = Core::ERROR_NONE;
+            uint32_t result = Core::ERROR_UNAVAILABLE;
+
             _adminLock.Lock();
             std::list<Exchange::INetworkControl::NetworkInfo> networksInfo;
             if (interface.empty() != true) {
                 const auto entry = _dhcpInterfaces.find(interface);
                 if (entry != _dhcpInterfaces.end()) {
-                   NetworkInfo(entry, networksInfo);
-                } else {
-                    result = Core::ERROR_UNAVAILABLE;
+                   result = NetworkInfo(entry, networksInfo);
                 }
             }
 
@@ -878,7 +877,7 @@ POP_WARNING()
 
         uint32_t Network(const string& interface, Exchange::INetworkControl::INetworkInfoIterator* const& networks) override
         {
-            uint32_t result = Core::ERROR_NONE;
+            uint32_t result = Core::ERROR_UNAVAILABLE;
 
             Exchange::INetworkControl::NetworkInfo networkInfo;
             if (interface.empty() != true) {
