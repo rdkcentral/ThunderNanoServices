@@ -19,7 +19,7 @@ project(WifiControl)
 
 cmake_minimum_required(VERSION 3.3)
 
-find_package(WPEFramework)
+find_package(bridge)
 
 project_version(1.0.0)
 
@@ -54,6 +54,8 @@ endif()
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
+
+target_compile_options (${MODULE_NAME} PRIVATE -Wno-psabi)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
