@@ -70,25 +70,34 @@ namespace API {
             attributes.push_back(terminator);
         }
 
-        void Append(TYPE param)
+        inline void Append(TYPE param)
         {
             attributes.insert(attributes.end() - 1, param);
         }
 
-        void Append(TYPE name, TYPE value)
+        inline void Append(TYPE name, TYPE value)
         {
             Append(name);
             Append(value);
         }
 
-        operator TYPE*(void)
+        inline operator TYPE*(void)
         {
             return &attributes[0];
         }
 
-        operator const TYPE*(void) const
+        inline operator const TYPE*(void) const
         {
             return &attributes[0];
+        }
+
+        inline const TYPE& operator[](size_t idx) const{
+            return attributes[idx];
+        }
+
+        inline size_t Size() const
+        {
+            return attributes.size();
         }
     };
 
