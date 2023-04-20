@@ -108,8 +108,6 @@ namespace Renderer {
                 , _glRenderBuffer(0)
                 , _external(false)
             {
-                buffer.AddRef();
-
                 _eglImage = _egl.CreateImage(buffer.operator->(), _external);
 
                 ASSERT(_eglImage != EGL_NO_IMAGE);
@@ -157,8 +155,6 @@ namespace Renderer {
 
                 _egl.ResetCurrent();
 
-                _buffer.Release();
-
                 TRACE(Trace::GL, ("FrameBuffer %p destructed", this));
             }
 
@@ -175,7 +171,7 @@ namespace Renderer {
                 PushDebug();
                 glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
                 PopDebug();
-                return true;
+                return 0;
             }
 
             bool External() const
