@@ -199,6 +199,7 @@ namespace Renderer {
 
             if (_device != nullptr) {
                 gbm_device_destroy(_device);
+                _device = nullptr;
             }
 
             TRACE(Trace::Buffer, (_T("GBM buffer %p destructed"), this));
@@ -325,7 +326,7 @@ namespace Renderer {
     if (drmFd >= 0) {
         Core::ProxyType<Renderer::GBM> entry = Core::ProxyType<Renderer::GBM>::Create(drmFd, width, height, format);
 
-        if (entry->IsValid() == false) {
+        if (entry->IsValid() == true) {
             result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
         }
     }
