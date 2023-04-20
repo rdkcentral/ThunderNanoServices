@@ -344,6 +344,8 @@ namespace DRM {
             ++nPlanes;
         }
 
+        buffer->Completed(false);
+
         if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
 
             if (drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), modifiers.data(), &framebufferId, DRM_MODE_FB_MODIFIERS) != 0) {
