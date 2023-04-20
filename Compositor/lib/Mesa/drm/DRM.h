@@ -40,7 +40,7 @@ namespace DRM {
     using PropertyRegister = std::map<std::string, Identifier>;
     using IdentifierRegister = std::vector<Identifier>;
 
-    constexpr Identifier InvalidIdentifier = 0;
+    constexpr Identifier InvalidIdentifier = static_cast<Identifier>(~0);
 
     enum class PlaneType : uint8_t {
         Cursor = DRM_PLANE_TYPE_CURSOR,
