@@ -79,7 +79,8 @@ namespace Backend {
                         buffer.identifier = Compositor::DRM::CreateFrameBuffer(id, buffer.data.operator->());
                     }
                 }
-                ~DoubleBuffer() override
+
+                virtual ~DoubleBuffer() override
                 {
                     for (auto& buffer : _buffers) {
                         Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.identifier);
@@ -165,15 +166,17 @@ namespace Backend {
 
                 _dpmsPropertyId = Compositor::DRM::GetPropertyId(_connectorProperties, "DPMS");
 
-                Scan();
+                if (Scan() == false){
+                    TRACE(Trace::Backend, ("Connector %s is not in a valid state", connector.c_str()));
+                } else { 
+                    ASSERT(_ctrController != InvalidIdentifier);
+                    ASSERT(_primaryPlane != InvalidIdentifier);
 
-                ASSERT(_ctrController != InvalidIdentifier);
-                ASSERT(_primaryPlane != InvalidIdentifier);
-
-                TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
+                    TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
+                }
             }
 
-            ~ConnectorImplementation() override
+            virtual ~ConnectorImplementation() override
             {
                 _backend.Release();
                 _buffer.CompositRelease();
@@ -200,6 +203,9 @@ namespace Backend {
             void Render() override
             {
                 _currentBuffer = _buffer.Swap();
+
+                TRACE(Trace::Backend, ("Curent buffer: %u", _currentBuffer));
+
                 if (IsConnected() == true) {
                     _backend->PageFlip(*this);
                 }
@@ -252,11 +258,13 @@ namespace Backend {
         private:
             bool IsConnected() const
             {
-                return (_ctrController > 0);
+                return (_ctrController != Compositor::InvalidIdentifier);
             }
 
-            void Scan()
+            bool Scan()
             {
+                bool result(false);
+
                 _ctrController = Compositor::InvalidIdentifier;
                 _primaryPlane = Compositor::InvalidIdentifier;
 
@@ -267,8 +275,6 @@ namespace Backend {
                 ASSERT(plane_res != nullptr);
 
                 drmModeEncoderPtr encoder = NULL;
-                drmModeCrtcPtr crtc = NULL;
-                drmModePlanePtr plane = NULL;
 
                 for (int c = 0; c < res->count_connectors; c++) {
                     drmModeConnectorPtr connector = drmModeGetConnector(_backend->Descriptor(), res->connectors[c]);
@@ -290,65 +296,76 @@ namespace Backend {
                         }
                     }
 
-                    /*
-                     * Find the CRTC currently used by this connector. It is possible to
-                     * use a different CRTC if desired, however unlike the pre-atomic API,
-                     * we have to explicitly change every object in the routing path.
-                     */
+                    if(encoder != nullptr) {                                           /*
+                        * Find the CRTC currently used by this connector. It is possible to
+                        * use a different CRTC if desired, however unlike the pre-atomic API,
+                        * we have to explicitly change every object in the routing path.
+                        */
 
-                    ASSERT(encoder != nullptr);
-                    ASSERT(encoder->crtc_id != Compositor::InvalidIdentifier);
+                        drmModePlanePtr plane = NULL;
+                        drmModeCrtcPtr crtc = NULL;
 
-                    for (uint8_t c = 0; c < res->count_crtcs; c++) {
-                        if (res->crtcs[c] == encoder->crtc_id) {
-                            crtc = drmModeGetCrtc(_backend->Descriptor(), res->crtcs[c]);
-                            break;
+                        ASSERT(encoder->crtc_id != Compositor::InvalidIdentifier);
+
+                        for (uint8_t c = 0; c < res->count_crtcs; c++) {
+                            if (res->crtcs[c] == encoder->crtc_id) {
+                                crtc = drmModeGetCrtc(_backend->Descriptor(), res->crtcs[c]);
+                                break;
+                            }
                         }
-                    }
 
-                    /* Ensure the CRTC is active. */
-                    ASSERT(crtc != nullptr);
-                    ASSERT(crtc->buffer_id != 0);
-                    ASSERT(crtc->crtc_id != 0);
+                        /* Ensure the CRTC is active. */
+                        ASSERT(crtc != nullptr);
+                        ASSERT(crtc->buffer_id != 0);
+                        ASSERT(crtc->crtc_id != 0);
 
-                    /*
-                     * The kernel doesn't directly tell us what it considers to be the
-                     * single primary plane for this CRTC (i.e. what would be updated
-                     * by drmModeSetCrtc), but if it's already active then we can cheat
-                     * by looking for something displaying the same framebuffer ID,
-                     * since that information is duplicated.
-                     */
-                    for (uint8_t p = 0; p < plane_res->count_planes; p++) {
-                        plane = drmModeGetPlane(_backend->Descriptor(), plane_res->planes[p]);
+                        /*
+                        * The kernel doesn't directly tell us what it considers to be the
+                        * single primary plane for this CRTC (i.e. what would be updated
+                        * by drmModeSetCrtc), but if it's already active then we can cheat
+                        * by looking for something displaying the same framebuffer ID,
+                        * since that information is duplicated.
+                        */
+                        for (uint8_t p = 0; p < plane_res->count_planes; p++) {
+                            plane = drmModeGetPlane(_backend->Descriptor(), plane_res->planes[p]);
 
-                        TRACE(Trace::Backend, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB %" PRIu32, plane->plane_id, plane->crtc_id, plane->fb_id));
+                            TRACE(Trace::Backend, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB %" PRIu32, plane->plane_id, plane->crtc_id, plane->fb_id));
 
-                        if ((plane->crtc_id == crtc->crtc_id) && (plane->fb_id == crtc->buffer_id)) {
-                            break;
+                            if ((plane->crtc_id == crtc->crtc_id) && (plane->fb_id == crtc->buffer_id)) {
+                                break;
+                            }
                         }
+
+                        ASSERT(plane);
+
+                        _ctrController = crtc->crtc_id;
+                        _primaryPlane = plane->plane_id;
+                        _drmModeStatus = crtc->mode;
+
+                        uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
+
+                        TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, connector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
+
+                        GetPropertyIds(_ctrController, DRM_MODE_OBJECT_CRTC, _crtcProperties);
+                        GetPropertyIds(_primaryPlane, DRM_MODE_OBJECT_PLANE, _planeProperties);
+
+                        drmModeFreeCrtc(crtc);
+                        drmModeFreePlane(plane);
                     }
-
-                    ASSERT(plane);
-
-                    _ctrController = crtc->crtc_id;
-                    _primaryPlane = plane->plane_id;
-                    _drmModeStatus = crtc->mode;
-
-                    uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
-
-                    TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, connector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
-
-                    drmModeFreeCrtc(crtc);
+                    
                     drmModeFreeEncoder(encoder);
-                    drmModeFreePlane(plane);
+                    
+
+                    result = ((_ctrController != Compositor::InvalidIdentifier) 
+                           && (_primaryPlane != Compositor::InvalidIdentifier));
 
                     break;
                 }
 
                 drmModeFreeResources(res);
+                drmModeFreePlaneResources(plane_res);
 
-                GetPropertyIds(_ctrController, DRM_MODE_OBJECT_CRTC, _crtcProperties);
-                GetPropertyIds(_primaryPlane, DRM_MODE_OBJECT_PLANE, _planeProperties);
+                return result;
             }
 
             bool GetPropertyIds(const Compositor::Identifier object, const uint32_t type, Compositor::DRM::PropertyRegister& registry)
@@ -474,29 +491,40 @@ namespace Backend {
     private:
         uint32_t PageFlip(ConnectorImplementation& connector)
         {
+            uint32_t result(Core::ERROR_NONE);
+
             if (connector.CtrControllerId() != Compositor::InvalidIdentifier) {
                 _adminLock.Lock();
 
                 const auto index(_pendingCommits.find(connector.CtrControllerId()));
 
-                if (index != _pendingCommits.end()) {
+                if (index == _pendingCommits.end()) {
                     connector.AddRef();
 
-                    _pendingCommits.emplace(std::piecewise_construct,
-                        std::forward_as_tuple(connector.CtrControllerId()),
-                        std::forward_as_tuple(&connector));
+                    if (result = _output.Commit(_cardFd, &connector, DRM_MODE_PAGE_FLIP_EVENT, this) != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, ("Pageflip failed for %u", connector.CtrControllerId()));
+                    } else {
+                        _pendingCommits.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(connector.CtrControllerId()),
+                            std::forward_as_tuple(&connector));
 
-                    _output->Commit(_cardFd, &connector, DRM_MODE_PAGE_FLIP_EVENT, this);
+                        TRACE(Trace::Backend, ("Commited pageflip for CRTC %u", connector.CtrControllerId()));
+                    }
+                } else {
+                    TRACE(Trace::Backend, ("Skipping commit, pageflip is still pending for CRTC %u", connector.CtrControllerId()));
+                    result = Core::ERROR_INPROGRESS;
                 }
 
                 _adminLock.Unlock();
             }
 
-            return 0;
+            return result;
         }
 
         void FinishPageFlip(const Compositor::Identifier crtc, const unsigned sec, const unsigned usec)
         {
+            _adminLock.Lock();
+
             CommitRegister::iterator index(_pendingCommits.find(crtc));
 
             ConnectorImplementation* connector(nullptr);
@@ -504,16 +532,18 @@ namespace Backend {
             if (index != _pendingCommits.end()) {
                 connector = index->second;
                 _pendingCommits.erase(index);
+
+                ASSERT(crtc == connector->CtrControllerId());
+
+                struct timespec presentationTimestamp {
+                    .tv_sec = sec, .tv_nsec = usec * 1000
+                };
+
+                connector->Completed(false);
+                connector->Release();
             }
 
-            ASSERT(crtc == connector->CtrControllerId());
-
-            struct timespec presentationTimestamp {
-                .tv_sec = sec, .tv_nsec = usec * 1000
-            };
-
-            connector->Completed(false);
-            connector->Release();
+            _adminLock.Unlock();
         }
 
         static void PageFlipHandler(int /*cardFd*/, unsigned /*seq*/, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
@@ -547,7 +577,7 @@ namespace Backend {
             return _cardFd;
         }
 
-        uint32_t FindConnectorId(const string& connectorName)
+        Identifier FindConnectorId(const string& connectorName)
         {
             ASSERT(_cardFd > 0);
 
@@ -555,7 +585,7 @@ namespace Backend {
 
             ASSERT(resources != nullptr);
 
-            uint32_t connectorId = 0;
+            Identifier connectorId(InvalidIdentifier);
 
             TRACE_GLOBAL(Trace::Backend, ("Lets see if we can find connector: %s", connectorName.c_str()));
 
@@ -582,6 +612,13 @@ namespace Backend {
                     }
                 }
             }
+
+            if ((connectorId == InvalidIdentifier)){
+                TRACE_GLOBAL(Trace::Error, ("Unable to find connector %s", connectorName.c_str()));
+            }
+
+            ASSERT(connectorId != InvalidIdentifier);
+
             return connectorId;
         }
 
@@ -589,7 +626,7 @@ namespace Backend {
         mutable Core::CriticalSection _adminLock;
         int _cardFd;
         Monitor _monitor;
-        std::shared_ptr<IOutput> _output;
+        IOutput& _output;
         CommitRegister _pendingCommits;
     }; // class DRM
 
