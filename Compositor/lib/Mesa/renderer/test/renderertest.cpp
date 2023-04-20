@@ -100,12 +100,25 @@ void PrintFormat(const string& preamble, const Compositor::PixelFormat& format)
     TRACE_GLOBAL(Trace::Information, ("%s", line.str().c_str()));
 }
 
-const Compositor::Color gray = { 0.2, 0.2, 0.2, 1.0 };
+const Compositor::Color gray = { 0.5, 0.5, 0.5, 1.0 };
 const Compositor::Color red = { 1.0, 0.0, 0.0, 1.0 };
+const Compositor::Color green = { 0.0, 1.0, 0.0, 1.0 };
+const Compositor::Color blue = { 0.0, 0.0, 1.0, 1.0 };
+const Compositor::Color white = { 1.0, 1.0, 1.0, 1.0 };
 }
 
-int main(int /*argc*/, const char* argv[])
+int main(int argc, const char* argv[])
 {
+    const std::array<Compositor::Color, 3> Colors = { red, green, blue };
+
+    std::string ConnectorId;
+
+    if (argc == 1) {
+        ConnectorId = "card0-HDMI-A-2";
+    } else {
+        ConnectorId = argv[1];
+    }
+
     Messaging::MessageUnit::flush flushMode;
     flushMode = Messaging::MessageUnit::flush::FLUSH;
 
@@ -134,48 +147,47 @@ int main(int /*argc*/, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer = Compositor::Connector("card0-Virtual-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
-
-        // int drmFd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer = Compositor::Connector(ConnectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
 
         Core::ProxyType<Compositor::IRenderer> renderer = Compositor::IRenderer::Instance(framebuffer->Identifier());
 
-        // const std::vector<Compositor::PixelFormat>& renderFormats(renderer->RenderFormats());
-        // for (const auto& format : renderFormats) {
-        //     PrintFormat("Render", format);
-        // }
-
-        // const std::vector<Compositor::PixelFormat>& textureFormats(renderer->TextureFormats());
-        // for (const auto& format : textureFormats) {
-        //     PrintFormat("Texture", format);
-        // }
-
         // Add a buffer to render on
+        TRACE_GLOBAL(Trace::Information, ("Render Bind"));
         renderer->Bind(framebuffer);
 
-        {
+        constexpr uint8_t nRenderCycles(10);
+
+        for (uint8_t i(0); i <= nRenderCycles; i++) {
+            TRACE_GLOBAL(Trace::Information, ("Render Begin"));
             renderer->Begin(1920, 1080);
 
-            renderer->Clear(gray);
+            TRACE_GLOBAL(Trace::Information, ("Render Clear"));
+            renderer->Clear(white);
 
             // TODO make one object of this...
             Compositor::Matrix quad1;
             Compositor::Transformation::Projection(quad1, 60, 120, Compositor::Transformation::TRANSFORM_NORMAL);
-            Compositor::Transformation::Translate(quad1, 20, 20);
 
-            renderer->Quadrangle(red, quad1);
+            constexpr uint8_t nRenderQuads(10);
 
+            for (uint8_t i(0); i <= nRenderQuads; i++){     
+                TRACE_GLOBAL(Trace::Information, ("Render Quadrangle %d", i));
+                renderer->Quadrangle(Colors.at(i % (Colors.size() - 1)), quad1);
+                Compositor::Transformation::Translate(quad1, 30, 60);
+            }
+
+            TRACE_GLOBAL(Trace::Information, ("Render End"));
             renderer->End();
 
             framebuffer->Render();
+
+            sleep(1);
         }
 
         renderer->Unbind();
 
         framebuffer.Release();
         renderer.Release();
-
-        // close(drmFd);
     }
 
     TRACE_GLOBAL(Trace::Information, ("Exiting %s.... ", executableName));

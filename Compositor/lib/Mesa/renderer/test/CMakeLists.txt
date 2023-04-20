@@ -3,20 +3,20 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
-find_package(EGL REQUIRED)
 
-add_executable(glextinfo glextinfo.cpp)
+add_executable(renderertest renderertest.cpp)
 
-target_link_libraries(glextinfo
+target_link_libraries(renderertest
     PRIVATE
-        common::include
-        gl::shaders
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
+        common::include
+        common::buffer
+        common::backend
         common::renderer
-        EGL::EGL
+        common::drm
 )
 
-install(TARGETS glextinfo DESTINATION bin)
+install(TARGETS renderertest DESTINATION bin)
