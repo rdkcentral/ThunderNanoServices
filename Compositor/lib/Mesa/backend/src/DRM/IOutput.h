@@ -47,7 +47,7 @@ namespace Backend {
             virtual const drmModeModeInfo& ModeInfo() const = 0;
         };
 
-        static IOutput* Instance();
+        static IOutput& Instance();
 
         virtual ~IOutput() = default;
 

@@ -69,8 +69,8 @@ namespace Backend {
                 uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
 
                 if (drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms) != 0) {
-                    TRACE(Trace::Error, ("drmModeSetCrtc failed: %s", strerror(-drmResult)));
-                    return false;
+                    TRACE(Trace::Error, ("drmModeConnectorSetProperty failed setting DPMS"));
+                    return result = Core::ERROR_GENERAL;
                 }
 
                 constexpr uint32_t X = 0;
@@ -108,12 +108,12 @@ namespace Backend {
 
     private:
         signed int _gammaSize;
-    };
+    }; // class LegacyCrtc
 
-    /* static */ IOutput* IOutput::Instance()
+    /* static */ IOutput& IOutput::Instance()
     {
-        static LegacyCrtc transaction;
-        return (&transaction);
+        static LegacyCrtc& output = Core::SingletonType<LegacyCrtc>::Instance();
+        return output;
     }
 } // namespace Backend
 } // namespace Compositor
