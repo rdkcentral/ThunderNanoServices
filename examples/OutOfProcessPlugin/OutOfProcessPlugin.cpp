@@ -332,6 +332,7 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
                 result->Body<Web::JSONBodyType<OutOfProcessPlugin::Data>>(body);
+                
             } else if ((request.Verb == Web::Request::HTTP_POST) && (index.Next() == true) && (index.Next() == true)) {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
@@ -345,6 +346,21 @@ namespace Plugin {
                     _browser->Hide(true);
                 } else if (index.Remainder() == _T("Show")) {
                     _browser->Hide(false);
+
+                // Test IDispatcher with given data size
+                } else if (index.Remainder() == _T("TestValidator")) {
+                    int stringSize = 32;
+                    if (request.HasBody() == true) {
+                        stringSize = std::stoi(*(request.Body<Web::TextBody>()));
+                    }
+                    PluginHost::IDispatcher* dispatcher(_browser->QueryInterface<PluginHost::IDispatcher>());
+                    printf("String size: %d\n", stringSize);
+                    const int string_length = stringSize * 1024;
+                    std::string my_string;
+    			    my_string.resize(string_length, 'a');
+                    my_string.replace(0, 4, "test");
+                    my_string.replace(my_string.length() - 4, 4, "test");
+                    dispatcher->Validate("", "", my_string);
                 } else if (index.Remainder() == _T("Notify4K")) {
                     string message;
                     for (uint32_t teller = 0; teller < ((4 * 1024) + 64); teller++) {

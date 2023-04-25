@@ -74,6 +74,7 @@ namespace Plugin {
         : public Exchange::IBrowser
         , public Exchange::IBrowserResources
         , public PluginHost::IStateControl
+        , public PluginHost::IDispatcher
         , public Core::Thread {
     private:
         enum StateType {
@@ -552,16 +553,44 @@ POP_WARNING()
             while (uris->Next(value) == true) {
                 TRACE(TooMuchInfo, (_T("UserStyleSheets [%s] processed"), value.c_str()));
             }
-            return Core::ERROR_NONE;
             TRACE(Trace::Information, (_T("UserStyleSheets update finished")));
+            return Core::ERROR_NONE;
+           
         }
 
         BEGIN_INTERFACE_MAP(OutOfProcessImplementation)
             INTERFACE_ENTRY(Exchange::IBrowser)
             INTERFACE_ENTRY(Exchange::IBrowserResources)
             INTERFACE_ENTRY(PluginHost::IStateControl)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
             INTERFACE_AGGREGATE(PluginHost::IPlugin::INotification,static_cast<IUnknown*>(&_sink))
         END_INTERFACE_MAP
+
+    public:
+
+        Core::hresult Validate(const string& token, const string& method, const string& paramaters /* @restrict:(4M-1) */) const override {
+            string paramatersFront = paramaters.substr(0, 4);
+            string paramatersBack = paramaters.substr(paramaters.length() - 4, 4);
+            if (paramatersFront == "test" && paramatersBack == "test")  {
+                return Core::ERROR_NONE;
+            }
+            else {
+                return Core::ERROR_GENERAL;
+            }
+        }
+        Core::hresult Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters /* @restrict:(4M-1) */, string& response /* @restrict:(4M-1) @out */) override {
+            return Core::ERROR_NONE;
+        }
+        Core::hresult Revoke(ICallback* callback) override {
+            return Core::ERROR_NONE;
+        }
+        
+        // If we need to activate this locally, we can get access to the base..
+        /* @stubgen:stub */
+        PluginHost::ILocalDispatcher* Local() override {
+            
+            return nullptr;
+	}
 
     private:
         friend Core::ThreadPool::JobType<OutOfProcessImplementation&>;
