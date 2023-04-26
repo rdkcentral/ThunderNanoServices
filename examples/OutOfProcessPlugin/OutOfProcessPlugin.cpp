@@ -354,13 +354,12 @@ namespace Plugin {
                         stringSize = std::stoi(*(request.Body<Web::TextBody>()));
                     }
                     PluginHost::IDispatcher* dispatcher(_browser->QueryInterface<PluginHost::IDispatcher>());
-                    printf("String size: %d\n", stringSize);
-                    const int string_length = stringSize * 1024;
-                    std::string my_string;
-    			    my_string.resize(string_length, 'a');
-                    my_string.replace(0, 4, "test");
-                    my_string.replace(my_string.length() - 4, 4, "test");
-                    dispatcher->Validate("", "", my_string);
+                    const int stringLength = stringSize * 1024;
+                    std::string myString;
+                    myString.resize(stringLength, 'a');
+                    myString.replace(0, 4, "test");
+                    myString.replace(myString.length() - 4, 4, "test");
+                    dispatcher->Validate("", "", myString);
                 } else if (index.Remainder() == _T("Notify4K")) {
                     string message;
                     for (uint32_t teller = 0; teller < ((4 * 1024) + 64); teller++) {

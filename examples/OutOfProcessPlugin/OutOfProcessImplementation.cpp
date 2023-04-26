@@ -572,9 +572,11 @@ POP_WARNING()
             string paramatersFront = paramaters.substr(0, 4);
             string paramatersBack = paramaters.substr(paramaters.length() - 4, 4);
             if (paramatersFront == "test" && paramatersBack == "test")  {
+                TRACE(Trace::Information, (_T("Validation Completed! Text Size: %u"), static_cast<uint32_t>(paramaters.length())));
                 return Core::ERROR_NONE;
             }
             else {
+                TRACE(Trace::Information, (_T("Failed to validate! Text corrupted! Text Size: %u"), static_cast<uint32_t>(paramaters.length())));
                 return Core::ERROR_GENERAL;
             }
         }
