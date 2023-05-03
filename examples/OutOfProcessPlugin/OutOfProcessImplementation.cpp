@@ -569,9 +569,9 @@ POP_WARNING()
     public:
 
         Core::hresult Validate(const string& token, const string& method, const string& paramaters /* @restrict:(4M-1) */) const override {
-            string paramatersFront = paramaters.substr(0, 4);
-            string paramatersBack = paramaters.substr(paramaters.length() - 4, 4);
-            if (paramatersFront == "test" && paramatersBack == "test")  {
+            string paramatersFront = paramaters.substr(0, 8);
+            string paramatersBack = paramaters.substr(paramaters.length() - 8, 8);
+            if (paramatersFront == "testabcd" && paramatersBack == "testabcd")  {
                 TRACE(Trace::Information, (_T("Validation Completed! Text Size: %u"), static_cast<uint32_t>(paramaters.length())));
                 return Core::ERROR_NONE;
             }

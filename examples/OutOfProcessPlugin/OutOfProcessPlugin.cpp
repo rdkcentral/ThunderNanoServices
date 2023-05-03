@@ -349,16 +349,19 @@ namespace Plugin {
 
                 // Test IDispatcher with given data size
                 } else if (index.Remainder() == _T("TestValidator")) {
-                    int stringSize = 32;
+                    uint32_t stringSize = 32;
                     if (request.HasBody() == true) {
                         stringSize = std::stoi(*(request.Body<Web::TextBody>()));
+                        if (stringSize > 128) {
+                            TRACE(Trace::Information, (_T("%u is not allowed. Size automatically set to maximum: 128K"), stringSize));
+                        }
                     }
                     PluginHost::IDispatcher* dispatcher(_browser->QueryInterface<PluginHost::IDispatcher>());
-                    const int stringLength = stringSize * 1024;
+                    const uint32_t stringLength = stringSize * 1024;
                     std::string myString;
                     myString.resize(stringLength, 'a');
-                    myString.replace(0, 4, "test");
-                    myString.replace(myString.length() - 4, 4, "test");
+                    myString.replace(0, 8, "testabcd");
+                    myString.replace(myString.length() - 8, 8, "testabcd");
                     dispatcher->Validate("", "", myString);
                 } else if (index.Remainder() == _T("Notify4K")) {
                     string message;
