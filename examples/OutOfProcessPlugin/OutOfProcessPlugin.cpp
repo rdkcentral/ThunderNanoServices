@@ -354,6 +354,7 @@ namespace Plugin {
                         stringSize = std::stoi(*(request.Body<Web::TextBody>()));
                         if (stringSize > 128) {
                             TRACE(Trace::Information, (_T("%u is not allowed. Size automatically set to maximum: 128K"), stringSize));
+                            stringSize = 128;
                         }
                     }
                     PluginHost::IDispatcher* dispatcher(_browser->QueryInterface<PluginHost::IDispatcher>());
