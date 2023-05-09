@@ -28,6 +28,12 @@ namespace Compositor {
     struct EXTERNAL IRenderer {
         virtual ~IRenderer() = default;
 
+        // struct ICallback
+        // {
+        //     virtual ~ICallback() = default;
+        //     void LastFrameTimestamp(const uint32_t seconds, const uint32_t microSeconds) = 0;
+        // };
+
         /**
          * @brief A factory for renderer, callee needs to call Release() when done.
          *
@@ -37,6 +43,14 @@ namespace Compositor {
         static Core::ProxyType<IRenderer> Instance(Identifier identifier);
 
         // virtual uint32_t Configure(const string& config) = 0;
+
+        // /**
+        //  * @brief Install a callback to receive e.g. the
+        //  *
+        //  * @param callback A callback pointer, or nullptr to unset the callback.
+        //  * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
+        //  */
+        // virtual uint32_t Callback(ICallback* callback) = 0;
 
         /**
          * @brief Binds a frame buffer to the renderer, all render related actions will be done using this buffer.
@@ -132,17 +146,35 @@ namespace Compositor {
         /**
          * @brief Returns a list of pixel @PixelFormat valid for rendering.
          *
-         * @return const std::vector<PixelFormat>& the list of @Formats
+         * @return const std::vector<PixelFormat>& the list of @PixelFormat
          */
         virtual const std::vector<PixelFormat>& RenderFormats() const = 0;
 
         /**
          * @brief Returns a list of pixel @PixelFormat valid for textures.
          *
-         * @return const std::vector<PixelFormat>& the list of @Formats
+         * @return const std::vector<PixelFormat>& the list of @PixelFormat
          */
         virtual const std::vector<PixelFormat>& TextureFormats() const = 0;
 
+        /**
+         * @brief Returns the current projection matrix of the renderer
+         *
+         * @return const Matrix& the projection matrix currently used
+         */
+        virtual const Matrix& Projection() const = 0;
+
+        /**
+         * @brief Creates a pixel data snapshot of the current render.
+         *
+         * @param format            Pixel format to be returned.
+         * @param area              Area of interest.
+         * @param size              Size of the buffer, 0 returns the size only.
+         * @param buffer            Receive buffer for the pixel data, nullptr returns the size only.
+         *
+         * @return uint64_t  The amount of data in the requested area.
+         */
+        // virtual uint64_t Snapshot(const PixelFormat format, const Box& area, const uint64_t size, uint8_t* buffer) = 0;
     }; // struct EXTERNAL IRenderer
 
 } // namespace Compositor
