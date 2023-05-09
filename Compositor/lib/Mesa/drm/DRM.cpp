@@ -223,6 +223,8 @@ namespace DRM {
                 TRACE_GLOBAL(Trace::Error, ("drmGetDeviceNameFromFd2 failed"));
                 return InvalidFileDescriptor;
             }
+
+            TRACE_GLOBAL(Trace::Information, ("No render node found, using primary node: '%s'", name));
         } else {
             TRACE_GLOBAL(Trace::Information, ("DRM Render Node: %s", name));
         }
@@ -377,7 +379,7 @@ namespace DRM {
         CloseDrmHandles(cardFd, handles);
 
         // just unlock and go, we still need to draw something,.
-        // buffer->Completed(false);
+        buffer->Completed(false);
 
         TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
 
