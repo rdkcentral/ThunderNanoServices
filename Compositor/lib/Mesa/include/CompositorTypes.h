@@ -27,12 +27,11 @@ namespace WPEFramework {
 
 namespace Compositor {
 
-
-using Box = struct {
-    uint32_t x;
-    uint32_t y;
-    uint32_t width;
-    uint32_t height;
+struct Box {
+    int x;
+    int y;
+    int width;
+    int height;
 };
 
 using Identifier = uintptr_t;
