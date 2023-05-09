@@ -15,27 +15,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(CompileSettingsDebug CONFIG REQUIRED)
-find_package(${NAMESPACE}Core CONFIG REQUIRED)
-find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
-find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
-
-add_executable(transformationtest main.cpp)
-
-add_subdirectory(ref_matrix)
-
-set_target_properties(transformationtest PROPERTIES
-    CXX_STANDARD 11
-    CXX_STANDARD_REQUIRED YES
-    VERSION ${PROJECT_VERSION}
-)
-
-target_link_libraries(transformationtest
-    PRIVATE
-        common::include
-        common::transformation
-        ref_matrix
-        ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
-)
-
-install(TARGETS transformationtest DESTINATION bin)
+add_library(ref_matrix ref_matrix.c)

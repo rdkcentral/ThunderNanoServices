@@ -34,7 +34,6 @@ MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace WPEFramework {
 
-
 #ifdef __DEBUG__
 void DebugSink(EGLenum error, const char* command, EGLint messageType, EGLLabelKHR /*threadLabel*/, EGLLabelKHR /*objectLabel*/, const char* message)
 {
@@ -124,403 +123,430 @@ std::vector<EGLConfig> MatchConfigs(EGLDisplay dpy, const EGLint attrib_list[])
 }
 
 namespace Compositor {
-namespace Renderer {
+    namespace Renderer {
+        constexpr int InvalidFileDescriptor = -1;
 
-    EGL::EGL(const int drmFd)
-        : _api()
-        , _display(EGL_NO_DISPLAY)
-        , _context(EGL_NO_CONTEXT)
-        , _draw_surface(EGL_NO_SURFACE)
-        , _read_surface(EGL_NO_SURFACE)
-        , _formats()
-    {
-        TRACE(Trace::EGL, ("%s - build: %s", __func__, __TIMESTAMP__));
+        EGL::EGL(const int drmFd)
+            : _api()
+            , _display(EGL_NO_DISPLAY)
+            , _context(EGL_NO_CONTEXT)
+            , _device(EGL_NO_DEVICE_EXT)
+            , _draw_surface(EGL_NO_SURFACE)
+            , _read_surface(EGL_NO_SURFACE)
+            , _formats()
+            , _gbmDescriptor(InvalidFileDescriptor)
+            , _gbmDevice(nullptr)
+        {
+            TRACE(Trace::EGL, ("%s - build: %s", __func__, __TIMESTAMP__));
 #ifdef __DEBUG__
-        constexpr EGLAttrib debugAttributes[] = {
-            EGL_DEBUG_MSG_CRITICAL_KHR,
-            EGL_TRUE, //
-            EGL_DEBUG_MSG_ERROR_KHR,
-            EGL_TRUE, //
-            EGL_DEBUG_MSG_WARN_KHR,
-            EGL_TRUE, //
-            EGL_DEBUG_MSG_INFO_KHR,
-            EGL_TRUE, //
-            EGL_NONE,
-        };
+            constexpr EGLAttrib debugAttributes[] = {
+                EGL_DEBUG_MSG_CRITICAL_KHR,
+                EGL_TRUE, //
+                EGL_DEBUG_MSG_ERROR_KHR,
+                EGL_TRUE, //
+                EGL_DEBUG_MSG_WARN_KHR,
+                EGL_TRUE, //
+                EGL_DEBUG_MSG_INFO_KHR,
+                EGL_TRUE, //
+                EGL_NONE,
+            };
 
-        ASSERT(_api.eglDebugMessageControl != nullptr);
-        _api.eglDebugMessageControl(DebugSink, debugAttributes);
+            ASSERT(_api.eglDebugMessageControl != nullptr);
+            _api.eglDebugMessageControl(DebugSink, debugAttributes);
 
 #endif
 
-        EGLBoolean eglBind = eglBindAPI(EGL_OPENGL_ES_API);
+            EGLBoolean eglBind = eglBindAPI(EGL_OPENGL_ES_API);
 
-        ASSERT(eglBind == EGL_TRUE);
+            ASSERT(eglBind == EGL_TRUE);
 
-        const bool isMaster = drmIsMaster(drmFd);
+            const bool isMaster = drmIsMaster(drmFd);
 
-        EGLDeviceEXT eglDevice = EGL_NO_DEVICE_EXT; // FindEGLDevice(drmFd);
+            EGLDeviceEXT eglDevice = FindEGLDevice(drmFd);
 
-        if (eglDevice != EGL_NO_DEVICE_EXT) {
-            TRACE(Trace::EGL, ("Initialize EGL using EGL device."));
-            InitializeEgl(EGL_PLATFORM_DEVICE_EXT, eglDevice, isMaster);
-        } else {
-            int gbm_fd = DRM::ReopenNode(drmFd, true);
+            if (eglDevice != EGL_NO_DEVICE_EXT) {
+                TRACE(Trace::EGL, ("Initialize EGL using EGL device."));
+                Initialize(EGL_PLATFORM_DEVICE_EXT, eglDevice, isMaster);
+            } else {
+                _gbmDescriptor = DRM::ReopenNode(drmFd, true);
+                _gbmDevice = gbm_create_device(_gbmDescriptor);
 
-            gbm_device* gbmDevice = gbm_create_device(gbm_fd);
+                if (_gbmDevice != nullptr) {
+                    TRACE(Trace::EGL, ("Initialize EGL using GMB device."));
+                    Initialize(EGL_PLATFORM_GBM_KHR, _gbmDevice, isMaster);
+                }
 
-            if (gbmDevice != nullptr) {
-                TRACE(Trace::EGL, ("Initialize EGL using GMB device."));
-                InitializeEgl(EGL_PLATFORM_GBM_KHR, gbmDevice, isMaster);
+                ASSERT(_gbmDevice != nullptr);
             }
 
-            TRACE(Trace::EGL, ("%s:%d BRAM DEBUG gbmDevice=%p", __FILE__, __LINE__, gbmDevice)); 
-            // gbm_device_destroy(gbmDevice);
-            close(gbm_fd);
+            GetPixelFormats(_formats);
+
+            TRACE(Trace::EGL, ("Initialized EGL Display=%p, Context=%p, %d formats supported", _display, _context, _formats.size()));
         }
 
-        ASSERT(_display != EGL_NO_DISPLAY);
-        ASSERT(_context != EGL_NO_CONTEXT);
+        EGL::~EGL()
+        {
+            ASSERT(_display != EGL_NO_DISPLAY);
 
-        TRACE(Trace::EGL, ("Initialized EGL Display=%p, Context=%p", _display, _context));
+            eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
-        GetPixelFormats(_formats);
+            if (_context != EGL_NO_CONTEXT) {
+                eglDestroyContext(_display, _context);
+                _context = EGL_NO_CONTEXT;
+            }
 
-        TRACE(Trace::EGL, ("%s:%d BRAM DEBUG", __FILE__, __LINE__));
-    }
+            eglTerminate(_display);
 
-    EGL::~EGL()
-    {
-        ASSERT(_display != EGL_NO_DISPLAY);
+            eglReleaseThread();
 
-        eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+            if (_gbmDevice != nullptr) {
+                gbm_device_destroy(_gbmDevice);
+            }
+            if (_gbmDescriptor != InvalidFileDescriptor) {
+                close(_gbmDescriptor);
+            }
 
-        if (_context != EGL_NO_CONTEXT) {
-            eglDestroyContext(_display, _context);
-            _context = EGL_NO_CONTEXT;
+            TRACE(Trace::EGL, ("EGL instance %p destructed", this));
         }
 
-        eglTerminate(_display);
+        EGLDeviceEXT EGL::FindEGLDevice(const int drmFd)
+        {
+            EGLDeviceEXT result(EGL_NO_DEVICE_EXT);
 
-        eglReleaseThread();
-    }
+            if ((_api.eglQueryDevicesEXT != nullptr) && (_api.eglQueryDeviceStringEXT != nullptr)) {
+                EGLint nEglDevices = 0;
+                _api.eglQueryDevicesEXT(0, nullptr, &nEglDevices);
+                TRACE(Trace::EGL, ("System has %u EGL device%s", nEglDevices, (nEglDevices == 1) ? "" : "s"));
 
-    EGLDeviceEXT EGL::FindEGLDevice(const int drmFd)
-    {
-        EGLDeviceEXT result(EGL_NO_DEVICE_EXT);
+                EGLDeviceEXT eglDevices[nEglDevices];
+                memset(eglDevices, 0, sizeof(eglDevices));
 
-        if ((_api.eglQueryDevicesEXT != nullptr) && (_api.eglQueryDeviceStringEXT != nullptr)) {
-            EGLint nEglDevices = 0;
-            _api.eglQueryDevicesEXT(0, nullptr, &nEglDevices);
-            TRACE(Trace::EGL, ("System has %u EGL device%s", nEglDevices, (nEglDevices == 1) ? "" : "s"));
+                _api.eglQueryDevicesEXT(nEglDevices, eglDevices, &nEglDevices);
 
-            EGLDeviceEXT eglDevices[nEglDevices];
-            memset(eglDevices, 0, sizeof(eglDevices));
+                if (nEglDevices > 0) {
+                    drmDevice* drmDevice = nullptr;
+                    int ret = drmGetDevice(drmFd, &drmDevice);
 
-            _api.eglQueryDevicesEXT(nEglDevices, eglDevices, &nEglDevices);
+                    if ((ret == 0) && (drmDevice != nullptr)) {
+                        for (int i = 0; i < nEglDevices; i++) {
+                            TRACE(Trace::EGL, ("Trying device %d [%p]", i, eglDevices[i]));
 
-            if (nEglDevices > 0) {
-                drmDevice* drmDevice = nullptr;
-                int ret = drmGetDevice(drmFd, &drmDevice);
+#ifdef __DEBUG__
+                            const char* extensions = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_EXTENSIONS);
+                            if (extensions != nullptr) {
+                                TRACE(Trace::EGL, ("EGL extensions: %s", extensions));
+                            }
+#endif
+                            const char* renderName = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_DRM_RENDER_NODE_FILE_EXT);
 
-                if ((ret == 0) && (drmDevice != nullptr)) {
-                    for (int i = 0; i < nEglDevices; i++) {
-                        TRACE(Trace::EGL, ("Trying device %d [%p]", i, eglDevices[i]));
+                            if (renderName != nullptr) {
+                                TRACE(Trace::EGL, ("EGL render node: %s", renderName));
+                            } else {
+                                TRACE(Trace::Error, ("No EGL render node associated to %p", eglDevices[i]));
+                            }
 
-// #ifdef __DEBUG__
-                        const char* extensions = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_EXTENSIONS);
-                        if (extensions != nullptr) {
-                            TRACE(Trace::EGL, ("EGL extensions: %s", extensions));
-                        }
-// #endif
-                        const char* renderName = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_DRM_RENDER_NODE_FILE_EXT);
+                            const char* deviceName = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_DRM_DEVICE_FILE_EXT);
+                            bool nodePresent(false);
 
-                        if (renderName != nullptr) {
-                            TRACE(Trace::EGL, ("EGL render node: %s", renderName));
-                        } else {
-                            TRACE(Trace::Error, ("No EGL render node associated to %p", eglDevices[i]));
-                        }
+                            if (deviceName == nullptr) {
+                                TRACE(Trace::Error, ("No EGL device name returned for %p", eglDevices[i]));
+                                continue;
+                            } else {
+                                TRACE(Trace::EGL, ("Found EGL device %s", deviceName));
 
-                        const char* deviceName = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_DRM_DEVICE_FILE_EXT);
-                        bool nodePresent(false);
-                        
-                        if(deviceName == nullptr){
-                            TRACE(Trace::Error, ("No EGL device name returned for %p", eglDevices[i]));
-                            continue;
-                        } else {
-                            TRACE(Trace::EGL, ("Found EGL device %s", deviceName));
-
-                            for (uint16_t i = 0; i < DRM_NODE_MAX; i++) {
-                                if ((drmDevice->available_nodes & (1 << i)) && (strcmp(drmDevice->nodes[i], deviceName) == 0)) {
-                                    nodePresent = true;
-                                    break;
+                                for (uint16_t i = 0; i < DRM_NODE_MAX; i++) {
+                                    if ((drmDevice->available_nodes & (1 << i)) && (strcmp(drmDevice->nodes[i], deviceName) == 0)) {
+                                        nodePresent = true;
+                                        break;
+                                    }
                                 }
+                            }
+
+                            if ((deviceName != nullptr) && (nodePresent == true)) {
+                                TRACE(Trace::EGL, ("Using EGL device %s", deviceName));
+                                result = eglDevices[i];
+                                break;
                             }
                         }
 
-                        if ((deviceName != nullptr) && (nodePresent == true)) {
-                            TRACE(Trace::EGL, ("Using EGL device %s", deviceName));
-                            result = eglDevices[i];
-                            break;
-                        }
+                        drmFreeDevice(&drmDevice);
+                    } else {
+                        TRACE(Trace::Error, ("No DRM devices found"));
                     }
-
-                    drmFreeDevice(&drmDevice);
                 } else {
-                    TRACE(Trace::Error, ("No DRM devices found"));
+                    TRACE(Trace::Error, ("No EGL devices found"));
                 }
             } else {
-                TRACE(Trace::Error, ("No EGL devices found"));
+                TRACE(Trace::Error, ("EGL device enumeration not supported"));
             }
-        } else {
-            TRACE(Trace::Error, ("EGL device enumeration not supported"));
+
+            return result;
         }
 
-        return result;
-    }
+        uint32_t EGL::Initialize(EGLenum platform, void* remote_display, const bool isMaster)
+        {
+            uint32_t result(Core::ERROR_NONE);
 
-    uint32_t EGL::InitializeEgl(EGLenum platform, void* remote_display, const bool isMaster)
-    {
-        uint32_t result(Core::ERROR_NONE);
+            API::Attributes<EGLint> displayAttributes;
 
-        API::Attributes<EGLint> displayAttributes;
+            const std::string clientExtensions(eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS));
 
-        if (API::EGL::HasExtension("EGL_KHR_display_reference") == true) {
-            displayAttributes.Append(EGL_TRACK_REFERENCES_KHR, EGL_TRUE);
-        }
+            TRACE(Trace::EGL, ("Client extensions: %s", clientExtensions.c_str()));
 
-        ASSERT(_api.eglGetPlatformDisplayEXT != nullptr);
+            if (API::HasExtension(clientExtensions, "EGL_KHR_display_reference") == true) {
+                displayAttributes.Append(EGL_TRACK_REFERENCES_KHR, EGL_TRUE);
+            }
 
-        _display = _api.eglGetPlatformDisplayEXT(platform, remote_display, displayAttributes);
+            ASSERT(_api.eglGetPlatformDisplayEXT != nullptr);
 
-        if (_display != EGL_NO_DISPLAY) {
+            _display = _api.eglGetPlatformDisplayEXT(platform, remote_display, displayAttributes);
+
+            ASSERT(_display != EGL_NO_DISPLAY);
+
             EGLint major, minor;
 
             if (eglInitialize(_display, &major, &minor) == EGL_TRUE) {
                 TRACE(Trace::EGL, ("EGL Initialized v%d.%d", major, minor));
 
-                std::vector<EGLint> contextAttributes;
+                API::Attributes<EGLint> contextAttributes;
 
-                contextAttributes.push_back(EGL_CONTEXT_CLIENT_VERSION);
-                contextAttributes.push_back(2);
+                contextAttributes.Append(EGL_CONTEXT_CLIENT_VERSION, 2);
 
-                if ((isMaster == true) && (API::EGL::HasExtension("EGL_IMG_context_priority") == true)) {
-                    contextAttributes.push_back(EGL_CONTEXT_PRIORITY_LEVEL_IMG);
-                    contextAttributes.push_back(EGL_CONTEXT_PRIORITY_HIGH_IMG);
+                const std::string displayExtensions(eglQueryString(_display, EGL_EXTENSIONS));
+
+                TRACE(Trace::EGL, ("Display extensions: %s", displayExtensions.c_str()));
+
+                if ((isMaster == true) && (API::HasExtension(displayExtensions, "EGL_IMG_context_priority") == true)) {
+                    contextAttributes.Append(EGL_CONTEXT_PRIORITY_LEVEL_IMG, EGL_CONTEXT_PRIORITY_HIGH_IMG);
                     TRACE(Trace::EGL, ("Using high context priority"));
                 }
 
-                if (API::EGL::HasExtension("EGL_EXT_create_context_robustness") == true) {
-                    contextAttributes.push_back(EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_EXT);
-                    contextAttributes.push_back(EGL_LOSE_CONTEXT_ON_RESET_EXT);
+                if (API::HasExtension(displayExtensions, "EGL_EXT_create_context_robustness") == true) {
+                    contextAttributes.Append(EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_EXT, EGL_LOSE_CONTEXT_ON_RESET_EXT);
                     TRACE(Trace::EGL, ("Using context robustness"));
                 }
 
-                contextAttributes.push_back(EGL_NONE);
+                ASSERT(API::HasExtension(displayExtensions, "EGL_KHR_no_config_context") == true);
+                ASSERT(API::HasExtension(displayExtensions, "EGL_MESA_configless_context") == true);
+                ASSERT(API::HasExtension(displayExtensions, "EGL_KHR_surfaceless_context") == true);
 
-                _context = eglCreateContext(_display, EGL_NO_CONFIG_KHR, EGL_NO_CONTEXT, contextAttributes.data());
+                if ((_api.eglQueryDisplayAttribEXT != nullptr) && (_api.eglQueryDeviceStringEXT != nullptr)) {
+                    EGLAttrib device_attrib;
 
-                if (_context != EGL_NO_CONTEXT) {
-                    if ((isMaster == true) && (API::EGL::HasExtension("EGL_IMG_context_priority") == true)) {
-                        EGLint priority = EGL_CONTEXT_PRIORITY_MEDIUM_IMG;
+                    _api.eglQueryDisplayAttribEXT(_display, EGL_DEVICE_EXT, reinterpret_cast<EGLAttrib*>(&_device));
 
-                        eglQueryContext(_display, _context, EGL_CONTEXT_PRIORITY_LEVEL_IMG, &priority);
+                    const string deviceExtensions(_api.eglQueryDeviceStringEXT(_device, EGL_EXTENSIONS));
 
-                        if (priority != EGL_CONTEXT_PRIORITY_HIGH_IMG) {
-                            TRACE(Trace::Error, ("Failed to obtain a high priority context"));
-                        } else {
-                            TRACE(Trace::EGL, ("Obtained high priority context"));
-                        }
-                    } else {
-                        TRACE(Trace::EGL, ("No high priority context supported"));
+                    TRACE(Trace::EGL, ("Device extensions: %s", deviceExtensions.c_str()));
+
+                    if (API::HasExtension(deviceExtensions, "EGL_MESA_device_software")) {
+                        TRACE(Trace::EGL, ("Software rendering detected"));
                     }
-                } else {
-                    TRACE(Trace::Error, ("eglCreateContext failed: %s", API::EGL::ErrorString(eglGetError())));
-                    result = Core::ERROR_UNAVAILABLE;
+
+                    TRACE(Trace::EGL, ("Vendor: %s", eglQueryString(_display, EGL_VENDOR)));
+
+                    if (API::HasExtension(deviceExtensions, "EGL_EXT_device_persistent_id")) {
+                        const char* driverName = _api.eglQueryDeviceStringEXT(_device, EGL_DRIVER_NAME_EXT);
+                        TRACE(Trace::EGL, ("Driver: %s", driverName));
+                    }
+                }
+
+                _context = eglCreateContext(_display, EGL_NO_CONFIG_KHR, EGL_NO_CONTEXT, contextAttributes);
+                ASSERT(_context != EGL_NO_CONTEXT);
+
+                if ((isMaster == true) && (API::HasExtension(displayExtensions, "EGL_IMG_context_priority") == true)) {
+                    EGLint priority = EGL_CONTEXT_PRIORITY_MEDIUM_IMG;
+
+                    eglQueryContext(_display, _context, EGL_CONTEXT_PRIORITY_LEVEL_IMG, &priority);
+
+                    if (priority != EGL_CONTEXT_PRIORITY_HIGH_IMG) {
+                        TRACE(Trace::Error, ("Failed to obtain a high priority context"));
+                    } else {
+                        TRACE(Trace::EGL, ("Obtained high priority context"));
+                    }
                 }
             } else {
                 TRACE(Trace::Error, ("eglInitialize failed: %s", API::EGL::ErrorString(eglGetError())));
                 result = Core::ERROR_UNAVAILABLE;
             }
-        } else {
-            TRACE(Trace::Error, ("eglGetPlatformDisplayEXT failed: %s", API::EGL::ErrorString(eglGetError())));
-            result = Core::ERROR_UNAVAILABLE;
+
+            return result;
         }
 
-        return result;
-    }
-
-    const std::vector<PixelFormat>& EGL::Formats() const
-    {
-        return _formats;
-    }
-
-    void EGL::GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals)
-    {
-        if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
-            EGLint nModifiers(0);
-            _api.eglQueryDmaBufModifiersEXT(_display, format, 0, nullptr, nullptr, &nModifiers);
-            TRACE(Trace::EGL, ("Found %d modifiers", nModifiers));
-
-            modifiers.resize(nModifiers);
-            externals.resize(nModifiers);
-
-            _api.eglQueryDmaBufModifiersEXT(_display, format, nModifiers, modifiers.data(), externals.data(), &nModifiers);
-        } else {
-            modifiers = { DRM_FORMAT_MOD_LINEAR };
-            externals = { EGL_FALSE };
-        }
-    }
-
-    void EGL::GetPixelFormats(std::vector<PixelFormat>& pixelFormats)
-    {
-        pixelFormats.clear();
-
-        std::vector<int> formats;
-
-        TRACE(Trace::EGL, ("Scanning for pixel formats"));
-
-        if (_api.eglQueryDmaBufFormatsEXT != nullptr) {
-            EGLint nFormats(0);
-            _api.eglQueryDmaBufFormatsEXT(_display, 0, NULL, &nFormats);
-
-            formats.resize(nFormats);
-            _api.eglQueryDmaBufFormatsEXT(_display, formats.size(), formats.data(), &nFormats);
-        } else {
-            formats = { DRM_FORMAT_ARGB8888, DRM_FORMAT_XRGB8888 };
+        const std::vector<PixelFormat>& EGL::Formats() const
+        {
+            return _formats;
         }
 
-        for (const auto& format : formats) {
-            TRACE(Trace::EGL, ("Scanning format \'%c\' \'%c\' \'%c\' \'%c\'", //
-                                  char(format & 0xff), char((format >> 8) & 0xff), //
-                                  char((format >> 16) & 0xff), char((format >> 24) & 0xff)));
+        void EGL::GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals)
+        {
+            if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
+                EGLint nModifiers(0);
+                _api.eglQueryDmaBufModifiersEXT(_display, format, 0, nullptr, nullptr, &nModifiers);
+                TRACE(Trace::EGL, ("Found %d modifiers", nModifiers));
 
-            std::vector<uint64_t> modifiers;
+                modifiers.resize(nModifiers);
+                externals.resize(nModifiers);
 
-            /**
-             * Indicates if the matching modifier is only supported for
-             * use with the GL_TEXTURE_EXTERNAL_OES texture target
-             */
-            std::vector<EGLBoolean> externals;
-
-            GetModifiers(format, modifiers, externals);
-
-            pixelFormats.emplace_back(format, modifiers);
-        }
-    }
-
-    bool EGL::IsExternOnly(const uint32_t format, const uint64_t modifier)
-    {
-        bool result(false);
-
-        if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
-            std::vector<uint64_t> modifiers;
-            std::vector<EGLBoolean> externals;
-
-            GetModifiers(format, modifiers, externals);
-
-            auto it = std::find(modifiers.begin(), modifiers.end(), modifier);
-
-            if (it != modifiers.end()) {
-                result = externals[distance(modifiers.begin(), it)];
+                _api.eglQueryDmaBufModifiersEXT(_display, format, nModifiers, modifiers.data(), externals.data(), &nModifiers);
+            } else {
+                modifiers = { DRM_FORMAT_MOD_LINEAR };
+                externals = { EGL_FALSE };
             }
         }
 
-        return result;
-    }
+        void EGL::GetPixelFormats(std::vector<PixelFormat>& pixelFormats)
+        {
+            pixelFormats.clear();
 
-    EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external)
-    {
-        ASSERT(buffer != nullptr);
-        Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
-        ASSERT(planes != nullptr);
+            std::vector<int> formats;
 
-        planes->Next();
-        ASSERT(planes->IsValid() == true);
+            TRACE(Trace::EGL, ("Scanning for pixel formats"));
 
-        Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
-        ASSERT(plane != nullptr); // we should atleast have 1 plane....
+            if (_api.eglQueryDmaBufFormatsEXT != nullptr) {
+                EGLint nFormats(0);
+                _api.eglQueryDmaBufFormatsEXT(_display, 0, NULL, &nFormats);
 
-        EGLImage result(EGL_NO_IMAGE);
-
-        if (_api.eglCreateImage != nullptr) {
-            API::Attributes<EGLAttrib> imageAttributes;
-
-            imageAttributes.Append(EGL_WIDTH, buffer->Width());
-            imageAttributes.Append(EGL_HEIGHT, buffer->Height());
-            imageAttributes.Append(EGL_LINUX_DRM_FOURCC_EXT, buffer->Format());
-            imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, plane->Accessor());
-            uint32_t value = plane->Offset();
-
-            imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, plane->Offset());
-            imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, plane->Stride());
-            imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
-            imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
-
-            if (planes->Next() == true) {
-                plane = planes->Plane();
-
-                ASSERT(plane != nullptr);
-
-                imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, plane->Accessor());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE1_OFFSET_EXT, plane->Offset());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE1_PITCH_EXT, plane->Stride());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
-                imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+                formats.resize(nFormats);
+                _api.eglQueryDmaBufFormatsEXT(_display, formats.size(), formats.data(), &nFormats);
+            } else {
+                formats = { DRM_FORMAT_ARGB8888, DRM_FORMAT_XRGB8888 };
             }
 
-            if (planes->Next() == true) {
-                plane = planes->Plane();
+            for (const auto& format : formats) {
+                TRACE(Trace::EGL, ("Scanning format \'%c\' \'%c\' \'%c\' \'%c\'", //
+                                      char(format & 0xff), char((format >> 8) & 0xff), //
+                                      char((format >> 16) & 0xff), char((format >> 24) & 0xff)));
 
-                ASSERT(plane != nullptr);
+                std::vector<uint64_t> modifiers;
 
-                imageAttributes.Append(EGL_DMA_BUF_PLANE2_FD_EXT, plane->Accessor());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE2_OFFSET_EXT, plane->Offset());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE2_PITCH_EXT, plane->Stride());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
-                imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+                /**
+                 * Indicates if the matching modifier is only supported for
+                 * use with the GL_TEXTURE_EXTERNAL_OES texture target
+                 */
+                std::vector<EGLBoolean> externals;
+
+                GetModifiers(format, modifiers, externals);
+
+                pixelFormats.emplace_back(format, modifiers);
             }
+        }
 
-            if (planes->Next() == true) {
-                plane = planes->Plane();
+        bool EGL::IsExternOnly(const uint32_t format, const uint64_t modifier)
+        {
+            bool result(false);
 
-                ASSERT(plane != nullptr);
+            if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
+                std::vector<uint64_t> modifiers;
+                std::vector<EGLBoolean> externals;
 
-                imageAttributes.Append(EGL_DMA_BUF_PLANE3_FD_EXT, plane->Accessor());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE3_OFFSET_EXT, plane->Offset());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE3_PITCH_EXT, plane->Stride());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
-                imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
-            }
+                GetModifiers(format, modifiers, externals);
 
-            imageAttributes.Append(EGL_IMAGE_PRESERVED_KHR, EGL_TRUE);
+                auto it = std::find(modifiers.begin(), modifiers.end(), modifier);
 
-            std::stringstream hexLine;
-
-            for (uint16_t i(0); i < imageAttributes.Size(); i++){
-                const int att(imageAttributes[i]);
-
-                hexLine << "0x" << std::uppercase << std::setfill('0') << std::setw(4) << std::hex << att;
-
-                if(((i % 8) == 0) && (i != 0)){
-                    hexLine << std::endl;
-                } else {
-                    hexLine << ", ";
+                if (it != modifiers.end()) {
+                    result = externals[distance(modifiers.begin(), it)];
                 }
             }
 
-            TRACE(Trace::EGL, ("%zu imageAttributes set: %s", imageAttributes.Size(), hexLine.str().c_str()));
-
-            result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, imageAttributes);
+            return result;
         }
 
-        external = IsExternOnly(buffer->Format(), buffer->Modifier());
+        EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external)
+        {
+            ASSERT(buffer != nullptr);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
+            ASSERT(planes != nullptr);
 
-        // just unlock and go, client still need to draw something,.
-        buffer->Completed(false);
+            planes->Next();
+            ASSERT(planes->IsValid() == true);
 
-        return result;
-    }
-} // namespace Renderer
+            Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
+            ASSERT(plane != nullptr); // we should atleast have 1 plane....
+
+            EGLImage result(EGL_NO_IMAGE);
+
+            if (_api.eglCreateImage != nullptr) {
+                API::Attributes<EGLAttrib> imageAttributes;
+
+                imageAttributes.Append(EGL_WIDTH, buffer->Width());
+                imageAttributes.Append(EGL_HEIGHT, buffer->Height());
+                imageAttributes.Append(EGL_LINUX_DRM_FOURCC_EXT, buffer->Format());
+
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, plane->Accessor());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, plane->Offset());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, plane->Stride());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+
+                if (planes->Next() == true) {
+                    plane = planes->Plane();
+
+                    ASSERT(plane != nullptr);
+
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, plane->Accessor());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_OFFSET_EXT, plane->Offset());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_PITCH_EXT, plane->Stride());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+                }
+
+                if (planes->Next() == true) {
+                    plane = planes->Plane();
+
+                    ASSERT(plane != nullptr);
+
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_FD_EXT, plane->Accessor());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_OFFSET_EXT, plane->Offset());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_PITCH_EXT, plane->Stride());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+                }
+
+                if (planes->Next() == true) {
+                    plane = planes->Plane();
+
+                    ASSERT(plane != nullptr);
+
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_FD_EXT, plane->Accessor());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_OFFSET_EXT, plane->Offset());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_PITCH_EXT, plane->Stride());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
+                }
+
+                imageAttributes.Append(EGL_IMAGE_PRESERVED_KHR, EGL_TRUE);
+
+// #ifdef __DEBUG__
+//                 std::stringstream hexLine;
+
+//                 for (uint16_t i(0); i < imageAttributes.Size(); i++) {
+//                     const int att(imageAttributes[i]);
+
+//                     hexLine << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << att << std::nouppercase;
+
+//                     if (i < imageAttributes.Size() - 1) {
+//                         hexLine << ", ";
+
+//                         if (((i + 1) % 2) == 0) {
+//                             hexLine << std::endl;
+//                         }
+//                     }
+//                 }
+
+//                 TRACE(Trace::EGL, ("%zu imageAttributes set: \n%s", imageAttributes.Size(), hexLine.str().c_str()));
+// #endif
+
+                result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, imageAttributes);
+            }
+
+            external = IsExternOnly(buffer->Format(), buffer->Modifier());
+
+            // just unlock and go, client still need to draw something,.
+            buffer->Completed(false);
+
+            return result;
+        }
+    } // namespace Renderer
 } // namespace Compositor
 } // namespace WPEFramework

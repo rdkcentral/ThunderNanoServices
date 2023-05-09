@@ -166,8 +166,8 @@ namespace Compositor {
         static inline void Rotate(Matrix& matrix, const float radians)
         {
             Matrix rotate = {
-                cos(radians), -sin(radians), 0.0f, //
-                sin(radians), cos(radians), 0.0f, //
+                ::cos(radians), -::sin(radians), 0.0f, //
+                ::sin(radians), ::cos(radians), 0.0f, //
                 0.0f, 0.0f, 1.0f, //
             };
 

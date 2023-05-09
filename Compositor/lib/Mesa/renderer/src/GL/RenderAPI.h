@@ -101,6 +101,11 @@ namespace API {
         }
     };
 
+    static inline bool HasExtension(const std::string& extensions, const std::string& extention)
+    {
+        return ((extention.size() > 0) && (extensions.find(extention) != std::string::npos));
+    }
+
     class GL {
     public:
 
@@ -214,12 +219,6 @@ namespace API {
             return ((name.size() > 0) && (renderer.find(name) != std::string::npos));
         }
 
-        static inline bool HasExtension(const std::string& extention)
-        {
-            static const char* glExtensions = reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
-            return ((extention.size() > 0) && (glExtensions != nullptr) && (std::string(glExtensions).find(extention) != std::string::npos));
-        }
-
         GL(const GL&) = delete;
         GL& operator=(const GL&) = delete;
 
@@ -281,16 +280,8 @@ namespace API {
             }
         }
 #undef CASE_TO_STRING
-
-        static inline bool HasExtension(const std::string& extention, EGLDisplay dpy = eglGetCurrentDisplay())
-        {
-            static const std::string extensions(eglQueryString(dpy, EGL_EXTENSIONS));
-            return ((extention.size() > 0) && (extensions.find(extention) != std::string::npos));
-        }
-
         static inline bool HasClientAPI(const std::string& api, EGLDisplay dpy = eglGetCurrentDisplay())
         {
-            // ASSERT(dpy != EGL_NO_DISPLAY);
             static const std::string apis(eglQueryString(dpy, EGL_CLIENT_APIS));
             return ((api.size() > 0) && (apis.find(api) != std::string::npos));
         }

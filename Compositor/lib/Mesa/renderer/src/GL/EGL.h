@@ -37,6 +37,7 @@
 #include <fragment-shader.h>
 #include <vertex-shader.h>
 
+struct gbm_device;
 namespace WPEFramework {
 namespace Compositor {
     namespace Renderer {
@@ -51,7 +52,7 @@ namespace Compositor {
 
         private:
             EGLDeviceEXT FindEGLDevice(const int drmFd);
-            uint32_t InitializeEgl(EGLenum platform, void* remote_display, bool isMaster);
+            uint32_t Initialize(EGLenum platform, void* remote_display, bool isMaster);
             void GetPixelFormats(std::vector<PixelFormat>& formats);
             void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals);
             bool IsExternOnly(const uint32_t format, const uint64_t modifier);
@@ -117,10 +118,15 @@ namespace Compositor {
             EGLDisplay _display;
             EGLContext _context;
 
+            EGLDeviceEXT _device;
+
             EGLSurface _draw_surface;
             EGLSurface _read_surface;
 
             std::vector<PixelFormat> _formats;
+
+            int _gbmDescriptor;
+            gbm_device* _gbmDevice;
         }; // class EGL
     } // namespace Renderer
 } // namespace Compositor
