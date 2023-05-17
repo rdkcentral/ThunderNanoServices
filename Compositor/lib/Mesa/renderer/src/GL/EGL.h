@@ -53,9 +53,9 @@ namespace Compositor {
         private:
             EGLDeviceEXT FindEGLDevice(const int drmFd);
             uint32_t Initialize(EGLenum platform, void* remote_display, bool isMaster);
-            void GetPixelFormats(std::vector<PixelFormat>& formats);
-            void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals);
-            bool IsExternOnly(const uint32_t format, const uint64_t modifier);
+            void GetPixelFormats(std::vector<PixelFormat>& formats) const;
+            void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals) const;
+            bool IsExternOnly(const uint32_t format, const uint64_t modifier) const;
 
         public:
             inline EGLDisplay Display() const
@@ -73,19 +73,21 @@ namespace Compositor {
                 return eglGetCurrentContext() == _context;
             }
 
-            inline bool SetCurrent()
+            inline bool SetCurrent() const
             {
                 return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, _context) == EGL_TRUE);
             }
 
-            inline bool ResetCurrent()
+            inline bool ResetCurrent() const
             {
                 return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE);
             }
 
             const std::vector<PixelFormat>& Formats() const;
 
-            EGLImage CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool&);
+            EGLImage CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool&) const;
+
+            bool DestroyImage(EGLImage image) const;
 
             class ContextBackup {
             public:

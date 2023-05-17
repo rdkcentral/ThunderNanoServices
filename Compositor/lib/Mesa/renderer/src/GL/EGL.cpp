@@ -378,7 +378,7 @@ namespace Compositor {
             return _formats;
         }
 
-        void EGL::GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals)
+        void EGL::GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals) const
         {
             if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
                 EGLint nModifiers(0);
@@ -395,7 +395,7 @@ namespace Compositor {
             }
         }
 
-        void EGL::GetPixelFormats(std::vector<PixelFormat>& pixelFormats)
+        void EGL::GetPixelFormats(std::vector<PixelFormat>& pixelFormats) const
         {
             pixelFormats.clear();
 
@@ -432,7 +432,7 @@ namespace Compositor {
             }
         }
 
-        bool EGL::IsExternOnly(const uint32_t format, const uint64_t modifier)
+        bool EGL::IsExternOnly(const uint32_t format, const uint64_t modifier) const
         {
             bool result(false);
 
@@ -452,7 +452,7 @@ namespace Compositor {
             return result;
         }
 
-        EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external)
+        EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external) const
         {
             ASSERT(buffer != nullptr);
             Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
@@ -517,25 +517,25 @@ namespace Compositor {
 
                 imageAttributes.Append(EGL_IMAGE_PRESERVED_KHR, EGL_TRUE);
 
-// #ifdef __DEBUG__
-//                 std::stringstream hexLine;
+                // #ifdef __DEBUG__
+                //                 std::stringstream hexLine;
 
-//                 for (uint16_t i(0); i < imageAttributes.Size(); i++) {
-//                     const int att(imageAttributes[i]);
+                //                 for (uint16_t i(0); i < imageAttributes.Size(); i++) {
+                //                     const int att(imageAttributes[i]);
 
-//                     hexLine << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << att << std::nouppercase;
+                //                     hexLine << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << att << std::nouppercase;
 
-//                     if (i < imageAttributes.Size() - 1) {
-//                         hexLine << ", ";
+                //                     if (i < imageAttributes.Size() - 1) {
+                //                         hexLine << ", ";
 
-//                         if (((i + 1) % 2) == 0) {
-//                             hexLine << std::endl;
-//                         }
-//                     }
-//                 }
+                //                         if (((i + 1) % 2) == 0) {
+                //                             hexLine << std::endl;
+                //                         }
+                //                     }
+                //                 }
 
-//                 TRACE(Trace::EGL, ("%zu imageAttributes set: \n%s", imageAttributes.Size(), hexLine.str().c_str()));
-// #endif
+                //                 TRACE(Trace::EGL, ("%zu imageAttributes set: \n%s", imageAttributes.Size(), hexLine.str().c_str()));
+                // #endif
 
                 result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, imageAttributes);
             }
@@ -544,6 +544,18 @@ namespace Compositor {
 
             // just unlock and go, client still need to draw something,.
             buffer->Completed(false);
+
+            return result;
+        }
+
+        bool EGL::DestroyImage(EGLImage image) const
+        {
+            bool result((_api.eglDestroyImage != nullptr) && (image == EGL_NO_IMAGE));
+
+            if ((_api.eglDestroyImage != nullptr) && (image != EGL_NO_IMAGE))
+            {
+                result = (_api.eglDestroyImage(_display, image) == EGL_TRUE);
+            }
 
             return result;
         }
