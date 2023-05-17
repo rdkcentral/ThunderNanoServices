@@ -246,7 +246,12 @@ namespace Renderer {
         }
         void Render() override { 
         }
- 
+
+        Exchange::ICompositionBuffer::DataType Type() const
+        {
+            return Exchange::ICompositionBuffer::TYPE_DMA;
+        }
+
     private:
         uint32_t Offset(const uint8_t planeId) const {
             uint32_t result = 0;

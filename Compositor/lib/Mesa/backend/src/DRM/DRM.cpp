@@ -234,6 +234,11 @@ namespace Compositor {
                     return _buffer->Modifier();
                 }
 
+                Exchange::ICompositionBuffer::DataType Type() const
+                {
+                    return _buffer->Type();
+                }
+
                 /**
                  * IOutput::IConnector implementation
                  */
