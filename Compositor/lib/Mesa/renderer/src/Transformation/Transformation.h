@@ -26,6 +26,7 @@
 namespace WPEFramework {
 namespace Compositor {
     namespace Transformation {
+
         using TransformType = enum : uint8_t {
             TRANSFORM_NORMAL = 0, // No transform
             TRANSFORM_90 = 1, // 90 degrees counter-clockwise
@@ -37,6 +38,10 @@ namespace Compositor {
             TRANSFORM_FLIPPED_270 = 7, // Flip and rotate 270 degrees counter-clockwise
             TRANSFORM_MAX // Always last
         };
+
+        /**
+         * @brief Default transformations
+         */
         static const std::array<Matrix, TRANSFORM_MAX> Transformations = {
             Matrix({
                 // [TRANSFORM_NORMAL]
@@ -88,7 +93,9 @@ namespace Compositor {
             })
         };
 
-        /** Writes the identity matrix into mat */
+        /**
+         * Initializes @matrix with a identity matrix.
+         */
         static inline void Identity(Matrix& matrix)
         {
             matrix = Transformations[TRANSFORM_NORMAL];
@@ -113,10 +120,8 @@ namespace Compositor {
         }
 
         /**
-         * @brief  The transpose of a matrix is obtained by changing the rows into columns and columns into rows for a given matrix.
-         *
-         * @param mat
-         * @param a
+         * The transpose of a matrix is obtained by changing the rows into columns
+         * and columns into rows for a given matrix.
          */
         static inline void Transpose(Matrix& matrix, const Matrix& a)
         {
@@ -129,10 +134,10 @@ namespace Compositor {
             matrix = transpose;
         }
 
-        /** Writes a 2D translation matrix to mat of magnitude (x, y)
-         *  The translate() method moves an element from its current position
+        /**
+         * Writes a 2D translation matrix to mat of magnitude (x, y)
+         * The translate() method moves an element from its current position
          */
-
         static inline void Translate(Matrix& matrix, const float x, const float y)
         {
             Matrix translate = {
@@ -144,7 +149,9 @@ namespace Compositor {
             Multiply(matrix, matrix, translate);
         }
 
-        /** Writes a 2D scale matrix to mat of magnitude (x, y) */
+        /**
+         * Writes a 2D scale matrix to matrix of magnitude (x, y)
+         */
         static inline void Scale(Matrix& matrix, const float x, const float y)
         {
             Matrix scale = {
@@ -156,13 +163,18 @@ namespace Compositor {
             Multiply(matrix, matrix, scale);
         }
 
+        /**
+         * Simple conversion from degree to radials
+         */
         static inline float ToRadials(float degree)
         {
             constexpr float pi = 3.1415926536f;
             return degree * (pi / 180.0f);
         };
 
-        /** Writes a 2D rotation matrix to mat at an angle of rad radians */
+        /**
+         *  Writes a 2D rotation matrix to @matrix at an angle of @radians radians
+         */
         static inline void Rotate(Matrix& matrix, const float radians)
         {
             Matrix rotate = {
@@ -174,8 +186,10 @@ namespace Compositor {
             Multiply(matrix, matrix, rotate);
         }
 
-        /** Writes a transformation matrix which applies the specified
-         *  wl_output_transform to mat */
+        /**
+         * Writes a transformation matrix which applies the specified
+         * TransformType @transform to @matrix
+         */
         static inline void Transform(Matrix& matrix, const TransformType transform)
         {
             Multiply(matrix, matrix, Transformations[transform]);
@@ -210,10 +224,12 @@ namespace Compositor {
             result[8] = 1.0f;
         }
 
-        /** Shortcut for the various matrix operations involved in projecting the
-         *  specified wlr_box onto a given orthographic projection with a given
+        /**
+         *  Shortcut for the various matrix operations involved in projecting the
+         *  specified Box onto a given orthographic projection with a given
          *  rotation. The result is written to result, which can be applied to each
-         *  coordinate of the box to get a new coordinate from [-1,1]. */
+         *  coordinate of the box to get a new coordinate from [-1,1].
+         */
         static inline void ProjectBox(Matrix& result, const Box& box, const TransformType transform, const float radians, const Matrix& projection)
         {
             float x = box.x;
