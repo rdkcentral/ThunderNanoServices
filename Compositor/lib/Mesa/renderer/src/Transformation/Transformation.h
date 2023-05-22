@@ -19,14 +19,13 @@
 
 #pragma once
 
-#include <IRenderer.h>
+#include <CompositorTypes.h>
 #include <array>
 #include <math.h>
 
 namespace WPEFramework {
 namespace Compositor {
     namespace Transformation {
-
         using TransformType = enum : uint8_t {
             TRANSFORM_NORMAL = 0, // No transform
             TRANSFORM_90 = 1, // 90 degrees counter-clockwise
@@ -94,14 +93,28 @@ namespace Compositor {
         };
 
         /**
-         * Initializes @matrix with a identity matrix.
+         * Writes a 2D identity matrix to @matrix
+         *
+         * The identity() method resets the current transform to the identity matrix.
+         *
+         * @param matrix The resulting matrix
+         *
          */
         static inline void Identity(Matrix& matrix)
         {
             matrix = Transformations[TRANSFORM_NORMAL];
         }
 
-        /** mat ← a × b */
+        /**
+         * Writes a 2D multiply matrix to @matrix of @a and @b
+         *
+         * The multiply() method combines two matrices together.
+         *
+         * @param matrix The resulting matrix
+         * @param a The first matrix
+         * @param b The second matrix
+         *
+         */
         static inline void Multiply(Matrix& matrix, const Matrix& a, const Matrix& b)
         {
             Matrix multiply = {
@@ -120,8 +133,13 @@ namespace Compositor {
         }
 
         /**
-         * The transpose of a matrix is obtained by changing the rows into columns
-         * and columns into rows for a given matrix.
+         * Writes a 2D transpose matrix to @matrix
+         *
+         * The transpose() method switches the rows and columns of the matrix.
+         *
+         * @param matrix The resulting matrix
+         * @param a The matrix to transpose
+         *
          */
         static inline void Transpose(Matrix& matrix, const Matrix& a)
         {
@@ -135,8 +153,15 @@ namespace Compositor {
         }
 
         /**
-         * Writes a 2D translation matrix to mat of magnitude (x, y)
-         * The translate() method moves an element from its current position
+         * Writes a 2D translation matrix to @matrix of magnitude (x, y)
+         *
+         * The translate() method moves an element from its current position (according
+         * to the parameters given for the X-axis and the Y-axis).
+         *
+         * @param matrix The resulting matrix
+         * @param x The x translation
+         * @param y The y translation
+         *
          */
         static inline void Translate(Matrix& matrix, const float x, const float y)
         {
@@ -150,7 +175,15 @@ namespace Compositor {
         }
 
         /**
-         * Writes a 2D scale matrix to matrix of magnitude (x, y)
+         * Writes a 2D scale matrix to @matrix of magnitude (x, y)
+         *
+         * The scale() method increases or decreases the size of an element
+         * (according to the parameters given for the width and height).
+         *
+         * @param matrix The resulting matrix
+         * @param x The x scale
+         * @param y The y scale
+         *
          */
         static inline void Scale(Matrix& matrix, const float x, const float y)
         {
@@ -164,7 +197,10 @@ namespace Compositor {
         }
 
         /**
-         * Simple conversion from degree to radials
+         * Converts a degree to radials
+         *
+         * @param degree The degree to convert
+         * @return The radials
          */
         static inline float ToRadials(float degree)
         {
@@ -173,7 +209,14 @@ namespace Compositor {
         };
 
         /**
-         *  Writes a 2D rotation matrix to @matrix at an angle of @radians radians
+         * Writes a 2D rotation matrix to @matrix of magnitude @radians
+         *
+         * The rotate() method rotates an element clockwise or counter-clockwise
+         * according to a given degree.
+         *
+         * @param matrix The resulting matrix
+         * @param radians The rotation to apply
+         *
          */
         static inline void Rotate(Matrix& matrix, const float radians)
         {
@@ -187,8 +230,14 @@ namespace Compositor {
         }
 
         /**
-         * Writes a transformation matrix which applies the specified
-         * TransformType @transform to @matrix
+         * Writes a 2D transformation matrix to @matrix with a specified transform
+         *
+         * The transform() method replaces the current transformation matrix with
+         * a matrix described by the arguments of this method.
+         *
+         * @param matrix The resulting matrix
+         * @param transform The transform to apply
+         *
          */
         static inline void Transform(Matrix& matrix, const TransformType transform)
         {
@@ -196,10 +245,15 @@ namespace Compositor {
         }
 
         /**
-         * Writes a 2D orthographic projection matrix to mat of (width, height) with a
-         * specified transform.
+         * Writes a 2D projection matrix to @result with a specified transform
          *
-         * Equivalent to glOrtho(0, width, 0, height, 1, -1) with the transform applied.
+         * Equivalent to glOrtho(0, width, height, 0, 1, -1) with the transform applied.
+         *
+         * @param result The resulting matrix
+         * @param width The width of the projection
+         * @param height The height of the projection
+         * @param transform The transform to apply
+         *
          */
         static inline void Projection(Matrix& result, const uint32_t width, const uint32_t height, const TransformType transform)
         {
@@ -225,10 +279,18 @@ namespace Compositor {
         }
 
         /**
-         *  Shortcut for the various matrix operations involved in projecting the
-         *  specified Box onto a given orthographic projection with a given
-         *  rotation. The result is written to result, which can be applied to each
-         *  coordinate of the box to get a new coordinate from [-1,1].
+         * Writes a 2D projection matrix to @result of @box with a specified transform,
+         * rotation and projection.
+         *
+         * Equivalent to glOrtho(box.x, box.x + box.width, box.y, box.y + box.height, 1, -1)
+         * with the transform applied.
+         *
+         * @param result The resulting matrix
+         * @param box The box to project
+         * @param transform The transform to apply
+         * @param radians The rotation to apply
+         * @param projection The projection to apply
+         *
          */
         static inline void ProjectBox(Matrix& result, const Box& box, const TransformType transform, const float radians, const Matrix& projection)
         {
