@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 Metrological
+# Copyright 2023 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory(backend)
-add_subdirectory(scandrm)
-add_subdirectory(wayland)
+find_package(wayland-client REQUIRED)
+find_package(wayland-protocols REQUIRED)
+
+WaylandGenerator(
+    HEADERS WaylandHeaders
+    SOURCES WaylandSources
+    DEFENITIONS xdg-shell
+)
+
+add_executable(waylandclienttest client.c ${WaylandSources})
+
+target_include_directories(waylandclienttest PRIVATE 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+)
+
+target_link_libraries(waylandclienttest
+    PRIVATE
+        wayland-client::wayland-client
+        wayland-protocols::wayland-protocols
+)
+
+install(TARGETS waylandclienttest DESTINATION bin)
