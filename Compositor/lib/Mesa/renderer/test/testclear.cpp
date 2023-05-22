@@ -67,13 +67,10 @@ public:
         , _previousIndex(0)
 
     {
-        uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
-        Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
-
         _connector = Compositor::Connector(
             connectorId,
             Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,
-            format,
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
             false);
 
         ASSERT(_connector.IsValid());
