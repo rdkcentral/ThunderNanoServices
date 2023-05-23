@@ -552,8 +552,7 @@ namespace Compositor {
         {
             bool result((_api.eglDestroyImage != nullptr) && (image == EGL_NO_IMAGE));
 
-            if ((_api.eglDestroyImage != nullptr) && (image != EGL_NO_IMAGE))
-            {
+            if ((_api.eglDestroyImage != nullptr) && (image != EGL_NO_IMAGE)) {
                 result = (_api.eglDestroyImage(_display, image) == EGL_TRUE);
             }
 
