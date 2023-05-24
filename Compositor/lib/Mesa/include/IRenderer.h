@@ -28,12 +28,6 @@ namespace Compositor {
     struct EXTERNAL IRenderer {
         virtual ~IRenderer() = default;
 
-        // struct ICallback
-        // {
-        //     virtual ~ICallback() = default;
-        //     void LastFrameTimestamp(const uint32_t seconds, const uint32_t microSeconds) = 0;
-        // };
-
         struct ITexture {
             virtual ~ITexture() = default;
 
@@ -41,7 +35,7 @@ namespace Compositor {
             virtual uint32_t Release() const = 0;
 
             virtual bool IsValid() const = 0;
-        };
+        }; // struct ITexture
 
         /**
          * @brief A factory for renderer, callee needs to call Release() when done.
@@ -50,8 +44,6 @@ namespace Compositor {
          * @return Core::ProxyType<IRenderer>
          */
         static Core::ProxyType<IRenderer> Instance(Identifier identifier);
-
-        // virtual uint32_t Configure(const string& config) = 0;
 
         // /**
         //  * @brief Install a callback to receive e.g. the

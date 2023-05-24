@@ -106,8 +106,40 @@ namespace Compositor {
             wl_buffer_destroy(buffer);
         }
 
-        const struct wl_buffer_listener WaylandOutput::wlBufferListener = {
+        const struct wl_buffer_listener WaylandOutput::bufferListener = {
             .release = onBufferRelease,
+        };
+
+        void WaylandOutput::onPresentationFeedbackSyncOutput(void* data, struct wp_presentation_feedback* feedback, struct wl_output* output)
+        {
+            if (feedback != nullptr) {
+                wp_presentation_feedback_destroy(feedback);
+            }
+        }
+
+        void WaylandOutput::onPresentationFeedbackPresented(void* data, struct wp_presentation_feedback* feedback, uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh_ns, uint32_t seq_hi, uint32_t seq_lo, uint32_t flags)
+        {
+            WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
+            implementation->PresentationFeedback(WaylandOutput::PresentationFeedbackEvent(tv_sec_hi, tv_sec_lo, tv_nsec, refresh_ns, seq_hi, seq_lo, flags, true));
+
+            if (feedback != nullptr) {
+                wp_presentation_feedback_destroy(feedback);
+            }
+        }
+
+        void WaylandOutput::onPresentationFeedbackDiscarded(void* data, struct wp_presentation_feedback* feedback)
+        {
+            WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
+
+            if (feedback != nullptr) {
+                wp_presentation_feedback_destroy(feedback);
+            }
+        }
+
+        const struct wp_presentation_feedback_listener WaylandOutput::presentationFeedbackListener = {
+            .sync_output = onPresentationFeedbackSyncOutput,
+            .presented = onPresentationFeedbackPresented,
+            .discarded = onPresentationFeedbackDiscarded,
         };
 
         WaylandOutput::WaylandOutput(Wayland::IBackend& backend, const string& name,
@@ -126,6 +158,7 @@ namespace Compositor {
             , _resolution(resolution)
             , _buffer()
             , _signal(false, true)
+            , _commitSequence(0)
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
@@ -145,9 +178,7 @@ namespace Compositor {
 
             wl_surface_set_user_data(_surface, this);
 
-            zxdg_decoration_manager_v1* decorationManager;
-
-            _windowSurface = _backend.WindowSurface(_surface, decorationManager);
+            _windowSurface = _backend.WindowSurface(_surface);
 
             ASSERT(_windowSurface != nullptr);
 
@@ -155,11 +186,9 @@ namespace Compositor {
 
             ASSERT(_topLevelSurface != nullptr);
 
-            if (decorationManager != nullptr) {
-                _windowDecoration = zxdg_decoration_manager_v1_get_toplevel_decoration(decorationManager, _topLevelSurface);
+            _windowDecoration = _backend.GetWindowDecorationInterface(_topLevelSurface);
 
-                ASSERT(_windowDecoration != nullptr);
-
+            if (_windowDecoration != nullptr) {
                 zxdg_toplevel_decoration_v1_set_mode(_windowDecoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
             }
 
@@ -241,7 +270,7 @@ namespace Compositor {
             if ((_surface != nullptr) && (_buffer.IsValid() == true)) {
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
 
-                wl_buffer_add_listener(buffer, &wlBufferListener, NULL);
+                wl_buffer_add_listener(buffer, &bufferListener, nullptr);
 
                 wl_surface_attach(_surface, buffer, 0, 0);
 
@@ -249,8 +278,17 @@ namespace Compositor {
 
                 wl_surface_commit(_surface);
 
-                // _backend.Flush();
+                // TODO: Implement presentation feedback
+                // struct wp_presentation_feedback* feedback = _backend.GetFeedbackInterface(_surface);
+
+                // if (feedback != nullptr) {
+                //     wp_presentation_feedback_add_listener(feedback, &presentationFeedbackListener, this);
+                // } else {
+                //     PresentationFeedback(NextSequence());
+                // }
             }
+
+            _backend.Flush();
         }
 
         uint32_t WaylandOutput::Width() const
@@ -283,6 +321,11 @@ namespace Compositor {
             if (_buffer.IsValid() == false) {
                 _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
             }
+        }
+
+        void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)
+        {
+            // TODO: Implement presentation feedback handling here.
         }
     } // namespace Backend
 } // namespace Compositor

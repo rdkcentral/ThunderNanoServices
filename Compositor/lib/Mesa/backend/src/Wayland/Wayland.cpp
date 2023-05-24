@@ -108,7 +108,7 @@ namespace Compositor {
             uint32_t Release() const override;
 
             wl_surface* Surface() const override;
-            xdg_surface* WindowSurface(wl_surface* surface, zxdg_decoration_manager_v1*& decoration) const override;
+            xdg_surface* WindowSurface(wl_surface* surface) const override;
             int RoundTrip() const override;
             int Flush() const override;
             void Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const override;
@@ -116,16 +116,19 @@ namespace Compositor {
 
             wl_buffer* CreateBuffer(Exchange::ICompositionBuffer* buffer) const override;
 
+            struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const override;
+            struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const override;
+
             void RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version);
 
-            void PresentationClock(const uint32_t clock);
+            void PresentationClock(const uint32_t clockType);
             void DrmNode(const std::string& name);
             void HandleDmaFormatTable(int32_t fd, uint32_t size);
             void OpenDrmRender(drmDevice* device);
 
             int Dispatch(const uint32_t events) const;
 
-            Core::ProxyType<Exchange::ICompositionBuffer> Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force);
+            Core::ProxyType<Exchange::ICompositionBuffer> Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback);
 
         private:
             mutable uint32_t _refCount;
@@ -164,10 +167,10 @@ namespace Compositor {
          * @param clock The clock id of the presentation object
          *
          */
-        static void onPresentationClockId(void* data, struct wp_presentation* presentation, uint32_t clock)
+        static void onPresentationClockId(void* data, struct wp_presentation* presentation, uint32_t clockType)
         {
             WaylandImplementation* implementation = static_cast<WaylandImplementation*>(data);
-            implementation->PresentationClock(clock);
+            implementation->PresentationClock(clockType);
         }
 
         static const struct wp_presentation_listener presentationListener = {
@@ -185,7 +188,6 @@ namespace Compositor {
         static void onXdgWmBasePing(void* data, struct xdg_wm_base* base, uint32_t serial)
         {
             xdg_wm_base_pong(base, serial);
-            // TRACE_GLOBAL(Trace::Backend, ("XDG WM PingPong"));
         }
 
         static const struct xdg_wm_base_listener xdgWmBaseListener = {
@@ -216,6 +218,7 @@ namespace Compositor {
          */
         static void onDrmHandleFormat(void* data, struct wl_drm* drm, uint32_t format)
         {
+            /* ignore this event */
         }
 
         /**
@@ -227,6 +230,7 @@ namespace Compositor {
          */
         static void onDrmHandleAuthenticated(void* data, struct wl_drm* drm)
         {
+            /* ignore this event */
         }
 
         /**
@@ -239,6 +243,7 @@ namespace Compositor {
          */
         static void onDrmHandleCapabilities(void* data, struct wl_drm* drm, uint32_t caps)
         {
+            /* ignore this event */
         }
 
         static const struct wl_drm_listener drmListener = {
@@ -267,27 +272,29 @@ namespace Compositor {
             .format = onShmFormat,
         };
 
-        // static void linuxDmabufV1HandleFormat(void* data, struct zwp_linux_dmabuf_v1* linux_dmabuf_v1, uint32_t format)
-        // {
-        //     if (format != DRM_FORMAT_INVALID) {
-        //         TRACE_GLOBAL(Trace::Backend, ("Found DMA format: %s", DRM::FormatString(format)));
-        //     }
-        // }
+#ifdef USE_LEGACY_WAYLAND
+#warning "Note: Using legacy Linux dmabuf Wayland events"
+        static void linuxDmabufV1HandleFormat(void* data, struct zwp_linux_dmabuf_v1* linux_dmabuf_v1, uint32_t format)
+        {
+            if (format != DRM_FORMAT_INVALID) {
+                TRACE_GLOBAL(Trace::Backend, ("Found DMA format: %s", DRM::FormatString(format)));
+            }
+        }
 
-        // static void linuxDmabufV1HandleModifier(void* data, struct zwp_linux_dmabuf_v1* linux_dmabuf_v1, uint32_t format, uint32_t modifier_hi, uint32_t modifier_lo)
-        // {
-        //     uint64_t modifier = ((uint64_t)modifier_hi << 32) | modifier_lo;
+        static void linuxDmabufV1HandleModifier(void* data, struct zwp_linux_dmabuf_v1* linux_dmabuf_v1, uint32_t format, uint32_t modifier_hi, uint32_t modifier_lo)
+        {
+            uint64_t modifier = ((uint64_t)modifier_hi << 32) | modifier_lo;
 
-        //     if (format != DRM_FORMAT_INVALID) {
-        //         TRACE_GLOBAL(Trace::Backend, ("Found DMA format: %s: 0x%" PRIX64, DRM::FormatString(format), modifier));
-        //     }
-        // }
+            if (format != DRM_FORMAT_INVALID) {
+                TRACE_GLOBAL(Trace::Backend, ("Found DMA format: %s: 0x%" PRIX64, DRM::FormatString(format), modifier));
+            }
+        }
 
-        // // Note, thess events is deprecated
-        // static const struct zwp_linux_dmabuf_v1_listener linuxDmabufV1Listener = {
-        //     .format = linuxDmabufV1HandleFormat,
-        //     .modifier = linuxDmabufV1HandleModifier,
-        // };
+        static const struct zwp_linux_dmabuf_v1_listener linuxDmabufV1Listener = {
+            .format = linuxDmabufV1HandleFormat,
+            .modifier = linuxDmabufV1HandleModifier,
+        };
+#else
 
         /**
          * @brief Callback for the feedback done event on the feedback object
@@ -407,6 +414,7 @@ namespace Compositor {
             .tranche_formats = onLinuxDmabufFeedbackTrancheFormats,
             .tranche_flags = onLinuxDmabufFeedbackTrancheFlags,
         };
+#endif // USE_LEGACY_WAYLAND
 
         /**
          * @brief Callback for the global event on the registry
@@ -588,11 +596,15 @@ namespace Compositor {
                 wp_presentation_add_listener(_wlPresentation, &presentationListener, this);
             } else if (::strcmp(iface, zwp_linux_dmabuf_v1_interface.name) == 0 && version >= 4) {
                 _wlZwpLinuxDmabufV1 = static_cast<zwp_linux_dmabuf_v1*>(wl_registry_bind(registry, name, &zwp_linux_dmabuf_v1_interface, 4));
-                // zwp_linux_dmabuf_v1_add_listener(_wlZwpLinuxDmabufV1, &linuxDmabufV1Listener, this);
+#ifdef USE_LEGACY_WAYLAND
+                zwp_linux_dmabuf_v1_add_listener(_wlZwpLinuxDmabufV1, &linuxDmabufV1Listener, this);
+#else
                 if (_wlZwpLinuxDmabufV1) {
                     _wlZwpLinuxDmabufFeedbackV1 = zwp_linux_dmabuf_v1_get_default_feedback(_wlZwpLinuxDmabufV1);
                     zwp_linux_dmabuf_feedback_v1_add_listener(_wlZwpLinuxDmabufFeedbackV1, &linuxDmabufFeedbackV1Listener, this);
                 }
+#endif // USE_LEGACY_WAYLAND
+
             } else if (::strcmp(iface, zwp_relative_pointer_manager_v1_interface.name) == 0) {
                 _wlZwpRelativePointerManagerV1 = static_cast<zwp_relative_pointer_manager_v1*>(wl_registry_bind(registry, name, &zwp_relative_pointer_manager_v1_interface, 1));
             } else if (::strcmp(iface, wl_drm_interface.name) == 0) {
@@ -612,9 +624,15 @@ namespace Compositor {
          * @param clock The `clock` parameter is an unsigned 32-bit integer that represents the presentation
          * clock value. This function sets the `_presentationClock` member variable to the value of `clock`.
          */
-        void WaylandImplementation::PresentationClock(const uint32_t clock)
+        void WaylandImplementation::PresentationClock(const uint32_t clockType)
         {
-            _presentationClock = clock;
+            _presentationClock = clockType;
+
+            if (clockType == CLOCK_MONOTONIC || clockType == CLOCK_MONOTONIC_RAW) {
+                TRACE(Trace::Information, ("Using monotonic clock for presentation"));
+            } else {
+                TRACE(Trace::Information, ("Using realtime clock for presentation"));
+            }
         }
 
         /**
@@ -779,11 +797,9 @@ namespace Compositor {
          *
          * @return an xdg_surface pointer.
          */
-        xdg_surface* WaylandImplementation::WindowSurface(wl_surface* surface, zxdg_decoration_manager_v1*& decoration) const
+        xdg_surface* WaylandImplementation::WindowSurface(wl_surface* surface) const
         {
             xdg_surface* xdgSurface = xdg_wm_base_get_xdg_surface(_xdgWmBase, surface);
-
-            decoration = (xdgSurface != nullptr) ? _wlZxdgDecorationManagerV1 : nullptr;
 
             return xdgSurface;
         };
@@ -826,9 +842,21 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force)
+        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback)
         {
+
             return _windows.Instance<Backend::WaylandOutput>(name, *this, name, resolution, format, force);
+        }
+
+        struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
+        {
+            ASSERT(topLevelSurface != nullptr);
+            return (_wlZxdgDecorationManagerV1 != nullptr) ? zxdg_decoration_manager_v1_get_toplevel_decoration(_wlZxdgDecorationManagerV1, topLevelSurface) : nullptr;
+        }
+        struct wp_presentation_feedback* WaylandImplementation::GetFeedbackInterface(wl_surface* surface) const
+        {
+            ASSERT(surface != nullptr);
+            return (_wlPresentation != NULL) ? wp_presentation_feedback(_wlPresentation, surface) : nullptr;
         }
 
         /**
@@ -919,6 +947,8 @@ namespace Compositor {
             }
             wl_buffer* wlBuffer = wl_shm_pool_create_buffer(pool, plane->Offset(), buffer->Width(), buffer->Height(), plane->Stride(), wl_shm_format);
 
+            buffer->Completed(false);
+
             wl_shm_pool_destroy(pool);
 
             return wlBuffer;
@@ -967,10 +997,10 @@ namespace Compositor {
      *
      * @return A `Core::ProxyType` object that wraps an instance of `Exchange::ICompositionBuffer`.
      */
-    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force)
+    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback)
     {
         static Backend::WaylandImplementation backend("");
-        return backend.Output(name, resolution, format, force);
+        return backend.Output(name, resolution, format, force, callback);
     }
 } // namespace Compositor
 } // namespace WPEFramework

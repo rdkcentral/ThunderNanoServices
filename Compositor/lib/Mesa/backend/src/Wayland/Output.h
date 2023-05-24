@@ -27,10 +27,50 @@
 
 #include "IBackend.h"
 
+#include <wayland-client.h>
+#include "generated/presentation-time-client-protocol.h"
+#include "generated/xdg-shell-client-protocol.h"
+
 namespace WPEFramework {
 namespace Compositor {
     namespace Backend {
         class WaylandOutput : public Exchange::ICompositionBuffer {
+
+            struct PresentationFeedbackEvent {
+                PresentationFeedbackEvent() = delete;
+                PresentationFeedbackEvent(const PresentationFeedbackEvent& copy) = delete;
+                PresentationFeedbackEvent& operator=(const PresentationFeedbackEvent& copy) = delete;
+                PresentationFeedbackEvent(PresentationFeedbackEvent&& move) = delete;
+                PresentationFeedbackEvent& operator=(PresentationFeedbackEvent&& move) = delete;
+
+                PresentationFeedbackEvent(const uint32_t tv_sec_hi, const uint32_t tv_sec_lo, const uint32_t tv_nsec, const uint32_t refresh_ns, const uint32_t seq_hi, const uint32_t seq_lo, const uint32_t flags, const bool presented)
+                    : tv_seconds((static_cast<uint64_t>(tv_sec_hi) << 32) | tv_sec_lo)
+                    , tv_nseconds(tv_nsec)
+                    , refresh_ns(refresh_ns)
+                    , sequence((static_cast<uint64_t>(seq_hi) << 32) | seq_lo)
+                    , flags(flags)
+                    , presented(presented)
+                {
+                }
+
+                PresentationFeedbackEvent(const uint64_t sequence)
+                    : tv_seconds(0)
+                    , tv_nseconds(0)
+                    , refresh_ns(0)
+                    , sequence(sequence)
+                    , flags(0)
+                    , presented(true)
+                {
+                }
+
+                uint64_t tv_seconds;
+                uint32_t tv_nseconds;
+                uint32_t refresh_ns;
+                uint64_t sequence;
+                uint32_t flags;
+                bool presented;
+            }; // struct PresentationFeedbackEvent
+
         public:
             WaylandOutput() = delete;
             WaylandOutput(WaylandOutput&&) = delete;
@@ -63,9 +103,21 @@ namespace Compositor {
             static const struct xdg_toplevel_listener toplevelListener;
 
             static void onBufferRelease(void* data, struct wl_buffer* buffer);
-            static const struct wl_buffer_listener wlBufferListener;
+            static const struct wl_buffer_listener bufferListener;
+
+            static void onPresentationFeedbackSyncOutput(void* data, struct wp_presentation_feedback* feedback, struct wl_output* output);
+            static void onPresentationFeedbackPresented(void* data, struct wp_presentation_feedback* feedback, uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh_ns, uint32_t seq_hi, uint32_t seq_lo, uint32_t flags);
+            static void onPresentationFeedbackDiscarded(void* data, struct wp_presentation_feedback* feedback);
+            static const struct wp_presentation_feedback_listener presentationFeedbackListener;
 
             void CreateBuffer();
+
+            void PresentationFeedback(const PresentationFeedbackEvent& event);
+
+            uint64_t NextSequence()
+            {
+                return _commitSequence++;
+            }
 
         private:
             mutable uint32_t _refCount;
@@ -82,6 +134,7 @@ namespace Compositor {
             Compositor::Matrix _matrix;
             Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
             Core::Event _signal;
+            uint64_t _commitSequence;
         }; // WaylandOutput
 
     } // namespace Backend
