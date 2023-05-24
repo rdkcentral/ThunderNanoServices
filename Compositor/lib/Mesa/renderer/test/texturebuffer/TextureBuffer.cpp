@@ -1,6 +1,6 @@
 #include "TextureBuffer.h"
 
-#include <drm/drm_fourcc.h>
+#include <drm_fourcc.h>
 
 namespace WPEFramework {
 namespace Compositor {

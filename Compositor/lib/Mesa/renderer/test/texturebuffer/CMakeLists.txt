@@ -18,6 +18,8 @@
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 
+find_package(libdrm REQUIRED)
+
 add_library(TextureBuffer STATIC TextureBuffer.cpp)
 
 target_include_directories(TextureBuffer PUBLIC ${CMAKE_CURRENT_LIST_DIR})
@@ -26,6 +28,7 @@ target_link_libraries(TextureBuffer
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
+        libdrm::libdrm
 )
 
 add_library(TextureBuffer::TextureBuffer ALIAS TextureBuffer)
