@@ -82,7 +82,7 @@ namespace Compositor {
          * @brief Ends a render pass.
          *
          */
-        virtual void End() = 0;
+        virtual void End(bool dump = false) = 0;
 
         /**
          * @brief Clear the viewport with the provided color

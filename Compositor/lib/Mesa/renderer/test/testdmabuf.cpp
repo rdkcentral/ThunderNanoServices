@@ -119,8 +119,8 @@ public:
 
         _renderer->Bind(buffer);
         _renderer->Begin(buffer->Width(), buffer->Height());
-        _renderer->Clear(red);
-        _renderer->End();
+        _renderer->Clear(color);
+        _renderer->End(true);
         _renderer->Unbind();
     }
 
@@ -202,7 +202,7 @@ private:
 
         _renderer->Render(_texture.texture, box, matrix, 1.0f);
 
-        _renderer->End();
+        _renderer->End(true);
 
         _connector->Render();
 
@@ -264,7 +264,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 60);
+        WPEFramework::RenderTest test(connectorId, 1);
 
         // test.Start();
 

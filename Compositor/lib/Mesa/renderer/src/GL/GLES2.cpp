@@ -27,6 +27,8 @@
 #include <vertex-shader.h>
 
 #include "Format.h"
+#include <png.h>
+
 
 namespace WPEFramework {
 namespace Compositor {
@@ -866,9 +868,21 @@ namespace Compositor {
                 return (glGetError() == GL_NO_ERROR);
             }
 
-            void End() override
+            void End(bool dump) override
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
+
+                if (dump == true) {
+                    std::vector<uint8_t> pixels;
+                    Box box = { 0, 0, static_cast<int>(_viewportWidth), static_cast<int>(_viewportHeight) };
+                    if (Snapshot(box, DRM_FORMAT_ARGB8888, pixels) == true) {
+                        std::stringstream ss;
+                        ss << "egl-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+                        Core::File snapshot(ss.str());
+
+                        WritePNG(ss.str(), pixels, _viewportWidth, _viewportHeight);
+                    }
+                }
 
                 // nothing to do
 
@@ -987,6 +1001,88 @@ namespace Compositor {
             bool InContext() const
             {
                 return ((_egl.IsCurrent() == true) && (_frameBuffer != nullptr));
+            }
+
+            bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
+            {
+
+                png_structp pngPointer = nullptr;
+
+                pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+                if (pngPointer == nullptr) {
+
+                    return false;
+                }
+
+                png_infop infoPointer = nullptr;
+                infoPointer = png_create_info_struct(pngPointer);
+                if (infoPointer == nullptr) {
+
+                    png_destroy_write_struct(&pngPointer, &infoPointer);
+                    return false;
+                }
+
+                // Set up error handling.
+                if (setjmp(png_jmpbuf(pngPointer))) {
+
+                    png_destroy_write_struct(&pngPointer, &infoPointer);
+                    return false;
+                }
+
+                // Set image attributes.
+                int depth = 8;
+                png_set_IHDR(pngPointer,
+                    infoPointer,
+                    width,
+                    height,
+                    depth,
+                    PNG_COLOR_TYPE_RGB,
+                    PNG_INTERLACE_NONE,
+                    PNG_COMPRESSION_TYPE_DEFAULT,
+                    PNG_FILTER_TYPE_DEFAULT);
+
+                // Initialize rows of PNG.
+                png_byte** rowLines = static_cast<png_byte**>(png_malloc(pngPointer, height * sizeof(png_byte*)));
+                
+                const int pixelSize = 4; // RGBA
+
+                for (unsigned int i = 0; i < height; ++i) {
+
+                    png_byte* rowLine = static_cast<png_byte*>(png_malloc(pngPointer, sizeof(png_byte) * width * pixelSize));
+                    const uint8_t* rowSource = buffer.data() + (sizeof(png_byte) * i * width * pixelSize);
+                    rowLines[i] = rowLine;
+                    for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
+                        *rowLine++ = rowSource[j + 2]; // Red
+                        *rowLine++ = rowSource[j + 1]; // Green
+                        *rowLine++ = rowSource[j + 0]; // Blue
+                    }
+                }
+
+                bool result = false;
+                
+                // Duplicate file descriptor and create File stream based on it.
+                FILE* filePointer = fopen(filename.c_str(), "wb");
+
+                if (nullptr != filePointer) {
+                    // Write the image data to "file".
+                    png_init_io(pngPointer, filePointer);
+                    png_set_rows(pngPointer, infoPointer, rowLines);
+                    png_write_png(pngPointer, infoPointer, PNG_TRANSFORM_IDENTITY, nullptr);
+                    // All went well.
+                    result = true;
+                }
+
+                // Close stream to flush and release allocated buffers
+                fclose(filePointer);
+
+                for (unsigned int i = 0; i < height; i++) {
+                    png_free(pngPointer, rowLines[i]);
+                }
+
+                png_free(pngPointer, rowLines);
+                png_destroy_write_struct(&pngPointer, &infoPointer);
+
+                return result;
             }
 
             bool Snapshot(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels)
