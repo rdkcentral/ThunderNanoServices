@@ -6,7 +6,7 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-#include <drm/drm_fourcc.h>
+#include <drm_fourcc.h>
 
 namespace WPEFramework {
 namespace Compositor {
