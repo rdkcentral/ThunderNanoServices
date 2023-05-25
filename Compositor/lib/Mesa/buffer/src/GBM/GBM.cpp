@@ -354,8 +354,7 @@ namespace Compositor {
 
     /* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(const Compositor::Identifier identifier, const uint32_t width, const uint32_t height, const PixelFormat& format)
     {
-
-        ASSERT(drmAvailable() == 1);
+        // ASSERT(drmAvailable() == 1);
 
         Core::ProxyType<Exchange::ICompositionBuffer> result;
 
