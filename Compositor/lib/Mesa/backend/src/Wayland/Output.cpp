@@ -162,9 +162,10 @@ namespace Compositor {
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
-            backend.AddRef();
+            _backend.AddRef();
 
             _backend.Format(format, _format, _modifier);
+            TRACE(Trace::Backend, ("Picked DMA format: %s modifier: 0x%" PRIX64, DRM::FormatString(_format), _modifier));
 
             ASSERT(_format != DRM_FORMAT_INVALID);
             ASSERT(_modifier != DRM_FORMAT_MOD_INVALID);
@@ -319,6 +320,7 @@ namespace Compositor {
         void WaylandOutput::CreateBuffer()
         {
             if (_buffer.IsValid() == false) {
+                ASSERT(_backend.RenderNode() > 0);
                 _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
             }
         }
