@@ -45,6 +45,9 @@ constexpr Identifier InvalidIdentifier = static_cast<Identifier>(~0);
  * @brief  A single DRM format, with a set of modifiers attached.
  *
  */
+
+using FormatRegister = std::map<uint32_t, std::vector<uint64_t>>;
+
 class PixelFormat {
 private:
     static constexpr uint8_t DefaultModifier = 0x00;
