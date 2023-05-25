@@ -20,14 +20,14 @@
 #include "../Module.h"
 
 #include <CompositorTypes.h>
+#include <DRM.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
 #include <interfaces/ICompositionBuffer.h>
-#include <DRM.h>
 
+#include "IBackend.h"
 #include "Input.h"
 #include "Output.h"
-#include "IBackend.h"
 
 #include <sys/mman.h>
 
@@ -40,9 +40,9 @@
 #include "generated/pointer-gestures-unstable-v1-client-protocol.h"
 #include "generated/presentation-time-client-protocol.h"
 #include "generated/relative-pointer-unstable-v1-client-protocol.h"
+#include "generated/xdg-activation-v1-client-protocol.h"
 #include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
-#include "generated/xdg-activation-v1-client-protocol.h"
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
@@ -150,7 +150,7 @@ namespace Compositor {
             zwp_relative_pointer_manager_v1* _wlZwpRelativePointerManagerV1;
             xdg_activation_v1* _wlXdgActivationV1;
             zwp_linux_dmabuf_feedback_v1* _wlZwpLinuxDmabufFeedbackV1;
-            std::vector<PixelFormat> _formats;
+            FormatRegister _dmaFormats;
 
             Input _input;
             ServerMonitor _serverMonitor;
@@ -470,7 +470,7 @@ namespace Compositor {
             , _wlZwpRelativePointerManagerV1(nullptr)
             , _wlXdgActivationV1(nullptr)
             , _wlZwpLinuxDmabufFeedbackV1(nullptr)
-            , _formats()
+            , _dmaFormats()
             , _input()
             , _serverMonitor(*this, wl_display_get_fd(_wlDisplay))
             , _windows()
@@ -490,7 +490,7 @@ namespace Compositor {
             // Query available drm formats
             RoundTrip();
 
-            ASSERT(_formats.size() > 0);
+            ASSERT(_dmaFormats.size() > 0);
 
             if (const char* token = getenv("XDG_ACTIVATION_TOKEN")) {
                 _activationToken = token;
@@ -667,8 +667,6 @@ namespace Compositor {
          */
         void WaylandImplementation::HandleDmaFormatTable(int fd, uint32_t size)
         {
-            std::map<uint32_t, std::vector<uint64_t>> results;
-
             void* map = ::mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
 
             close(fd);
@@ -681,6 +679,8 @@ namespace Compositor {
                 // Core::ToHexString(static_cast<uint8_t*>(map), size, hexData);
                 // TRACE(Trace::Backend, ("RAW Data: %s", hexData.c_str()));
 
+                _dmaFormats.clear();
+
                 for (int i = 0; i < nFormats; i++) {
                     const uint32_t format(formats[i].format);
 
@@ -690,23 +690,20 @@ namespace Compositor {
 
                     TRACE(Trace::Backend, ("%d Found DMA format: %s modifier: 0x%" PRIX64, i, DRM::FormatString(format), modifier));
 
-                    auto index = results.find(format);
+                    FormatRegister::iterator index = _dmaFormats.find(format);
 
-                    if (index == results.end()) {
-                        std::vector<uint64_t> modifiers = { modifier };
-                        results.emplace(format, modifiers);
+                    if (index == _dmaFormats.end()) {
+                        _dmaFormats.emplace(format, std::vector<uint64_t>({ modifier }));
                     } else {
-                        auto modifiers = index->second;
-                        if (std::find(modifiers.begin(), modifiers.end(), modifier) != modifiers.end()) {
+                        std::vector<uint64_t>& modifiers = index->second;
+
+                        if (std::find(modifiers.begin(), modifiers.end(), modifier) == modifiers.end()) {
                             modifiers.push_back(modifier);
                         }
                     }
                 }
 
-                for (const auto& result : results) {
-                    _formats.emplace_back(result.first, result.second);
-                }
-                TRACE(Trace::Backend, ("Found %d formats", _formats.size()));
+                TRACE(Trace::Backend, ("Found %d formats", _dmaFormats.size()));
 
                 ::munmap(map, size);
             }
@@ -721,9 +718,14 @@ namespace Compositor {
         {
             string renderNode = DRM::GetNode(DRM_NODE_RENDER, device);
 
+            if (renderNode.empty()) {
+                renderNode = DRM::GetNode(DRM_NODE_PRIMARY, device);
+                TRACE(Trace::Information, ("DRM device %p has no render node, trying primary instead", device));
+            }
+
             if (renderNode.empty() == false) {
                 _drmRenderFd = open(renderNode.c_str(), O_RDWR | O_CLOEXEC);
-                TRACE(Trace::Backend, ("Opened render node %s fd: %d", renderNode.c_str(), _drmRenderFd));
+                TRACE(Trace::Backend, ("Opened DRM node %s fd: %d", renderNode.c_str(), _drmRenderFd));
             } else {
                 TRACE(Trace::Error, ("Could not find render node for drm device %p", device));
             }
@@ -814,20 +816,18 @@ namespace Compositor {
             return wl_display_flush(_wlDisplay);
         }
 
-        void WaylandImplementation::Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const
+        void WaylandImplementation::Format(const Compositor::PixelFormat& requested, uint32_t& format, uint64_t& modifier) const
         {
             format = DRM_FORMAT_INVALID;
             modifier = DRM_FORMAT_MOD_INVALID;
 
-            for (const auto& localFormat : _formats) {
-                if (localFormat.Type() == input.Type()) {
-                    format = localFormat.Type();
-
-                    for (const auto& localModifier : localFormat.Modifiers()) {
-
-                        for (const auto& requestedModifier : input.Modifiers()) {
+            for (const auto& localFormat : _dmaFormats) {
+                if (localFormat.first == requested.Type()) {
+                    format = requested.Type();
+                    for (const auto& localModifier : localFormat.second) {
+                        for (const auto& requestedModifier : requested.Modifiers()) {
                             if (requestedModifier == localModifier) {
-                                modifier = localModifier;
+                                modifier = requestedModifier;
                                 break;
                             }
                         }
