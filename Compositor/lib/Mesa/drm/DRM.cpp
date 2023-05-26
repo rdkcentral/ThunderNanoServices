@@ -164,7 +164,9 @@ namespace Compositor {
             int device_count = drmGetDevices2(0 /* flags */, &devices[0], nDrmDevices);
 
             if (device_count > 0) {
-                for (decltype(device_count) i = 0; i < device_count; i++) {
+                for (uint8_t i = 0; i < device_count; i++) {
+                    TRACE_GLOBAL(Trace::Information, ("DRM node %p 0x%04X: Primary %s,  Render  %s", devices[i], devices[i]->available_nodes, (devices[i]->available_nodes & (1 << DRM_NODE_PRIMARY)) ? devices[i]->nodes[DRM_NODE_PRIMARY] : "Unavailable", (devices[i]->available_nodes & (1 << DRM_NODE_RENDER)) ? devices[i]->nodes[DRM_NODE_RENDER] : "Unavailable"));
+
                     switch (type) {
                     case DRM_NODE_PRIMARY: // card<num>, always created, KMS, privileged
                     case DRM_NODE_CONTROL: // ControlD<num>, currently unused
@@ -467,16 +469,20 @@ namespace Compositor {
          */
         string GetNode(const uint32_t type, drmDevice* device)
         {
-            drmDevice* devices[64];
             string node;
 
-            int n = drmGetDevices2(0, devices, sizeof(devices) / sizeof(devices[0]));
+            const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
+            drmDevicePtr devices[nDrmDevices];
 
-            for (int i = 0; i < n; ++i) {
+            drmGetDevices2(0, devices, nDrmDevices);
+
+            for (int i = 0; i < nDrmDevices; ++i) {
                 drmDevice* dev = devices[i];
                 if (device && !drmDevicesEqual(device, dev)) {
                     continue;
                 }
+                TRACE_GLOBAL(Trace::Information, ("DRM node %p 0x%04X: Primary %s,  Render  %s", dev, dev->available_nodes, (dev->available_nodes & (1 << DRM_NODE_PRIMARY)) ? dev->nodes[DRM_NODE_PRIMARY] : "Unavailable", (dev->available_nodes & (1 << DRM_NODE_RENDER)) ? dev->nodes[DRM_NODE_RENDER] : "Unavailable"));
+
                 if (!(dev->available_nodes & (1 << type)))
                     continue;
 
@@ -484,7 +490,7 @@ namespace Compositor {
                 break;
             }
 
-            drmFreeDevices(devices, n);
+            drmFreeDevices(devices, nDrmDevices);
             return node;
         }
 

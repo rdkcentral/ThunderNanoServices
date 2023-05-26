@@ -122,9 +122,10 @@ namespace Compositor {
             void RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version);
 
             void PresentationClock(const uint32_t clockType);
-            void DrmNode(const std::string& name);
             void HandleDmaFormatTable(int32_t fd, uint32_t size);
+
             void OpenDrmRender(drmDevice* device);
+            void OpenDrmRender(const std::string& name);
 
             int Dispatch(const uint32_t events) const;
 
@@ -205,7 +206,7 @@ namespace Compositor {
         static void onDrmHandleDevice(void* data, struct wl_drm* drm, const char* name)
         {
             WaylandImplementation* implementation = static_cast<WaylandImplementation*>(data);
-            implementation->DrmNode(name);
+            implementation->OpenDrmRender(name);
         }
 
         /**
@@ -636,25 +637,6 @@ namespace Compositor {
         }
 
         /**
-         * The function opens a DRM node for rendering if it exists in a list of available nodes.
-         *
-         * @param name A string representing the name of the DRM node to be opened.
-         */
-        void WaylandImplementation::DrmNode(const string& name)
-        {
-            std::vector<std::string> nodes;
-            Compositor::DRM::GetNodes(DRM_NODE_RENDER, nodes);
-
-            if (std::find(nodes.begin(), nodes.end(), name) != nodes.end()) {
-                _drmRenderFd = open(name.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC);
-                ASSERT(_drmRenderFd > 0);
-                TRACE(Trace::Backend, ("Opened DRM node: %s fd: %d", name.c_str(), _drmRenderFd));
-            } else {
-                TRACE(Trace::Error, ("Unknown DRM node: %s", name.c_str()));
-            }
-        }
-
-        /**
          * This function handles the DMA format table by parsing the data and storing the formats and modifiers
          * in a map.
          *
@@ -724,10 +706,32 @@ namespace Compositor {
             }
 
             if (renderNode.empty() == false) {
-                _drmRenderFd = open(renderNode.c_str(), O_RDWR | O_CLOEXEC);
-                TRACE(Trace::Backend, ("Opened DRM node %s fd: %d", renderNode.c_str(), _drmRenderFd));
+                OpenDrmRender(renderNode);
             } else {
                 TRACE(Trace::Error, ("Could not find render node for drm device %p", device));
+            }
+        }
+
+        /**
+         * The function opens a DRM node for rendering if it exists in a list of available nodes.
+         *
+         * @param name A string representing the name of the DRM node to be opened.
+         */
+        void WaylandImplementation::OpenDrmRender(const string& name)
+        {
+            if (_drmRenderFd == InvalidFileDescriptor) {
+                std::vector<std::string> nodes;
+                Compositor::DRM::GetNodes(DRM_NODE_RENDER | DRM_NODE_PRIMARY, nodes);
+
+                if (std::find(nodes.begin(), nodes.end(), name) != nodes.end()) {
+                    _drmRenderFd = open(name.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC);
+                    ASSERT(_drmRenderFd > 0);
+                    TRACE(Trace::Backend, ("Opened DRM node: %s fd: %d", name.c_str(), _drmRenderFd));
+                } else {
+                    TRACE(Trace::Error, ("Unknown DRM node: %s", name.c_str()));
+                }
+            } else {
+                TRACE(Trace::Information, ("DRM node %s already opened", name.c_str()));
             }
         }
 

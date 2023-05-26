@@ -220,6 +220,7 @@ int main(int argc, const char* argv[])
             "CompositorBuffer",
             "CompositorBackend",
             "CompositorRenderer",
+            "DRMCommon"
         };
 
         for (auto module : modules) {
