@@ -17,4 +17,3 @@
 
 add_subdirectory(backend)
 add_subdirectory(scandrm)
-add_subdirectory(wayland)
