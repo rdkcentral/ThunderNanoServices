@@ -80,9 +80,6 @@ namespace Compositor {
 
             virtual ~WaylandOutput();
 
-            void AddRef() const override;
-            uint32_t Release() const override;
-
             uint32_t Identifier() const override;
 
             Exchange::ICompositionBuffer::IIterator* Planes(const uint32_t timeoutMs) override;
@@ -120,7 +117,6 @@ namespace Compositor {
             }
 
         private:
-            mutable uint32_t _refCount;
             Wayland::IBackend& _backend;
             wl_surface* _surface;
             xdg_surface* _windowSurface;

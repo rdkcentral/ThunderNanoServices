@@ -145,8 +145,7 @@ namespace Compositor {
         WaylandOutput::WaylandOutput(Wayland::IBackend& backend, const string& name,
             const Exchange::IComposition::ScreenResolution resolution,
             const Compositor::PixelFormat& format, const bool force)
-            : _refCount(1)
-            , _backend(backend)
+            : _backend(backend)
             , _surface(nullptr)
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
@@ -161,8 +160,6 @@ namespace Compositor {
             , _commitSequence(0)
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
-
-            _backend.AddRef();
 
             _backend.Format(format, _format, _modifier);
             TRACE(Trace::Backend, ("Picked DMA format: %s modifier: 0x%" PRIX64, DRM::FormatString(_format), _modifier));
@@ -230,25 +227,6 @@ namespace Compositor {
             if (_surface != nullptr) {
                 wl_surface_destroy(_surface);
             }
-
-            _backend.Release();
-        }
-
-        void WaylandOutput::AddRef() const
-        {
-            Core::InterlockedIncrement(_refCount);
-        }
-
-        uint32_t WaylandOutput::Release() const
-        {
-            uint32_t result = Core::ERROR_NONE;
-
-            if (Core::InterlockedDecrement(_refCount) == 0) {
-                delete this;
-                result = Core::ERROR_DESTRUCTION_SUCCEEDED;
-            }
-
-            return (result);
         }
 
         uint32_t WaylandOutput::Identifier() const

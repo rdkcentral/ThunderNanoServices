@@ -544,6 +544,9 @@ namespace Compositor {
                 xdg_activation_v1_destroy(_wlXdgActivationV1);
             }
 
+            if(_wlZwpLinuxDmabufFeedbackV1 != nullptr) {
+            }
+
             xdg_wm_base_destroy(_xdgWmBase);
             wl_compositor_destroy(_wlCompositor);
             wl_registry_destroy(_wlRegistry);
@@ -1003,7 +1006,7 @@ namespace Compositor {
      */
     Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback)
     {
-        static Backend::WaylandImplementation backend("");
+        static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance("");
         return backend.Output(name, resolution, format, force, callback);
     }
 } // namespace Compositor
