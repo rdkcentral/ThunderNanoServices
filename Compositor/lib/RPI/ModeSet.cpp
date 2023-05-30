@@ -158,7 +158,7 @@ namespace WPEFramework {
 
     bool ModeSet::DRM::Open(uint32_t type)
     {
-        bool result = false; 
+        bool result = false;
 
         if (   drmAvailable() == 1
             && _fd == InvalidFileDescriptor()
@@ -172,7 +172,7 @@ namespace WPEFramework {
                     _fd = open(it-> c_str(), O_RDWR);
 
                     result =    _fd != InvalidFileDescriptor()
-                             && InitializeDisplayProperties() 
+                             && InitializeDisplayProperties()
                              && drmSetMaster(_fd) == 0
                              ;
 
@@ -297,7 +297,7 @@ extern "C" {
 }
 #endif
 
-    bool ModeSet::DRM::ShowFramebuffer(struct gbm_bo* bo) const 
+    bool ModeSet::DRM::ShowFramebuffer(struct gbm_bo* bo) const
     {
         bool result = false;
 
@@ -460,8 +460,8 @@ extern "C" {
     {
         bool result = false;
 
-        drmModeResPtr resources =    drmAvailable() == 1 
-                                  && _fd != InvalidFileDescriptor() 
+        drmModeResPtr resources =    drmAvailable() == 1
+                                  && _fd != InvalidFileDescriptor()
                                   ? drmModeGetResources(_fd) : nullptr
                                   ;
 
@@ -474,7 +474,7 @@ extern "C" {
                                   && in_unsigned_range<uint32_t, DRM_MODE_CONNECTOR_HDMIA>::value
                                  )
                              );
- 
+
                 if (  connectors != nullptr
                     && connectors->connector_type == DRM_MODE_CONNECTOR_HDMIA
                     && connectors->connection == DRM_MODE_CONNECTED
@@ -519,9 +519,9 @@ extern "C" {
     {
         bool result = false;
 
-        drmModeConnectorPtr connector =    drmAvailable() == 1 
-                                        && _fd != InvalidFileDescriptor() 
-                                        && _connector != InvalidConnector() 
+        drmModeConnectorPtr connector =    drmAvailable() == 1
+                                        && _fd != InvalidFileDescriptor()
+                                        && _connector != InvalidConnector()
                                         ? drmModeGetConnector(_fd, _connector) : nullptr
                                         ;
 
@@ -536,7 +536,7 @@ extern "C" {
             uint64_t rate[2] = { 0, 0 };
             uint64_t clock[2] = { 0, 0 };
 
-            for (int i = 0; i < connector->count_modes; i++) { 
+            for (int i = 0; i < connector->count_modes; i++) {
                 static_assert(    !narrowing<decltype(DRM_MODE_TYPE_PREFERRED), uint32_t, true>::value
                               || (    DRM_MODE_TYPE_PREFERRED >= 0
                                   && in_unsigned_range<uint32_t, DRM_MODE_TYPE_PREFERRED>::value
@@ -554,7 +554,7 @@ extern "C" {
 
                     break;
                 } else {
-                    static_assert(   !narrowing<decltype(DRM_MODE_TYPE_DRIVER), uint32_t, true>::value 
+                    static_assert(   !narrowing<decltype(DRM_MODE_TYPE_DRIVER), uint32_t, true>::value
                                   || (   DRM_MODE_TYPE_DRIVER >= 0
                                       && in_unsigned_range<uint32_t, DRM_MODE_TYPE_DRIVER>::value
                                      )
@@ -569,7 +569,7 @@ extern "C" {
                             || (   area[0] == area[1]
                                 && rate[0] < rate[1]
                                )
-                            || (   area[0] == area[1] 
+                            || (   area[0] == area[1]
                                 && rate[0] == rate[1]
                                 && clock[0] < clock[1]
                                )
@@ -648,7 +648,7 @@ extern "C" {
            ) {
             auto its = std::find_if(  _surfaces.begin()
                                     , _surfaces.end()
-                                    , [&surface](struct gbm_surface* surf) 
+                                    , [&surface](struct gbm_surface* surf)
                                       {
                                          return surface == surf;
                                       }
@@ -659,7 +659,7 @@ extern "C" {
                 do {
                     itb = std::find_if(  _bo2surface.begin()
                                        , _bo2surface.end()
-                                       , [&surface](std::pair<struct gbm_bo*, struct gbm_surface*> item) 
+                                       , [&surface](std::pair<struct gbm_bo*, struct gbm_surface*> item)
                                          {
                                              return item.second == surface;
                                          }
@@ -676,7 +676,7 @@ extern "C" {
 
                 result = count > _surfaces.size();
 
-                if (result) { 
+                if (result) {
                     /* void */ gbm_surface_destroy(surface);
                     surface = InvalidSurface();
                 }
@@ -730,7 +730,7 @@ extern "C" {
            ) {
             auto its = std::find_if(  _bos.begin()
                                     , _bos.end()
-                                    , [&bo](struct gbm_bo* buffer) 
+                                    , [&bo](struct gbm_bo* buffer)
                                     {
                                         return buffer == bo;
                                     }
@@ -768,7 +768,7 @@ extern "C" {
                 result = it.second;
             }
         }
- 
+
         return result;
     }
 
@@ -795,7 +795,7 @@ extern "C" {
             && _drm.FileDescriptor() != DRM::InvalidFileDescriptor()
            ) {
             _device = gbm_create_device(_drm.FileDescriptor());
-            
+
             device = _device;
         }
 
@@ -911,7 +911,7 @@ extern "C" {
     {
         static std::queue<BufferInfo> frames;
 
-        BufferInfo frame(surface, GBM::InvalidBuffer(), DRM::InvalidFramebuffer()); 
+        BufferInfo frame(surface, GBM::InvalidBuffer(), DRM::InvalidFramebuffer());
 
         if (   _drm.IsValid()
             && _gbm.IsValid()

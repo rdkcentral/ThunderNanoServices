@@ -164,7 +164,7 @@ namespace GLResourceMediator {
             static constexpr uint32_t InvalidFormat() { return ModeSet::GBM::InvalidFormat(); }
             static constexpr uint32_t InvalidStride() { return ModeSet::GBM::InvalidStride(); }
             static constexpr uint32_t InvalidWidth() { return  ModeSet::GBM::InvalidWidth(); }
-            static constexpr uint32_t InvalidHeight() { return ModeSet::GBM::InvalidHeight(); } 
+            static constexpr uint32_t InvalidHeight() { return ModeSet::GBM::InvalidHeight(); }
 
             bool IsValid() const;
 
@@ -294,7 +294,7 @@ namespace GLResourceMediator {
             static constexpr GLfloat Top() { return 1.0f; }
             static constexpr GLfloat Near() { return -1.0f; }
             static constexpr GLfloat Far() { return 1.0f; }
-        
+
         private :
 
             explicit Offset(GLfloat, GLfloat, GLfloat);
@@ -306,7 +306,7 @@ namespace GLResourceMediator {
 
         class Scale final {
         public:
-                
+
             Scale(Scale&&) = delete;
             Scale& operator=(Scale&&) = delete;
 
@@ -346,7 +346,7 @@ namespace GLResourceMediator {
             explicit Texture(GLuint, GLuint, GLuint);
             ~Texture();
 
-            explicit Texture(Texture&&); 
+            explicit Texture(Texture&&);
             Texture& operator=(Texture&&);
 
             GLuint Target() const { return _target; }
@@ -479,7 +479,7 @@ namespace GLResourceMediator {
             bool DestroyShader(GLuint) const;
             bool CompileAndLink(GLuint, GLuint);
             bool Destroy();
- 
+
             const std::string _vtx_src;
             const std::string _frag_src;
 
@@ -559,7 +559,7 @@ namespace GLResourceMediator {
 
         static constexpr EGLNativeDisplayType InvalidDisplayType() { return Native::InvalidDisplay(); }
         static constexpr EGLNativeWindowType InvalidWindowType() { return Native::InvalidSurface(); }
- 
+
         static_assert(std::is_convertible<decltype(_EGL_NO_IMAGE), KHRFIX(EGLImage)>::value);
         static constexpr KHRFIX(EGLImage) InvalidImage() { return _EGL_NO_IMAGE; }
 
@@ -1001,15 +1001,15 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
 
         PluginHost::IShell* _service;
-        
+
         Core::ProxyType<RPC::InvokeServer> _engine;
-        
+
         ExternalAccess* _externalAccess;
-        
+
         std::list<INotification*> _observers;
-        
+
         ClientContainer _clients;
-        
+
         Config _config;
 
         GLResourceMediator::ModeSetOpenOnce& _platform;
@@ -1075,8 +1075,7 @@ namespace Plugin {
         , _sync_fd{InvalidSyncFd()}
         , _buf{buf}
         , _valid{_fd != InvalidFd() && InitializeLocks()}
-    {
-    }
+    {}
 
     WPEFramework::GLResourceMediator::Native::Prime::~Prime()
     {
@@ -1120,7 +1119,6 @@ namespace Plugin {
 
     bool WPEFramework::GLResourceMediator::Native::Prime::Lock() const
     {
-        
 // FIXME: not signal safe
         bool ret =   _sync_fd != InvalidSyncFd()
                    && fcntl(_sync_fd, F_SETLKW, &_acquire) != -1
@@ -1151,7 +1149,7 @@ namespace Plugin {
         bool result =    _buf != ModeSet::GBM::InvalidBuffer()
                       && _sync_fd == InvalidSyncFd()
                       ;
-                                                         
+
         // Once is enough
         if (result) {
             static_assert(InvalidSyncFd() == -1);
@@ -1198,8 +1196,7 @@ namespace Plugin {
         , _height{0}
         , _prime{ModeSet::GBM::InvalidBuffer()}
         , _valid{Initialize()}
-    {
-    }
+    {}
 
     WPEFramework::GLResourceMediator::Native::~Native()
     {
@@ -1250,7 +1247,7 @@ namespace Plugin {
         if (_surf != InvalidSurface()) {
             _set.DestroyRenderTarget(_surf);
         }
-        
+
         _valid =    _buf != ModeSet::GBM::InvalidBuffer()
                  || _surf != InvalidSurface()
                  ;
@@ -1262,8 +1259,7 @@ namespace Plugin {
 
     WPEFramework::GLResourceMediator::GLES::Opacity::Opacity()
         : Opacity{InitialOpacity()}
-    {
-    }
+    {}
 
     WPEFramework::GLResourceMediator::GLES::Opacity::Opacity(const Opacity& other)
     {
@@ -1347,7 +1343,7 @@ namespace Plugin {
 
         return result;
     }
- 
+
     bool WPEFramework::GLResourceMediator::GLES::Offset::Z(GLfloat z)
     {
         bool result =    z >= Near()
@@ -1374,10 +1370,7 @@ namespace Plugin {
         : _x{x}
         , _y{y}
         , _z{z}
-    {
-    }
-
-
+    {}
 
     WPEFramework::GLResourceMediator::GLES::Scale::Scale()
         : Scale(InitialScale())
@@ -1431,8 +1424,7 @@ namespace Plugin {
     WPEFramework::GLResourceMediator::GLES::Scale::Scale(GLclampf horiz, GLclampf vert)
         : _horiz{horiz}
         , _vert{vert}
-    {
-    }
+    {}
 
     WPEFramework::GLResourceMediator::GLES::Texture::Texture(GLuint target, GLuint width, GLuint height)
         : _tex{InvalidTexture()}
@@ -1454,8 +1446,8 @@ namespace Plugin {
 
     WPEFramework::GLResourceMediator::GLES::Texture::~Texture()
     {
-        if (   Unbind()
-            || IsValid()
+        if (   IsValid()
+            && Unbind()
            ) {
             glDeleteTextures(1, &_tex);
         }
@@ -1481,7 +1473,7 @@ namespace Plugin {
 
             other._tex = InvalidTexture();
 // FIXME: sometimes other is still used in Bind() which results in an error
-//            other._target = 0;
+            other._target = 0;
 
             other._opacity = Opacity();
 
@@ -1534,7 +1526,7 @@ namespace Plugin {
 
         return result;
     }
- 
+
     bool WPEFramework::GLResourceMediator::GLES::Texture::Opacity(GLfloat alpha)
     {
         return _opacity.Alpha(alpha);
@@ -1542,9 +1534,9 @@ namespace Plugin {
 
     bool WPEFramework::GLResourceMediator::GLES::Texture::Properties(GLuint x, GLuint y, GLuint z, GLuint width, GLuint height, GLfloat alpha)
     {
-        GLuint w = Width();
-        GLuint h = Height();
-        
+        const GLuint w = Width();
+        const GLuint h = Height();
+
         bool result =    width > 0
                       && height > 0
                       && width <= w
@@ -1630,7 +1622,7 @@ namespace Plugin {
             }
 
             result = GL_ERROR_WITH_RETURN();
-        
+
             result = Unbind() && result;
         }
 
@@ -1642,7 +1634,7 @@ namespace Plugin {
     {
         return Data(typename std::is_member_pointer<FUNC>::type(), func, std::forward<ARG>(arg)...);
     }
- 
+
     bool WPEFramework::GLResourceMediator::GLES::Texture::Initialize()
     {
         bool result =    _tex == InvalidTexture()
@@ -1675,7 +1667,7 @@ namespace Plugin {
             func(std::forward<ARG>(arg)...);
 
             result = GL_ERROR_WITH_RETURN();
-        
+
             result = Unbind() && result;
         }
 
@@ -1708,8 +1700,7 @@ namespace Plugin {
         , _egl{egl}
         , _pglEGLImageTargetTexture2DOES{nullptr}
         , _valid{Initialize()}
-    {
-    }
+    {}
 
     WPEFramework::GLResourceMediator::GLES::~GLES()
     {
@@ -1837,13 +1828,13 @@ namespace Plugin {
 
                     glEnable(GL_DEPTH_TEST);
                     GL_ERROR();
-                
+
                     GLint bits = 0;
 
                     glGetIntegerv(GL_DEPTH_BITS, &bits);
                     GL_ERROR();
 
-                    if (bits > 0) { 
+                    if (bits > 0) {
                         glDepthMask(GL_TRUE);
                         GL_ERROR();
 
@@ -1891,7 +1882,7 @@ namespace Plugin {
                                        // Buffer dimensions [Width, Height]
                                        tw = static_cast<common_t>(tex.Width()),
                                        th = static_cast<common_t>(tex.Height()),
-                                       // Geometry drawing rectangle [tx, ty, dw, dh] 
+                                       // Geometry drawing rectangle [tx, ty, dw, dh]
                                        dw = tw * static_cast<common_t>(tex.SX()),
                                        dh = th * static_cast<common_t>(tex.SY()),
                                        // Resolution width height defining a rectangle [0, 0, width, height]
@@ -2211,16 +2202,15 @@ namespace Plugin {
 
         return result;
     }
- 
+
     bool WPEFramework::GLResourceMediator::GLES::Supported(const std::string& name) const
     {
         static_assert(std::is_convertible<GLubyte, unsigned char>::value);
         static_assert(std::is_convertible<std::string::value_type, unsigned char>::value);
- 
+
         const GLubyte* str = nullptr;
 
         // A valid GL context should exist
-        
         bool result = _egl.Bind();
 
         std::string ext;
@@ -2245,7 +2235,7 @@ namespace Plugin {
 
          return result;
      }
- 
+
     bool WPEFramework::GLResourceMediator::GLES::CreateTextureFromEGLImage(const KHRFIX(EGLImage)& image, EGLint x, EGLint y, EGLint z, EGLint width, EGLint height, EGLint alpha)
     {
         bool result =    IsValid()
@@ -2390,7 +2380,7 @@ namespace Plugin {
             /* bool */ tex_fbo.Unbind();
         }
 
-        return result;    
+        return result;
     }
 
     bool WPEFramework::GLResourceMediator::GLES::RenderTileOES(const Opacity& opacity) const
@@ -2495,13 +2485,12 @@ namespace Plugin {
     {
         GLuint prog = Program::InvalidProgram();
 
-
         bool result = GL_ERROR_WITH_RETURN();
 
         if (result) {
             glGetIntegerv(GL_CURRENT_PROGRAM, reinterpret_cast<GLint*>(&prog));
             GL_ERROR();
-            
+
             result = prog != Program::InvalidProgram();
         }
 
@@ -2566,11 +2555,11 @@ namespace Plugin {
 #endif
 
             result =    static_cast<common_t>(std::numeric_limits<GLint>::lowest()) <= quirk_x
-                     && quirk_x <= static_cast<common_t>(std::numeric_limits<GLint>::max()) 
+                     && quirk_x <= static_cast<common_t>(std::numeric_limits<GLint>::max())
                      && static_cast<common_t>(std::numeric_limits<GLint>::lowest()) <= quirk_y
-                     && quirk_y <= static_cast<common_t>(std::numeric_limits<GLint>::max()) 
-                     && quirk_width <= static_cast<common_t>(std::numeric_limits<GLsizei>::max()) 
-                     && quirk_height <= static_cast<common_t>(std::numeric_limits<GLsizei>::max()) 
+                     && quirk_y <= static_cast<common_t>(std::numeric_limits<GLint>::max())
+                     && quirk_width <= static_cast<common_t>(std::numeric_limits<GLsizei>::max())
+                     && quirk_height <= static_cast<common_t>(std::numeric_limits<GLsizei>::max())
                      && quirk_width <= static_cast<common_t>(dims[0])
                      && quirk_height <= static_cast<common_t>(dims[1])
                      ;
@@ -2613,28 +2602,28 @@ namespace Plugin {
                 || val != static_cast<EGLint>(_EGL_CONDITION_SATISFIED)
                ) {
                 EGLAttrib status;
- 
+
                 bool result =    KHRFIX(eglGetSyncAttrib)(_dpy, _sync, _EGL_SYNC_STATUS, &status) != EGL_FALSE
                               && status == _EGL_SIGNALED
                               ;
- 
+
                 if (!result) {
                     TRACE(Trace::Error, (_T("EGL: synchronization primitive failed")));
                 }
              }
- 
+
             /* EGLBoolean */ val = static_cast<EGLint>(KHRFIX(eglDestroySync)(_dpy, _sync));
- 
+
             if (val != EGL_TRUE) {
                  // Error
             }
- 
+
             // Consume the (possible) errors
             /* ELGint */ glGetError();
             /* ELGint */ eglGetError();
         }
     }
- 
+
     WPEFramework::GLResourceMediator::EGL::EGL(Native& native)
         : _native{native}
         , _dpy{InvalidDisplay()}
@@ -2751,7 +2740,7 @@ namespace Plugin {
             const int fd = prime.Fd();
             const int sync_fd = prime.SyncFd();
 
-            for(auto begin = _images.begin(), end = _images.end(), it = begin; it != end; it++) {
+            for (auto begin = _images.begin(), end = _images.end(), it = begin; it != end; it++) {
                 std::pair<std::tuple<int, int>, KHRFIX(EGLImage)> pair = *it;
 
                 std::tuple<int, int> tuple = std::get<0>(pair);
@@ -2769,7 +2758,7 @@ namespace Plugin {
 
         return result;
     }
-   
+
     KHRFIX(EGLImage) WPEFramework::GLResourceMediator::EGL::Image(const Native::Prime& prime) const
     {
         KHRFIX(EGLImage) image = InvalidImage();
@@ -2782,7 +2771,7 @@ namespace Plugin {
             const int fd = prime.Fd();
             const int sync_fd = prime.SyncFd();
 
-            for(auto begin = _images.begin(), end = _images.end(), it = begin; it != end; it++) {
+            for (auto begin = _images.begin(), end = _images.end(), it = begin; it != end; it++) {
                 std::pair<std::tuple<int,int>, KHRFIX(EGLImage)> pair = *it;
 
                 std::tuple<int, int> tuple = std::get<0>(pair);
@@ -2848,7 +2837,7 @@ namespace Plugin {
 
             /* EGLBoolean */ eglMakeCurrent(Display(), InvalidSurface(), InvalidSurface(), InvalidContext());
         }
- 
+
         return result;
     }
 
@@ -2927,7 +2916,7 @@ namespace Plugin {
     bool WPEFramework::GLResourceMediator::EGL::Render(std::true_type, FUNC&& func, bool post, ARG0&& arg0, ARG&&... arg) const
     {
         bool result =    IsValid()
-                      && Bind() 
+                      && Bind()
                      && eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE
                      ;
 
@@ -2984,7 +2973,7 @@ namespace Plugin {
 
         { Sync sync(*this); }
 
-        result =    result 
+        result =    result
                  && eglSwapBuffers(Display(), ReadSurface()) != EGL_FALSE
                  && (std::forward<ARG0>(arg0).*postfunc)(std::forward<ARG>(arg)...)
                  && Unbind()
@@ -3026,7 +3015,6 @@ namespace Plugin {
         bool result =    _native.IsValid()
                       && !IsValid()
                       ;
- 
 
         if (result) {
             const int step = 0;
@@ -3078,7 +3066,7 @@ namespace Plugin {
                             if (!result) {
                                 break;
                             }
-                                
+
                             _cfg = configs[0];
                         }
                         __attribute__((fallthrough));
@@ -3260,7 +3248,7 @@ namespace Plugin {
 
     WPEFramework::Core::instance_id WPEFramework::Plugin::ClientSurface::Native() const
     {
-        using common_t = std::common_type<int, Core::instance_id>::type; 
+        using common_t = std::common_type<int, Core::instance_id>::type;
 
         const int fd = _native.NativePrime().Fd();
 
@@ -3298,7 +3286,7 @@ namespace Plugin {
     }
 
     uint32_t WPEFramework::Plugin::ClientSurface::ZOrder(uint16_t zorder)
-    { 
+    {
         _layer = zorder;
         return Core::ERROR_NONE;
     }
@@ -3390,7 +3378,7 @@ namespace Plugin {
 
             const Core::instance_id id = client->Native();
 
-            fds[0] = static_cast<int>(id); 
+            fds[0] = static_cast<int>(id);
             fds[1] = client->SyncPrimitive();
 
             static_assert(std::is_unsigned<Core::instance_id>::value);
@@ -3568,7 +3556,7 @@ namespace Plugin {
 
             _externalAccess = new ExternalAccess(*this, Core::NodeId(_config.Connector().Value().c_str()), service->ProxyStubPath(), _engine);
 
-            if (   _externalAccess != nullptr 
+            if (   _externalAccess != nullptr
                 && _externalAccess->IsListening()
                ) {
                 PlatformReady();
@@ -3834,7 +3822,7 @@ namespace Plugin {
         silence(className);
         silence(version);
 
-        // Use the className to check for multiple HDMI's. 
+        // Use the className to check for multiple HDMI's.
         return _parent.QueryInterface(interfaceId);
     }
 
@@ -3845,8 +3833,7 @@ namespace Plugin {
         , _transfer{InvalidSocket()}
         , _addr{AF_UNIX, "/tmp/Compositor/DMA"}
         , _valid{Init()}
-    {
-    }
+    {}
 
     WPEFramework::Plugin::CompositorImplementation::DMATransfer::~DMATransfer()
     {
@@ -4306,8 +4293,7 @@ namespace Plugin {
         , _sharing{Instance()}
         , _egl{egl}
         , _gles{gles}
-    {
-    }
+    {}
 
     WPEFramework::Core::CriticalSection& WPEFramework::Plugin::CompositorImplementation::RenderThread::Instance()
     {
@@ -4318,33 +4304,32 @@ namespace Plugin {
     WPEFramework::Plugin::CompositorImplementation::SceneRenderer::SceneRenderer(GLResourceMediator::EGL& egl, GLResourceMediator::GLES& gles, CompositorImplementation& compositor)
         : RenderThread{egl, gles}
         , _compositor{compositor}
-    {
-    }
- 
+    {}
+
     WPEFramework::Plugin::CompositorImplementation::SceneRenderer::~SceneRenderer()
     {
         Stop();
- 
+
         /* bool */ Wait(Core::Thread::STOPPED, Core::infinite);
     }
- 
+
     uint32_t WPEFramework::Plugin::CompositorImplementation::SceneRenderer::Worker()
     {
         constexpr const uint32_t ret = 0;
- 
+
         bool status =     Render()
                       && _compositor.FrameFlip()
                       ;
- 
+
         if (status) {
             Block();
         } else {
             Stop();
         }
- 
-         return ret;
+
+        return ret;
     }
- 
+
     bool WPEFramework::Plugin::CompositorImplementation::SceneRenderer::Render()
     {
         Exchange::IComposition::ScreenResolution resolution = _compositor.Resolution();
@@ -4353,9 +4338,9 @@ namespace Plugin {
         uint32_t h = HeightFromResolution(resolution);
 
         using common_t = std::common_type<uint32_t, GLuint>::type;
- 
-         _sharing.Lock();
- 
+
+        _sharing.Lock();
+
         bool ret =    static_cast<common_t>(w) <= static_cast<common_t>(std::numeric_limits<GLuint>::max())
                    && static_cast<common_t>(h) <= static_cast<common_t>(std::numeric_limits<GLuint>::max())
                    && _egl.Render(std::bind(&GLResourceMediator::GLES::RenderScene,
@@ -4366,9 +4351,9 @@ namespace Plugin {
                                          { return left.Z() > right.Z(); } 
                                          ), true)
                    ;
- 
+
         _sharing.Unlock();
- 
+
         return ret;
     }
 
@@ -4477,7 +4462,7 @@ namespace Plugin {
                      && _egl.RenderWithoutSwap(std::bind(&GLResourceMediator::GLES::RenderSharedBuffer, &_gles, std::cref(prime), geom.x, geom.y, zorder, geom.width, geom.height, opa));
 
             _sharing.Unlock();
- 
+
             result =    client->SyncPrimitiveEnd()
                      && result;
 
