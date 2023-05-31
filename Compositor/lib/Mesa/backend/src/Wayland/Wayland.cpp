@@ -545,6 +545,7 @@ namespace Compositor {
             }
 
             if(_wlZwpLinuxDmabufFeedbackV1 != nullptr) {
+                zwp_linux_dmabuf_feedback_v1_destroy(_wlZwpLinuxDmabufFeedbackV1);
             }
 
             xdg_wm_base_destroy(_xdgWmBase);
