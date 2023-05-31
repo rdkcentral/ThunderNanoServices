@@ -202,7 +202,7 @@ private:
 
         _renderer->Render(_texture.texture, box, matrix, 1.0f);
 
-        _renderer->End(true);
+        _renderer->End(false);
 
         _connector->Render();
 
