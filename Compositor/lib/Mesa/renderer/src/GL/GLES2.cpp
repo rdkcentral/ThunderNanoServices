@@ -29,6 +29,7 @@
 #include "Format.h"
 #include <png.h>
 
+#include <DRM.h>
 
 namespace WPEFramework {
 namespace Compositor {
@@ -346,7 +347,7 @@ namespace Compositor {
                 {
                     PushDebug();
 
-                    if (color[3] == 1.0) {
+                    if (color[3] >= 1.0) {
                         glDisable(GL_BLEND);
                     } else {
                         glEnable(GL_BLEND);
@@ -422,11 +423,11 @@ namespace Compositor {
                     return _alpha;
                 }
 
-                bool Draw(const GLuint id, GLenum target, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
+                bool Draw(const GLuint id, GLenum target, const bool hasAlpha, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
                     PushDebug();
 
-                    if (alpha >= 1.0) {
+                    if ((hasAlpha == false) && (alpha >= 1.0)) {
                         glDisable(GL_BLEND);
                     } else {
                         glEnable(GL_BLEND);
@@ -513,7 +514,6 @@ namespace Compositor {
             };
 
             class GLESTexture : public IRenderer::ITexture {
-
             public:
                 GLESTexture() = delete;
                 GLESTexture(const GLESTexture&) = delete;
@@ -601,72 +601,32 @@ namespace Compositor {
                     return result;
                 }
 
-                const uint16_t Width() const { return _buffer->Width(); }
-                const uint16_t Height() const { return _buffer->Height(); }
+                uint16_t Width() const override { return _buffer->Width(); }
+                uint16_t Height() const override{ return _buffer->Height(); }
                 const GLenum Target() const { return _target; }
                 const GLuint Id() const { return _textureId; }
                 // const std::vector<GLuint>& Identifiers() const { return _textureIds; }
 
-                bool Draw(const GLuint id, GLenum target, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
+                bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
                     bool result(false);
 
                     if (_buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
                         ExternalProgram* program = _parent.Programs().QueryType<ExternalProgram>();
                         ASSERT(program != nullptr);
-                        result = program->Draw(id, target, alpha, matrix, coordinates);
+                        result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
                     }
 
                     if (_buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
                         RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
                         ASSERT(program != nullptr);
-                        result = program->Draw(id, target, alpha, matrix, coordinates);
+                        result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
                     }
 
                     return result;
                 }
 
             private:
-                /**
-                 * ToDo: This is a test function to create a simple texture.
-                 * Remove this function when raw texture are rendered properly.
-                 *
-                 * This texture should show 4 quads arranged a 2x2 grid respective red, green, blue yellow.
-                 *
-                 */
-                void CreateSimpleTexture2D()
-                {
-                    Renderer::EGL::ContextBackup backup;
-
-                    _parent.Egl().SetCurrent();
-
-                    // // 2x2 Image, 3 bytes per pixel (R, G, B, A)
-                    GLubyte pixels[4 * 4] = {
-                        255, 0, 0, 255, // Red
-                        0, 255, 0, 128, // Green
-                        0, 0, 255, 255, // Blue
-                        128, 255, 0, 255 // Yellow
-                    };
-
-                    // Use tightly packed data
-                    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-                    // Generate a texture object
-                    glGenTextures(1, &_textureId);
-
-                    // Bind the texture object
-                    glBindTexture(GL_TEXTURE_2D, _textureId);
-
-                    // Load the texture
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-                    // Set the filtering mode
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-                    glBindTexture(_target, 0);
-                }
-
                 void ImportDMABuffer()
                 {
                     bool external(false);
@@ -730,7 +690,8 @@ namespace Compositor {
 
                     _buffer->Completed(false);
 
-                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%08x, gltype=0x%08x", _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type));
+                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", 
+                        _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));   
                 }
 
             private:
@@ -946,7 +907,7 @@ namespace Compositor {
                         x1, y2, // bottom left
                     };
 
-                    result = (glesTexture->Draw(glesTexture->Id(), glesTexture->Target(), alpha, gl_matrix, coordinates) == true) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+                    result = (glesTexture->Draw(alpha, gl_matrix, coordinates) == true) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
                 }
 
                 return result;

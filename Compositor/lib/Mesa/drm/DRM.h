@@ -74,7 +74,7 @@ namespace Compositor {
     case value:               \
         return #value;
 
-            static const char* FormatString(uint32_t format)
+        static const char* FormatString(uint32_t format)
         {
             switch (format) {
                 CASE_TO_STRING(DRM_FORMAT_INVALID)
@@ -216,6 +216,32 @@ namespace Compositor {
             }
         }
 #undef CASE_TO_STRING
+
+        static bool HasAlpha(uint32_t drmFormat)
+        {
+            return (
+                   (drmFormat == DRM_FORMAT_ARGB4444)
+                || (drmFormat == DRM_FORMAT_ABGR4444)
+                || (drmFormat == DRM_FORMAT_RGBA4444)
+                || (drmFormat == DRM_FORMAT_BGRA4444)
+                || (drmFormat == DRM_FORMAT_ARGB1555)
+                || (drmFormat == DRM_FORMAT_ABGR1555)
+                || (drmFormat == DRM_FORMAT_RGBA5551)
+                || (drmFormat == DRM_FORMAT_BGRA5551)
+                || (drmFormat == DRM_FORMAT_ARGB8888)
+                || (drmFormat == DRM_FORMAT_ABGR8888)
+                || (drmFormat == DRM_FORMAT_RGBA8888)
+                || (drmFormat == DRM_FORMAT_BGRA8888)
+                || (drmFormat == DRM_FORMAT_ARGB2101010)
+                || (drmFormat == DRM_FORMAT_ABGR2101010)
+                || (drmFormat == DRM_FORMAT_RGBA1010102)
+                || (drmFormat == DRM_FORMAT_BGRA1010102)
+                || (drmFormat == DRM_FORMAT_ARGB16161616)
+                || (drmFormat == DRM_FORMAT_ABGR16161616)
+                || (drmFormat == DRM_FORMAT_ARGB16161616F)
+                || (drmFormat == DRM_FORMAT_ABGR16161616F));
+        }
+
     } // namespace DRM
 } // namespace Compositor
 } // namespace WPEFramework

@@ -35,6 +35,9 @@ namespace Compositor {
             virtual uint32_t Release() const = 0;
 
             virtual bool IsValid() const = 0;
+
+            virtual uint16_t Width() const = 0;
+            virtual uint16_t Height() const = 0;
         }; // struct ITexture
 
         /**

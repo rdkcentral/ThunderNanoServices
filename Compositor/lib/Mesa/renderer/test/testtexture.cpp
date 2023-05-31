@@ -160,20 +160,21 @@ private:
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        const uint16_t rwidth(256);
-        const uint16_t rheight(256);
+        const uint16_t renderWidth(512);
+        const uint16_t renderHeight(512);
 
         _renderer->Bind(_connector);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box box = { .x = (width / 2) - (rwidth / 2), .y = (height / 2) - (rheight / 2), .width = rwidth, .height = rheight };
-
+        const Compositor::Box renderBox = { .x = (width / 2) - (renderWidth / 2), .y = (height / 2) - (renderHeight / 2), .width = renderWidth, .height = renderHeight };
         Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
+        
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
 
-        _renderer->Render(_texture, box, matrix, 1.0f);
+        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = _texture->Width(), .height = _texture->Height() };
+        _renderer->Render(_texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);
 
@@ -237,7 +238,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 1);
+        WPEFramework::RenderTest test(connectorId, 15);
 
         test.Start();
 
