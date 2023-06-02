@@ -111,6 +111,10 @@ if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
         PRIVATE
             WestonServer::WestonServer
     )
+    install(
+        FILES config/weston.ini
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor/weston
+    )
 elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     find_package(WesterosServer)
     if(WESTEROS_SERVER_FOUND)
@@ -142,9 +146,3 @@ install(
     TARGETS ${TARGET}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
 )
-
-install(
-    FILES config/weston.ini
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor/weston
-)
-
