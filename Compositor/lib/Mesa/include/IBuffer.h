@@ -28,6 +28,12 @@ namespace WPEFramework {
 
 namespace Compositor {
 
+    struct ICallback
+    {
+        virtual ~ICallback() = default;
+        virtual void LastFrameTimestamp(const uint64_t time) = 0;
+    }; // struct ICallback
+
     /**
      * @brief  Allocate a new output.
      *         When the callee is done with the output, they must release it.
@@ -41,10 +47,11 @@ namespace Compositor {
      * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
      */
     extern Core::ProxyType<Exchange::ICompositionBuffer> Connector(
-        const string& connector, 
-        const Exchange::IComposition::ScreenResolution resolution, 
-        const Compositor::PixelFormat& format, 
-        bool forceResolution);
+        const string& connector,
+        const Exchange::IComposition::ScreenResolution resolution,
+        const Compositor::PixelFormat& format,
+        bool forceResolution,
+        ICallback* callback = nullptr);
 
     /**
      * @brief  Allocate a new buffer.
