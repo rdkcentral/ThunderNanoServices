@@ -23,3 +23,5 @@ message(STATUS "-- Renderer ${COMPOSITOR_RENDERER_IMPLEMENTATION}")
 
 add_subdirectory("src/Transformation")
 add_subdirectory("src/${COMPOSITOR_RENDERER_IMPLEMENTATION}")
+
+add_subdirectory(test)

@@ -178,6 +178,11 @@ namespace Renderer {
             return reinterpret_cast<Core::instance_id>(_ptr);
         }
 
+        Exchange::ICompositionBuffer::DataType Type() const
+        {
+            return Exchange::ICompositionBuffer::TYPE_DMA;
+        }
+
     private:
         int CreateDumbBuffer(const int fd,
             const uint32_t width, const uint32_t height, const uint32_t bpp,

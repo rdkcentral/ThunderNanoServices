@@ -51,10 +51,6 @@ const std::vector<std::string> Parse(const std::string& input)
 
 int main(int /*argc*/, const char* argv[])
 {
-
-    Messaging::MessageUnit::flush flushMode;
-    flushMode = Messaging::MessageUnit::flush::FLUSH;
-
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
 
     const char* executableName(Core::FileNameOnly(argv[0]));

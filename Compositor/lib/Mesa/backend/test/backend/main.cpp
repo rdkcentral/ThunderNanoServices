@@ -38,8 +38,18 @@ using namespace WPEFramework;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-int main(int /* argc*/, const char* argv[])
+int main(int argc, const char* argv[])
 {
+
+    std::string ConnectorId;
+
+    if (argc == 1) {
+        ConnectorId = "card1-HDMI-A-2";
+    } else {
+        ConnectorId = argv[1];
+    }
+
+
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
     Messaging::ConsolePrinter printer(false);
 
@@ -76,26 +86,24 @@ int main(int /* argc*/, const char* argv[])
             case 'S': {
                 if (framebuffer.IsValid() == true) {
                     framebuffer->Render();
-                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped to id=%u", framebuffer->Identifier()));
+                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer: %u", framebuffer->Identifier()));
                     break;
                 }
             }
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::Connector("card0-Virtual-1", Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+                    framebuffer = Compositor::Connector(ConnectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
-                } else {
-                    framebuffer->AddRef();
-                    TRACE_GLOBAL(Trace::Information, ("Add reffed framebuffer %u", framebuffer->Identifier()));
                 }
                 break;
             }
 
             case 'R': {
                 if (framebuffer.IsValid() == true) {
-                    TRACE_GLOBAL(Trace::Information, ("Releasing framebuffer", framebuffer->Identifier()));
-                    framebuffer.Release();
+                    uint32_t id = framebuffer->Identifier();
+                    uint32_t res = framebuffer.Release();
+                    TRACE_GLOBAL(Trace::Information, ("Released framebuffer %u(%d)", id,  res));
                 }
                 break;
             }
@@ -105,6 +113,7 @@ int main(int /* argc*/, const char* argv[])
             }
 
             case '?': {
+                printf("%s <card1-HDMI-A-2>\n\n", argv[0]);
                 printf("[S]wap buffers\n");
                 printf("[A]llocate a frame buffer\n");
                 printf("[R]elease a frame buffer\n");
@@ -118,11 +127,6 @@ int main(int /* argc*/, const char* argv[])
             }
             }
         } while (keyPress != 'Q');
-
-        if (framebuffer.IsValid() == true) {
-            framebuffer.Release();
-            TRACE_GLOBAL(Trace::Information, ("framebuffer1 released..."));
-        }
     }
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));

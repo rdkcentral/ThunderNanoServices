@@ -125,12 +125,12 @@ namespace Backend {
         const IConnector* _connector;
         uint32_t _mode_id;
         uint32_t _gamma_lut;
-    };
+    }; // class AtomicCrtc
 
-    /* static */ IOutput* IOutput::Instance()
+    /* static */ IOutput& IOutput::Instance()
     {
-        static AtomicCrtc transaction;
-        return (&transaction);
+        static AtomicCrtc& output = Core::SingletonType<AtomicCrtc>::Instance();
+        return output;
     }
 
 

@@ -21,6 +21,7 @@ find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
+find_package(PNG REQUIRED)
 
 find_package(gbm REQUIRED)
 
@@ -42,6 +43,7 @@ target_link_libraries(CommonRendererGLES
         GLESv2::GLESv2
         libdrm::libdrm
         gbm::gbm
+        PNG::PNG
 )
 
 set_target_properties(CommonRendererGLES PROPERTIES

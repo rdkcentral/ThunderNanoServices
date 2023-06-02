@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 Metrological
+ * Copyright 2023 Metrological B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #pragma once
+#include <wayland-client.h>
 
-#ifndef MODULE_NAME
-#define MODULE_NAME Plugin_Compositor_Implementation
-#endif
+namespace WPEFramework {
+namespace Compositor {
+    namespace Backend {
+        namespace Wayland {
+            struct IGlobalRegistry {
+                virtual ~IGlobalRegistry() = default;
 
-#include <com/com.h>
-#include <core/core.h>
-#include <messaging/messaging.h>
+                virtual void onRegister(struct wl_registry* registry, uint32_t name, const char* interface, uint32_t version) = 0;
+                virtual void onUnregister(uint32_t name) = 0;
+            }; // struct IGlobalRegistry
+        } //    namespace Wayland
+    } //    namespace Backend
+} //    namespace Compositor
+} //   namespace WPEFramework

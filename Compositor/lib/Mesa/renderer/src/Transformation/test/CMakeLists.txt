@@ -22,6 +22,8 @@ find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
 
 add_executable(transformationtest main.cpp)
 
+add_subdirectory(ref_matrix)
+
 set_target_properties(transformationtest PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES
@@ -32,6 +34,7 @@ target_link_libraries(transformationtest
     PRIVATE
         common::include
         common::transformation
+        ref_matrix
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
 )
 

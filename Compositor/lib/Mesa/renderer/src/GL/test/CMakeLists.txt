@@ -20,21 +20,3 @@ target_link_libraries(glextinfo
 )
 
 install(TARGETS glextinfo DESTINATION bin)
-
-add_executable(renderertest renderertest.cpp)
-
-target_link_libraries(renderertest
-    PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
-        ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
-        gl::shaders
-        common::include
-        common::buffer
-        common::backend
-        common::renderer
-        common::drm
-)
-
-install(TARGETS renderertest DESTINATION bin)
