@@ -15,7 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_AVS_PERSISTENT_PATH "/root/AVS" CACHE STRING "AVS database directory location")
+set(PLUGIN_AVS_PERSISTENT_ROOT_PATH "/root" CACHE STRING "AVS database directory location")
+set(PLUGIN_AVS_PERSISTENT_PATH "${PLUGIN_AVS_PERSISTENT_ROOT_PATH}/${NAMESPACE}/AVS")
 
 # platform independent files
 install(DIRECTORY

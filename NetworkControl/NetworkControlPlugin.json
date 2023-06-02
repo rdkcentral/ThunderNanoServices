@@ -36,6 +36,6 @@
    }
   },
   "interface": {
-    "$ref": "{interfacedir}/NetworkControl.json#"
+    "$ref": "{cppinterfacedir}/INetworkControl.h"
   }
 }

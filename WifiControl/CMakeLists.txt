@@ -39,8 +39,8 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
-    WifiControl.cpp  
-    WifiControlJsonRpc.cpp
+    WifiControl.cpp
+    WifiControlImplementation.cpp
     Network.cpp      
     Module.cpp)
 
@@ -54,6 +54,8 @@ endif()
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
+
+target_compile_options (${MODULE_NAME} PRIVATE -Wno-psabi)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE

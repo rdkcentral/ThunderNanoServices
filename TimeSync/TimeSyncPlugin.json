@@ -13,7 +13,8 @@
     "properties": {
       "deferred": {
         "type": "boolean",
-        "description": "Determines if automatic time sync shall be initially disabled"
+        "description": "Determines if automatic time sync shall be initially disabled. This parameter is deprecated and SubSystemControl could be used instead",
+        "deprecated": true
       },
       "periodicity": {
         "type": "number",

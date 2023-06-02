@@ -184,7 +184,6 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         Power()
             : _adminLock()
             , _skipURL(0)
-            , _service(nullptr)
             , _clients()
             , _sink(this)
             , _notificationClients()
@@ -262,7 +261,6 @@ POP_WARNING()
     private:
         Core::CriticalSection _adminLock;
         uint32_t _skipURL;
-        PluginHost::IShell* _service;
         Clients _clients;
         Core::Sink<Notification> _sink;
         std::list<Exchange::IPower::INotification*> _notificationClients;

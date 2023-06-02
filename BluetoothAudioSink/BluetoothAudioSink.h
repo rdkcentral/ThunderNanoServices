@@ -47,42 +47,14 @@ namespace Plugin {
     private:
         class Config : public Core::JSON::Container {
         public:
-            class SDPServiceConfig : public Core::JSON::Container {
-            public:
-                SDPServiceConfig(const SDPServiceConfig&) = delete;
-                SDPServiceConfig& operator=(const SDPServiceConfig&) = delete;
-                SDPServiceConfig()
-                    : Core::JSON::Container()
-                    , Enable(true)
-                    , Name(_T("A2DP Audio Source"))
-                    , Description()
-                    , Provider()
-                {
-                    Add("enable", &Enable);
-                    Add("name", &Name);
-                    Add("description", &Description);
-                    Add("provider", &Provider);
-                }
-                ~SDPServiceConfig() = default;
-
-            public:
-                Core::JSON::Boolean Enable;
-                Core::JSON::String Name;
-                Core::JSON::String Description;
-                Core::JSON::String Provider;
-            };
-
-        public:
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
             Config()
                 : Core::JSON::Container()
                 , Controller(_T("BluetoothControl"))
-                , SDPService()
             {
                 Add(_T("controller"), &Controller);
                 Add(_T("latency"), &Latency);
-                Add(_T("sdpservice"), &SDPService);
                 Add(_T("codecs"), &Codecs);
             }
             ~Config() = default;
@@ -90,7 +62,6 @@ namespace Plugin {
         public:
             Core::JSON::String Controller;
             Core::JSON::DecUInt16 Latency;
-            SDPServiceConfig SDPService;
             Core::JSON::String Codecs;
         }; // class Config
 
@@ -165,7 +136,7 @@ namespace Plugin {
             ~ComNotificationSink() = default;
 
         public:
-            void CleanedUp(const Core::IUnknown* remote VARIABLE_IS_NOT_USED, const uint32_t interfaceId VARIABLE_IS_NOT_USED) override
+            void Dangling(const Core::IUnknown* remote VARIABLE_IS_NOT_USED, const uint32_t interfaceId VARIABLE_IS_NOT_USED) override
             {
             }
             void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId) override
@@ -544,7 +515,7 @@ namespace Plugin {
             void OnDeviceUpdated()
             {
                 ASSERT(_device != nullptr);
-                if (_device->IsBonded() == true) {
+                if (_device->IsPaired() == true) {
                     if (_device->IsConnected() == true) {
                         if (_state == Exchange::IBluetoothAudioSink::DISCONNECTED) {
                             TRACE(ProfileFlow, (_T("Device disconnected")));

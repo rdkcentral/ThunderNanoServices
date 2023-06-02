@@ -159,72 +159,70 @@ namespace Plugin {
             }
         }
         
-        if (message.length() != 0) {
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     /* virtual */ void OutOfProcessPlugin::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(service == _service);
+        if (_service != nullptr) {
+	    ASSERT(_service == service);
 
-        _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
-        _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-        _service->DisableWebServer();
+            _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
+            _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
+            _service->DisableWebServer();
 
-        if(_browser != nullptr) {
-            if( _browserresources != nullptr) {
-                Exchange::JBrowserResources::Unregister(*this);
-                _browserresources->Release();
-                _browserresources = nullptr;
-            }
-            _browser->Unregister(_notification);
-
-            if(_memory != nullptr) {
-                _memory->Release();
-                _memory = nullptr;
-            }
-
-            if (_state != nullptr) {
-                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
-                if (sink != nullptr) {
-                    _service->Unregister(sink);
-                    sink->Release();
+            if (_browser != nullptr) {
+                if (_browserresources != nullptr) {
+                    Exchange::JBrowserResources::Unregister(*this);
+                    _browserresources->Release();
+                    _browserresources = nullptr;
                 }
-                _state->Unregister(_notification);
-                _state->Release();
-                _state = nullptr;
+                _browser->Unregister(_notification);
+
+                if (_memory != nullptr) {
+                    _memory->Release();
+                    _memory = nullptr;
+                }
+
+                if (_state != nullptr) {
+                    PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+                    if (sink != nullptr) {
+                        _service->Unregister(sink);
+                        sink->Release();
+                    }
+                    _state->Unregister(_notification);
+                    _state->Release();
+                    _state = nullptr;
+                }
+
+                // Stop processing:
+                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+                VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
+                _browser = nullptr;
+
+                // It should have been the last reference we are releasing, 
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger the cleanup sequence for 
+                    // out-of-process code. Which will guard 
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
 
-            // Stop processing:
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-            VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
-            _browser = nullptr;
-
-            // It should have been the last reference we are releasing, 
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // If this was running in a (container) process...
-            if (connection != nullptr) {
-                // Lets trigger the cleanup sequence for 
-                // out-of-process code. Which will guard 
-                // that unwilling processes, get shot if
-                // not stopped friendly :-)
-                connection->Terminate();
-                connection->Release();
-            }
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
         }
-
-        _connectionId = 0;
-        _service->Release();
-        _service = nullptr;
     }
 
-       /* static */ const char* OutOfProcessPlugin::PluginStateStr(const PluginHost::IShell::state state)
+    /* static */ const char* OutOfProcessPlugin::PluginStateStr(const PluginHost::IShell::state state)
     {
         switch (state) {
         case PluginHost::IShell::DEACTIVATED:
@@ -334,6 +332,7 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
                 result->Body<Web::JSONBodyType<OutOfProcessPlugin::Data>>(body);
+                
             } else if ((request.Verb == Web::Request::HTTP_POST) && (index.Next() == true) && (index.Next() == true)) {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
@@ -347,6 +346,24 @@ namespace Plugin {
                     _browser->Hide(true);
                 } else if (index.Remainder() == _T("Show")) {
                     _browser->Hide(false);
+
+                // Test IDispatcher with given data size
+                } else if (index.Remainder() == _T("TestValidator")) {
+                    uint32_t stringSize = 32;
+                    if (request.HasBody() == true) {
+                        stringSize = std::stoi(*(request.Body<Web::TextBody>()));
+                        if (stringSize > 128) {
+                            TRACE(Trace::Information, (_T("%u is not allowed. Size automatically set to maximum: 128K"), stringSize));
+                            stringSize = 128;
+                        }
+                    }
+                    PluginHost::IDispatcher* dispatcher(_browser->QueryInterface<PluginHost::IDispatcher>());
+                    const uint32_t stringLength = stringSize * 1024;
+                    std::string myString;
+                    myString.resize(stringLength, 'a');
+                    myString.replace(0, 8, "testabcd");
+                    myString.replace(myString.length() - 8, 8, "testabcd");
+                    dispatcher->Validate("", "", myString);
                 } else if (index.Remainder() == _T("Notify4K")) {
                     string message;
                     for (uint32_t teller = 0; teller < ((4 * 1024) + 64); teller++) {

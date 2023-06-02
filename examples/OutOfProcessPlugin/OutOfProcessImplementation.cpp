@@ -74,6 +74,7 @@ namespace Plugin {
         : public Exchange::IBrowser
         , public Exchange::IBrowserResources
         , public PluginHost::IStateControl
+        , public PluginHost::IDispatcher
         , public Core::Thread {
     private:
         enum StateType {
@@ -134,16 +135,16 @@ POP_WARNING()
                 , Crash(false)
                 , Destruct(1000)
                 , Single(false)
+                , ExternalAccess(_T("/tmp/oopexample"))
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("config"), &Init);
                 Add(_T("crash"), &Crash);
                 Add(_T("destruct"), &Destruct);
                 Add(_T("single"), &Single);
+                Add(_T("accessor"), &ExternalAccess);
             }
-            ~Config()
-            {
-            }
+            ~Config() override = default;
 
         public:
             Core::JSON::DecUInt16 Sleep;
@@ -151,6 +152,7 @@ POP_WARNING()
             Core::JSON::Boolean Crash;
             Core::JSON::DecUInt32 Destruct;
             Core::JSON::Boolean Single;
+            Core::JSON::String ExternalAccess;
         };
 
     public:
@@ -182,7 +184,7 @@ POP_WARNING()
             }
 
         private:
-            virtual void* Aquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
+            virtual void* Acquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId)
             {
                 void* result = nullptr;
 
@@ -190,7 +192,7 @@ POP_WARNING()
                 if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IBrowser::ID) || (interfaceId == Core::IUnknown::ID))) {
                     // Reference count our parent
                     _parentInterface->AddRef();
-                    TRACE(Trace::Information, ("Browser interface aquired => %p", this));
+                    TRACE(Trace::Information, ("Browser interface acquired => %p", this));
                     // Allright, respond with the interface.
                     result = _parentInterface;
                 }
@@ -281,23 +283,26 @@ POP_WARNING()
                 _service->AddRef();
             }
 
-            _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
-            _externalAccess = new ExternalAccess(Core::NodeId("/tmp/oopexample"), this, service->ProxyStubPath(), _engine);
+            _config.FromString(service->ConfigLine());
 
-            result = Core::ERROR_OPENING_FAILED;
-            if (_externalAccess != nullptr) {
-                if (_externalAccess->IsListening() == false) {
-                    TRACE(Trace::Information, (_T("Deleting the External Server, it is not listening!")));
-                    delete _externalAccess;
-                    _externalAccess = nullptr;
-                    _engine.Release();
-                } 
+            if (_config.ExternalAccess.IsSet() == true) {
+                _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+                _externalAccess = new ExternalAccess(Core::NodeId(_config.ExternalAccess.Value().c_str()), this, service->ProxyStubPath(), _engine);
+
+                result = Core::ERROR_OPENING_FAILED;
+                if (_externalAccess != nullptr) {
+                    if (_externalAccess->IsListening() == false) {
+                        TRACE(Trace::Information, (_T("Deleting the External Server, it is not listening!")));
+                        delete _externalAccess;
+                        _externalAccess = nullptr;
+                        _engine.Release();
+                    }
+                }
             }
 
             if (result == Core::ERROR_NONE) {
 
                 _dataPath = service->DataPath();
-                _config.FromString(service->ConfigLine());
 
                 if (_config.Init.Value() > 0) {
                     TRACE(Trace::Information, (_T("Configuration requested to take [%d] mS"), _config.Init.Value()));
@@ -548,16 +553,46 @@ POP_WARNING()
             while (uris->Next(value) == true) {
                 TRACE(TooMuchInfo, (_T("UserStyleSheets [%s] processed"), value.c_str()));
             }
-            return Core::ERROR_NONE;
             TRACE(Trace::Information, (_T("UserStyleSheets update finished")));
+            return Core::ERROR_NONE;
+           
         }
 
         BEGIN_INTERFACE_MAP(OutOfProcessImplementation)
             INTERFACE_ENTRY(Exchange::IBrowser)
             INTERFACE_ENTRY(Exchange::IBrowserResources)
             INTERFACE_ENTRY(PluginHost::IStateControl)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
             INTERFACE_AGGREGATE(PluginHost::IPlugin::INotification,static_cast<IUnknown*>(&_sink))
         END_INTERFACE_MAP
+
+    public:
+
+        Core::hresult Validate(const string& token, const string& method, const string& paramaters /* @restrict:(4M-1) */) const override {
+            string paramatersFront = paramaters.substr(0, 8);
+            string paramatersBack = paramaters.substr(paramaters.length() - 8, 8);
+            if (paramatersFront == "testabcd" && paramatersBack == "testabcd")  {
+                TRACE(Trace::Information, (_T("Validation Completed! Text Size: %u"), static_cast<uint32_t>(paramaters.length())));
+                return Core::ERROR_NONE;
+            }
+            else {
+                TRACE(Trace::Information, (_T("Failed to validate! Text corrupted! Text Size: %u"), static_cast<uint32_t>(paramaters.length())));
+                return Core::ERROR_GENERAL;
+            }
+        }
+        Core::hresult Invoke(ICallback* callback, const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters /* @restrict:(4M-1) */, string& response /* @restrict:(4M-1) @out */) override {
+            return Core::ERROR_NONE;
+        }
+        Core::hresult Revoke(ICallback* callback) override {
+            return Core::ERROR_NONE;
+        }
+        
+        // If we need to activate this locally, we can get access to the base..
+        /* @stubgen:stub */
+        PluginHost::ILocalDispatcher* Local() override {
+            
+            return nullptr;
+	}
 
     private:
         friend Core::ThreadPool::JobType<OutOfProcessImplementation&>;

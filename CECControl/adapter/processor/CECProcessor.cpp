@@ -3,7 +3,7 @@
 #include <CECOperationFrame.h>
 #include "CECMessage.h"
 
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 
 namespace WPEFramework {
 namespace CEC {

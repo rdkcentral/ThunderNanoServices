@@ -1307,7 +1307,7 @@ namespace Weston {
             , _display(nullptr)
             , _exitTimer(nullptr)
             , _compositor(nullptr)
-            , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz)
+            , _resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz)
             , _loadedSignal(false, true)
             , _adminLock()
         {
@@ -1316,6 +1316,7 @@ namespace Weston {
             ASSERT(_instance == nullptr);
             _instance = this;
             _service = service;
+            _service->AddRef();
 
             string runtimeDir;
             Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), runtimeDir);
@@ -1360,6 +1361,8 @@ namespace Weston {
             wl_display_destroy(_display);
 
             _instance = nullptr;
+
+            _service->Release();
             _service = nullptr;
         }
         uint32_t StartComposition()
@@ -1408,8 +1411,7 @@ namespace Weston {
         }
         inline bool LoadBackend(PluginHost::IShell* service)
         {
-            ASSERT(service == _service);
-            _backend = Create<DRM>(_service);
+            _backend = Create<DRM>(service);
             _backend->Load(this);
             weston_compositor_flush_heads_changed(_compositor);
             ASSERT(_backendLoaded == true);
@@ -1502,16 +1504,16 @@ namespace Weston {
 
             const char* request = nullptr;
             switch(value) {
-                case Exchange::IComposition::ScreenResolution_480i:      request = "720x480@60.0";       break;
-                case Exchange::IComposition::ScreenResolution_480p:      request = "720x480@60.0 16:9";  break;
-                case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720@60.0 16:9"; break;
-                case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720@50.0";      break;
-                case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080@24.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080@60.0";     break;
-                case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160@60.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_480i:      request = "720x480@60.0";       break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_480p:      request = "720x480@60.0 16:9";  break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_720p:      request = "1280x720@60.0 16:9"; break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz:  request = "1280x720@50.0";      break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz: request = "1920x1080@24.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz: request = "1920x1080@60.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz: request = "3840x2160@50.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz: request = "3840x2160@60.0";     break;
                 default: break;
             }
             if (request != nullptr) {

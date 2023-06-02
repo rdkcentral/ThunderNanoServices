@@ -3,256 +3,22 @@
 #pragma once
 
 #include "Module.h"
-#include "RequestSender.h"
-#include <unordered_set>
 
 namespace WPEFramework {
 namespace Plugin {
     class BackOffice : public PluginHost::IPlugin {
-    private:
-        class StateChangeObserver {
-        public:
-            enum State {
-                ACTIVATED,
-                DEACTIVATED,
-                UNAVAILABLE,
-                RESUMED,
-                SUSPENDED,
-                UNKNOWN
-            };
-
-            static State Convert(PluginHost::IStateControl::state state)
-            {
-                switch (state) {
-                case PluginHost::IStateControl::RESUMED:
-                    return State::RESUMED;
-                case PluginHost::IStateControl::SUSPENDED:
-                    return State::SUSPENDED;
-                case PluginHost::IStateControl::UNINITIALIZED:
-                default:
-                    return State::UNKNOWN;
-                }
-            }
-            static string Convert(State state)
-            {
-                switch (state) {
-                case ACTIVATED:
-                    return _T("Activated");
-                case DEACTIVATED:
-                    return _T("Deactivated");
-                case UNAVAILABLE:
-                    return _T("Unavailable");
-                case RESUMED:
-                    return _T("Resumed");
-                case SUSPENDED:
-                    return _T("Suspended");
-                case UNKNOWN:
-                    return _T("Unknown");
-                default:
-                    Trace::Error(_T("Unknown mapping found!"));
-                    return _T("Unknown");
-                }
-            }
-
-            using Callback = std::function<void(State, const string&)>;
-
-            class OperationalObserver : public PluginHost::IPlugin::INotification {
-            public:
-                OperationalObserver(StateChangeObserver& parent)
-                    : _parent(parent)
-                {
-                }
-                ~OperationalObserver() override = default;
-                OperationalObserver(const OperationalObserver&) = delete;
-                OperationalObserver& operator=(const OperationalObserver&) = delete;
-
-                BEGIN_INTERFACE_MAP(OperationalObserver)
-                INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
-                END_INTERFACE_MAP
-
-            private:
-
-#if THUNDER_VERSION >= 3
-                void Activated(const string& callsign, PluginHost::IShell* service) override
-                {
-                    ASSERT(service != nullptr);
-
-                    if (_parent._callback != nullptr) {
-                        if (_parent._callsigns.count(callsign) != 0) {
-                            _parent.CreateObservable(callsign, service);
-                            _parent._callback(State::ACTIVATED, callsign);
-                        }
-                    }
-                }
-                void Deactivated(const string& callsign, PluginHost::IShell*) override
-                {
-                    if (_parent._callback != nullptr) {
-                        if (_parent._callsigns.count(callsign) != 0) {
-                            _parent.DestroyObservable(callsign);
-                            _parent._callback(State::DEACTIVATED, callsign);
-                        }
-                    }
-                }
-                void Unavailable(const string& callsign, PluginHost::IShell*) override
-                {
-                    if (_parent._callback != nullptr) {
-                        if ((_parent._callsigns.count(callsign) != 0)) {
-                            _parent._callback(State::UNAVAILABLE, callsign);
-                        }
-                    }
-                }
-#else
-                void StateChange(PluginHost::IShell* plugin) override
-                {
-                    ASSERT(plugin != nullptr);
-
-                    if (_parent._callback != nullptr) {
-                        auto callsign = plugin->Callsign();
-                        if ((_parent._callsigns.count(callsign) != 0)) {
-                            switch (plugin->State()) {
-                            case PluginHost::IShell::ACTIVATED:
-                                _parent.CreateObservable(callsign, plugin);
-                                _parent._callback(State::ACTIVATED, callsign);
-                                break;
-                            case PluginHost::IShell::DEACTIVATED:
-                                _parent.DestroyObservable(callsign);
-                                _parent._callback(State::DEACTIVATED, callsign);
-                                break;
-                            default:
-                                Trace::Information(_T("Change to unknown state, ignoring."));
-                                break;
-                            }
-                        }
-                    }
-                }
-#endif
-
-            private:
-                StateChangeObserver& _parent;
-            };
-
-            class StandbyObserver {
-            private:
-                class Notification : public PluginHost::IStateControl::INotification {
-                public:
-                    explicit Notification(const std::function<void(StateChangeObserver::State)>& callback)
-                        : _callback(callback)
-                    {
-                    }
-                    ~Notification() override = default;
-
-                    Notification(const Notification&) = delete;
-                    Notification& operator=(const Notification&) = delete;
-
-                    BEGIN_INTERFACE_MAP(Notification)
-                    INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
-                    END_INTERFACE_MAP
-
-                private:
-                    void StateChange(const PluginHost::IStateControl::state state) override
-                    {
-                        _callback(Convert(state));
-                    }
-
-                    std::function<void(StateChangeObserver::State)> _callback;
-                };
-
-            public:
-                StandbyObserver(const std::function<void(StateChangeObserver::State)>& callback, PluginHost::IShell* service)
-                    : _notification(callback)
-                {
-                    ASSERT(service != nullptr);
-                    _control = service->QueryInterface<PluginHost::IStateControl>();
-                    if (_control != nullptr) {
-                        _control->Register(&_notification);
-                    }
-                }
-                ~StandbyObserver()
-                {
-                    if (_control != nullptr) {
-                        _control->Unregister(&_notification);
-                        _control->Release();
-                    }
-                }
-
-                StandbyObserver(const StandbyObserver&) = delete;
-                StandbyObserver& operator=(const StandbyObserver&) = delete;
-
-            private:
-                PluginHost::IStateControl* _control;
-                Core::Sink<Notification> _notification;
-            };
-
-        public:
-            StateChangeObserver()
-                : _callback(nullptr)
-                , _operationalObserver(*this)
-            {
-            }
-            ~StateChangeObserver()
-            {
-                _callsigns.clear();
-                _standbyObservers.clear();
-            }
-
-            StateChangeObserver(const StateChangeObserver&) = delete;
-            StateChangeObserver& operator=(const StateChangeObserver&) = delete;
-
-            void RegisterOperationalNotifications(const Callback& callback, PluginHost::IShell* service)
-            {
-                ASSERT(service != nullptr);
-                _callback = callback;
-                service->Register(&_operationalObserver);
-            }
-            void UnregisterOperationalNotifications(PluginHost::IShell* service)
-            {
-                ASSERT(service != nullptr);
-                _callback = nullptr;
-                service->Unregister(&_operationalObserver);
-            }
-
-            void RegisterObservable(std::initializer_list<string> observables)
-            {
-                _callsigns.insert(observables);
-            }
-            void UnregisterObservable(std::initializer_list<string> observables)
-            {
-                for (const auto& observable : observables) {
-                    _callsigns.erase(observable);
-                }
-            }
-
-        private:
-            void CreateObservable(const string& callsign, PluginHost::IShell* service)
-            {
-                if (_standbyObservers.count(callsign) == 0) {
-                    _standbyObservers.emplace(std::piecewise_construct,
-                        std::forward_as_tuple(callsign),
-                        std::forward_as_tuple(std::bind(&StateChangeObserver::StateChange, this, callsign, std::placeholders::_1), service));
-                }
-            }
-            void DestroyObservable(const string& callsign)
-            {
-                if (_standbyObservers.count(callsign) != 0) {
-                    _standbyObservers.erase(callsign);
-                }
-            }
-
-            void StateChange(const string& callsign, State state)
-            {
-                if (_callback != nullptr) {
-                    _callback(state, callsign);
-                }
-            }
-
-        private:
-            Callback _callback;
-            std::unordered_set<string> _callsigns;
-            std::unordered_map<string, StandbyObserver> _standbyObservers;
-            Core::Sink<OperationalObserver> _operationalObserver;
-        };
-
     public:
+        enum reportstate {
+            ACTIVATED,
+            DEACTIVATED,
+            UNAVAILABLE,
+            RESUMED,
+            SUSPENDED
+        };
+ 
+    private:
+        using QueryParameters = std::list<std::pair<string, string>>;
+
         class Config : public Core::JSON::Container {
         public:
             Config(const Config&) = delete;
@@ -262,23 +28,23 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , ServerAddress()
                 , ServerPort()
+                , UserAgent(_T("BackOffice Reporting Plugin"))
                 , Customer()
                 , Platform()
                 , Country()
                 , Type()
                 , Session()
                 , CallsignMapping()
-                , StateMapping()
             {
-                Add(_T("server_address"), &ServerAddress);
-                Add(_T("server_port"), &ServerPort);
+                Add(_T("server"), &ServerAddress);
+                Add(_T("port"), &ServerPort);
+                Add(_T("useragent"), &UserAgent);
                 Add(_T("customer"), &Customer);
                 Add(_T("platform"), &Platform);
                 Add(_T("country"), &Country);
                 Add(_T("type"), &Type);
                 Add(_T("session"), &Session);
                 Add(_T("callsign_mapping"), &CallsignMapping);
-                Add(_T("state_mapping"), &StateMapping);
             }
 
             ~Config() override = default;
@@ -286,24 +52,341 @@ namespace Plugin {
         public:
             Core::JSON::String ServerAddress;
             Core::JSON::DecUInt16 ServerPort;
+            Core::JSON::String UserAgent;
             Core::JSON::String Customer;
             Core::JSON::String Platform;
             Core::JSON::String Country;
             Core::JSON::String Type;
             Core::JSON::DecUInt16 Session;
             Core::JSON::ArrayType<Core::JSON::String> CallsignMapping;
-            Core::JSON::ArrayType<Core::JSON::String> StateMapping;
+        };
+        class WebClient : public Web::WebLinkType<Crypto::SecureSocketPort, Web::Response, Web::Request, WebClient&> {
+        private:
+            using BaseClass = Web::WebLinkType<Crypto::SecureSocketPort, Web::Response, Web::Request, WebClient&>;
+            using Queue = std::list<std::pair<string, string>>;
+
+            static constexpr uint32_t MaximumWaitTime = 5 * 1000; // 5 Seconds waiting time
+
+        public:
+            WebClient(const WebClient& copy) = delete;
+            WebClient& operator=(const WebClient&) = delete;
+
+            WebClient()
+                : BaseClass(5, *this, Core::SocketPort::STREAM, Core::NodeId(), Core::NodeId(), 2048, 2048)
+                , _lock()
+                , _queue()
+                , _hostAddress()
+                , _userAgent()
+                , _message()
+                , _job(*this)
+            {
+            }
+            ~WebClient() override {
+                _job.Revoke();
+                BaseClass::Close(1000);
+            }
+
+        public:
+            uint32_t Configure(const Core::NodeId& remoteNode, const string& userAgent, const QueryParameters& queryParameters) {
+                _hostAddress = remoteNode.HostAddress();
+                _userAgent = userAgent;
+
+                BaseClass::Link().LocalNode(remoteNode.AnyInterface());
+                BaseClass::Link().RemoteNode(remoteNode.AnyInterface());
+
+                for (const auto& entry : queryParameters) {
+                    _queryParameters += Core::Format("%s=%s&", entry.first.c_str(), entry.second.c_str());
+                }
+
+                ASSERT(!_queryParameters.empty());
+
+                return (_queryParameters.empty() ? Core::ERROR_UNKNOWN_TABLE : Core::ERROR_NONE);
+            }
+            void Send(const string& event, const string& id) {
+                _lock.Lock();
+                _queue.emplace_back(event, id);
+                _lock.Unlock();
+
+                // We have data to send, see if we are capable of sending
+                if (BaseClass::IsClosed()) {
+                    // Nope there is no connection, lets open it, the StateChange will trigger continuation
+                    BaseClass::Open(0);
+                }
+            }
+            // Notification of a Partial Request received, time to attach a body..
+            void LinkBody(Core::ProxyType<WPEFramework::Web::Response>& element VARIABLE_IS_NOT_USED) override {
+                // We are not expected to receive Bodies with the incoming message, so drop it...
+            }
+            void Received(Core::ProxyType<WPEFramework::Web::Response>& element) override {
+
+                _job.Revoke();
+
+                _lock.Lock();
+
+                // Oke a request has been completed, it has to be the first one in the queue.
+                if (element->ErrorCode != Web::STATUS_OK) {
+                    SYSLOG(Logging::Error, (_T("Received error code: %d for stats reporting"), element->ErrorCode));
+                }
+
+                if (_queue.empty() == false) {
+                    Submit();
+                }
+                else {
+                    Close(0);
+                }
+
+                _lock.Unlock();
+            }
+            void Send(const Core::ProxyType<WPEFramework::Web::Request>& request VARIABLE_IS_NOT_USED) override
+            {
+                // Oke the request has been send, lets wait for the response..
+            }
+            void StateChange() override
+            {
+                _lock.Lock();
+
+                if ((IsOpen() == false) || (_queue.empty() == true)) {
+                    Close(0);
+                }
+                else {
+                    Submit();
+                }
+
+                _lock.Unlock();
+            }
+
+            Core::ProxyType<WPEFramework::Web::Response> Element() {
+                return (PluginHost::IFactories::Instance().Response());
+            }
+
+        private:
+            friend class Core::ThreadPool::JobType<WebClient&>;
+            void Dispatch() {
+                // We got a time out.. Might be an error or a restart after an error. Retry/Connect
+                if (BaseClass::IsOpen() == true) {
+                    BaseClass::Close(1000);
+                    if (_queue.empty() == false) {
+                        Open(0);
+                    }
+                }
+            }
+            void Submit() {
+                std::pair<string, string> entry = _queue.back();
+                _queue.pop_back();
+
+                _message.Verb       = Web::Request::HTTP_GET;
+                _message.Query      = Core::Format("%sevent=%s&id=%s", _queryParameters.c_str(), entry.first.c_str(), entry.second.c_str());
+                _message.Host       = _hostAddress;
+                _message.Accept     = _T("*/*");
+                _message.UserAgent  = _userAgent;
+                _message.Connection = Web::Request::CONNECTION_KEEPALIVE;
+
+                BaseClass::Submit(Core::ProxyType<WPEFramework::Web::Request>(_message));
+                _job.Reschedule(Core::Time::Now().Add(MaximumWaitTime));
+            }
+
+        private:
+            Core::CriticalSection _lock;
+            Queue _queue;
+            string _queryParameters;
+            string _hostAddress;
+            string _userAgent;
+            Core::ProxyObject<WPEFramework::Web::Request> _message;
+            Core::ThreadPool::JobType<WebClient&> _job;
+        };
+        class Observer : public PluginHost::IPlugin::INotification {
+        private:
+            class StateControlObserver : public PluginHost::IStateControl::INotification {
+            public:
+                StateControlObserver() = delete;
+                StateControlObserver(const StateControlObserver&) = delete;
+                StateControlObserver& operator=(const StateControlObserver&) = delete;
+
+                explicit StateControlObserver(Observer& parent, const string& reportName)
+                    : _parent(parent)
+                    , _reportName(reportName)
+                    , _stateControl(nullptr)
+                {
+                }
+                ~StateControlObserver() override {
+                    Unregister();
+                }
+
+            public:
+                void Register(PluginHost::IShell* plugin) {
+
+                    ASSERT(_stateControl == nullptr);
+
+                    _stateControl = plugin->QueryInterface<PluginHost::IStateControl>();
+
+                    if (_stateControl != nullptr) {
+                        _stateControl->Register(this);
+                    }
+                }
+                void Unregister() {
+
+                    if (_stateControl != nullptr) {
+                        _stateControl->Unregister(this);
+                        _stateControl->Release();
+                        _stateControl = nullptr;
+                    }
+                }
+                void StateChange(const PluginHost::IStateControl::state state) override
+                {
+                    if (state == PluginHost::IStateControl::RESUMED) {
+                        _parent.StateChange(_reportName, reportstate::RESUMED);
+                    }
+                    else if (state == PluginHost::IStateControl::SUSPENDED) {
+                        _parent.StateChange(_reportName, reportstate::SUSPENDED);
+                    }
+                }
+                const string& ReportName() const {
+                    return (_reportName);
+                }
+
+                BEGIN_INTERFACE_MAP(StateControlObserver)
+                    INTERFACE_ENTRY(PluginHost::IStateControl::INotification)
+                END_INTERFACE_MAP
+
+            private:
+                Observer& _parent;
+                const string _reportName;
+                PluginHost::IStateControl* _stateControl;
+            };
+            using CallsignMap = std::unordered_map<string, Core::Sink<StateControlObserver> >;
+
+        public:
+            Observer(BackOffice& parent) 
+                : _parent(parent)
+                , _callsigns() {
+            }
+            ~Observer() override = default;
+
+        public:
+            uint32_t Initialize(PluginHost::IShell* service, const Config& config) {
+
+                Core::JSON::ArrayType<Core::JSON::String>::ConstIterator index = config.CallsignMapping.Elements();
+
+                // Check out for which Callsigns we need to report the lifetime stuff.
+                while (index.Next() == true) {
+                    // TODO: To make it more clear it is anothername for the callsign, suggest to use an equal sign
+                    Core::TextSegmentIterator loop(Core::TextFragment(index.Current().Value()), false, ',');
+                    if (loop.Next() == true) {
+                        string callsign = loop.Current().Text();
+                        string reportName = callsign;
+
+                        if (loop.Next() == true) {
+                            // Seems we have a "surrogate" name.
+                            reportName = loop.Current().Text();
+                        }
+                        _callsigns.emplace(std::piecewise_construct,
+                            std::forward_as_tuple(callsign),
+                            std::forward_as_tuple(*this, reportName));
+                    }
+                }
+
+                if (_callsigns.empty() == false) {
+                    // Register for retrieval of information.
+                    service->Register(this);
+                }
+
+                return (_callsigns.empty() == false ? Core::ERROR_NONE : Core::ERROR_UNKNOWN_TABLE);
+            }
+            void Deinitialize(PluginHost::IShell* service) {
+                service->Unregister(this);
+
+                _callsigns.clear();
+            }
+
+#if THUNDER_VERSION >= 3
+            void Activated(const string& callsign, PluginHost::IShell* plugin) override
+            {
+                ASSERT(plugin != nullptr);
+
+                CallsignMap::iterator index = _callsigns.find(callsign);
+
+                // Is this a callsign which requires attention ?
+                if (index != _callsigns.end()) {
+                    StateChange(index->second.ReportName(), reportstate::ACTIVATED);
+
+                    index->second.Register(plugin);
+                }
+            }
+            void Deactivated(const string& callsign, PluginHost::IShell*) override
+            {
+                CallsignMap::iterator index = _callsigns.find(callsign);
+
+                // Is this a callsign which requires attention ?
+                if (index != _callsigns.end()) {
+                    StateChange(index->second.ReportName(), reportstate::DEACTIVATED);
+
+                    index->second.Unregister();
+                }
+            }
+            void Unavailable(const string& callsign, PluginHost::IShell*) override
+            {
+                CallsignMap::iterator index = _callsigns.find(callsign);
+
+                // Is this a callsign which requires attention ?
+                if (index != _callsigns.end()) {
+                    StateChange(index->second.ReportName(), reportstate::UNAVAILABLE);
+                }
+            }
+#else
+            void StateChange(PluginHost::IShell* plugin) override
+            {
+                ASSERT(plugin != nullptr);
+
+                string callsign = plugin->Callsign();
+                CallsignMap::iterator index = _callsigns.find(callsign);
+
+                // Is this a callsign which requires attention ?
+                if (index != _callsigns.end()) {
+                    switch (plugin->State()) {
+                    case PluginHost::IShell::ACTIVATED:
+                        StateChange(index->second.ReportName(), reportstate::ACTIVATED);
+                        index->second.Register(plugin);
+                        break;
+                    case PluginHost::IShell::DEACTIVATED:
+                        StateChange(index->second.ReportName(), reportstate::DEACTIVATED);
+                        index->second.Unregister();
+                        break;
+                    case PluginHost::IShell::UNAVAILABLE:
+                        StateChange(index->second.ReportName(), reportstate::UNAVAILABLE);
+                        break
+                    default:
+                        Trace::Information(_T("Change to unknown state, ignoring."));
+                        break;
+                    }
+                }
+            }
+#endif
+
+            BEGIN_INTERFACE_MAP(Observer)
+                INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
+            END_INTERFACE_MAP
+
+        private:
+            void StateChange(const string& reportName, const reportstate state) {
+                _parent.Send(reportName, state);
+            }
+
+        private:
+            BackOffice& _parent;
+            CallsignMap _callsigns;
         };
 
     public:
-        BackOffice()
-            : _requestSender(nullptr)
-        {
-        }
-        ~BackOffice() override = default;
-
         BackOffice(const BackOffice&) = delete;
         BackOffice& operator=(const BackOffice&) = delete;
+
+        PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST);
+        BackOffice()
+            : _stateChangeObserver(*this)
+            , _requestSender() {
+        }
+        POP_WARNING();
+        ~BackOffice() override = default;
 
         BEGIN_INTERFACE_MAP(BackOffice)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -316,15 +399,12 @@ namespace Plugin {
         string Information() const override;
 
     private:
-        void Send(StateChangeObserver::State state, const string& callsign);
+        void Send(const string& callsign, reportstate state);
+       uint32_t CreateQueryParameters(PluginHost::IShell* service, const Config& config, QueryParameters& params);
 
     private:
-        StateChangeObserver _stateChangeObserver;
-        std::unique_ptr<RequestSender> _requestSender;
-        Config _config;
-        PluginHost::ISubSystem* _subSystem;
-        std::unordered_map<string, string> _callsignMappings;
-        std::unordered_map<string, string> _stateMappings;
+        Core::Sink<Observer> _stateChangeObserver;
+        WebClient _requestSender;
     };
 
 } // namespace

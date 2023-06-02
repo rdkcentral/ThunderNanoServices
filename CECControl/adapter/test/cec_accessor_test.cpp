@@ -36,7 +36,7 @@
 
 #include <core/core.h>
 #include <localtracer/localtracer.h>
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 
 #include "../CECAccessor.h"
 

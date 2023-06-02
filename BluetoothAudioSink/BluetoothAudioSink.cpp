@@ -72,7 +72,7 @@ namespace Plugin {
 
                     Bluetooth::Address address(filename.c_str());
                     if (address.IsValid() == true) {
-                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
+                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename, Exchange::IBluetooth::IDevice::ADDRESS_BREDR);
                         if (device != nullptr) {
                             Core::File fileData(storageDir.Current().c_str());
                             if (fileData.Open(true) == true) {
@@ -103,17 +103,21 @@ namespace Plugin {
 
     /* virtual */ void BluetoothAudioSink::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        delete _sink;
-        _sink = nullptr;
+            if (_sink != nullptr) {
+                delete _sink;
+                _sink = nullptr;
+            }
 
-        Exchange::JBluetoothAudioSink::Unregister(*this);
+            Exchange::JBluetoothAudioSink::Unregister(*this);
 
-        service->Unregister(&_comNotificationSink);
+            service->Unregister(&_comNotificationSink);
 
-        service->Release();
-        _service = nullptr;
+            service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ uint32_t BluetoothAudioSink::Callback(Exchange::IBluetoothAudioSink::ICallback* callback)
@@ -149,7 +153,7 @@ namespace Plugin {
         if (_sink == nullptr) {
             Exchange::IBluetooth* bluetoothCtl(Controller());
             if (bluetoothCtl != nullptr) {
-                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
+                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address, Exchange::IBluetooth::IDevice::ADDRESS_BREDR);
                 if (device != nullptr) {
                     _sink = new A2DPSink(this, _codecSettings, device, _sinkSEID);
                     if (_sink != nullptr) {

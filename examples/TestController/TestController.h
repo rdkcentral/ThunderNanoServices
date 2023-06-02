@@ -148,8 +148,8 @@ namespace Plugin {
 
         void RegisterAll();
         void UnregisterAll();
-        Core::JSON::ArrayType<JsonData::TestController::RunResultData> TestResults(const string& results);
-        uint32_t endpoint_run(const JsonData::TestController::RunParamsData& params, Core::JSON::ArrayType<JsonData::TestController::RunResultData>& response);
+        Core::JSON::ArrayType<JsonData::TestController::RunResultDataElem> TestResults(const string& results);
+        uint32_t endpoint_run(const JsonData::TestController::RunParamsData& params, Core::JSON::ArrayType<JsonData::TestController::RunResultDataElem>& response);
         uint32_t get_categories(Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_tests(const string& index, Core::JSON::ArrayType<Core::JSON::String>& response) const;
         uint32_t get_description(const string& index, JsonData::TestController::DescriptionData& response) const;

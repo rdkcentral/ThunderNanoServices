@@ -111,19 +111,21 @@ POP_WARNING()
 
     /* virtual */ void SwitchBoard::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
-        ASSERT(_switches.size() > 1);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
+            ASSERT(_switches.size() > 1);
 
-        for (auto& index: _switches) {
-            index.second.Unregister(&_sink);
+            for (auto& index: _switches) {
+                index.second.Unregister(&_sink);
+            }
+            _switches.clear();
+
+            Deinitialize();
+
+            _service->Unregister(&_sink);
+            _service->Release();
+            _service = nullptr;
         }
-        _switches.clear();
-
-        Deinitialize();
-
-        _service->Unregister(&_sink);
-        _service->Release();
-        _service = nullptr;
     }
 
     /* virtual */ string SwitchBoard::Information() const
@@ -139,7 +141,7 @@ POP_WARNING()
 
     /* virtual */ Core::ProxyType<Web::Response> SwitchBoard::Process(const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         TRACE(Trace::Information, (string(_T("Received request"))));
 

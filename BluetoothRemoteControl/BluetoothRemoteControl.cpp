@@ -161,7 +161,7 @@ namespace Plugin {
                     Bluetooth::Address address (filename.c_str());
 
                     if (address.IsValid() == true)  {
-                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
+                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                         Core::File fileData(storageDir.Current().c_str());
 
                         if (device != nullptr) {
@@ -187,24 +187,26 @@ namespace Plugin {
 
     void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        if (_recorder.IsOpen() == true) {
-            _recorder.Close();
+            if (_recorder.IsOpen() == true) {
+                _recorder.Close();
+            }
+
+            if (_gattRemote != nullptr) {
+                delete _gattRemote;
+                _gattRemote = nullptr;
+            }
+
+            if (_voiceHandler != nullptr) {
+                _voiceHandler->Release();
+                _voiceHandler = nullptr;
+            }
+
+            _service->Release();
+            _service = nullptr;
         }
-
-        if (_gattRemote != nullptr) {
-            delete _gattRemote;
-            _gattRemote = nullptr;
-        }
-
-        if (_voiceHandler != nullptr) {
-            _voiceHandler->Release();
-            _voiceHandler = nullptr;
-        }
-
-        _service->Release();
-        _service = nullptr;
     }
 
     string BluetoothRemoteControl::Information() const
@@ -350,7 +352,7 @@ namespace Plugin {
             ASSERT(_service != nullptr);
             Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
             if (bluetoothCtl != nullptr) {
-                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
+                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                 if (device != nullptr) {
                     _gattRemote = new GATTRemote(this, device, _configLine);
                     if (_gattRemote != nullptr) {

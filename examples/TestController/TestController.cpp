@@ -94,12 +94,8 @@ namespace Plugin {
                 TRACE(Trace::Warning, (_T("Colud not get Remote connection")));
             }
         } else {
-            TRACE(Trace::Fatal, (_T("*** TestController could not be instantiated ***")))
+            TRACE(Trace::Fatal, (_T("*** TestController could not be instantiated ***")));
             message = _T("TestUtility could not be instantiated.");
-        }
-
-        if(message.length() != 0) {
-            Deinitialize(service);
         }
 
         return message;
@@ -107,38 +103,38 @@ namespace Plugin {
 
     /* virtual */ void TestController::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service->Unregister(&_notification);
+            _service->Unregister(&_notification);
  
-        if(_testControllerImp != nullptr) {
-            UnregisterAll();
-            _testControllerImp->TearDown();
+            if (_testControllerImp != nullptr) {
+                UnregisterAll();
+                _testControllerImp->TearDown();
 
-            if(_memory != nullptr){
-                if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
-                    TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+                if (_memory != nullptr){
+                    if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
+                        TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
+                    }
+                    _memory = nullptr;
                 }
-                _memory = nullptr;
+
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
+                VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
+                _testControllerImp = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // The connection can disappear in the meantime...
+                if (connection != nullptr) {
+                    // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                    connection->Terminate();
+                    connection->Release();
+                }           
             }
-
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
-            VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
-            _testControllerImp = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // The connection can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
-            }           
-            
-
+            _service->Release();
+            _service = nullptr;
+            _connection = 0;
         }
-        _service->Release();
-        _service = nullptr;
-        _connection = 0;
     }
 
     /* virtual */ string TestController::Information() const
@@ -413,7 +409,7 @@ namespace Plugin {
         }
 
         if (!executed) {
-            TRACE(Trace::Fatal, (_T("*** Wrong request !!! ***")))
+            TRACE(Trace::Fatal, (_T("*** Wrong request !!! ***")));
         }
 
         return response;

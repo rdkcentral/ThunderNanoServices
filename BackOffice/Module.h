@@ -6,6 +6,7 @@
 #define MODULE_NAME Plugin_BackOffice
 #endif
 
+#include <cryptalgo/cryptalgo.h>
 #include <plugins/plugins.h>
 
 #undef EXTERNAL
