@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-SERVICE_REGISTRATION(ProcessMonitor, 1, 0);
+namespace {
+
+    static Metadata<ProcessMonitor> metadata(
+        // Version
+        1, 0, 0,
+        // Preconditions
+        {},
+        // Terminations
+        {},
+        // Controls
+        {}
+    );
+}
 
 const string ProcessMonitor::Initialize(PluginHost::IShell* service)
 {
@@ -34,7 +46,7 @@ const string ProcessMonitor::Initialize(PluginHost::IShell* service)
     return (_T(""));
 }
 
-void ProcessMonitor::Deinitialize(PluginHost::IShell* service)
+void ProcessMonitor::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
     _notification.Close();
 }

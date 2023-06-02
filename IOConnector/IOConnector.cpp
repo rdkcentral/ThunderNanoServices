@@ -37,7 +37,20 @@ ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 namespace Plugin
 {
 
-    SERVICE_REGISTRATION(IOConnector, 1, 0);
+    namespace {
+
+        static Metadata<IOConnector> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<IOConnector::Data>> jsonBodyDataFactory(1);
 
@@ -100,6 +113,8 @@ namespace Plugin
         config.FromString(service->ConfigLine());
 
         _service = service;
+        _service->AddRef();
+
         _skipURL = _service->WebPrefix().length();
 
         auto index(config.Pins.Elements());
@@ -211,7 +226,7 @@ namespace Plugin
         return (_pins.size() > 0 ? string() : _T("Could not instantiate the requested Pin"));
     }
 
-    /* virtual */ void IOConnector::Register(ICatalog::INotification* sink)
+    /* virtual */ void IOConnector::Register(Exchange::IExternal::ICatalog::INotification* sink)
     {
         _adminLock.Lock();
 
@@ -229,7 +244,7 @@ namespace Plugin
         _adminLock.Unlock();
     }
 
-    /* virtual */ void IOConnector::Unregister(ICatalog::INotification* sink)
+    /* virtual */ void IOConnector::Unregister(Exchange::IExternal::ICatalog::INotification* sink)
     {
         _adminLock.Lock();
 
@@ -259,25 +274,42 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service)
+    /* virtual */ Exchange::IInputPin* IOConnector::IInputPinResource(const uint32_t id)
     {
-        ASSERT(_service == service);
+        Exchange::IInputPin* result = nullptr;
 
-        _adminLock.Lock();
+        Pins::iterator index = _pins.find(id);
 
-        for (std::pair<const uint32_t, PinHandler>& product : _pins) {
-            product.second.Unsubscribe(&_sink);
-
-            for (auto client : _notifications) {
-                client->Deactivated(product.second.Pin());
-            }
+        if (index != _pins.end()) {
+            result = index->second.Pin();
+            result->AddRef();
         }
 
-        _adminLock.Unlock();
+        return (result);
+    }
 
-        _pins.clear();
+    /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service VARIABLE_IS_NOT_USED)
+    {
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service = nullptr;
+            _adminLock.Lock();
+
+            for (std::pair<const uint32_t, PinHandler>& product : _pins) {
+                product.second.Unsubscribe(&_sink);
+
+                for (auto client : _notifications) {
+                    client->Deactivated(product.second.Pin());
+                }
+            }
+
+            _adminLock.Unlock();
+
+            _pins.clear();
+
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ string IOConnector::Information() const

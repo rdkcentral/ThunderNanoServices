@@ -34,54 +34,55 @@ class Cobalt: public PluginHost::IPlugin,
         public PluginHost::IWeb,
         public PluginHost::JSONRPC {
 private:
-    Cobalt(const Cobalt&);
-    Cobalt& operator=(const Cobalt&);
 
     class Notification: public RPC::IRemoteConnection::INotification,
             public PluginHost::IStateControl::INotification,
             public Exchange::IBrowser::INotification {
 
-    private:
+    public:
         Notification() = delete;
         Notification(const Notification&) = delete;
         Notification& operator=(const Notification&) = delete;
 
     public:
-        explicit Notification(Cobalt *parent) :
-                _parent(*parent) {
+        explicit Notification(Cobalt* parent)
+            : _parent(*parent)
+        {
             ASSERT(parent != nullptr);
         }
-        ~Notification() {
-        }
+        ~Notification() override = default;
 
     public:
         BEGIN_INTERFACE_MAP (Notification)
         INTERFACE_ENTRY (PluginHost::IStateControl::INotification)
         INTERFACE_ENTRY (Exchange::IBrowser::INotification)
-        INTERFACE_ENTRY (RPC::IRemoteConnection::INotification)END_INTERFACE_MAP
+        INTERFACE_ENTRY (RPC::IRemoteConnection::INotification)
+        END_INTERFACE_MAP
 
     private:
-        virtual void StateChange(
-                const PluginHost::IStateControl::state state) override {
+        void StateChange(const PluginHost::IStateControl::state state) override
+        {
             _parent.StateChange(state);
         }
-        // Signal changes on the subscribed namespace..
-        virtual void LoadFinished(const string &URL) override {
+        void LoadFinished(const string &URL) override
+        {
             _parent.LoadFinished(URL);
         }
-        virtual void URLChanged(const string &URL) override {
+        void URLChanged(const string &URL) override
+        {
             _parent.URLChanged(URL);
         }
-        virtual void Hidden(const bool hidden) override {
+        void Hidden(const bool hidden) override
+        {
             _parent.Hidden(hidden);
         }
-        virtual void Closure() override
+        void Closure() override
         {
         }
-        virtual void Activated(RPC::IRemoteConnection*) override
+        void Activated(RPC::IRemoteConnection*) override
         {
         }
-        virtual void Deactivated(RPC::IRemoteConnection *connection) override
+        void Deactivated(RPC::IRemoteConnection *connection) override
         {
             _parent.Deactivated(connection);
         }
@@ -92,21 +93,24 @@ private:
 
 public:
     class Data: public Core::JSON::Container {
-    private:
+    public:
         Data(const Data&) = delete;
         Data& operator=(const Data&) = delete;
 
     public:
-        Data() :
-            Core::JSON::Container(), URL(),
-                  FPS(), Suspended(false), Hidden(false) {
+        Data()
+            : Core::JSON::Container()
+            , URL()
+            , FPS()
+            , Suspended(false)
+            , Hidden(false)
+        {
             Add(_T("url"), &URL);
             Add(_T("fps"), &FPS);
             Add(_T("suspended"), &Suspended);
             Add(_T("hidden"), &Hidden);
         }
-        ~Data() {
-        }
+        ~Data() override = default;
 
     public:
         Core::JSON::String URL;
@@ -116,12 +120,19 @@ public:
     };
 
 public:
-    Cobalt() :
-            _skipURL(0), _hidden(false), _cobalt(nullptr), _application(nullptr),
-            _memory(nullptr), _service(nullptr), _notification(this) {
+    Cobalt(const Cobalt&);
+    Cobalt& operator=(const Cobalt&);
+    Cobalt()
+        : _skipURL(0)
+        , _connectionId(0)
+        , _hidden(false)
+        , _cobalt(nullptr)
+        , _application(nullptr)
+        , _memory(nullptr)
+        , _service(nullptr)
+        , _notification(this) {
     }
-    virtual ~Cobalt() {
-    }
+    ~Cobalt() override = default;
 
 public:
     BEGIN_INTERFACE_MAP (Cobalt)
@@ -137,14 +148,14 @@ public:
 public:
     //  IPlugin methods
     // -------------------------------------------------------------------------------------------------------
-    virtual const string Initialize(PluginHost::IShell* service);
-    virtual void Deinitialize(PluginHost::IShell *service);
-    virtual string Information() const;
+    const string Initialize(PluginHost::IShell* service) override;
+    void Deinitialize(PluginHost::IShell *service) override;
+    string Information() const override;
 
     //  IWeb methods
     // -------------------------------------------------------------------------------------------------------
-    virtual void Inbound(Web::Request &request);
-    virtual Core::ProxyType<Web::Response> Process(const Web::Request &request);
+    void Inbound(Web::Request &request) override;
+    Core::ProxyType<Web::Response> Process(const Web::Request &request) override;
 
 private:
     void Deactivated(RPC::IRemoteConnection *connection);
@@ -153,17 +164,6 @@ private:
     void URLChanged(const string &URL);
     void Hidden(const bool hidden);
     void Closure();
-
-    inline void ConnectionTermination(uint32_t connectionId)
-    {
-        if (connectionId != 0) {
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(connectionId));
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
-            }
-        }
-    }
 
     // JsonRpc
     void RegisterAll();

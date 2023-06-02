@@ -44,9 +44,7 @@ namespace Plugin {
                 Add(_T("time"), &SyncTime);
             }
 
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::String TimeSource;
@@ -66,9 +64,7 @@ namespace Plugin {
                 Add(_T("time"), &Time);
             }
 
-            virtual ~SetData()
-            {
-            }
+            ~SetData() override = default;
 
         public:
             TimeRep Time;
@@ -120,7 +116,7 @@ namespace Plugin {
                 }
             }
 
-            virtual void Completed()
+            void Completed() override
             {
                 uint64_t timeTicks = _client->SyncTime();
 
@@ -174,43 +170,13 @@ namespace Plugin {
             Core::JSON::DecUInt16 Periodicity;
         };
 
-        class PeriodicSync : public Core::IDispatch {
-        private:
-            PeriodicSync() = delete;
-            PeriodicSync(const PeriodicSync&) = delete;
-            PeriodicSync& operator=(const PeriodicSync&) = delete;
-
-        public:
-            PeriodicSync(Exchange::ITimeSync* timeSync)
-                : _timeSync(timeSync)
-            {
-                ASSERT(timeSync != nullptr);
-
-                _timeSync = timeSync;
-                _timeSync->AddRef();
-            }
-            ~PeriodicSync()
-            {
-                _timeSync->Release();
-            }
-
-        public:
-            virtual void Dispatch() override
-            {
-                _timeSync->Synchronize();
-            }
-
-        private:
-            Exchange::ITimeSync* _timeSync;
-        };
-
     private:
         TimeSync(const TimeSync&) = delete;
         TimeSync& operator=(const TimeSync&) = delete;
 
     public:
         TimeSync();
-        virtual ~TimeSync();
+        ~TimeSync() override;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
         BEGIN_INTERFACE_MAP(TimeSync)
@@ -223,16 +189,22 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
+        friend Core::ThreadPool::JobType<TimeSync&>;
+        void Dispatch()
+        {
+            TRACE(Trace::Information, (_T("TimeSync: job is dispatched")));
+            _client->Synchronize();
+        }
         void SyncedTime(const uint64_t timeTicks);
         void EnsureSubsystemIsActive();
 
@@ -249,9 +221,10 @@ namespace Plugin {
         uint16_t _skipURL;
         uint32_t _periodicity;
         Exchange::ITimeSync* _client;
-        Core::ProxyType<Core::IDispatch> _activity;
         Core::Sink<Notification> _sink;
-        PluginHost::IShell* _service;
+        PluginHost::ISubSystem* _subSystem;
+
+        Core::WorkerPool::JobType<TimeSync&> _job;
     };
 
 } // namespace Plugin

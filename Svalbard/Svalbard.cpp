@@ -22,25 +22,40 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Svalbard, 1, 0);
+    namespace {
+
+        static Metadata<Svalbard> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     const string Svalbard::Initialize(PluginHost::IShell* service) /* override */ 
     {
         string message;
 
+        ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_svalbard == nullptr);
         ASSERT(_connectionId == 0);
 
         _service = service;
+        _service->AddRef();
+
         _service->Register(&_notification);
         _svalbard = _service->Root<Exchange::IConfiguration>(_connectionId, Core::infinite, _T("CryptographyImplementation"));
 
         if (_svalbard == nullptr) {
             message = _T("Svalbard could not be instantiated.");
-            _service->Unregister(&_notification);
-            _service = nullptr;
         } else {
+            printf("Svalbard - Connection Id - %u\n",_connectionId);
             _svalbard->Configure(_service);
         }
 
@@ -49,26 +64,33 @@ namespace Plugin {
 
     void Svalbard::Deinitialize(PluginHost::IShell* service)  /* override */
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service->Unregister(&_notification);
-        _svalbard->Release();
+            _service->Unregister(&_notification);
 
-        if (_connectionId != 0) {
+            if (_svalbard != nullptr) {
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                printf("Svalbard - Remote Connection  - %p\n",connection);
 
-            if (connection != nullptr) {
+                VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
+                _svalbard = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-                TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
+                if (connection != nullptr) {
+                    TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
 
-                connection->Terminate();
-                connection->Release();
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
+
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
         }
 
-        _svalbard = nullptr;
-        _service = nullptr;
     }
 
     string Svalbard::Information() const /* override */

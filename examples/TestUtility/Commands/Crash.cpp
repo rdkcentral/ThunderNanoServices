@@ -43,7 +43,10 @@ public:
         TestCore::TestCommandController::Instance().Announce(this);
     }
 
-    virtual ~Crash() { TestCore::TestCommandController::Instance().Revoke(this); }
+    ~Crash() override
+    {
+       TestCore::TestCommandController::Instance().Revoke(this);
+    }
 
     BEGIN_INTERFACE_MAP(Crash)
     INTERFACE_ENTRY(Exchange::ITestUtility::ICommand)

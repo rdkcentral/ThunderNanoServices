@@ -36,7 +36,7 @@ target_include_directories(${LIB_NAME}
 
 target_link_libraries(${LIB_NAME}
     PRIVATE
-        AAMP::AAMP
+        Aamp::Aamp
         GStreamer::GStreamer
         GStreamerVideo::GStreamerVideo
         ${NAMESPACE}Core::${NAMESPACE}Core
@@ -44,4 +44,4 @@ target_link_libraries(${LIB_NAME}
         ${GLIB_LIBRARIES})
 
 install(TARGETS ${LIB_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)

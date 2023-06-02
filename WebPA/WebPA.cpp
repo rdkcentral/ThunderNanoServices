@@ -22,18 +22,33 @@
 namespace WPEFramework {
 namespace Plugin {
 
-SERVICE_REGISTRATION(WebPA, 1, 0);
+namespace {
+
+    static Metadata<WebPA> metadata(
+        // Version
+        1, 0, 0,
+        // Preconditions
+        {},
+        // Terminations
+        {},
+        // Controls
+        {}
+    );
+}
 
 /* virtual */ const string WebPA::Initialize(PluginHost::IShell* service)
 {
     string message;
 
+    ASSERT(service != nullptr);
     ASSERT(_webpa == nullptr);
     ASSERT(_service == nullptr);
+    ASSERT(_connectionId == 0);
 
     // Setup skip URL for right offset.
-    _connectionId = 0;
+
     _service = service;
+    _service->AddRef();
     _skipURL = _service->WebPrefix().length();
 
     // Register the Process::Notification stuff. The Remote connection might die before we get a
@@ -47,8 +62,6 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
         if (_webpa->Initialize(_service) == Core::ERROR_NONE) {
             TRACE(Trace::Information, (_T("Successfully instantiated WebPA Service")));
         } else {
-            _webpa->Release();
-            _webpa = nullptr;
             TRACE(Trace::Error, (_T("WebPA Service could not be launched.")));
             message = _T("WebPA Service could not be launched.");
         }
@@ -57,36 +70,35 @@ SERVICE_REGISTRATION(WebPA, 1, 0);
         message = _T("WebPA Service could not be instantiated.");
     }
 
-    if (_webpa == nullptr) {
-        _service->Unregister(&_notification);
-        _service = nullptr;
-    }
-
     return message;
 }
 
-/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service)
+/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
-    ASSERT(_webpa != nullptr);
-    ASSERT(_service == service);
+    if (_service != nullptr) {
+        ASSERT(_service == service);
 
-    _service->Unregister(&_notification);
+        _service->Unregister(&_notification);
 
-    _webpa->Deinitialize(_service);
-    _webpa->Release();
+        if (_webpa != nullptr) {
 
-    if(_connectionId != 0){
-        RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
+            _webpa->Deinitialize(_service);
 
-        // The connection can disappear in the meantime...
-        if (nullptr != serviceConnection) {
-            // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-            serviceConnection->Terminate();
-            serviceConnection->Release();
+            RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
+            VARIABLE_IS_NOT_USED uint32_t result = _webpa->Release();
+            _webpa = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            // The connection can disappear in the meantime...
+            if (nullptr != serviceConnection) {
+                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                serviceConnection->Terminate();
+                serviceConnection->Release();
+            }
         }
+        _connectionId = 0;
+        _service->Release();
+        _service = nullptr;
     }
-    _webpa = nullptr;
-    _service = nullptr;
 }
 
 /* virtual */ string WebPA::Information() const

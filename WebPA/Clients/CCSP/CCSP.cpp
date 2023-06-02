@@ -17,8 +17,7 @@
  * limitations under the License.
  */
  
-#include <core/core.h>
-#include <tracing/tracing.h>
+#include "Module.h"
 
 #include <signal.h>
 #include <string>
@@ -28,6 +27,7 @@
 extern "C"
 {
 #endif
+#include <syscfg/syscfg.h>
 int Parodus2CCSPMain();
 #ifdef __cplusplus
 }
@@ -54,10 +54,10 @@ private:
     public:
         Config()
             : Core::JSON::Container()
-            , DataFile(_T(""))
+            , DataFile(_T("/usr/ccsp/syscfg.db"))
             , ClientURL(_T("tcp://127.0.0.1:6667"))
             , ParodusURL(_T("tcp://127.0.0.1:6666"))
-            , ConfigFile(_T("/usr/share/ccspcommonlibrary/ccsp_msg.cfg"))
+            , ConfigFile(_T("/usr/ccsp/ccsp_msg.cfg"))
         {
             Add(_T("ccspdatafile"), &DataFile);
             Add(_T("ccspclienturl"), &ClientURL);
@@ -83,7 +83,7 @@ public:
         TRACE(Trace::Information, (_T("CCSP::Construct()")));
     }
 
-    virtual ~CCSP()
+    ~CCSP() override
     {
         TRACE(Trace::Information, (_T("CCSP::Destruct()")));
 
@@ -99,27 +99,26 @@ public:
     END_INTERFACE_MAP
 
     //WebPAClient Interface
-    virtual uint32_t Configure(PluginHost::IShell* service) override
+    uint32_t Configure(PluginHost::IShell* service) override
     {
         ASSERT(nullptr != service);
         Config config;
         config.FromString(service->ConfigLine());
         TRACE_GLOBAL(Trace::Information, (_T("DataFile = [%s] ParodusURL = [%s] ClientURL = [%s]"), config.DataFile.Value().c_str(), config.ParodusURL.Value().c_str(), config.ClientURL.Value().c_str()));
-        if (config.DataFile.Value().empty() != true) {
-            Core::SystemInfo::SetEnvironment(_T("DATA_FILE"), config.DataFile.Value().c_str());
-        } else {
-            // Set default url for parodus and clients
-            Core::SystemInfo::SetEnvironment(_T("PARODUS_URL"), config.ParodusURL.Value().c_str());
-            Core::SystemInfo::SetEnvironment(_T("PARODUS2CCSP_CLIENT_URL"), config.ClientURL.Value().c_str());
-        }
+        // Set default url for parodus and clients
+        Core::SystemInfo::SetEnvironment(_T("PARODUS_URL"), config.ParodusURL.Value().c_str());
+        Core::SystemInfo::SetEnvironment(_T("PARODUS2CCSP_CLIENT_URL"), config.ClientURL.Value().c_str());
 
         Core::File configFile(config.ConfigFile.Value());
         configFile.Link(CCSPConfigLink);
 
+        // Create shared mem using datafile file
+        syscfg_create(config.DataFile.Value().c_str(), 0, nullptr);
+
         return (Core::ERROR_NONE);
     }
 
-    virtual void Launch() override
+    uint32_t Launch() override
     {
         Block();
         Wait(Thread::BLOCKED | Thread::STOPPED, Core::infinite);
@@ -128,10 +127,11 @@ public:
                 // Call Parodus listner worker function
                 Run();
         }
+        return (Core::ERROR_NONE);
     }
 
 private:
-    virtual uint32_t Worker();
+    uint32_t Worker() override;
 
 private:
     Core::CriticalSection _adminLock;

@@ -23,13 +23,15 @@ find_package(WPEFramework)
 project_version(1.0.0)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
-find_package(WDMP-C REQUIRED)
-find_package(TinyXML REQUIRED)
-find_package(LibParodus REQUIRED)
 find_package(GLIB REQUIRED)
+find_package(LibParodus REQUIRED)
+find_package(NanoMsg REQUIRED)
+find_package(TinyXML REQUIRED)
+find_package(WDMP-C REQUIRED)
+find_package(WRP-C REQUIRED)
 
 
-add_library(${TARGET}
+add_library(${TARGET} SHARED
     Handler/Handler.cpp
     Adapter/DataModel/DataModel.cpp
     Adapter/Notifier.cpp
@@ -54,10 +56,12 @@ target_link_libraries(${TARGET}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        wdmp_c::wdmp_c
-        tinyxml::tinyxml
-        libparodus::libparodus
         ${GLIB_LIBRARIES}
+        LibParodus::LibParodus
+        NanoMsg::NanoMsg
+        TinyXML::TinyXML
+        WDMP-C::WDMP-C
+        WRP-C::WRP-C
 )
 
 target_compile_definitions(${TARGET} PRIVATE ${PLUGIN_DEFINITIONS})

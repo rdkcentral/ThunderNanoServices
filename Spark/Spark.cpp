@@ -28,7 +28,19 @@ namespace Spark {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Spark, 1, 0);
+    namespace {
+
+        static Metadata<Spark> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::INTERNET, subsystem::GRAPHICS },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(2);
     static Core::ProxyPoolType<Web::JSONBodyType<Spark::Data>> jsonBodyDataFactory(2);
@@ -40,13 +52,16 @@ namespace Plugin {
         string message;
 
         ASSERT(_service == nullptr);
+        ASSERT(service != nullptr);
+        ASSERT(_connectionId == 0);
         ASSERT(_spark == nullptr);
         ASSERT(_memory == nullptr);
 
         config.FromString(service->ConfigLine());
 
-        _connectionId = 0;
         _service = service;
+        _service->AddRef();
+
         _skipURL = _service->WebPrefix().length();
 
         // Register the Connection::Notification stuff. The Remote process might die
@@ -56,80 +71,80 @@ namespace Plugin {
         _service->Register(&_notification);
 
         _spark = _service->Root<Exchange::IBrowser>(_connectionId, 3000, _T("SparkImplementation"));
-
-        if (_spark != nullptr) {
-
+        if (_spark == nullptr) {
+            message = _T("Spark could not be instantiated. Could not load SparkImplementation");
+        } else {
+            RegisterAll();
+            _spark->Register(&_notification);
             PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
-
             if (stateControl == nullptr) {
-                _spark->Release();
-                _spark = nullptr;
+                message = _T("Spark could not be instantiated.");
             } else {
+                stateControl->Register(&_notification);
+                stateControl->Configure(_service);
+                stateControl->Release();
 
                 const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
-                ASSERT(connection != nullptr);
-
                 if (connection != nullptr) {
                     _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
                     ASSERT(_memory != nullptr);
-
                     connection->Release();
                 }
-                _spark->Register(&_notification);
-                stateControl->Register(&_notification);
-                stateControl->Configure(_service);
-
-                stateControl->Release();
             }
-        }
-
-        if (_spark == nullptr) {
-            message = _T("Spark could not be instantiated.");
-            _service->Unregister(&_notification);
-            _service = nullptr;
         }
 
         return message;
     }
 
-    /* virtual */ void Spark::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void Spark::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
-        ASSERT(_spark != nullptr);
-        ASSERT(_memory != nullptr);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        PluginHost::IStateControl* stateControl(
-            _spark->QueryInterface<PluginHost::IStateControl>());
+            // Make sure the Activated and Deactivated are no longer called before we
+            // start cleaning up..
+            _service->Unregister(&_notification);
 
-        // Make sure the Activated and Deactivated are no longer called before we
-        // start cleaning up..
-        _service->Unregister(&_notification);
-        _spark->Unregister(&_notification);
-        _memory->Release();
+            if (_spark != nullptr) {
+                UnregisterAll();
+                _spark->Unregister(&_notification);
 
-        // In case Spark crashed, there is no access to the statecontrol interface,
-        // check it !!
-        if (stateControl != nullptr) {
-            stateControl->Unregister(&_notification);
-            stateControl->Release();
-        }
+                PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
+                // In case Spark crashed, there is no access to the statecontrol interface,
+                // check it !!
+                if (stateControl != nullptr) {
+                    stateControl->Unregister(&_notification);
+                    stateControl->Release();
+                } else {
+                    // On behalf of the crashed process, we will release the notification sink.
+                    _notification.Release();
+                }
 
-        _spark->Release();
+                if (_memory != nullptr) {
+                    _memory->Release();
+                    _memory = nullptr;
+                }
 
-        if(_connectionId != 0){
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _spark->Release();
+                _spark = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
+                // The process can disappear in the meantime...
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
-        }
 
-        // Deinitialize what we initialized..
-        _memory = nullptr;
-        _spark = nullptr;
-        _service = nullptr;
+            // Deinitialize what we initialized..
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
+        }
     }
 
     /* virtual */ string Spark::Information() const

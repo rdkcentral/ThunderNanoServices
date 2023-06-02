@@ -328,52 +328,26 @@ namespace Plugin {
                 // bit (NTP time)
         };
 
-        class Activity : public Core::IDispatchType<void> {
-        private:
-            Activity() = delete;
-            Activity(const Activity&) = delete;
-            Activity& operator=(const Activity&) = delete;
-
-        public:
-            Activity(NTPClient* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~Activity()
-            {
-            }
-
-        public:
-            virtual void Dispatch() override
-            {
-                _parent.Dispatch();
-            }
-
-        private:
-            NTPClient& _parent;
-        };
-
     private:
         NTPClient(const NTPClient&) = delete;
         NTPClient& operator=(const NTPClient&) = delete;
 
     public:
         NTPClient();
-        virtual ~NTPClient();
+        ~NTPClient() override;
 
     public:
         void Initialize(SourceIterator& sources, const uint16_t retries, const uint16_t delay);
-        virtual void Register(Exchange::ITimeSync::INotification* notification) override;
-        virtual void Unregister(Exchange::ITimeSync::INotification* notification) override;
+        void Register(Exchange::ITimeSync::INotification* notification) override;
+        void Unregister(Exchange::ITimeSync::INotification* notification) override;
 
-        virtual uint32_t Synchronize() override;
-        virtual void Cancel() override;
-        virtual string Source() const override;
-        virtual uint64_t SyncTime() const override;
+        uint32_t Synchronize() override;
+        void Cancel() override;
+        string Source() const override;
+        uint64_t SyncTime() const override;
 
         // ITime methods
-        virtual uint64_t TimeSync() const override
+        uint64_t TimeSync() const override
         {
             return SyncTime();
         }
@@ -384,15 +358,17 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        friend Core::ThreadPool::JobType<NTPClient&>;
+        void Dispatch();
+
         // Implement Core::SocketDatagram
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
 
         // Signal a state change, Opened, Closed or Accepted
-        virtual void StateChange() override;
+        void StateChange() override;
 
         void Update();
-        void Dispatch();
         bool FireRequest();
 
     private:
@@ -406,8 +382,9 @@ namespace Plugin {
         uint32_t _currentAttempt;
         ServerList _servers;
         ServerIterator _serverIndex;
-        Core::ProxyType<Core::IDispatchType<void>> _activity;
         std::list<Exchange::ITimeSync::INotification*> _clients;
+
+        Core::WorkerPool::JobType<NTPClient&> _job;
     };
 
 } // namespace Plugin

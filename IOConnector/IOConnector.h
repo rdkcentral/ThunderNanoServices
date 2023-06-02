@@ -33,7 +33,8 @@ namespace Plugin {
         : public PluginHost::IPlugin,
           public PluginHost::IWeb,
           public Exchange::IExternal::ICatalog,
-          public PluginHost::JSONRPC {
+          public PluginHost::JSONRPC,
+          public Exchange::IInputPin::ICatalog {
     private:
         class Sink : public Exchange::IExternal::INotification {
         public:
@@ -285,6 +286,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::IExternal::ICatalog)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_ENTRY(Exchange::IInputPin::ICatalog)
         END_INTERFACE_MAP
 
     public:
@@ -296,9 +298,11 @@ namespace Plugin {
 
         //   IExternal::IFactory methods
         // -------------------------------------------------------------------------------------------------------
-        void Register(ICatalog::INotification* sink) override;
-        void Unregister(ICatalog::INotification* sink) override;
+        void Register(Exchange::IExternal::ICatalog::INotification* sink) override;
+        void Unregister(Exchange::IExternal::ICatalog::INotification* sink) override;
+
         Exchange::IExternal* Resource(const uint32_t id) override;
+        Exchange::IInputPin* IInputPinResource(const uint32_t id) override;
 
         //  IWeb methods
         // -------------------------------------------------------------------------------------------------------

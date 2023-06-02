@@ -29,7 +29,19 @@ namespace WebServer {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(WebServer, 1, 0);
+    namespace {
+
+        static Metadata<WebServer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::NETWORK },
+            // Terminations
+            {},
+            // Controls
+            { subsystem::WEBSOURCE }
+        );
+    }
 
     /* virtual */ const string WebServer::Initialize(PluginHost::IShell* service)
     {
@@ -38,10 +50,12 @@ namespace Plugin {
         ASSERT(_server == nullptr);
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
+        ASSERT(service != nullptr);
+        ASSERT(_connectionId == 0);
 
         // Setup skip URL for right offset.
-        _connectionId = 0;
         _service = service;
+        _service->AddRef();
         _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
@@ -56,30 +70,23 @@ namespace Plugin {
             // We see that sometimes the implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
             if (stateControl == nullptr) {
-                _server->Release();
-                _server = nullptr;
+                message = _T("WebServer Couldnt get StateControl.");
 
             } else {
                 uint32_t result = stateControl->Configure(_service);
                 stateControl->Release();
-
                 if (result != Core::ERROR_NONE) {
                     message = _T("WebServer could not be configured.");
-                    _server->Release();
-                    _server = nullptr;
                 }
                 else {
                     RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
-
                     if (connection != nullptr) {
                         _memory = WPEFramework::WebServer::MemoryObserver(connection);
-                        connection->Release();
-
                         ASSERT(_memory != nullptr);
+                        connection->Release();
                     }
 
                     PluginHost::ISubSystem* subSystem = service->SubSystems();
-
                     if (subSystem != nullptr) {
                         if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
                             SYSLOG(Logging::Startup, (_T("WebSource is not defined as External !!")));
@@ -91,11 +98,7 @@ namespace Plugin {
                     }
                 }
             }
-        }
-
-        if (_server == nullptr) {
-            _service->Unregister(&_notification);
-            _service = nullptr;
+        } else {
             message = _T("WebServer could not be instantiated.");
         }
 
@@ -104,39 +107,39 @@ namespace Plugin {
 
     /* virtual */ void WebServer::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == _service);
-        ASSERT(_server != nullptr);
+        if (_service != nullptr) {
+            ASSERT(_service == _service);
 
-        _service->Unregister(&_notification);
-        if (_memory != nullptr) {
-            _memory->Release();
-        }
+            _service->Unregister(&_notification);
 
-        // Stop processing of the browser:
-        _server->Release();
+            if (_server != nullptr) {
 
-        if(_connectionId != 0){
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                PluginHost::ISubSystem* subSystem = service->SubSystems();
+                if (subSystem != nullptr) {
+                    if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
+                        subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
+                        subSystem->Release();
+                    }
+                }
 
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
+                if (_memory != nullptr) {
+                    _memory->Release();
+                    _memory = nullptr;
+                }
+
+                // Stop processing of the browser:
+                VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
+                _server = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
             }
+
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
         }
-
-        PluginHost::ISubSystem* subSystem = service->SubSystems();
-
-        if (subSystem != nullptr) {
-            ASSERT(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true);
-            subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
-            subSystem->Release();
-        }
-
-        _memory = nullptr;
-        _server = nullptr;
-        _service = nullptr;
     }
 
     /* virtual */ string WebServer::Information() const

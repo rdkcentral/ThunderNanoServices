@@ -76,15 +76,11 @@ private:
             WallClockNotifier(const WallClockNotifier&) = delete;
             WallClockNotifier& operator=(const WallClockNotifier&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable: 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             WallClockNotifier()
                 : Core::Thread(Core::Thread::DefaultStackSize(), _T("WallClockNotifier")) {
             }
-#ifdef __WINDOWS__
-#pragma warning(default: 4355)
-#endif
+POP_WARNING()
             ~WallClockNotifier() = default;
 
         public:
@@ -225,7 +221,7 @@ public:
         : RPC::Communicator(
             source, 
             proxyServerPath, 
-            Core::proxy_cast<Core::IIPCServer>(engine))
+            Core::ProxyType<Core::IIPCServer>(engine))
         , _remoteEntry(nullptr)
     {
         // Once the socket is opened the first exchange between client and server is an 
@@ -247,7 +243,7 @@ public:
     }
 
 private:
-    void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+    void* Acquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
     {
         void* result = nullptr;
 

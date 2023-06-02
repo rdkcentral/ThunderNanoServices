@@ -34,12 +34,11 @@ find_library(PARODUS_SERVICE_LIBRARY parodus)
 if(EXISTS "${PARODUS_SERVICE_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    set(PARODUS_SERVICE_FOUND TRUE)
-
-    find_package_handle_standard_args(ParodusService DEFAULT_MSG PARODUS_SERVICE_FOUND PARODUS_SERVICE_LIBRARY)
+    find_package_handle_standard_args(ParodusService DEFAULT_MSG PARODUS_SERVICE_LIBRARY)
     mark_as_advanced(PARODUS_SERVICE_LIBRARY)
+    set(PARODUS_SERVICE_FOUND ${ParodusService})
 
-    if(NOT TARGET ParodusService::ParodusService)
+    if(ParodusService_FOUND AND NOT TARGET ParodusService::ParodusService)
         add_library(ParodusService::ParodusService UNKNOWN IMPORTED)
 
         set_target_properties(ParodusService::ParodusService PROPERTIES
@@ -47,4 +46,11 @@ if(EXISTS "${PARODUS_SERVICE_LIBRARY}")
                 IMPORTED_LOCATION "${PARODUS_SERVICE_LIBRARY}"
                 )
     endif()
+else()
+    if(ParodusService_FIND_REQUIRED)
+        message(FATAL_ERROR "PARODUS_SERVICE_LIBRARY not available")
+    elseif(NOT ParodusService_FIND_QUIETLY)
+        message(STATUS "PARODUS_SERVICE_LIBRARY not available")
+    endif()
+
 endif()

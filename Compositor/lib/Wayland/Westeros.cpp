@@ -93,7 +93,7 @@ namespace Westeros {
             return (_instance);
         }
 
-        virtual ~Compositor()
+        ~Compositor() override
         {
             TRACE(Trace::Information, (_T("Destructing the compositor")));
 
@@ -291,7 +291,7 @@ namespace Westeros {
         }
 
     private:
-        static void callback(bool ready)
+        static void callback(bool ready VARIABLE_IS_NOT_USED)
         {
         }
 
@@ -464,7 +464,7 @@ namespace Implementation {
 
         WesterosGL()
             : _context(nullptr)
-            , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz) {
+            , _resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz) {
         }
         ~WesterosGL() {
             if (_context != nullptr) {
@@ -490,16 +490,16 @@ namespace Implementation {
 
                 const char* request = nullptr;
                 switch(value) {
-                    case Exchange::IComposition::ScreenResolution_480i:      request = "768x480";      break;
-                    case Exchange::IComposition::ScreenResolution_480p:      request = "768x480";      break;
-                    case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720";     break;
-                    case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720x50";  break;
-                    case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080x24"; break;
-                    case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080x50"; break;
-                    case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080x50"; break;
-                    case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080x60"; break;
-                    case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160x50"; break;
-                    case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160x60"; break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_480i:      request = "768x480";      break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_480p:      request = "768x480";      break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_720p:      request = "1280x720";     break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz:  request = "1280x720x50";  break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz: request = "1920x1080x24"; break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz: request = "1920x1080x50"; break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz: request = "1920x1080x50"; break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz: request = "1920x1080x60"; break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz: request = "3840x2160x50"; break;
+                    case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz: request = "3840x2160x60"; break;
                     default: break;
                 }
                 if (request != nullptr) {

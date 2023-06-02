@@ -237,7 +237,7 @@ namespace Plugin {
             Core::CriticalSection _adminLock;
             std::map<const string, Exchange::ICommand::IFactory*> _factory;
         };
-        class Sequencer : public Core::IDispatchType<void> {
+        class Sequencer {
         private:
             Sequencer() = delete;
             Sequencer(const Sequencer& copy) = delete;
@@ -252,6 +252,7 @@ namespace Plugin {
                 , _name(name)
                 , _service(service)
                 , _sequenceList(5)
+                , _job(*this)
             {
                 ASSERT(service != nullptr);
 
@@ -261,6 +262,7 @@ namespace Plugin {
             }
             ~Sequencer()
             {
+                _job.Revoke();
                 // Make sure we are not executing anything if we get destructed.
                 Abort();
 
@@ -388,9 +390,18 @@ namespace Plugin {
                 // Wait for the sequencer to reaach a safe positon..
                 return (result);
             }
+            void Submit()
+            {
+                _job.Submit();
+            }
+            void Revoke()
+            {
+                _job.Revoke();
+            }
 
         private:
-            virtual void Dispatch()
+            friend Core::ThreadPool::JobType<Sequencer&>;
+            void Dispatch()
             {
                 _adminLock.Lock();
 
@@ -453,6 +464,7 @@ namespace Plugin {
             string _name;
             PluginHost::IShell* _service;
             Core::ProxyList<Exchange::ICommand> _sequenceList;
+            Core::WorkerPool::JobType<Sequencer&> _job;
         };
 
         Commander(const Commander&) = delete;
@@ -460,7 +472,7 @@ namespace Plugin {
 
     public:
         Commander();
-        virtual ~Commander();
+        ~Commander() override;
 
         BEGIN_INTERFACE_MAP(Commander)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -470,16 +482,16 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service);
-        virtual void Deinitialize(PluginHost::IShell* service);
-        virtual string Information() const;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
-        //	IWeb methods
+        //   IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request);
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
-        //	IExchange::ICommand::IRegistration methods
+        //   IExchange::ICommand::IRegistration methods
         // -------------------------------------------------------------------------------------------------------
         template <typename COMMAND>
         void Register()
@@ -496,11 +508,11 @@ namespace Plugin {
                 delete result;
             }
         }
-        virtual void Register(const string& className, Exchange::ICommand::IFactory* factory)
+        void Register(const string& className, Exchange::ICommand::IFactory* factory) override
         {
             _commandAdministrator.Register(className, factory);
         }
-        virtual Exchange::ICommand::IFactory* Unregister(const string& className)
+        Exchange::ICommand::IFactory* Unregister(const string& className) override
         {
             return (_commandAdministrator.Unregister(className));
         }

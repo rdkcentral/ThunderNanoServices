@@ -29,7 +29,17 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
 option(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL "Enable kernel connection control" OFF)
 
-set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
+set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING "Autostart")
+set(PLUGIN_BLUETOOTH_PORT "/dev/ttyAMA0" CACHE STRING "Device port")
+set(PLUGIN_BLUETOOTH_BAUDRATE 115200 CACHE STRING "Serial transmission speed in baud")
+set(PLUGIN_BLUETOOTH_NAME "Thunder" CACHE STRING "Name of the local Bluetooth device")
+set(PLUGIN_BLUETOOTH_SHORT_NAME "Thunder" CACHE STRING "Short name of the local Bluetooth device")
+set(PLUGIN_BLUETOOTH_CLASS "0x000424" CACHE STRING "Class of the local Bluetooth device")
+set(PLUGIN_BLUETOOTH_AUTO_PASSKEY_CONFIRM true CACHE STRING "Denotes if passkey confirmation request should be automattically cofirmed")
+set(PLUGIN_BLUETOOTH_CONTINUOUS_BACKGROUND_SCAN false CACHE STRING "Denotes if background LE scan should be done continuously")
+set(PLUGIN_BLUETOOTH_PERSISTMAC false CACHE STRING "Denotes Bluetooth address shall be made persistent")
+set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SOURCE "" CACHE STRING "Callsign of the A2DP Audio Source service (if any)")
+set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SINK "" CACHE STRING "Callsign of the A2DP Audio Sink service (if any)")
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -38,7 +48,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     BluetoothControl.cpp
-    BluetoothControlJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

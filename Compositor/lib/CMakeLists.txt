@@ -24,11 +24,11 @@ if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
         add_subdirectory(${COMPOSITOR_IMPLEMENTATION_PATH})
     else()
         include(GetExternalCode)
-        set(COMPOSITOR_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor implementation version")
+        set(COMPOSITOR_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor implementation version: commit_id_or_tag_or_branch_name")
         set(COMPOSITOR_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${COMPOSITOR_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${COMPOSITOR_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${COMPOSITOR_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         add_subdirectory(Nexus)
@@ -37,6 +37,6 @@ else()
     add_subdirectory (${PLUGIN_COMPOSITOR_IMPLEMENTATION})
 endif()
 
-if(PLUGIN_COMPOSITOR_TEST)
+#if(PLUGIN_COMPOSITOR_TEST)
     add_subdirectory (Test)
-endif()
+#endif()

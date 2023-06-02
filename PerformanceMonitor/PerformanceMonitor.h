@@ -38,7 +38,7 @@ namespace Plugin {
             RegisterAll();
         }
 
-        virtual ~PerformanceMonitor()
+        ~PerformanceMonitor() override
         {
             UnregisterAll();
         }
@@ -50,9 +50,9 @@ namespace Plugin {
 
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
     private:
         void RegisterAll();

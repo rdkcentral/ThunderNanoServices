@@ -30,73 +30,46 @@ namespace WPEFramework {
 namespace Plugin {
     class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
-        class Notification : public Exchange::IComposition::INotification {
-        private:
+        class Notification : public Exchange::IComposition::INotification, public RPC::IRemoteConnection::INotification {
+        public:
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
 
-        public:
             Notification(Compositor* parent)
                 : _parent(*parent)
-                , _client()
-                , _service()
             {
             }
-            virtual ~Notification()
-            {
-            }
-
-            void Initialize(PluginHost::IShell* service, Exchange::IComposition* client)
-            {
-                ASSERT(_service == nullptr);
-                ASSERT(service != nullptr);
-                ASSERT(_client == nullptr);
-                ASSERT(client != nullptr);
-
-                _client = client;
-                _client->AddRef();
-
-                _service = service;
-                _service->AddRef();
-                _client->Register(this);
-            }
-            void Deinitialize()
-            {
-
-                ASSERT(_service != nullptr);
-                ASSERT(_client != nullptr);
-
-                if (_client != nullptr) {
-                    _client->Unregister(this);
-                    _client->Release();
-                    _client = nullptr;
-                }
-
-                if (_service != nullptr) {
-                    _service->Release();
-                    _service = nullptr;
-                }
-            }
+            ~Notification() override = default;
 
             //   IComposition INotification methods
             // -------------------------------------------------------------------------------------------------------
-            virtual void Attached(const string& name, Exchange::IComposition::IClient* client) override
+            void Attached(const string& name, Exchange::IComposition::IClient* client) override
             {
                 _parent.Attached(name, client);
             }
-            virtual void Detached(const string& name) override
+            void Detached(const string& name) override
             {
                 _parent.Detached(name);
             }
 
+            //RPC::IRemoteConnection::INotification methods
+            void Activated(RPC::IRemoteConnection* /* connection */ ) override {
+            }
+
+            void Deactivated(RPC::IRemoteConnection* connection) override
+            {
+                _parent.Deactivated(connection);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */ ) override {
+            }
+
             BEGIN_INTERFACE_MAP(PluginSink)
             INTERFACE_ENTRY(Exchange::IComposition::INotification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
             Compositor& _parent;
-            Exchange::IComposition* _client;
-            PluginHost::IShell* _service;
         };
 
     public:
@@ -118,9 +91,7 @@ namespace Plugin {
                 Add(_T("workdir"), &WorkDir);
                 Add(_T("inputswitch"), &InputSwitch);
             }
-            ~Config()
-            {
-            }
+            ~Config() = default;
 
         public:
             Core::JSON::String System;
@@ -129,11 +100,10 @@ namespace Plugin {
         };
 
         class Data : public Core::JSON::Container {
-        private:
+        public:
             Data(const Data&) = delete;
             Data& operator=(const Data&) = delete;
 
-        public:
             Data()
                 : Core::JSON::Container()
                 , Clients()
@@ -146,9 +116,7 @@ namespace Plugin {
                 Add(_T("height"), &Height);
             }
 
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
         public:
             Core::JSON::ArrayType<Core::JSON::String> Clients;
@@ -164,7 +132,7 @@ namespace Plugin {
         Compositor& operator=(const Compositor&) = delete;
         
         Compositor();
-        virtual ~Compositor();
+        ~Compositor() override = default;
 
     public:
         BEGIN_INTERFACE_MAP(Compositor)
@@ -178,18 +146,19 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         //	IWeb methods
         // -------------------------------------------------------------------------------------------------------
-        virtual void Inbound(Web::Request& request) override;
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
+        void Inbound(Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
         void Attached(const string& name, Exchange::IComposition::IClient* client);
         void Detached(const string& name);
+        void Deactivated(RPC::IRemoteConnection* connection);
 
         uint32_t Resolution(const Exchange::IComposition::ScreenResolution);
         Exchange::IComposition::ScreenResolution Resolution() const;

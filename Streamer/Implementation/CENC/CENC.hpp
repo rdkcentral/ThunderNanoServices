@@ -36,6 +36,7 @@ namespace Player {
                 CENC& operator=(const CENC&) = delete;
 
                 CENC(const Exchange::IStream::streamtype streamType, const uint8_t index);
+                ~CENC() = default;
 
             public:
                 struct PipelineData {

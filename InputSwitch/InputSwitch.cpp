@@ -23,7 +23,20 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(InputSwitch, 1, 0);
+    namespace {
+
+        static Metadata<InputSwitch> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType< Core::JSON::ArrayType < InputSwitch::Data > > > jsonResponseFactory(1);
 
@@ -45,7 +58,7 @@ namespace Plugin {
         return (EMPTY_STRING);
     }
 
-    /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         _handler = nullptr;
     }
@@ -93,7 +106,7 @@ namespace Plugin {
                 }
 
                 result->ContentType = Web::MIMETypes::MIME_JSON;
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
             else {
                 string name (index.Current().Text());
@@ -111,7 +124,7 @@ namespace Plugin {
                     element.Enabled = Consumer(name);
 
                     result->ContentType = Web::MIMETypes::MIME_JSON;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->Body(Core::ProxyType<Web::IBody>(response));
                 }
             }
         }
@@ -156,7 +169,7 @@ namespace Plugin {
                     element.Enabled  = (mode == Exchange::IInputSwitch::ENABLED);
 
                     result->ContentType = Web::MIMETypes::MIME_JSON;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->Body(Core::ProxyType<Web::IBody>(response));
                 }
             }
         } else {

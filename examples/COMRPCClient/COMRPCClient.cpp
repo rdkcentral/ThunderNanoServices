@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
     // Or 
     // 2)
     //    if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
-    //        controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
+    //        controller = client->Acquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
     //
     // Or
     // 3)
@@ -245,6 +245,19 @@ int main(int argc, char* argv[])
                 string value;
                 if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
                     printf("Get value: %s\n", value.c_str());
+                }
+                break;
+
+            }
+            case 'X': {
+                uint32_t count = 0;
+                while (count++ != 500000) {
+                    string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
+                    if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
+                        if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
+                            printf("Iteration %6i: Set/Get value: %s\n", count, value.c_str());
+                        }
+                    }
                 }
                 break;
 

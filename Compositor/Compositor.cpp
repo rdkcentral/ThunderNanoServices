@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Compositor.h"
 #include <interfaces/IInputSwitch.h>
 
@@ -24,24 +24,36 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Compositor, 1, 0);
+    namespace {
 
-    static string PrimaryName(const string& layerName) 
+        static Metadata<Compositor> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            { subsystem::PLATFORM, subsystem::GRAPHICS });
+    }
+
+    static string PrimaryName(const string& layerName)
     {
         size_t pos = layerName.find(':', 0);
         if (pos != string::npos) {
-            return(layerName.substr(0, pos));
+            return (layerName.substr(0, pos));
         }
         return (layerName);
     }
 
     struct client_info {
         uint16_t layer;
-        string   name;
+        string name;
         Exchange::IComposition::IClient* access;
     };
 
-    static void SetZOrderList (std::list<client_info>& list, uint16_t index = 0) {
+    static void SetZOrderList(std::list<client_info>& list, uint16_t index = 0)
+    {
 
         // Time to set the new ZOrder. All effected clients have been listed...
         std::list<client_info>::iterator loop(list.begin());
@@ -52,31 +64,32 @@ namespace Plugin {
         }
     }
 
-    static void GetZOrderList(const Compositor::Clients& entries, std::list<client_info>& list) {
-        Compositor::Clients::const_iterator index (entries.cbegin());
+    static void GetZOrderList(const Compositor::Clients& entries, std::list<client_info>& list)
+    {
+        Compositor::Clients::const_iterator index(entries.cbegin());
         while (index != entries.cend()) {
             client_info entry = { static_cast<uint16_t>(index->second->ZOrder()), index->first, index->second };
 
-            std::list<client_info>::iterator loop (list.begin());
+            std::list<client_info>::iterator loop(list.begin());
 
             while ((loop != list.end()) && (loop->layer <= entry.layer)) {
                 loop++;
             }
             if (loop == list.end()) {
                 list.push_back(entry);
-            }
-            else {
+            } else {
                 list.insert(loop, entry);
             }
             index++;
         }
     }
 
-    static void Rearrange(std::list<client_info>& list, uint16_t index, uint16_t location, uint16_t start, uint16_t end) {
+    static void Rearrange(std::list<client_info>& list, uint16_t index, uint16_t location, uint16_t start, uint16_t end)
+    {
         // Now we have all the information, reconstruct the zOrder branch..
         std::list<client_info> set;
 
-        ASSERT (location != start);
+        ASSERT(location != start);
 
         // Now create a list with the items swapped.
         if (location == 0) {
@@ -85,44 +98,39 @@ namespace Plugin {
             std::list<client_info>::iterator loop(list.begin());
 
             while (loop != list.end()) {
-                if (start != 0) { 
-                    start--; 
-                    loop++; 
-                }
-                else if (end   != 0) { 
-                    end--; 
-                    set.push_back(*loop); 
-                    loop = list.erase(loop); 
-                }
-                else { 
-                    loop = list.erase(loop); 
+                if (start != 0) {
+                    start--;
+                    loop++;
+                } else if (end != 0) {
+                    end--;
+                    set.push_back(*loop);
+                    loop = list.erase(loop);
+                } else {
+                    loop = list.erase(loop);
                 }
             }
 
             // Now push the safed entries in front, in the same order :-)
             set.splice(set.end(), list);
-                
+
             SetZOrderList(set, index);
-        }
-        else {
-            ASSERT (location >= end);
+        } else {
+            ASSERT(location >= end);
 
             // Moving the callsign down in the order
             std::list<client_info>::iterator loop(list.begin());
-               
+
             while (loop != list.end()) {
-                if (end != 0) { 
+                if (end != 0) {
                     end--;
                     location--;
                     set.push_back(*loop);
-                    loop = list.erase(loop); 
-                }
-                else if (location != 0) { 
-                    location--; 
+                    loop = list.erase(loop);
+                } else if (location != 0) {
+                    location--;
                     loop++;
-                }
-                else {
-                    loop = list.erase(loop); 
+                } else {
+                    loop = list.erase(loop);
                 }
             }
 
@@ -152,20 +160,21 @@ namespace Plugin {
         , _inputSwitchCallsign()
 
     {
-        RegisterAll();
-    }
-
-    Compositor::~Compositor()
-    {
-        UnregisterAll();
     }
 
     /* virtual */ const string Compositor::Initialize(PluginHost::IShell* service)
     {
-        string message(EMPTY_STRING);
+        string message;
         string result;
 
         ASSERT(service != nullptr);
+        ASSERT(_service == nullptr);
+        ASSERT(_composition == nullptr);
+        ASSERT(_connectionId == 0);
+
+        _service = service;
+        _service->AddRef();
+        _service->Register(&_notification);
 
         Compositor::Config config;
         config.FromString(service->ConfigLine());
@@ -187,10 +196,9 @@ namespace Plugin {
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: CompositorImplementation";
         } else {
-            _service = service;
 
-            _notification.Initialize(service, _composition);
-
+            RegisterAll();
+            _composition->Register(&_notification);
             _composition->Configure(_service);
 
             _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
@@ -204,33 +212,58 @@ namespace Plugin {
     }
     /* virtual */ void Compositor::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(service == _service);
+        if (_service != nullptr) {
+	    ASSERT(_service == service);
 
-        // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
-        PluginHost::ISubSystem* subSystems = _service->SubSystems();
+            _service->Unregister(&_notification);
 
-        ASSERT(subSystems != nullptr);
+            // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
+            PluginHost::ISubSystem* subSystems = _service->SubSystems();
 
-        if (subSystems != nullptr) {
-            // Set Graphics event. We need to set up a handler for this at a later moment
-            subSystems->Set(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
-            subSystems->Release();
+            ASSERT(subSystems != nullptr);
+
+            if (subSystems != nullptr) {
+                // Set Graphics event. We need to set up a handler for this at a later moment
+                subSystems->Set(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
+                subSystems->Release();
+            }
+
+            if (_composition != nullptr) {
+                UnregisterAll();
+                _composition->Unregister(&_notification);
+
+                if (_inputSwitch != nullptr) {
+                    _inputSwitch->Release();
+                    _inputSwitch = nullptr;
+                }
+                if (_brightness != nullptr) {
+                    _brightness->Release();
+                    _brightness = nullptr;
+                }
+
+                // Stop processing:
+                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+                VARIABLE_IS_NOT_USED uint32_t result = _composition->Release();
+                _composition = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger the cleanup sequence for
+                    // out-of-process code. Which will guard
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
+            }
+
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
         }
-
-        if (_inputSwitch != nullptr) {
-            _inputSwitch->Release();
-            _inputSwitch = nullptr;
-        }
-        if (_brightness != nullptr) {
-            _brightness->Release();
-            _brightness = nullptr;
-        }
-        if (_composition != nullptr) {
-            _composition->Release();
-            _composition = nullptr;
-        }
-
-        _notification.Deinitialize();
     }
     /* virtual */ string Compositor::Information() const
     {
@@ -263,19 +296,19 @@ namespace Plugin {
             if (index.Next() == false || index.Current() == "Clients") {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
                 ZOrder(response->Clients);
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
             // http://<ip>/Service/Compositor/ZOrder (top to bottom)
             else if (index.Current() == "ZOrder") {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
                 ZOrder(response->Clients);
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
             // http://<ip>/Service/Compositor/Resolution
             else if (index.Current() == "Resolution") {
                 Core::ProxyType<Web::JSONBodyType<Data>> response(jsonResponseFactory.Element());
                 response->Resolution = Resolution();
-                result->Body(Core::proxy_cast<Web::IBody>(response));
+                result->Body(Core::ProxyType<Web::IBody>(response));
             }
 
             // http://<ip>/Service/Compositor/Geometry/[Callsign]
@@ -291,7 +324,7 @@ namespace Plugin {
                     response->Y = rectangle.x;
                     response->Width = rectangle.width;
                     response->Height = rectangle.height;
-                    result->Body(Core::proxy_cast<Web::IBody>(response));
+                    result->Body(Core::ProxyType<Web::IBody>(response));
                 } else {
                     result->ErrorCode = Web::STATUS_BAD_REQUEST;
                     result->Message = _T("Could not retrieve Geometry, Client not specified");
@@ -304,7 +337,7 @@ namespace Plugin {
             if (index.Next() == true) {
                 if (index.Current() == _T("Resolution")) { /* http://<ip>/Service/Compositor/Resolution/3 --> 720p*/
                     if (index.Next() == true) {
-                        Exchange::IComposition::ScreenResolution format(Exchange::IComposition::ScreenResolution_Unknown);
+                        Exchange::IComposition::ScreenResolution format(Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown);
                         uint32_t number(Core::NumberType<uint32_t>(index.Current()).Value());
 
                         if ((number != 0) && (number < 100)) {
@@ -316,15 +349,14 @@ namespace Plugin {
                                 format = value.Value();
                             }
                         }
-                        if (format != Exchange::IComposition::ScreenResolution_Unknown) {
+                        if (format != Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown) {
                             Resolution(format);
                         } else {
                             result->ErrorCode = Web::STATUS_BAD_REQUEST;
                             result->Message = _T("invalid parameter for resolution: ") + index.Current().Text();
                         }
                     }
-                } 
-                else {
+                } else {
                     string clientName(index.Current().Text());
 
                     if (clientName.empty() == true) {
@@ -372,7 +404,7 @@ namespace Plugin {
                                 error = Geometry(clientName, rectangle);
                             } else if (index.Current() == _T("Top")) { /* http://<ip>/Service/Compositor/Netflix/Top */
                                 error = ToTop(clientName);
-                            } 
+                            }
 
                             if (error != Core::ERROR_NONE && result->ErrorCode == Web::STATUS_OK) {
                                 if (error == Core::ERROR_UNAVAILABLE) {
@@ -392,7 +424,7 @@ namespace Plugin {
             }
 
             result->ContentType = Web::MIMETypes::MIME_JSON;
-            result->Body(Core::proxy_cast<Web::IBody>(response));
+            result->Body(Core::ProxyType<Web::IBody>(response));
         } else {
             result->ErrorCode = Web::STATUS_BAD_REQUEST;
             result->Message = string(_T("Unsupported request for the service."));
@@ -444,7 +476,7 @@ namespace Plugin {
         if (it != _clients.end()) {
 
             Exchange::IComposition::IClient* removedclient = it->second;
-            
+
             TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
             _clients.erase(it);
 
@@ -454,6 +486,14 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 
+    void Compositor::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        if (_connectionId == connection->Id()) {
+
+            ASSERT(_service != nullptr);
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+        }
+    }
     uint32_t Compositor::Resolution(const Exchange::IComposition::ScreenResolution format)
     {
         uint32_t result = Core::ERROR_UNAVAILABLE;
@@ -479,7 +519,8 @@ namespace Plugin {
         return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
     }
 
-    void Compositor::ZOrder(std::list<string>& zOrderedList, const bool primary) const {
+    void Compositor::ZOrder(std::list<string>& zOrderedList, const bool primary) const
+    {
 
         std::list<client_info> list;
 
@@ -488,18 +529,17 @@ namespace Plugin {
         GetZOrderList(_clients, list);
 
         // Now copy the sorted list to the actual list..
-        std::list<client_info>::const_iterator loop (list.begin());
+        std::list<client_info>::const_iterator loop(list.begin());
         while (loop != list.end()) {
             if (primary == false) {
                 zOrderedList.push_back(loop->name);
-            }
-            else {
+            } else {
                 string layerName = PrimaryName(loop->name);
                 if (std::find(zOrderedList.begin(), zOrderedList.end(), layerName) == zOrderedList.end()) {
                     zOrderedList.push_back(layerName);
                 }
             }
-                
+
             loop++;
         }
 
@@ -515,7 +555,7 @@ namespace Plugin {
         Clients::iterator it = _clients.begin();
 
         while (it != _clients.end()) {
-            string current (PrimaryName(it->first));
+            string current(PrimaryName(it->first));
             if (callsign == current) {
                 it->second->Opacity(value);
                 result = Core::ERROR_NONE;
@@ -549,10 +589,11 @@ namespace Plugin {
         Clients::iterator it = _clients.begin();
 
         while (it != _clients.end()) {
-            string current (PrimaryName(it->first));
+            string current(PrimaryName(it->first));
             if (callsign == current) {
-                it->second->Geometry(rectangle);
-                result = Core::ERROR_NONE;
+                TRACE(Trace::Information, (_T("Set Geometry for %s"), callsign.c_str()));
+
+                result = it->second->Geometry(rectangle);
 
                 TRACE(Trace::Information, (_T("Geometry x=%d y=%d width=%d height=%d is set for client surface %s"), rectangle.x, rectangle.y, rectangle.width, rectangle.height, callsign.c_str()));
             }
@@ -566,7 +607,7 @@ namespace Plugin {
 
     Exchange::IComposition::Rectangle Compositor::Geometry(const string& callsign) const
     {
-        Exchange::IComposition::Rectangle result { 0,0,0,0 };
+        Exchange::IComposition::Rectangle result { 0, 0, 0, 0 };
         Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
         if (client != nullptr) {
@@ -577,7 +618,8 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t Compositor::Select(const string& callsign) {
+    uint32_t Compositor::Select(const string& callsign)
+    {
 
         uint32_t result = Core::ERROR_UNAVAILABLE;
 
@@ -585,8 +627,7 @@ namespace Plugin {
             result = _inputSwitch->Select(callsign);
 
             TRACE(Trace::Information, (_T("Input is directed to client %s"), callsign.c_str()));
-        }
-        else {
+        } else {
             Exchange::IInputSwitch* switcher = _service->QueryInterfaceByCallsign<Exchange::IInputSwitch>(_inputSwitchCallsign);
             if (switcher != nullptr) {
                 result = switcher->Select(callsign);
@@ -598,14 +639,15 @@ namespace Plugin {
         return (result);
     }
 
-    uint32_t Compositor::PutBefore(const string& relative, const string& callsign) {
+    uint32_t Compositor::PutBefore(const string& relative, const string& callsign)
+    {
         uint32_t result = Core::ERROR_NONE;
 
         std::list<client_info> list;
 
-        uint16_t relativeIndex      (relative.empty() ? 0 : ~0);
-        uint16_t callsignStartIndex (~0);
-        uint16_t callsignEndIndex   (~0);
+        uint16_t relativeIndex(relative.empty() ? 0 : ~0);
+        uint16_t callsignStartIndex(~0);
+        uint16_t callsignEndIndex(~0);
 
         _adminLock.Lock();
 
@@ -613,17 +655,16 @@ namespace Plugin {
 
         // Find the index of what we need to move
         uint32_t current = 0;
-        std::list<client_info>::iterator loop (list.begin());
+        std::list<client_info>::iterator loop(list.begin());
 
         while (loop != list.end()) {
-            string layerName (PrimaryName(loop->name));
+            string layerName(PrimaryName(loop->name));
 
-            if ( (relativeIndex == static_cast<uint16_t>(~0)) && (layerName == relative) ) {
+            if ((relativeIndex == static_cast<uint16_t>(~0)) && (layerName == relative)) {
                 relativeIndex = current;
-            }
-            else if (layerName == callsign) {
+            } else if (layerName == callsign) {
                 if (callsignStartIndex == static_cast<uint16_t>(~0)) {
-                    callsignStartIndex  = current;
+                    callsignStartIndex = current;
                 }
                 callsignEndIndex = current;
             }
@@ -642,8 +683,7 @@ namespace Plugin {
 
             if (relativeIndex < callsignStartIndex) {
                 Rearrange(list, startIndex, 0, callsignStartIndex - startIndex, callsignEndIndex - callsignStartIndex + 1);
-            }
-            else {
+            } else {
                 Rearrange(list, startIndex, relativeIndex - startIndex, 0, callsignEndIndex - callsignStartIndex + 1);
             }
             TRACE(Trace::Information, (_T("Client surface %s is put below surface %s"), callsign.c_str(), relative.c_str()));
@@ -651,9 +691,9 @@ namespace Plugin {
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
- 
+
         _adminLock.Unlock();
- 
+
         return (result);
     }
 

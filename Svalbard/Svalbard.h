@@ -40,10 +40,12 @@ namespace Plugin {
             ~Notification() override = default;
 
         public:
-            void Activated(RPC::IRemoteConnection*) override {
+            void Activated(RPC::IRemoteConnection* /* connection */) override {
             }
             virtual void Deactivated(RPC::IRemoteConnection* connection) override {
                 _parent.Deactivated(connection);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */) override {
             }
 
             BEGIN_INTERFACE_MAP(Notification)
@@ -58,18 +60,14 @@ namespace Plugin {
         Svalbard(const Svalbard&) = delete;
         Svalbard& operator=(const Svalbard&) = delete;
 
-        #ifdef __WINDOWS__
-        #pragma warning(disable: 4355)
-        #endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         Svalbard()
             : _connectionId(0)
             , _service(nullptr)
             , _svalbard(nullptr)
             , _notification(*this) {
         }
-        #ifdef __WINDOWS__
-        #pragma warning(default: 4355)
-        #endif
+POP_WARNING()
         ~Svalbard() override = default;
 
         BEGIN_INTERFACE_MAP(Svalbard)

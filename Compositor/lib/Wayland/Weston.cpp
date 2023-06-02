@@ -445,9 +445,13 @@ namespace Weston {
                 , _timer(nullptr)
                 , _surface(surface)
             {
+                struct weston_geometry geometry = weston_surface_get_bounding_box(_surface);
+                _width = geometry.width;
+                _height = geometry.height;
+
                 RegisterSurfaceDestroyListener(surface);
             }
-            virtual ~SurfaceData()
+            ~SurfaceData() override
             {
                 RemoveTimer();
             }
@@ -504,7 +508,7 @@ namespace Weston {
                 surfaceData->RemoveTimer();
                 return 1;
             }
-            void ZOrder(const uint32_t zorder) override
+            uint32_t ZOrder(const uint16_t zorder) override
             {
                 if (_timer != nullptr) {
                     wl_event_source_remove(_timer);
@@ -514,21 +518,28 @@ namespace Weston {
                 struct wl_event_loop* loop = wl_display_get_event_loop(compositor->wl_display);
                 _timer = wl_event_loop_add_timer(loop, SetZOrder, this);
                 wl_event_source_timer_update(_timer, 1);
+                return (Core::ERROR_NONE);
+            }
+            inline uint32_t ZOrder() const override
+            {
+                return _zorder;
             }
             void Resize(const int x, const int y, const int w, const int h)
             {
-                struct weston_view* view = nullptr;
-                wl_list_for_each(view, &_surface->views, surface_link) {
-                    weston_view_set_position(view, x, y);
-                    weston_view_set_mask(view, 0, 0, w, h);
-                    weston_surface_damage(view->surface);
-                }
+                  struct weston_view* view = nullptr;
+                  wl_list_for_each(view, &_surface->views, surface_link) {
+                      weston_view_set_position(view, x, y);
+                      weston_view_set_mask(view, 0, 0, w, h);
+                      weston_surface_damage(view->surface);
+                  }
+                  _width = w;
+                  _height = h;
             }
-            void Visibility(const bool visible)
+            void Visibility(const bool visible) override
             {
                 UpdateOpacity(visible);
             }
-            void Opacity(const uint32_t opacity)
+            void Opacity(const uint32_t opacity) override
             {
                 UpdateOpacity(static_cast<float>(opacity)/MaxOpacityRange);
             }
@@ -538,10 +549,6 @@ namespace Weston {
                     wl_event_source_remove(_timer);
                     _timer = nullptr;
                 }
-            }
-            inline uint32_t ZOrder() const
-            {
-                return _zorder;
             }
             inline struct weston_compositor* WestonCompositor() const
             {
@@ -593,7 +600,7 @@ namespace Weston {
                 _surfaceDestroyListener.notify = NotifySurfaceDestroy;
                 wl_signal_add(&surface->destroy_signal, &_surfaceDestroyListener);
             }
-            static void NotifySurfaceDestroy(struct wl_listener* listener, void* data)
+            static void NotifySurfaceDestroy(struct wl_listener* listener, VARIABLE_IS_NOT_USED void* data)
             {
                 SurfaceData* surfaceData;
                 surfaceData = wl_container_of(listener, surfaceData, _surfaceDestroyListener);
@@ -1187,7 +1194,7 @@ namespace Weston {
                     DestroyOutput(output);
                 }
             }
-            static void HeadsChanged(struct wl_listener* listener, void* argument)
+            static void HeadsChanged(VARIABLE_IS_NOT_USED struct wl_listener* listener, void* argument)
             {
                 TRACE_GLOBAL(Trace::Information, (_T("DRM Backend Loading in progress")));
                 struct weston_compositor* compositor = static_cast<weston_compositor*>(argument);
@@ -1300,7 +1307,7 @@ namespace Weston {
             , _display(nullptr)
             , _exitTimer(nullptr)
             , _compositor(nullptr)
-            , _resolution(Exchange::IComposition::ScreenResolution_1080i50Hz)
+            , _resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz)
             , _loadedSignal(false, true)
             , _adminLock()
         {
@@ -1309,6 +1316,7 @@ namespace Weston {
             ASSERT(_instance == nullptr);
             _instance = this;
             _service = service;
+            _service->AddRef();
 
             string runtimeDir;
             Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), runtimeDir);
@@ -1353,6 +1361,8 @@ namespace Weston {
             wl_display_destroy(_display);
 
             _instance = nullptr;
+
+            _service->Release();
             _service = nullptr;
         }
         uint32_t StartComposition()
@@ -1401,7 +1411,7 @@ namespace Weston {
         }
         inline bool LoadBackend(PluginHost::IShell* service)
         {
-            _backend = Create<DRM>(_service);
+            _backend = Create<DRM>(service);
             _backend->Load(this);
             weston_compositor_flush_heads_changed(_compositor);
             ASSERT(_backendLoaded == true);
@@ -1494,16 +1504,16 @@ namespace Weston {
 
             const char* request = nullptr;
             switch(value) {
-                case Exchange::IComposition::ScreenResolution_480i:      request = "720x480@60.0";       break;
-                case Exchange::IComposition::ScreenResolution_480p:      request = "720x480@60.0 16:9";  break;
-                case Exchange::IComposition::ScreenResolution_720p:      request = "1280x720@60.0 16:9"; break;
-                case Exchange::IComposition::ScreenResolution_720p50Hz:  request = "1280x720@50.0";      break;
-                case Exchange::IComposition::ScreenResolution_1080p24Hz: request = "1920x1080@24.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080i50Hz: request = "1920x1080@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080p50Hz: request = "1920x1080@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_1080p60Hz: request = "1920x1080@60.0";     break;
-                case Exchange::IComposition::ScreenResolution_2160p50Hz: request = "3840x2160@50.0";     break;
-                case Exchange::IComposition::ScreenResolution_2160p60Hz: request = "3840x2160@60.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_480i:      request = "720x480@60.0";       break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_480p:      request = "720x480@60.0 16:9";  break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_720p:      request = "1280x720@60.0 16:9"; break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz:  request = "1280x720@50.0";      break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz: request = "1920x1080@24.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz: request = "1920x1080@50.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz: request = "1920x1080@60.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz: request = "3840x2160@50.0";     break;
+                case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz: request = "3840x2160@60.0";     break;
                 default: break;
             }
             if (request != nullptr) {
@@ -1537,7 +1547,7 @@ namespace Weston {
             _surfaceActivateListener.notify = NotifySurfaceActivate;
             wl_signal_add(&_compositor->activate_signal, &_surfaceActivateListener);
         }
-        static void NotifySurfaceActivate(struct wl_listener* listener, void* data)
+        static void NotifySurfaceActivate(VARIABLE_IS_NOT_USED struct wl_listener* listener, void* data)
         {
             struct weston_surface_activation_data* activationData =
                    static_cast<struct weston_surface_activation_data*>(data);

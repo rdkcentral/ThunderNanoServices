@@ -27,20 +27,24 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+if(Spark_FIND_QUIETLY)
+    set(_SPARK_MODE QUIET)
+elseif(Spark_FIND_REQUIRED)
+    set(_SPARK_MODE REQUIRED)
+endif()
+
 find_package(PkgConfig)
-pkg_check_modules(SPARK Spark)
-
-include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(Spark DEFAULT_MSG SPARK_LIBRARIES)
-
-mark_as_advanced(SPARK_INCLUDE_DIRS SPARK_LIBRARIES)
-
+pkg_check_modules(SPARK ${_SPARK_MODE} Spark)
 
 find_library(SPARK_LIBRARY NAMES ${SPARK_LIBRARIES}
         HINTS ${SPARK_LIBDIR} ${SPARK_LIBRARY_DIRS}
         )
 
-if(SPARK_LIBRARY AND NOT TARGET Spark::Spark)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Spark DEFAULT_MSG SPARK_FOUND SPARK_LIBRARY SPARK_LIBRARIES)
+mark_as_advanced(SPARK_INCLUDE_DIRS SPARK_LIBRARY SPARK_LIBRARIES)
+
+if(Spark_FOUND AND NOT TARGET Spark::Spark)
     add_library(Spark::Spark UNKNOWN IMPORTED)
     set_target_properties(Spark::Spark PROPERTIES
             IMPORTED_LOCATION "${SPARK_LIBRARY}"

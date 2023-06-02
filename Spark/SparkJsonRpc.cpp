@@ -30,7 +30,6 @@ namespace Plugin {
     using namespace JsonData::StateControl;
 
     // Registration
-    //
 
     void Spark::RegisterAll()
     {
@@ -103,10 +102,12 @@ namespace Plugin {
 
         if (param.IsSet()) {
             if (param == VisibilityType::VISIBLE) {
-                _spark->Hide(true);
+                _spark->Hide(false);
             }
             else {
-                _spark->Hide(false);
+                // Note: Hide is not working, since there is no
+                // required platform support from pxCore library
+                _spark->Hide(true);
             }
 
             result =  Core::ERROR_NONE;

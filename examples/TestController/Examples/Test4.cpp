@@ -38,14 +38,14 @@ public:
         ;
     }
 
-    virtual ~Test4()
+    ~Test4() override
     {
         TestCore::TestCategory2::Instance().Unregister(this);
     }
 
 public:
     // ICommand methods
-    string Execute(const string& params) final
+    string Execute(const string& params VARIABLE_IS_NOT_USED) final
     {
         TestCore::TestResult jsonResult;
         string result;

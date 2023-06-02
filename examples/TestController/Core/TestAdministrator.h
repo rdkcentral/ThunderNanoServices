@@ -43,7 +43,7 @@ namespace TestCore {
         {
         }
 
-        virtual ~TestIterator() = default;
+        ~TestIterator() override = default;
 
         BEGIN_INTERFACE_MAP(TestIterator)
         INTERFACE_ENTRY(Exchange::ITestController::ITest::IIterator)
@@ -88,7 +88,7 @@ namespace TestCore {
         {
         }
 
-        virtual ~CategoryIterator() = default;
+        ~CategoryIterator() override = default;
 
         BEGIN_INTERFACE_MAP(CategoryIterator)
         INTERFACE_ENTRY(Exchange::ITestController::ICategory::IIterator)
@@ -119,8 +119,8 @@ namespace TestCore {
         IteratorImpl _iterator;
     };
 
-    class TestAdministrator {
-    private:
+    class TestAdministrator : virtual public Core::IUnknown {
+    protected:
         TestAdministrator()
             : _adminLock()
             , _testsCategories()
@@ -134,14 +134,14 @@ namespace TestCore {
         static TestAdministrator& Instance();
         ~TestAdministrator()
         {
-            ASSERT((_testsCategories.empty() == true) && "Something went wrong");
-
             for (auto& testCategory : _testsCategories) {
+
                 Exchange::ITestController::ITest::IIterator* existingTests = testCategory.second->Tests();
                 while (existingTests->Next()) {
-                    testCategory.second->Unregister(existingTests->Test());
+                    existingTests->Test()->Release();
                 }
-                Revoke(testCategory.second);
+                existingTests->Release();
+                testCategory.second->Release();
             }
         }
 
@@ -152,6 +152,8 @@ namespace TestCore {
         Exchange::ITestController::ICategory::IIterator* Categories();
         Exchange::ITestController::ICategory* Category(const string& name);
 
+        BEGIN_INTERFACE_MAP(TestAdministrator)
+        END_INTERFACE_MAP
     private:
         mutable Core::CriticalSection _adminLock;
         CategoriesContainer _testsCategories;

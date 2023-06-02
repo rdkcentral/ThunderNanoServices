@@ -34,11 +34,11 @@ if(COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH)
     add_subdirectory (${COMPOSITOR_WAYLAND_IMPLEMENTATION_PATH})
 else ()
     include(GetExternalCode)
-    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version")
+    set(COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION "master" CACHE STRING "Compositor wayland implementation version: commit_id_or_tag_or_branch_name")
     set(COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Compositor" CACHE STRING "Compositor wayland implementation repository")
     GetExternalCode(
         GIT_REPOSITORY ${COMPOSITOR_WAYLAND_IMPLEMENTATION_REPOSITORY}
-        GIT_TAG ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
+        GIT_VERSION ${COMPOSITOR_WAYLAND_IMPLEMENTATION_VERSION}
         SOURCE_DIR "Nexus"
     )
     add_subdirectory (Nexus/NexusServer)
@@ -63,7 +63,8 @@ if(PLUGIN_COMPOSITOR_NXSERVER)
     target_compile_definitions(${TARGET}
         PRIVATE
             ENABLE_NXSERVER=1)
-    if(V3D_DRM_DISABLE)
+    target_include_directories(${TARGET} PRIVATE Nexus)
+    if (V3D_DRM_DISABLE)
         target_compile_definitions(${TARGET}
             PRIVATE
                 V3D_DRM_DISABLE=1)
@@ -101,17 +102,19 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
-    find_package(WestonServer)
-    if(WESTON_SERVER_FOUND)
-        target_sources(${TARGET}
-            PRIVATE
-                Weston.cpp
-        )
-        target_link_libraries(${TARGET}
-            PRIVATE
-                WestonServer::WestonServer
-        )
-    endif(WESTON_SERVER_FOUND)
+    find_package(WestonServer REQUIRED)
+    target_sources(${TARGET}
+        PRIVATE
+            Weston.cpp
+    )
+    target_link_libraries(${TARGET}
+        PRIVATE
+            WestonServer::WestonServer
+    )
+    install(
+        FILES config/weston.ini
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor/weston
+    )
 elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     find_package(WesterosServer)
     if(WESTEROS_SERVER_FOUND)
@@ -133,21 +136,13 @@ elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     endif(WESTEROS_SERVER_FOUND)
 endif()
 
-if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
-    find_package(${NAMESPACE}VirtualInput REQUIRED)
-    target_link_libraries(${TARGET} 
-        PRIVATE 
-           ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
-    )
-endif(PLUGIN_COMPOSITOR_VIRTUALINPUT)
+find_package(${NAMESPACE}VirtualInput REQUIRED)
+target_link_libraries(${TARGET} 
+    PRIVATE 
+        ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
+)
 
 install(
     TARGETS ${TARGET}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
 )
-
-install(
-    FILES config/weston.ini
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor/weston
-)
-

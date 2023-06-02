@@ -1,0 +1,6 @@
+autostart = "false"
+
+configuration = JSON()
+
+if "@PLUGIN_SECURESHELLSERVER_IMPLEMENTATION@" == "Dropbear":
+    configuration.add("inputparameters", "-R -p 22")

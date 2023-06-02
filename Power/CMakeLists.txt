@@ -70,13 +70,13 @@ if(${PLUGIN_POWER_MFRPERSIST_STATE} STREQUAL ON AND MFRPWRMGRLIBS_FOUND)
     message("Enabling Persistent power state feature...")
     target_sources(${MODULE_NAME} PRIVATE
         PowerImplementation/${PLUGIN_POWER_IMPLEMENTATION}/MFRPersistPower.cpp)
-    target_link_libraries(${MODULE_NAME} PRIVATE pwrmgrlibs::pwrmgrlibs)
+    target_link_libraries(${MODULE_NAME} PRIVATE MFRPwrMgrLibs::MFRPwrMgrLibs)
 else()
     target_sources(${MODULE_NAME} PRIVATE
         PowerImplementation/Stub/MFRPersistPowerStub.cpp)
 endif()
 
-if(BCM_PM_FOUND)
+if(BcmPowerManager_FOUND)
     find_package(NEXUS REQUIRED)
     find_package(NXCLIENT REQUIRED)
     if (NXCLIENT_FOUND)
@@ -88,11 +88,11 @@ if(BCM_PM_FOUND)
                     ${POWER_IMPLEMENTATION_PATH}/PowerImplementation.cpp)
         else()
             include(GetExternalCode)
-            set(POWER_IMPLEMENTATION_VERSION "master" CACHE STRING "Power implementation version")
+            set(POWER_IMPLEMENTATION_VERSION "master" CACHE STRING "Power implementation version: commit_id_or_tag_or_branch_name")
             set(POWER_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Power" CACHE STRING "Power implementation repository")
             GetExternalCode(
                 GIT_REPOSITORY ${POWER_IMPLEMENTATION_REPOSITORY}
-                GIT_TAG ${POWER_IMPLEMENTATION_VERSION}
+                GIT_VERSION ${POWER_IMPLEMENTATION_VERSION}
                 SOURCE_DIR "PowerImplementation/Broadcom"
             )
             target_sources(${MODULE_NAME}

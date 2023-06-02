@@ -72,7 +72,8 @@ namespace Plugin {
             UNKNOWN
         };
     private:
-        static constexpr const TCHAR* Name = "imageTemp";
+        static constexpr const TCHAR* ImageFileName = "imageTemp";
+        static constexpr const TCHAR* HashContextFileName = "hashTemp";
         static int32_t constexpr WaitTime = Core::infinite;
 
     private:
@@ -112,14 +113,12 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            virtual ~Notifier()
-            {
-            }
-            virtual void NotifyStatus(const uint32_t status) override
+            ~Notifier() override = default;
+            void NotifyStatus(const uint32_t status) override
             {
                 _parent.NotifyDownloadStatus(status);
             }
-            virtual void NotifyProgress(const uint32_t transferred) override
+            void NotifyProgress(const uint32_t transferred) override
             {
                 _parent.NotifyProgress(UpgradeStatus::DOWNLOAD_STARTED, ErrorType::ERROR_NONE, transferred);
             }
@@ -140,9 +139,7 @@ namespace Plugin {
                 ASSERT(parent != nullptr);
             }
 
-            virtual ~Upgrader()
-            {
-            }
+            ~Upgrader() override = default;
             void Schedule() {
                 Core::ProxyType<Core::IDispatch> job(*this);
                 Core::IWorkerPool::Instance().Submit(job);
@@ -151,7 +148,7 @@ namespace Plugin {
                 Core::ProxyType<Core::IDispatch> job(*this);
                 Core::IWorkerPool::Instance().Revoke(job);
             }
-            virtual void Dispatch() override {
+            void Dispatch() override {
                 _parent.Upgrade();
             }
 
@@ -181,7 +178,7 @@ namespace Plugin {
             RegisterAll();
         }
 
-        virtual ~FirmwareControl()
+        ~FirmwareControl() override
         {
             UnregisterAll();
 
@@ -201,9 +198,9 @@ namespace Plugin {
     public:
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
-        virtual const string Initialize(PluginHost::IShell* service) override;
-        virtual void Deinitialize(PluginHost::IShell* service) override;
-        virtual string Information() const override;
+        const string Initialize(PluginHost::IShell* service) override;
+        void Deinitialize(PluginHost::IShell* service) override;
+        string Information() const override;
 
         inline void NotifyDownloadStatus(const uint32_t status)
         {
@@ -284,11 +281,12 @@ namespace Plugin {
 
         inline void RemoveDownloadedFile()
         {
-            Core::File _storage(_destination + Name);
-            if (_storage.Exists()) {
-                _storage.Destroy();
+            Core::File storage(_destination + ImageFileName);
+            if (storage.Exists()) {
+                storage.Destroy();
             }
         }
+
         inline void ResetStatus()
         {
             _adminLock.Lock();

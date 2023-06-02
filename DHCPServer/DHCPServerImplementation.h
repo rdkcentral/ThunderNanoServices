@@ -504,7 +504,7 @@ namespace Plugin {
             {
                 return (_optionData[2]);
             }
-            inline uint16_t SendData(uint8_t dataFrame[], const uint16_t length)
+            inline uint16_t SendData(uint8_t dataFrame[], const uint16_t length VARIABLE_IS_NOT_USED)
             {
                 ASSERT(length >= (sizeof(_dhcpReply) + _optionSize + 1));
 
@@ -692,9 +692,7 @@ namespace Plugin {
                 _dns = ntohl(static_cast<const Core::NodeId::SocketInfo&>(DNS).IPV4Socket.sin_addr.s_addr);
             }
         }
-        virtual ~DHCPServerImplementation()
-        {
-        }
+        ~DHCPServerImplementation() override = default;
 
     public:
         inline bool IsActive() const
@@ -867,10 +865,10 @@ namespace Plugin {
             }
         }
         // Signal a state change, Opened, Closed or Accepted
-        virtual void StateChange()
+        void StateChange() override
         {
         }
-        virtual uint16_t SendData(uint8_t dataFrame[], const uint16_t length)
+        uint16_t SendData(uint8_t dataFrame[], const uint16_t length) override
         {
             uint16_t result = 0;
 
@@ -892,7 +890,7 @@ namespace Plugin {
 
             return (result);
         }
-        virtual uint16_t ReceiveData(uint8_t dataFrame[], const uint16_t length)
+        uint16_t ReceiveData(uint8_t dataFrame[], const uint16_t length) override
         {
             const CoreMessage* const message = reinterpret_cast<const CoreMessage*>(dataFrame);
             // Check the size of the message, certain elments need to be in there (RFC 2131 section 3)

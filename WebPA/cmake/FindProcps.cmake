@@ -1,8 +1,8 @@
-# - Try to find WDMP-C
+# - Try to find Procps
 # Once done this will define
-#  PROCPS_FOUND - System has WDMP-C
-#  PROCPS_INCLUDE_DIRS - The WDMP-C include directories
-#  PROCPS_LIBRARIES - The libraries needed to use WDMP-C
+#  PROCPS_FOUND - System has Procps
+#  PROCPS_INCLUDE_DIRS - The Procps include directories
+#  PROCPS_LIBRARIES - The libraries needed to use Procps
 #
 # Copyright (C) 2019 Metrological.
 #
@@ -34,17 +34,23 @@ find_library(PROCPS_LIBRARY procps)
 if(EXISTS "${PROCPS_LIBRARY}")
     include(FindPackageHandleStandardArgs)
 
-    set(PROCPS_FOUND TRUE)
-
-    find_package_handle_standard_args(PROCPS DEFAULT_MSG PROCPS_FOUND PROCPS_LIBRARY)
+    find_package_handle_standard_args(Procps DEFAULT_MSG PROCPS_LIBRARY)
     mark_as_advanced(PROCPS_LIBRARY)
+    set(PROCPS_FOUND ${Procps_FOUND})
 
-    if(NOT TARGET procps::procps)
-        add_library(procps::procps UNKNOWN IMPORTED)
+    if(Procps_FOUND AND NOT TARGET Procps::Procps)
+        add_library(Procps::Procps UNKNOWN IMPORTED)
 
-        set_target_properties(procps::procps PROPERTIES
+        set_target_properties(Procps::Procps PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${PROCPS_LIBRARY}"
                 )
     endif()
+else()
+    if(Procps_FIND_REQUIRED)
+        message(FATAL_ERROR "PROCPS_LIBRARY not available")
+    elseif(NOT Procps_FIND_QUIETLY)
+        message(STATUS "PROCPS_LIBRARY not available")
+    endif()
+
 endif()

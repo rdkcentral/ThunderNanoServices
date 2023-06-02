@@ -37,14 +37,14 @@ public:
         TestCore::TestCategory1::Instance().Register(this);
     }
 
-    virtual ~Test1()
+    ~Test1() override
     {
         TestCore::TestCategory1::Instance().Unregister(this);
     }
 
 public:
     // ICommand methods
-    string Execute(const string& params) final
+    string Execute(const string& params VARIABLE_IS_NOT_USED) final
     {
         TestCore::TestResult jsonResult;
         string result;

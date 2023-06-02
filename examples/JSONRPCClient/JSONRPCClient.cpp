@@ -24,10 +24,91 @@
 #endif
 #include <interfaces/IPerformance.h>
 #include <interfaces/IMath.h>
+#include <interfaces/json/JsonData_Math.h>
 
 #include "../JSONRPCPlugin/Data.h"
 
 namespace WPEFramework {
+
+namespace Plugin {
+    class MathImplementation : public Exchange::IMath {
+    public:
+        MathImplementation(const MathImplementation&) = delete;
+        MathImplementation& operator= (const MathImplementation&) = delete;
+
+        MathImplementation() = default;
+        ~MathImplementation() override = default;
+
+    public:
+        // Inherited via IMath
+        uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+        {
+            sum = A + B;
+            return (Core::ERROR_NONE);
+        }
+
+        uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+        {
+            sum = A - B;
+            return (Core::ERROR_NONE);
+        }
+
+        BEGIN_INTERFACE_MAP(MathImplementation)
+            INTERFACE_ENTRY(Exchange::IMath)
+        END_INTERFACE_MAP
+    };
+
+    class MeasurementClock {
+    public:
+        MeasurementClock(const MeasurementClock&) = delete;
+        MeasurementClock& operator= (const MeasurementClock&) = delete;
+
+        MeasurementClock() {
+            Clear();
+        }
+        ~MeasurementClock() = default;
+
+    public:
+        void Clear() {
+            _checks = 0;
+            _min = ~0;
+            _max = 0;
+            _start = 0;
+            _total = 0;
+        }
+        void Start() {
+            _start = Core::Time::Now().Ticks();
+        }
+        void Stop() {
+            uint64_t clock = Core::Time::Now().Ticks();
+            uint32_t duration = static_cast<uint32_t>(clock - _start);
+            if (duration > _max) _max = duration;
+            if (duration < _min) _min = duration;
+            _checks++;
+            _total += duration;
+        }
+        uint32_t Measurements() const {
+            return (_checks);
+        }
+        uint32_t Average() const {
+            return (_checks > 0 ? static_cast<uint32_t>(_total / _checks) : 0);
+        }
+        uint32_t Min() const {
+            return (_min);
+        }
+        uint32_t Max() const {
+            return (_max);
+        }
+
+    private:
+        uint32_t _checks;
+        uint32_t _min;
+        uint32_t _max;
+        uint64_t _start;
+        uint64_t _stop;
+        uint64_t _total;
+    };
+}
 
 namespace JSONRPC {
 template <typename INTERFACE>
@@ -170,13 +251,13 @@ static void clock_legacy(const Data::Time& parameters)
 
 static void async_callback(const Data::Response& response)
 {
-    printf("Finally we are triggered. GLOBAL: @ %s\n", Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
+    printf("Finally we are triggered. GLOBAL: @ %s\n", Core::Time(response.Time.Value()).ToRFC1123().c_str());
 }
 
 class Callbacks {
 public:
     void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
-        printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value(), false).ToRFC1123().c_str());
+        printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value()).ToRFC1123().c_str());
     }
 };
 
@@ -320,7 +401,7 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
         printf("Can not measure the performance of COMRPC, there is no connection.\n");
     } else {
         Core::StopWatch measurement;
-        Exchange::IPerformance* perf = client->Aquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
+        Exchange::IPerformance* perf = client->Acquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
         if (perf == nullptr) {
             printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
         } else {
@@ -462,6 +543,8 @@ int main(int argc, char** argv)
 
         ASSERT(client.IsValid() == true);
 
+        Core::Sink<Plugin::MathImplementation> localPerformance;
+
         // Open up the COMRPC Client connection.
         if (client->Open(2000) != Core::ERROR_NONE) {
             printf("Failed to open up a COMRPC link with the server. Is the server running ?\n");
@@ -478,7 +561,7 @@ int main(int argc, char** argv)
         printf("Preparing JSONRPC!!!\n");
 
         #ifdef __WINDOWS__
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:8080")));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:25555")));
         #else
         Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
         #endif
@@ -758,7 +841,7 @@ int main(int argc, char** argv)
             }
             case '@':
             {
-                Exchange::IMath* math = client->Aquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
+                Exchange::IMath* math = client->Acquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
                 if (math != nullptr) {
                     uint16_t A = 10;
                     uint16_t B = 5;
@@ -768,6 +851,56 @@ int main(int argc, char** argv)
                     math->Sub(A, B, Sum);
                     printf("Diff of %d & %d using IMath::Sub = %d\n", A, B, Sum);
                 }
+                break;
+            }
+            case '#':
+            {
+                const uint32_t PerformanceRuns = 100;
+                Plugin::MeasurementClock theClock;
+                Exchange::IMath* local = localPerformance.IUnknown::QueryInterface<Exchange::IMath>();
+                Exchange::IMath* comrpc = client->Acquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
+                JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(_T("JSONRPCPlugin.1"));
+
+                if (local != nullptr) {
+                    theClock.Clear();
+                    // Lets do a local test
+                    for (uint32_t run = 0; run < PerformanceRuns; run++) {
+                        uint16_t sum;
+                        theClock.Start();
+                        local->Add(5, 8, sum);
+                        theClock.Stop();
+                    }
+                    printf("LOCAL:   Average: [%d] uS, Min: [%d] uS, Max: [%d] uS\n", theClock.Average(), theClock.Min(), theClock.Max());
+                }
+
+                if (comrpc != nullptr) {
+                    theClock.Clear();
+                    // Lets do a local test
+                    for (uint32_t run = 0; run < PerformanceRuns; run++) {
+                        uint16_t sum;
+                        theClock.Start();
+                        comrpc->Add(5, 8, sum);
+                        theClock.Stop();
+                    }
+                    printf("COMRPC:  Average: [%d] uS, Min: [%d] uS, Max: [%d] uS\n", theClock.Average(), theClock.Min(), theClock.Max());
+                }
+
+                {
+                    theClock.Clear();
+                    // Lets do a local test
+                    for (uint32_t run = 0; run < PerformanceRuns; run++) {
+                        JsonData::Math::AddParamsInfo info;
+                        Core::JSON::DecUInt16 sum;
+
+                        theClock.Start();
+                        info.A = 5;
+                        info.B = 8;
+                        jsonrpc.Invoke(2000, "add", info, sum);
+                        theClock.Stop();
+                    }
+                    printf("JSONRPC: Average: [%d] uS, Min: [%d] uS, Max: [%d] uS\n", theClock.Average(), theClock.Min(), theClock.Max());
+                }
+
                 break;
             }
             case 'X':

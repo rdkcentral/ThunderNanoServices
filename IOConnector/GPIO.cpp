@@ -60,7 +60,7 @@ namespace GPIO
     // ----------------------------------------------------------------------------------------------------
 
     Pin::Pin(const uint16_t pin, const bool activeLow)
-        : BaseClass(pin, IExternal::regulator, IExternal::general, IExternal::logic, 0)
+        : BaseClass(pin, IExternal::basic::regulator, IExternal::specific::general, IExternal::dimension::logic, 0)
         , _pin(pin)
         , _activeLow(activeLow ? 1 : 0)
         , _lastValue(false)
@@ -93,7 +93,6 @@ namespace GPIO
         }
         // The derived class shoud set, the initial value of the modifiers...
         _timedPin.AddRef();
-        _timedPin.AddReference();
     }
 
     /* virtual */ Pin::~Pin()
@@ -124,7 +123,6 @@ namespace GPIO
 
         Period(0);
 
-        _timedPin.DropReference();
         _timedPin.CompositRelease();
 
     }
@@ -172,7 +170,7 @@ namespace GPIO
             // force HasChanged to be true!!
             _lastValue = !Get();
 
-            Updated();
+            Evaluate();
         }
     }
 
@@ -290,7 +288,7 @@ namespace GPIO
     }
 
     void Pin::Unregister(IInputPin::INotification* sink) /* override */ {
-        _timedPin.Register(sink);
+        _timedPin.Unregister(sink);
     }
 
     void Pin::AddMarker(const uint32_t marker) /* override */ {

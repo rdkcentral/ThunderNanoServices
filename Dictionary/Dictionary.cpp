@@ -31,7 +31,20 @@ ENUM_CONVERSION_BEGIN(Plugin::Dictionary::enumType)
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Dictionary, 1, 0);
+    namespace {
+
+        static Metadata<Dictionary> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
 
     static Core::ProxyPoolType<Web::JSONBodyType<Dictionary::NameSpace>> jsonBodyDataFactory(4);
     static Core::ProxyPoolType<Web::TextBody> textBodyDataFactory(4);
@@ -132,10 +145,12 @@ namespace Plugin {
 
         Core::File dictionaryFile(service->PersistentPath() + _config.Storage.Value());
 
-        if (dictionaryFile.Open(true) == true) {
+        if (dictionaryFile.Create() == true) {
             NameSpace dictionary;
             CreateExternalDictionary(EMPTY_STRING, dictionary);
-            dictionary.IElement::ToFile(dictionaryFile);
+            if (dictionary.IElement::ToFile(dictionaryFile) == false) {
+                SYSLOG(Logging::Shutdown, (_T("Error occured while trying to save dictionary data to file!")));
+            }
         }
     }
 
@@ -185,7 +200,7 @@ namespace Plugin {
             Get(nameSpace, key, value);
             *valueBody = value;
 
-            result->Body(Core::proxy_cast<Web::IBody>(valueBody));
+            result->Body(Core::ProxyType<Web::IBody>(valueBody));
             result->ErrorCode = Web::STATUS_OK;
             result->Message = _T("OK");
         } else if ((request.Verb == Web::Request::HTTP_POST) && (key.empty() == false) && (request.HasBody() == true)) {

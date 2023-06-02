@@ -32,7 +32,6 @@ set(PLUGIN_SNAPSHOT_AUTOSTART true CACHE STRING "Automatically start Snapshot pl
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(BCM_HOST QUIET)
@@ -47,7 +46,6 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE 
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         PNG::PNG)
 
 set_target_properties(${MODULE_NAME}
@@ -62,11 +60,11 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
                 ${SNAPSHOT_IMPLEMENTATION_PATH}/NexusCapture.cpp)
     else()
         include(GetExternalCode)
-        set(SNAPSHOT_IMPLEMENTATION_VERSION "master" CACHE STRING "Snapshot implementation version")
+        set(SNAPSHOT_IMPLEMENTATION_VERSION "master" CACHE STRING "Snapshot implementation version: commit_id_or_tag_or_branch_name")
         set(SNAPSHOT_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/Snapshot" CACHE STRING "Snapshot implementation repository")
         GetExternalCode(
             GIT_REPOSITORY ${SNAPSHOT_IMPLEMENTATION_REPOSITORY}
-            GIT_TAG ${SNAPSHOT_IMPLEMENTATION_VERSION}
+            GIT_VERSION ${SNAPSHOT_IMPLEMENTATION_VERSION}
             SOURCE_DIR "Nexus"
         )
         target_sources(${MODULE_NAME}

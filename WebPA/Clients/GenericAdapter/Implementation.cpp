@@ -84,11 +84,11 @@ private:
             : _parent(parent)
         {
         }
-        virtual ~NotificationCallback()
+        ~NotificationCallback() override
         {
             TRACE(Trace::Information, (_T("%s destructed. Line: %d"), __PRETTY_FUNCTION__, __LINE__));
         }
-        virtual void NotifyEvent(const std::string& payload, const std::string& source, const std::string& destination) override;
+        void NotifyEvent(const std::string& payload, const std::string& source, const std::string& destination) override;
 
     private:
         GenericAdapter* _parent;
@@ -110,7 +110,7 @@ public:
         _notificationCallback = new NotificationCallback(this);
     }
 
-    virtual ~GenericAdapter()
+    ~GenericAdapter() override
     {
         TRACE(Trace::Information, (_T("GenericAdapter::Destruct()")));
 
@@ -135,7 +135,7 @@ public:
     END_INTERFACE_MAP
 
     //WebPAClient Interface
-    virtual uint32_t Configure(PluginHost::IShell* service) override
+    uint32_t Configure(PluginHost::IShell* service) override
     {
         ASSERT(nullptr != service);
         Config config;
@@ -157,7 +157,7 @@ public:
         return Core::ERROR_NONE;
     }
 
-    virtual uint32_t Launch() override
+    uint32_t Launch() override
     {
         uint32_t status = Core::ERROR_GENERAL;
         if (true == IsRunning()) {
@@ -196,7 +196,7 @@ public:
     }
 
 private:
-    virtual uint32_t Worker();
+    uint32_t Worker() override;
     uint32_t ConnectToParodus();
     void DisconnectFromParodus();
     long TimeValDiff(struct timespec *starttime, struct timespec *finishtime);
@@ -234,11 +234,13 @@ uint32_t GenericAdapter::ConnectToParodus()
     uint16_t maxRetrySleep = (uint16_t) pow(2, backoffMaxTime) - 1;
     TRACE(Trace::Information, (_T("maxRetrySleep = %d"), maxRetrySleep));
 
+PUSH_WARNING(DISABLE_WARNING_MISSING_FIELD_INITIALIZERS)
     libpd_cfg_t clientCFG = {.service_name = "config",
                              .receive = true, .keepalive_timeout_secs = 64,
                              .parodus_url = _parodusURL.c_str(),
                              .client_url = _clientURL.c_str()
                             };
+POP_WARNING()
 
     TRACE(Trace::Information, (_T("parodusUrl = %s clientUrl = %s"), _parodusURL.c_str(), _clientURL.c_str()));
 

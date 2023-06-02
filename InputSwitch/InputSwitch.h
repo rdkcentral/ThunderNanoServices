@@ -49,9 +49,7 @@ namespace Plugin {
                 Add(_T("callsign"), &Callsign);
                 Add(_T("enabled"), &Enabled);
             }
-            virtual ~Data()
-            {
-            }
+            ~Data() override = default;
 
             Data& operator= (const Data& rhs)
             {
@@ -78,7 +76,7 @@ namespace Plugin {
             RegisterAll();
         }
 
-        virtual ~InputSwitch()
+        ~InputSwitch() override
         {
             UnregisterAll();
         }

@@ -25,11 +25,9 @@ namespace WPEFramework {
 
 namespace Exchange {
 
-#ifdef __WINDOWS__
-    static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:63000");
-#else
-    static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
-#endif
+    extern "C" {
+        constexpr static TCHAR SimpleTestAddress[] = _T("127.0.0.1:63000");
+    }
 
     enum example_ids {
         ID_WALLCLOCK = 0x80001000,

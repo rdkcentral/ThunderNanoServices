@@ -22,7 +22,19 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(DIALServer, 1, 0);
+    namespace {
+
+        static Metadata<DIALServer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::PLATFORM, subsystem::NETWORK },
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static const string _SearchTarget(_T("urn:dial-multiscreen-org:service:dial:1"));
     static const string _DefaultAppInfoPath(_T("Apps"));
@@ -311,16 +323,16 @@ namespace Plugin {
             // Oops no way we can operate...
             result = _T("No DIALInterface available.");
         } else {
-            const uint8_t* rawId(Core::SystemInfo::Instance().RawDeviceId());
-            const string deviceId(Core::SystemInfo::Instance().Id(rawId, ~0));
 
             _service = service;
+            _service->AddRef();
             _dialURL = Core::URL(service->Accessor());
             _dialURL.Host(selectedNode.HostAddress());
             if (_dialURL.Port().IsSet() == false) {
                 _dialURL.Port(80);
             }
 
+            const string deviceId = DeviceId();
             // TODO: THis used to be the MAC, but I think  it is just a unique number, otherwise, we need the MAC
             //       that goes with the selectedNode !!!!
             _dialServiceImpl = new DIALServerImpl(deviceId, _dialURL, _DefaultAppInfoPath, selectedNode.IsAnyInterface());
@@ -377,23 +389,28 @@ namespace Plugin {
 
     /* virtual */ void DIALServer::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service != NULL);
-        ASSERT(_dialServiceImpl != NULL);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
+            ASSERT(_dialServiceImpl != NULL);
 
-        UnregisterAll();
+            UnregisterAll();
 
-        _adminLock.Lock();
+            _adminLock.Lock();
 
-        _sink.Unregister(service);
+            _sink.Unregister(service);
 
-        _adminLock.Unlock();
+            _adminLock.Unlock();
 
-        delete _dialServiceImpl;
-        _dialServiceImpl = nullptr;
+            if (_dialServiceImpl != nullptr) {
+                delete _dialServiceImpl;
+                _dialServiceImpl = nullptr;
+            }
 
-        _appInfo.clear();
+            _appInfo.clear();
 
-        _service = nullptr;
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ string DIALServer::Information() const
@@ -551,7 +568,7 @@ namespace Plugin {
 
                     string versionText;
                     Core::URL::KeyValue options(request.Query.Value());
-                    if (options.Exists(_VersionSupportedKey, true) == true) {
+                    if (options.HasKey(_VersionSupportedKey, true) != Core::URL::KeyValue::status::UNAVAILABLE) {
                         TCHAR destination[256];
                         versionText = options[_VersionSupportedKey].Text();
                         uint16_t length = Core::URL::Decode(versionText.c_str(), static_cast<uint16_t>(versionText.length()), destination, sizeof(destination));
@@ -561,7 +578,7 @@ namespace Plugin {
 
                     Version version(versionText);
 
-                    if (options.Exists(_ClientFriendlyName.c_str(), true) == true) {
+                    if (options.HasKey(_ClientFriendlyName.c_str(), true) != Core::URL::KeyValue::status::UNAVAILABLE) {
                         if ((version.IsValid() == false) || (version < Version(2, 1, 0))) {
                             // No version was specified but firendlyName was and this
                             // may only be sent to Server 2.1+

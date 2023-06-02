@@ -55,9 +55,7 @@ namespace Plugin {
                 : _parent(parent)
             {
             }
-            virtual ~Job()
-            {
-            }
+            ~Job() override = default;
 
         public:
             uint32_t Worker()
@@ -104,9 +102,7 @@ namespace Plugin {
 
                 return (result);
             }
-            virtual ~Entry()
-            {
-            }
+            ~Entry() override = default;
 
         public:
             inline uint32_t Id() const
@@ -125,9 +121,7 @@ namespace Plugin {
             {
                 if ((value == Exchange::IComposition::minOpacity) || (value == Exchange::IComposition::maxOpacity)) {
                     _surface.Visibility(value == Exchange::IComposition::maxOpacity);
-                }
-                else
-                {  
+                } else {
                     _surface.Opacity(value);
                 }
             }
@@ -172,6 +166,7 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
+                , RefreshLock(false)
                 , Join(false)
                 , Display("wayland-0")
                 , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
@@ -179,6 +174,7 @@ namespace Plugin {
                 Add(_T("join"), &Join);
                 Add(_T("display"), &Display);
                 Add(_T("resolution"), &Resolution);
+                Add(_T("refreshlock"), &RefreshLock);
 
             }
             ~Config()
@@ -186,6 +182,7 @@ namespace Plugin {
             }
 
         public:
+            Core::JSON::Boolean RefreshLock;
             Core::JSON::Boolean Join;
             Core::JSON::String Display;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
@@ -208,17 +205,17 @@ namespace Plugin {
             }
 
             // ICalllback methods
-            virtual void Attached(const uint32_t id)
+            void Attached(const uint32_t id) override
             {
                 _parent.Add(id);
             }
 
-            virtual void Detached(const uint32_t id)
+            void Detached(const uint32_t id) override
             {
                 _parent.Remove(id);
             }
 #ifdef ENABLE_NXSERVER
-            virtual void StateChange(Broadcom::Platform::server_state state)
+            void StateChange(Broadcom::Platform::server_state state) override
             {
                 if (state == Broadcom::Platform::OPERATIONAL) {
                     _parent.StartImplementation();
@@ -292,7 +289,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         //   IComposition methods
         // -------------------------------------------------------------------------------------------------------
-        /* virtual */ uint32_t Configure(PluginHost::IShell* service)
+        /* virtual */ uint32_t Configure(PluginHost::IShell* service) override
         {
             _service = service;
             _service->AddRef();
@@ -333,11 +330,14 @@ namespace Plugin {
             ASSERT(_nxserver != nullptr);
             return (((_nxserver != nullptr) || (_server != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #else
+            if (_config.RefreshLock.Value() == true) {
+                ::setenv("WESTEROS_GL_USE_REFRESH_LOCK", "1", 1);
+            }
             StartImplementation();
             return ((_server != nullptr) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #endif
         }
-        /* virtual */ void Register(Exchange::IComposition::INotification* notification)
+        /* virtual */ void Register(Exchange::IComposition::INotification* notification) override
         {
             // Do not double register a notification sink.
             g_implementationLock.Lock();
@@ -358,7 +358,7 @@ namespace Plugin {
             }
             g_implementationLock.Unlock();
         }
-        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification)
+        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification) override
         {
             g_implementationLock.Lock();
             std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
@@ -391,7 +391,7 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         //   IProcess methods
         // -------------------------------------------------------------------------------------------------------
-        /* virtual */ bool Dispatch()
+        /* virtual */ bool Dispatch() override
         {
             return true;
         }
@@ -405,11 +405,11 @@ namespace Plugin {
             }
             return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
         }
-        bool Consumer(const string& name) const override
+        bool Consumer(VARIABLE_IS_NOT_USED const string& name) const override
         {
             return true;
         }
-        uint32_t Consumer(const string& name, const mode) override
+        uint32_t Consumer(VARIABLE_IS_NOT_USED const string& name, const mode) override
         {
             return (Core::ERROR_UNAVAILABLE);
         }

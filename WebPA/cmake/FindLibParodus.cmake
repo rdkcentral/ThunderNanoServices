@@ -39,16 +39,23 @@ if(EXISTS "${LIBPARODUS_LIBRARY}")
 
     set(LIBPARODUS_FOUND TRUE)
 
-    find_package_handle_standard_args(LIBPARODUS DEFAULT_MSG LIBPARODUS_FOUND LIBPARODUS_INCLUDE LIBPARODUS_LIBRARY)
+    find_package_handle_standard_args(LibParodus DEFAULT_MSG LIBPARODUS_FOUND LIBPARODUS_INCLUDE LIBPARODUS_LIBRARY)
     mark_as_advanced(LIBPARODUS_INCLUDE LIBPARODUS_LIBRARY)
 
-    if(NOT TARGET libparodus::libparodus)
-        add_library(libparodus::libparodus UNKNOWN IMPORTED)
+    if(LibParodus_FOUND AND NOT TARGET LibParodus::LibParodus)
+        add_library(LibParodus::LibParodus UNKNOWN IMPORTED)
 
-        set_target_properties(libparodus::libparodus PROPERTIES
+        set_target_properties(LibParodus::LibParodus PROPERTIES
                 IMPORTED_LINK_INTERFACE_LANGUAGES "C"
                 IMPORTED_LOCATION "${LIBPARODUS_LIBRARY}"
                 INTERFACE_INCLUDE_DIRECTORIES "${LIBPARODUS_INCLUDE}"
                 )
     endif()
+else()
+    if(LibParodus_FIND_REQUIRED)
+        message(FATAL_ERROR "LIBPARODUS_LIBRARY not available")
+    elseif(NOT LibParodus_FIND_QUIETLY)
+        message(STATUS "LIBPARODUS_LIBRARY not available")
+    endif()
+
 endif()

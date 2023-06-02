@@ -23,18 +23,32 @@ namespace WPEFramework
 
     namespace Plugin
     {
+        namespace {
 
-        SERVICE_REGISTRATION(ResourceMonitor, 1, 0);
+            static Metadata<ResourceMonitor> metadata(
+                // Version
+                1, 0, 0,
+                // Preconditions
+                {},
+                // Terminations
+                {},
+                // Controls
+                {}
+            );
+        }
 
         const string ResourceMonitor::Initialize(PluginHost::IShell *service)
         {
             string message;
-            _connectionId = 0;
 
+            ASSERT(service != nullptr);
             ASSERT(_service == nullptr);
             ASSERT(_monitor == nullptr);
+            ASSERT(_connectionId == 0);
 
             _service = service;
+            _service->AddRef();
+            _service->Register(&_notification);
 
             _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
 
@@ -42,45 +56,61 @@ namespace WPEFramework
 
             if (_monitor == nullptr)
             {
-                _service = nullptr;
                 message = _T("ResourceMonitor could not be instantiated.");
             }
             else
             {
                 if(_monitor->Configure(service) == Core::ERROR_INCOMPLETE_CONFIG){
-                    _service = nullptr;
-                    message = _T("ResourceMonitor could not be instantiated.");
+                    message = _T("ResourceMonitor could not be Configured.");
                 }
             }
 
             return message;
         }
 
-        void ResourceMonitor::Deinitialize(PluginHost::IShell *service)
+        void ResourceMonitor::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
         {
-            ASSERT(_service == _service);
+            if (_service != nullptr) {
+                ASSERT(_service == _service);
 
-            _monitor->Release();
+                _service->Unregister(&_notification);
 
-            if (_connectionId != 0)
-            {
-                RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
+                if (_monitor != nullptr) {
 
-                // The process can disappear in the meantime...
-                if (connection != nullptr)
-                {
-                    // Connection is still there.
-                    connection->Terminate();
-                    connection->Release();
+                    RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
+                    VARIABLE_IS_NOT_USED uint32_t result = _monitor->Release();
+                    _monitor = nullptr;
+                    ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                    // The process can disappear in the meantime...
+                    if (connection != nullptr) {
+                        // Connection is still there.
+                        connection->Terminate();
+                        connection->Release();
+                    }
                 }
-            }
 
-            _service = nullptr;
+                _connectionId = 0;
+                _service->Release();
+                _service = nullptr;
+            }
         }
 
         string ResourceMonitor::Information() const
         {
             return "";
+        }
+
+        void ResourceMonitor::Deactivated(RPC::IRemoteConnection* connection)
+        {
+            if (connection->Id() == _connectionId) {
+
+                ASSERT(_service != nullptr);
+
+                Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
+                    PluginHost::IShell::DEACTIVATED,
+                    PluginHost::IShell::FAILURE));
+            }
         }
 
         /* static */ Core::ProxyPoolType<Web::TextBody> ResourceMonitor::webBodyFactory(4);

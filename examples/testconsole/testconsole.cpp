@@ -65,7 +65,7 @@ public:
         , _provisionRequest(Core::ProxyType<Web::Request>::Create())
     {
     }
-    virtual ~ProvisioningClient()
+    ~ProvisioningClient() override
     {
         Close(Core::infinite);
     }
@@ -402,9 +402,7 @@ int main(int argc, char** argv)
     // Give the server process some time to come up... Only needed for debugging both processes..
     SleepS(5);
 
-#ifdef __WIN32__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
 
     // Scope to make sure that the sockets are destructed before we close the singletons !!!
     {
@@ -480,9 +478,7 @@ int main(int argc, char** argv)
         // WPEFramework::Core::Random<int32_t> (randomNumber, -70000, +70000);
         printf("Random startup %d\n", randomNumber);
 
-#ifdef __WIN32__
-#pragma warning(default : 4355)
-#endif
+POP_WARNING()
 
         WPEFramework::Core::Directory pluginDirectory(_T("/usr/src"));
 
@@ -560,7 +556,7 @@ int main(int argc, char** argv)
 
                 sendObject->Identifier = testCount++;
                 sendObject->Name = _T("TestCommand");
-                JSONConnector.Submit(WPEFramework::Core::proxy_cast<WPEFramework::Core::JSON::IElement>(sendObject));
+                JSONConnector.Submit(WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>(sendObject));
                 break;
             }
             case '3': {
@@ -588,7 +584,7 @@ int main(int argc, char** argv)
                 sendObject->Name = _T("TestCase6");
                 sendObject->Params.Duration = 100;
 
-                webSocketJSONConnection.Submit(Core::proxy_cast<Core::JSON::IElement>(sendObject));
+                webSocketJSONConnection.Submit(Core::ProxyType<Core::JSON::IElement>(sendObject));
                 break;
             }
             case '7': {

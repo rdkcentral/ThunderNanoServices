@@ -33,7 +33,19 @@ ENUM_CONVERSION_END(Plugin::BluetoothRemoteControl::recorder)
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(BluetoothRemoteControl, 1, 0);
+    namespace {
+
+        static Metadata<BluetoothRemoteControl> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            { subsystem::BLUETOOTH },
+            // Terminations
+            { subsystem::NOT_BLUETOOTH },
+            // Controls
+            {}
+        );
+    }
 
     template<typename FROM, typename TO>
     class LUT {
@@ -149,7 +161,7 @@ namespace Plugin {
                     Bluetooth::Address address (filename.c_str());
 
                     if (address.IsValid() == true)  {
-                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
+                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                         Core::File fileData(storageDir.Current().c_str());
 
                         if (device != nullptr) {
@@ -175,24 +187,26 @@ namespace Plugin {
 
     void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        if (_recorder.IsOpen() == true) {
-            _recorder.Close();
+            if (_recorder.IsOpen() == true) {
+                _recorder.Close();
+            }
+
+            if (_gattRemote != nullptr) {
+                delete _gattRemote;
+                _gattRemote = nullptr;
+            }
+
+            if (_voiceHandler != nullptr) {
+                _voiceHandler->Release();
+                _voiceHandler = nullptr;
+            }
+
+            _service->Release();
+            _service = nullptr;
         }
-
-        if (_gattRemote != nullptr) {
-            delete _gattRemote;
-            _gattRemote = nullptr;
-        }
-
-        if (_voiceHandler != nullptr) {
-            _voiceHandler->Release();
-            _voiceHandler = nullptr;
-        }
-
-        _service->Release();
-        _service = nullptr;
     }
 
     string BluetoothRemoteControl::Information() const
@@ -338,7 +352,7 @@ namespace Plugin {
             ASSERT(_service != nullptr);
             Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
             if (bluetoothCtl != nullptr) {
-                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
+                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                 if (device != nullptr) {
                     _gattRemote = new GATTRemote(this, device, _configLine);
                     if (_gattRemote != nullptr) {
@@ -395,10 +409,22 @@ namespace Plugin {
             if (Core::File(keyMapFile).Exists() == true) {
                 PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(name));
 
-                uint32_t result = map.Load(keyMapFile);
-                if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), keyMapFile.c_str()));
+                Core::File mappingFile(keyMapFile);
+                Core::JSON::ArrayType<PluginHost::VirtualInput::KeyMap::KeyMapEntry> mappingTable;
+
+                if (mappingFile.Open(true) == true) {
+                    Core::OptionalType<Core::JSON::Error> error;
+                    mappingTable.IElement::FromFile(mappingFile, error);
+                    if (error.IsSet() == true) {
+                        TRACE(Trace::Error, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
+                    } else {
+                        if (map.Import(mappingTable) != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Failed to load keymap file [%s]"), keyMapFile.c_str()));
+                        }
+                    }
+                    mappingFile.Close();
                 }
+
             } else {
                 TRACE(Trace::Information, (_T("Keymap file [%s] not available"), keyMapFile.c_str()));
             }
@@ -514,7 +540,7 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
                 TRACE(Trace::Information, ("key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             } else {
-                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"))
+                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             }
         }
 

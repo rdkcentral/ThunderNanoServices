@@ -6,13 +6,14 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-Streamer plugin for Thunder framework.
+A Streamer plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -77,6 +78,13 @@ The table below lists configuration options of the plugin.
 | locator | string | Library name: *libWPEFrameworkStreamer.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [Streamer.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Streamer.json)
+
 <a name="head.Methods"></a>
 # Methods
 
@@ -94,7 +102,7 @@ Streamer interface methods:
 
 
 <a name="method.create"></a>
-## *create <sup>method</sup>*
+## *create [<sup>method</sup>](#head.Methods)*
 
 Creates a stream instance.
 
@@ -125,7 +133,7 @@ Creates a stream instance.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.create",
     "params": {
         "type": "cable"
@@ -138,13 +146,13 @@ Creates a stream instance.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="method.destroy"></a>
-## *destroy <sup>method</sup>*
+## *destroy [<sup>method</sup>](#head.Methods)*
 
 Destroys a stream instance.
 
@@ -174,7 +182,7 @@ Destroys a stream instance.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.destroy",
     "params": {
         "id": 0
@@ -187,13 +195,13 @@ Destroys a stream instance.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.load"></a>
-## *load <sup>method</sup>*
+## *load [<sup>method</sup>](#head.Methods)*
 
 Loads a source into a stream.
 
@@ -229,7 +237,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.load",
     "params": {
         "id": 0,
@@ -243,13 +251,13 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.attach"></a>
-## *attach <sup>method</sup>*
+## *attach [<sup>method</sup>](#head.Methods)*
 
 Attaches a decoder to the streamer.
 
@@ -282,7 +290,7 @@ Attaches a decoder to the streamer.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.attach",
     "params": {
         "id": 0
@@ -295,13 +303,13 @@ Attaches a decoder to the streamer.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
 
 <a name="method.detach"></a>
-## *detach <sup>method</sup>*
+## *detach [<sup>method</sup>](#head.Methods)*
 
 Detaches a decoder from the streamer.
 
@@ -333,7 +341,7 @@ Detaches a decoder from the streamer.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.detach",
     "params": {
         "id": 0
@@ -346,7 +354,7 @@ Detaches a decoder from the streamer.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": null
 }
 ```
@@ -374,7 +382,7 @@ Streamer interface properties:
 
 
 <a name="property.speed"></a>
-## *speed <sup>property</sup>*
+## *speed [<sup>property</sup>](#head.Properties)*
 
 Provides access to the playback speed.
 
@@ -390,7 +398,7 @@ Also see: [statechange](#event.statechange)
 | :-------- | :-------- | :-------- |
 | (property) | number | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
 
 ### Errors
 
@@ -406,7 +414,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.speed@0"
 }
 ```
@@ -416,7 +424,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 100
 }
 ```
@@ -426,7 +434,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.speed@0",
     "params": 100
 }
@@ -437,13 +445,13 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.position"></a>
-## *position <sup>property</sup>*
+## *position [<sup>property</sup>](#head.Properties)*
 
 Provides access to the stream position.
 
@@ -453,7 +461,7 @@ Provides access to the stream position.
 | :-------- | :-------- | :-------- |
 | (property) | number | Position (in milliseconds) |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
 
 ### Errors
 
@@ -469,7 +477,7 @@ Provides access to the stream position.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.position@0"
 }
 ```
@@ -479,7 +487,7 @@ Provides access to the stream position.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 60000
 }
 ```
@@ -489,7 +497,7 @@ Provides access to the stream position.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.position@0",
     "params": 60000
 }
@@ -500,13 +508,13 @@ Provides access to the stream position.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.window"></a>
-## *window <sup>property</sup>*
+## *window [<sup>property</sup>](#head.Properties)*
 
 Provides access to the stream playback window.
 
@@ -520,7 +528,7 @@ Provides access to the stream playback window.
 | (property).width | number | Width of the window (in pixels) |
 | (property).height | number | Height of the window (in pixels) |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
 
 ### Errors
 
@@ -536,7 +544,7 @@ Provides access to the stream playback window.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.window@0"
 }
 ```
@@ -546,7 +554,7 @@ Provides access to the stream playback window.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": {
         "x": 0,
         "y": 0,
@@ -561,7 +569,7 @@ Provides access to the stream playback window.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.window@0",
     "params": {
         "x": 0,
@@ -577,13 +585,13 @@ Provides access to the stream playback window.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
 
 <a name="property.speeds"></a>
-## *speeds <sup>property</sup>*
+## *speeds [<sup>property</sup>](#head.Properties)*
 
 Provides access to the speeds supported by the stream player.
 
@@ -596,7 +604,7 @@ Provides access to the speeds supported by the stream player.
 | (property) | array | Supported speeds (in percentage) |
 | (property)[#] | integer | (speeds in percentage) |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
 
 ### Errors
 
@@ -612,7 +620,7 @@ Provides access to the speeds supported by the stream player.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.speeds@0"
 }
 ```
@@ -622,7 +630,7 @@ Provides access to the speeds supported by the stream player.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         0,
         100,
@@ -636,7 +644,7 @@ Provides access to the speeds supported by the stream player.
 ```
 
 <a name="property.streams"></a>
-## *streams <sup>property</sup>*
+## *streams [<sup>property</sup>](#head.Properties)*
 
 Provides access to the all created stream instance IDs.
 
@@ -656,7 +664,7 @@ Provides access to the all created stream instance IDs.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.streams"
 }
 ```
@@ -666,7 +674,7 @@ Provides access to the all created stream instance IDs.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         0,
         1,
@@ -677,7 +685,7 @@ Provides access to the all created stream instance IDs.
 ```
 
 <a name="property.type"></a>
-## *type <sup>property</sup>*
+## *type [<sup>property</sup>](#head.Properties)*
 
 Provides access to the type of a stream.
 
@@ -689,7 +697,7 @@ Provides access to the type of a stream.
 | :-------- | :-------- | :-------- |
 | (property) | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
 
 ### Errors
 
@@ -704,7 +712,7 @@ Provides access to the type of a stream.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.type@0"
 }
 ```
@@ -714,13 +722,13 @@ Provides access to the type of a stream.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "cable"
 }
 ```
 
 <a name="property.drm"></a>
-## *drm <sup>property</sup>*
+## *drm [<sup>property</sup>](#head.Properties)*
 
 Provides access to the DRM type associated with a stream.
 
@@ -734,7 +742,7 @@ Also see: [drmchange](#event.drmchange)
 | :-------- | :-------- | :-------- |
 | (property) | string | DRM used (must be one of the following: *none*, *clearkey*, *playready*, *widevine*, *unknown*) |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
 
 ### Errors
 
@@ -749,7 +757,7 @@ Also see: [drmchange](#event.drmchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.drm@0"
 }
 ```
@@ -759,13 +767,13 @@ Also see: [drmchange](#event.drmchange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "clearkey"
 }
 ```
 
 <a name="property.state"></a>
-## *state <sup>property</sup>*
+## *state [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current state of a stream.
 
@@ -779,7 +787,7 @@ Also see: [statechange](#event.statechange)
 | :-------- | :-------- | :-------- |
 | (property) | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
 
 ### Errors
 
@@ -794,7 +802,7 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.state@0"
 }
 ```
@@ -804,13 +812,13 @@ Also see: [statechange](#event.statechange)
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "controlled"
 }
 ```
 
 <a name="property.metadata"></a>
-## *metadata <sup>property</sup>*
+## *metadata [<sup>property</sup>](#head.Properties)*
 
 Provides access to the metadata associated with the stream.
 
@@ -822,7 +830,7 @@ Provides access to the metadata associated with the stream.
 | :-------- | :-------- | :-------- |
 | (property) | string | Custom implementation-specific metadata |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.metadata@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.metadata@0*.
 
 ### Errors
 
@@ -837,7 +845,7 @@ Provides access to the metadata associated with the stream.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.metadata@0"
 }
 ```
@@ -847,13 +855,13 @@ Provides access to the metadata associated with the stream.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": ""
+    "id": 42,
+    "result": "..."
 }
 ```
 
 <a name="property.error"></a>
-## *error <sup>property</sup>*
+## *error [<sup>property</sup>](#head.Properties)*
 
 Provides access to the most recent error code.
 
@@ -865,7 +873,7 @@ Provides access to the most recent error code.
 | :-------- | :-------- | :-------- |
 | (property) | number | Custom implementation-specific error code value |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.error@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.error@0*.
 
 ### Errors
 
@@ -880,7 +888,7 @@ Provides access to the most recent error code.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.error@0"
 }
 ```
@@ -890,13 +898,13 @@ Provides access to the most recent error code.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": 0
 }
 ```
 
 <a name="property.elements"></a>
-## *elements <sup>property</sup>*
+## *elements [<sup>property</sup>](#head.Properties)*
 
 Provides access to the stream elements.
 
@@ -910,7 +918,7 @@ Provides access to the stream elements.
 | (property)[#] | object | Stream element |
 | (property)[#].type | string | Stream element type (must be one of the following: *video*, *audio*, *subtitles*, *teletext*, *data*) |
 
-> The *stream id* shall be passed as the index to the property, e.g. *Streamer.1.elements@0*.
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.elements@0*.
 
 ### Errors
 
@@ -926,7 +934,7 @@ Provides access to the stream elements.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "method": "Streamer.1.elements@0"
 }
 ```
@@ -936,7 +944,7 @@ Provides access to the stream elements.
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": [
         {
             "type": "video"
@@ -964,7 +972,7 @@ Streamer interface events:
 
 
 <a name="event.statechange"></a>
-## *statechange <sup>event</sup>*
+## *statechange [<sup>event</sup>](#head.Notifications)*
 
 Notifies of stream state change.
 
@@ -975,7 +983,7 @@ Notifies of stream state change.
 | params | object |  |
 | params.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
 
-> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 
@@ -990,7 +998,7 @@ Notifies of stream state change.
 ```
 
 <a name="event.timeupdate"></a>
-## *timeupdate <sup>event</sup>*
+## *timeupdate [<sup>event</sup>](#head.Notifications)*
 
 Notifies of stream position change. This event is fired every second to indicate the current stream position. It does not fire if the stream is paused (i.e. speed is set to 0).
 
@@ -1001,7 +1009,7 @@ Notifies of stream position change. This event is fired every second to indicate
 | params | object |  |
 | params.time | number | Stream position in miliseconds |
 
-> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 
@@ -1016,7 +1024,7 @@ Notifies of stream position change. This event is fired every second to indicate
 ```
 
 <a name="event.stream"></a>
-## *stream <sup>event</sup>*
+## *stream [<sup>event</sup>](#head.Notifications)*
 
 Notifies of a custom stream incident.
 
@@ -1027,7 +1035,7 @@ Notifies of a custom stream incident.
 | params | object |  |
 | params.code | number | Implementation-specific incident code |
 
-> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 
@@ -1042,7 +1050,7 @@ Notifies of a custom stream incident.
 ```
 
 <a name="event.player"></a>
-## *player <sup>event</sup>*
+## *player [<sup>event</sup>](#head.Notifications)*
 
 Notifies of a custom player incident.
 
@@ -1053,7 +1061,7 @@ Notifies of a custom player incident.
 | params | object |  |
 | params.code | number | Implementation-specific incident code |
 
-> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 
@@ -1068,7 +1076,7 @@ Notifies of a custom player incident.
 ```
 
 <a name="event.drm"></a>
-## *drm <sup>event</sup>*
+## *drm [<sup>event</sup>](#head.Notifications)*
 
 Notifies of a custom DRM-related incident.
 
@@ -1079,7 +1087,7 @@ Notifies of a custom DRM-related incident.
 | params | object |  |
 | params.code | number | Implementation-specific incident code |
 
-> The *Stream ID* shall be passed within the designator, e.g. *0.client.events.1*.
+> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
 
 ### Example
 

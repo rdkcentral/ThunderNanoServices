@@ -13,6 +13,7 @@ TimeSync plugin for Thunder framework.
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
 - [Notifications](#head.Notifications)
@@ -23,12 +24,14 @@ TimeSync plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification about its configuration,
+         methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties,
+         relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -46,7 +49,8 @@ The table below provides and overview of terms and abbreviations used in this do
 
 | Term | Description |
 | :-------- | :-------- |
-| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
+| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times,
+         but each instance the instance name, callsign, must be unique. |
 
 <a name="head.References"></a>
 ## References
@@ -76,12 +80,19 @@ The table below lists configuration options of the plugin.
 | classname | string | Class name: *TimeSync* |
 | locator | string | Library name: *libWPEFrameworkTimeSync.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
-| deferred | boolean | <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled |
+| deferred | boolean | <sup>*(deprecated)*</sup> <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled. This parameter is deprecated and SubSystemControl could be used instead |
 | periodicity | number | <sup>*(optional)*</sup> Periodicity of time synchronization (in hours), 0 for one-off synchronization |
 | retries | number | <sup>*(optional)*</sup> Number of synchronization attempts if the source cannot be reached (may be 0) |
 | interval | number | <sup>*(optional)*</sup> Time to wait (in milliseconds) before retrying a synchronization attempt after a failure |
 | sources | array | Time sources |
 | sources[#] | string | (a time source entry) |
+
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- [TimeSync.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/TimeSync.json) (version 1.0.0) (uncompliant-extended format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -94,15 +105,15 @@ TimeSync interface methods:
 | :-------- | :-------- |
 | [synchronize](#method.synchronize) | Synchronizes time |
 
-
 <a name="method.synchronize"></a>
-## *synchronize <sup>method</sup>*
+## *synchronize [<sup>method</sup>](#head.Methods)*
 
 Synchronizes time.
 
 ### Description
 
-Use this method to synchronize the system time with the currently configured time source. If automatic time synchronization is initially disabled or stopped, it will be restarted.
+Use this method to synchronize the system time with the currently configured time source. If automatic time synchronization is initially disabled or stopped,
+         it will be restarted.
 
 ### Parameters
 
@@ -127,9 +138,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "TimeSync.1.synchronize"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TimeSync.1.synchronize"
 }
 ```
 
@@ -137,9 +148,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -155,9 +166,8 @@ TimeSync interface properties:
 | [synctime](#property.synctime) <sup>RO</sup> | Most recent synchronized time |
 | [time](#property.time) | Current system time |
 
-
 <a name="property.synctime"></a>
-## *synctime <sup>property</sup>*
+## *synctime [<sup>property</sup>](#head.Properties)*
 
 Provides access to the most recent synchronized time.
 
@@ -165,11 +175,13 @@ Provides access to the most recent synchronized time.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Most recent synchronized time |
-| (property).time | string | Synchronized time (in ISO8601 format); empty string if the time has never been synchronized |
-| (property)?.source | string | <sup>*(optional)*</sup> The synchronization source e.g. an NTP server |
+| result | object | Most recent synchronized time |
+| result.time | string | Synchronized time (in ISO8601 format); empty string if the time has never been synchronized |
+| result?.source | string | <sup>*(optional)*</sup> The synchronization source e.g. an NTP server |
 
 ### Example
 
@@ -177,9 +189,9 @@ Provides access to the most recent synchronized time.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "TimeSync.1.synctime"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TimeSync.1.synctime"
 }
 ```
 
@@ -187,29 +199,35 @@ Provides access to the most recent synchronized time.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": {
-        "time": "2019-05-07T07:20:26Z",
-        "source": "ntp://example.com"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "time": "2019-05-07T07:20:26Z",
+    "source": "ntp://example.com"
+  }
 }
 ```
 
 <a name="property.time"></a>
-## *time <sup>property</sup>*
+## *time [<sup>property</sup>](#head.Properties)*
 
 Provides access to the current system time.
 
 ### Description
 
-Upon setting this property automatic time synchronization will be stopped. If not already active, the framework's *time* subsystem will become activated. If the property is set empty then the *time* subsystem will still become activated but without setting the time (thereby notifying the framework that the time has been set externally).
+Upon setting this property automatic time synchronization will be stopped. Usage of this property is deprecated and the SubSystem control plugin can be used as an alternative to achieve the same
 
 ### Value
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | (property) | string | System time (in ISO8601 format) |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | string | System time (in ISO8601 format) |
 
 ### Errors
 
@@ -223,9 +241,9 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "TimeSync.1.time"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TimeSync.1.time"
 }
 ```
 
@@ -233,9 +251,9 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": "2019-05-07T07:20:26Z"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "2019-05-07T07:20:26Z"
 }
 ```
 
@@ -243,10 +261,10 @@ Upon setting this property automatic time synchronization will be stopped. If no
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "TimeSync.1.time",
-    "params": "2019-05-07T07:20:26Z"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TimeSync.1.time",
+  "params": "2019-05-07T07:20:26Z"
 }
 ```
 
@@ -255,7 +273,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1234567890,
+    "id": 42,
     "result": "null"
 }
 ```
@@ -263,7 +281,7 @@ Upon setting this property automatic time synchronization will be stopped. If no
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the TimeSync plugin:
 
@@ -273,9 +291,8 @@ TimeSync interface events:
 | :-------- | :-------- |
 | [timechange](#event.timechange) | Signals a time change |
 
-
 <a name="event.timechange"></a>
-## *timechange <sup>event</sup>*
+## *timechange [<sup>event</sup>](#head.Notifications)*
 
 Signals a time change.
 
@@ -287,8 +304,8 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.timechange"
+  "jsonrpc": "2.0",
+  "method": "client.events.1.timechange"
 }
 ```
 

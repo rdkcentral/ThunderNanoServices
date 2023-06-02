@@ -163,7 +163,7 @@ namespace Plugin {
 
             using AdditionalDataType = std::unordered_map<string, string>;
 
-            virtual ~IApplication() {}
+            ~IApplication() override = default;
 
             virtual bool IsRunning() const = 0;
 
@@ -238,7 +238,7 @@ namespace Plugin {
                 if (_passiveMode == false) {
                     // We are in active mode, no need to do reporting from DIALSserver, move
                     // to the required plugin
-                    _service = _service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
+                    _service = service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
 
                     if (_service == nullptr) {
                         // Oops the service we want to use does not exist, move to Passive more..
@@ -259,6 +259,7 @@ namespace Plugin {
                 }
                 if (_service != nullptr) {
                     _service->Release();
+                    _service = nullptr;
                 }
             }
 
@@ -275,7 +276,7 @@ namespace Plugin {
                     } else {
                         running = (_service->State() == PluginHost::IShell::ACTIVATED);
                     }
-                    if ((running == true) && (_service->AutoStart() == true)) {
+                    if ((running == true) && (_service->Startup() == PluginHost::IShell::startup::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             running = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
@@ -297,7 +298,7 @@ namespace Plugin {
                         hidden = !hidden;
                         app->Release();
                     }
-                    if ((hidden == true) && (_service->AutoStart() == true)) {
+                    if ((hidden == true) && (_service->Startup() == PluginHost::IShell::startup::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             hidden = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
@@ -332,14 +333,14 @@ namespace Plugin {
             uint32_t Start(const string& parameters, const string& payload) override
             {
                 // DIAL active mode operation logic:
-                // AutoStart: OFF
+                // Startup: ACTIVATED
                 //  - Start activates the app, sets launch point, sets content link and sets visible state, resumes if needed
                 //  - Stop deactivates the app
                 //  - Hide sets app's invisible state
                 //  - 'Running' state is when service is activated and in visible state
                 //  - 'Hidden' state is when service is activated and in invisible state
                 //  - 'Stopped' state is when service is deactivated
-                // AutoStart: ON
+                // Startup: DEACTIVATED
                 //  - Start activates the app if needed, sets launch point, sets content link and sets visible state and resumes
                 //  - Stop suspends the app
                 //  - Hide sets app's invisible state
@@ -401,7 +402,7 @@ namespace Plugin {
                     _service->Notify(message);
                     _parent->event_stop(_callsign, parameters);
                 } else {
-                    if (_service->AutoStart() == true) {
+                    if (_service->Startup() == PluginHost::IShell::startup::ACTIVATED) {
                         PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             if (stateCtrl->State() != PluginHost::IStateControl::SUSPENDED) {
@@ -755,7 +756,7 @@ namespace Plugin {
 
         public:
             DIALServerImpl(const string& MACAddress, const Core::URL& baseURL, const string& appPath, const bool dynamicInterface);
-            virtual ~DIALServerImpl();
+            ~DIALServerImpl() override;
 
         public:
             // Notification of a Partial Request received, time to attach a body..
@@ -1177,9 +1178,7 @@ namespace Plugin {
         DIALServer(const DIALServer&) = delete;
         DIALServer& operator=(const DIALServer&) = delete;
 
-#ifdef __WINDOWS__
-#pragma warning(disable : 4355)
-#endif
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         DIALServer()
             : _adminLock()
             , _config()
@@ -1193,12 +1192,8 @@ namespace Plugin {
             , _deprecatedAPI(false)
         {
         }
-#ifdef __WINDOWS__
-#pragma warning(default : 4355)
-#endif
-        virtual ~DIALServer()
-        {
-        }
+POP_WARNING()
+        ~DIALServer() override = default;
 
         BEGIN_INTERFACE_MAP(DIALServer)
         INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -1217,29 +1212,29 @@ namespace Plugin {
         // If there is an error, return a string describing the issue why the initialisation failed.
         // The Service object is *NOT* reference counted, lifetime ends if the plugin is deactivated.
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
-        virtual const string Initialize(PluginHost::IShell* service);
+        const string Initialize(PluginHost::IShell* service) override;
 
         // The plugin is unloaded from the framework. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
-        virtual void Deinitialize(PluginHost::IShell* service);
+        void Deinitialize(PluginHost::IShell* service) override;
 
         // Returns an interface to a JSON struct that can be used to return specific metadata information with respect
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
-        virtual string Information() const;
+        string Information() const override;
 
         //      IWeb methods
         // -------------------------------------------------------------------------------------------------------
         // Whenever a request is received, it might carry some additional data in the body. This method allows
         // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
         // in the body of the request.
-        virtual void Inbound(Web::Request& request);
+        void Inbound(Web::Request& request) override;
 
         // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
         // do our thing and to return the result in the response object. Here the actual specific module work,
         // based on a a request is handled.
-        virtual Core::ProxyType<Web::Response> Process(const Web::Request& request);
+        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     public:
         // IDIALServer methods
@@ -1271,6 +1266,30 @@ namespace Plugin {
 
         bool DeprecatedAPI() const {
             return (_deprecatedAPI);
+        }
+
+        string DeviceId() const
+        {
+            string deviceId;
+            PluginHost::ISubSystem* subSystem = _service->SubSystems();
+            if (subSystem != nullptr) {
+
+                const PluginHost::ISubSystem::IIdentifier* identifier(subSystem->Get<PluginHost::ISubSystem::IIdentifier>());
+                if (identifier != nullptr) {
+                    uint8_t buffer[64];
+
+                    buffer[0] = static_cast<const PluginHost::ISubSystem::IIdentifier*>(identifier)
+                                ->Identifier(sizeof(buffer) - 1, &(buffer[1]));
+
+                    if (buffer[0] != 0) {
+                        deviceId = Core::SystemInfo::Instance().Id(buffer, ~0);
+                    }
+
+                    identifier->Release();
+                }
+                subSystem->Release();
+            }
+            return deviceId;
         }
 
     private:

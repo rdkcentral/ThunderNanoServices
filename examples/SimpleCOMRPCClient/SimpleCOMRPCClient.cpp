@@ -24,11 +24,6 @@
 #include <plugins/plugins.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
-#ifdef __WINDOWS__
-    static constexpr TCHAR SimpleTestAddress[] = _T("127.0.0.1:62000");
-#else
-    static constexpr TCHAR SimpleTestAddress[] = _T("/tmp/comserver");
-#endif
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
 using namespace WPEFramework;
@@ -97,7 +92,7 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, ServerType& t
 {
     int index = 1;
     bool showHelp = false;
-    comChannel = Core::NodeId(SimpleTestAddress);
+    comChannel = Core::NodeId(Exchange::SimpleTestAddress);
 
     while ((index < argc) && (!showHelp)) {
         if (strcmp(argv[index], "-connect") == 0) {
@@ -142,7 +137,7 @@ int main(int argc, char* argv[])
 
     if (ParseOptions(argc, argv, comChannel, type, callsign) == true) {
         printf("Options:\n");
-        printf("-connect <IP/FQDN>:<port> [default: %s]\n", SimpleTestAddress);
+        printf("-connect <IP/FQDN>:<port> [default: %s]\n", Exchange::SimpleTestAddress);
         printf("-plugin <callsign> [use plugin server and not the stand-alone version]\n");
         printf("-h This text\n\n");
     }
@@ -180,6 +175,19 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
+            case 'R':
+                printf("Revoking our IMath interface to te otherside..!\n");
+                if (client->IsOpen() == true) {
+                    uint32_t result = client->Revoke<Exchange::IMath>(outbound);
+
+                    if (result == Core::ERROR_NONE) {
+                        printf("Our IMath nterface has been Revoked from the other side!\n");
+                    }
+                    else {
+                        printf("Our revoke has not been accepted, Error: %d!\n", result);
+                    }
+                }
+                break;
             case 'C':
                 if (clock != nullptr) {
                     printf("There is no need to create a clock, we already have one!\n");
@@ -193,10 +201,10 @@ int main(int argc, char* argv[])
                         break;
                     } else {
                         if (type == ServerType::STANDALONE_SERVER) {
-                            clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
+                            clock = client->Acquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
                         }
                         else {
-                            WPEFramework::PluginHost::IShell* controller = client->Aquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            WPEFramework::PluginHost::IShell* controller = client->Acquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
                             if (controller == nullptr) {
                                 printf("Could not get the IShell* interface from the controller to execute the QueryInterfaceByCallsign!\n");
                             }
@@ -217,7 +225,7 @@ int main(int argc, char* argv[])
 
                         }
                     } else {
-                        printf("Aquired the IWallclock, ready for use\n");
+                        printf("Acquired the IWallclock, ready for use\n");
                     }
                 }
                 break;
