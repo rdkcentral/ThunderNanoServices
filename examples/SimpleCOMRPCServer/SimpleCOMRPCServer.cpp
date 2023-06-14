@@ -233,8 +233,6 @@ public:
         // over socket, the announce message could be handled on the communication thread
         // or better, if possible, it can be run on the thread of the engine we have just 
         // created.
-        engine->Announcements(Announcement());
-
         Open(Core::infinite);
     }
     ~COMServer() override
