@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2022 Metrological B.V.
+ * Copyright 2023 Metrological B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -205,7 +205,7 @@ private:
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = _texture.texture->Width(), .height = _texture.texture->Height() };
+        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(_texture.texture->Width()), .height = int(_texture.texture->Height()) };
         _renderer->Render(_texture.texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);

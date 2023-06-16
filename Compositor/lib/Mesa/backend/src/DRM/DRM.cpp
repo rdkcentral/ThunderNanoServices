@@ -225,7 +225,7 @@ namespace Compositor {
                 {
                     return _buffer->Height();
                 }
-                uint32_t Format() const
+                uint32_t Format() const override
                 {
                     return _buffer->Format();
                 }
