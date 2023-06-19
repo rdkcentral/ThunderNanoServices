@@ -543,6 +543,9 @@ namespace Weston {
             {
                 UpdateOpacity(static_cast<float>(opacity)/MaxOpacityRange);
             }
+            uint32_t Opacity() const {
+                return 0;
+            }
             inline void RemoveTimer()
             {
                 if (_timer != nullptr) {

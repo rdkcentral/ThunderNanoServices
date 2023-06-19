@@ -15,27 +15,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+option(INSTALL_COMPOSITOR_SERVER_TEST "Build compositor server test app" ON)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(${NAMESPACE}CompositorBuffer CONFIG REQUIRED)
 
-add_executable(mesaserver main.cpp)
+add_executable(compositorserver main.cpp)
 
-target_link_libraries(mesaserver
+target_link_libraries(compositorserver
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}CompositorBuffer::${NAMESPACE}CompositorBuffer
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         CompileSettingsDebug::CompileSettingsDebug
-        common::include
-        common::buffer
-        common::backend
-        common::transformation
-        common::renderer
-        common::drm
+        platform::implementation
 )
 
-install(TARGETS mesaserver DESTINATION bin)
+if(INSTALL_COMPOSITOR_SERVER_TEST)
+    install(TARGETS compositorserver RUNTIME DESTINATION bin)
+endif()

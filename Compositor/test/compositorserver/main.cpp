@@ -28,14 +28,7 @@
 
 #include <interfaces/IComposition.h>
 #include <interfaces/ICompositionBuffer.h>
-
-#include <IBuffer.h>
-#include <IRenderer.h>
-#include <Transformation.h>
-
 #include <compositorbuffer/CompositorBufferType.h>
-
-#include <drm_fourcc.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 

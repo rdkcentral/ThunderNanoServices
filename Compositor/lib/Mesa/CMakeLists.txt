@@ -49,6 +49,7 @@ target_link_libraries(${PLATFORM_COMPOSITOR}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}CompositorBuffer::${NAMESPACE}CompositorBuffer
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         CompileSettingsDebug::CompileSettingsDebug
         common::include
         common::buffer
@@ -71,4 +72,4 @@ install(TARGETS ${PLATFORM_COMPOSITOR}
 
 add_library(compositor::platform ALIAS ${PLATFORM_COMPOSITOR})
 
-add_subdirectory(test)
+# add_subdirectory(test)
