@@ -593,6 +593,8 @@ namespace Plugin {
                 client->AddRef();
             }
 
+            TRACE(Trace::Information, (_T("Create a %dx%d surface for client %s, "), width, height, name.c_str()));
+
             return client;
         }
 
@@ -637,7 +639,7 @@ namespace Plugin {
 
         uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
         {
-            TRACE(Trace::Information, (_T("FixMe: Could not set resolution to %s. This is still a to do"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
+            TRACE(Trace::Error, (_T("FixMe: Could not set resolution to %s. This is still a to do"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
             return (Core::ERROR_UNAVAILABLE);
         }
 

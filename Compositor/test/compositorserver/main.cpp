@@ -18,7 +18,7 @@
  */
 
 #ifndef MODULE_NAME
-#define MODULE_NAME CompositorMesaTestServer
+#define MODULE_NAME CompositorTestServer
 #endif
 
 #include <core/core.h>
@@ -333,11 +333,13 @@ int main(int argc, const char* argv[])
 
         const std::vector<string> modules = {
             "CompositorMesaImplementation",
-            "CompositorMesaTestServer",
+            "CompositorTestServer",
             "CompositorBuffer",
             "CompositorBackend",
             "CompositorRenderer",
-            "DRMCommon"
+            "DRMCommon",
+            "CompositorRenderEGL",
+            "CompositorRenderer"
         };
 
         for (auto module : modules) {
