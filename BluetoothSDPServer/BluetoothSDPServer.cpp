@@ -65,11 +65,14 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
+        Config config(_service->ConfigLine());
+
         Configure(Config(_service->ConfigLine()));
 
         if (_services.empty() == false) {
-            _server.Start(0 /* TODO: do not hardcode this */);
-        } else {
+            _server.Start(config.Interface, config.PSM, config.InactivityTimeoutMs);
+        }
+        else {
             TRACE(Trace::Error, (_T("No services configured for SDP Server")));
         }
 
@@ -80,36 +83,43 @@ namespace Plugin {
 
     Bluetooth::SDP::Service* BluetoothSDPServer::ConfigureA2DPService(const bool sink, const string& configuration)
     {
-        // helper funcion, assumes access is locked already
-        namespace SDP = Bluetooth::SDP;
+        Bluetooth::SDP::Service* newService = nullptr;
 
-        SDP::Service& service = _server.Add();
+        _server.WithServiceTree([&](Bluetooth::SDP::Tree& tree) {
 
-        service.ServiceClassIDList()->Add(sink ? SDP::ClassID::AudioSink : SDP::ClassID::AudioSource);
-        service.ProfileDescriptorList()->Add(SDP::ClassID::AdvancedAudioDistribution, 0x0103 /* v1.3 */);
-        service.ProtocolDescriptorList()->Add(SDP::ClassID::L2CAP, SDP::Service::Protocol::L2CAP(/* PSM */ 25));
-        service.ProtocolDescriptorList()->Add(SDP::ClassID::AVDTP, SDP::Service::Protocol::AVDTP(0x0102 /* v1.2 */));
+            namespace SDP = Bluetooth::SDP;
 
-        uint16_t features = 0;
+            SDP::Service& service = tree.Add();
 
-        if (sink == true) {
-            Config::A2DP::Config<Config::A2DP::sinktype> config(configuration);
-            features = config.GetFeatures();
-        } else {
-            Config::A2DP::Config<Config::A2DP::sourcetype> config(configuration);
-            features = config.GetFeatures();
-        }
+            service.ServiceClassIDList()->Add(sink? SDP::ClassID::AudioSink : SDP::ClassID::AudioSource);
+            service.ProfileDescriptorList()->Add(SDP::ClassID::AdvancedAudioDistribution, 0x0103 /* v1.3 */);
+            service.ProtocolDescriptorList()->Add(SDP::ClassID::L2CAP, SDP::Service::Protocol::L2CAP(/* PSM */ 25));
+            service.ProtocolDescriptorList()->Add(SDP::ClassID::AVDTP, SDP::Service::Protocol::AVDTP(0x0102 /* v1.2 */));
 
-        if (features != 0) {
-            service.Add(SDP::Service::AttributeDescriptor::a2dp::SupportedFeatures, SDP::Service::Data::Element<uint16_t>(features));
-        }
+            uint16_t features = 0;
 
-        return (&service);
+            if (sink == true) {
+                Config::A2DP::Config<Config::A2DP::sinktype> config(configuration);
+                features = config.GetFeatures();
+            }
+            else {
+                Config::A2DP::Config<Config::A2DP::sourcetype> config(configuration);
+                features = config.GetFeatures();
+            }
+
+            if (features != 0) {
+                service.Add(SDP::Service::AttributeDescriptor::a2dp::SupportedFeatures, SDP::Service::Data::Element<uint16_t>(features));
+            }
+
+            newService = &service;
+        });
+
+        return (newService);
     }
 
     void BluetoothSDPServer::Configure(const Config& config)
     {
-        _server.Lock();
+        _lock.Lock();
 
         auto service = config.Services.Elements();
 
@@ -131,13 +141,11 @@ namespace Plugin {
                     newService->BrowseGroupList()->Add(Bluetooth::SDP::ClassID::PublicBrowseRoot);
                 }
 
-                _lock.Lock();
                 _services.emplace_back(std::make_pair(newService, service.Current().Callsign.Value()));
-                _lock.Unlock();
             }
         }
 
-        _server.Unlock();
+        _lock.Unlock();
     }
 
     /* virtual */ void BluetoothSDPServer::Deinitialize(PluginHost::IShell* service)
@@ -164,7 +172,6 @@ namespace Plugin {
                 ASSERT(service != nullptr);
                 service->Enable(true);
                 TRACE(Trace::Information, (_T("Enabled service 0x%08x '%s'"), service->Handle(), service->Name().c_str()));
-                break;
             }
         }
 
@@ -181,7 +188,6 @@ namespace Plugin {
                 ASSERT(service != nullptr);
                 service->Enable(false);
                 TRACE(Trace::Information, (_T("Disabled service 0x%08x '%s'"), service->Handle(), service->Name().c_str()));
-                break;
             }
         }
 
