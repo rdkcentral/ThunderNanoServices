@@ -539,7 +539,6 @@ int main(int argc, char** argv)
                 comChannel, 
                 Core::ProxyType<Core::IIPCServer>(engine)
             ));
-        engine->Announcements(client->Announcement());
 
         ASSERT(client.IsValid() == true);
 

@@ -83,6 +83,7 @@
 
 #include <core/core.h>
 #include <com/com.h>
+#include <definitions/definitions.h>
 #include <plugins/Types.h>
 #include <interfaces/IDictionary.h>
 #include <iostream>
@@ -90,6 +91,34 @@
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
 namespace Thunder = WPEFramework;
+
+class Sink : public Thunder::Exchange::IDictionary::INotification {
+public:
+    Sink() = delete;
+    Sink(Sink&&) = delete;
+    Sink(const Sink&) = delete;
+    Sink& operator= (const Sink&) = delete;
+
+    Sink(Thunder::Exchange::IDictionary* source)
+        : _source(source) {
+        _source->AddRef();
+    }
+    ~Sink() override {
+        _source->Release();
+    }
+
+public:
+    void Modified(const string& nameSpace, const string& key, const string& value) override {
+        printf("In namespace [%s], the key [%s] has a new value: [%s]\n", nameSpace.c_str(), key.c_str(), value.c_str());
+    }
+
+    BEGIN_INTERFACE_MAP(Sink)
+        INTERFACE_ENTRY(Thunder::Exchange::IDictionary::INotification);
+    END_INTERFACE_MAP
+
+private:
+    Thunder::Exchange::IDictionary* _source;
+};
 
 class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary > {
 private:
@@ -133,15 +162,56 @@ private:
     }
 };
 
+class WorkerPoolImplementation 
+    : public Thunder::Core::IIPCServer
+    , public Thunder::Core::ThreadPool::IDispatcher
+    , public Thunder::Core::WorkerPool {
+public:
+    WorkerPoolImplementation() = delete;
+    WorkerPoolImplementation(WorkerPoolImplementation&&) = delete;
+    WorkerPoolImplementation(const WorkerPoolImplementation&) = delete;
+    WorkerPoolImplementation& operator=(const WorkerPoolImplementation&) = delete;
+
+    PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+    WorkerPoolImplementation(const uint8_t threads, const uint32_t stackSize, const uint32_t queueSize)
+        : WorkerPool(threads, stackSize, queueSize, this, nullptr) {
+        //, _announceHandler(nullptr) {
+        Thunder::Core::IWorkerPool::Assign(this);
+    }
+    POP_WARNING()
+
+    ~WorkerPoolImplementation() override {
+        Thunder::Core::IWorkerPool::Assign(nullptr);
+    }
+
+private:
+    // ThreadPool::IDispatcher
+    // -------------------------------------------------------------
+    void Initialize() override {
+    }
+    void Deinitialize() override {
+    }
+    void Dispatch(Thunder::Core::IDispatch* job) override {
+        job->Dispatch();
+    }
+
+    // IIPCServer
+    // -------------------------------------------------------------
+    void Procedure(Thunder::Core::IPCChannel& channel, Thunder::Core::ProxyType<Thunder::Core::IIPC>& data) override {
+        Thunder::Core::ProxyType<Thunder::RPC::Job> job(Thunder::RPC::Job::Instance());
+
+        job->Set(channel, data);
+
+        WorkerPool::Submit(Thunder::Core::ProxyType<Thunder::Core::IDispatch>(job));
+    }
+
+private:
+    Thunder::Core::IIPCServer* _announceHandler;
+};
+
 int main(int argc, char* argv[])
 {
-    // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address
-    // Here we create a domain socket address
-    #ifdef __WINDOWS__
-    Thunder::Core::NodeId nodeId("127.0.0.1:62000");
-    #else
-    Thunder::Core::NodeId nodeId("/tmp/communicator");
-    #endif
+    bool directLink = true;
 
     // Create an engine that can deserialize the invoke COMRPC messages that have been 
     // received. The parameters her <4,1> stand for the queue length, 4 which means that
@@ -219,12 +289,73 @@ int main(int argc, char* argv[])
     //
     // Or
     // 3)
+    // WorkerPoolImplementation workerPool(2, Thunder::Core::Thread::DefaultStackSize(), 6);
+    
+    if (directLink == true)
     {
+        #ifdef __WINDOWS__
+        Thunder::Core::NodeId nodeId("127.0.0.1:5522");
+        #else
+        Thunder::Core::NodeId nodeId("/tmp/Dictionary/communicator");
+        #endif
+        Thunder::Core::ProxyObject<Thunder::RPC::CommunicatorClient> client(nodeId);
+        client.AddRef();
+
+        Thunder::Exchange::IDictionary* pluginOnly = client.Open<Thunder::Exchange::IDictionary>(_T(""));
+
+        if (pluginOnly != nullptr) {
+            Thunder::Core::Sink<Sink> sink(pluginOnly);
+
+            pluginOnly->Register(_T("/name"), &sink);
+
+            int32_t counter = 0;
+            char keyPress;
+
+            do {
+                keyPress = toupper(getchar());
+
+                switch (keyPress) {
+                case 'S': {
+
+                    string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
+                    if (pluginOnly->Set(_T("/name"), _T("key"), value) == true) {
+                        printf("Set value: %s\n", value.c_str());
+                    }
+                    break;
+                }
+                case 'G': {
+                    string value;
+                    if (pluginOnly->Get(_T("/name"), _T("key"), value) == true) {
+                        printf("Get value: %s\n", value.c_str());
+                    }
+                    break;
+
+                }
+                case 'Q': break;
+                default: break;
+                };
+            } while (keyPress != 'Q');
+
+            pluginOnly->Unregister(_T("/"), &sink);
+            pluginOnly->Release();
+            pluginOnly = nullptr;
+        }
+        client.CompositRelease();
+    }
+    else {
+        // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address
+        // Here we create a domain socket address
+        #ifdef __WINDOWS__
+                Thunder::Core::NodeId nodeId("127.0.0.1:62000");
+        #else
+                Thunder::Core::NodeId nodeId("/tmp/communicator");
+        #endif
+
+
         Dictionary  dictionary(3000, nodeId, _T("Dictionary"));
         char keyPress;
         uint32_t counter = 8;
 
-        // chip.PCD_Init();
         do {
             keyPress = toupper(getchar());
             
