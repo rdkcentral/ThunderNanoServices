@@ -111,7 +111,6 @@ namespace Plugin {
                 Signalling(A2DPSource& parent)
                     : _parent(parent)
                     , _lock()
-                    , _device(nullptr)
                     , _signalling(nullptr)
                     , _transport(nullptr)
                 {
@@ -126,95 +125,43 @@ namespace Plugin {
                 // IHandler overrides
                 bool Accept(Bluetooth::AVDTP::ServerSocket* channel) override
                 {
-                    bool result = false;
-
-                    ASSERT(channel != nullptr);
-
-                    _lock.Lock();
-
-                    if (_parent.IsBusy() == false) {
-
-                        TRACE(SourceFlow, (_T("Source accepting signalling connection from %s"), channel->RemoteNode().HostAddress().c_str()));
-
-                        Exchange::IBluetooth* btControl = _parent._parent.Controller();
-                        ASSERT(btControl != nullptr);
-
-                        if (btControl != nullptr) {
-
-                            ASSERT(_device == nullptr);
-
-                            _device = btControl->Device(channel->RemoteNode().HostAddress(), Exchange::IBluetooth::IDevice::ADDRESS_BREDR);
-                            ASSERT(_device != nullptr);
-
-                            btControl->Release();
-
-                            _parent.OnDeviceConnected(_device);
-                            _signalling = channel;
-
-                            result = true;
-                        }
-                    }
-                    else if (channel->RemoteNode().HostAddress() == _device->RemoteId()) {
-
-                        ASSERT(_signalling != nullptr);
-
-                        if (_transport == nullptr) {
-
-                            TRACE(SourceFlow, (_T("Source accepting transport connection from %s"), channel->RemoteNode().HostAddress().c_str()));
-
-                            channel->Type(Bluetooth::AVDTP::ServerSocket::channeltype::TRANSPORT);
-
-                            _transport = channel;
-
-                            result = true;
-                        }
-                        else {
-                            TRACE(SourceFlow, (_T("Unsupported connection from %s"), channel->RemoteNode().HostAddress().c_str()));
-                        }
-                    }
-
-                    _lock.Unlock();
-
-                    return (result);
+                    // Accept any connection, don't know yet who it is!
+                    return (true);
                 }
                 void Operational(const bool running, Bluetooth::AVDTP::ServerSocket* channel) override
                 {
                     ASSERT(channel != nullptr);
 
+                    _lock.Lock();
+
                     if (running == true) {
-                        TRACE(SourceFlow, (_T("Signalling channel operational")));
-                        //Client::Channel(*channel);
+                        // It is yet another AVDTP connection from the same device
+                        if (_parent.Address() == channel->RemoteNode().HostAddress()) {
+                            ASSERT(_parent.Address().empty() == false);
+
+                            if (_transport == nullptr) {
+                                TRACE(SourceFlow, (_T("Transport connection from %s is open"), channel->RemoteNode().HostAddress().c_str()));
+                                channel->Type(Bluetooth::AVDTP::ServerSocket::TRANSPORT);
+                                _transport = channel;
+                            } else {
+                                TRACE(Trace::Error, (_T("Unsupported connection")));
+                            }
+                        } else {
+                            TRACE(SourceFlow, (_T("Signalling connection from %s is open"), channel->RemoteNode().HostAddress().c_str()));
+                        }
                     }
                     else {
-                        TRACE(SourceFlow, (_T("Signalling channel not operational")));
-
-                        _lock.Lock();
-
-                        if (channel == _signalling) {
-                            ASSERT(channel->Type() == Bluetooth::AVDTP::ServerSocket::SIGNALLING);
-
-                            _parent.OnSignallingDisconnected();
-
-                            _signalling = nullptr;
-                        }
-                        else if (channel == _transport) {
-                            ASSERT(channel->Type() == Bluetooth::AVDTP::ServerSocket::TRANSPORT);
-
-                            _parent.OnTransportDisconnected();
-
+                        if (channel == _transport) {
+                            TRACE(SourceFlow, (_T("Transport connection to %s is closed"), channel->RemoteNode().HostAddress().c_str()));
                             _transport = nullptr;
                         }
-
-                        if ((_signalling == nullptr) && (_transport == nullptr) && (_device != nullptr)) {
-
-                            _parent.OnDeviceDisconnected(_device);
-
-                            _device->Release();
-                            _device = nullptr;
+                        else {
+                            TRACE(SourceFlow, (_T("Signalling connection to %s is closed"), channel->RemoteNode().HostAddress().c_str()));
+                            _transport = nullptr;
                         }
-
-                        _lock.Unlock();
                     }
+
+                    _lock.Unlock();
                 }
                 void OnSignal(const Bluetooth::AVDTP::Signal& request, const Bluetooth::AVDTP::ServerSocket::ResponseHandler& handler) override
                 {
@@ -232,7 +179,6 @@ namespace Plugin {
             private:
                 A2DPSource& _parent;
                 Core::CriticalSection _lock;
-                Exchange::IBluetooth::IDevice* _device;
                 Bluetooth::AVDTP::ServerSocket* _signalling;
                 Bluetooth::AVDTP::ServerSocket* _transport;
             };
@@ -257,56 +203,6 @@ namespace Plugin {
             {
             }
             ~A2DPSource() override
-            {
-            }
-
-        private:
-            void OnDeviceConnected(Exchange::IBluetooth::IDevice* device)
-            {
-                ASSERT(device != nullptr);
-
-                TRACE(SourceFlow, (_T("Device %s connected"), device->RemoteId().c_str()));
-
-                _lock.Lock();
-
-                ASSERT(_device == nullptr);
-
-                _device = device;
-                _device->AddRef();
-
-                _lock.Unlock();
-            }
-            void OnDeviceDisconnected(Exchange::IBluetooth::IDevice* device)
-            {
-                ASSERT(device != nullptr);
-
-                TRACE(SourceFlow, (_T("Device %s disconnected"), device->RemoteId().c_str()));
-
-                _lock.Lock();
-
-                ASSERT(_device == device);
-
-                _device->Release();
-                _device = nullptr;
-
-                _lock.Unlock();
-            }
-            void OnSignallingDisconnected()
-            {
-                _disconnectJob.Submit([this]() {
-                    _lock.Lock();
-
-                    if (_sourceEndpoint != nullptr) {
-                        TRACE(Trace::Information, (_T("Audio source was disconnected abruptly, unlocking endpoint")));
-                        _sourceEndpoint->Disconnected();
-                    }
-
-                    _lock.Unlock();
-
-                    State(Exchange::IBluetoothAudio::DISCONNECTED);
-                });
-            }
-            void OnTransportDisconnected()
             {
             }
 
@@ -418,7 +314,7 @@ namespace Plugin {
 
                             State(Exchange::IBluetoothAudio::CONNECTED);
 
-                            result = Core::ERROR_NONE;
+                             result = Core::ERROR_NONE;
                         }
                         else {
                             TRACE(Trace::Error, (_T("Unsupported configuration")));
@@ -466,6 +362,19 @@ namespace Plugin {
                             _sourceEndpoint = &endpoint;
 
                             TRACE(Trace::Information, (_T("Acquired the receiver audio sink (endpoint %d)"), endpoint.Id()));
+
+                            auto* control = _parent.Controller();
+                            ASSERT(control != nullptr);
+                            ASSERT(_device == nullptr);
+
+                            auto* channel = endpoint.Channel();
+                            ASSERT(channel != nullptr);
+
+                            string address = endpoint.Channel()->RemoteNode().HostAddress();
+                            ASSERT(address.empty() == false);
+
+                            _device = control->Device(address, Exchange::IBluetooth::IDevice::ADDRESS_BREDR);
+                            ASSERT(_device != nullptr);
 
                             // Notify listneres that the Bluetooth audio source and the client receiver sink are both ready for streaming!
                             State(Exchange::IBluetoothAudio::READY);

@@ -151,14 +151,20 @@ namespace Plugin {
                 return (_lastActivity);
             }
             bool IsBusy() const {
-                ASSERT(_handler != nullptr);
-                return (_handler->IsBusy());
+                if (_handler != nullptr) {
+                    // This is safe, once set handler always outlives this channel.
+                    return (_handler->IsBusy());
+                }
+                else {
+                    return (false);
+                }
             }
 
         public:
             void Handler(IHandler* handler)
             {
                 ASSERT(handler != nullptr);
+                ASSERT(_handler == nullptr);
 
                 _handler = handler;
             }
@@ -199,9 +205,9 @@ namespace Plugin {
                     _server->Connected(running, *this);
                 }
 
-                ASSERT(_handler != nullptr);
-
-                _handler->Operational(running, static_cast<Bluetooth::AVDTP::ServerSocket*>(this));
+                if (_handler != nullptr) {
+                    _handler->Operational(running, static_cast<Bluetooth::AVDTP::ServerSocket*>(this));
+                }
             }
 
         private:
@@ -343,8 +349,8 @@ namespace Plugin {
 
     private:
         // The signalling server is shared between sink and source functionality.
-        // While it is the core component of source, it may be also needed for sink, 
-        // whenever the sink device initiates the connection (this is optionally allowed by the spec). 
+        // While it is the core component of source, it may be also needed for sink,
+        // whenever the sink device initiates the connection (this is optionally allowed by the spec).
         SignallingServer()
             : _server()
             , _lock()
@@ -495,6 +501,9 @@ namespace Plugin {
                     //    TRACE(Trace::Error, (_T("Failed to close connection")));
                    // }
                 }
+            }
+            else {
+                TRACE(ServerFlow, (_T("AVDTP connection '%s' closed"), channel.RemoteNode().HostName().c_str()));
             }
 
             _lock.Unlock();
