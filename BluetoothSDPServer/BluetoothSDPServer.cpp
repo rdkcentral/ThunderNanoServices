@@ -20,7 +20,6 @@
 #include "Module.h"
 
 #include "BluetoothSDPServer.h"
-#include "Tracing.h"
 
 namespace WPEFramework {
 

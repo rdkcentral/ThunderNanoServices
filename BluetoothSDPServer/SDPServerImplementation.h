@@ -21,9 +21,11 @@
 
 #include "Module.h"
 
-#include "Tracing.h"
+#include "DebugTracing.h"
 
 namespace WPEFramework {
+
+namespace Plugin {
 
 namespace SDP {
 
@@ -55,7 +57,7 @@ namespace SDP {
         public:
             void OnPDU(const Bluetooth::SDP::ServerSocket& socket, const Bluetooth::SDP::PDU& request, const Bluetooth::SDP::ServerSocket::ResponseHandler& handler) override
             {
-                TRACE(Tracing::Verbose, (_T("Incoming SDP request %d from remote client %s"),
+                TRACE(Verbose, (_T("Incoming SDP request %d from remote client %s"),
                         request.Type(), RemoteNode().HostName().c_str()));
 
                 // Just forward the request to the server.
@@ -70,10 +72,10 @@ namespace SDP {
                 if (upAndRunning == true) {
                     _lastActivity = Core::Time::Now().Ticks();
 
-                    TRACE(Tracing::Verbose, (_T("Incoming SDP connection from %s"), RemoteId().c_str()));
+                    TRACE(Verbose, (_T("Incoming SDP connection from %s"), RemoteId().c_str()));
                 }
                 else {
-                    TRACE(Tracing::Verbose, (_T("Closed SDP connection to %s"), RemoteId().c_str()));
+                    TRACE(Verbose, (_T("Closed SDP connection to %s"), RemoteId().c_str()));
                 }
             }
 
@@ -139,7 +141,7 @@ namespace SDP {
             {
                 uint32_t result = Core::ERROR_NONE;
 
-                TRACE(Tracing::Verbose, (_T("Starting SDP Server...")));
+                TRACE(Verbose, (_T("Starting SDP Server...")));
 
                 Core::NodeId node(Bluetooth::Address(interface).NodeId(Bluetooth::Address::BREDR_ADDRESS, 0, psm));
 
@@ -155,7 +157,7 @@ namespace SDP {
                         _connectionEvaluationTimer.Schedule(NextTick.Ticks(), Timer(*this));
                     }
 
-                    TRACE(Tracing::Verbose, (_T("SDP server is now listening on HCI interface %d (%s), L2CAP PSM %d"), 
+                    TRACE(Verbose, (_T("SDP server is now listening on HCI interface %d (%s), L2CAP PSM %d"),
                             node.QualifiedName().c_str(), interface, psm));
                 }
                 else {
@@ -166,8 +168,10 @@ namespace SDP {
             }
             uint32_t Stop()
             {
-                TRACE(Tracing::Verbose, (_T("Stopping SDP Server...")));
+                TRACE(Verbose, (_T("Stopping SDP Server...")));
+
                 Close(Core::infinite);
+
                 return (Core::ERROR_NONE);
             }
 
@@ -185,7 +189,7 @@ namespace SDP {
                 while (index.Next() == true) {
                     if (timeNow - index.Client()->LastActivity() >= _inactivityTimeoutUs) {
                         // Close inactive connections
-                        TRACE(Tracing::Verbose, (_T("Closing inactive connection to %s"), index.Client()->RemoteId().c_str()));
+                        TRACE(Verbose, (_T("Closing inactive connection to %s"), index.Client()->RemoteId().c_str()));
                         index.Client()->Close(0);
                     }
                 }
@@ -223,7 +227,7 @@ namespace SDP {
                 if (_server->Start(interface, psm) == Core::ERROR_NONE) {
                     TRACE(Trace::Information, (_T("Started Bluetooth SDP Server, providing %i services"), Services().size()));
 
-                    Tracing::Dump<Tracing::Verbose>(*this);
+                    Dump<Verbose>(*this);
                 }
                 else {
                     TRACE(Trace::Error, (_T("Failed to start Bluetooth SDP server")));
@@ -257,5 +261,7 @@ namespace SDP {
     }; //class ServiceDiscoveryServer
 
 } // namespace SDP
+
+} // namespace Plugin
 
 }

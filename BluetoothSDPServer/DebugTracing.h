@@ -22,39 +22,9 @@
 
 namespace WPEFramework {
 
-namespace Tracing {
+namespace Plugin {
 
-    class Verbose {
-    public:
-        Verbose() = delete;
-        Verbose(const Verbose&) = delete;
-        Verbose& operator=(const Verbose&) = delete;
-        Verbose(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit Verbose(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-        ~Verbose() = default;
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class Verbose
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, Verbose);
 
     template<typename FLOW>
     void Dump(const Bluetooth::SDP::Tree& tree)
