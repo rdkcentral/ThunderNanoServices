@@ -23,135 +23,29 @@
 
 namespace WPEFramework {
 
-namespace A2DP {
+namespace Plugin {
 
-    class ProfileFlow {
-    public:
-        ~ProfileFlow() = default;
-        ProfileFlow() = delete;
-        ProfileFlow(const ProfileFlow&) = delete;
-        ProfileFlow& operator=(const ProfileFlow&) = delete;
-        ProfileFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit ProfileFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, SinkFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, SourceFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, ServerFlow);
 
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, DiscoveryFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, SignallingFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, TransportFlow);
 
-    private:
-        std::string _text;
-    }; // class ProfileFlow
+    template<typename FLOW>
+    void Dump(const Bluetooth::AVDTP::StreamEndPoint& sep)
+    {
+        TRACE_GLOBAL(FLOW, (_T("%s"), sep.AsString().c_str()));
 
-    class DiscoveryFlow {
-    public:
-        ~DiscoveryFlow() = default;
-        DiscoveryFlow() = delete;
-        DiscoveryFlow(const DiscoveryFlow&) = delete;
-        DiscoveryFlow& operator=(const DiscoveryFlow&) = delete;
-        DiscoveryFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit DiscoveryFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
+        if (sep.Capabilities().empty() == false) {
+            TRACE_GLOBAL(FLOW, (_T("Capabilities:")));
 
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
+            for (auto const& caps : sep.Capabilities()) {
+                TRACE_GLOBAL(FLOW, (_T(" - %s"), caps.second.AsString().c_str()));
+            }
         }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class DiscoveryFlow
-
-    class SignallingFlow {
-    public:
-        ~SignallingFlow() = default;
-        SignallingFlow() = delete;
-        SignallingFlow(const SignallingFlow&) = delete;
-        SignallingFlow& operator=(const SignallingFlow&) = delete;
-        SignallingFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit SignallingFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class SignallingFlow
-
-    class TransportFlow {
-    public:
-        ~TransportFlow() = default;
-        TransportFlow() = delete;
-        TransportFlow(const TransportFlow&) = delete;
-        TransportFlow& operator=(const TransportFlow&) = delete;
-        TransportFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit TransportFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class TransportFlow
+    }
 
     template<typename FLOW>
     void Dump(const Bluetooth::SDP::Tree& tree)
@@ -230,6 +124,6 @@ namespace A2DP {
         }
     }
 
-} // namespace A2DP
+} // namespace Plugin
 
 }
