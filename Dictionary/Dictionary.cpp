@@ -335,6 +335,7 @@ namespace Plugin {
         }
 #endif
 
+        sink->AddRef();
         _observers.push_back(std::pair<string, struct Exchange::IDictionary::INotification*>(nameSpace, sink));
 
         _adminLock.Unlock();
@@ -356,6 +357,7 @@ namespace Plugin {
         }
 
         if (index != _observers.end()) {
+            index->second->Release();
             _observers.erase(index);
         }
 
