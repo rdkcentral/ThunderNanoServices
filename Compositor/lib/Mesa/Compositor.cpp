@@ -76,51 +76,9 @@ namespace Plugin {
             Core::JSON::HexUInt64 Modifier;
         };
 
-    private:
-        // The communication channel with the (remote) other site
-        class ExternalAccess : public RPC::Communicator {
-        public:
-            ExternalAccess() = delete;
-            ExternalAccess(const ExternalAccess&) = delete;
-            ExternalAccess& operator=(const ExternalAccess&) = delete;
-
-            ExternalAccess(
-                CompositorImplementation& parent,
-                const Core::NodeId& source,
-                const string& proxyStubPath,
-                const Core::ProxyType<RPC::InvokeServer>& handler)
-                : RPC::Communicator(source, proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
-                , _parent(parent)
-            {
-                uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
-
-                handler->Announcements(Announcement());
-
-                if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Could not open Compositor RPC link server. Error: %s"), Core::NumberType<uint32_t>(result).Text()));
-                } else {
-                    // We need to pass the communication channel NodeId via an environment variable, for process,
-                    // not being started by the rpcprocess...
-                    Core::SystemInfo::SetEnvironment(_T("COMPOSITOR"), RPC::Communicator::Connector(), true);
-                }
-            }
-
-            ~ExternalAccess() override = default;
-
-        private:
-            virtual void* Acquire(const string& /*className*/, const uint32_t interfaceId, const uint32_t /*versionId*/) override
-            {
-                return (_parent.QueryInterface(interfaceId));
-            }
-
-            CompositorImplementation& _parent;
-        };
-
     public:
         CompositorImplementation()
             : _adminLock()
-            , _engine()
-            , _externalAccess(nullptr)
             , _format(DRM_FORMAT_INVALID)
             , _modifier(DRM_FORMAT_MOD_INVALID)
             , _gpuConnector()
@@ -135,11 +93,6 @@ namespace Plugin {
 
         ~CompositorImplementation() override
         {
-            if (_externalAccess != nullptr) {
-                delete _externalAccess;
-                _engine.Release();
-            }
-
             _clientBridge.Close();
             _clients.Clear();
             _renderer.Release();
@@ -458,34 +411,22 @@ namespace Plugin {
 
             config.FromString(service->ConfigLine());
 
-            _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
-            _externalAccess = new ExternalAccess(*this, Core::NodeId(config.RPCConnector.Value().c_str()), service->ProxyStubPath(), _engine);
+            _format = config.Format.Value();
+            _modifier = config.Modifier.Value();
+            _port = config.Port.Value();
+            _resolution = config.Resolution.Value();
 
-            if (_externalAccess->IsListening() == true) {
-                _format = config.Format.Value();
-                _modifier = config.Modifier.Value();
-                _port = config.Port.Value();
-                _resolution = config.Resolution.Value();
+            _gpuConnector = Compositor::Connector(_port, _resolution, _format, false);
 
-                _gpuConnector = Compositor::Connector(_port, _resolution, _format, false);
+            ASSERT(_gpuConnector.IsValid());
 
-                ASSERT(_gpuConnector.IsValid());
+            _renderer = Compositor::IRenderer::Instance(_gpuConnector->Identifier());
 
-                _renderer = Compositor::IRenderer::Instance(_gpuConnector->Identifier());
+            _clientBridge.Open(config.ClientBridge.Value());
 
-                _clientBridge.Open(config.ClientBridge.Value());
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITORCLIENTBRIDGE"), config.ClientBridge.Value(), true);
 
-                Core::SystemInfo::SetEnvironment(_T("COMPOSITORCLIENTBRIDGE"), config.ClientBridge.Value(), true);
-
-                PlatformReady(service);
-
-            } else {
-                delete _externalAccess;
-                _externalAccess = nullptr;
-                _engine.Release();
-                TRACE(Trace::Error, (_T("Could not report PlatformReady as there was a problem starting the Compositor RPC %s"), _T("server")));
-                result = Core::ERROR_OPENING_FAILED;
-            }
+            PlatformReady(service);
 
             return (result);
         }
@@ -650,8 +591,6 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _adminLock;
-        Core::ProxyType<RPC::InvokeServer> _engine;
-        ExternalAccess* _externalAccess;
         string _port;
         Exchange::IComposition::ScreenResolution _resolution;
         uint32_t _format;
