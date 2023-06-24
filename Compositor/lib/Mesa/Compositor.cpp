@@ -423,7 +423,7 @@ namespace Plugin {
 
             _clientBridge.Open(bridgePath);
 
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITORCLIENTBRIDGE"), bridgePath, true);
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_CLIENTBRIDGE"), bridgePath, true);
 
             PlatformReady(service);
 
