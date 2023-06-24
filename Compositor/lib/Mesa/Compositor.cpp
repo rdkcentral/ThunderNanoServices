@@ -51,14 +51,12 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , RPCConnector(_T("/tmp/compositor"))
-                , ClientBridge(_T("/tmp/compositorclient-bridge"))
+                , ClientBridge(_T("clientbridge"))
                 , Port("HDMI-A-1")
                 , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
             {
-                Add(_T("rpc_connector"), &RPCConnector);
                 Add(_T("client_bridge"), &ClientBridge);
                 Add(_T("port"), &Port);
                 Add(_T("resolution"), &Resolution);
@@ -68,7 +66,6 @@ namespace Plugin {
 
             ~Config() override = default;
 
-            Core::JSON::String RPCConnector;
             Core::JSON::String ClientBridge;
             Core::JSON::String Port;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
@@ -422,9 +419,11 @@ namespace Plugin {
 
             _renderer = Compositor::IRenderer::Instance(_gpuConnector->Identifier());
 
-            _clientBridge.Open(config.ClientBridge.Value());
+            std::string bridgePath = service->VolatilePath() + "/" + config.ClientBridge.Value();
 
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITORCLIENTBRIDGE"), config.ClientBridge.Value(), true);
+            _clientBridge.Open(bridgePath);
+
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITORCLIENTBRIDGE"), bridgePath, true);
 
             PlatformReady(service);
 
