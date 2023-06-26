@@ -119,8 +119,6 @@ namespace Plugin {
             {
                 uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
 
-                handler->Announcements(Announcement());
-
                 if (result != Core::ERROR_NONE) {
                     TRACE(Trace::Error, (_T("Could not open RPI Compositor RPCLink server. Error: %s"), Core::NumberType<uint32_t>(result).Text()));
                 } else {
