@@ -22,7 +22,7 @@ find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(${NAMESPACE}CompositorBuffer CONFIG REQUIRED)
+find_package(${NAMESPACE}CompositorBufferType CONFIG REQUIRED)
 
 add_executable(compositorserver main.cpp)
 
@@ -31,7 +31,7 @@ target_link_libraries(compositorserver
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}COM::${NAMESPACE}COM
-        ${NAMESPACE}CompositorBuffer::${NAMESPACE}CompositorBuffer
+        ${NAMESPACE}CompositorBufferType::${NAMESPACE}CompositorBufferType
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         CompileSettingsDebug::CompileSettingsDebug
         platform::implementation
