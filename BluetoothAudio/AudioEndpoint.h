@@ -21,6 +21,7 @@
 
 #include "Module.h"
 #include "DebugTracing.h"
+#include <bluetooth/audio/codecs/SBC.h>
 
 namespace WPEFramework {
 
@@ -28,10 +29,24 @@ namespace Plugin {
 
 namespace A2DP {
 
-    template<typename HANDLER, typename FLOW>
     class AudioEndpoint : public Bluetooth::AVDTP::StreamEndPoint {
     public:
         using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
+
+        struct IHandler {
+            virtual ~IHandler() { }
+
+            virtual void SignallingStatus(AudioEndpoint& endpoint, const bool running) = 0;
+            virtual void TransportStatus(AudioEndpoint& endpoint, const bool running) = 0;
+
+            virtual uint32_t OnSetConfiguration(Bluetooth::A2DP::IAudioCodec& codec) = 0;
+            virtual uint32_t OnAcquire() = 0;
+            virtual uint32_t OnRelinquish() = 0;
+            virtual uint32_t OnSetSpeed(const int8_t speed) = 0;
+            virtual uint32_t OnBrokenConnection() = 0;
+
+            virtual void OnPacketReceived(const uint8_t packet[], const uint16_t length) = 0;
+        };
 
     public:
         AudioEndpoint() = delete;
@@ -39,9 +54,10 @@ namespace A2DP {
         AudioEndpoint& operator=(const AudioEndpoint&) = delete;
         ~AudioEndpoint() override = default;
 
+#if 0
         // Initialize endpoint from client
         template<typename SEP>
-        AudioEndpoint(HANDLER& handler, const uint8_t intSeid, SEP&& sep)
+        AudioEndpoint(AudioEndpointHandler& handler, const uint8_t intSeid, SEP&& sep)
             : Bluetooth::AVDTP::StreamEndPoint(std::forward<SEP>(sep))
             , _handler(handler)
             , _codec(nullptr)
@@ -58,19 +74,20 @@ namespace A2DP {
                 TRACE(Trace::Error, (_T("Invalid endpoint")));
             }
         }
-
+#endif
         // Initialize endpoint from server
-        AudioEndpoint(HANDLER& handler, const uint8_t id,
+        AudioEndpoint(IHandler& handler, const uint8_t id,
                         const bool sink,
                         Bluetooth::A2DP::IAudioCodec* codec,
                         Bluetooth::A2DP::IAudioContentProtection* cp = nullptr)
 
             : Bluetooth::AVDTP::StreamEndPoint(id, (sink? Bluetooth::AVDTP::StreamEndPoint::SINK : Bluetooth::AVDTP::StreamEndPoint::SOURCE), Bluetooth::AVDTP::StreamEndPoint::AUDIO)
+            , _lock()
             , _handler(handler)
+            , _remote(nullptr)
             , _codec(codec)
             , _contentProtection(cp)
             , _contentProtectionEnabled(false)
-            , _intSeid(0)
         {
             ASSERT(_codec != nullptr);
             ASSERT(id != 0);
@@ -80,6 +97,7 @@ namespace A2DP {
             Add(StreamEndPoint::capability, Service::MEDIA_CODEC, CodecCapabilities());
 
             if (_contentProtection != nullptr) {
+                // Optionally...
                 Add(StreamEndPoint::capability, Service::CONTENT_PROTECTION, ContentProtectionCapabilities());
             }
         }
@@ -99,9 +117,11 @@ namespace A2DP {
         }
 
     public:
-        uint32_t Configure(const Bluetooth::A2DP::IAudioCodec::StreamFormat& format, const string& settings, const bool enableCP = false)
+        uint32_t Configure(const uint8_t remoteId, const Bluetooth::A2DP::IAudioCodec::StreamFormat& format, const string& settings, const bool enableCP = false)
         {
             using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
+
+            _lock.Lock();
 
             // Configure Media Transport
             Add(Service::MEDIA_TRANSPORT);
@@ -130,62 +150,128 @@ namespace A2DP {
                 _contentProtectionEnabled = false;
             }
 
-            const uint32_t result = (_handler.SetConfiguration(*this, _intSeid));
+            uint32_t result = _remote.SetConfiguration(*this, remoteId);
 
             if (result == Core::ERROR_NONE) {
-                State(StreamEndPoint::CONFIGURED);
+                RemoteId(remoteId);
+
+                uint8_t failed{};
+                result = OnSetConfiguration(failed, nullptr);
             }
+
+            _lock.Unlock();
 
             return (result);
         }
-        uint32_t Start() override
+        uint32_t Start()
         {
-            const uint32_t result = _handler.Start(*this);
+            uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
-            if (result== Core::ERROR_NONE) {
-                State(StreamEndPoint::STARTED);
+            _lock.Lock();
+
+            if (State() == StreamEndPoint::OPENED) {
+
+                result = _remote.Start(*this);
+
+                if (result == Core::ERROR_NONE) {
+                    result = OnStart();
+                }
             }
+
+            _lock.Unlock();
 
             return (result);
         }
-        uint32_t Suspend() override
+        uint32_t Suspend()
         {
-            const uint32_t result = _handler.Suspend(*this);
+            uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
-            if (result == Core::ERROR_NONE) {
-                State(StreamEndPoint::OPENED);
+            _lock.Lock();
+
+            if (State() == StreamEndPoint::STARTED) {
+
+                result = _remote.Suspend(*this);
+
+                if (result == Core::ERROR_NONE) {
+                    result = OnSuspend();
+                }
             }
+
+            _lock.Unlock();
 
             return (result);
         }
-        uint32_t Open() override
+        uint32_t Open()
         {
-            const uint32_t result = _handler.Open(*this);
+            uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
-            if (result == Core::ERROR_NONE) {
-                State(StreamEndPoint::OPENED);
+            _lock.Lock();
+
+            if (State() == StreamEndPoint::CONFIGURED) {
+
+                result = _remote.Open(*this);
+
+                if (result == Core::ERROR_NONE) {
+                    result = OnOpen();
+                }
             }
+
+            _lock.Unlock();
 
             return (result);
         }
-        uint32_t Close() override
+        uint32_t Close()
         {
-            const uint32_t result = _handler.Close(*this);
+            uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
-            if (result == Core::ERROR_NONE) {
-                State(StreamEndPoint::IDLE);
+            _lock.Lock();
+
+            if ((State() == StreamEndPoint::OPENED) || (State() == StreamEndPoint::STARTED)) {
+
+                result = _remote.Close(*this);
+
+                if (result == Core::ERROR_NONE) {
+                    result = OnClose();
+                }
             }
+
+            _lock.Unlock();
+
+            return (result);
+        }
+        uint32_t Abort()
+        {
+            uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+            _lock.Lock();
+
+            if ((State() == StreamEndPoint::CONFIGURED) || (State() == StreamEndPoint::OPENED) || (State() == StreamEndPoint::STARTED)) {
+
+                result = _remote.Abort(*this);
+                if (result == Core::ERROR_NONE) {;
+                    result = OnAbort();
+                }
+            }
+
+            _lock.Unlock();
 
             return (result);
         }
 
     public:
-        // AVDTP::StreamEndPoint overrides
-        uint32_t OnConfigure(const uint8_t intSeid, uint8_t& failedCategory) override
+        const string& DeviceAddress() const {
+            return (_deviceAddress);
+        }
+
+    private:
+        // AVDTP::IStreamEndPointControl overrides
+        uint32_t OnSetConfiguration(uint8_t& failedCategory, Bluetooth::AVDTP::Socket* channel) override
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
             failedCategory = 0;
+
+            _lock.Lock();
 
             if (State() == StreamEndPoint::IDLE) {
                 result = Core::ERROR_BAD_REQUEST;
@@ -193,38 +279,50 @@ namespace A2DP {
                 auto const& it = Configuration().find(Service::MEDIA_TRANSPORT);
 
                 if (it == Configuration().end()) {
-                    TRACE(FLOW, (_T("Configuration request is missing MEDIA_TRANSPORT category")));
+                    TRACE(ServerFlow, (_T("Configuration request is missing MEDIA_TRANSPORT category")));
                 }
                 else {
                     auto const& it = Configuration().find(Service::MEDIA_CODEC);
 
                     if (it == Configuration().end()) {
-                        TRACE(FLOW, (_T("Configuration request is missing MEDIA_CODEC category")));
+                        TRACE(ServerFlow, (_T("Configuration request is missing MEDIA_CODEC category")));
                     }
                     else {
                         const Bluetooth::Buffer& config = (*it).second.Params();
 
                         if (Codec()->Configure(config.data(), config.size()) == Core::ERROR_NONE) {
-                            _intSeid = intSeid;
 
-                            if (_handler.OnSetConfiguration(*this) == Core::ERROR_NONE) {
+                            if (_handler.OnSetConfiguration(*Codec()) == Core::ERROR_NONE) {
 
-                                TRACE(FLOW, (_T("Endpoint %d configured (with codec %02x, initiator SEID %02x)"),
-                                                        Id(), Codec()->Type(), intSeid));
+                                TRACE(ServerFlow, (_T("Endpoint %d configured (with codec %02x)"), Id(), Codec()->Type()));
 
                                 State(StreamEndPoint::CONFIGURED);
+
+                                if (channel != nullptr) {
+                                    // Since this endpoint is now confured, allow bidirectional traffic.
+                                    _remote.Channel(channel);
+
+                                    _deviceAddress = channel->RemoteNode().HostAddress();
+                                    _handler.SignallingStatus(*this, true);
+
+                                    // And the inactivity monitor must not close this socket now!
+                                    _remote.Channel()->Busy(true);
+                                }
+
                                 result = Core::ERROR_NONE;
                             }
                         }
                         else {
                             failedCategory = Service::MEDIA_CODEC;
 
-                            TRACE(FLOW, (_T("Requested MEDIA_CODEC configuration is unsupported or invalid for codec %02x"),
+                            TRACE(ServerFlow, (_T("Requested MEDIA_CODEC configuration is unsupported or invalid for codec %02x"),
                                                         Codec()->Type()));
                         }
                     }
                 }
             }
+
+            _lock.Unlock();
 
             if (result != Core::ERROR_NONE) {
                 TRACE(Trace::Error, (_T("Failed to configure endpoint %d [%d]"), Id(), result));
@@ -232,13 +330,19 @@ namespace A2DP {
 
             return (result);
         }
+        uint32_t OnReconfigure(uint8_t& failedCategory) override
+        {
+            return (OnSetConfiguration(failedCategory, nullptr));
+        }
         uint32_t OnOpen() override
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            _lock.Lock();
+
             if (State() == StreamEndPoint::CONFIGURED) {
-                if (_handler.OnAcquire(*this) == Core::ERROR_NONE) {
-                    TRACE(FLOW, (_T("Endpoint %d opened"), Id()));
+                if (_handler.OnAcquire() == Core::ERROR_NONE) {
+                    TRACE(ServerFlow, (_T("Endpoint %d opened"), Id()));
                     State(StreamEndPoint::OPENED);
                 }
 
@@ -249,28 +353,39 @@ namespace A2DP {
                 TRACE(Trace::Error, (_T("Failed to open endpoint %d [%d]"), Id(), result));
             }
 
+            _lock.Unlock();
+
             return (result);
         }
         uint32_t OnClose() override
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            _lock.Lock();
+
             if ((State() == StreamEndPoint::OPENED) || (State() == StreamEndPoint::STARTED)) {
 
                 State(StreamEndPoint::CLOSING);
 
-                result = _handler.OnRelinquish(*this);
+                result = _handler.OnRelinquish();
 
-                if (result == Core::ERROR_NONE) {
-                    TRACE(FLOW, (_T("Endpoint %d closed"), Id()));
+                TRACE(ServerFlow, (_T("Endpoint %d closed"), Id()));
 
-                    // Go back in state machine.
-                    State(StreamEndPoint::IDLE);
+                // Release the connections...
+                if (_transport != nullptr) {
+                    _transport->Busy(false);
                 }
+
+                _remote.Channel()->Busy(false);
+
+                // Go back in state machine.
+                State(StreamEndPoint::IDLE);
             }
 
+            _lock.Unlock();
+
             if (result != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to close endpoint %d [%d]"), Id(), result));
+                TRACE(Trace::Error, (_T("Failed to gracefully close endpoint %d [%d]"), Id(), result));
             }
 
             return (result);
@@ -279,34 +394,44 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            _lock.Lock();
+
             if (State() == StreamEndPoint::OPENED) {
-                result = _handler.OnSetSpeed(*this, 100);
+                result = _handler.OnSetSpeed(100);
 
                 if (result == Core::ERROR_NONE) {
-                    TRACE(FLOW, (_T("Endpoint %d started"), Id()));
+                    TRACE(ServerFlow, (_T("Endpoint %d started"), Id()));
+
                     State(StreamEndPoint::STARTED);
                 }
             }
 
+            _lock.Unlock();
+
             if (result != Core::ERROR_NONE) {
                 TRACE(Trace::Error, (_T("Failed to start endpoint %d [%d]"), Id(), result));
             }
+
             return (result);
         }
         uint32_t OnSuspend() override
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            _lock.Lock();
+
             if (State() == StreamEndPoint::STARTED) {
-                result = _handler.OnSetSpeed(*this, 0);
+                result = _handler.OnSetSpeed(0);
 
                 if (result == Core::ERROR_NONE) {
-                    TRACE(FLOW, (_T("Endpoint %d suspended"), Id()));
+                    TRACE(ServerFlow, (_T("Endpoint %d suspended"), Id()));
 
                     // Go back in state machine.
                     State(StreamEndPoint::OPENED);
                 }
             }
+
+            _lock.Unlock();
 
             if (result != Core::ERROR_NONE) {
                 TRACE(Trace::Error, (_T("Failed to suspend endpoint %d [%d]"), Id(), result));
@@ -318,40 +443,123 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            _lock.Lock();
+
             if (State() != StreamEndPoint::IDLE) {
                 State(StreamEndPoint::ABORTING);
 
-                _handler.OnRelinquish(*this);
+                result = _handler.OnRelinquish();
 
-                TRACE(FLOW, (_T("Endpoint %d aborted"), Id()));
+                // Release the connections...
+                if (_transport != nullptr) {
+                    _transport->Busy(false);
+                }
+
+                _remote.Channel()->Busy(false);
+
+                TRACE(ServerFlow, (_T("Endpoint %d aborted"), Id()));
 
                 // Reset state machine.
                 State(StreamEndPoint::IDLE);
-                result = Core::ERROR_NONE;
             }
 
+            _lock.Unlock();
+
             if (result != Core::ERROR_NONE) {
-                TRACE(Trace::Error, (_T("Failed to abort endpoint %d [%d]"), Id(), result));
+                TRACE(Trace::Error, (_T("Failed to gracefully abort endpoint %d [%d]"), Id(), result));
             }
 
             return (result);
         }
+        uint32_t OnSecurityControl() override
+        {
+            return (Core::ERROR_UNAVAILABLE);
+        }
 
     public:
-        void Disconnected()
+        void Operational(Bluetooth::AVDTP::Socket& channel, const bool isRunning)
         {
-            TRACE(FLOW, (_T("Endpoint %d device disconnected"), Id()));
+            if (channel.Type() == Bluetooth::AVDTP::Socket::SIGNALLING) {
+                if (isRunning == false) {
+
+                    _lock.Lock();
+
+                    if (IsFree() == false) {
+                        // Signalling channel was disconnected while the endpoint is not idle,
+                        // apparently device was abruptly disconnected, handle this.
+                        BrokenConnection();
+                    }
+
+                    _lock.Unlock();
+                }
+
+                _handler.SignallingStatus(*this, isRunning);
+            }
+            else if (channel.Type() == Bluetooth::AVDTP::Socket::TRANSPORT) {
+
+                _lock.Lock();
+
+                if (isRunning == true) {
+                    _transport = &channel;
+
+                    // When the transport channel is connected, mark is as not closeable.
+                    // Only if the endpoint is closed or aborted may it be closed.
+                    _transport->Busy(!IsFree());
+                }
+                else {
+                    _transport = nullptr;
+                    _remote.Channel(nullptr);
+                    _deviceAddress.clear();
+                }
+
+                _lock.Unlock();
+
+                _handler.TransportStatus(*this, isRunning);
+            }
+            else {
+                ASSERT(!"Bad channel type");
+            }
+        }
+
+    public:
+        void OnPacket(const uint8_t data[], const uint16_t length)
+        {
+            _handler.OnPacketReceived(data, length);
+        }
+
+    private:
+        void BrokenConnection()
+        {
+            TRACE(ServerFlow, (_T("Endpoint %d device disconnected unexpectedly"), Id()));
 
             // Deallocate the sink and teardown internal data, no point in closing the remote
             // device as it's not longer reachable.
+            _handler.OnBrokenConnection();
 
-            _handler.OnRelinquish(*this);
+            // Release the connections...
+            if (_transport != nullptr) {
+                _transport->Busy(false);
+            }
+
+            _remote.Channel()->Busy(false);
 
             // Reset state machine.
             State(StreamEndPoint::IDLE);
         }
 
     private:
+        Bluetooth::A2DP::IAudioCodec* AllocCodec(uint8_t codec, const Bluetooth::Buffer& params)
+        {
+            switch (codec) {
+            case Bluetooth::A2DP::SBC::CODEC_TYPE:
+                TRACE(ServerFlow, (_T("Endpoint supports LC_SBC codec")));
+                return (new Bluetooth::A2DP::SBC(params));
+            default:
+                break;
+            }
+
+            return (nullptr);
+        }
         Bluetooth::Buffer CodecCapabilities() const
         {
             // Convenience method to serialize codec capabilities frame.
@@ -379,7 +587,7 @@ namespace A2DP {
             auto it = Capabilities().find(Service::MEDIA_TRANSPORT);
 
             if (it == Capabilities().end()) {
-                TRACE(FLOW, (_T("Endpoint %02x does not support MEDIA_TRANSPORT category!"), Id()));
+                TRACE(ServerFlow, (_T("Endpoint %02x does not support MEDIA_TRANSPORT category!"), Id()));
                 result = false;
             }
 
@@ -394,7 +602,7 @@ namespace A2DP {
             auto it = Capabilities().find(Service::MEDIA_CODEC);
 
             if (it == Capabilities().end()) {
-                TRACE(FLOW, (_T("Endpoint 0x%02x does not support MEDIA_CODEC category!"), Id()));
+                TRACE(ServerFlow, (_T("Endpoint 0x%02x does not support MEDIA_CODEC category!"), Id()));
             }
             else {
                 const Service& caps = (*it).second;
@@ -408,16 +616,16 @@ namespace A2DP {
                         uint8_t codecType{};
                         config.Pop(codecType);
 
-                        _codec.reset(_handler.Codec(codecType, caps.Params()));
+                        _codec.reset(AllocCodec(codecType, caps.Params()));
                         ASSERT(_codec.get() != nullptr);
 
                         if (_codec == nullptr) {
-                            TRACE(FLOW, (_T("Endpoint 0x%02x supports an unknown audio codec [0x%02x]"),
+                            TRACE(ServerFlow, (_T("Endpoint 0x%02x supports an unknown audio codec [0x%02x]"),
                                                     Id(), codecType));
                         }
                     }
                     else {
-                        TRACE(FLOW, (_T("Endpoint media type is not AUDIO! [0x%02x]"), mediaType));
+                        TRACE(ServerFlow, (_T("Endpoint media type is not AUDIO! [0x%02x]"), mediaType));
                     }
                 }
             }
@@ -439,7 +647,7 @@ namespace A2DP {
                 auto it = Capabilities().find(Service::CONTENT_PROTECTION);
 
                 if (it == Capabilities().end()) {
-                    TRACE(FLOW, (_T("Endpoint 0x%02x does not support CONTENT_PROTECTION category"), Id()));
+                    TRACE(ServerFlow, (_T("Endpoint 0x%02x does not support CONTENT_PROTECTION category"), Id()));
                 }
                 else {
                     const Service& caps = (*it).second;
@@ -451,13 +659,13 @@ namespace A2DP {
                         config.Pop(cpType);
 
                         if (cpType == a2dp_contentprotection::NONE) {
-                            TRACE(FLOW, (_T("Endpoint 0x%02x uses no copy protection"), Id()));
+                            TRACE(ServerFlow, (_T("Endpoint 0x%02x uses no copy protection"), Id()));
                         }
                         else {
                             //
                             // TODO Add support for copy protection?
                             ///
-                            TRACE(FLOW, (_T("Endpoint 0x%02x supports unknown copy protection! [0x%04x]"),
+                            TRACE(ServerFlow, (_T("Endpoint 0x%02x supports unknown copy protection! [0x%04x]"),
                                                     Id(), static_cast<uint8_t>(cpType)));
                         }
                     }
@@ -466,11 +674,14 @@ namespace A2DP {
         }
 
     public:
-        HANDLER& _handler;
+        Core::CriticalSection _lock;
+        IHandler& _handler;
+        Bluetooth::AVDTP::Client _remote;
+        Bluetooth::AVDTP::Socket* _transport;
         std::unique_ptr<Bluetooth::A2DP::IAudioCodec> _codec;
         std::unique_ptr<Bluetooth::A2DP::IAudioContentProtection> _contentProtection;
         bool _contentProtectionEnabled;
-        uint8_t _intSeid;
+        string _deviceAddress;
     }; // class AudioEndpoint
 
 } // namespace A2DP

@@ -30,22 +30,22 @@ namespace Plugin {
 
     string BluetoothAudioSource::Initialize(PluginHost::IShell* service, const string& controller, const Config& config)
     {
+        ASSERT(_source == nullptr);
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
 
         _service = service;
         _service->AddRef();
 
-        ASSERT(_source != nullptr);
-
         _controller = controller;
         ASSERT(controller.empty() == false);
+
+        _source = Core::Service<A2DPSource>::Create<A2DPSource>(*this);
+        ASSERT(_source != nullptr);
 
         _source->Config(config);
 
         Exchange::BluetoothAudio::JSource::Register(*this, this);
-
-        _source->Add(true, new Bluetooth::A2DP::SBC(53));
 
         return {};
     }

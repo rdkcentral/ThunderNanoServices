@@ -20,6 +20,10 @@
 #pragma once
 
 #include "Module.h"
+
+#include "AudioEndpoint.h"
+
+#include <interfaces/IBluetooth.h>
 #include <interfaces/IBluetoothAudio.h>
 #include <bluetooth/audio/bluetooth_audio.h>
 
@@ -85,7 +89,20 @@ namespace Plugin {
         Job _job;
     }; // class DecoupledJob
 
-    class SignallingServer {
+    static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device)
+    {
+        ASSERT(device != nullptr);
+
+        return (Bluetooth::Address(device->LocalId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0, 0));
+    }
+    static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device, const uint16_t psm)
+    {
+        ASSERT(device != nullptr);
+
+        return (Bluetooth::Address(device->RemoteId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0 /* must be zero */, psm));
+    }
+
+    class SignallingServer : public Bluetooth::AVDTP::Server {
     public:
         class Config : public Core::JSON::Container {
         public:
@@ -111,115 +128,71 @@ namespace Plugin {
         }; // class Config
 
     public:
-        struct IHandler {
-            virtual ~IHandler() {}
-            virtual bool Accept(Bluetooth::AVDTP::ServerSocket* channel) = 0;
-            virtual void Operational(const bool running, Bluetooth::AVDTP::ServerSocket* channel) = 0;
-            virtual void OnSignal(const Bluetooth::AVDTP::Signal& /* signal */, const Bluetooth::AVDTP::ServerSocket::ResponseHandler& /* handler */) { }
-            virtual void OnPacket(const uint8_t* /* packet */, const uint16_t /* length */) { }
-            virtual bool IsBusy() const = 0;
-        };
-
-    public:
-        template<typename SERVER>
-        class Channel : public Bluetooth::AVDTP::ServerSocket {
+        template<typename SOCKETSERVER>
+        class Channel : public Bluetooth::AVDTP::Socket {
         public:
             Channel() = delete;
             Channel(const Channel&) = delete;
             Channel& operator=(const Channel&) = delete;
             ~Channel() = default;
 
-            Channel(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<Channel<SERVER>>* server)
-                : Bluetooth::AVDTP::ServerSocket(connector, remoteNode)
-                , _server(static_cast<SERVER*>(server))
-                , _handler(nullptr)
+            Channel(const SOCKET& connector, const Core::NodeId& remoteNode, Core::SocketServerType<Channel<SOCKETSERVER>>* server)
+                : Bluetooth::AVDTP::Socket(connector, remoteNode)
+                , _socketServer(static_cast<SOCKETSERVER*>(server))
                 , _lastActivity(0)
             {
+                // Created by the socket server.
                 ASSERT(server != nullptr);
             }
-            Channel(const Core::NodeId& localNode, const Core::NodeId& remoteNode, IHandler* handler)
-                : Bluetooth::AVDTP::ServerSocket(localNode, remoteNode)
-                , _server(nullptr)
-                , _handler(handler)
+            Channel(const Core::NodeId& localNode, const Core::NodeId& remoteNode, SOCKETSERVER* server)
+                : Bluetooth::AVDTP::Socket(localNode, remoteNode)
+                , _socketServer(server)
                 , _lastActivity(0)
             {
-                ASSERT(handler != nullptr);
+                // Created by the signalling server.
+                ASSERT(server != nullptr);
             }
 
         public:
             uint64_t LastActivity() const {
                 return (_lastActivity);
             }
-            bool IsBusy() const {
-                if (_handler != nullptr) {
-                    // This is safe, once set handler always outlives this channel.
-                    return (_handler->IsBusy());
-                }
-                else {
-                    return (false);
-                }
-            }
-
-        public:
-            void Handler(IHandler* handler)
-            {
-                ASSERT(handler != nullptr);
-                ASSERT(_handler == nullptr);
-
-                _handler = handler;
-            }
 
         private:
-            void OnSignal(const Bluetooth::AVDTP::Signal& signal, const Bluetooth::AVDTP::ServerSocket::ResponseHandler& handler) override
+            // Socket overrides
+            void OnSignal(const Bluetooth::AVDTP::Signal& signal, const Bluetooth::AVDTP::Socket::ResponseHandler& handler) override
             {
                 TRACE(ServerFlow, (_T("Incoming AVDTP signal %d from remote client %s"), signal.Id(), RemoteNode().HostName().c_str()));
-
-                ASSERT(_handler != nullptr);
-
-                _handler->OnSignal(signal, handler);
-
+                _socketServer->OnSignal(this, signal, handler);
                 _lastActivity = Core::Time::Now().Ticks();
             }
             void OnPacket(const uint8_t packet[], const uint16_t length) override
             {
-                ASSERT(_handler != nullptr);
-
-                _handler->OnPacket(packet, length);
-
+                _socketServer->OnPacket(this, packet, length);
                 _lastActivity = Core::Time::Now().Ticks();
             }
-
-        private:
-            void Operational(const bool running) override
+            void Operational(const bool isRunning) override
             {
-                if (running == true) {
-                    _lastActivity = Core::Time::Now().Ticks();
-
+                if (isRunning == true) {
                     TRACE(ServerFlow, (_T("Incoming AVDTP connection from %s"), RemoteNode().HostName().c_str()));
                 }
                 else {
                     TRACE(ServerFlow, (_T("Closed AVDTP connection to %s"), RemoteNode().HostName().c_str()));
                 }
 
-                if (_server != nullptr) {
-                    _server->Connected(running, *this);
-                }
-
-                if (_handler != nullptr) {
-                    _handler->Operational(running, static_cast<Bluetooth::AVDTP::ServerSocket*>(this));
-                }
+                _socketServer->Operational(this, isRunning);
+                _lastActivity = Core::Time::Now().Ticks();
             }
 
         private:
-            SERVER* _server;
-            IHandler* _handler;
+            SOCKETSERVER* _socketServer;
             mutable uint64_t _lastActivity;
         }; // class Channel
 
-        class Implementation;
-        using PeerConnection = Channel<Implementation>;
+        class SocketServer;
+        using PeerConnection = Channel<SocketServer>;
 
-        class Implementation : public Core::SocketServerType<PeerConnection> {
+        class SocketServer : public Core::SocketServerType<PeerConnection> {
         public:
             class Timer {
                 // Timer used for disconnecting stale AVDTP connections.
@@ -230,46 +203,42 @@ namespace Plugin {
                 Timer& operator=(const Timer&) = delete;
                 ~Timer() = default;
 
-                Timer(Implementation& server)
-                    : _server(server)
+                Timer(SocketServer& server)
+                    : _socketServer(server)
                 {
                 }
 
             public:
-                uint64_t Timed(const uint64_t scheduledTime) {
-                    return (_server.EvaluateConnections(scheduledTime));
+                uint64_t Timed(const uint64_t scheduledTime)
+                {
+                    return (_socketServer.EvaluateConnections(scheduledTime));
                 }
 
             private:
-                Implementation& _server;
+                SocketServer& _socketServer;
             }; // class Timer
 
         public:
             static constexpr uint32_t OpenTimeoutMs = 2000;
             static constexpr uint32_t CloseTimeoutMs = 2000;
-            static constexpr uint32_t ConnectionEvaluationPeriodMs = 100;
+            static constexpr uint32_t ConnectionEvaluationPeriodMs = 1000;
 
         public:
-            Implementation(const Implementation&) = delete;
-            Implementation& operator=(const Implementation&) = delete;
+            friend class Channel<SocketServer>;
 
-            Implementation(SignallingServer& parent, const uint32_t inactivityTimeoutMs)
-                : Core::SocketServerType<Channel<Implementation>>()
+            SocketServer(const SocketServer&) = delete;
+            SocketServer& operator=(const SocketServer&) = delete;
+
+            SocketServer(SignallingServer& parent, const uint32_t inactivityTimeoutMs)
+                : Core::SocketServerType<Channel<SocketServer>>()
                 , _parent(parent)
                 , _inactivityTimeoutUs(inactivityTimeoutMs * Core::Time::TicksPerMillisecond)
                 , _connectionEvaluationTimer(Core::Thread::DefaultStackSize(), _T("SignallingConnectionChecker"))
             {
             }
-            ~Implementation()
+            ~SocketServer()
             {
                 Stop();
-            }
-
-        public:
-            void Connected(const bool running, PeerConnection& connection)
-            {
-                // Relay the notification up
-                _parent.Connected(running, connection);
             }
 
         public:
@@ -281,17 +250,15 @@ namespace Plugin {
 
                 LocalNode(node);
 
-                if (Open(OpenTimeoutMs) == Core::ERROR_NONE) {
+                result = Open(OpenTimeoutMs);
 
+                if (result == Core::ERROR_NONE) {
                     if (_inactivityTimeoutUs != 0) {
                         Core::Time NextTick = Core::Time::Now();
                         NextTick.Add(ConnectionEvaluationPeriodMs);
 
                         _connectionEvaluationTimer.Schedule(NextTick.Ticks(), Timer(*this));
                     }
-                }
-                else {
-                    result = Core::ERROR_GENERAL;
                 }
 
                 return (result);
@@ -308,10 +275,26 @@ namespace Plugin {
             }
 
         private:
+            // Channel callbacks
+            void Operational(PeerConnection* channel, const bool isRunning)
+            {
+                _parent.Operational(channel, isRunning);
+            }
+
+        private:
+            void OnSignal(PeerConnection* channel, const Bluetooth::AVDTP::Signal& signal, const Bluetooth::AVDTP::Socket::ResponseHandler& handler)
+            {
+                _parent.OnSignal(channel, signal, handler);
+            }
+            void OnPacket(PeerConnection* channel, const uint8_t packet[], const uint16_t length)
+            {
+                _parent.OnPacket(channel, packet, length);
+            }
+
+        private:
+            // Timer callbacks
             uint64_t EvaluateConnections(const uint64_t timeNow)
             {
-                // This will close and destroy inactive connections.
-
                 Core::Time NextTick(Core::Time::Now());
                 NextTick.Add(ConnectionEvaluationPeriodMs);
 
@@ -323,12 +306,12 @@ namespace Plugin {
                 while (index.Next() == true) {
                     // If the endpoint is being open, it must not time out.
                     if (index.Client()->IsBusy() == false) {
+
                         const uint64_t lastActivity = index.Client()->LastActivity();
                         const uint64_t elapsed = (timeNow > lastActivity? timeNow - lastActivity : 0);
 
                         if (elapsed >= _inactivityTimeoutUs) {
                             TRACE(ServerFlow, (_T("Closing inactive AVDTP connection to %s"), index.Client()->RemoteNode().HostName().c_str()));
-
                             index.Client()->Close(0);
                         }
                     }
@@ -341,28 +324,97 @@ namespace Plugin {
             SignallingServer& _parent;
             uint64_t _inactivityTimeoutUs;
             Core::TimerType<Timer> _connectionEvaluationTimer;
-        }; // Class Implementation
+        }; // Class SocketServer
 
     public:
         SignallingServer(const SignallingServer&) = delete;
         SignallingServer& operator=(const SignallingServer&) = delete;
 
     private:
-        // The signalling server is shared between sink and source functionality.
-        // While it is the core component of source, it may be also needed for sink,
-        // whenever the sink device initiates the connection (this is optionally allowed by the spec).
         SignallingServer()
-            : _server()
+            : _socketServer()
             , _lock()
-            , _sink(nullptr)
-            , _source(nullptr)
             , _peerConnection()
+            , _endpoints()
+            , _transportEndpoint(nullptr)
         {
         }
-
         ~SignallingServer()
         {
             Stop();
+        }
+
+    private:
+        // SocketServer callbacks
+        void Operational(PeerConnection* channel, const bool isRunning)
+        {
+            printf("OPERA %d\n", isRunning);
+            ASSERT(channel != nullptr);
+
+            _lock.Lock();
+
+            if (isRunning == true) {
+                for (auto& ep : _endpoints) {
+                    A2DP::AudioEndpoint& endpoint = ep.second;
+
+                    if (endpoint.DeviceAddress() == channel->RemoteNode().HostAddress()) {
+                        if (endpoint.IsFree() == false) {
+                            if (channel->Type() == Bluetooth::AVDTP::Socket::SIGNALLING) {
+                                channel->Type(Bluetooth::AVDTP::Socket::TRANSPORT);
+                                endpoint.Operational(*channel, true);
+                                _transportEndpoint = &endpoint;
+                            }
+                            else {
+                                TRACE(Trace::Error, (_T("Unsupported AVDTP channel!")));
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
+            else {
+                if (channel->Type() == Bluetooth::AVDTP::Socket::TRANSPORT) {
+                    ASSERT(_transportEndpoint != nullptr);
+                    _transportEndpoint->Operational(*channel, false);
+                    _transportEndpoint = nullptr;
+                }
+                else if (channel->Type() == Bluetooth::AVDTP::Socket::SIGNALLING) {
+                    for (auto& ep : _endpoints) {
+                        A2DP::AudioEndpoint& endpoint = ep.second;
+
+                        if (endpoint.DeviceAddress() == channel->RemoteNode().HostAddress()) {
+                            if (endpoint.IsFree() == false) {
+                                endpoint.Operational(*channel, false);
+                            }
+
+                            break;
+                        }
+                    }
+                }
+                else {
+                    // Should be unreachable...
+                    ASSERT(false);
+                }
+            }
+
+            _lock.Unlock();
+        }
+        void OnSignal(PeerConnection* /* channel */, const Bluetooth::AVDTP::Signal& signal, const Bluetooth::AVDTP::Socket::ResponseHandler& handler)
+        {
+            Server::OnSignal(signal, handler);
+        }
+        void OnPacket(PeerConnection* /* channel */, const uint8_t packet[], const uint16_t length)
+        {
+            _lock.Lock();
+
+            ASSERT(_transportEndpoint != nullptr);
+
+            if  (_transportEndpoint != nullptr) {
+                _transportEndpoint->OnPacket(packet, length);
+            }
+
+            _lock.Unlock();
         }
 
     public:
@@ -373,20 +425,36 @@ namespace Plugin {
         }
 
     public:
-        void Start(const uint16_t hciInterface, const uint8_t psm, const uint32_t inactivityTimeoutMs)
+        void Add(const bool sink, Bluetooth::A2DP::IAudioCodec* codec, A2DP::AudioEndpoint::IHandler& handler)
         {
             _lock.Lock();
 
+            uint8_t id = (static_cast<uint8_t>(_endpoints.size()) + 1);
+
+            auto it = _endpoints.emplace(std::piecewise_construct,
+                                        std::forward_as_tuple(id),
+                                        std::forward_as_tuple(handler, id, sink, codec)).first;
+
+            TRACE(Trace::Information, (_T("New audio %s endpoint #%d (codec %02x)"), (sink? "sink": "source"), (*it).second.Id(), (*it).second.Codec()->Type()));
+
+            _lock.Unlock();
+        }
+
+    public:
+        void Start(const uint16_t hciInterface, const uint8_t psm, const uint32_t inactivityTimeoutMs)
+        {
             TRACE(ServerFlow, (_T("Starting AVDTP server on HCI interface %d (PSM %d), timeout %d ms"), hciInterface, psm, inactivityTimeoutMs));
 
-            if (_server.IsValid() == false) {
-                _server = Core::ProxyType<Implementation>::Create(*this, inactivityTimeoutMs);
+            _lock.Lock();
 
-                if (_server.IsValid() == true) {
-                    if (_server->Start(hciInterface, psm) != Core::ERROR_NONE) {
+            if (_socketServer.IsValid() == false) {
+                _socketServer = Core::ProxyType<SocketServer>::Create(*this, inactivityTimeoutMs);
+
+                if (_socketServer.IsValid() == true) {
+                    if (_socketServer->Start(hciInterface, psm) != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to start the signalling server")));
 
-                        _server.Release();
+                        _socketServer.Release();
                     }
                     else {
                         TRACE(Trace::Information, (_T("Started signalling server (listening on HCI interface %d, L2CPAP PSM %d)"), hciInterface, psm));
@@ -400,23 +468,25 @@ namespace Plugin {
         {
             _lock.Lock();
 
-            if (_server.IsValid() == true) {
-                _server->Stop();
-                _server.Release();
+            if (_socketServer.IsValid() == true) {
+                _socketServer->Stop();
+                _socketServer.Release();
 
                 TRACE(Trace::Information, (_T("Stopped AVDTP Server")));
             }
 
             _lock.Unlock();
         }
-        Bluetooth::AVDTP::ServerSocket* Create(const Core::NodeId& local, const Core::NodeId& remote, IHandler* handler)
+
+    public:
+        Bluetooth::AVDTP::Socket* Create(const Core::NodeId& local, const Core::NodeId& remote)
         {
-            Bluetooth::AVDTP::ServerSocket* conn = nullptr;
+            Bluetooth::AVDTP::Socket* conn = nullptr;
 
             _lock.Lock();
 
-            if ((_server.IsValid() == true) && (_peerConnection == nullptr)) {
-                _peerConnection.reset(new (std::nothrow) PeerConnection(local, remote, handler));
+            if ((_socketServer.IsValid() == true) && (_peerConnection == nullptr)) {
+                _peerConnection.reset(new (std::nothrow) PeerConnection(local, remote, _socketServer.operator->()));
                 ASSERT(_peerConnection.get() != nullptr);
 
                 conn = _peerConnection.get();
@@ -426,95 +496,42 @@ namespace Plugin {
 
             return (conn);
         }
-        void Destroy(Bluetooth::AVDTP::ServerSocket* connection)
+        void Destroy(Bluetooth::AVDTP::Socket* connection)
         {
             _lock.Lock();
 
-            if ((_server.IsValid() == true) && (_peerConnection.get() == connection)) {
+            if ((_socketServer.IsValid() == true) && (_peerConnection.get() == connection)) {
                 _peerConnection.reset();
             }
 
             _lock.Unlock();
         }
-        void Register(IHandler *handler, const bool sink = false)
+
+    private:
+        bool WithEndpoint(const uint8_t id, const std::function<void(Bluetooth::AVDTP::StreamEndPoint&)>& inspectCb) override
         {
+            bool result = false;
+
             _lock.Lock();
 
-            if (sink == true) {
-                TRACE(ServerFlow, (_T("Registered a sink handler")));
-                ASSERT(_sink == nullptr);
-                _sink = handler;
-            }
-            else {
-                TRACE(ServerFlow, (_T("Registered a source handler")));
-                ASSERT(_source == nullptr);
-                _source = handler;
+            auto it = _endpoints.find(id);
+
+            if (it != _endpoints.end()) {
+                inspectCb(it->second);
+                result = true;
             }
 
             _lock.Unlock();
-        }
-        void Unregister(IHandler *handler)
-        {
-            _lock.Lock();
 
-            if (handler == _sink) {
-                _sink = nullptr;
-            }
-            else if (handler == _source) {
-                _source = nullptr;
-            }
-
-            _lock.Unlock();
+            return (result);
         }
 
     private:
-        void Connected(const bool running, PeerConnection& channel)
-        {
-            _lock.Lock();
-
-            if (running == true) {
-
-                bool accepted = false;
-
-                // The priority is for the sink since it may know the device already (i.e. the assigned device).
-
-                if (_sink != nullptr) {
-                    if (_sink->Accept(static_cast<Bluetooth::AVDTP::ServerSocket*>(&channel)) == true) {
-                        TRACE(ServerFlow, (_T("AVDTP connection '%s' accepted by sink"), channel.RemoteNode().HostName().c_str()));
-                        channel.Handler(_sink);
-                        accepted = true;
-                    }
-                }
-
-                if ((accepted == false) && (_source != nullptr)) {
-                    if (_source->Accept(static_cast<Bluetooth::AVDTP::ServerSocket*>(&channel)) == true) {
-                        TRACE(ServerFlow, (_T("AVDTP connection '%s' accepted by source"), channel.RemoteNode().HostName().c_str()));
-                        channel.Handler(_source);
-                        accepted = true;
-                    }
-                }
-
-                if (accepted == false) {
-                    TRACE(ServerFlow, (_T("AVDTP connection '%s' not accepted, closing"), channel.RemoteNode().HostName().c_str()));
-
-                    //if (channel.Close(1000) != Core::ERROR_NONE) {
-                    //    TRACE(Trace::Error, (_T("Failed to close connection")));
-                   // }
-                }
-            }
-            else {
-                TRACE(ServerFlow, (_T("AVDTP connection '%s' closed"), channel.RemoteNode().HostName().c_str()));
-            }
-
-            _lock.Unlock();
-        }
-
-    private:
-        Core::ProxyType<Implementation> _server;
+        Core::ProxyType<SocketServer> _socketServer;
         Core::CriticalSection _lock;
-        IHandler* _sink;
-        IHandler* _source;
         std::unique_ptr<PeerConnection> _peerConnection;
+        std::map<uint8_t, A2DP::AudioEndpoint> _endpoints;
+        A2DP::AudioEndpoint* _transportEndpoint;
     };
 
 } // namespace Plugin

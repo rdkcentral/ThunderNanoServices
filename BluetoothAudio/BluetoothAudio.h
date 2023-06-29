@@ -22,7 +22,7 @@
 #include "Module.h"
 
 #include "SignallingServer.h"
-#include "BluetoothAudioSink.h"
+//#include "BluetoothAudioSink.h"
 #include "BluetoothAudioSource.h"
 
 #include <bluetooth/audio/bluetooth_audio.h>
@@ -68,7 +68,7 @@ namespace Plugin {
     public:
         BEGIN_INTERFACE_MAP(BluetoothAudioSink)
             INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_AGGREGATE(Exchange::IBluetoothAudio::ISink, _sink)
+//            INTERFACE_AGGREGATE(Exchange::IBluetoothAudio::ISink, _sink)
             INTERFACE_AGGREGATE(Exchange::IBluetoothAudio::ISource, _source)
         END_INTERFACE_MAP
 
@@ -79,17 +79,17 @@ namespace Plugin {
         BluetoothAudio()
             : _service(nullptr)
             , _comNotificationSink(*this)
-            , _sink(nullptr)
+//            , _sink(nullptr)
             , _source(nullptr)
         {
         }
 
         ~BluetoothAudio()
         {
-            if (_sink != nullptr) {
-                _sink->Release();
-                _sink = nullptr;
-            }
+//            if (_sink != nullptr) {
+//                _sink->Release();
+//                _sink = nullptr;
+//            }
 
             if (_source != nullptr) {
                 _source->Release();
@@ -100,9 +100,9 @@ namespace Plugin {
     private:
         void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId)
         {
-            if (_sink != nullptr) {
-                _sink->Revoked(remote, interfaceId);
-            }
+//            if (_sink != nullptr) {
+//                _sink->Revoked(remote, interfaceId);
+//            }
 
             if (_source != nullptr) {
                 _source->Revoked(remote, interfaceId);
@@ -118,7 +118,7 @@ namespace Plugin {
 private:
     PluginHost::IShell* _service;
     Core::Sink<ComNotificationSink> _comNotificationSink;
-    BluetoothAudioSink* _sink;
+    //BluetoothAudioSink* _sink;
     BluetoothAudioSource* _source;
   };
 

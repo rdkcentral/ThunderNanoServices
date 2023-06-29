@@ -42,9 +42,13 @@ namespace Plugin {
             enum features : uint16_t {
                 NONE        = 0,
                 HEADPHONE   = (1 << 1),
+                PLAYER      = (1 << 1),
                 SPEAKER     = (1 << 2),
+                MICROPHONE  = (1 << 2),
                 RECORDER    = (1 << 3),
-                AMPLIFIER   = (1 << 4)
+                TUNER       = (1 << 3),
+                AMPLIFIER   = (1 << 4),
+                MIXER       = (1 << 4)
             };
 
         public:
@@ -192,7 +196,11 @@ namespace Plugin {
     public:
         using DiscoveryCompleteCb = std::function<void(const std::list<AudioService>&)>;
 
-        ServiceDiscovery() = delete;
+        ServiceDiscovery()
+            : Bluetooth::SDP::ClientSocket(Core::NodeId(),Core::NodeId())
+            , _profile(*this)
+        {
+        }
         ServiceDiscovery(const ServiceDiscovery&) = delete;
         ServiceDiscovery& operator=(const ServiceDiscovery&) = delete;
 

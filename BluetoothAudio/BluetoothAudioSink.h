@@ -96,20 +96,6 @@ namespace Plugin {
                 A2DPSink& _parent;
             }; // class DeviceCallback
 
-        public:
-            static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device)
-            {
-                ASSERT(device != nullptr);
-
-                return (Bluetooth::Address(device->LocalId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0, 0));
-            }
-            static Core::NodeId Designator(const Exchange::IBluetooth::IDevice* device, const uint16_t psm)
-            {
-                ASSERT(device != nullptr);
-
-                return (Bluetooth::Address(device->RemoteId().c_str()).NodeId(static_cast<Bluetooth::Address::type>(device->Type()), 0 /* must be zero */, psm));
-            }
-
         private:
             // This is the AVDTP transport channel.
             class Transport : public Bluetooth::RTP::ClientSocket {
