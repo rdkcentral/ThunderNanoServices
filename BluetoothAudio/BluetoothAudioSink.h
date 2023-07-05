@@ -1034,7 +1034,7 @@ namespace Plugin {
 
                 return (result);
             }
-            uint32_t OnSetConfiguration(A2DP::AudioEndpoint& ep, Bluetooth::AVDTP::Socket* channel)
+            uint32_t OnSetConfiguration(A2DP::AudioEndpoint& ep VARIABLE_IS_NOT_USED, Bluetooth::AVDTP::Socket* channel VARIABLE_IS_NOT_USED)
             {
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
