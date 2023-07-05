@@ -29,41 +29,30 @@ namespace Plugin {
 
 namespace A2DP {
 
-    class AudioEndpoint : public Bluetooth::AVDTP::StreamEndPoint {
+    inline Bluetooth::A2DP::IAudioCodec* AllocCodec(uint8_t codec, const Bluetooth::Buffer& params)
+    {
+        switch (codec) {
+        case Bluetooth::A2DP::SBC::CODEC_TYPE:
+            return (new Bluetooth::A2DP::SBC(params));
+        default:
+            break;
+        }
+
+        return (nullptr);
+    }
+
+    class AudioEndpointData : public Bluetooth::AVDTP::StreamEndPointData {
     public:
-        using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
+        AudioEndpointData() = delete;
+        AudioEndpointData(const AudioEndpointData&) = delete;
+        AudioEndpointData& operator=(const AudioEndpointData&) = delete;
+        ~AudioEndpointData() override = default;
 
-        struct IHandler {
-            virtual ~IHandler() { }
-
-            virtual void SignallingStatus(AudioEndpoint& endpoint, const bool running) = 0;
-            virtual void TransportStatus(AudioEndpoint& endpoint, const bool running) = 0;
-
-            virtual uint32_t OnSetConfiguration(Bluetooth::A2DP::IAudioCodec& codec) = 0;
-            virtual uint32_t OnAcquire() = 0;
-            virtual uint32_t OnRelinquish() = 0;
-            virtual uint32_t OnSetSpeed(const int8_t speed) = 0;
-            virtual uint32_t OnBrokenConnection() = 0;
-
-            virtual void OnPacketReceived(const uint8_t packet[], const uint16_t length) = 0;
-        };
-
-    public:
-        AudioEndpoint() = delete;
-        AudioEndpoint(const AudioEndpoint&) = delete;
-        AudioEndpoint& operator=(const AudioEndpoint&) = delete;
-        ~AudioEndpoint() override = default;
-
-#if 0
-        // Initialize endpoint from client
         template<typename SEP>
-        AudioEndpoint(AudioEndpointHandler& handler, const uint8_t intSeid, SEP&& sep)
-            : Bluetooth::AVDTP::StreamEndPoint(std::forward<SEP>(sep))
-            , _handler(handler)
+        AudioEndpointData(SEP&& sep)
+            : Bluetooth::AVDTP::StreamEndPointData(std::forward<SEP>(sep))
             , _codec(nullptr)
             , _contentProtection(nullptr)
-            , _contentProtectionEnabled(false)
-            , _intSeid(intSeid)
         {
             if (DeserializeTransportCapabilities() == true) {
                 DeserializeCodecCapabilities();
@@ -74,21 +63,152 @@ namespace A2DP {
                 TRACE(Trace::Error, (_T("Invalid endpoint")));
             }
         }
-#endif
-        // Initialize endpoint from server
-        AudioEndpoint(IHandler& handler, const uint8_t id,
-                        const bool sink,
-                        Bluetooth::A2DP::IAudioCodec* codec,
-                        Bluetooth::A2DP::IAudioContentProtection* cp = nullptr)
+
+    public:
+        const Bluetooth::A2DP::IAudioCodec* Codec() const {
+            return (_codec.get());
+        }
+        Bluetooth::A2DP::IAudioCodec* Codec(){
+            return (_codec.get());
+        }
+        const Bluetooth::A2DP::IAudioContentProtection* ContentProtection() const {
+            return (_contentProtection.get());
+        }
+        Bluetooth::A2DP::IAudioContentProtection* ContentProtection() {
+            return (_contentProtection.get());
+        }
+
+    private:
+        bool DeserializeTransportCapabilities()
+        {
+            bool result = true;
+
+            auto it = Capabilities().find(Service::MEDIA_TRANSPORT);
+
+            if (it == Capabilities().end()) {
+                TRACE(ServerFlow, (_T("Endpoint %02x does not support MEDIA_TRANSPORT category!"), Id()));
+                result = false;
+            }
+
+            return (result);
+        }
+        void DeserializeCodecCapabilities()
+        {
+            using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
+
+            ASSERT(_codec == nullptr);
+
+            auto it = Capabilities().find(Service::MEDIA_CODEC);
+
+            if (it == Capabilities().end()) {
+                TRACE(ServerFlow, (_T("Endpoint 0x%02x does not support MEDIA_CODEC category!"), Id()));
+            }
+            else {
+                const Service& caps = (*it).second;
+
+                if (caps.Params().size() >= 2) {
+                    Bluetooth::DataRecord config(caps.Params());
+                    uint8_t mediaType{};
+                    config.Pop(mediaType);
+
+                    if (mediaType == Bluetooth::A2DP::IAudioCodec::MEDIA_TYPE) {
+                        uint8_t codecType{};
+                        config.Pop(codecType);
+
+                        _codec.reset(AllocCodec(codecType, caps.Params()));
+                        ASSERT(_codec.get() != nullptr);
+
+                        if (_codec == nullptr) {
+                            TRACE(ServerFlow, (_T("Endpoint 0x%02x supports an unknown audio codec [0x%02x]"),
+                                                    Id(), codecType));
+                        }
+                    }
+                    else {
+                        TRACE(ServerFlow, (_T("Endpoint media type is not AUDIO! [0x%02x]"), mediaType));
+                    }
+                }
+            }
+        }
+        void DeserializeCopyProtectionCapabilities()
+        {
+            using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
+
+            enum a2dp_contentprotection : uint16_t {
+                NONE    = 0x0000,
+                DTCP    = 0x0001,
+                SCMS_T  = 0x0002
+            };
+
+            ASSERT(_contentProtection == nullptr);
+
+            // Optional content protection capability
+            if (_codec != nullptr) {
+                auto it = Capabilities().find(Service::CONTENT_PROTECTION);
+
+                if (it == Capabilities().end()) {
+                    TRACE(ServerFlow, (_T("Endpoint 0x%02x does not support CONTENT_PROTECTION category"), Id()));
+                }
+                else {
+                    const Service& caps = (*it).second;
+
+                    if (caps.Params().size() >= 2) {
+                        Bluetooth::DataRecordLE config(caps.Params());
+
+                        a2dp_contentprotection cpType{};
+                        config.Pop(cpType);
+
+                        if (cpType == a2dp_contentprotection::NONE) {
+                            TRACE(ServerFlow, (_T("Endpoint 0x%02x uses no copy protection"), Id()));
+                        }
+                        else {
+                            //
+                            // TODO Add support for copy protection?
+                            ///
+                            TRACE(ServerFlow, (_T("Endpoint 0x%02x supports unknown copy protection! [0x%04x]"),
+                                                    Id(), static_cast<uint8_t>(cpType)));
+                        }
+                    }
+                }
+            }
+        }
+
+    private:
+        std::unique_ptr<Bluetooth::A2DP::IAudioCodec> _codec;
+        std::unique_ptr<Bluetooth::A2DP::IAudioContentProtection> _contentProtection;
+    };
+
+    class AudioEndpoint : public Bluetooth::AVDTP::StreamEndPoint {
+    public:
+        using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
+
+        struct IHandler {
+            virtual ~IHandler() { }
+
+            virtual uint32_t OnSetConfiguration(AudioEndpoint& endpoint, Bluetooth::AVDTP::Socket* channel) = 0;
+            virtual uint32_t OnAcquire() = 0;
+            virtual uint32_t OnRelinquish() = 0;
+            virtual uint32_t OnSetSpeed(const int8_t speed) = 0;
+        };
+
+    public:
+        AudioEndpoint() = delete;
+        AudioEndpoint(const AudioEndpoint&) = delete;
+        AudioEndpoint& operator=(const AudioEndpoint&) = delete;
+        ~AudioEndpoint() override = default;
+
+        AudioEndpoint(IHandler& handler, const uint8_t id, const bool sink,
+                      Bluetooth::A2DP::IAudioCodec* codec,
+                      Bluetooth::A2DP::IAudioContentProtection* cp = nullptr)
 
             : Bluetooth::AVDTP::StreamEndPoint(id, (sink? Bluetooth::AVDTP::StreamEndPoint::SINK : Bluetooth::AVDTP::StreamEndPoint::SOURCE), Bluetooth::AVDTP::StreamEndPoint::AUDIO)
             , _lock()
-            , _handler(handler)
+            , _handler(&handler)
             , _remote(nullptr)
             , _codec(codec)
             , _contentProtection(cp)
             , _contentProtectionEnabled(false)
         {
+            ASSERT(_handler != nullptr);
             ASSERT(_codec != nullptr);
             ASSERT(id != 0);
 
@@ -117,9 +237,11 @@ namespace A2DP {
         }
 
     public:
-        uint32_t Configure(const uint8_t remoteId, const Bluetooth::A2DP::IAudioCodec::StreamFormat& format, const string& settings, const bool enableCP = false)
+        uint32_t Configure(const Bluetooth::A2DP::IAudioCodec::StreamFormat& format, const string& settings, const bool enableCP = false)
         {
             using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
+
+            ASSERT(_handler != nullptr);
 
             _lock.Lock();
 
@@ -150,11 +272,9 @@ namespace A2DP {
                 _contentProtectionEnabled = false;
             }
 
-            uint32_t result = _remote.SetConfiguration(*this, remoteId);
+            uint32_t result = _remote.SetConfiguration(*this, RemoteId());
 
             if (result == Core::ERROR_NONE) {
-                RemoteId(remoteId);
-
                 uint8_t failed{};
                 result = OnSetConfiguration(failed, nullptr);
             }
@@ -257,10 +377,27 @@ namespace A2DP {
 
             return (result);
         }
+        void Disconnected()
+        {
+            _lock.Lock();
 
-    public:
-        const string& DeviceAddress() const {
-            return (_deviceAddress);
+            if ((State() != Bluetooth::AVDTP::StreamEndPoint::IDLE)
+                    && (State() != Bluetooth::AVDTP::StreamEndPoint::CLOSING)
+                    && (State() != Bluetooth::AVDTP::StreamEndPoint::ABORTING)) {
+
+                TRACE(ServerFlow, (_T("Endpoint %d device disconnected unexpectedly"), Id()));
+
+                // Deallocate the sink and teardown internal data, no point in closing the remote
+                // device as it's not longer reachable.
+                OnAbort();
+            }
+
+            _lock.Unlock();
+
+        }
+        void ClientChannel(Bluetooth::AVDTP::Socket* channel)
+        {
+            _remote.Channel(channel);
         }
 
     private:
@@ -292,22 +429,11 @@ namespace A2DP {
 
                         if (Codec()->Configure(config.data(), config.size()) == Core::ERROR_NONE) {
 
-                            if (_handler.OnSetConfiguration(*Codec()) == Core::ERROR_NONE) {
+                            if (_handler->OnSetConfiguration(*this, channel) == Core::ERROR_NONE) {
 
                                 TRACE(ServerFlow, (_T("Endpoint %d configured (with codec %02x)"), Id(), Codec()->Type()));
 
                                 State(StreamEndPoint::CONFIGURED);
-
-                                if (channel != nullptr) {
-                                    // Since this endpoint is now confured, allow bidirectional traffic.
-                                    _remote.Channel(channel);
-
-                                    _deviceAddress = channel->RemoteNode().HostAddress();
-                                    _handler.SignallingStatus(*this, true);
-
-                                    // And the inactivity monitor must not close this socket now!
-                                    _remote.Channel()->Busy(true);
-                                }
 
                                 result = Core::ERROR_NONE;
                             }
@@ -341,7 +467,7 @@ namespace A2DP {
             _lock.Lock();
 
             if (State() == StreamEndPoint::CONFIGURED) {
-                if (_handler.OnAcquire() == Core::ERROR_NONE) {
+                if (_handler->OnAcquire() == Core::ERROR_NONE) {
                     TRACE(ServerFlow, (_T("Endpoint %d opened"), Id()));
                     State(StreamEndPoint::OPENED);
                 }
@@ -367,16 +493,9 @@ namespace A2DP {
 
                 State(StreamEndPoint::CLOSING);
 
-                result = _handler.OnRelinquish();
+                result = _handler->OnRelinquish();
 
                 TRACE(ServerFlow, (_T("Endpoint %d closed"), Id()));
-
-                // Release the connections...
-                if (_transport != nullptr) {
-                    _transport->Busy(false);
-                }
-
-                _remote.Channel()->Busy(false);
 
                 // Go back in state machine.
                 State(StreamEndPoint::IDLE);
@@ -397,7 +516,7 @@ namespace A2DP {
             _lock.Lock();
 
             if (State() == StreamEndPoint::OPENED) {
-                result = _handler.OnSetSpeed(100);
+                result = _handler->OnSetSpeed(100);
 
                 if (result == Core::ERROR_NONE) {
                     TRACE(ServerFlow, (_T("Endpoint %d started"), Id()));
@@ -421,7 +540,7 @@ namespace A2DP {
             _lock.Lock();
 
             if (State() == StreamEndPoint::STARTED) {
-                result = _handler.OnSetSpeed(0);
+                result = _handler->OnSetSpeed(0);
 
                 if (result == Core::ERROR_NONE) {
                     TRACE(ServerFlow, (_T("Endpoint %d suspended"), Id()));
@@ -441,21 +560,14 @@ namespace A2DP {
         }
         uint32_t OnAbort() override
         {
-            uint32_t result = Core::ERROR_ILLEGAL_STATE;
+            uint32_t result = Core::ERROR_NONE;
 
             _lock.Lock();
 
             if (State() != StreamEndPoint::IDLE) {
                 State(StreamEndPoint::ABORTING);
 
-                result = _handler.OnRelinquish();
-
-                // Release the connections...
-                if (_transport != nullptr) {
-                    _transport->Busy(false);
-                }
-
-                _remote.Channel()->Busy(false);
+                result = _handler->OnRelinquish();
 
                 TRACE(ServerFlow, (_T("Endpoint %d aborted"), Id()));
 
@@ -476,90 +588,7 @@ namespace A2DP {
             return (Core::ERROR_UNAVAILABLE);
         }
 
-    public:
-        void Operational(Bluetooth::AVDTP::Socket& channel, const bool isRunning)
-        {
-            if (channel.Type() == Bluetooth::AVDTP::Socket::SIGNALLING) {
-                if (isRunning == false) {
-
-                    _lock.Lock();
-
-                    if (IsFree() == false) {
-                        // Signalling channel was disconnected while the endpoint is not idle,
-                        // apparently device was abruptly disconnected, handle this.
-                        BrokenConnection();
-                    }
-
-                    _lock.Unlock();
-                }
-
-                _handler.SignallingStatus(*this, isRunning);
-            }
-            else if (channel.Type() == Bluetooth::AVDTP::Socket::TRANSPORT) {
-
-                _lock.Lock();
-
-                if (isRunning == true) {
-                    _transport = &channel;
-
-                    // When the transport channel is connected, mark is as not closeable.
-                    // Only if the endpoint is closed or aborted may it be closed.
-                    _transport->Busy(!IsFree());
-                }
-                else {
-                    _transport = nullptr;
-                    _remote.Channel(nullptr);
-                    _deviceAddress.clear();
-                }
-
-                _lock.Unlock();
-
-                _handler.TransportStatus(*this, isRunning);
-            }
-            else {
-                ASSERT(!"Bad channel type");
-            }
-        }
-
-    public:
-        void OnPacket(const uint8_t data[], const uint16_t length)
-        {
-            _handler.OnPacketReceived(data, length);
-        }
-
     private:
-        void BrokenConnection()
-        {
-            TRACE(ServerFlow, (_T("Endpoint %d device disconnected unexpectedly"), Id()));
-
-            // Deallocate the sink and teardown internal data, no point in closing the remote
-            // device as it's not longer reachable.
-            _handler.OnBrokenConnection();
-
-            // Release the connections...
-            if (_transport != nullptr) {
-                _transport->Busy(false);
-            }
-
-            _remote.Channel()->Busy(false);
-
-            // Reset state machine.
-            State(StreamEndPoint::IDLE);
-        }
-
-    private:
-        Bluetooth::A2DP::IAudioCodec* AllocCodec(uint8_t codec, const Bluetooth::Buffer& params)
-        {
-            switch (codec) {
-            case Bluetooth::A2DP::SBC::CODEC_TYPE:
-                TRACE(ServerFlow, (_T("Endpoint supports LC_SBC codec")));
-                return (new Bluetooth::A2DP::SBC(params));
-            default:
-                break;
-            }
-
-            return (nullptr);
-        }
         Bluetooth::Buffer CodecCapabilities() const
         {
             // Convenience method to serialize codec capabilities frame.
@@ -579,109 +608,13 @@ namespace A2DP {
             return (Bluetooth::Buffer(caps, length));
         }
 
-    private:
-        bool DeserializeTransportCapabilities()
-        {
-            bool result = true;
-
-            auto it = Capabilities().find(Service::MEDIA_TRANSPORT);
-
-            if (it == Capabilities().end()) {
-                TRACE(ServerFlow, (_T("Endpoint %02x does not support MEDIA_TRANSPORT category!"), Id()));
-                result = false;
-            }
-
-            return (result);
-        }
-        void DeserializeCodecCapabilities()
-        {
-            using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
-
-            ASSERT(_codec == nullptr);
-
-            auto it = Capabilities().find(Service::MEDIA_CODEC);
-
-            if (it == Capabilities().end()) {
-                TRACE(ServerFlow, (_T("Endpoint 0x%02x does not support MEDIA_CODEC category!"), Id()));
-            }
-            else {
-                const Service& caps = (*it).second;
-
-                if (caps.Params().size() >= 2) {
-                    Bluetooth::DataRecord config(caps.Params());
-                    uint8_t mediaType{};
-                    config.Pop(mediaType);
-
-                    if (mediaType == Bluetooth::A2DP::IAudioCodec::MEDIA_TYPE) {
-                        uint8_t codecType{};
-                        config.Pop(codecType);
-
-                        _codec.reset(AllocCodec(codecType, caps.Params()));
-                        ASSERT(_codec.get() != nullptr);
-
-                        if (_codec == nullptr) {
-                            TRACE(ServerFlow, (_T("Endpoint 0x%02x supports an unknown audio codec [0x%02x]"),
-                                                    Id(), codecType));
-                        }
-                    }
-                    else {
-                        TRACE(ServerFlow, (_T("Endpoint media type is not AUDIO! [0x%02x]"), mediaType));
-                    }
-                }
-            }
-        }
-        void DeserializeCopyProtectionCapabilities()
-        {
-            using Service = Bluetooth::AVDTP::StreamEndPoint::Service;
-
-            enum a2dp_contentprotection : uint16_t {
-                NONE    = 0x0000,
-                DTCP    = 0x0001,
-                SCMS_T  = 0x0002
-            };
-
-            ASSERT(_contentProtection == nullptr);
-
-            // Optional content protection capability
-            if (_codec != nullptr) {
-                auto it = Capabilities().find(Service::CONTENT_PROTECTION);
-
-                if (it == Capabilities().end()) {
-                    TRACE(ServerFlow, (_T("Endpoint 0x%02x does not support CONTENT_PROTECTION category"), Id()));
-                }
-                else {
-                    const Service& caps = (*it).second;
-
-                    if (caps.Params().size() >= 2) {
-                        Bluetooth::DataRecordLE config(caps.Params());
-
-                        a2dp_contentprotection cpType{};
-                        config.Pop(cpType);
-
-                        if (cpType == a2dp_contentprotection::NONE) {
-                            TRACE(ServerFlow, (_T("Endpoint 0x%02x uses no copy protection"), Id()));
-                        }
-                        else {
-                            //
-                            // TODO Add support for copy protection?
-                            ///
-                            TRACE(ServerFlow, (_T("Endpoint 0x%02x supports unknown copy protection! [0x%04x]"),
-                                                    Id(), static_cast<uint8_t>(cpType)));
-                        }
-                    }
-                }
-            }
-        }
-
     public:
         Core::CriticalSection _lock;
-        IHandler& _handler;
+        IHandler* _handler;
         Bluetooth::AVDTP::Client _remote;
-        Bluetooth::AVDTP::Socket* _transport;
         std::unique_ptr<Bluetooth::A2DP::IAudioCodec> _codec;
         std::unique_ptr<Bluetooth::A2DP::IAudioContentProtection> _contentProtection;
         bool _contentProtectionEnabled;
-        string _deviceAddress;
     }; // class AudioEndpoint
 
 } // namespace A2DP

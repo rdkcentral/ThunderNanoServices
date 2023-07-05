@@ -34,37 +34,49 @@ namespace Plugin {
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
 
+        _lock.Lock();
+
         _service = service;
         _service->AddRef();
 
         _controller = controller;
         ASSERT(controller.empty() == false);
 
-        _source = Core::Service<A2DPSource>::Create<A2DPSource>(*this);
+        _source = Core::Service<A2DPSource>::Create<A2DPSource>(*this, config);
         ASSERT(_source != nullptr);
 
-        _source->Config(config);
+        SignallingServer::Instance().Register(_source);
 
-        Exchange::BluetoothAudio::JSource::Register(*this, this);
+        SignallingServer::Instance().Add(true, new Bluetooth::A2DP::SBC(53), *_source);
+
+        _lock.Unlock();
+
+        Exchange::BluetoothAudio::JSource::Register(*_jsonRpcModule, this);
 
         return {};
     }
 
     void BluetoothAudioSource::Deinitialize(PluginHost::IShell* service)
     {
+        _lock.Lock();
+
         if (_service != nullptr) {
             ASSERT(_service == service);
+
+            Exchange::BluetoothAudio::JSource::Unregister(*_jsonRpcModule);
+
+            SignallingServer::Instance().Unregister(_source);
 
             if (_source != nullptr) {
                 _source->Release();
                 _source = nullptr;
             }
 
-            Exchange::BluetoothAudio::JSource::Unregister(*this);
-
             service->Release();
             _service = nullptr;
         }
+
+        _lock.Unlock();
     }
 
 } // namespace Plugin

@@ -51,6 +51,7 @@ set(PLUGIN_BLUETOOTHAUDIO_SOURCE_CODECSBC_MAXBITPOOL "53" CACHE STRING "Audio so
 add_library(${MODULE_NAME} SHARED
     BluetoothAudio.cpp
     BluetoothAudioSource.cpp
+    BluetoothAudioSink.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

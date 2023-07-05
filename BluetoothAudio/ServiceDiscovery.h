@@ -262,7 +262,7 @@ namespace Plugin {
 
                 Bluetooth::SDP::Tree tree;
 
-                uint32_t result = _profile.Discover(uuids, tree);
+                result = _profile.Discover(uuids, tree);
 
                 if (result == Core::ERROR_NONE) {
 

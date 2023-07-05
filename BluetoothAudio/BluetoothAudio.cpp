@@ -60,32 +60,30 @@ namespace Plugin {
             {
                 Add("controller", &Controller);
                 Add("source", &Source);
-                //Add("sink", &Sink);
+                Add("sink", &Sink);
                 Add("server", &Server);
             }
 
             Core::JSON::String Controller;
             BluetoothAudioSource::Config Source;
-            //BluetoothAudioSink::Config Sink;
+            BluetoothAudioSink::Config Sink;
             SignallingServer::Config Server;
         };
 
         GlobalConfig config;
         config.FromString(_service->ConfigLine());
 
-        _source = Core::Service<BluetoothAudioSource>::Create<BluetoothAudioSource>();
+        _source = Core::Service<BluetoothAudioSource>::Create<BluetoothAudioSource>(this);
         ASSERT(_source != nullptr);
 
-        //_sink = Core::Service<BluetoothAudioSink>::Create<BluetoothAudioSink>();
-        //ASSERT(_sink != nullptr);
+        _sink = Core::Service<BluetoothAudioSink>::Create<BluetoothAudioSink>(this);
+        ASSERT(_sink != nullptr);
 
-        //_sink->Initialize(service, config.Controller.Value(), config.Sink);
         _source->Initialize(service, config.Controller.Value(), config.Source);
+        _sink->Initialize(service, config.Controller.Value(), config.Sink);
 
-        SignallingServer::Instance().Add(true, new Bluetooth::A2DP::SBC(53), *_source);
-        //SignallingServer::Instance().Add(false, new Bluetooth::A2DP::SBC(253), _sink);
-
-        SignallingServer::Instance().Start(config.Server.Interface.Value(), config.Server.PSM.Value(), config.Server.InactivityTimeoutMs.Value());
+        SignallingServer::Instance().Start(config.Server.Interface.Value(), config.Server.PSM.Value(),
+                                            config.Server.InactivityTimeoutMs.Value(), (*_source));
 
         return {};
     }
@@ -96,15 +94,19 @@ namespace Plugin {
 
             ASSERT(_service == service);
 
+            SignallingServer::Instance().Stop();
+
             if (_source != nullptr) {
+                _source->Deinitialize(service);
                 _source->Release();
                 _source = nullptr;
             }
 
-            //if (_sink != nullptr) {
-            //    _sink->Release();
-            //    _sink = nullptr;
-           // }
+            if (_sink != nullptr) {
+                _sink->Deinitialize(service);
+                _sink->Release();
+                _sink = nullptr;
+            }
 
             service->Unregister(&_comNotificationSink);
 

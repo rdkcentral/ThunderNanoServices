@@ -41,10 +41,7 @@ namespace Plugin {
 
         _controllerLatency = (config.Latency.Value() <= 10000? config.Latency.Value() : 10000);
 
-        _SEID = config.SEID.Value();
-        ASSERT(_SEID != 0);
-
-        Exchange::BluetoothAudio::JSink::Register(*this, this);
+        SignallingServer::Instance().Register(this);
 
         if (Core::File(_service->PersistentPath()).IsDirectory() == false) {
             if (Core::Directory(_service->PersistentPath().c_str()).CreatePath() == false) {
@@ -73,7 +70,7 @@ namespace Plugin {
                                 A2DPSink::AudioServiceData data;
                                 data.IElement::FromFile(fileData);
 
-                                _sink.reset(new (std::nothrow) A2DPSink(this, _codecSettings, device, _SEID, std::move(data)));
+                                _sink.reset(new (std::nothrow) A2DPSink(this, _codecSettings, device, std::move(data)));
                                 ASSERT(_sink.get() != nullptr);
 
                                 TRACE(Trace::Information, (_T("Loaded previously assigned audio sink [%s]"), filename.c_str()));
@@ -94,71 +91,31 @@ namespace Plugin {
             }
         }
 
+        _endpoints.emplace(Bluetooth::A2DP::IAudioCodec::LC_SBC, SignallingServer::Instance().Add(false, new Bluetooth::A2DP::SBC(53), *this));
+
         _lock.Unlock();
+
+        Exchange::BluetoothAudio::JSink::Register(*_jsonRpcModule, this);
 
         return {};
     }
 
     void BluetoothAudioSink::Deinitialize(PluginHost::IShell* service)
     {
+        _lock.Lock();
+
         if (_service != nullptr) {
             ASSERT(_service == service);
 
             _sink.reset();
 
-            Exchange::BluetoothAudio::JSink::Unregister(*this);
+            Exchange::BluetoothAudio::JSink::Unregister(*_jsonRpcModule);
 
             service->Release();
             _service = nullptr;
         }
-    }
-
-    /* virtual */ uint32_t BluetoothAudioSink::Callback(Exchange::IBluetoothAudio::ISink::ICallback* callback)
-    {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
-
-        _lock.Lock();
-
-        if (callback == nullptr) {
-            if (_callback != nullptr) {
-                _callback->Release();
-                _callback = nullptr;
-                result = Core::ERROR_NONE;
-            }
-        }
-        else if (_callback == nullptr) {
-            _callback = callback;
-            _callback->AddRef();
-            result = Core::ERROR_NONE;
-        }
 
         _lock.Unlock();
-
-        return (result);
-    }
-
-    /* virtual */ uint32_t BluetoothAudioSink::Source(Exchange::IBluetoothAudio::IStream* source)
-    {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
-
-        _lock.Lock();
-
-        if (source == nullptr) {
-            if (_source != nullptr) {
-                _source->Release();
-                _source = nullptr;
-                result = Core::ERROR_NONE;
-            }
-        }
-        else if (_source == nullptr) {
-            _source = source;
-            _source->AddRef();
-            result = Core::ERROR_NONE;
-        }
-
-        _lock.Unlock();
-
-        return (result);
     }
 
     /* virtual */ uint32_t BluetoothAudioSink::Assign(const string& address)
@@ -174,7 +131,8 @@ namespace Plugin {
                 Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address, Exchange::IBluetooth::IDevice::ADDRESS_BREDR);
 
                 if (device != nullptr) {
-                    _sink.reset(new (std::nothrow) A2DPSink(this, _codecSettings, device, _SEID));
+                    _sink.reset(new (std::nothrow) A2DPSink(this, _codecSettings, device));
+                    device->Release();
 
                     if (_sink != nullptr) {
                         TRACE(Trace::Information, (_T("Assigned [%s] to Bluetooth audio sink"), address.c_str()));
@@ -238,25 +196,6 @@ namespace Plugin {
         _lock.Unlock();
 
         return (result);
-    }
-
-    void BluetoothAudioSink::Operational(const A2DPSink::AudioServiceData& data)
-    {
-        _lock.Lock();
-
-        ASSERT(_sink != nullptr);
-
-        // Store the settings, if not already done..
-        Core::File settingsFile(_service->PersistentPath() + _sink->Address() + _T(".json"));
-
-        if ((settingsFile.Exists() == false) && (settingsFile.Create() == true)) {
-            TRACE(Trace::Information, (_T("Storing Bluetooth audio sink information [%s]"), _sink->Address().c_str()));
-            data.IElement::ToFile(settingsFile);
-            settingsFile.Close();
-        }
-
-        _lock.Unlock();
-
     }
 
 } // namespace Plugin

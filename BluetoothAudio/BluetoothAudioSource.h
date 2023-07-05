@@ -40,8 +40,7 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    class BluetoothAudioSource : public PluginHost::JSONRPC
-                               , public Exchange::IBluetoothAudio::ISource {
+    class BluetoothAudioSource :  public Exchange::IBluetoothAudio::ISource {
     public:
         class Config : public Core::JSON::Container {
         public:
@@ -62,7 +61,10 @@ namespace Plugin {
 
     private:
         class A2DPSource : public Exchange::IBluetoothAudio::ISource::IControl
-                         , public A2DP::AudioEndpoint::IHandler {
+                         , public A2DP::AudioEndpoint::IHandler
+                         , public SignallingServer::IMediaReceiver
+                         , public SignallingServer::IObserver {
+
         private:
             class SendBuffer : public Core::SharedBuffer {
             private:
@@ -345,7 +347,7 @@ namespace Plugin {
                     Core::hresult result = Core::ERROR_ALREADY_RELEASED;
 
                     ExecuteAsync([this, &result]() {
-                        _parent.WithEndpoint([this, &result](A2DP::AudioEndpoint& ep) {
+                        _parent.Visit([this, &result](A2DP::AudioEndpoint& ep) {
                             result = ep.Abort();
                         });
                     });
@@ -362,7 +364,7 @@ namespace Plugin {
                     Core::hresult result = Core::ERROR_ILLEGAL_STATE;
 
                     ExecuteAsync([this, &result, &speed]() {
-                        _parent.WithEndpoint([this, &result, &speed](A2DP::AudioEndpoint& ep) {
+                        _parent.Visit([this, &result, &speed](A2DP::AudioEndpoint& ep) {
                             if (speed == 0) {
                                 result = ep.Suspend();
                             }
@@ -418,19 +420,21 @@ namespace Plugin {
             A2DPSource(const A2DPSource&) = delete;
             A2DPSource& operator=(const A2DPSource&) = delete;
 
-            A2DPSource(BluetoothAudioSource& parent)
+            A2DPSource(BluetoothAudioSource& parent, const Config& config)
                 : _parent(parent)
                 , _lock()
                 , _broker(*this)
                 , _localClient(Core::Service<LocalClient>::Create<LocalClient>(*this))
                 , _sink(nullptr)
                 , _state(Exchange::IBluetoothAudio::DISCONNECTED)
-                , _connector()
+                , _connector(config.Connector.Value())
                 , _updateJob()
                 , _sendBuffer()
                 , _discovery()
                 , _device(nullptr)
                 , _endpoint(nullptr)
+                , _signallingChannel()
+                , _transportChannel()
             {
             }
             ~A2DPSource() override
@@ -448,6 +452,9 @@ namespace Plugin {
                 ASSERT(_device == nullptr);
                 ASSERT(_endpoint == nullptr);
 
+                ASSERT(_signallingChannel.IsValid() == false);
+                ASSERT(_transportChannel.IsValid() == false);
+
                 _lock.Unlock();
             }
 
@@ -456,9 +463,80 @@ namespace Plugin {
                 return (_parent.Controller());
             }
 
+        public:
+            Exchange::IBluetoothAudio::state State() const {
+                return (_state);
+            }
+            uint32_t Device(string& address) const
+            {
+                uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+                _lock.Lock();
+
+                if (_device != nullptr) {
+                    address = _device->Address();
+                    result = Core::ERROR_NONE;
+                }
+
+                _lock.Unlock();
+
+                return (result);
+            }
+            uint32_t Type(Exchange::IBluetoothAudio::ISource::devicetype& type) const
+            {
+                uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+                _lock.Lock();
+
+                if (_device != nullptr) {
+                    type  = _device->Type();
+                    result = Core::ERROR_NONE;
+                }
+
+                _lock.Unlock();
+
+                return (result);
+            }
+            uint32_t StreamProperties(Exchange::IBluetoothAudio::StreamProperties& props) const
+            {
+                uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+                _lock.Lock();
+
+                if (_device != nullptr) {
+                    props = _streamProperties;
+                    result = Core::ERROR_NONE;
+                }
+
+                _lock.Unlock();
+
+                return (result);
+            }
+            uint32_t CodecProperties(Exchange::IBluetoothAudio::CodecProperties& props) const
+            {
+                uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+                _lock.Lock();
+
+                if (_device != nullptr) {
+                    if (_codec->Type() == Bluetooth::A2DP::IAudioCodec::codectype::LC_SBC) {
+                        props.Codec = Exchange::IBluetoothAudio::LC_SBC;
+                    }
+
+                    result = Core::ERROR_NONE;
+                }
+
+                _lock.Unlock();
+
+                return (result);
+            }
+
         private:
+            // DeviceBoker callbaks
             void OnDeviceConnected(DeviceBroker::Device& device)
             {
+                // One of the observed devices has been connected, examine it!
+
                 std::list<ServiceDiscovery::AudioService> services;
 
                 _discovery.LocalNode(Designator(device.Control()));
@@ -469,94 +547,158 @@ namespace Plugin {
                     if (_discovery.Discover({Bluetooth::SDP::ClassID::AudioSource}, services) != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Service discovery failed!")));
                     }
+                    else {
+                        if (services.empty() == false) {
+                            ServiceDiscovery::AudioService& service = services.front();
 
-                    _discovery.Disconnect();
-                }
+                            if (services.size() > 1) {
+                                TRACE(SourceFlow, (_T("More than one audio source available, using the first one!")));
+                            }
 
-                if (services.empty() == false) {
-                    ServiceDiscovery::AudioService& service = services.front();
+                            TRACE(SourceFlow, (_T("Audio source service available: A2DP v%d.%d, AVDTP v%d.%d, L2CAP PSM: %i, features: 0b%s"),
+                                                (service.ProfileVersion() >> 8), (service.ProfileVersion() & 0xFF),
+                                                (service.TransportVersion() >> 8), (service.TransportVersion() & 0xFF),
+                                                service.PSM(), std::bitset<8>(service.Features()).to_string().c_str()));
 
-                    if (services.size() > 1) {
-                        TRACE(SourceFlow, (_T("More than one audio source available, using the first one!")));
+                            device.Type(service.Features());
+                        }
+                        else {
+                            TRACE(SourceFlow, (_T("Device %s is not an audio source device, stop observing"), device.Address().c_str()));
+                            _broker.Forget(device);
+                        }
                     }
 
-                    TRACE(SourceFlow, (_T("Audio source service available: A2DP v%d.%d, AVDTP v%d.%d, L2CAP PSM: %i, features: 0b%s"),
-                                        (service.ProfileVersion() >> 8), (service.ProfileVersion() & 0xFF),
-                                        (service.TransportVersion() >> 8), (service.TransportVersion() & 0xFF),
-                                        service.PSM(), std::bitset<8>(service.Features()).to_string().c_str()));
-
-                    device.Type(service.Features());
-                }
-                else {
-                    TRACE(SourceFlow, (_T("Device %s is not an audio source device, stop observing"), device.Address().c_str()));
-                    _broker.Forget(device);
+                    _discovery.Disconnect();
                 }
             }
 
         private:
-            void Assign(A2DP::AudioEndpoint& endpoint)
+            void Assign(A2DP::AudioEndpoint& endpoint, const Core::ProxyType<SignallingServer::PeerConnection>& channel)
             {
-                _lock.Lock();
+                // The initiator has successfully configured both endpoints, the audio connection can now
+                // be considered active, so let's bind all the pieces together.
 
-                DeviceBroker::Device* device = _broker.Find(endpoint.DeviceAddress());
-                ASSERT(device != nullptr);
+                ASSERT(channel.IsValid() == true);
+                ASSERT(channel->Type() == Bluetooth::AVDTP::Socket::SIGNALLING);
 
-                if (device != nullptr) {
-                    _device = device;
-                }
-
+                // Enable bidirectional communication on the endpoint.
                 ASSERT(_endpoint == nullptr);
                 _endpoint = &endpoint;
+                _endpoint->ClientChannel(&(*channel));
 
-                _lock.Unlock();
+                // Lock the physiscal device.
+                DeviceBroker::Device* device = _broker.Find(channel->RemoteNode().HostAddress());
+                ASSERT(device != nullptr);
+                _device = device;
+
+                // Lock the connection.
+                ASSERT(_signallingChannel.IsValid() == false);
+                _signallingChannel = channel;
+                _signallingChannel->Latch(true);
 
                 State(Exchange::IBluetoothAudio::CONNECTED);
+            }
+            void Assign(const Core::ProxyType<SignallingServer::PeerConnection>& channel)
+            {
+                // The transport channel has been opened, the streaming session is now all set up!
 
+                ASSERT(channel.IsValid() == true);
+                ASSERT(channel->Type() == Bluetooth::AVDTP::Socket::TRANSPORT);
+
+                // The device and signalling channel must surely be known by now.
+                ASSERT(_device != nullptr);
+                ASSERT(_signallingChannel.IsValid() == true);
+
+                ASSERT(_transportChannel.IsValid() == false);
+                _transportChannel = channel;
+                _transportChannel->Latch(true);
+
+                State(Exchange::IBluetoothAudio::READY);
             }
             void Unassign()
             {
-                _lock.Lock();
+                // The streaming session has been closed down, clean up!
 
-                _endpoint = nullptr;
+                _endpoint->ClientChannel(nullptr);
+
+                if (_transportChannel.IsValid() == true) {
+                    _transportChannel->Latch(false);
+                    _transportChannel.Release();
+                }
+
+                if (_signallingChannel.IsValid() == true) {
+                    _signallingChannel->Latch(false);
+                    _signallingChannel.Release();
+                }
 
                 if (_device != nullptr) {
                     _device->Release();
                     _device = nullptr;
                 }
 
-                _lock.Unlock();
+                _endpoint = nullptr;
 
-                State(Exchange::IBluetoothAudio::CONNECTED);
+                State(Exchange::IBluetoothAudio::DISCONNECTED);
+            }
+
+        private:
+            // SignallingServer::IObserver overrides
+            void Operational(const Core::ProxyType<SignallingServer::PeerConnection>& channel, const bool isRunning) override
+            {
+                ASSERT(channel.IsValid() == true);
+
+                if (isRunning == true) {
+
+                    _lock.Lock();
+
+                    if ((_signallingChannel.IsValid() == true) && (_signallingChannel->RemoteNode().HostAddress() == channel->RemoteNode().HostAddress())) {
+                        if ((channel->Type() == Bluetooth::AVDTP::Socket::SIGNALLING) && (_transportChannel.IsValid() == false)) {
+
+                            // Since this is a second AVDTP connection from same device and an endpoint is already configured
+                            // assume it's the transport channel being opened.
+                            channel->Type(Bluetooth::AVDTP::Socket::TRANSPORT);
+
+                            Assign(channel);
+                        }
+                        else {
+                            TRACE(Trace::Error, (_T("Unsupported channel type has been opened!")));
+                        }
+                    }
+
+                    _lock.Unlock();
+                }
+                else {
+
+                    if (channel->Type() == Bluetooth::AVDTP::Socket::SIGNALLING) {
+
+                        _lock.Lock();
+
+                        if ((_signallingChannel.IsValid() == true)
+                            && (_signallingChannel->RemoteNode().HostName() == channel->RemoteNode().HostName())) {
+
+                            // Looks like our signalling connection has been abruptly closed, clean up!
+                            ASSERT(_endpoint != nullptr);
+
+                            // The endpoint is a static resource.
+                            A2DP::AudioEndpoint* endpoint = _endpoint;
+
+                            _cleanupJob.Submit([endpoint]() {
+                                endpoint->Disconnected();
+                            });
+                        }
+
+                        _lock.Unlock();
+                    }
+                }
             }
 
         private:
             // AudioEndpoint::IHandler overrides
-            void SignallingStatus(A2DP::AudioEndpoint& endpoint, const bool running) override
-            {
-                if (running == true) {
-                    TRACE(SourceFlow, (_T("Signalling channel connected")));
-                    Assign(endpoint);
-                }
-                else {
-                    TRACE(SourceFlow, (_T("Signalling channel disconnected")));
-                }
-            }
-            void TransportStatus(A2DP::AudioEndpoint& endpoint VARIABLE_IS_NOT_USED, const bool running) override
-            {
-                if (running == true) {
-                    TRACE(SourceFlow, (_T("Transport channel connected")));
-                    State(Exchange::IBluetoothAudio::READY);
-                }
-                else {
-                    TRACE(SourceFlow, (_T("Transport channel disconnected")));
-                }
-            }
-            uint32_t OnSetConfiguration(Bluetooth::A2DP::IAudioCodec& codec) override
+            uint32_t OnSetConfiguration(A2DP::AudioEndpoint& endpoint, Bluetooth::AVDTP::Socket* channel) override
             {
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
-                TRACE(SourceFlow, (_T("Signalling channel is connecting")));
-                State(Exchange::IBluetoothAudio::CONNECTING);
+                ASSERT(channel != nullptr);
 
                 _lock.Lock();
 
@@ -564,10 +706,13 @@ namespace Plugin {
                     TRACE(Trace::Error, (_T("No receiver audio sink available")));
                 }
                 else {
+                    TRACE(SourceFlow, (_T("Signalling channel is connecting")));
+                    State(Exchange::IBluetoothAudio::CONNECTING);
+
                     Bluetooth::A2DP::IAudioCodec::StreamFormat streamFormat;
                     string _;
 
-                    codec.Configuration(streamFormat, _);
+                    endpoint.Codec()->Configuration(streamFormat, _);
 
                     if ((streamFormat.SampleRate != 0)
                             && ((streamFormat.Channels > 0) && (streamFormat.Channels <= 2))
@@ -582,13 +727,13 @@ namespace Plugin {
                         if (_sink->Configure(format) == Core::ERROR_NONE) {
                             TRACE(SourceFlow, (_T("Raw stream format: %d Hz, %d bits, %d channels"), format.SampleRate, format.Resolution, format.Channels));
 
-                            _codec = &codec;
-
                             _streamProperties.SampleRate = streamFormat.SampleRate;
                             _streamProperties.BitRate = 0; // TODO
                             _streamProperties.Channels = streamFormat.Channels;
                             _streamProperties.Resolution = streamFormat.Resolution;
                             _streamProperties.IsResampled = false;
+
+                            Assign(endpoint, SignallingServer::Instance().Claim(channel->RemoteNode()));
 
                             result = Core::ERROR_NONE;
                         }
@@ -686,17 +831,7 @@ namespace Plugin {
 
                 _lock.Unlock();
 
-                State(Exchange::IBluetoothAudio::DISCONNECTED);
-
                 return (result);
-            }
-            uint32_t OnBrokenConnection() override
-            {
-                _cleanupJob.Submit([this]() {
-                    OnRelinquish();
-                });
-
-                return Core::ERROR_NONE;
             }
             uint32_t OnSetSpeed(const int8_t speed) override
             {
@@ -728,17 +863,20 @@ namespace Plugin {
 
                 return (result);
             }
-            void OnPacketReceived(const uint8_t data[], const uint16_t length) override
+
+        private:
+            // SignallingServer::IMediaTransport overrides
+            void Packet(const uint8_t data[], const uint16_t length) override
             {
                 ASSERT(_sendBuffer != nullptr);
-                ASSERT(_codec != nullptr);
+                ASSERT(_endpoint != nullptr);
 
                 Bluetooth::RTP::MediaPacket packet(data, length);
 
                 uint8_t stream[32*1024];
 
                 uint16_t produced = sizeof(stream);
-                packet.Unpack(*_codec, stream, produced);
+                packet.Unpack(*_endpoint->Codec(), stream, produced);
 
                 // CMD_DUMP("audio stream", stream, produced);
 
@@ -789,97 +927,16 @@ namespace Plugin {
                 return (result);
             }
 
-        public:
-            void Config(const Config& config)
-            {
-                _connector = config.Connector;
-            }
-
         private:
-            bool WithEndpoint(const std::function<void(A2DP::AudioEndpoint&)>& cb)
+            bool Visit(const std::function<void(A2DP::AudioEndpoint&)>& cb)
             {
                 bool result = false;
-
-                A2DP::AudioEndpoint* ep = nullptr;
 
                 _lock.Lock();
 
                 if (_endpoint != nullptr) {
-                    ep = _endpoint;
+                    cb(*_endpoint);
                     result = true;
-                }
-
-                _lock.Unlock();
-
-                // The source endpoint is a static resource, hence the pointer will be always valid.
-                if (ep != nullptr) {
-                    cb(*ep);
-                }
-
-                return (result);
-            }
-
-        public:
-            Exchange::IBluetoothAudio::state State() const {
-                return (_state);
-            }
-            uint32_t Device(string& address) const
-            {
-                uint32_t result = Core::ERROR_ILLEGAL_STATE;
-
-                _lock.Lock();
-
-                if (_device != nullptr) {
-                    address = _device->Address();
-                    result = Core::ERROR_NONE;
-                }
-
-                _lock.Unlock();
-
-                return (result);
-            }
-            uint32_t Type(Exchange::IBluetoothAudio::ISource::devicetype& type) const
-            {
-                uint32_t result = Core::ERROR_ILLEGAL_STATE;
-
-                _lock.Lock();
-
-                if (_device != nullptr) {
-                    type  = _device->Type();
-                    result = Core::ERROR_NONE;
-                }
-
-                _lock.Unlock();
-
-                return (result);
-            }
-            uint32_t StreamProperties(Exchange::IBluetoothAudio::StreamProperties& props) const
-            {
-                uint32_t result = Core::ERROR_ILLEGAL_STATE;
-
-                _lock.Lock();
-
-                if (_device != nullptr) {
-                    props = _streamProperties;
-                    result = Core::ERROR_NONE;
-                }
-
-                _lock.Unlock();
-
-                return (result);
-            }
-            uint32_t CodecProperties(Exchange::IBluetoothAudio::CodecProperties& props) const
-            {
-                uint32_t result = Core::ERROR_ILLEGAL_STATE;
-
-                _lock.Lock();
-
-                if (_device != nullptr) {
-                    if (_codec->Type() == Bluetooth::A2DP::IAudioCodec::codectype::LC_SBC) {
-                        props.Codec = Exchange::IBluetoothAudio::LC_SBC;
-                    }
-
-                    result = Core::ERROR_NONE;
                 }
 
                 _lock.Unlock();
@@ -918,6 +975,8 @@ namespace Plugin {
             ServiceDiscovery _discovery;
             DeviceBroker::Device* _device;
             A2DP::AudioEndpoint* _endpoint;
+            Core::ProxyType<SignallingServer::PeerConnection> _signallingChannel;
+            Core::ProxyType<SignallingServer::PeerConnection> _transportChannel;
             Exchange::IBluetoothAudio::StreamProperties _streamProperties;
         }; //class A2DPSource
 
@@ -925,26 +984,32 @@ namespace Plugin {
         BluetoothAudioSource(const BluetoothAudioSource&) = delete;
         BluetoothAudioSource& operator=(const BluetoothAudioSource&) = delete;
 
-        BluetoothAudioSource()
+        BluetoothAudioSource(PluginHost::JSONRPC* module)
             : _lock()
+            , _jsonRpcModule(module)
+            , _service(nullptr)
             , _cleanupJob()
             , _controller()
-            , _service(nullptr)
             , _callback(nullptr)
             , _source(nullptr)
         {
         }
         ~BluetoothAudioSource()
         {
-            if (_source != nullptr) {
-                _source->Release();
-            }
-
+            ASSERT(_callback == nullptr);
             if (_callback != nullptr) {
                 _callback->Release();
             }
 
+            ASSERT(_source == nullptr);
+            if (_source != nullptr) {
+                _source->Release();
+            };
+
             ASSERT(_service == nullptr);
+            if (_service != nullptr) {
+                _service->Release();
+            }
         }
 
     public:
@@ -969,7 +1034,8 @@ namespace Plugin {
                 callback->Release();
             }
 
-            Exchange::BluetoothAudio::JSource::Event::StateChanged(*this, state);
+            ASSERT(_jsonRpcModule != nullptr);
+            Exchange::BluetoothAudio::JSource::Event::StateChanged((*_jsonRpcModule), state);
         }
 
     public:
@@ -1012,7 +1078,6 @@ namespace Plugin {
         {
             ASSERT(_source != nullptr);
             return (_source->Type(type));
-
         }
         uint32_t Device(string& address) const override
         {
@@ -1021,8 +1086,8 @@ namespace Plugin {
         }
         uint32_t Codec(Exchange::IBluetoothAudio::CodecProperties& properties) const override
         {
+            ASSERT(_source != nullptr);
             return (_source->CodecProperties(properties));
-            return (Core::ERROR_NONE);
         }
         uint32_t DRM(Exchange::IBluetoothAudio::DRMProperties& properties VARIABLE_IS_NOT_USED) const override
         {
@@ -1041,6 +1106,11 @@ namespace Plugin {
             return (_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
         }
         operator A2DP::AudioEndpoint::IHandler&() {
+            ASSERT(_source != nullptr);
+            return (*_source);
+        }
+        operator SignallingServer::IMediaReceiver&() {
+            ASSERT(_source != nullptr);
             return (*_source);
         }
 
@@ -1061,7 +1131,6 @@ namespace Plugin {
 
     public:
         BEGIN_INTERFACE_MAP(BluetoothAudioSource)
-            INTERFACE_ENTRY(PluginHost::IDispatcher)
             INTERFACE_ENTRY(Exchange::IBluetoothAudio::ISource)
             INTERFACE_AGGREGATE(Exchange::IBluetoothAudio::ISource::IControl, _source)
             INTERFACE_AGGREGATE(Exchange::IBluetoothAudio::IStream, _source)
@@ -1069,9 +1138,10 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _lock;
+        PluginHost::JSONRPC* _jsonRpcModule;
+        PluginHost::IShell* _service;
         DecoupledJob _cleanupJob;
         string _controller;
-        PluginHost::IShell* _service;
         Exchange::IBluetoothAudio::ISource::ICallback* _callback;
         A2DPSource* _source;
     }; // class BluetoothAudioSource
