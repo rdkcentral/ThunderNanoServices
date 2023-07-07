@@ -20,6 +20,8 @@ project(BluetoothRemoteControl)
 cmake_minimum_required(VERSION 3.3)
 
 find_package(WPEFramework)
+find_package(${NAMESPACE}Bluetooth REQUIRED)
+find_package(${NAMESPACE}BluetoothGATT REQUIRED)
 
 project_version(1.0.0)
 
@@ -47,12 +49,18 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+target_compile_options(${MODULE_NAME}
+    PRIVATE
+        -Wno-psabi
+        -fdiagnostics-color=always)
+
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth)
+        ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth
+        ${NAMESPACE}BluetoothGATT::${NAMESPACE}BluetoothGATT)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
@@ -61,7 +69,5 @@ install(
 	DIRECTORY keymaps/
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/${PROJECT_NAME}
 	FILES_MATCHING PATTERN "*.json")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
 write_config()
