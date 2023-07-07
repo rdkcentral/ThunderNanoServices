@@ -224,7 +224,7 @@ namespace Plugin {
                 {
                     ASSERT(_codec != nullptr);
 
-                    _timestamp = 0;
+                    ResetOdometer();
 
                     // Ideally the sequence should start with a random value...
                     _sequence = (Core::Time::Now().Ticks() & 0xFFFF);
@@ -243,6 +243,10 @@ namespace Plugin {
                     ASSERT((_channels == 1) || (_channels == 2));
 
                     TRACE(SinkFlow, (_T("Resetting transport: clock rate: %d, channels: %d, resolution: %d bits per sample"), _clockRate, _channels, format.Resolution));
+                }
+                void ResetOdometer()
+                {
+                    _timestamp = 0;
                 }
                 uint32_t Transmit(const uint16_t length /* in bytes! */, const uint8_t data[])
                 {
@@ -491,7 +495,10 @@ namespace Plugin {
                                     // All data was used and no new is currently available, apparently the source has stalled.
                                     _offset += PlayTime();
                                     _startTime = Core::Time::Now().Ticks();
-                                    _transport.Reset();
+                                    _transport.ResetOdometer();
+
+                                    // Give them a break...
+                                    ::SleepMs(10);
                                 }
                                 break;
                             }
@@ -715,8 +722,6 @@ namespace Plugin {
                 }
                 void Unassign(A2DP::AudioEndpoint* endpoint)
                 {
-                    ASSERT(endpoint != nullptr);
-
                     _lock.Lock();
 
                     if (_channel.IsValid() == true) {
@@ -724,7 +729,9 @@ namespace Plugin {
                         _channel.Release();
                     }
 
-                    endpoint->ClientChannel(nullptr);
+                    if (endpoint != nullptr) {
+                        endpoint->ClientChannel(nullptr);
+                    }
 
                     _lock.Unlock();
                 }
