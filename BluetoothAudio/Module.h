@@ -22,11 +22,13 @@
 #define __DEBUG__ // TODO: Remove eventually
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_BluetoothAudioSink
+#define MODULE_NAME Plugin_BluetoothAudio
 #endif
 
-#include <bluetooth/bluetooth.h>
+#include <bluetooth/audio/bluetooth_audio.h>
 #include <plugins/plugins.h>
 
 #undef EXTERNAL
 #define EXTERNAL
+
+#include "DebugTracing.h"

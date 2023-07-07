@@ -616,7 +616,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         HCISocket::Inquiry(scanTime, limited); // blocking call
 
                         BackgroundScan(true);
-                        ScanningChanged(false, adapter::BREDR, limited);
+                        ScanningChanged(false, adapter::BREDR);
                         ClearState(INQUIRING);
                     });
                 }
@@ -661,7 +661,7 @@ class BluetoothControl : public PluginHost::IPlugin
                         HCISocket::Scan(scanTime, limited, passive); // blocking call
 
                         BackgroundScan(true);
-                        ScanningChanged(false, adapter::LE, limited);
+                        ScanningChanged(false, adapter::LE);
                         ClearState(SCANNING);
                     });
                 }
@@ -920,7 +920,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     _parent->JSONRPC().DiscoverableComplete((type == adapter::LE));
                 }
             }
-            void ScanningChanged(const bool started, const adapter type, const bool limited)
+            void ScanningChanged(const bool started, const adapter type, const bool limited = false)
             {
                 TRACE(ControlFlow, (_T("%s scan %s (%s)"), ((type == adapter::LE)? "BLE" : "BR/EDR"),
                                         (started? "started" : "ended"), Core::Time::Now().ToRFC1123().c_str()));

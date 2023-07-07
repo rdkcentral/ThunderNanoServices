@@ -1,12 +1,12 @@
 {
   "$schema": "plugin.schema.json",
   "info": {
-    "title": "Bluetooth Audio Sink Plugin",
-    "callsign": "BluetoothAudioSink",
-    "locator": "libWPEFrameworkBluetoothAudioSink.so",
+    "title": "Bluetooth Audio Plugin",
+    "callsign": "BluetoothAudio",
+    "locator": "libWPEFrameworkBluetoothAudio.so",
     "status": "alpha",
     "description": [ "The Bluetooth Audio Sink plugin enables audio streaming to Bluetooth audio sink devices.",
-                     "The plugin is sink a from the host device stack perspective; in Bluetooth topology the host device becomes in fact an audio source.", 
+                     "The plugin is sink a from the host device stack perspective; in Bluetooth topology the host device becomes in fact an audio source.",
                      "The plugin requires a Bluetooth controller service that will provide Bluetooth BR/EDR scanning, pairing and connection functionality; typically this is fulfiled by the *BluetoothControl* plugin."],
     "version": "1.0",
     "acronyms": {
@@ -20,16 +20,35 @@
   "configuration": {
     "type": "object",
     "required": [ "configuration" ],
-    "description": "BluetoothAudioSink service configuration",
+    "description": "BluetoothAudio service configuration",
     "properties": {
-      "configuration": {
+      "controller": {
+        "type": "string",
+        "description": "Callsign of the Bluetooth controller service (typically *BluetoothControl*)"
+      },
+      "server": {
+        "description": "BluetoothAudio server configuration",
         "type": "object",
-        "required": [ "controller", "codecs" ],
         "properties": {
-          "controller": {
-            "type": "string",
-            "description": "Callsign of the Bluetooth controller service (typically *BluetoothControl*)"
+          "interface": {
+            "type": "number",
+            "description": "Bluetooth interface to listen to for incomming connections"
           },
+          "inactivitytimeout": {
+            "type": "number",
+            "description": "Timeout to drop inactive connections (in ms)"
+          },
+          "psm": {
+            "type": "number",
+            "description": "Port to listen to for incomming conections (typically 25)"
+          }
+        }
+      },
+      "sink": {
+        "description": "BluetoothAudio sink configuration",
+        "type": "object",
+        "required": [ "codecs" ],
+        "properties": {
           "codecs": {
             "type": "object",
             "description": "Codec settings",
@@ -53,6 +72,31 @@
                     "type": "string",
                     "enum": [ "Mono", "Stereo", "JointStereo", "DualChannel" ],
                     "description": "Channel mode for custom audio quality (used when *preset* is not specified)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "source": {
+        "description": "BluetoothAudio source configuration",
+        "type": "object",
+        "required": ["codecs" ],
+        "properties": {
+          "codecs": {
+            "type": "object",
+            "description": "Codec settings",
+            "required": [ "LC_SBC" ],
+            "properties": {
+              "LC-SBC": {
+                "type": "object",
+                "required": [ "maxbitpool" ],
+                "description": "Settings for the LC-SBC codec",
+                "properties": {
+                  "maxbitpool": {
+                    "type": "number",
+                    "description": "Maximum accepted bitpool value"
                   }
                 }
               }

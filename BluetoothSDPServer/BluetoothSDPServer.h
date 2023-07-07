@@ -144,10 +144,15 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Controller(_T("BluetoothControl"))
                 , Provider(_T("Thunder"))
+                , Interface(0 /* HCI interface 0 */)
+                , PSM(Bluetooth::SDP::PSM)
                 , BrowseGroups()
             {
                 Add(_T("controller"), &Controller);
                 Add(_T("provider"), &Provider);
+                Add(_T("interface"), &Interface);
+                Add(_T("psm"), &PSM);
+                Add(_T("inactivitytimeout"), &InactivityTimeoutMs);
                 Add(_T("browsegroups"), &BrowseGroups);
                 Add(_T("services"), &Services);
                 FromString(text);
@@ -157,6 +162,9 @@ namespace Plugin {
         public:
             Core::JSON::String Controller;
             Core::JSON::String Provider;
+            Core::JSON::DecUInt8 Interface;
+            Core::JSON::DecUInt8 PSM;
+            Core::JSON::DecUInt32 InactivityTimeoutMs;
             Core::JSON::ArrayType<Core::JSON::String> BrowseGroups;
             Core::JSON::ArrayType<ServiceConfig> Services;
         }; // class Config

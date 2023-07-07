@@ -15,11 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(BluetoothAudioSink)
+project(BluetoothAudio)
 
 cmake_minimum_required(VERSION 3.3)
 
 find_package(WPEFramework)
+find_package(${NAMESPACE}Bluetooth REQUIRED)
+find_package(${NAMESPACE}BluetoothAudio REQUIRED)
 
 project_version(1.0.0)
 
@@ -30,26 +32,36 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
+find_package(${NAMESPACE}BluetoothAudio REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
-find_package(SBC REQUIRED)
 
-set(PLUGIN_BLUETOOTHAUDIOSINK_AUTOSTART true CACHE STRING true)
-set(PLUGIN_BLUETOOTHAUDIOSINK_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
-set(PLUGIN_BLUETOOTHAUDIOSINK_LATENCY "0" CACHE STRING "Device audio latency")
-set(PLUGIN_BLUETOOTHAUDIOSINK_CODECSBC_PRESET "HQ" CACHE STRING "SBC codec quality preset")
+set(PLUGIN_BLUETOOTHAUDIO_AUTOSTART true CACHE STRING true)
+set(PLUGIN_BLUETOOTHAUDIO_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
+set(PLUGIN_BLUETOOTHAUDIO_INTERFACE "0" CACHE STRING "Bluetooth host interface to use")
+set(PLUGIN_BLUETOOTHAUDIO_INACTIVITYTIMEOUT "5000" CACHE STRING "Server inactivity timeout")
+
+set(PLUGIN_BLUETOOTHAUDIO_SINK_LATENCY "20" CACHE STRING "Audio sink device audio latency")
+set(PLUGIN_BLUETOOTHAUDIO_SINK_CODECSBC_PRESET "HQ" CACHE STRING "Audio sink SBC codec quality preset")
+
+set(PLUGIN_BLUETOOTHAUDIO_SOURCE_CONNECTOR "/tmp/bluetoothaudiosource" CACHE STRING "Audio source connector")
+set(PLUGIN_BLUETOOTHAUDIO_SOURCE_CODECSBC_MAXBITPOOL "53" CACHE STRING "Audio source SBC codec maximum supported bitpool value")
 
 add_library(${MODULE_NAME} SHARED
+    BluetoothAudio.cpp
+    BluetoothAudioSource.cpp
     BluetoothAudioSink.cpp
-    AudioCodecSBC.cpp
-    AudioEndpoint.cpp
-    ServiceDiscovery.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
+
+target_compile_options(${MODULE_NAME} 
+    PRIVATE 
+        -Wno-psabi
+        -fdiagnostics-color=always)
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
@@ -57,11 +69,9 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth
-        ${SBC_LIBRARIES})
+        ${NAMESPACE}BluetoothAudio::${NAMESPACE}BluetoothAudio)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
 write_config()

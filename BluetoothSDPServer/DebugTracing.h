@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2021 Metrological
+ * Copyright 2022 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,141 +17,14 @@
  * limitations under the License.
  */
 
-#pragma once
 
-#include "Module.h"
+#pragma once
 
 namespace WPEFramework {
 
-namespace A2DP {
+namespace Plugin {
 
-    class ProfileFlow {
-    public:
-        ~ProfileFlow() = default;
-        ProfileFlow() = delete;
-        ProfileFlow(const ProfileFlow&) = delete;
-        ProfileFlow& operator=(const ProfileFlow&) = delete;
-        ProfileFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit ProfileFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class ProfileFlow
-
-    class DiscoveryFlow {
-    public:
-        ~DiscoveryFlow() = default;
-        DiscoveryFlow() = delete;
-        DiscoveryFlow(const DiscoveryFlow&) = delete;
-        DiscoveryFlow& operator=(const DiscoveryFlow&) = delete;
-        DiscoveryFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit DiscoveryFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class DiscoveryFlow
-
-    class SignallingFlow {
-    public:
-        ~SignallingFlow() = default;
-        SignallingFlow() = delete;
-        SignallingFlow(const SignallingFlow&) = delete;
-        SignallingFlow& operator=(const SignallingFlow&) = delete;
-        SignallingFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit SignallingFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class SignallingFlow
-
-    class TransportFlow {
-    public:
-        ~TransportFlow() = default;
-        TransportFlow() = delete;
-        TransportFlow(const TransportFlow&) = delete;
-        TransportFlow& operator=(const TransportFlow&) = delete;
-        TransportFlow(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit TransportFlow(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
-
-    private:
-        std::string _text;
-    }; // class TransportFlow
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, Verbose);
 
     template<typename FLOW>
     void Dump(const Bluetooth::SDP::Tree& tree)
@@ -230,6 +103,6 @@ namespace A2DP {
         }
     }
 
-} // namespace A2DP
+} // namespace Tracing
 
 }

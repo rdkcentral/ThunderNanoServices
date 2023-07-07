@@ -23,7 +23,7 @@
 #define MODULE_NAME Plugin_BluetoothSDPServer
 #endif
 
-#include <bluetooth/bluetooth.h>
+#include <bluetooth/audio/bluetooth_audio.h>
 #include <plugins/plugins.h>
 
 #undef EXTERNAL

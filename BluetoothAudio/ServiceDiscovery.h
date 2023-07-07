@@ -20,11 +20,10 @@
 #pragma once
 
 #include "Module.h"
-#include "Tracing.h"
 
 namespace WPEFramework {
 
-namespace A2DP {
+namespace Plugin {
 
     class ServiceDiscovery : public Bluetooth::SDP::ClientSocket {
     private:
@@ -43,9 +42,13 @@ namespace A2DP {
             enum features : uint16_t {
                 NONE        = 0,
                 HEADPHONE   = (1 << 1),
+                PLAYER      = (1 << 1),
                 SPEAKER     = (1 << 2),
+                MICROPHONE  = (1 << 2),
                 RECORDER    = (1 << 3),
-                AMPLIFIER   = (1 << 4)
+                TUNER       = (1 << 3),
+                AMPLIFIER   = (1 << 4),
+                MIXER       = (1 << 4)
             };
 
         public:
@@ -82,8 +85,7 @@ namespace A2DP {
                 using Element::Element;
 
             public:
-                features Features() const
-                {
+                features Features() const {
                     return (static_cast<features>(Value()));
                 }
             }; // class FeaturesDescriptor
@@ -104,17 +106,22 @@ namespace A2DP {
             AudioService(const Bluetooth::SDP::Service& service)
                 : AudioService()
             {
+                // Construct form service discovery.
+
                 namespace SDP = Bluetooth::SDP;
 
                 const auto* a2dpData = service.Profile(SDP::ClassID::AdvancedAudioDistribution);
+
                 if (a2dpData != nullptr) {
                     _a2dpVersion = a2dpData->Version();
 
                     const auto* l2capData = service.Protocol(SDP::ClassID::L2CAP);
+
                     if (l2capData != nullptr) {
                         _l2capPsm = SDP::Service::Protocol::L2CAP(*l2capData).PSM();
 
                         const auto* avdtpData = service.Protocol(SDP::ClassID::AVDTP);
+
                         if (avdtpData != nullptr) {
                             _avdtpVersion = SDP::Service::Protocol::AVDTP(*avdtpData).Version();
 
@@ -122,7 +129,8 @@ namespace A2DP {
                                 _type = SINK;
 
                                 // This one is optional...
-                                const auto* supportedFeaturesData = service.Attribute(Bluetooth::SDP::Service::AttributeDescriptor::a2dp::SupportedFeatures);
+                                const auto* supportedFeaturesData = service.Attribute(SDP::Service::AttributeDescriptor::a2dp::SupportedFeatures);
+
                                 if (supportedFeaturesData != nullptr) {
                                     _features = FeaturesDescriptor(*supportedFeaturesData).Features();
                                 }
@@ -135,36 +143,39 @@ namespace A2DP {
             AudioService(const Data& data)
                 : AudioService()
             {
+                // Construct form disk save.
+
                 _type = SINK;
                 _l2capPsm = data.PSM.Value();
                 _a2dpVersion = data.A2DPVersion.Value();
                 _avdtpVersion = data.AVDTPVersion.Value();
                 _features = static_cast<features>(data.Features.Value());
+
+                ASSERT(_l2capPsm != 0);
+                ASSERT(_a2dpVersion != 0);
+                ASSERT(_avdtpVersion != 0);
             }
 
             ~AudioService() = default;
 
         public:
-            type Type() const
-            {
+            type Type() const {
                 return (_type);
             }
-            uint16_t PSM() const
-            {
+            uint16_t PSM() const {
                 return (_l2capPsm);
             }
-            uint16_t TransportVersion() const
-            {
+            uint16_t TransportVersion() const {
                 return (_avdtpVersion);
             }
-            uint16_t ProfileVersion() const
-            {
+            uint16_t ProfileVersion() const {
                 return (_a2dpVersion);
             }
-            features Features() const
-            {
+            features Features() const {
                 return (_features);
             }
+
+        public:
             void Settings(Data& data) const
             {
                 data.PSM = _l2capPsm;
@@ -185,14 +196,17 @@ namespace A2DP {
     public:
         using DiscoveryCompleteCb = std::function<void(const std::list<AudioService>&)>;
 
-        ServiceDiscovery() = delete;
+        ServiceDiscovery()
+            : Bluetooth::SDP::ClientSocket(Core::NodeId(),Core::NodeId())
+            , _profile(*this)
+        {
+        }
         ServiceDiscovery(const ServiceDiscovery&) = delete;
         ServiceDiscovery& operator=(const ServiceDiscovery&) = delete;
 
         ServiceDiscovery(const Core::NodeId& localNode, const Core::NodeId& remoteNode)
             : Bluetooth::SDP::ClientSocket(localNode, remoteNode)
-            , _lock()
-            , _profile()
+            , _profile(*this)
         {
         }
         ~ServiceDiscovery()
@@ -203,9 +217,6 @@ namespace A2DP {
     private:
         uint32_t Initialize() override
         {
-            _lock.Lock();
-            _audioServices.clear();
-            _lock.Unlock();
             return (Core::ERROR_NONE);
         }
 
@@ -218,6 +229,7 @@ namespace A2DP {
         uint32_t Connect()
         {
             uint32_t result = Open(OpenTimeout);
+
             if (result != Core::ERROR_NONE) {
                 TRACE(Trace::Error, (_T("Failed to open A2DP/SDP socket [%d]"), result));
             } else {
@@ -232,6 +244,7 @@ namespace A2DP {
 
             if (IsOpen() == true) {
                 result = Close(CloseTimeout);
+
                 if (result != Core::ERROR_NONE) {
                     TRACE(Trace::Error, (_T("Failed to close A2DP/SDP socket [%d]"), result));
                 } else {
@@ -241,48 +254,40 @@ namespace A2DP {
 
             return (result);
         }
-        void Discover(const DiscoveryCompleteCb discoveryComplete)
+        uint32_t Discover(const std::list<Bluetooth::UUID>& uuids, std::list<AudioService>& services)
         {
-            _discoveryComplete = discoveryComplete;
+            uint32_t result = Core::ERROR_NONE;
+
             if (IsOpen() == true) {
-                _profile.Discover(DiscoverTimeout, *this, std::list<Bluetooth::UUID>{ Bluetooth::SDP::ClassID::AudioSink }, [&](const uint32_t result) {
-                    if (result == Core::ERROR_NONE) {
-                        TRACE(DiscoveryFlow, (_T("Service discovery complete")));
 
-                        _lock.Lock();
+                Bluetooth::SDP::Tree tree;
 
-                        TRACE(DiscoveryFlow, (_T("Discovered %d service(s)"), _profile.Services().size()));
-                        Dump<DiscoveryFlow>(_profile);
+                result = _profile.Discover(uuids, tree);
 
-                        if (_profile.Services().empty() == false) {
-                            for (auto const& service : _profile.Services()) {
-                                if (service.HasClassID(Bluetooth::SDP::ClassID::AudioSink) == true) {
-                                    _audioServices.emplace_back(service);
-                                }
-                            }
-                        } else {
-                            TRACE(Trace::Information, (_T("Not an A2DP audio sink device!")));
+                if (result == Core::ERROR_NONE) {
+
+                    TRACE(DiscoveryFlow, (_T("Discovered %d service(s)"), tree.Services().size()));
+                    Dump<DiscoveryFlow>(tree);
+
+                    std::list<AudioService> audioServices;
+
+                    if (tree.Services().empty() == false) {
+                        for (auto const& service : tree.Services()) {
+                            services.emplace_back(service);
                         }
-
-                        _discoveryComplete(_audioServices);
-
-                        _lock.Unlock();
-                    } else {
-                        TRACE(Trace::Error, (_T("SDP service discovery failed [%d]"), result));
-                    }
-                });
+                    } 
+                } else {
+                    TRACE(Trace::Error, (_T("SDP service discovery failed [%d]"), result));
+                }
             }
+
+            return (result);
         }
 
     private:
-        Core::CriticalSection _lock;
-        Bluetooth::SDP::Profile _profile;
-        std::list<AudioService> _audioServices;
-        DiscoveryCompleteCb _discoveryComplete;
+        Bluetooth::SDP::Client _profile;
     }; // class ServiceDiscovery
 
-} // namespace A2DP
-
-
+} // namespace Plugin
 
 }

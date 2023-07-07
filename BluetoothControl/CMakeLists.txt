@@ -66,6 +66,11 @@ if(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL)
             USE_KERNEL_CONNECTION_CONTROL)
 endif()
 
+target_compile_options(${MODULE_NAME}
+    PRIVATE
+        -Wno-psabi
+        -fdiagnostics-color=always)
+
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug

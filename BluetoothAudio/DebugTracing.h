@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2022 Metrological
+ * Copyright 2021 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,44 +17,35 @@
  * limitations under the License.
  */
 
-
 #pragma once
+
+#include "Module.h"
 
 namespace WPEFramework {
 
-namespace Tracing {
+namespace Plugin {
 
-    class Verbose {
-    public:
-        Verbose() = delete;
-        Verbose(const Verbose&) = delete;
-        Verbose& operator=(const Verbose&) = delete;
-        Verbose(const TCHAR formatter[], ...)
-        {
-            va_list ap;
-            va_start(ap, formatter);
-            Trace::Format(_text, formatter, ap);
-            va_end(ap);
-        }
-        explicit Verbose(const string& text)
-            : _text(Core::ToString(text))
-        {
-        }
-        ~Verbose() = default;
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, SinkFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, SourceFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, ServerFlow);
 
-    public:
-        const char* Data() const
-        {
-            return (_text.c_str());
-        }
-        uint16_t Length() const
-        {
-            return (static_cast<uint16_t>(_text.length()));
-        }
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, DiscoveryFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, SignallingFlow);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, TransportFlow);
 
-    private:
-        std::string _text;
-    }; // class Verbose
+    template<typename FLOW>
+    void Dump(const Bluetooth::AVDTP::StreamEndPoint& sep)
+    {
+        TRACE_GLOBAL(FLOW, (_T("%s"), sep.AsString().c_str()));
+
+        if (sep.Capabilities().empty() == false) {
+            TRACE_GLOBAL(FLOW, (_T("Capabilities:")));
+
+            for (auto const& caps : sep.Capabilities()) {
+                TRACE_GLOBAL(FLOW, (_T(" - %s"), caps.second.AsString().c_str()));
+            }
+        }
+    }
 
     template<typename FLOW>
     void Dump(const Bluetooth::SDP::Tree& tree)
@@ -133,6 +124,6 @@ namespace Tracing {
         }
     }
 
-} // namespace Tracing
+} // namespace Plugin
 
 }
