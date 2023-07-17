@@ -82,7 +82,7 @@ namespace Plugin {
             _browserresources = _browser->QueryInterface<Exchange::IBrowserResources>();
             if( _browserresources != nullptr) {
                 Exchange::JBrowserResources::Register(*this, _browserresources);
-                Register("bigupdate", [this](const Core::JSONRPC::Context&, const string& params){ 
+                Register("bigupdate", [this](const Core::JSONRPC::Context&, const string& params, Core::OptionalType<Core::JSON::Error>&) {
                     uint32_t updates = 5000;
                     string sleep("100");
                     if(params.empty() == false) {
