@@ -1024,7 +1024,8 @@ namespace Plugin {
                     result = Core::ERROR_UNAVAILABLE;
                 }
                 else {
-                    TRACE(SinkFlow, (_T("Configuring audio endpoint 0x%02x to: sample rate: %i Hz, resolution: %i bits per sample, channels: %i, frame rate: %i.%02i Hz"), _endpoint->Id(), format.SampleRate, format.Resolution, format.Channels, (format.FrameRate / 100), (format.FrameRate % 100)));
+                    TRACE(SinkFlow, (_T("Configuring audio endpoint 0x%02x to: sample rate: %d Hz, resolution: %d bits per sample, channels: %d, frame rate: %d.%02d Hz"), 
+                            _endpoint->Id(), format.SampleRate, format.Resolution, format.Channels, (format.FrameRate / 100), (format.FrameRate % 100)));
 
                     Bluetooth::A2DP::IAudioCodec::StreamFormat streamFormat;
                     streamFormat.SampleRate = format.SampleRate;
@@ -1548,17 +1549,14 @@ namespace Plugin {
         {
             _lock.Lock();
 
-            ASSERT(_callback == nullptr);
             if (_callback != nullptr) {
                 _callback->Release();
             }
 
-            ASSERT(_source == nullptr);
             if (_source != nullptr) {
                 _source->Release();
             }
 
-            ASSERT(_service == nullptr);
             if (_service != nullptr) {
                 _service->Release();
             }

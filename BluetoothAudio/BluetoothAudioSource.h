@@ -240,6 +240,7 @@ namespace Plugin {
                     ctrl->Release();
 
                     for (auto& device : _devices) {
+                        device.second->Control()->Callback(static_cast<Exchange::IBluetooth::IDevice::ICallback*>(nullptr));
                         device.second->Release();
                     }
                 }
@@ -352,8 +353,8 @@ namespace Plugin {
                         });
                     });
 
-                    if ((result != Core::ERROR_NONE) && (result != Core::ERROR_ALREADY_RELEASED)) {
-                        TRACE(Trace::Error, (_T("Failed to relinquish endpoint [%d]"), result));
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to abort endpoint [%d]"), result));
                     }
 
                     return (result);
@@ -373,6 +374,10 @@ namespace Plugin {
                             }
                             else {
                                 result = Core::ERROR_UNAVAILABLE;
+                            }
+
+                            if (result != Core::ERROR_NONE) {
+                                TRACE_GLOBAL(Trace::Error, (_T("Failed to set speed!")));
                             }
                         });
                     });
@@ -409,7 +414,9 @@ namespace Plugin {
                         event.SetEvent();
                     });
 
-                    event.Lock(CallTimeoutMs);
+                    if (event.Lock(CallTimeoutMs) == Core::ERROR_TIMEDOUT) {
+                        TRACE_GLOBAL(Trace::Error, (_T("Async call timed out!")));
+                    }
                 }
 
             private:
@@ -423,6 +430,7 @@ namespace Plugin {
             A2DPSource(BluetoothAudioSource& parent, const Config& config)
                 : _parent(parent)
                 , _lock()
+                , _bufferLock()
                 , _broker(*this)
                 , _localClient(Core::Service<LocalClient>::Create<LocalClient>(*this))
                 , _sink(nullptr)
@@ -435,6 +443,8 @@ namespace Plugin {
                 , _endpoint(nullptr)
                 , _signallingChannel()
                 , _transportChannel()
+                , _streamProperties()
+                , _reconnectionEvent(false, true)
             {
             }
             ~A2DPSource() override
@@ -532,43 +542,76 @@ namespace Plugin {
             }
 
         private:
+            void MaybeReconnect(DeviceBroker::Device& device, const uint8_t psm)
+            {
+                _reconnectJob.Schedule([this, &device, psm]() {
+
+                    if (_reconnectionEvent.IsSet() == false) {
+                        TRACE(Trace::Information, (_T("Attemping reconnection to %s..."), device.Address().c_str()));
+
+                        _initiatedConnection = SignallingServer::Instance().Create(Designator(device.Control()), Designator(device.Control(), psm));
+
+                        if (_initiatedConnection.IsValid() == true) {
+                            _initiatedConnection->Open(1000);
+
+                            if (_initiatedConnection->IsOpen() == true) {
+                                _initiatedConnection->Latch(true);
+
+                                // If they know us they may re-establish the connection, give them some time to decide.
+                                if (_reconnectionEvent.Lock(100000) == Core::ERROR_TIMEDOUT) {
+                                    _initiatedConnection->Latch(false);
+                                    _initiatedConnection->Close(0);
+                                }
+                            }
+                        }
+                    }
+
+                }, 500);
+            }
+
             // DeviceBoker callbaks
             void OnDeviceConnected(DeviceBroker::Device& device)
             {
                 // One of the observed devices has been connected, examine it!
 
-                std::list<ServiceDiscovery::AudioService> services;
+                if ((_discovery.IsOpen() == false) && (_discovery.IsConnecting() == false)) {
+                    std::list<ServiceDiscovery::AudioService> services;
 
-                _discovery.LocalNode(Designator(device.Control()));
-                _discovery.RemoteNode(Designator(device.Control(), Bluetooth::SDP::PSM));
+                    _discovery.LocalNode(Designator(device.Control()));
+                    _discovery.RemoteNode(Designator(device.Control(), Bluetooth::SDP::PSM));
 
-                if (_discovery.Connect() == Core::ERROR_NONE) {
+                    if (_discovery.Connect() == Core::ERROR_NONE) {
 
-                    if (_discovery.Discover({Bluetooth::SDP::ClassID::AudioSource}, services) != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Service discovery failed!")));
-                    }
-                    else {
-                        if (services.empty() == false) {
-                            ServiceDiscovery::AudioService& service = services.front();
-
-                            if (services.size() > 1) {
-                                TRACE(SourceFlow, (_T("More than one audio source available, using the first one!")));
-                            }
-
-                            TRACE(SourceFlow, (_T("Audio source service available: A2DP v%d.%d, AVDTP v%d.%d, L2CAP PSM: %i, features: 0b%s"),
-                                                (service.ProfileVersion() >> 8), (service.ProfileVersion() & 0xFF),
-                                                (service.TransportVersion() >> 8), (service.TransportVersion() & 0xFF),
-                                                service.PSM(), std::bitset<8>(service.Features()).to_string().c_str()));
-
-                            device.Type(service.Features());
+                        if (_discovery.Discover({Bluetooth::SDP::ClassID::AudioSource}, services) != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Service discovery failed!")));
                         }
                         else {
-                            TRACE(SourceFlow, (_T("Device %s is not an audio source device, stop observing"), device.Address().c_str()));
-                            _broker.Forget(device);
-                        }
-                    }
+                            if (services.empty() == false) {
+                                ServiceDiscovery::AudioService& service = services.front();
 
-                    _discovery.Disconnect();
+                                if (services.size() > 1) {
+                                    TRACE(SourceFlow, (_T("More than one audio source available, using the first one!")));
+                                }
+
+                                TRACE(SourceFlow, (_T("Audio source service available: A2DP v%d.%d, AVDTP v%d.%d, L2CAP PSM: %i, features: 0b%s"),
+                                                    (service.ProfileVersion() >> 8), (service.ProfileVersion() & 0xFF),
+                                                    (service.TransportVersion() >> 8), (service.TransportVersion() & 0xFF),
+                                                    service.PSM(), std::bitset<8>(service.Features()).to_string().c_str()));
+
+                                device.Type(service.Features());
+
+                                if (_reconnectionEvent.IsSet() == false) {
+                                    MaybeReconnect(device, service.PSM());
+                                }
+                            }
+                            else {
+                                TRACE(SourceFlow, (_T("Device %s is not an audio source device, stop observing"), device.Address().c_str()));
+                                _broker.Forget(device);
+                            }
+                        }
+
+                        _discovery.Disconnect();
+                    }
                 }
             }
 
@@ -631,12 +674,18 @@ namespace Plugin {
                     _signallingChannel.Release();
                 }
 
+                if (_initiatedConnection.IsValid() == true) {
+                    _initiatedConnection.Release();
+                }
+
                 if (_device != nullptr) {
                     _device->Release();
                     _device = nullptr;
                 }
 
                 _endpoint = nullptr;
+
+                _reconnectionEvent.ResetEvent();
 
                 State(Exchange::IBluetoothAudio::DISCONNECTED);
             }
@@ -668,26 +717,20 @@ namespace Plugin {
                     _lock.Unlock();
                 }
                 else {
-
                     if (channel->Type() == Bluetooth::AVDTP::Socket::SIGNALLING) {
+                        _cleanupJob.Submit([this, channel]() {
+                            _lock.Lock();
 
-                        _lock.Lock();
+                            if ((_signallingChannel.IsValid() == true)
+                                && (_signallingChannel->RemoteNode().HostName() == channel->RemoteNode().HostName())) {
 
-                        if ((_signallingChannel.IsValid() == true)
-                            && (_signallingChannel->RemoteNode().HostName() == channel->RemoteNode().HostName())) {
+                                // Looks like our signalling connection has been abruptly closed, clean up!
+                                ASSERT(_endpoint != nullptr);
+                                _endpoint->Disconnected();
+                            }
 
-                            // Looks like our signalling connection has been abruptly closed, clean up!
-                            ASSERT(_endpoint != nullptr);
-
-                            // The endpoint is a static resource.
-                            A2DP::AudioEndpoint* endpoint = _endpoint;
-
-                            _cleanupJob.Submit([endpoint]() {
-                                endpoint->Disconnected();
-                            });
-                        }
-
-                        _lock.Unlock();
+                            _lock.Unlock();
+                        });
                     }
                 }
             }
@@ -709,6 +752,8 @@ namespace Plugin {
                     TRACE(SourceFlow, (_T("Signalling channel is connecting")));
                     State(Exchange::IBluetoothAudio::CONNECTING);
 
+                    _reconnectionEvent.SetEvent();
+
                     Bluetooth::A2DP::IAudioCodec::StreamFormat streamFormat;
                     string _;
 
@@ -724,13 +769,18 @@ namespace Plugin {
                         format.Channels = streamFormat.Channels;
                         format.Resolution = streamFormat.Resolution;
 
+                        if (format.FrameRate == 0) {
+                            format.FrameRate = 7500; // redbook audio
+                        }
+
                         if (_sink->Configure(format) == Core::ERROR_NONE) {
-                            TRACE(SourceFlow, (_T("Raw stream format: %d Hz, %d bits, %d channels"), format.SampleRate, format.Resolution, format.Channels));
+                            TRACE(SourceFlow, (_T("Raw stream format: %d Hz, %d bits, %d channels, frame rate: %d.%02d Hz"),
+                                    format.SampleRate, format.Resolution, format.Channels, (format.FrameRate / 100), (format.FrameRate % 100)));
 
                             _streamProperties.SampleRate = streamFormat.SampleRate;
-                            _streamProperties.BitRate = 0; // TODO
                             _streamProperties.Channels = streamFormat.Channels;
                             _streamProperties.Resolution = streamFormat.Resolution;
+                            _streamProperties.BitRate = endpoint.Codec()->BitRate();
                             _streamProperties.IsResampled = false;
 
                             Assign(endpoint, SignallingServer::Instance().Claim(channel->RemoteNode()));
@@ -768,11 +818,15 @@ namespace Plugin {
                 else {
                     ASSERT(_sendBuffer == nullptr);
 
+                    _bufferLock.Lock();
+
                     // Create the transport medium.
-                    _sendBuffer.reset(new (std::nothrow) SendBuffer(_connector, 16*1024));
+                    _sendBuffer.reset(new (std::nothrow) SendBuffer(_connector, (32 * 1024)));
                     ASSERT(_sendBuffer.get() != nullptr);
 
                     if (_sendBuffer->IsValid() == true) {
+
+                        _bufferLock.Unlock();
 
                         // See if the receiver is ready to handle this format.
                         if (_sink->Acquire(_connector) == Core::ERROR_NONE) {
@@ -789,6 +843,8 @@ namespace Plugin {
                         }
                     }
                     else {
+                        _bufferLock.Unlock();
+
                         TRACE(Trace::Error, (_T("Failed to open the transport medium")));
                         result = Core::ERROR_UNAVAILABLE;
                     }
@@ -806,6 +862,8 @@ namespace Plugin {
             {
                 uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+                TRACE(Trace::Information, (_T("Releasing receiver audio sink...")));
+
                 _lock.Lock();
 
                 if (_sink == nullptr) {
@@ -813,6 +871,11 @@ namespace Plugin {
                     TRACE(Trace::Information, (_T("No receiver audio sink available to relinquish")));
                 }
                 else {
+                    // Enforce the flow, even if the client or remote device do not.
+                    if (_sink->Speed(0) != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to stop audio sink")));
+                    }
+
                     result = _sink->Relinquish();
 
                     if ((result != Core::ERROR_NONE) && (result != Core::ERROR_ALREADY_RELEASED)) {
@@ -821,15 +884,20 @@ namespace Plugin {
                 }
 
                 // Even if failed earlier, continue with teardown...
+
+                _bufferLock.Lock();
+
                 _sendBuffer.reset();
 
-                result = Core::ERROR_NONE;
+                _bufferLock.Unlock();
 
                 Unassign();
 
+                _lock.Unlock();
+
                 TRACE(Trace::Information, (_T("Relinquished receiver audio sink%s"), (result != Core::ERROR_NONE? " (with errors)" : "")));
 
-                _lock.Unlock();
+                result = Core::ERROR_NONE;
 
                 return (result);
             }
@@ -868,23 +936,30 @@ namespace Plugin {
             // SignallingServer::IMediaTransport overrides
             void Packet(const uint8_t data[], const uint16_t length) override
             {
-                ASSERT(_sendBuffer != nullptr);
-                ASSERT(_endpoint != nullptr);
+                _bufferLock.Lock();
 
-                Bluetooth::RTP::MediaPacket packet(data, length);
+                if (_sendBuffer != nullptr) {
 
-                uint8_t stream[32*1024];
+                    ASSERT(_sendBuffer != nullptr);
+                    ASSERT(_endpoint != nullptr);
 
-                uint16_t produced = sizeof(stream);
-                packet.Unpack(*_endpoint->Codec(), stream, produced);
+                    Bluetooth::RTP::MediaPacket packet(data, length);
 
-                // CMD_DUMP("audio stream", stream, produced);
+                    uint8_t stream[32*1024];
 
-                if (produced != 0) {
-                    if (_sendBuffer->Write(produced, stream) != produced) {
-                        TRACE(Trace::Error, (_T("Receiver failed to consume stream data")));
+                    uint16_t produced = sizeof(stream);
+                    packet.Unpack(*_endpoint->Codec(), stream, produced);
+
+                    // CMD_DUMP("audio stream", stream, produced);
+
+                    if (produced != 0) {
+                        if (_sendBuffer->Write(produced, stream) != produced) {
+                            TRACE(Trace::Error, (_T("Receiver failed to consume stream data")));
+                        }
                     }
                 }
+
+                _bufferLock.Unlock();
             }
 
         public:
@@ -963,6 +1038,7 @@ namespace Plugin {
         private:
             BluetoothAudioSource& _parent;
             mutable Core::CriticalSection _lock;
+            mutable Core::CriticalSection _bufferLock;
             DeviceBroker _broker;
             LocalClient* _localClient;
             Exchange::IBluetoothAudio::IStream* _sink;
@@ -970,6 +1046,7 @@ namespace Plugin {
             string _connector;
             DecoupledJob _updateJob;
             DecoupledJob _cleanupJob;
+            DecoupledJob _reconnectJob;
             Bluetooth::A2DP::IAudioCodec* _codec;
             std::unique_ptr<SendBuffer> _sendBuffer;
             ServiceDiscovery _discovery;
@@ -978,6 +1055,8 @@ namespace Plugin {
             Core::ProxyType<SignallingServer::PeerConnection> _signallingChannel;
             Core::ProxyType<SignallingServer::PeerConnection> _transportChannel;
             Exchange::IBluetoothAudio::StreamProperties _streamProperties;
+            Core::ProxyType<SignallingServer::PeerConnection> _initiatedConnection;
+            Core::Event _reconnectionEvent;
         }; //class A2DPSource
 
     public:
@@ -996,20 +1075,21 @@ namespace Plugin {
         }
         ~BluetoothAudioSource()
         {
-            ASSERT(_callback == nullptr);
+            _lock.Lock();
+
             if (_callback != nullptr) {
                 _callback->Release();
             }
 
-            ASSERT(_source == nullptr);
             if (_source != nullptr) {
                 _source->Release();
             };
 
-            ASSERT(_service == nullptr);
             if (_service != nullptr) {
                 _service->Release();
             }
+
+            _lock.Unlock();
         }
 
     public:
