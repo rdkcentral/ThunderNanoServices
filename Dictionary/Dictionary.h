@@ -391,12 +391,12 @@ namespace Plugin {
         // -------------------------------------------------------------------------------------------------------
         // Direct method to Get a value from a key in a certain namespace from the dictionary.
         // NameSpace and key MUST be filled.
-        bool Get(const string& nameSpace, const string& key, string& value) const override;
+        Core::hresult Get(const string& nameSpace, const string& key, string& value) const override;
         IDictionary::IIterator* Get(const string& nameSpace) const override;
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
         // NameSpace and key MUST be filled.
-        bool Set(const string& nameSpace, const string& key, const string& value) override;
+        Core::hresult Set(const string& nameSpace, const string& key, const string& value) override;
         void Register(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
         void Unregister(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
 
