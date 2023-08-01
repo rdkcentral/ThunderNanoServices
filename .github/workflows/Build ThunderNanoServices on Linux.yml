@@ -2,13 +2,13 @@ name: Build ThunderNanoServices on Linux
 
 on:
   push:
-    branches: ["master"]
+    branches: ["development/actions-warnings"] # CHANGE TO MASTER
   pull_request:
     branches: ["master"]
 
 jobs:
   ThunderInterfaces:
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master
+    uses: VeithMetro/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master # CHANGE TO RDKCENTRAL
 
   ThunderNanoServices:
     needs: ThunderInterfaces
@@ -75,6 +75,7 @@ jobs:
     - name: Build ThunderNanoServices
       run: |
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
+        -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
         -DPLUGIN_CECCONTROL=ON \
