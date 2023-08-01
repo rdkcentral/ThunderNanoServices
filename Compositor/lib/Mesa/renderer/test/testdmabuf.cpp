@@ -29,10 +29,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-
 #include <inttypes.h>
 
 #include <IBuffer.h>
@@ -40,13 +36,6 @@
 #include <Transformation.h>
 
 #include <drm_fourcc.h>
-
-#include <X11/Xlib.h>
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#define EGL_EGLEXT_PROTOTYPES
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
 
 #include <simpleworker/SimpleWorker.h>
 
@@ -80,7 +69,6 @@ public:
         , _renderer()
         , _fps(fps)
         , _texture()
-
     {
         _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_720p, _format, false);
         ASSERT(_connector.IsValid());
@@ -188,7 +176,7 @@ private:
             return 0;
         }
 
-        const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
+        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -230,10 +218,9 @@ private:
     uint64_t _lastFrame;
     Sink _sink;
     const Compositor::PixelFormat _format;
-    Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IRenderer> _renderer;
     const uint8_t _fps;
-    uint8_t _previousIndex;
     Texture _texture;
 }; // RenderTest
 }
