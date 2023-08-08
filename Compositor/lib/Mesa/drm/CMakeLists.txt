@@ -38,6 +38,7 @@ set_target_properties(CommonDRM
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        POSITION_INDEPENDENT_CODE ON
 )
 
 target_include_directories(CommonDRM

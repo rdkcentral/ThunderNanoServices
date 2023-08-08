@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 Metrological
+# Copyright 2023 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,13 +20,14 @@ set(TARGET ${PLATFORM_COMPOSITOR})
 message(STATUS "Setting up ${TARGET} for Mesa platfrom")
 
 find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(${NAMESPACE}CompositorBufferType REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
 find_package(libdrm REQUIRED)
-
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
 
@@ -39,3 +40,36 @@ add_subdirectory(drm)
 add_subdirectory(buffer)
 add_subdirectory(backend)
 add_subdirectory(renderer)
+
+add_library(${PLATFORM_COMPOSITOR} SHARED Compositor.cpp)
+
+target_link_libraries(${PLATFORM_COMPOSITOR}
+    PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}COM::${NAMESPACE}COM
+        ${NAMESPACE}CompositorBufferType::${NAMESPACE}CompositorBufferType
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        CompileSettingsDebug::CompileSettingsDebug
+        common::include
+        common::buffer
+        common::backend
+        common::transformation
+        common::renderer
+        common::drm
+)
+
+set_target_properties(${PLATFORM_COMPOSITOR} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+        FRAMEWORK FALSE
+        POSITION_INDEPENDENT_CODE ON
+)
+
+install(TARGETS ${PLATFORM_COMPOSITOR}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
+)
+
+add_library(compositor::platform ALIAS ${PLATFORM_COMPOSITOR})
+
+# add_subdirectory(test)
