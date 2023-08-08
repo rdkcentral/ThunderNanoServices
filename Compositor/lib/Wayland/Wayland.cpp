@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Wayland.h"
 #ifdef ENABLE_NXSERVER
 #include "NexusServer/Settings.h"
@@ -82,7 +82,7 @@ namespace Plugin {
             Entry(Wayland::Display::Surface* surface, Implementation::IServer* server)
                 : _surface(*surface)
                 , _server(server)
-                , _rectangle( {0, 0, surface->Width(), surface->Height() } )
+                , _rectangle({ 0, 0, surface->Width(), surface->Height() })
             {
                 ASSERT(surface != nullptr);
                 ASSERT(server != nullptr);
@@ -105,6 +105,10 @@ namespace Plugin {
             ~Entry() override = default;
 
         public:
+            Core::instance_id Native() const override
+            {
+                return reinterpret_cast<Core::instance_id>(_surface.Native());
+            }
             inline uint32_t Id() const
             {
                 return _surface.Id();
@@ -125,14 +129,18 @@ namespace Plugin {
                     _surface.Opacity(value);
                 }
             }
-            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override 
+            uint32_t Opacity() const override
+            {
+                return 0;
+            }
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
             {
                 _rectangle = rectangle;
                 _surface.Resize(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 
                 return (Core::ERROR_NONE);
             }
-            Exchange::IComposition::Rectangle Geometry() const override 
+            Exchange::IComposition::Rectangle Geometry() const override
             {
                 return (_rectangle);
             }
@@ -148,7 +156,7 @@ namespace Plugin {
                 return (_layer);
             }
             BEGIN_INTERFACE_MAP(Entry)
-                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
 
         private:
@@ -385,9 +393,6 @@ namespace Plugin {
             return (Implementation::GetResolution());
         }
 
-
-
-
         // -------------------------------------------------------------------------------------------------------
         //   IProcess methods
         // -------------------------------------------------------------------------------------------------------
@@ -525,7 +530,7 @@ namespace Plugin {
                 // instantiated a few lines above.
 
                 if (_server->StartController(_config.Display.Value(), &_sink) == true) {
-                   // Firing up the compositor controller.
+                    // Firing up the compositor controller.
                     _job.Run();
 
                     TRACE(Trace::Information, (_T("Compositor initialized\n")));

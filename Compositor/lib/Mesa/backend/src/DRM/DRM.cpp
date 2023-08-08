@@ -144,7 +144,7 @@ namespace Compositor {
                 ConnectorImplementation(const ConnectorImplementation&) = delete;
                 ConnectorImplementation& operator=(const ConnectorImplementation&) = delete;
 
-                ConnectorImplementation(string gpu, const string& connector, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution)
+                ConnectorImplementation(string gpu, const string& connector, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format, const bool forceResolution, Compositor::ICallback* callback)
                     : _backend(_backends.Instance<Backend::DRM>(gpu, gpu))
                     , _connectorId(_backend->FindConnectorId(connector))
                     , _ctrController(InvalidIdentifier)
@@ -157,13 +157,14 @@ namespace Compositor {
                     , _crtcProperties()
                     , _drmModeStatus()
                     , _dpmsPropertyId(InvalidIdentifier)
+                    , _callback(callback)
                 {
                     ASSERT(_connectorId != InvalidIdentifier);
 
                     _buffer = Compositor::CreateBuffer(
-                        _backend->Descriptor(), 
-                        Exchange::IComposition::WidthFromResolution(resolution), 
-                        Exchange::IComposition::HeightFromResolution(resolution), 
+                        _backend->Descriptor(),
+                        Exchange::IComposition::WidthFromResolution(resolution),
+                        Exchange::IComposition::HeightFromResolution(resolution),
                         format);
 
                     _bufferId = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), _buffer.operator->());
@@ -185,7 +186,7 @@ namespace Compositor {
                 virtual ~ConnectorImplementation() override
                 {
                     _backend.Release();
-                    
+
                     //_buffer->CompositRelease();
 
                     TRACE(Trace::Backend, ("Connector %p Destroyed", this));
@@ -225,7 +226,7 @@ namespace Compositor {
                 {
                     return _buffer->Height();
                 }
-                uint32_t Format() const
+                uint32_t Format() const override
                 {
                     return _buffer->Format();
                 }
@@ -271,6 +272,11 @@ namespace Compositor {
                 Compositor::Identifier DpmsPropertyId() const override
                 {
                     return _dpmsPropertyId;
+                }
+
+                Compositor::ICallback* Callback() const
+                {
+                    return _callback;
                 }
 
             private:
@@ -449,6 +455,8 @@ namespace Compositor {
                 drmModeModeInfo _drmModeStatus;
                 Compositor::Identifier _dpmsPropertyId;
 
+                Compositor::ICallback* _callback;
+
                 static Core::ProxyMapType<string, Backend::DRM> _backends;
             };
 
@@ -495,7 +503,6 @@ namespace Compositor {
                 , _monitor(*this)
                 , _output(IOutput::Instance())
                 , _pendingCommits()
-                , _lastPageFlip(0)
             {
                 ASSERT(_cardFd > 0);
 
@@ -566,20 +573,24 @@ namespace Compositor {
                 ConnectorImplementation* connector(nullptr);
 
                 if (index != _pendingCommits.end()) {
+
                     connector = index->second;
                     _pendingCommits.erase(index);
 
                     ASSERT(crtc == connector->CtrControllerId());
 
                     connector->Completed(false);
+
+                    if (connector->Callback() != nullptr) {
+                        const struct timespec presentationTimestamp {
+                            .tv_sec = sec, .tv_nsec = usec * 1000
+                        };
+
+                        connector->Callback()->LastFrameTimestamp(Core::Time(presentationTimestamp).Ticks());
+                    }
+
                     connector->Release();
                 }
-
-                const struct timespec presentationTimestamp {
-                    .tv_sec = sec, .tv_nsec = usec * 1000
-                };
-
-                _lastPageFlip = Core::Time(presentationTimestamp).Ticks();
 
                 _adminLock.Unlock();
             }
@@ -665,7 +676,6 @@ namespace Compositor {
             Monitor _monitor;
             IOutput& _output;
             CommitRegister _pendingCommits;
-            uint64_t _lastPageFlip;
         }; // class DRM
 
         /* static */ Core::ProxyMapType<string, DRM> DRM::ConnectorImplementation::_backends;
@@ -692,7 +702,7 @@ namespace Compositor {
     /*
        TODO:  ScreenResolution_Unknown for auto setting preferred mode
     */
-    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force)
+    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback)
     {
         ASSERT(drmAvailable() == 1);
 
@@ -707,7 +717,7 @@ namespace Compositor {
 
         static Core::ProxyMapType<string, Exchange::ICompositionBuffer> gbmConnectors;
 
-        return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connector, gpu, connector, resolution, format, force);
+        return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connector, gpu, connector, resolution, format, force, callback);
     }
 } // namespace Compositor
 } // WPEFramework

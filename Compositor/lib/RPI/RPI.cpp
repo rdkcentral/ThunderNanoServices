@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Module.h"
 
 #include <interfaces/IComposition.h>
@@ -60,7 +60,7 @@ namespace Plugin {
             {
                 _adminLock.Lock();
                 element->AddRef();
-                _clients.push_back({element, true});
+                _clients.push_back({ element, true });
                 _job.Submit();
                 _adminLock.Unlock();
             }
@@ -69,7 +69,7 @@ namespace Plugin {
             {
                 _adminLock.Lock();
                 element->AddRef();
-                _clients.push_back({element, false});
+                _clients.push_back({ element, false });
                 _job.Submit();
                 _adminLock.Unlock();
             }
@@ -110,11 +110,11 @@ namespace Plugin {
 
         public:
             ExternalAccess(
-                CompositorImplementation& parent, 
-                const Core::NodeId& source, 
-                const string& proxyStubPath, 
+                CompositorImplementation& parent,
+                const Core::NodeId& source,
+                const string& proxyStubPath,
                 const Core::ProxyType<RPC::InvokeServer>& handler)
-                : RPC::Communicator(source,  proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
+                : RPC::Communicator(source, proxyStubPath.empty() == false ? Core::Directory::Normalize(proxyStubPath) : proxyStubPath, Core::ProxyType<Core::IIPCServer>(handler))
                 , _handler(parent)
             {
                 uint32_t result = RPC::Communicator::Open(RPC::CommunicationTimeOut);
@@ -203,7 +203,8 @@ namespace Plugin {
                 currentRectangle.width = Exchange::IComposition::WidthFromResolution(resolution);
                 currentRectangle.height = Exchange::IComposition::HeightFromResolution(resolution);
             }
-            ~ClientData() {
+            ~ClientData()
+            {
                 if (clientInterface != nullptr) {
                     clientInterface->Release();
                 }
@@ -234,7 +235,6 @@ namespace Plugin {
                 _engine.Release();
                 TRACE(Trace::Error, (_T("Could not report PlatformReady as there was a problem starting the Compositor RPC %s"), _T("server")));
                 result = Core::ERROR_OPENING_FAILED;
-
             }
             return result;
         }
@@ -279,7 +279,6 @@ namespace Plugin {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
         }
 
-
     private:
         using ClientDataContainer = std::map<string, ClientData>;
         using ConstClientDataIterator = ClientDataContainer::const_iterator;
@@ -303,7 +302,7 @@ namespace Plugin {
                 } else {
                     _adminLock.Lock();
 
-                    ClientDataContainer::iterator element (_clients.find(name));
+                    ClientDataContainer::iterator element(_clients.find(name));
 
                     if (element != _clients.end()) {
                         _adminLock.Unlock();
@@ -312,22 +311,19 @@ namespace Plugin {
 
                         TRACE(Trace::Information, (_T("Replace client %s."), name.c_str()));
                         _adminLock.Lock();
-                    }
-                    else {
+                    } else {
                         TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
-
                     }
 
                     client->AddRef();
                     _clients.emplace(std::piecewise_construct,
-                                         std::forward_as_tuple(name),
-                                         std::forward_as_tuple(client, Resolution()));
+                        std::forward_as_tuple(name),
+                        std::forward_as_tuple(client, Resolution()));
 
                     _adminLock.Unlock();
                     for (auto&& index : _observers) {
                         index->Attached(name, client);
                     }
-
                 }
                 client->Release();
             }
@@ -340,11 +336,14 @@ namespace Plugin {
 
             _adminLock.Lock();
             auto it = _clients.begin();
-            while ( (it != _clients.end()) && (it->second.clientInterface != client) ) { ++it; }
+            while ((it != _clients.end()) && (it->second.clientInterface != client)) {
+                ++it;
+            }
 
             if (it != _clients.end()) {
                 string name(it->first);
-                Core::IUnknown* client =  it->second.clientInterface;;
+                Core::IUnknown* client = it->second.clientInterface;
+                ;
                 _clients.erase(it);
                 _adminLock.Unlock();
 

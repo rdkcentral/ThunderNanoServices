@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2022 Metrological B.V.
+ * Copyright 2023 Metrological B.V.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,10 +29,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-
 #include <inttypes.h>
 
 #include <IBuffer.h>
@@ -40,13 +36,6 @@
 #include <Transformation.h>
 
 #include <drm_fourcc.h>
-
-#include <X11/Xlib.h>
-#define GL_GLEXT_PROTOTYPES
-#include <GL/gl.h>
-#define EGL_EGLEXT_PROTOTYPES
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
 
 #include <simpleworker/SimpleWorker.h>
 
@@ -75,12 +64,11 @@ public:
         : _adminLock()
         , _lastFrame(0)
         , _sink(*this)
-        , _format(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR })
+        , _format(DRM_FORMAT_ARGB8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
         , _fps(fps)
         , _texture()
-
     {
         _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_720p, _format, false);
         ASSERT(_connector.IsValid());
@@ -91,7 +79,7 @@ public:
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
         // Create a dmabuf texture
-        _texture.data = Compositor::CreateBuffer(_connector->Identifier(), 10, 10, _format);
+        _texture.data = Compositor::CreateBuffer(_connector->Identifier(), 100, 100, _format);
         FillTexture(_texture.data, green);
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %p", _texture.data.operator->()));
 
@@ -120,7 +108,13 @@ public:
         _renderer->Bind(buffer);
         _renderer->Begin(buffer->Width(), buffer->Height());
         _renderer->Clear(color);
-        _renderer->End(true);
+
+        const Compositor::Box box = { .x = 0, .y = 0, .width = int(buffer->Width() / 2), .height = int(buffer->Height() / 2) };
+        Compositor::Matrix matrix;
+        Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_NORMAL, Compositor::Transformation::ToRadials(0), _renderer->Projection());
+        _renderer->Quadrangle({ color[1], color[2], color[0], 1.0f }, matrix);
+
+        _renderer->End(false);
         _renderer->Unbind();
     }
 
@@ -182,25 +176,25 @@ private:
             return 0;
         }
 
-        const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
+        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        const uint16_t rwidth(500);
-        const uint16_t rheight(500);
+        const uint16_t renderWidth(256);
+        const uint16_t renderHeight(256);
 
         _renderer->Bind(_connector);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box box = { .x = (width / 2) - (rwidth / 2), .y = (height / 2) - (rheight / 2), .width = rwidth, .height = rheight };
-
+        const Compositor::Box renderBox = { .x = (width / 2) - (renderWidth / 2), .y = (height / 2) - (renderHeight / 2), .width = renderWidth, .height = renderHeight };
         Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
 
-        _renderer->Render(_texture.texture, box, matrix, 1.0f);
+        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(_texture.texture->Width()), .height = int(_texture.texture->Height()) };
+        _renderer->Render(_texture.texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);
 
@@ -224,10 +218,9 @@ private:
     uint64_t _lastFrame;
     Sink _sink;
     const Compositor::PixelFormat _format;
-    Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IRenderer> _renderer;
     const uint8_t _fps;
-    uint8_t _previousIndex;
     Texture _texture;
 }; // RenderTest
 }

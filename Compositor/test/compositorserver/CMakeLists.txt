@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 Metrological
+# Copyright 2023 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,31 +15,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+option(INSTALL_COMPOSITOR_SERVER_TEST "Build compositor server test app" ON)
+
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
+find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(${NAMESPACE}CompositorBufferType CONFIG REQUIRED)
 
-find_package(gbm REQUIRED)
+add_executable(compositorserver main.cpp)
 
-add_library(CommonBufferDumb STATIC DRMDumb.cpp)
-
-target_link_libraries(CommonBufferDumb
-    PUBLIC
-        common::include
+target_link_libraries(compositorserver
     PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
-        gbm::gbm
-        common::drm
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}COM::${NAMESPACE}COM
+        ${NAMESPACE}CompositorBufferType::${NAMESPACE}CompositorBufferType
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        CompileSettingsDebug::CompileSettingsDebug
+        platform::implementation
 )
 
-set_target_properties(CommonBufferDumb PROPERTIES
-        CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
-        POSITION_INDEPENDENT_CODE ON
-)
-
-add_library(common::buffer ALIAS CommonBufferDumb)
+if(INSTALL_COMPOSITOR_SERVER_TEST)
+    install(TARGETS compositorserver RUNTIME DESTINATION bin)
+endif()

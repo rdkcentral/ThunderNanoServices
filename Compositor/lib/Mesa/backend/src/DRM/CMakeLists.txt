@@ -50,6 +50,7 @@ set_target_properties(CommonBackendDRM PROPERTIES
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        POSITION_INDEPENDENT_CODE ON
 )
 
 add_library(common::backend ALIAS CommonBackendDRM)
