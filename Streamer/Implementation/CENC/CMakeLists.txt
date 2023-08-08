@@ -30,6 +30,8 @@ pkg_check_modules(GST
 
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(${LIB_NAME} STATIC
     PlayerImplementation.cpp)
 
