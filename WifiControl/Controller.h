@@ -1836,7 +1836,7 @@ namespace WPASupplicant {
                 ConnectSink(const ConnectSink&) = delete;
                 ConnectSink& operator= (const ConnectSink&) = delete;
                 ConnectSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
-                ~ConnectSink() override = default;;
+                ~ConnectSink() override = default;
 
             public:
                 uint32_t Wait(const uint32_t waitTime) {
