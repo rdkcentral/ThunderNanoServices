@@ -91,10 +91,7 @@ namespace Plugin {
     /* virtual */ void BluetoothAudio::Deinitialize(PluginHost::IShell* service)
     {
         if (_service != nullptr) {
-
             ASSERT(_service == service);
-
-            SignallingServer::Instance().Stop();
 
             if (_source != nullptr) {
                 _source->Deinitialize(service);
@@ -111,6 +108,9 @@ namespace Plugin {
             service->Unregister(&_comNotificationSink);
 
             service->Release();
+
+            SignallingServer::Instance().Clear();
+
             _service = nullptr;
         }
     }

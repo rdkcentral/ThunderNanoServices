@@ -243,6 +243,8 @@ namespace A2DP {
 
             ASSERT(_handler != nullptr);
 
+            TRACE(ServerFlow, (_T("Configuring endpoint %d by client"), Id()));
+
             _lock.Lock();
 
             // Configure Media Transport
@@ -287,6 +289,8 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            TRACE(ServerFlow, (_T("Starting endpoint %d by client"), Id()));
+
             _lock.Lock();
 
             if (State() == StreamEndPoint::OPENED) {
@@ -308,6 +312,8 @@ namespace A2DP {
 
             _lock.Lock();
 
+            TRACE(ServerFlow, (_T("Suspending endpoint %d by client"), Id()));
+
             if (State() == StreamEndPoint::STARTED) {
 
                 result = _remote.Suspend(*this);
@@ -324,6 +330,8 @@ namespace A2DP {
         uint32_t Open()
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
+
+            TRACE(ServerFlow, (_T("Opening endpoint %d by client"), Id()));
 
             _lock.Lock();
 
@@ -344,6 +352,8 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            TRACE(ServerFlow, (_T("Closing endpoint %d by client"), Id()));
+
             _lock.Lock();
 
             if ((State() == StreamEndPoint::OPENED) || (State() == StreamEndPoint::STARTED)) {
@@ -363,12 +373,14 @@ namespace A2DP {
         {
             uint32_t result = Core::ERROR_ILLEGAL_STATE;
 
+            TRACE(ServerFlow, (_T("Aborting endpoint %d by client"), Id()));
+
             _lock.Lock();
 
             if ((State() == StreamEndPoint::CONFIGURED) || (State() == StreamEndPoint::OPENED) || (State() == StreamEndPoint::STARTED)) {
 
                 result = _remote.Abort(*this);
-                if (result == Core::ERROR_NONE) {;
+                if (result == Core::ERROR_NONE) {
                     result = OnAbort();
                 }
             }
@@ -385,7 +397,7 @@ namespace A2DP {
                     && (State() != Bluetooth::AVDTP::StreamEndPoint::CLOSING)
                     && (State() != Bluetooth::AVDTP::StreamEndPoint::ABORTING)) {
 
-                TRACE(ServerFlow, (_T("Endpoint %d device disconnected unexpectedly"), Id()));
+                TRACE(ServerFlow, (_T("Endpoint %d device disconnected unexpectedly!"), Id()));
 
                 // Deallocate the sink and teardown internal data, no point in closing the remote
                 // device as it's not longer reachable.
@@ -441,8 +453,7 @@ namespace A2DP {
                         else {
                             failedCategory = Service::MEDIA_CODEC;
 
-                            TRACE(ServerFlow, (_T("Requested MEDIA_CODEC configuration is unsupported or invalid for codec %02x"),
-                                                        Codec()->Type()));
+                            TRACE(ServerFlow, (_T("Requested MEDIA_CODEC configuration is unsupported or invalid for codec %02x"), Codec()->Type()));
                         }
                     }
                 }
@@ -467,19 +478,19 @@ namespace A2DP {
             _lock.Lock();
 
             if (State() == StreamEndPoint::CONFIGURED) {
-                if (_handler->OnAcquire() == Core::ERROR_NONE) {
+                result = _handler->OnAcquire();
+
+                if (result == Core::ERROR_NONE) {
                     TRACE(ServerFlow, (_T("Endpoint %d opened"), Id()));
                     State(StreamEndPoint::OPENED);
                 }
-
-                result = Core::ERROR_NONE;
             }
+
+            _lock.Unlock();
 
             if (result != Core::ERROR_NONE) {
                 TRACE(Trace::Error, (_T("Failed to open endpoint %d [%d]"), Id(), result));
             }
-
-            _lock.Unlock();
 
             return (result);
         }
