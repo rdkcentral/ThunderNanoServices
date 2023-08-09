@@ -81,7 +81,6 @@ The table below lists configuration options of the plugin.
 | configuration?.connector | string | <sup>*(optional)*</sup> Connector name |
 | configuration?.interface | string | <sup>*(optional)*</sup> Interface name |
 | configuration?.application | string | <sup>*(optional)*</sup> Application name |
-| configuration?.preferred | string | <sup>*(optional)*</sup> Preferred |
 | configuration?.autoconnect | string | <sup>*(optional)*</sup> Enable autoconnect |
 | configuration?.retryinterval | string | <sup>*(optional)*</sup> Retry interval |
 
