@@ -113,7 +113,7 @@ namespace Plugin {
 
             config.FromString(framework->ConfigLine());
 
-            _cryptography = Cryptography::ICryptography::Instance("");
+            _cryptography = Exchange::ICryptography::Instance("");
 
             Core::ProxyType<RPC::InvokeServer> server = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
 
@@ -136,11 +136,11 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(CryptographyImplementation)
             INTERFACE_ENTRY(Exchange::IConfiguration)
-            INTERFACE_AGGREGATE(Cryptography::ICryptography, _cryptography)
+            INTERFACE_AGGREGATE(Exchange::ICryptography, _cryptography)
         END_INTERFACE_MAP
 
     private:
-        Cryptography::ICryptography* _cryptography;
+        Exchange::ICryptography* _cryptography;
         ExternalAccess* _rpcLink;
     };
 
