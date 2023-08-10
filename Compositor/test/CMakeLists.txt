@@ -15,5 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory(compositortest)
+option(BUILD_COMPOSITOR_TEST_CLIENT "Build compositor test client" OFF)
+option(BUILD_COMPOSITOR_TEST_SERVER "Build compositor test server" OFF)
+
+if (BUILD_COMPOSITOR_TEST_CLIENT)
+    add_subdirectory(compositortest)
+endif()
+if (BUILD_COMPOSITOR_TEST_SERVER)
 add_subdirectory(compositorserver)
+endif()
+
+
