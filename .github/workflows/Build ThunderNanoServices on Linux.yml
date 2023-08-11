@@ -2,14 +2,14 @@ name: Build ThunderNanoServices on Linux
 
 on:
   push:
-    branches: ["development/actions-warnings"] # CHANGE TO MASTER
+    branches: ["development/actions-warnings"] # CHANGE
   pull_request:
     branches: ["master"]
   workflow_call:
 
 jobs:
   ThunderInterfaces:
-    uses: VeithMetro/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master # CHANGE TO RDKCENTRAL
+    uses: VeithMetro/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master # CHANGE
 
   ThunderNanoServices:
     needs: ThunderInterfaces
