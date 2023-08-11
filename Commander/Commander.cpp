@@ -102,25 +102,28 @@ namespace Plugin {
     /* virtual */ void Commander::Deinitialize(PluginHost::IShell* service)
     {
         if (_service != nullptr) {
+
             ASSERT(_service == service);
 
-            // Stop all running sequencers..
-            std::map<const string, Core::ProxyType<Sequencer>>::iterator index(_sequencers.begin());
+            if (_service == service) {
+                // Stop all running sequencers..
+                std::map<const string, Core::ProxyType<Sequencer>>::iterator index(_sequencers.begin());
 
-            while (index != _sequencers.end()) {
+                while (index != _sequencers.end()) {
 
-                index->second->Abort();
-                index->second->Revoke();
+                    index->second->Abort();
+                    index->second->Revoke();
 
-                index++;
+                    index++;
+                }
+
+                // Kill all sequencer instances.
+                _sequencers.clear();
+
+                // Deinitialize what we initialized..
+                _service->Release();
+                _service = nullptr;
             }
-
-            // Kill all sequencer instances.
-            _sequencers.clear();
-
-            // Deinitialize what we initialized..
-            _service->Release();
-            _service = nullptr;
         }
     }
 
