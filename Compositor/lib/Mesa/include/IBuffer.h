@@ -46,7 +46,7 @@ namespace Compositor {
      *
      * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
      */
-    extern Core::ProxyType<Exchange::ICompositionBuffer> Connector(
+    EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> Connector(
         const string& connector,
         const Exchange::IComposition::ScreenResolution resolution,
         const Compositor::PixelFormat& format,
@@ -63,10 +63,10 @@ namespace Compositor {
      *
      * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
      */
-    extern Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer (
-        const Identifier identifier, 
-        const uint32_t width, 
-        const uint32_t height, 
+    EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+        const Identifier identifier,
+        const uint32_t width,
+        const uint32_t height,
         const PixelFormat& format);
 
 } // namespace Compositor

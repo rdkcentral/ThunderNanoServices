@@ -601,8 +601,8 @@ namespace Compositor {
                     return result;
                 }
 
-                uint16_t Width() const override { return _buffer->Width(); }
-                uint16_t Height() const override{ return _buffer->Height(); }
+                uint32_t Width() const override { return _buffer->Width(); }
+                uint32_t Height() const override { return _buffer->Height(); }
                 const GLenum Target() const { return _target; }
                 const GLuint Id() const { return _textureId; }
                 // const std::vector<GLuint>& Identifiers() const { return _textureIds; }

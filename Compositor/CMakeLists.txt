@@ -75,10 +75,11 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-if(PLUGIN_COMPOSITOR_SERVER)
-    add_subdirectory(server)
-endif()
 
 add_subdirectory(lib)
+
+add_library(platform::implementation ALIAS ${PLATFORM_COMPOSITOR})
+
+add_subdirectory(test)
 
 write_config()

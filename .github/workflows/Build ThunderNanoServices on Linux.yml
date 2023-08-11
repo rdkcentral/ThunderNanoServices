@@ -5,6 +5,7 @@ on:
     branches: ["development/actions-warnings"] # CHANGE TO MASTER
   pull_request:
     branches: ["master"]
+  workflow_call:
 
 jobs:
   ThunderInterfaces:

@@ -62,6 +62,17 @@ public:
 
     PixelFormat() = delete;
 
+    PixelFormat(const PixelFormat& copy){
+        _fourcc = copy._fourcc;
+        _modifiers = copy._modifiers;
+    };
+
+    PixelFormat& operator=(const PixelFormat& rhs) {
+        _fourcc = rhs._fourcc;
+        _modifiers = rhs._modifiers;
+        return *this;
+    }
+
     PixelFormat(const uint32_t fourcc, const uint16_t nModifiers, const uint64_t modifiers[])
         : _fourcc(fourcc)
         , _modifiers(modifiers, modifiers + nModifiers)
@@ -94,8 +105,8 @@ public:
     }
 
 private:
-    const uint32_t _fourcc; // The actual DRM format, from `drm_fourcc.h`
-    const std::vector<uint64_t> _modifiers;
+     uint32_t _fourcc; // The actual DRM format, from `drm_fourcc.h`
+     std::vector<uint64_t> _modifiers;
 }; // class PixelFormat
 } // namespace Compositor
 } // namespace WPEFramework

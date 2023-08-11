@@ -47,7 +47,6 @@ namespace Plugin {
                 : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
                 , _parentInterface(parentInterface)
             {
-                engine->Announcements(Announcement());
                 Open(Core::infinite);
             }
             ~ExternalAccess()

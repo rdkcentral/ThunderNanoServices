@@ -27,7 +27,7 @@ namespace Plugin {
 
     class ServiceDiscovery : public Bluetooth::SDP::ClientSocket {
     private:
-        static constexpr uint16_t OpenTimeout = 500; // ms
+        static constexpr uint16_t OpenTimeout = 5000; // ms
         static constexpr uint16_t CloseTimeout = 5000;
         static constexpr uint16_t DiscoverTimeout = 5000;
 
