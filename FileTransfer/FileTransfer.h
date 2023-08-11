@@ -231,8 +231,12 @@ namespace Plugin
                     uint16_t SendCharacters(uint8_t *dataFrame, const TCHAR stream[], const uint8_t delta, const uint16_t total)
                     {
                         ASSERT(delta == 0);
-                        // Copying from an aligned position..
-                        ::memcpy(dataFrame, stream, total);
+
+                        if (delta == 0) {
+                            // Copying from an aligned position..
+                            ::memcpy(dataFrame, stream, total);
+                        }
+
                         return (total);
                     }
 
