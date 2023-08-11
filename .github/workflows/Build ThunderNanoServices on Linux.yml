@@ -2,7 +2,7 @@ name: Build ThunderNanoServices on Linux
 
 on:
   push:
-    branches: ["master"] # CHANGE
+    branches: ["master"]
   pull_request:
     branches: ["master"]
   workflow_call:
