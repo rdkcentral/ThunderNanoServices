@@ -46,7 +46,9 @@ namespace CEC {
                 {
                     ASSERT(length >= sizeof(_physicalAddress));
 
-                    memcpy(buffer, _physicalAddress, sizeof(_physicalAddress));
+                    if (length >= sizeof(_physicalAddress)) {
+                        memcpy(buffer, _physicalAddress, sizeof(_physicalAddress));
+                    }
 
                     return sizeof(_physicalAddress);
                 }
