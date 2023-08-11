@@ -52,7 +52,9 @@ namespace CEC {
                 {
                     ASSERT(length >= sizeof(_vendorId));
 
-                    memcpy(buffer, _vendorId, sizeof(_vendorId));
+                    if (length >= sizeof(_vendorId)) {
+                        memcpy(buffer, _vendorId, sizeof(_vendorId));
+                    }
 
                     return sizeof(_vendorId);
                 }
