@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+option(INSTALL_COMPOSITOR_CLIENT_TEST "Build compositor client test app" ON)
+
 find_package(GLESv2 REQUIRED)
 find_package(EGL REQUIRED)
 find_package(PNG REQUIRED)
@@ -48,4 +50,6 @@ target_compile_definitions(CompositorTest
         ${EGL_DEFINITIONS}
         ${GLESV2_DEFINITIONS})
 
-install(TARGETS CompositorTest DESTINATION bin)
+if(INSTALL_COMPOSITOR_CLIENT_TEST)
+    install(TARGETS CompositorTest DESTINATION bin)
+endif(INSTALL_COMPOSITOR_CLIENT_TEST)

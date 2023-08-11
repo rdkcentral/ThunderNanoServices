@@ -23,6 +23,8 @@ find_package(NXCLIENT REQUIRED)
 
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(${LIB_NAME}
      PlayerImplementation.cpp)
 

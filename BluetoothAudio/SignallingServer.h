@@ -365,7 +365,7 @@ namespace Plugin {
                 }
 
                 _peerConnections.Visit([this, &timeNow](const string& address, Core::ProxyType<PeerConnection>& connection) {
-                    if (connection->IsLatched() == false) {
+                    if ((connection->IsOpen() == true) && (connection->IsLatched() == false)) {
                         const uint64_t lastActivity = connection->LastActivity();
                         const uint64_t elapsed = (timeNow > lastActivity? timeNow - lastActivity : 0);
 
@@ -407,6 +407,7 @@ namespace Plugin {
         SignallingServer()
             : _socketServer()
             , _lock()
+            , _observersLock()
             , _endpoints()
             , _observers()
             , _mediaReceiver(nullptr)
@@ -414,7 +415,7 @@ namespace Plugin {
         }
         ~SignallingServer()
         {
-            Stop();
+            Clear();
         }
 
     public:
@@ -422,6 +423,13 @@ namespace Plugin {
         {
             static SignallingServer& server = Core::SingletonType<SignallingServer>::Instance();
             return (server);
+        }
+        void Clear()
+        {
+            Stop();
+            _observers.clear();
+            _endpoints.clear();
+            _mediaReceiver = nullptr;
         }
 
     public:
@@ -487,19 +495,19 @@ namespace Plugin {
         {
             // Register a new AVDTP connection observer.
 
-            _lock.Lock();
+            _observersLock.Lock();
 
             ASSERT(std::find(_observers.begin(), _observers.end(), observer) == _observers.end());
 
             _observers.push_back(observer);
 
-            _lock.Unlock();
+            _observersLock.Unlock();
         }
         void Unregister(const IObserver* observer)
         {
             // Unregister an AVDTP connection observer.
 
-            _lock.Lock();
+            _observersLock.Lock();
 
             auto it = std::find(_observers.begin(), _observers.end(), observer);
 
@@ -507,7 +515,7 @@ namespace Plugin {
                 _observers.erase(it);
             }
 
-            _lock.Unlock();
+            _observersLock.Unlock();
         }
 
     public:
@@ -568,13 +576,13 @@ namespace Plugin {
         {
             ASSERT(channel.IsValid() == true);
 
-            _lock.Lock();
+            _observersLock.Lock();
 
             for (auto& observer : _observers) {
                 observer->Operational(channel, isRunning);
             }
 
-            _lock.Unlock();
+            _observersLock.Unlock();
         }
         void OnSignal(const Bluetooth::AVDTP::Signal& signal, const Bluetooth::AVDTP::Socket::ResponseHandler& handler)
         {
@@ -610,6 +618,7 @@ namespace Plugin {
     private:
         Core::ProxyType<SocketServer> _socketServer;
         Core::CriticalSection _lock;
+        Core::CriticalSection _observersLock;
         std::map<uint8_t, A2DP::AudioEndpoint> _endpoints;
         std::list<IObserver*> _observers;
         IMediaReceiver* _mediaReceiver;

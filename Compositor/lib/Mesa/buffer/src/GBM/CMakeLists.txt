@@ -45,6 +45,7 @@ set_target_properties(CommonBufferGBM PROPERTIES
         CXX_STANDARD_REQUIRED YES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        POSITION_INDEPENDENT_CODE ON
 )
 
 add_library(common::buffer ALIAS CommonBufferGBM)

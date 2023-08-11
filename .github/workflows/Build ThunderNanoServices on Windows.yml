@@ -5,6 +5,7 @@ on:
     branches: ["master"]
   pull_request:
     branches: ["master"]
+  workflow_call:
 
 env:
   commander: ThunderNanoServices\Commander\Commander.vcxproj
@@ -39,29 +40,87 @@ jobs:
         path: ThunderOnWindows
         repository: WebPlatformForEmbedded/ThunderOnWindows
 
-    - name: Checkout Thunder
+# ----- Thunder -----
+    - name: Checkout Thunder - default
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=Thunder:') }}
       uses: actions/checkout@v3
       with:
         path: ThunderOnWindows/Thunder
         repository: ${{github.repository_owner}}/Thunder
 
-    - name: Checkout ThunderTools
+    - name: Regex Thunder
+      if: contains(github.event.pull_request.body, '[DependsOn=Thunder:')
+      id: thunder
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=Thunder:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout Thunder - ${{steps.thunder.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=Thunder:')
+      uses: actions/checkout@v3
+      with:
+        path: ThunderOnWindows/Thunder
+        repository: ${{github.repository_owner}}/Thunder
+        ref: ${{steps.thunder.outputs.first_match}}
+
+# ----- ThunderTools -----
+    - name: Checkout ThunderTools - default
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=ThunderTools:') }}
       uses: actions/checkout@v3
       with:
         path: ThunderOnWindows/ThunderTools
         repository: ${{github.repository_owner}}/ThunderTools
 
+    - name: Regex ThunderTools
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderTools:')
+      id: tools
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=ThunderTools:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout ThunderTools - ${{steps.tools.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderTools:')
+      uses: actions/checkout@v3
+      with:
+        path: ThunderOnWindows/ThunderTools
+        repository: ${{github.repository_owner}}/ThunderTools
+        ref: ${{steps.tools.outputs.first_match}}
+
+# ----- ThunderInterfaces -----
+    - name: Checkout ThunderInterfaces - default
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:') }}
+      uses: actions/checkout@v3
+      with:
+        path: ThunderOnWindows/ThunderInterfaces
+        repository: ${{github.repository_owner}}/ThunderInterfaces
+
+    - name: Regex ThunderInterfaces
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:')
+      id: thunderinterfaces
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=ThunderInterfaces:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout ThunderInterfaces - ${{steps.thunderinterfaces.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:')
+      uses: actions/checkout@v3
+      with:
+        path: ThunderOnWindows/ThunderInterfaces
+        repository: ${{github.repository_owner}}/ThunderInterfaces
+        ref: ${{steps.thunderinterfaces.outputs.first_match}}
+
+# ----- Other checkouts -----
     - name: Checkout ThunderClientLibraries
       uses: actions/checkout@v3
       with:
         path: ThunderOnWindows/ThunderClientLibraries
         repository: ${{github.repository_owner}}/ThunderClientLibraries
-
-    - name: Checkout ThunderInterfaces
-      uses: actions/checkout@v3
-      with:
-        path: ThunderOnWindows/ThunderInterfaces
-        repository: ${{github.repository_owner}}/ThunderInterfaces
 
     - name: Checkout ThunderNanoServices
       uses: actions/checkout@v3
