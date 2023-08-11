@@ -850,7 +850,7 @@ namespace WPASupplicant {
              {
                  _adminLock.Lock();
                  
-                 uint8_t* data = static_cast<uint8_t*>(ALLOCA(sizeof(uint8_t) * infoLine.Length()));
+                 uint8_t* data = static_cast<uint8_t*>(ALLOCA(infoLine.Length()));
                  uint16_t attrLen = Core::FromHexString(infoLine.Data(), data, infoLine.Length());
                  uint8_t pos = 0;
 
