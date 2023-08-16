@@ -408,14 +408,14 @@ namespace Plugin {
             ConnectorType(const ConnectorType<STREAMTYPE>&) = delete;
             ConnectorType<STREAMTYPE>& operator=(const ConnectorType<STREAMTYPE>&) = delete;
 
-            PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST);
+            PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             template <typename... Args>
             ConnectorType(PluginHost::Channel& channel, Args&&... args)
                 : WebProxy::Connector(channel, &_streamType)
                 , _streamType(*this, std::forward<Args>(args)...)
             {
             }
-            POP_WARNING();
+            POP_WARNING()
 
             ~ConnectorType() override = default;
 

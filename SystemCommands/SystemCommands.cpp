@@ -52,7 +52,7 @@ namespace Plugin {
         return string();
     }
 
-    void SystemCommands::Inbound(Web::Request& request)
+    void SystemCommands::Inbound(Web::Request& /* request */)
     {
     }
 
@@ -72,7 +72,7 @@ namespace Plugin {
             if (index.Current().Text() == "USBReset") {
                 string device;
                 Core::URL::KeyValue options(request.Query.Value());
-                if (options.Exists(_T("device"), true) == true) {
+                if (options.HasKey(_T("device"), true) != Core::URL::KeyValue::status::UNAVAILABLE) {
                     constexpr int kDeviceNameMaxLength = 255;
                     std::array<char, kDeviceNameMaxLength> deviceName {0};
                     device = options[_T("device")].Text();

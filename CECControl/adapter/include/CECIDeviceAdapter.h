@@ -10,7 +10,7 @@ namespace CEC {
             virtual uint8_t Received(const cec_adapter_role_t follower, const logical_address_t initiator, const uint8_t length, const uint8_t data[]) = 0;
         };
 
-        virtual ~IDeviceAdapter() = default;;
+        virtual ~IDeviceAdapter() = default;
 
         virtual uint32_t Register(INotification* notification) = 0;
         virtual uint32_t Unregister(INotification* notification) = 0;

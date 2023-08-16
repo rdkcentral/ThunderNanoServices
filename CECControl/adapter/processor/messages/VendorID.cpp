@@ -48,7 +48,7 @@ namespace CEC {
                 ~VendorID() override = default;
 
             private:
-                uint8_t Process(const uint8_t length, uint8_t buffer[])
+                uint8_t Process(const uint8_t length VARIABLE_IS_NOT_USED, uint8_t buffer[])
                 {
                     ASSERT(length >= sizeof(_vendorId));
 
