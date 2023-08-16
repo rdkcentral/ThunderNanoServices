@@ -27,10 +27,6 @@
             "type": "string",
             "description": "Application name."
           },
-          "preferred": {
-            "type": "string",
-            "description": "Preferred."
-          },
           "autoconnect": {
             "type": "string",
             "description": "Enable autoconnect."

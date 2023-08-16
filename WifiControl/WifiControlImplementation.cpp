@@ -629,7 +629,6 @@ namespace Plugin
                 : ConnectorDirectory(_T("wpa_supplicant"))
                 , Interface(_T("wlan0"))
                 , Application(_T("/usr/sbin/wpa_supplicant"))
-                , Preferred()
                 , AutoConnect(false)
                 , RetryInterval(30)
                 , MaxRetries(-1)
@@ -641,7 +640,6 @@ namespace Plugin
                 Add(_T("connector"), &ConnectorDirectory);
                 Add(_T("interface"), &Interface);
                 Add(_T("application"), &Application);
-                Add(_T("preferred"), &Preferred);
                 Add(_T("autoconnect"), &AutoConnect);
                 Add(_T("retryinterval"), &RetryInterval);
                 Add(_T("maxretries"), &MaxRetries);
@@ -656,7 +654,6 @@ namespace Plugin
             Core::JSON::String ConnectorDirectory;
             Core::JSON::String Interface;
             Core::JSON::String Application;
-            Core::JSON::String Preferred;
             Core::JSON::Boolean AutoConnect;
             Core::JSON::DecUInt8 RetryInterval;
             Core::JSON::DecSInt32 MaxRetries;
@@ -941,7 +938,6 @@ namespace Plugin
                     _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
 
                     _controller->Callback(&_sink);
-                    _preferredSsid = config.Preferred.Value();
                     Core::File configFile(_configurationStore);
 
                     if (configFile.Open(true) == true) {
