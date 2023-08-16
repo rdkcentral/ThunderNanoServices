@@ -850,7 +850,7 @@ namespace WPASupplicant {
              {
                  _adminLock.Lock();
                  
-                 uint8_t data[infoLine.Length()];
+                 uint8_t* data = static_cast<uint8_t*>(ALLOCA(infoLine.Length()));
                  uint16_t attrLen = Core::FromHexString(infoLine.Data(), data, infoLine.Length());
                  uint8_t pos = 0;
 
@@ -1836,7 +1836,7 @@ namespace WPASupplicant {
                 ConnectSink(const ConnectSink&) = delete;
                 ConnectSink& operator= (const ConnectSink&) = delete;
                 ConnectSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
-                ~ConnectSink() override = default;;
+                ~ConnectSink() override = default;
 
             public:
                 uint32_t Wait(const uint32_t waitTime) {

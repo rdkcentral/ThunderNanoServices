@@ -96,7 +96,7 @@ namespace WPEFramework {
                 return receivedSize;
             }
 
-            uint16_t SendData(uint8_t *dataFrame, const uint16_t maxSendSize) override
+            uint16_t SendData(uint8_t* /* dataFrame */, const uint16_t /* maxSendSize */) override
             {
                 // Do not do anything here
                 return 0;

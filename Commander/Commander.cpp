@@ -99,7 +99,7 @@ namespace Plugin {
         return _T("");
     }
 
-    /* virtual */ void Commander::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void Commander::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         if (_service != nullptr) {
             ASSERT(_service == service);
