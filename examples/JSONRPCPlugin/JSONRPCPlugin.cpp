@@ -46,7 +46,7 @@ namespace Plugin
         return (method != _T("checkvalidation") ? PluginHost::JSONRPC::classification::VALID : PluginHost::JSONRPC::classification::INVALID);
     }
 
-    SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
+    SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0)
 
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     JSONRPCPlugin::JSONRPCPlugin()

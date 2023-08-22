@@ -63,6 +63,6 @@ namespace TestCore {
     private:
     };
 
-    SERVICE_REGISTRATION(TestControllerImp, 1, 0);
+    SERVICE_REGISTRATION(TestControllerImp, 1, 0)
 } // namespace TestCore
 } // namespace WPEFramewor

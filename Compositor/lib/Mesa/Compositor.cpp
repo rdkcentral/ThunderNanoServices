@@ -603,7 +603,7 @@ namespace Plugin {
         Compositor::Color _background;
     };
 
-    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
+    SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
 
 } // namespace Plugin
 } // namespace WPEFramework

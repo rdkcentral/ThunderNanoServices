@@ -352,6 +352,6 @@ namespace Plugin {
         string _csvFilePath;
     };
 
-    SERVICE_REGISTRATION(ResourceMonitorImplementation, 1, 0);
+    SERVICE_REGISTRATION(ResourceMonitorImplementation, 1, 0)
 } /* namespace Plugin */
 } // namespace WPEFramework

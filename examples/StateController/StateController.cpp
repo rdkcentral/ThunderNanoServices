@@ -22,7 +22,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(StateController, 1, 0);
+    SERVICE_REGISTRATION(StateController, 1, 0)
 
     /* virtual */ const string StateController::Initialize(PluginHost::IShell* service)
     {

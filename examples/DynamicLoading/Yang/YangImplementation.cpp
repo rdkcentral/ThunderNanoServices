@@ -317,7 +317,7 @@ namespace Plugin {
         uint8_t _balance;
     }; // class YangImplementation
 
-    SERVICE_REGISTRATION(YangImplementation, 1, 0);
+    SERVICE_REGISTRATION(YangImplementation, 1, 0)
 
 } // namespace Plugin
 

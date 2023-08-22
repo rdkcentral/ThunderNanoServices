@@ -25,7 +25,7 @@ ENUM_CONVERSION_BEGIN(Plugin::BluetoothControl::Config::adaptertype)
     { Plugin::BluetoothControl::Config::CLASSIC, _TXT("classic") },
     { Plugin::BluetoothControl::Config::LOW_ENERGY, _TXT("lowenergy") },
     { Plugin::BluetoothControl::Config::DUAL, _TXT("dual") },
-ENUM_CONVERSION_END(Plugin::BluetoothControl::Config::adaptertype);
+ENUM_CONVERSION_END(Plugin::BluetoothControl::Config::adaptertype)
 
 namespace Plugin {
 

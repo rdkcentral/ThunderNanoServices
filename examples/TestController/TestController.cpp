@@ -60,7 +60,7 @@ namespace TestController {
 } // namespace TestController
 
 namespace Plugin {
-    SERVICE_REGISTRATION(TestController, 1, 0);
+    SERVICE_REGISTRATION(TestController, 1, 0)
 
     /* virtual */ const string TestController::Initialize(PluginHost::IShell* service)
     {

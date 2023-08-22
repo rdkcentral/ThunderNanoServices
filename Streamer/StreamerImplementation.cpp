@@ -23,7 +23,7 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(StreamerImplementation, 1, 0);
+    SERVICE_REGISTRATION(StreamerImplementation, 1, 0)
 
     /* virtual */ uint32_t StreamerImplementation::Configure(PluginHost::IShell* service)
     {

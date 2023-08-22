@@ -62,7 +62,7 @@ namespace TestUtility {
 } // namespace TestUtility
 
 namespace Plugin {
-    SERVICE_REGISTRATION(TestUtility, 1, 0);
+    SERVICE_REGISTRATION(TestUtility, 1, 0)
 
     /* virtual */ const string TestUtility::Initialize(PluginHost::IShell* service)
     {

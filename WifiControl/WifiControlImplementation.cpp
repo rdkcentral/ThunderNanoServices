@@ -1470,6 +1470,6 @@ namespace Plugin
         Core::WorkerPool::JobType<WifiControlImplementation&> _job;
     };
 
-    SERVICE_REGISTRATION(WifiControlImplementation, 1, 0);
+    SERVICE_REGISTRATION(WifiControlImplementation, 1, 0)
 } // namespace Plugin
 } // namespace WPEFramework
