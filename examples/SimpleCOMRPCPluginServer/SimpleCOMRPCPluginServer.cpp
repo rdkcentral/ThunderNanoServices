@@ -27,7 +27,7 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SimpleCOMRPCPluginServer, 1, 0);
+    SERVICE_REGISTRATION(SimpleCOMRPCPluginServer, 1, 0)
 
     //IPlugin
     const string SimpleCOMRPCPluginServer::Initialize(PluginHost::IShell* service)  /* override */

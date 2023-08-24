@@ -24,7 +24,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(VolumeControlImplementation, 1, 0);
+    SERVICE_REGISTRATION(VolumeControlImplementation, 1, 0)
 
     VolumeControlImplementation::VolumeControlImplementation()
         : _adminLock{}

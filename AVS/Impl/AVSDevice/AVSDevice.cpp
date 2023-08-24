@@ -67,7 +67,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(AVSDevice, 1, 0);
+    SERVICE_REGISTRATION(AVSDevice, 1, 0)
 
     using namespace alexaClientSDK;
 

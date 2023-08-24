@@ -691,7 +691,7 @@ POP_WARNING()
         Core::WorkerPool::JobType<OutOfProcessImplementation&> _job;
     };
 
-    SERVICE_REGISTRATION(OutOfProcessImplementation, 1, 0);
+    SERVICE_REGISTRATION(OutOfProcessImplementation, 1, 0)
 
 } // namespace Plugin
 

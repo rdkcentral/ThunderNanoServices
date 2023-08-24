@@ -449,7 +449,7 @@ namespace Plugin {
         ClientDataContainer _clients;
     };
 
-    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
+    SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
 
 } // namespace Plugin
 } // namespace WPEFramework

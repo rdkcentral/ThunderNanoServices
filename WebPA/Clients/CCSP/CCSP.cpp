@@ -140,7 +140,7 @@ private:
 // The essence of making the IWebPAClient interface available. This instantiates
 // an object that can be created from the outside of the library by looking
 // for the CCSP class name, that realizes the IStateControl interface.
-SERVICE_REGISTRATION(CCSP, 1, 0);
+SERVICE_REGISTRATION(CCSP, 1, 0)
 
 uint32_t CCSP::Worker()
 {

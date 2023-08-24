@@ -1483,7 +1483,7 @@ POP_WARNING()
         std::vector<Exchange::INetworkControl::INotification*> _notifications;
     };
 
-    SERVICE_REGISTRATION(NetworkControlImplementation, 1, 0);
+    SERVICE_REGISTRATION(NetworkControlImplementation, 1, 0)
 } // namespace Plugin
 } // namespace WPEFramework
 

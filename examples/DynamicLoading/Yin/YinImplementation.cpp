@@ -280,7 +280,7 @@ namespace Plugin {
         uint8_t _balance;
     }; // class YinImplementation
 
-    SERVICE_REGISTRATION(YinImplementation, 1, 0);
+    SERVICE_REGISTRATION(YinImplementation, 1, 0)
 
 } // namespace Plugin
 

@@ -144,6 +144,6 @@ namespace Plugin {
         ExternalAccess* _rpcLink;
     };
 
-    SERVICE_REGISTRATION(CryptographyImplementation, 1, 0);
+    SERVICE_REGISTRATION(CryptographyImplementation, 1, 0)
 }
 } /* namespace WPEFramework::Plugin */

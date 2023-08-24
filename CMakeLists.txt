@@ -18,6 +18,8 @@
 cmake_minimum_required(VERSION 3.3)
 project(NanoServices)
 
+find_package(WPEFramework)
+
 option(PLUGIN_AVS "Include AVS plugin" OFF)
 option(PLUGIN_BACKOFFICE "Include BackOffice plugin" OFF)
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
@@ -61,10 +63,28 @@ option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 
+if(ENABLE_STRICT_COMPILER_SETTINGS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(FATAL_ERROR "Compiling with Clang")
+        set(CMAKE_STRICT_COMPILER_SETTINGS "-Weverything -Wextra -Wpedantic -Werror")
+        set(CMAKE_STRICT_CXX_COMPILER_SETTINGS "${CMAKE_STRICT_COMPILER_SETTINGS} -Wnon-virtual-dtor")
+    elseif(${CMAKE_COMPILER_IS_GNUCXX})
+        message(STATUS "Compiling with GCC")
+        set(CMAKE_STRICT_COMPILER_SETTINGS "-Wall -Wextra -Wpedantic -Werror")
+        set(CMAKE_STRICT_CXX_COMPILER_SETTINGS "${CMAKE_STRICT_COMPILER_SETTINGS} -Wnon-virtual-dtor")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        message(STATUS "Compiling with MS Visual Studio")
+        set(CMAKE_STRICT_COMPILER_SETTINGS "/W4")
+    else()
+        message(STATUS "Compiler ${CMAKE_CXX_COMPILER_ID}")
+    endif()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_STRICT_CXX_COMPILER_SETTINGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_STRICT_COMPILER_SETTINGS}")
+endif()
+
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
-
 
 if(PLUGIN_AVS)
     add_subdirectory(AVS)

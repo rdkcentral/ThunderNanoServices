@@ -22,7 +22,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Doggo, 1, 0);
+    SERVICE_REGISTRATION(Doggo, 1, 0)
 
     const string Doggo::Initialize(PluginHost::IShell* service)
     {

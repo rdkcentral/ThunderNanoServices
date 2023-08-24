@@ -23,7 +23,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(LanguageAdministratorImpl, 1, 0);
+    SERVICE_REGISTRATION(LanguageAdministratorImpl, 1, 0)
 
     LanguageAdministratorImpl::LanguageAdministratorImpl()
         : _adminLock()

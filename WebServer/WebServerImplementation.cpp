@@ -786,7 +786,7 @@ POP_WARNING()
         std::list<PluginHost::IStateControl::INotification*> _observers;
     };
 
-    SERVICE_REGISTRATION(WebServerImplementation, 1, 0);
+    SERVICE_REGISTRATION(WebServerImplementation, 1, 0)
 
     /* virtual */ void WebServerImplementation::IncomingChannel::Received(Core::ProxyType<Web::Request>& request)
     {

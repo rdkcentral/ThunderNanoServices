@@ -901,7 +901,7 @@ POP_WARNING()
         NotificationSink _sink;
     };
 
-    SERVICE_REGISTRATION(SparkImplementation, 1, 0);
+    SERVICE_REGISTRATION(SparkImplementation, 1, 0)
 
 } /* namespace Plugin */
 

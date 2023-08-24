@@ -562,7 +562,7 @@ namespace Plugin {
 #endif
     };
 
-    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
+    SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
 
 } // namespace Plugin
 

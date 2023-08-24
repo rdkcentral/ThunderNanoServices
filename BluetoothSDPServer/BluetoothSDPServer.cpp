@@ -27,19 +27,19 @@ ENUM_CONVERSION_BEGIN(Plugin::BluetoothSDPServer::Config::ServiceConfig::service
     { Plugin::BluetoothSDPServer::Config::ServiceConfig::A2DP_AUDIO_SINK, _TXT("a2dp-audio-sink") },
     { Plugin::BluetoothSDPServer::Config::ServiceConfig::A2DP_AUDIO_SOURCE, _TXT("a2dp-audio-source") },
     { Plugin::BluetoothSDPServer::Config::ServiceConfig::AVRCP, _TXT("avrcp") },
-    ENUM_CONVERSION_END(Plugin::BluetoothSDPServer::Config::ServiceConfig::serviceclass);
+    ENUM_CONVERSION_END(Plugin::BluetoothSDPServer::Config::ServiceConfig::serviceclass)
 
 ENUM_CONVERSION_BEGIN(Plugin::BluetoothSDPServer::Config::A2DP::sourcetype) { Plugin::BluetoothSDPServer::Config::A2DP::PLAYER, _TXT("player") },
     { Plugin::BluetoothSDPServer::Config::A2DP::MICROPHONE, _TXT("microphone") },
     { Plugin::BluetoothSDPServer::Config::A2DP::MIXER, _TXT("mixer") },
     { Plugin::BluetoothSDPServer::Config::A2DP::TUNER, _TXT("tuner") },
-    ENUM_CONVERSION_END(Plugin::BluetoothSDPServer::Config::A2DP::sourcetype);
+    ENUM_CONVERSION_END(Plugin::BluetoothSDPServer::Config::A2DP::sourcetype)
 
 ENUM_CONVERSION_BEGIN(Plugin::BluetoothSDPServer::Config::A2DP::sinktype) { Plugin::BluetoothSDPServer::Config::A2DP::HEADPHONES, _TXT("headphones") },
     { Plugin::BluetoothSDPServer::Config::A2DP::SPEAKER, _TXT("speaker") },
     { Plugin::BluetoothSDPServer::Config::A2DP::RECORDER, _TXT("recorder") },
     { Plugin::BluetoothSDPServer::Config::A2DP::AMPLIFIER, _TXT("amplifier") },
-    ENUM_CONVERSION_END(Plugin::BluetoothSDPServer::Config::A2DP::sinktype);
+    ENUM_CONVERSION_END(Plugin::BluetoothSDPServer::Config::A2DP::sinktype)
 
 namespace Plugin {
 

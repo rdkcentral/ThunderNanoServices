@@ -67,6 +67,6 @@ namespace TestCore {
         uint32_t _shutdownTimeout;
     };
 
-    SERVICE_REGISTRATION(TestUtilityImp, 1, 0);
+    SERVICE_REGISTRATION(TestUtilityImp, 1, 0)
 } // namespace TestCore
 } // namespace WPEFramewor

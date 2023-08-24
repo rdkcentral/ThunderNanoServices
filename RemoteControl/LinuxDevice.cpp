@@ -824,5 +824,5 @@ ENUM_CONVERSION_BEGIN(Plugin::LinuxDevice::type)
     { Plugin::LinuxDevice::type::MOUSE, _TXT("MOUSE") },
     { Plugin::LinuxDevice::type::JOYSTICK, _TXT("JOYSTICK") },
     { Plugin::LinuxDevice::type::TOUCH, _TXT("TOUCH") },
-ENUM_CONVERSION_END(Plugin::LinuxDevice::type);
+ENUM_CONVERSION_END(Plugin::LinuxDevice::type)
 }

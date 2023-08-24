@@ -121,7 +121,7 @@ namespace Exchange {
     }
 
 
-    SERVICE_REGISTRATION(RemoteHostExampleImpl, 1, 0);
+    SERVICE_REGISTRATION(RemoteHostExampleImpl, 1, 0)
 }
 }
 

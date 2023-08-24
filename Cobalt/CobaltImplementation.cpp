@@ -654,7 +654,7 @@ private:
     PluginHost::IShell* _service;
 };
 
-SERVICE_REGISTRATION(CobaltImplementation, 1, 0);
+SERVICE_REGISTRATION(CobaltImplementation, 1, 0)
 
 }
 /* namespace Plugin */

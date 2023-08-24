@@ -23,7 +23,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(RemoteHostExample, 1, 0);
+    SERVICE_REGISTRATION(RemoteHostExample, 1, 0)
 
     const string RemoteHostExample::Initialize(PluginHost::IShell* service) 
     {

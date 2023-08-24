@@ -276,6 +276,6 @@ private:
 // The essence of making the IWebPAService interface available. This instantiates
 // an object that can be created from the outside of the library by looking
 // for the WebPAImplementation class name, that realizes the IStateControl interface.
-SERVICE_REGISTRATION(WebPAImplementation, 1, 0);
+SERVICE_REGISTRATION(WebPAImplementation, 1, 0)
 
 }
