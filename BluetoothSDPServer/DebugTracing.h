@@ -24,7 +24,7 @@ namespace WPEFramework {
 
 namespace Plugin {
 
-    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, Verbose);
+    DEFINE_MESSAGING_CATEGORY(Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, Verbose)
 
     template<typename FLOW>
     void Dump(const Bluetooth::SDP::Tree& tree)

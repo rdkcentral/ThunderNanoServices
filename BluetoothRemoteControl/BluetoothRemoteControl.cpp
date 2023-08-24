@@ -98,8 +98,8 @@ namespace Plugin {
 
     static const LUT<Exchange::IVoiceProducer::IProfile::codec, WAV::Recorder::codec> CodecTable({
 
-        { .from = Exchange::IVoiceProducer::IProfile::codec::PCM,   .to = WAV::Recorder::codec::PCM   },
-        { .from = Exchange::IVoiceProducer::IProfile::codec::ADPCM, .to = WAV::Recorder::codec::ADPCM }
+        { Exchange::IVoiceProducer::IProfile::codec::PCM,   WAV::Recorder::codec::PCM   },
+        { Exchange::IVoiceProducer::IProfile::codec::ADPCM, WAV::Recorder::codec::ADPCM }
 
     });
 
