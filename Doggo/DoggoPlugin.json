@@ -10,6 +10,6 @@
   },
   "interface": {
     "$cppref": "{cppinterfacedir}/IConfiguration.h",
-    "$cppref": "{cppinterfacedir}/IWatchdogControl.h"
+    "$cppref": "{cppinterfacedir}/IWatchDog.h"
   }
 }
