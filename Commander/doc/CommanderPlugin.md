@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A Commander plugin for Thunder framework.
+Commander plugin for Thunder framework.
 
 ### Table of Contents
 

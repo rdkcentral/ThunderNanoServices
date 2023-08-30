@@ -24,7 +24,7 @@ WifiControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the WifiControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the WifiControl plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -89,7 +89,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- Exchange::IWifiControl ([IWifiControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IWifiControl.h)) (version 1.0.0) (compliant format)
+- IWifiControl ([IWifiControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IWifiControl.h)) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -105,7 +105,6 @@ WifiControl interface methods:
 | [connect](#method.connect) | Connect device to requested SSID |
 | [disconnect](#method.disconnect) | Disconnect device from requested SSID |
 | [status](#method.status) | Status of current device, like which SSID is connected and it is in scanning state or not |
-
 
 <a name="method.scan"></a>
 ## *scan [<sup>method</sup>](#head.Methods)*
@@ -128,9 +127,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.scan"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.scan"
 }
 ```
 
@@ -138,9 +137,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -165,9 +164,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.abortscan"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.abortscan"
 }
 ```
 
@@ -175,9 +174,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -205,12 +204,12 @@ Connect device to requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.connect",
-    "params": {
-        "configssid": "TESTWIFI"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.connect",
+  "params": {
+    "configssid": "..."
+  }
 }
 ```
 
@@ -218,9 +217,9 @@ Connect device to requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -248,12 +247,12 @@ Disconnect device from requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.disconnect",
-    "params": {
-        "configssid": "TESTWIFI"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.disconnect",
+  "params": {
+    "configssid": "..."
+  }
 }
 ```
 
@@ -261,9 +260,9 @@ Disconnect device from requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -290,9 +289,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.status"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.status"
 }
 ```
 
@@ -300,12 +299,12 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "connectedssid": "TESTWIFI",
-        "isscanning": false
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "connectedssid": "...",
+    "isscanning": false
+  }
 }
 ```
 
@@ -322,7 +321,6 @@ WifiControl interface properties:
 | [securities](#property.securities) <sup>RO</sup> | Provides security method of requested SSID |
 | [configs](#property.configs) <sup>RO</sup> | Provides configs list |
 | [config](#property.config) | Provide config details for requested SSID |
-
 
 <a name="property.networks"></a>
 ## *networks [<sup>property</sup>](#head.Properties)*
@@ -352,9 +350,9 @@ Provides access to the provides available networks information.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.networks"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.networks"
 }
 ```
 
@@ -362,17 +360,19 @@ Provides access to the provides available networks information.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        {
-            "ssid": "TESTWIFI",
-            "bssid": 215985502509648,
-            "frequency": 5180,
-            "signal": 4294967272,
-            "security": ["WPA","WPA2","Enterprise"]
-        }
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "ssid": "...",
+      "bssid": 0,
+      "frequency": 0,
+      "signal": 0,
+      "security": [
+        "Open"
+      ]
+    }
+  ]
 }
 ```
 
@@ -403,9 +403,9 @@ Provides access to the provides security method of requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.securities@TESTWIFI"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.securities@xyz"
 }
 ```
 
@@ -413,16 +413,16 @@ Provides access to the provides security method of requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        {
-            "method": "WPA",
-            "keys": [
-                "PSK"
-            ]
-        }
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "method": "Open",
+      "keys": [
+        "PSK"
+      ]
+    }
+  ]
 }
 ```
 
@@ -448,9 +448,9 @@ Provides access to the provides configs list.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.configs"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.configs"
 }
 ```
 
@@ -458,11 +458,11 @@ Provides access to the provides configs list.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "..."
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "..."
+  ]
 }
 ```
 
@@ -506,9 +506,9 @@ Provides access to the provide config details for requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.config@TESTWIFI"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.config@xyz"
 }
 ```
 
@@ -516,17 +516,17 @@ Provides access to the provide config details for requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "hidden": false,
-        "accesspoint": false,
-        "ssid": "TESTWIFI",
-        "secret": "1234test",
-        "identity": "",
-        "method": "WPA",
-        "key": "PSK"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "hidden": false,
+    "accesspoint": false,
+    "ssid": "...",
+    "secret": "...",
+    "identity": "...",
+    "method": "Open",
+    "key": "PSK"
+  }
 }
 ```
 
@@ -534,20 +534,20 @@ Provides access to the provide config details for requested SSID.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "WifiControl.1.config@TESTWIFI",
-    "params": {
-        "value": {
-            "hidden": false,
-            "accesspoint": false,
-            "ssid": "TESTWIFI",
-            "secret": "1234test",
-            "identity": "",
-            "method": "WPA",
-            "key": "PSK"
-        }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.config@xyz",
+  "params": {
+    "value": {
+      "hidden": false,
+      "accesspoint": false,
+      "ssid": "...",
+      "secret": "...",
+      "identity": "...",
+      "method": "Open",
+      "key": "PSK"
     }
+  }
 }
 ```
 
@@ -564,7 +564,7 @@ Provides access to the provide config details for requested SSID.
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the WifiControl plugin:
 
@@ -574,7 +574,6 @@ WifiControl interface events:
 | :-------- | :-------- |
 | [networkchange](#event.networkchange) | Notifies that Network were added, removed or modified |
 | [connectionchange](#event.connectionchange) | Notifies that wifi connection changes |
-
 
 <a name="event.networkchange"></a>
 ## *networkchange [<sup>event</sup>](#head.Notifications)*
@@ -589,8 +588,8 @@ This event carries no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.networkchange"
+  "jsonrpc": "2.0",
+  "method": "client.events.1.networkchange"
 }
 ```
 
@@ -610,11 +609,11 @@ Notifies that wifi connection changes.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.connectionchange",
-    "params": {
-        "ssid": "TESTWIFI"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.connectionchange",
+  "params": {
+    "ssid": "..."
+  }
 }
 ```
 

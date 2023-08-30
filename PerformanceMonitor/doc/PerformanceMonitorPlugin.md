@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A PerformanceMonitor plugin for Thunder framework.
+PerformanceMonitor plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -82,7 +82,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [PerformanceMonitor.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/PerformanceMonitor.json)
+- [PerformanceMonitor.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/PerformanceMonitor.json) (version 1.0.0) (uncompliant-collapsed format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -97,7 +97,6 @@ PerformanceMonitor interface methods:
 | [send](#method.send) | Interface to test send data |
 | [receive](#method.receive) | Interface to test receive data |
 | [exchange](#method.exchange) | Interface to test exchange data |
-
 
 <a name="method.clear"></a>
 ## *clear [<sup>method</sup>](#head.Methods)*
@@ -120,9 +119,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "PerformanceMonitor.1.clear"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.clear"
 }
 ```
 
@@ -130,9 +129,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -162,14 +161,14 @@ Interface to test send data.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "PerformanceMonitor.1.send",
-    "params": {
-        "data": "abababababab",
-        "length": 0,
-        "duration": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.send",
+  "params": {
+    "data": "abababababab",
+    "length": 0,
+    "duration": 0
+  }
 }
 ```
 
@@ -177,9 +176,9 @@ Interface to test send data.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 0
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
 }
 ```
 
@@ -209,10 +208,10 @@ Interface to test receive data.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "PerformanceMonitor.1.receive",
-    "params": 0
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.receive",
+  "params": 0
 }
 ```
 
@@ -220,13 +219,13 @@ Interface to test receive data.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "data": "abababababab",
-        "length": 0,
-        "duration": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "data": "abababababab",
+    "length": 0,
+    "duration": 0
+  }
 }
 ```
 
@@ -259,14 +258,14 @@ Interface to test exchange data.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "PerformanceMonitor.1.exchange",
-    "params": {
-        "data": "abababababab",
-        "length": 0,
-        "duration": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.exchange",
+  "params": {
+    "data": "abababababab",
+    "length": 0,
+    "duration": 0
+  }
 }
 ```
 
@@ -274,13 +273,13 @@ Interface to test exchange data.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "data": "abababababab",
-        "length": 0,
-        "duration": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "data": "abababababab",
+    "length": 0,
+    "duration": 0
+  }
 }
 ```
 
@@ -294,7 +293,6 @@ PerformanceMonitor interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [measurement](#property.measurement) <sup>RO</sup> | Retrieve the performance measurement against given package size |
-
 
 <a name="property.measurement"></a>
 ## *measurement [<sup>property</sup>](#head.Properties)*
@@ -353,9 +351,9 @@ Provides access to the retrieve the performance measurement against given packag
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "PerformanceMonitor.1.measurement@1000"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.measurement@1000"
 }
 ```
 
@@ -363,46 +361,9 @@ Provides access to the retrieve the performance measurement against given packag
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "serialization": {
-            "minimum": 0,
-            "maximum": 0,
-            "average": 0,
-            "count": 0
-        },
-        "deserialization": {
-            "minimum": 0,
-            "maximum": 0,
-            "average": 0,
-            "count": 0
-        },
-        "execution": {
-            "minimum": 0,
-            "maximum": 0,
-            "average": 0,
-            "count": 0
-        },
-        "threadpool": {
-            "minimum": 0,
-            "maximum": 0,
-            "average": 0,
-            "count": 0
-        },
-        "communication": {
-            "minimum": 0,
-            "maximum": 0,
-            "average": 0,
-            "count": 0
-        },
-        "total": {
-            "minimum": 0,
-            "maximum": 0,
-            "average": 0,
-            "count": 0
-        }
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 

@@ -24,14 +24,12 @@ BluetoothControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the BluetoothControl plugin. It includes detailed specification about its configuration,
-         methods and properties as well as sent notifications.
+This document describes purpose and functionality of the BluetoothControl plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties,
-         relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -49,8 +47,7 @@ The table below provides and overview of terms and abbreviations used in this do
 
 | Term | Description |
 | :-------- | :-------- |
-| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times,
-         but each instance the instance name, callsign, must be unique. |
+| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
 <a name="head.References"></a>
 ## References
@@ -165,16 +162,15 @@ Also see: [discoverablestarted](#event.discoverablestarted), [discoverablecomple
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.setdiscoverable",
-    "params": {
-        "type": "LowEnergy",
-        
-        "mode": "General",
-        "connectable": false,
-        "duration": 30
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.setdiscoverable",
+  "params": {
+    "type": "LowEnergy",
+    "mode": "General",
+    "connectable": false,
+    "duration": 30
+  }
 }
 ```
 
@@ -182,9 +178,9 @@ Also see: [discoverablestarted](#event.discoverablestarted), [discoverablecomple
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -221,12 +217,12 @@ Also see: [discoverablecomplete](#event.discoverablecomplete)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.stopdiscoverable",
-    "params": {
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.stopdiscoverable",
+  "params": {
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -234,9 +230,9 @@ Also see: [discoverablecomplete](#event.discoverablecomplete)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -276,15 +272,14 @@ Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.scan",
-    "params": {
-        "type": "LowEnergy",
-        "mode": "General",
-        
-        "duration": 60
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.scan",
+  "params": {
+    "type": "LowEnergy",
+    "mode": "General",
+    "duration": 60
+  }
 }
 ```
 
@@ -292,9 +287,9 @@ Also see: [scanstarted](#event.scanstarted), [scancomplete](#event.scancomplete)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -331,12 +326,12 @@ Also see: [scancomplete](#event.scancomplete)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.stopscanning",
-    "params": {
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.stopscanning",
+  "params": {
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -344,9 +339,9 @@ Also see: [scancomplete](#event.scancomplete)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -391,14 +386,13 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.connect",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.connect",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -406,9 +400,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -451,14 +445,13 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.disconnect",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.disconnect",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -466,9 +459,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -481,8 +474,7 @@ Pairs a Bluetooth device.
 
 PIN-code or passkey requests may appear during the pairing process. The process can be cancelled any time by calling the *abortpairing* method.
 
-Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event.pincoderequest), [passkeyrequest](#event.passkeyrequest),
-         [passkeyconfirmrequest](#event.passkeyconfirmrequest)
+Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event.pincoderequest), [passkeyrequest](#event.passkeyrequest), [passkeyconfirmrequest](#event.passkeyconfirmrequest)
 
 ### Parameters
 
@@ -491,8 +483,7 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 | params | object |  |
 | params.address | string | Bluetooth address |
 | params?.type | string | <sup>*(optional)*</sup> Device type (must be one of the following: *Classic*, *LowEnergy*, *LowEnergyRandom*) (default: *LowEnergy*) |
-| params?.capabilities | string | <sup>*(optional)*</sup> Pairing capabilities (must be one of the following: *DisplayOnly*, *DisplayYesNo*, *KeyboardOnly*,
-         *NoInputNoOutput*, *KeyboardDisplay*) (default: *NoInputNoOutput*) |
+| params?.capabilities | string | <sup>*(optional)*</sup> Pairing capabilities (must be one of the following: *DisplayOnly*, *DisplayYesNo*, *KeyboardOnly*, *NoInputNoOutput*, *KeyboardDisplay*) (default: *NoInputNoOutput*) |
 | params?.timeout | integer | <sup>*(optional)*</sup> Maximum time allowed for the pairing process to complete (in seconds) (default: *20*) |
 
 ### Result
@@ -515,16 +506,15 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.pair",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy",
-        "capabilities": "NoInputNoOutput",
-        "timeout": 60
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.pair",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy",
+    "capabilities": "NoInputNoOutput",
+    "timeout": 60
+  }
 }
 ```
 
@@ -532,9 +522,9 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -572,14 +562,13 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.unpair",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.unpair",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -587,9 +576,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -627,14 +616,13 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.abortpairing",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.abortpairing",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -642,9 +630,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -687,15 +675,14 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.providepincode",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "Classic",
-        "secret": "0000"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.providepincode",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic",
+    "secret": "0000"
+  }
 }
 ```
 
@@ -703,9 +690,9 @@ Also see: [devicestatechange](#event.devicestatechange), [pincoderequest](#event
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -748,15 +735,14 @@ Also see: [devicestatechange](#event.devicestatechange), [passkeyrequest](#event
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.providepasskey",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "Classic",
-        "secret": 123456
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.providepasskey",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic",
+    "secret": 123456
+  }
 }
 ```
 
@@ -764,9 +750,9 @@ Also see: [devicestatechange](#event.devicestatechange), [passkeyrequest](#event
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -809,15 +795,14 @@ Also see: [devicestatechange](#event.devicestatechange), [passkeyconfirmrequest]
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.confirmpasskey",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "Classic",
-        "iscorrect": true
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.confirmpasskey",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic",
+    "iscorrect": true
+  }
 }
 ```
 
@@ -825,9 +810,9 @@ Also see: [devicestatechange](#event.devicestatechange), [passkeyconfirmrequest]
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -868,14 +853,13 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.forget",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.forget",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -883,9 +867,9 @@ Also see: [devicestatechange](#event.devicestatechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -913,9 +897,9 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.getdevicelist"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.getdevicelist"
 }
 ```
 
@@ -923,14 +907,14 @@ This method takes no parameters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        {
-            "address": "81:6F:B0:91:9B:FE",
-            "type": "LowEnergy"
-        }
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "address": "81:6F:B0:91:9B:FE",
+      "type": "LowEnergy"
+    }
+  ]
 }
 ```
 
@@ -974,14 +958,13 @@ Retrieves detailed information about a known Bluetooth device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.getdeviceinfo",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.getdeviceinfo",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -989,22 +972,20 @@ Retrieves detailed information about a known Bluetooth device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "address": "81:6F:B0:91:9B:FE",
-        "type": "Classic",
-        
-        "name": "Thunder Bluetooth Speaker",
-        "class": 2360324,
-        "appearance": 2113,
-        "services": [
-            "110a"
-        ],
-        "connected": true,
-        
-        "paired": true
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic",
+    "name": "Thunder Bluetooth Speaker",
+    "class": 2360324,
+    "appearance": 2113,
+    "services": [
+      "110a"
+    ],
+    "connected": true,
+    "paired": true
+  }
 }
 ```
 
@@ -1044,9 +1025,9 @@ Provides access to the list of local Bluetooth adapters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.adapters"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.adapters"
 }
 ```
 
@@ -1054,11 +1035,11 @@ Provides access to the list of local Bluetooth adapters.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        0
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    0
+  ]
 }
 ```
 
@@ -1100,9 +1081,9 @@ Provides access to the local Bluetooth adapter information.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.adapter@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.adapter@0"
 }
 ```
 
@@ -1110,21 +1091,19 @@ Provides access to the local Bluetooth adapter information.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "id": 0,
-        "interface": "hci0",
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "Dual",
-        "version": 8,
-        "manufacturer": 15,
-        "class": 1060,
-        "name": "Thunder Bluetooth Controller",
-        
-        "shortname": "Thunder"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "id": 0,
+    "interface": "hci0",
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Dual",
+    "version": 8,
+    "manufacturer": 15,
+    "class": 1060,
+    "name": "Thunder Bluetooth Controller",
+    "shortname": "Thunder"
+  }
 }
 ```
 
@@ -1152,9 +1131,9 @@ Provides access to the list of known remote Bluetooth devices.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.devices"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.devices"
 }
 ```
 
@@ -1162,11 +1141,11 @@ Provides access to the list of known remote Bluetooth devices.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "81:6F:B0:91:9B:FE"
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "81:6F:B0:91:9B:FE"
+  ]
 }
 ```
 
@@ -1210,9 +1189,9 @@ Provides access to the remote Bluetooth device information.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "BluetoothControl.1.device@81:6F:B0:91:9B:FE"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.device@81:6F:B0:91:9B:FE"
 }
 ```
 
@@ -1220,22 +1199,20 @@ Provides access to the remote Bluetooth device information.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "address": "81:6F:B0:91:9B:FE",
-        "type": "Classic",
-        
-        "name": "Thunder Bluetooth Speaker",
-        "class": 2360324,
-        "appearance": 2113,
-        "services": [
-            "110a"
-        ],
-        "connected": true,
-        
-        "paired": true
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic",
+    "name": "Thunder Bluetooth Speaker",
+    "class": 2360324,
+    "appearance": 2113,
+    "services": [
+      "110a"
+    ],
+    "connected": true,
+    "paired": true
+  }
 }
 ```
 
@@ -1283,14 +1260,13 @@ Register to this event to be notified about entering the discoverable state
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.discoverablestarted",
-    "params": {
-        "type": "LowEnergy",
-        "mode": "General",
-        
-        "connectable": false
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.discoverablestarted",
+  "params": {
+    "type": "LowEnergy",
+    "mode": "General",
+    "connectable": false
+  }
 }
 ```
 
@@ -1314,11 +1290,11 @@ Register to this event to be notified about leaving the discoverable state
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.discoverablecomplete",
-    "params": {
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.discoverablecomplete",
+  "params": {
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -1345,12 +1321,12 @@ Register to this event to be notified about device scan start
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.scanstarted",
-    "params": {
-        "type": "LowEnergy",
-        "mode": "General"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.scanstarted",
+  "params": {
+    "type": "LowEnergy",
+    "mode": "General"
+  }
 }
 ```
 
@@ -1374,11 +1350,11 @@ Register to this event to be notified about device scan completion
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.scancomplete",
-    "params": {
-        "type": "LowEnergy"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.scancomplete",
+  "params": {
+    "type": "LowEnergy"
+  }
 }
 ```
 
@@ -1409,15 +1385,14 @@ Register to this event to be notified about device state changes
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "LowEnergy.client.events.1.devicestatechange",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "LowEnergy",
-        "state": "Disconnected",
-        "disconnectreason": "ConnectionTimeout"
-    }
+  "jsonrpc": "2.0",
+  "method": "LowEnergy.client.events.1.devicestatechange",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "LowEnergy",
+    "state": "Disconnected",
+    "disconnectreason": "ConnectionTimeout"
+  }
 }
 ```
 
@@ -1442,13 +1417,12 @@ Register to this event to be notified about PIN code requests during a legacy pa
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.pincoderequest",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "Classic"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.pincoderequest",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic"
+  }
 }
 ```
 
@@ -1473,13 +1447,12 @@ Register to this event to be notified about passkey requests that may be require
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.passkeyrequest",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "Classic"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.passkeyrequest",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic"
+  }
 }
 ```
 
@@ -1505,14 +1478,13 @@ Register to this event to be notified about passkey confirmation requests that m
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.passkeyconfirmrequest",
-    "params": {
-        "address": "81:6F:B0:91:9B:FE",
-        
-        "type": "Classic",
-        "secret": 123456
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.passkeyconfirmrequest",
+  "params": {
+    "address": "81:6F:B0:91:9B:FE",
+    "type": "Classic",
+    "secret": 123456
+  }
 }
 ```
 

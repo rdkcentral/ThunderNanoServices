@@ -25,8 +25,7 @@ This document describes purpose and functionality of the BluetoothSDPServer plug
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties,
-         relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -45,8 +44,7 @@ The table below provides and overview of terms and abbreviations used in this do
 
 | Term | Description |
 | :-------- | :-------- |
-| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times,
-         but each instance the instance name, callsign, must be unique. |
+| <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
 <a name="head.References"></a>
 ## References
@@ -81,8 +79,7 @@ The table below lists configuration options of the plugin.
 | configuration?.provider | string | <sup>*(optional)*</sup> Name of the service provider (e.g. device manufacturer) |
 | configuration?.services | array | <sup>*(optional)*</sup>  |
 | configuration?.services[#] | object | <sup>*(optional)*</sup> Service settings |
-| configuration?.services[#]?.class | string | <sup>*(optional)*</sup> Class of the Bluetooth service (must be one of the following: *a2dp-audio-sink*,
-         *a2dp-audio-source*) |
+| configuration?.services[#]?.class | string | <sup>*(optional)*</sup> Class of the Bluetooth service (must be one of the following: *a2dp-audio-sink*, *a2dp-audio-source*) |
 | configuration?.services[#].callsign | string | Callsign of the service providing the functionality |
 | configuration?.services[#]?.name | string | <sup>*(optional)*</sup> Name of the service advertised over SDP |
 | configuration?.services[#]?.description | string | <sup>*(optional)*</sup> Description of the service advertised over SDP |

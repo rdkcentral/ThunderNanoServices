@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A Spark plugin for Thunder framework.
+Spark plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -24,7 +24,7 @@ A Spark plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Spark plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the Spark plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -85,9 +85,9 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [Spark.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Spark.json)
-- [Browser.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Browser.json)
-- [StateControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/StateControl.json)
+- [Spark.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Spark.json) (version 1.0.0) (uncompliant-extended format)
+- [Browser.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Browser.json) (version 1.0.0) (uncompliant-extended format)
+- [StateControl.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/StateControl.json) (version 1.0.0) (uncompliant-extended format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -99,7 +99,6 @@ Browser interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [delete](#method.delete) | Removes contents of a directory from the persistent storage |
-
 
 <a name="method.delete"></a>
 ## *delete [<sup>method</sup>](#head.Methods)*
@@ -135,12 +134,12 @@ Use this method to recursively delete contents of a directory
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.delete",
-    "params": {
-        "path": ".cache/wpe/disk-cache"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.delete",
+  "params": {
+    "path": ".cache/wpe/disk-cache"
+  }
 }
 ```
 
@@ -148,9 +147,9 @@ Use this method to recursively delete contents of a directory
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -173,7 +172,6 @@ StateControl interface properties:
 | :-------- | :-------- |
 | [state](#property.state) | Running state of the service |
 
-
 <a name="property.url"></a>
 ## *url [<sup>property</sup>](#head.Properties)*
 
@@ -187,6 +185,12 @@ Also see: [urlchange](#event.urlchange)
 | :-------- | :-------- | :-------- |
 | (property) | string | URL loaded in the browser |
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | string |  |
+
 ### Errors
 
 | Code | Message | Description |
@@ -199,9 +203,9 @@ Also see: [urlchange](#event.urlchange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.url"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.url"
 }
 ```
 
@@ -209,9 +213,9 @@ Also see: [urlchange](#event.urlchange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "https://www.google.com"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "https://www.google.com"
 }
 ```
 
@@ -219,10 +223,10 @@ Also see: [urlchange](#event.urlchange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.url",
-    "params": "https://www.google.com"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.url",
+  "params": "https://www.google.com"
 }
 ```
 
@@ -249,6 +253,12 @@ Also see: [visibilitychange](#event.visibilitychange)
 | :-------- | :-------- | :-------- |
 | (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | string |  (must be one of the following: *visible*, *hidden*) |
+
 ### Errors
 
 | Code | Message | Description |
@@ -261,9 +271,9 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.visibility"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.visibility"
 }
 ```
 
@@ -271,9 +281,9 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "visible"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "visible"
 }
 ```
 
@@ -281,10 +291,10 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.visibility",
-    "params": "visible"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.visibility",
+  "params": "visible"
 }
 ```
 
@@ -307,9 +317,11 @@ Provides access to the current number of frames per second the browser is render
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | number | Current number of frames per second the browser is rendering |
+| result | number | Current number of frames per second the browser is rendering |
 
 ### Example
 
@@ -317,9 +329,9 @@ Provides access to the current number of frames per second the browser is render
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.fps"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.fps"
 }
 ```
 
@@ -327,9 +339,9 @@ Provides access to the current number of frames per second the browser is render
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 30
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 30
 }
 ```
 
@@ -346,15 +358,21 @@ Also see: [statechange](#event.statechange)
 | :-------- | :-------- | :-------- |
 | (property) | string | Running state of the service (must be one of the following: *resumed*, *suspended*) |
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | string |  (must be one of the following: *resumed*, *suspended*) |
+
 ### Example
 
 #### Get Request
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.state"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.state"
 }
 ```
 
@@ -362,9 +380,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "resumed"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "resumed"
 }
 ```
 
@@ -372,10 +390,10 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Spark.1.state",
-    "params": "resumed"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Spark.1.state",
+  "params": "resumed"
 }
 ```
 
@@ -392,7 +410,7 @@ Also see: [statechange](#event.statechange)
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Spark plugin:
 
@@ -408,7 +426,6 @@ StateControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [statechange](#event.statechange) | Signals a state change of the service |
-
 
 <a name="event.urlchange"></a>
 ## *urlchange [<sup>event</sup>](#head.Notifications)*
@@ -427,12 +444,12 @@ Signals a URL change in the browser.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.urlchange",
-    "params": {
-        "url": "https://www.google.com",
-        "loaded": false
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.urlchange",
+  "params": {
+    "url": "https://www.google.com",
+    "loaded": false
+  }
 }
 ```
 
@@ -452,11 +469,11 @@ Signals a visibility change of the browser.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.visibilitychange",
-    "params": {
-        "hidden": false
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.visibilitychange",
+  "params": {
+    "hidden": false
+  }
 }
 ```
 
@@ -476,11 +493,11 @@ Signals a state change of the service.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.statechange",
-    "params": {
-        "suspended": false
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.statechange",
+  "params": {
+    "suspended": false
+  }
 }
 ```
 

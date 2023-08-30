@@ -1,12 +1,12 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.FileTransfer_Plugin"></a>
-# FileTransfer Plugin
+<a name="head.BackOffice_Plugin"></a>
+# BackOffice Plugin
 
 **Version: 1.0**
 
-**Status: :black_circle::white_circle::white_circle:**
+**Status: :white_circle::white_circle::white_circle:**
 
-FileTransfer plugin for Thunder framework.
+BackOffice plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -20,7 +20,7 @@ FileTransfer plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the FileTransfer plugin. It includes detailed specification about its configuration.
+This document describes purpose and functionality of the BackOffice plugin. It includes detailed specification about its configuration.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -58,7 +58,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The FileTransfer plugin provides web browsing functionality based on the FileTransfer engine.
+The BackOffice plugin responsible for monitoring lifecycle of observables and passing this info to the server.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -69,11 +69,18 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *FileTransfer*) |
-| classname | string | Class name: *FileTransfer* |
-| locator | string | Library name: *libWPEFrameworkFileTransfer.so* |
+| callsign | string | Plugin instance name (default: *BackOffice*) |
+| classname | string | Class name: *BackOffice* |
+| locator | string | Library name: *libWPEFrameworkBackOffice.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.port | number | <sup>*(optional)*</sup> Port number (default: 2201) |
-| configuration?.fullfile | boolean | <sup>*(optional)*</sup> If value failse update at the end of the file (default: false) |
+| configuration | object |  |
+| configuration.server_address | string | Back office server address |
+| configuration.server_port | number | Back office server port |
+| configuration.customer | string | Customer name |
+| configuration.platform | string | Platform name |
+| configuration.country | string | Country code |
+| configuration?.type | string | <sup>*(optional)*</sup> Type |
+| configuration?.session | number | <sup>*(optional)*</sup> session number |
+| configuration.callsign_mapping | string | Mapping on how to map callsigns to server accepted names |
+| configuration.state_mapping | string | Mapping on how to map state to server accepted states |
 

@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A WebPA plugin for Thunder framework.
+WebPA plugin for Thunder framework.
 
 ### Table of Contents
 
