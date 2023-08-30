@@ -6,7 +6,7 @@
 
 **Status: :white_circle::white_circle::white_circle:**
 
-A Containers plugin for Thunder framework.
+Containers plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -82,7 +82,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [Containers.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Containers.json)
+- [Containers.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Containers.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -95,7 +95,6 @@ Containers interface methods:
 | :-------- | :-------- |
 | [start](#method.start) | Starts a new container |
 | [stop](#method.stop) | Stops a container |
-
 
 <a name="method.start"></a>
 ## *start [<sup>method</sup>](#head.Methods)*
@@ -131,16 +130,16 @@ Starts a new container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Containers.1.start",
-    "params": {
-        "name": "ContainerName",
-        "command": "lsof",
-        "parameters": [
-            "-i"
-        ]
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Containers.1.start",
+  "params": {
+    "name": "ContainerName",
+    "command": "lsof",
+    "parameters": [
+      "-i"
+    ]
+  }
 }
 ```
 
@@ -148,9 +147,9 @@ Starts a new container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -184,12 +183,12 @@ Stops a container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Containers.1.stop",
-    "params": {
-        "name": "ContainerName"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Containers.1.stop",
+  "params": {
+    "name": "ContainerName"
+  }
 }
 ```
 
@@ -197,9 +196,9 @@ Stops a container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -217,7 +216,6 @@ Containers interface properties:
 | [memory](#property.memory) <sup>RO</sup> | Memory taken by container |
 | [cpu](#property.cpu) <sup>RO</sup> | CPU time |
 
-
 <a name="property.containers"></a>
 ## *containers [<sup>property</sup>](#head.Properties)*
 
@@ -227,10 +225,12 @@ Provides access to the list of active containers.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of names of all containers |
-| (property)[#] | string |  |
+| result | array | List of names of all containers |
+| result[#] | string |  |
 
 ### Example
 
@@ -238,9 +238,9 @@ Provides access to the list of active containers.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Containers.1.containers"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Containers.1.containers"
 }
 ```
 
@@ -248,11 +248,11 @@ Provides access to the list of active containers.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "ContainerName"
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "ContainerName"
+  ]
 }
 ```
 
@@ -265,15 +265,17 @@ Provides access to the list of network interfaces of the container.
 
 ### Value
 
+> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.networks@ContainerName*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of all network interfaces related to the container |
-| (property)[#] | object | Returns networks associated with the container |
-| (property)[#]?.interface | string | <sup>*(optional)*</sup> Interface name |
-| (property)[#]?.ips | array | <sup>*(optional)*</sup> List of ip addresses |
-| (property)[#]?.ips[#] | string | <sup>*(optional)*</sup> IP address |
-
-> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.networks@ContainerName*.
+| result | array | List of all network interfaces related to the container |
+| result[#] | object | Returns networks associated with the container |
+| result[#]?.interface | string | <sup>*(optional)*</sup> Interface name |
+| result[#]?.ips | array | <sup>*(optional)*</sup> List of ip addresses |
+| result[#]?.ips[#] | string | <sup>*(optional)*</sup> IP address |
 
 ### Errors
 
@@ -287,9 +289,9 @@ Provides access to the list of network interfaces of the container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Containers.1.networks@ContainerName"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Containers.1.networks@ContainerName"
 }
 ```
 
@@ -297,16 +299,16 @@ Provides access to the list of network interfaces of the container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        {
-            "interface": "veth3NF06K",
-            "ips": [
-                "192.168.0.12"
-            ]
-        }
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "interface": "veth3NF06K",
+      "ips": [
+        "192.168.0.12"
+      ]
+    }
+  ]
 }
 ```
 
@@ -319,14 +321,16 @@ Provides access to the memory taken by container.
 
 ### Value
 
+> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.memory@ContainerName*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Memory allocated by the container, in bytes |
-| (property)?.allocated | number | <sup>*(optional)*</sup> Memory allocated by container |
-| (property)?.resident | number | <sup>*(optional)*</sup> Resident memory of the container |
-| (property)?.shared | number | <sup>*(optional)*</sup> Shared memory in the container |
-
-> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.memory@ContainerName*.
+| result | object | Memory allocated by the container, in bytes |
+| result?.allocated | number | <sup>*(optional)*</sup> Memory allocated by container |
+| result?.resident | number | <sup>*(optional)*</sup> Resident memory of the container |
+| result?.shared | number | <sup>*(optional)*</sup> Shared memory in the container |
 
 ### Errors
 
@@ -340,9 +344,9 @@ Provides access to the memory taken by container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Containers.1.memory@ContainerName"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Containers.1.memory@ContainerName"
 }
 ```
 
@@ -350,13 +354,13 @@ Provides access to the memory taken by container.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "allocated": 0,
-        "resident": 0,
-        "shared": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "allocated": 0,
+    "resident": 0,
+    "shared": 0
+  }
 }
 ```
 
@@ -369,14 +373,16 @@ Provides access to the CPU time.
 
 ### Value
 
+> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.cpu@ContainerName*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | CPU time spent on running the container, in nanoseconds |
-| (property)?.total | number | <sup>*(optional)*</sup> CPU-time spent on container, in nanoseconds |
-| (property)?.cores | array | <sup>*(optional)*</sup> Time spent on each cpu core, in nanoseconds |
-| (property)?.cores[#] | number | <sup>*(optional)*</sup>  |
-
-> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.cpu@ContainerName*.
+| result | object | CPU time spent on running the container, in nanoseconds |
+| result?.total | number | <sup>*(optional)*</sup> CPU-time spent on container, in nanoseconds |
+| result?.cores | array | <sup>*(optional)*</sup> Time spent on each cpu core, in nanoseconds |
+| result?.cores[#] | number | <sup>*(optional)*</sup>  |
 
 ### Errors
 
@@ -390,9 +396,9 @@ Provides access to the CPU time.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Containers.1.cpu@ContainerName"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Containers.1.cpu@ContainerName"
 }
 ```
 
@@ -400,14 +406,14 @@ Provides access to the CPU time.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "total": 2871287421,
-        "cores": [
-            2871287421
-        ]
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "total": 2871287421,
+    "cores": [
+      2871287421
+    ]
+  }
 }
 ```
 

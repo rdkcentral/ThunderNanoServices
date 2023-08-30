@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-A IOConnector plugin for Thunder framework.
+IOConnector plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -88,7 +88,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [IOConnector.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/IOConnector.json)
+- [IOConnector.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/IOConnector.json) (version 1.0.0) (uncompliant-extended format)
 
 <a name="head.Properties"></a>
 # Properties
@@ -100,7 +100,6 @@ IOConnector interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [pin](#property.pin) | GPIO pin value |
-
 
 <a name="property.pin"></a>
 ## *pin [<sup>property</sup>](#head.Properties)*
@@ -117,6 +116,12 @@ Also see: [activity](#event.activity)
 
 > The *pin id* argument shall be passed as the index to the property, e.g. *IOConnector.1.pin@189*.
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | number |  |
+
 ### Errors
 
 | Code | Message | Description |
@@ -129,9 +134,9 @@ Also see: [activity](#event.activity)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "IOConnector.1.pin@189"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "IOConnector.1.pin@189"
 }
 ```
 
@@ -139,9 +144,9 @@ Also see: [activity](#event.activity)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 1
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 1
 }
 ```
 
@@ -149,10 +154,10 @@ Also see: [activity](#event.activity)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "IOConnector.1.pin@189",
-    "params": 1
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "IOConnector.1.pin@189",
+  "params": 1
 }
 ```
 
@@ -169,7 +174,7 @@ Also see: [activity](#event.activity)
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the IOConnector plugin:
 
@@ -178,7 +183,6 @@ IOConnector interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [activity](#event.activity) | Notifies about GPIO pin activity |
-
 
 <a name="event.activity"></a>
 ## *activity [<sup>event</sup>](#head.Notifications)*
@@ -202,11 +206,11 @@ Register to this event to be notified about pin value changes
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "189.client.events.1.activity",
-    "params": {
-        "value": 1
-    }
+  "jsonrpc": "2.0",
+  "method": "189.client.events.1.activity",
+  "params": {
+    "value": 1
+  }
 }
 ```
 

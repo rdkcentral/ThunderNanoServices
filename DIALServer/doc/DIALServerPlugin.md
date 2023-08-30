@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-A DIALServer plugin for Thunder framework.
+DIALServer plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -107,7 +107,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [DIALServer.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/DIALServer.json)
+- [DIALServer.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/DIALServer.json) (version 1.0.0) (uncompliant-extended format)
 
 <a name="head.Properties"></a>
 # Properties
@@ -119,7 +119,6 @@ DIALServer interface properties:
 | Property | Description |
 | :-------- | :-------- |
 | [state](#property.state) | Current application running state |
-
 
 <a name="property.state"></a>
 ## *state [<sup>property</sup>](#head.Properties)*
@@ -138,6 +137,12 @@ This property can be used to update the running status of an un-managed applicat
 
 > The *application name* argument shall be passed as the index to the property, e.g. *DIALServer.1.state@YouTube*.
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | string |  (must be one of the following: *Stopped*, *Started*, *Hidden*) |
+
 ### Errors
 
 | Code | Message | Description |
@@ -151,9 +156,9 @@ This property can be used to update the running status of an un-managed applicat
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "DIALServer.1.state@YouTube"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DIALServer.1.state@YouTube"
 }
 ```
 
@@ -161,9 +166,9 @@ This property can be used to update the running status of an un-managed applicat
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "Stopped"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "Stopped"
 }
 ```
 
@@ -171,10 +176,10 @@ This property can be used to update the running status of an un-managed applicat
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "DIALServer.1.state@YouTube",
-    "params": "Stopped"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DIALServer.1.state@YouTube",
+  "params": "Stopped"
 }
 ```
 
@@ -191,7 +196,7 @@ This property can be used to update the running status of an un-managed applicat
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the DIALServer plugin:
 
@@ -202,9 +207,8 @@ DIALServer interface events:
 | [start](#event.start) | Signals that application launch (or show if previously hidden) was requested over DIAL |
 | [stop](#event.stop) | Signals that application stop was requested over DIAL |
 | [hide](#event.hide) | Signals that application hide was requested over DIAL |
-| [show](#event.show) | Signals that application show was requested over DIAL |
-| [change](#event.change) | Signals that application URL change was requested over DIAL |
-
+| <sup>deprecated</sup> [show](#event.show) | Signals that application show was requested over DIAL |
+| <sup>deprecated</sup> [change](#event.change) | Signals that application URL change was requested over DIAL |
 
 <a name="event.start"></a>
 ## *start [<sup>event</sup>](#head.Notifications)*
@@ -228,13 +232,13 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.start",
-    "params": {
-        "application": "YouTube",
-        "parameters": "watch?v=zpp045FBbQY",
-        "payload": "..."
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.start",
+  "params": {
+    "application": "YouTube",
+    "parameters": "watch?v=zpp045FBbQY",
+    "payload": "..."
+  }
 }
 ```
 
@@ -259,12 +263,12 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.stop",
-    "params": {
-        "application": "YouTube",
-        "parameters": "watch?v=zpp045FBbQY"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.stop",
+  "params": {
+    "application": "YouTube",
+    "parameters": "watch?v=zpp045FBbQY"
+  }
 }
 ```
 
@@ -288,11 +292,11 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.hide",
-    "params": {
-        "application": "YouTube"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.hide",
+  "params": {
+    "application": "YouTube"
+  }
 }
 ```
 
@@ -318,11 +322,11 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.show",
-    "params": {
-        "application": "YouTube"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.show",
+  "params": {
+    "application": "YouTube"
+  }
 }
 ```
 
@@ -348,11 +352,11 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.change",
-    "params": {
-        "application": "YouTube"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.change",
+  "params": {
+    "application": "YouTube"
+  }
 }
 ```
 

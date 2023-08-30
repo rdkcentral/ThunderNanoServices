@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-A SubsystemControl plugin for Thunder framework.
+SubsystemControl plugin for Thunder framework.
 
 ### Table of Contents
 

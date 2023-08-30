@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-A ProcessMonitor plugin for Thunder framework.
+ProcessMonitor plugin for Thunder framework.
 
 ### Table of Contents
 

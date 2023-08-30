@@ -1,18 +1,20 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.BackOffice_plugin"></a>
-# BackOffice plugin
+<a name="head.Doggo_Plugin"></a>
+# Doggo Plugin
 
 **Version: 1.0**
 
-**Status: :white_circle::white_circle::white_circle:**
+**Status: :black_circle::black_circle::white_circle:**
 
-A BackOffice plugin for Thunder framework.
+Doggo plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
+- [Methods](#head.Methods)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -20,7 +22,7 @@ A BackOffice plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the BackOffice plugin. It includes detailed specification about its configuration.
+This document describes purpose and functionality of the Doggo plugin. It includes detailed specification about its configuration and methods provided.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -58,7 +60,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The BackOffice plugin responsible for monitoring lifecycle of observables and passing this info to the server.
+The watchdog control plugin allows control a build-in kernel watchdog.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -69,18 +71,69 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *BackOffice*) |
-| classname | string | Class name: *BackOffice* |
-| locator | string | Library name: *libWPEFrameworkBackOffice.so* |
+| callsign | string | Plugin instance name (default: *Doggo*) |
+| classname | string | Class name: *Doggo* |
+| locator | string | Library name: *libWPEDoggo.so* |
 | autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object |  |
-| configuration.server_address | string | Back office server address |
-| configuration.server_port | number | Back office server port |
-| configuration.customer | string | Customer name |
-| configuration.platform | string | Platform name |
-| configuration.country | string | Country code |
-| configuration?.type | string | <sup>*(optional)*</sup> Type |
-| configuration?.session | number | <sup>*(optional)*</sup> session number |
-| configuration.callsign_mapping | string | Mapping on how to map callsigns to server accepted names |
-| configuration.state_mapping | string | Mapping on how to map state to server accepted states |
+
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- IWatchDog ([IWatchDog.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IWatchDog.h)) (version 1.0.0) (compliant format)
+
+<a name="head.Methods"></a>
+# Methods
+
+The following methods are provided by the Doggo plugin:
+
+WatchDog interface methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [touch](#method.touch) | Touch the watchdog as a sign of life |
+
+<a name="method.touch"></a>
+## *touch [<sup>method</sup>](#head.Methods)*
+
+Touch the watchdog as a sign of life.
+
+### Parameters
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| params | object |  |
+| params.callsign | string | In case a specific watchdog needs to be padded pass |
+
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | null | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Doggo.1.touch",
+  "params": {
+    "callsign": "..."
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
 

@@ -1,7 +1,7 @@
 {
   "$schema": "plugin.schema.json",
   "info": {
-    "title": "Watchdog Control Plugin",
+    "title": "Doggo Plugin",
     "callsign": "Doggo",
     "locator": "libWPEDoggo.so",
     "status": "beta",

@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A ResourceMonitor plugin for Thunder framework.
+ResourceMonitor plugin for Thunder framework.
 
 ### Table of Contents
 

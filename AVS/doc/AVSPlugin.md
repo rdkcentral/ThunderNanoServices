@@ -1,6 +1,6 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.The_Alexa_Voice_Service_Headless_Client"></a>
-# The Alexa Voice Service Headless Client
+<a name="head.AVS_Plugin"></a>
+# AVS Plugin
 
 **Version: 1.0**
 
@@ -13,6 +13,7 @@ AVS plugin for Thunder framework.
 - [Introduction](#head.Introduction)
 - [Description](#head.Description)
 - [Configuration](#head.Configuration)
+- [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Notifications](#head.Notifications)
 
@@ -22,12 +23,12 @@ AVS plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the AVS plugin. It includes detailed specification of its configuration, methods provided and notifications sent.
+This document describes purpose and functionality of the AVS plugin. It includes detailed specification about its configuration, methods provided and notifications sent.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
 <a name="head.Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
@@ -60,7 +61,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a name="head.Description"></a>
 # Description
 
-The Alexa Voice Service Headless Client serves as a personal assistant
+The Alexa Voice Service Headless Client serves as a personal assistant.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -74,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *AVS*) |
 | classname | string | Class name: *AVS* |
 | locator | string | Library name: *libWPEFrameworkAVS.so* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration.alexaclientconfig | string | The path to the AlexaClientSDKConfig.json (e.g /usr/share/WPEFramework/AVS/AlexaClientSDKConfig.json) |
 | configuration?.smartscreenconfig | string | <sup>*(optional)*</sup> The path to the SmartScreenSDKConfig.json (e.g /usr/share/WPEFramework/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled |
@@ -83,6 +84,13 @@ The table below lists configuration options of the plugin.
 | configuration.audiosource | string | The callsign of the plugin that provides the voice audio input or PORTAUDIO, when the portaudio library should be used. (e.g BluetoothRemoteControll, PORTAUDIO) |
 | configuration?.enablesmartscreen | boolean | <sup>*(optional)*</sup> Enable the SmartScreen support in the runtime. The SmartScreen functionality must be compiled in |
 | configuration?.enablekwd | boolean | <sup>*(optional)*</sup> Enable the Keyword Detection engine in the runtime. The KWD functionality must be compiled in |
+
+<a name="head.Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- IAVSController ([IAVSClient.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IAVSClient.h)) (version 1.0.0) (uncompliant-collapsed format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -93,20 +101,19 @@ AVSController interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [Mute](#method.Mute) | Mutes both AVS_SPEAKER_VOLUME and AVS_ALERTS_VOLUME |
-| [Record](#method.Record) | Starts or stops the voice recording, skipping keyword detection |
+| [mute](#method.mute) | Mutes the audio output of AVS |
+| [record](#method.record) | Starts or stops the voice recording, skipping keyword detection |
 
 <a name="method.mute"></a>
-## *mute <sup>method</sup>*
+## *mute [<sup>method</sup>](#head.Methods)*
 
-Mutes both AVS_SPEAKER_VOLUME and AVS_ALERTS_VOLUME.
+Mutes the audio output of AVS.
 
 ### Parameters
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | object |  |
-| params.mute | boolean | Mute or umute |
+| muted | boolean |  |
 
 ### Result
 
@@ -119,7 +126,6 @@ Mutes both AVS_SPEAKER_VOLUME and AVS_ALERTS_VOLUME.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 |  | ```ERROR_GENERAL``` | when there is a fatal error or authorisation is not possible |
-|  | ```ERROR_UNAVAILABLE``` | when the AVSController is unavailable |
 
 ### Example
 
@@ -127,25 +133,25 @@ Mutes both AVS_SPEAKER_VOLUME and AVS_ALERTS_VOLUME.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "AVS.1.mute",
-    "params": {
-        "mute": true
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "AVS.1.mute",
+  "params": false
 }
 ```
+
 #### Response
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
+
 <a name="method.record"></a>
-## *record <sup>method</sup>*
+## *record [<sup>method</sup>](#head.Methods)*
 
 Starts or stops the voice recording, skipping keyword detection.
 
@@ -153,8 +159,7 @@ Starts or stops the voice recording, skipping keyword detection.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | object |  |
-| params.start | boolean | Start or stop voice recording |
+| started | boolean |  |
 
 ### Result
 
@@ -167,7 +172,6 @@ Starts or stops the voice recording, skipping keyword detection.
 | Code | Message | Description |
 | :-------- | :-------- | :-------- |
 |  | ```ERROR_GENERAL``` | when there is a fatal error or authorisation is not possible |
-|  | ```ERROR_UNAVAILABLE``` | when the AVSController is unavailable |
 
 ### Example
 
@@ -175,27 +179,27 @@ Starts or stops the voice recording, skipping keyword detection.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "AVS.1.record",
-    "params": {
-        "start": true
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "AVS.1.record",
+  "params": false
 }
 ```
+
 #### Response
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
+
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers.Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the AVS plugin:
 
@@ -203,10 +207,10 @@ AVSController interface events:
 
 | Event | Description |
 | :-------- | :-------- |
-| [DialogueStateChange](#event.DialogueStateChange) | notifies about dialogue state changes |
+| [dialoguestatechange](#event.dialoguestatechange) | notifies about dialogue state changes |
 
 <a name="event.dialoguestatechange"></a>
-## *dialoguestatechange <sup>event</sup>*
+## *dialoguestatechange [<sup>event</sup>](#head.Notifications)*
 
 notifies about dialogue state changes.
 
@@ -214,17 +218,15 @@ notifies about dialogue state changes.
 
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| params | object |  |
-| params.state | string | The new state (must be one of the following: *IDLE*, *LISTENING*, *EXPECTING*, *THINKING*, *SPEAKING*) |
+| state | string | The new state (must be one of the following: *Idle*, *Listening*, *Expecting*, *Thinking*, *Speaking*) |
 
 ### Example
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.dialoguestatechange",
-    "params": {
-        "state": "SPEAKING"
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.dialoguestatechange",
+  "params": "SPEAKING"
 }
 ```
+

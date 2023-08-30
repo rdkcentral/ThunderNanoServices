@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A Power plugin for Thunder framework.
+Power plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -81,7 +81,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [Power.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Power.json)
+- [Power.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Power.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -93,7 +93,6 @@ Power interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [set](#method.set) | Sets power state |
-
 
 <a name="method.set"></a>
 ## *set [<sup>method</sup>](#head.Methods)*
@@ -129,13 +128,13 @@ Sets power state.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Power.1.set",
-    "params": {
-        "powerstate": "on",
-        "timeout": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Power.1.set",
+  "params": {
+    "powerstate": "on",
+    "timeout": 0
+  }
 }
 ```
 
@@ -143,9 +142,9 @@ Sets power state.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -160,7 +159,6 @@ Power interface properties:
 | :-------- | :-------- |
 | [state](#property.state) <sup>RO</sup> | Power state |
 
-
 <a name="property.state"></a>
 ## *state [<sup>property</sup>](#head.Properties)*
 
@@ -170,9 +168,11 @@ Provides access to the power state.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Power state (must be one of the following: *on*, *activestandby*, *passivestandby*, *suspendtoram*, *hibernate*, *poweroff*) |
+| result | string | Power state (must be one of the following: *on*, *activestandby*, *passivestandby*, *suspendtoram*, *hibernate*, *poweroff*) |
 
 ### Example
 
@@ -180,9 +180,9 @@ Provides access to the power state.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Power.1.state"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Power.1.state"
 }
 ```
 
@@ -190,9 +190,9 @@ Provides access to the power state.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "on"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "on"
 }
 ```
 

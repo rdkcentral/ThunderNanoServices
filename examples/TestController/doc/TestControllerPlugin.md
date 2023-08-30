@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A TestController plugin for Thunder framework.
+TestController plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -82,7 +82,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [TestController.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/TestController.json)
+- [TestController.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/TestController.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -94,7 +94,6 @@ TestController interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [run](#method.run) | Runs a single test or multiple tests |
-
 
 <a name="method.run"></a>
 ## *run [<sup>method</sup>](#head.Methods)*
@@ -132,14 +131,14 @@ Runs a single test or multiple tests.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "TestController.1.run",
-    "params": {
-        "category": "JSONRPC",
-        "test": "JSONRPCTest",
-        "args": "{ }"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestController.1.run",
+  "params": {
+    "category": "JSONRPC",
+    "test": "JSONRPCTest",
+    "args": "{ }"
+  }
 }
 ```
 
@@ -147,14 +146,14 @@ Runs a single test or multiple tests.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        {
-            "test": "JSONRPCTest",
-            "status": "Success"
-        }
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "test": "JSONRPCTest",
+      "status": "Success"
+    }
+  ]
 }
 ```
 
@@ -171,7 +170,6 @@ TestController interface properties:
 | [tests](#property.tests) <sup>RO</sup> | List of tests for a category |
 | [description](#property.description) <sup>RO</sup> | Description of a test |
 
-
 <a name="property.categories"></a>
 ## *categories [<sup>property</sup>](#head.Properties)*
 
@@ -181,10 +179,12 @@ Provides access to the list of test categories.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of test categories |
-| (property)[#] | string | Test category name |
+| result | array | List of test categories |
+| result[#] | string | Test category name |
 
 ### Example
 
@@ -192,9 +192,9 @@ Provides access to the list of test categories.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "TestController.1.categories"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestController.1.categories"
 }
 ```
 
@@ -202,11 +202,11 @@ Provides access to the list of test categories.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "JSONRPC"
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "JSONRPC"
+  ]
 }
 ```
 
@@ -219,12 +219,14 @@ Provides access to the list of tests for a category.
 
 ### Value
 
+> The *category* argument shall be passed as the index to the property, e.g. *TestController.1.tests@JSONRPC*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of tests for a category |
-| (property)[#] | string | Test name |
-
-> The *category* argument shall be passed as the index to the property, e.g. *TestController.1.tests@JSONRPC*.
+| result | array | List of tests for a category |
+| result[#] | string | Test name |
 
 ### Errors
 
@@ -239,9 +241,9 @@ Provides access to the list of tests for a category.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "TestController.1.tests@JSONRPC"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestController.1.tests@JSONRPC"
 }
 ```
 
@@ -249,11 +251,11 @@ Provides access to the list of tests for a category.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "JSONRPCTest"
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "JSONRPCTest"
+  ]
 }
 ```
 
@@ -266,12 +268,14 @@ Provides access to the description of a test.
 
 ### Value
 
+> The *test* argument shall be passed as the index to the property, e.g. *TestController.1.description@JSONRPC*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Description of a test |
-| (property).description | string | Test description |
-
-> The *test* argument shall be passed as the index to the property, e.g. *TestController.1.description@JSONRPC*.
+| result | object | Description of a test |
+| result.description | string | Test description |
 
 ### Errors
 
@@ -286,9 +290,9 @@ Provides access to the description of a test.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "TestController.1.description@JSONRPC"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestController.1.description@JSONRPC"
 }
 ```
 
@@ -296,11 +300,11 @@ Provides access to the description of a test.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "description": "Tests JSONRPC functionality"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "description": "Tests JSONRPC functionality"
+  }
 }
 ```
 

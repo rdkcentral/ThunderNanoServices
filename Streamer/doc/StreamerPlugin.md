@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A Streamer plugin for Thunder framework.
+Streamer plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -24,7 +24,7 @@ A Streamer plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Streamer plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the Streamer plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -83,7 +83,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [Streamer.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/Streamer.json)
+- [Streamer.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Streamer.json) (version 1.0.0) (uncompliant-extended format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -99,7 +99,6 @@ Streamer interface methods:
 | [load](#method.load) | Loads a source into a stream |
 | [attach](#method.attach) | Attaches a decoder to the streamer |
 | [detach](#method.detach) | Detaches a decoder from the streamer |
-
 
 <a name="method.create"></a>
 ## *create [<sup>method</sup>](#head.Methods)*
@@ -132,12 +131,12 @@ Creates a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.create",
-    "params": {
-        "type": "cable"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.create",
+  "params": {
+    "type": "cable"
+  }
 }
 ```
 
@@ -145,9 +144,9 @@ Creates a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 0
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
 }
 ```
 
@@ -181,12 +180,12 @@ Destroys a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.destroy",
-    "params": {
-        "id": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.destroy",
+  "params": {
+    "id": 0
+  }
 }
 ```
 
@@ -194,9 +193,9 @@ Destroys a stream instance.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -236,13 +235,13 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.load",
-    "params": {
-        "id": 0,
-        "location": "http://example.com/sample.m3u8"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.load",
+  "params": {
+    "id": 0,
+    "location": "http://example.com/sample.m3u8"
+  }
 }
 ```
 
@@ -250,9 +249,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -289,12 +288,12 @@ Attaches a decoder to the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.attach",
-    "params": {
-        "id": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.attach",
+  "params": {
+    "id": 0
+  }
 }
 ```
 
@@ -302,9 +301,9 @@ Attaches a decoder to the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -340,12 +339,12 @@ Detaches a decoder from the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.detach",
-    "params": {
-        "id": 0
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.detach",
+  "params": {
+    "id": 0
+  }
 }
 ```
 
@@ -353,9 +352,9 @@ Detaches a decoder from the streamer.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -380,7 +379,6 @@ Streamer interface properties:
 | [error](#property.error) <sup>RO</sup> | Most recent error code |
 | [elements](#property.elements) <sup>RO</sup> | Stream elements |
 
-
 <a name="property.speed"></a>
 ## *speed [<sup>property</sup>](#head.Properties)*
 
@@ -400,6 +398,12 @@ Also see: [statechange](#event.statechange)
 
 > The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | number | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
+
 ### Errors
 
 | Code | Message | Description |
@@ -413,9 +417,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.speed@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.speed@0"
 }
 ```
 
@@ -423,9 +427,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 100
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 100
 }
 ```
 
@@ -433,10 +437,10 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.speed@0",
-    "params": 100
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.speed@0",
+  "params": 100
 }
 ```
 
@@ -463,6 +467,12 @@ Provides access to the stream position.
 
 > The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | number | Position (in milliseconds) |
+
 ### Errors
 
 | Code | Message | Description |
@@ -476,9 +486,9 @@ Provides access to the stream position.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.position@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.position@0"
 }
 ```
 
@@ -486,9 +496,9 @@ Provides access to the stream position.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 60000
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 60000
 }
 ```
 
@@ -496,10 +506,10 @@ Provides access to the stream position.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.position@0",
-    "params": 60000
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.position@0",
+  "params": 60000
 }
 ```
 
@@ -530,6 +540,16 @@ Provides access to the stream playback window.
 
 > The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
 
+### Result
+
+| Name | Type | Description |
+| :-------- | :-------- | :-------- |
+| result | object | Geometry of the window |
+| result.x | number | Horizontal position of the window (in pixels) |
+| result.y | number | Vertical position of the window (in pixels) |
+| result.width | number | Width of the window (in pixels) |
+| result.height | number | Height of the window (in pixels) |
+
 ### Errors
 
 | Code | Message | Description |
@@ -543,9 +563,9 @@ Provides access to the stream playback window.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.window@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.window@0"
 }
 ```
 
@@ -553,14 +573,14 @@ Provides access to the stream playback window.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "x": 0,
-        "y": 0,
-        "width": 1080,
-        "height": 720
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 720
+  }
 }
 ```
 
@@ -568,15 +588,15 @@ Provides access to the stream playback window.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.window@0",
-    "params": {
-        "x": 0,
-        "y": 0,
-        "width": 1080,
-        "height": 720
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.window@0",
+  "params": {
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 720
+  }
 }
 ```
 
@@ -599,12 +619,14 @@ Provides access to the speeds supported by the stream player.
 
 ### Value
 
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | Supported speeds (in percentage) |
-| (property)[#] | integer | (speeds in percentage) |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
+| result | array | Supported speeds (in percentage) |
+| result[#] | integer | (speeds in percentage) |
 
 ### Errors
 
@@ -619,9 +641,9 @@ Provides access to the speeds supported by the stream player.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.speeds@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.speeds@0"
 }
 ```
 
@@ -629,17 +651,17 @@ Provides access to the speeds supported by the stream player.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        0,
-        100,
-        -100,
-        200,
-        -200,
-        400,
-        -400
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    0,
+    100,
+    -100,
+    200,
+    -200,
+    400,
+    -400
+  ]
 }
 ```
 
@@ -652,10 +674,12 @@ Provides access to the all created stream instance IDs.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | Stream IDs |
-| (property)[#] | number | (a stream ID) |
+| result | array | Stream IDs |
+| result[#] | number | (a stream ID) |
 
 ### Example
 
@@ -663,9 +687,9 @@ Provides access to the all created stream instance IDs.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.streams"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.streams"
 }
 ```
 
@@ -673,14 +697,14 @@ Provides access to the all created stream instance IDs.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        0,
-        1,
-        2,
-        3
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    0,
+    1,
+    2,
+    3
+  ]
 }
 ```
 
@@ -693,11 +717,13 @@ Provides access to the type of a stream.
 
 ### Value
 
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
+| result | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
 
 ### Errors
 
@@ -711,9 +737,9 @@ Provides access to the type of a stream.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.type@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.type@0"
 }
 ```
 
@@ -721,9 +747,9 @@ Provides access to the type of a stream.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "cable"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "cable"
 }
 ```
 
@@ -738,11 +764,13 @@ Also see: [drmchange](#event.drmchange)
 
 ### Value
 
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | DRM used (must be one of the following: *none*, *clearkey*, *playready*, *widevine*, *unknown*) |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
+| result | string | DRM used (must be one of the following: *none*, *clearkey*, *playready*, *widevine*, *unknown*) |
 
 ### Errors
 
@@ -756,9 +784,9 @@ Also see: [drmchange](#event.drmchange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.drm@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.drm@0"
 }
 ```
 
@@ -766,9 +794,9 @@ Also see: [drmchange](#event.drmchange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "clearkey"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "clearkey"
 }
 ```
 
@@ -783,11 +811,13 @@ Also see: [statechange](#event.statechange)
 
 ### Value
 
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
+| result | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
 
 ### Errors
 
@@ -801,9 +831,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.state@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.state@0"
 }
 ```
 
@@ -811,9 +841,9 @@ Also see: [statechange](#event.statechange)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "controlled"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "controlled"
 }
 ```
 
@@ -826,11 +856,13 @@ Provides access to the metadata associated with the stream.
 
 ### Value
 
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.metadata@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Custom implementation-specific metadata |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.metadata@0*.
+| result | string | Custom implementation-specific metadata |
 
 ### Errors
 
@@ -844,9 +876,9 @@ Provides access to the metadata associated with the stream.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.metadata@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.metadata@0"
 }
 ```
 
@@ -854,9 +886,9 @@ Provides access to the metadata associated with the stream.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "..."
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "..."
 }
 ```
 
@@ -869,11 +901,13 @@ Provides access to the most recent error code.
 
 ### Value
 
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.error@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | number | Custom implementation-specific error code value |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.error@0*.
+| result | number | Custom implementation-specific error code value |
 
 ### Errors
 
@@ -887,9 +921,9 @@ Provides access to the most recent error code.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.error@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.error@0"
 }
 ```
 
@@ -897,9 +931,9 @@ Provides access to the most recent error code.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 0
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
 }
 ```
 
@@ -912,13 +946,15 @@ Provides access to the stream elements.
 
 ### Value
 
+> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.elements@0*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of stream elements |
-| (property)[#] | object | Stream element |
-| (property)[#].type | string | Stream element type (must be one of the following: *video*, *audio*, *subtitles*, *teletext*, *data*) |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.elements@0*.
+| result | array | List of stream elements |
+| result[#] | object | Stream element |
+| result[#].type | string | Stream element type (must be one of the following: *video*, *audio*, *subtitles*, *teletext*, *data*) |
 
 ### Errors
 
@@ -933,9 +969,9 @@ Provides access to the stream elements.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Streamer.1.elements@0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Streamer.1.elements@0"
 }
 ```
 
@@ -943,20 +979,20 @@ Provides access to the stream elements.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        {
-            "type": "video"
-        }
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "type": "video"
+    }
+  ]
 }
 ```
 
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Streamer plugin:
 
@@ -969,7 +1005,6 @@ Streamer interface events:
 | [stream](#event.stream) | Notifies of a custom stream incident |
 | [player](#event.player) | Notifies of a custom player incident |
 | [drm](#event.drm) | Notifies of a custom DRM-related incident |
-
 
 <a name="event.statechange"></a>
 ## *statechange [<sup>event</sup>](#head.Notifications)*
@@ -989,11 +1024,11 @@ Notifies of stream state change.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "0.client.events.1.statechange",
-    "params": {
-        "state": "controlled"
-    }
+  "jsonrpc": "2.0",
+  "method": "0.client.events.1.statechange",
+  "params": {
+    "state": "controlled"
+  }
 }
 ```
 
@@ -1015,11 +1050,11 @@ Notifies of stream position change. This event is fired every second to indicate
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "0.client.events.1.timeupdate",
-    "params": {
-        "time": 30000
-    }
+  "jsonrpc": "2.0",
+  "method": "0.client.events.1.timeupdate",
+  "params": {
+    "time": 30000
+  }
 }
 ```
 
@@ -1041,11 +1076,11 @@ Notifies of a custom stream incident.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "0.client.events.1.stream",
-    "params": {
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "method": "0.client.events.1.stream",
+  "params": {
+    "code": 1
+  }
 }
 ```
 
@@ -1067,11 +1102,11 @@ Notifies of a custom player incident.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "0.client.events.1.player",
-    "params": {
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "method": "0.client.events.1.player",
+  "params": {
+    "code": 1
+  }
 }
 ```
 
@@ -1093,11 +1128,11 @@ Notifies of a custom DRM-related incident.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "0.client.events.1.drm",
-    "params": {
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "method": "0.client.events.1.drm",
+  "params": {
+    "code": 1
+  }
 }
 ```
 

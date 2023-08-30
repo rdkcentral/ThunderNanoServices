@@ -2,7 +2,7 @@
   "$schema": "plugin.schema.json",
   "info": {
     "class": "AVS",
-    "title": "The Alexa Voice Service Headless Client",
+    "title": "AVS Plugin",
     "callsign": "AVS",
     "locator": "libWPEFrameworkAVS.so",
     "status": "alpha",

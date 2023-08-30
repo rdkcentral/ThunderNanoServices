@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-A RemoteControl plugin for Thunder framework.
+RemoteControl plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -24,7 +24,7 @@ A RemoteControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -106,7 +106,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [RemoteControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/RemoteControl.json)
+- [RemoteControl.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/RemoteControl.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -128,7 +128,6 @@ RemoteControl interface methods:
 | [save](#method.save) | Saves the device's key map into persistent path |
 | [pair](#method.pair) | Activates pairing mode of a device |
 | [unpair](#method.unpair) | Unpairs a device |
-
 
 <a name="method.key"></a>
 ## *key [<sup>method</sup>](#head.Methods)*
@@ -167,13 +166,13 @@ Gets key code details.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.key",
-    "params": {
-        "device": "DevInput",
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.key",
+  "params": {
+    "device": "DevInput",
+    "code": 1
+  }
 }
 ```
 
@@ -181,15 +180,15 @@ Gets key code details.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "code": 1,
-        "key": 103,
-        "modifiers": [
-            "leftshift"
-        ]
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "code": 1,
+    "key": 103,
+    "modifiers": [
+      "leftshift"
+    ]
+  }
 }
 ```
 
@@ -228,13 +227,13 @@ Sends a key to a device (press and release).
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.send",
-    "params": {
-        "device": "DevInput",
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.send",
+  "params": {
+    "device": "DevInput",
+    "code": 1
+  }
 }
 ```
 
@@ -242,9 +241,9 @@ Sends a key to a device (press and release).
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -282,13 +281,13 @@ Presses a key on a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.press",
-    "params": {
-        "device": "DevInput",
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.press",
+  "params": {
+    "device": "DevInput",
+    "code": 1
+  }
 }
 ```
 
@@ -296,9 +295,9 @@ Presses a key on a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -337,13 +336,13 @@ Releases a key on a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.release",
-    "params": {
-        "device": "DevInput",
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.release",
+  "params": {
+    "device": "DevInput",
+    "code": 1
+  }
 }
 ```
 
@@ -351,9 +350,9 @@ Releases a key on a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -393,17 +392,17 @@ Adds a key code to the key map.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.add",
-    "params": {
-        "device": "DevInput",
-        "code": 1,
-        "key": 103,
-        "modifiers": [
-            "leftshift"
-        ]
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.add",
+  "params": {
+    "device": "DevInput",
+    "code": 1,
+    "key": 103,
+    "modifiers": [
+      "leftshift"
+    ]
+  }
 }
 ```
 
@@ -411,9 +410,9 @@ Adds a key code to the key map.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -453,17 +452,17 @@ Modifies a key code in the key map.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.modify",
-    "params": {
-        "device": "DevInput",
-        "code": 1,
-        "key": 103,
-        "modifiers": [
-            "leftshift"
-        ]
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.modify",
+  "params": {
+    "device": "DevInput",
+    "code": 1,
+    "key": 103,
+    "modifiers": [
+      "leftshift"
+    ]
+  }
 }
 ```
 
@@ -471,9 +470,9 @@ Modifies a key code in the key map.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -510,13 +509,13 @@ Deletes a key code from the key map.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.delete",
-    "params": {
-        "device": "DevInput",
-        "code": 1
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.delete",
+  "params": {
+    "device": "DevInput",
+    "code": 1
+  }
 }
 ```
 
@@ -524,9 +523,9 @@ Deletes a key code from the key map.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -564,12 +563,12 @@ Re-loads the device's key map from persistent memory.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.load",
-    "params": {
-        "device": "DevInput"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.load",
+  "params": {
+    "device": "DevInput"
+  }
 }
 ```
 
@@ -577,9 +576,9 @@ Re-loads the device's key map from persistent memory.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -616,12 +615,12 @@ Saves the device's key map into persistent path.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.save",
-    "params": {
-        "device": "DevInput"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.save",
+  "params": {
+    "device": "DevInput"
+  }
 }
 ```
 
@@ -629,9 +628,9 @@ Saves the device's key map into persistent path.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -667,12 +666,12 @@ Activates pairing mode of a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.pair",
-    "params": {
-        "device": "DevInput"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.pair",
+  "params": {
+    "device": "DevInput"
+  }
 }
 ```
 
@@ -680,9 +679,9 @@ Activates pairing mode of a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -719,13 +718,13 @@ Unpairs a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.unpair",
-    "params": {
-        "device": "DevInput",
-        "bindid": "id"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.unpair",
+  "params": {
+    "device": "DevInput",
+    "bindid": "id"
+  }
 }
 ```
 
@@ -733,9 +732,9 @@ Unpairs a device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -751,7 +750,6 @@ RemoteControl interface properties:
 | [devices](#property.devices) <sup>RO</sup> | Names of all available devices |
 | [device](#property.device) <sup>RO</sup> | Metadata of a specific device |
 
-
 <a name="property.devices"></a>
 ## *devices [<sup>property</sup>](#head.Properties)*
 
@@ -761,10 +759,12 @@ Provides access to the names of all available devices.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | Names of all available devices |
-| (property)[#] | string | Device name |
+| result | array | Names of all available devices |
+| result[#] | string | Device name |
 
 ### Example
 
@@ -772,9 +772,9 @@ Provides access to the names of all available devices.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.devices"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.devices"
 }
 ```
 
@@ -782,11 +782,11 @@ Provides access to the names of all available devices.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
-        "Web"
-    ]
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "Web"
+  ]
 }
 ```
 
@@ -799,12 +799,14 @@ Provides access to the metadata of a specific device.
 
 ### Value
 
+> The *device* argument shall be passed as the index to the property, e.g. *RemoteControl.1.device@DevInput*.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | object | Metadata of a specific device |
-| (property).metadata | string | Device metadata |
-
-> The *device* argument shall be passed as the index to the property, e.g. *RemoteControl.1.device@DevInput*.
+| result | object | Metadata of a specific device |
+| result.metadata | string | Device metadata |
 
 ### Errors
 
@@ -820,9 +822,9 @@ Provides access to the metadata of a specific device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "RemoteControl.1.device@DevInput"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.device@DevInput"
 }
 ```
 
@@ -830,18 +832,18 @@ Provides access to the metadata of a specific device.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": {
-        "metadata": "It is based on protocol A"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "metadata": "It is based on protocol A"
+  }
 }
 ```
 
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the RemoteControl plugin:
 
@@ -850,7 +852,6 @@ RemoteControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [keypressed](#event.keypressed) | Notifies of a key press/release action |
-
 
 <a name="event.keypressed"></a>
 ## *keypressed [<sup>event</sup>](#head.Notifications)*
@@ -870,11 +871,11 @@ Notifies of a key press/release action.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "42.client.events.1.keypressed",
-    "params": {
-        "pressed": false
-    }
+  "jsonrpc": "2.0",
+  "method": "42.client.events.1.keypressed",
+  "params": {
+    "pressed": false
+  }
 }
 ```
 

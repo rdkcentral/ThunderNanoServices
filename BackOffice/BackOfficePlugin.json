@@ -1,7 +1,7 @@
 {
     "$schema": "plugin.schema.json",
     "info": {
-        "title": "BackOffice plugin",
+        "title": "BackOffice Plugin",
         "callsign": "BackOffice",
         "locator": "libWPEFrameworkBackOffice.so",
         "status": "development",
