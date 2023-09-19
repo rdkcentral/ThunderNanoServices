@@ -72,6 +72,7 @@ POP_WARNING()
 
         BEGIN_INTERFACE_MAP(Svalbard)
             INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_AGGREGATE(Exchange::IDeviceObjects, _svalbard)
         END_INTERFACE_MAP
 
     public:
