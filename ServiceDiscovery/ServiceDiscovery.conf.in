@@ -1,0 +1,21 @@
+autostart = "@SERVICE_DISCOVERY_AUTOSTART@"
+
+configuration = JSON()
+
+configuration.add("port", "@SERVICE_DISCOVERY_PORT@")
+configuration.add("binding", "0.0.0.0")
+
+service_list = []
+
+if boolean("@PLUGIN_WEBSERVER@"):
+    service = JSON()
+
+    service.add("name", "http")
+    service.add("protocol", "tcp")
+    service.add("port", "@PLUGIN_WEBSERVER_PORT@")
+
+    service_list.append(service)
+
+
+if service_list:
+    configuration.add("services", service_list)

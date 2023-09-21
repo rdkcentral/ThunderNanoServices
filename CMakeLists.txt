@@ -47,6 +47,7 @@ option(PLUGIN_REMOTECONTROL "Include RemoteControl plugin" OFF)
 option(PLUGIN_RESOURCEMONITOR "Include ResourceMonitor plugin" OFF)
 option(PLUGIN_RUSTBRIDGE "Include RustBridge plugin" OFF)
 option(PLUGIN_SECURESHELLSERVER "Include SecureShellServer plugin" OFF)
+option(PLUGIN_SERVICEDISCOVERY "Include a mDNS Plugin" OFF)
 option(PLUGIN_STREAMER "Include Streamer plugin" OFF)
 option(PLUGIN_SNAPSHOT "Include Snapshot plugin" OFF)
 option(PLUGIN_SPARK "Include SparkEngine plugin" OFF)
@@ -196,6 +197,10 @@ endif()
 
 if(PLUGIN_SECURESHELLSERVER)
     add_subdirectory(SecureShellServer)
+endif()
+
+if(PLUGIN_SERVICEDISCOVERY)
+    add_subdirectory(ServiceDiscovery)
 endif()
 
 if(PLUGIN_SNAPSHOT)
