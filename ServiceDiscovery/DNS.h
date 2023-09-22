@@ -28,9 +28,17 @@ namespace Plugin {
             Refused = 5
         };
 
-        // RFC 1035: 3.2.2-3 TYPE and QTYPE values
-        enum class type : uint8_t {
-            A = 1, // a host address
+        enum class ResourceType {
+            Question = 0x01,
+            Answer,
+            Authority,
+            Additional
+        };
+
+        // Assigned by IANA: https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
+        enum class Type : uint16_t {
+            // RFC1035
+            A = 1, // a host ipv4 address
             NS = 2, // an authoritative name server
             MD = 3, // a mail destination (Obsolete - use MX)
             MF = 4, // a mail forwarder (Obsolete - use MX)
@@ -39,30 +47,38 @@ namespace Plugin {
             MB = 7, // a mailbox domain name (EXPERIMENTAL)
             MG = 8, // a mail group member (EXPERIMENTAL)
             MR = 9, // a mail rename domain name (EXPERIMENTAL)
-            Null = 10, // a null RR (EXPERIMENTAL)
+            NULLVALUE = 10, // a null RR (EXPERIMENTAL)
             WKS = 11, // a well known service description
             PTR = 12, // a domain name pointer
             HINFO = 13, // host information
             MINFO = 14, // mailbox or mail list information
             MX = 15, // mail exchange
             TXT = 16, // text strings
-            // QTypes
             AXFR = 252, // A request for a transfer of an entire zone
             MAILB = 253, // A request for mailbox-related records (MB, MG or MR)
             MAILA = 254, // A request for mail agent RRs (Obsolete - see MX)
-            ALL = 255 // A request for all records
+            ANY = 255, // A request for all records
+
+            // RFC3596
+            AAAA = 28, // a host ipv6 address
+
+            // RFC2782
+            SRV = 33, // a server selection
+
+            // RFC-ietf-dnsop-svcb-https-12
+            HTTPS = 63, // service binding type for use with HTTP
         };
 
-        enum class klass : uint8_t {
+        enum class Class : uint16_t {
             IN = 1, // the Internet
             CS = 2, // the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
             CH = 3, // the CHAOS class
             HS = 4, // Hesiod [Dyer 87]
             // QClass
-            ALL = 255 // any class
+            ANY = 255 // any class
         };
 
-        class BaseFrame {
+        class Frame {
         private:
             static constexpr uint8_t TransactionIdOffset = 0;
             static constexpr uint8_t FlagsOffset = 2;
@@ -89,125 +105,190 @@ namespace Plugin {
             static constexpr uint8_t HeaderLength = 12; // bytes
             using Buffer = Core::FrameType<HeaderLength, true, uint16_t>;
 
+            using BufferWrapper = Core::FrameType<0, true, uint16_t>;
+
         public:
-            template <typename TYPE>
-            struct IIterator {
-                virtual ~IIterator() = default;
+            // struct IResource {
+            //     virtual ~IResource() = default;
 
-                virtual bool IsValid() const = 0;
-                virtual void Reset() = 0;
-                virtual bool Next() = 0;
+            //     virtual DNS::ResourceType ResourceType() const = 0;
 
-                virtual TYPE* Current() = 0;
-            };
+            //     virtual std::string Name() const = 0;
+            //     virtual DNS::Type Type() const = 0;
+            //     virtual DNS::Class Class() const = 0;
+            // };
 
             class Question {
             public:
-                class Iterator : public IIterator<Question> {
-                public:
-                    ~Iterator() = default;
+                ~Question() = default;
 
-                    Iterator(const BaseFrame& parent)
-                        : _parent(parent)
-                    {
-                    }
+                Question() = delete;
+                Question(Question&&) = delete;
+                Question(const Question&) = delete;
+                Question& operator=(Question&&) = delete;
+                Question& operator=(const Question&) = delete;
 
-                    bool IsValid() const override
-                    {
-                        return false;
-                    }
+                Question(const string& name, const DNS::Type type, const DNS::Class klass)
+                    : _name(name)
+                    , _type(type)
+                    , _class(klass)
+                {
+                }
 
-                    void Reset() override
-                    {
-                    }
-                    bool Next() override
-                    {
-                        return false;
-                    }
-
-                    Question* Current() override
-                    {
-                        return nullptr;
-                    }
-
-                private:
-                    const BaseFrame& _parent;
-                };
-
-                const std::string& Name()
+            public:
+                inline const std::string& Name() const
                 {
                     return _name;
                 }
-
-                type Type() const
+                inline DNS::Type Type() const
                 {
-                    return _qtype;
+                    return _type;
                 }
-
-                klass Class() const
+                inline DNS::Class Class() const
                 {
-                    return _qclass;
+                    return _class;
                 }
-
-                ~Question() = default;
 
             private:
-                std::string _name;
-                type _qtype;
-                klass _qclass;
+                const std::string _name;
+                const DNS::Type _type;
+                const DNS::Class _class;
             };
 
             class ResourceRecord {
             public:
-                class Iterator : public IIterator<ResourceRecord> {
-                    ~Iterator() = default;
-
-                    bool IsValid() const override
-                    {
-                        return false;
-                    }
-
-                    void Reset() override
-                    {
-                    }
-                    bool Next() override
-                    {
-                        return false;
-                    }
-
-                    ResourceRecord* Current() override
-                    {
-                        return nullptr;
-                    }
-                };
-
                 ~ResourceRecord() = default;
 
-                type Type() const
+                ResourceRecord() = delete;
+                ResourceRecord(ResourceRecord&&) = delete;
+                ResourceRecord(const ResourceRecord&) = delete;
+                ResourceRecord& operator=(ResourceRecord&&) = delete;
+                ResourceRecord& operator=(const ResourceRecord&) = delete;
+
+                ResourceRecord(const string& name, const DNS::Type type, const DNS::Class klass, uint32_t ttl)
+                    : _name(name)
+                    , _type(type)
+                    , _class(klass)
+                    , _ttl(ttl)
                 {
-                    return _qtype;
                 }
 
-                klass Class() const
+                ResourceRecord(const DNS::Type type, const DNS::Class klass)
+                    : _name()
+                    , _type(type)
+                    , _class(klass)
+                    , _ttl()
                 {
-                    return _qclass;
+                }
+
+            public:
+                inline const std::string& Name() const
+                {
+                    return _name;
+                }
+                inline DNS::Type Type() const
+                {
+                    return _type;
+                }
+                inline DNS::Class Class() const
+                {
+                    return _class;
+                }
+
+                inline uint32_t TimeToLive() const
+                {
+                    return 0;
+                }
+
+                inline uint16_t Serialize(const uint32_t offset, uint8_t buffer[], const uint16_t length) const
+                {
+                    // uint16_t size = ((_buffer.Size() - offset) > length ? length : (_buffer.Size() - offset));
+                    // ::memcpy(buffer, &(_buffer[offset]), size);
+
+                    return (0);
+                }
+                inline uint16_t Deserialize(const uint32_t offset, const uint8_t buffer[], const uint16_t length)
+                {
+                    // ASSERT(offset == _buffer.Size());
+
+                    // _buffer.Size(length + _buffer.Size());
+                    // ::memcpy(&(_buffer[offset]), buffer, length);
+
+                    return (0);
                 }
 
             private:
-                type _qtype;
-                klass _qclass;
+                std::string _name;
+                const DNS::Type _type;
+                const DNS::Class _class;
+                uint32_t _ttl;
             };
 
-            BaseFrame()
+            class TextRecord : public ResourceRecord {
+                ~TextRecord() = default;
+
+                TextRecord() = delete;
+                TextRecord(TextRecord&&) = delete;
+                TextRecord(const TextRecord&) = delete;
+                TextRecord& operator=(TextRecord&&) = delete;
+                TextRecord& operator=(const TextRecord&) = delete;
+
+                TextRecord(const DNS::Class klass)
+                    : ResourceRecord(DNS::Type::TXT, klass)
+                {
+                }
+            };
+
+            class ARecord : public ResourceRecord {
+                ~ARecord() = default;
+
+                ARecord() = delete;
+                ARecord(ARecord&&) = delete;
+                ARecord(const ARecord&) = delete;
+                ARecord& operator=(ARecord&&) = delete;
+                ARecord& operator=(const ARecord&) = delete;
+
+                ARecord(const DNS::Class klass)
+                    : ResourceRecord(DNS::Type::A, klass)
+                {
+                }
+
+                std::string Address()
+                {
+                    return "0.0.0.0";
+                }
+            };
+
+            class AAAARecord : public ResourceRecord{
+                ~AAAARecord() = default;
+
+                AAAARecord() = delete;
+                AAAARecord(AAAARecord&&) = delete;
+                AAAARecord(const AAAARecord&) = delete;
+                AAAARecord& operator=(AAAARecord&&) = delete;
+                AAAARecord& operator=(const AAAARecord&) = delete;
+
+                AAAARecord(const DNS::Class klass)
+                    : ResourceRecord(DNS::Type::AAAA, klass)
+                {
+                }
+
+                std::string Address()
+                {
+                    return "2600:1901:0:38d7::";
+                }
+            };
+
+            Frame()
             {
             }
 
-            BaseFrame(const uint8_t buffer[], const uint16_t length)
+            Frame(const uint8_t buffer[], const uint16_t length)
             {
                 Deserialize(0, buffer, length);
             }
 
-            ~BaseFrame() = default;
+            ~Frame() = default;
 
             inline uint16_t TransactionId() const
             {
@@ -268,18 +349,54 @@ namespace Plugin {
                 return _buffer.Data();
             }
 
-            IIterator<Question>* Questions()
+            Question::Iterator Questions()
             {
-                IIterator<Question>* questions(nullptr);
+                // IIterator<IResource*>* questions(nullptr);
 
-                uint16_t questionCount = GetNumber<uint16_t>(QueryCountOffset);
+                // uint16_t count = GetNumber<uint16_t>(QueryCountOffset);
 
-                if (questionCount > 0) {
-                    questions = new Question::Iterator(*this); //(Core::FrameType<HeaderLength, true, uint16_t> _buffer[12], questionCount);
-                }
+                // if (count > 0) {
+                //     questions = new Resource::Iterator(*this); //(Core::FrameType<HeaderLength, true, uint16_t> _buffer[12], questionCount);
+                // }
 
-                return questions;
+                // return questions;
             }
+
+            // IIterator<IResource*>* Answers()
+            // {
+            //     IIterator<IResource*>* records(nullptr);
+
+            //     uint16_t count = GetNumber<uint16_t>(AnswerCountOffset);
+
+            //     if (count > 0) {
+            //     }
+
+            //     return records;
+            // }
+
+            // IIterator<IResource*>* AuthoritativeAnswers()
+            // {
+            //     IIterator<IResource*>* records(nullptr);
+
+            //     uint16_t count = GetNumber<uint16_t>(AuthoritativeAnswerBitMask);
+
+            //     if (count > 0) {
+            //     }
+
+            //     return records;
+            // }
+
+            // IIterator<IResource*>* AdditionalData()
+            // {
+            //     IIterator<IResource*>* records(nullptr);
+
+            //     uint16_t count = GetNumber<uint16_t>(AdditionalCountOffset);
+
+            //     if (count > 0) {
+            //     }
+
+            //     return records;
+            // }
 
         private:
             inline uint16_t Serialize(const uint32_t offset, uint8_t buffer[], const uint16_t length) const
