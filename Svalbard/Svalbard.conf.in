@@ -2,6 +2,8 @@ autostart = "@PLUGIN_SVALBARD_AUTOSTART@"
 
 configuration = JSON()
 
+configuration.add("location", "@PLUGIN_SVALBARD_LOCATION@")
+
 rootobject = JSON()
 rootobject.add("mode", "@PLUGIN_SVALBARD_MODE@")
 rootobject.add("user", "@PLUGIN_SVALBARD_USER@")

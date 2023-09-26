@@ -55,6 +55,7 @@ option(PLUGIN_SVALBARD "Include Svalbard plugin" OFF)
 option(PLUGIN_SYSTEMCOMMANDS "Include SystemCommands plugin" OFF)
 option(PLUGIN_SWITCHBOARD "Include SwitchBoard plugin" OFF)
 option(PLUGIN_TIMESYNC "Include TimeSync plugin" OFF)
+option(PLUGIN_VAULTPROVISIONING "Include VaultProvisioning plugin" OFF)
 option(PLUGIN_VOLUMECONTROL "Include VolumeControl plugin" OFF)
 option(PLUGIN_WEBPA "Include WebPA plugin" OFF)
 option(PLUGIN_WEBPROXY "Include WebProxy plugin" OFF)
@@ -232,6 +233,10 @@ endif()
 
 if(PLUGIN_TIMESYNC)
     add_subdirectory(TimeSync)
+endif()
+
+if(PLUGIN_VAULTPROVISIONING)
+    add_subdirectory(VaultProvisioning)
 endif()
 
 if(PLUGIN_VOLUMECONTROL)
