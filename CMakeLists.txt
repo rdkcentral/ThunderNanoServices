@@ -60,6 +60,7 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
+option(PLUGIN_SSOWEATHER "Include SsoWeather plugin" OFF)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -184,6 +185,10 @@ endif()
 
 if(PLUGIN_SPARK)
     add_subdirectory(Spark)
+endif()
+
+if(PLUGIN_SSOWEATHER)
+    add_subdirectory(SsoWeather)
 endif()
 
 if(PLUGIN_STREAMER)

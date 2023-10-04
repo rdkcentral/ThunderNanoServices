@@ -20,11 +20,13 @@
 #pragma once
 
 #include "Module.h"
+#include <interfaces/ISsoWeather.h>
+#include <interfaces/json/JVolumeControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class SsoWeather : public PluginHost::IPlugin {
+    class SsoWeather : public PluginHost::IPlugin, public PluginHost::JSONRPC {
     public:
         class Notification : public RPC::IRemoteConnection::INotification {
         public:
@@ -71,7 +73,8 @@ namespace Plugin {
         SsoWeather& operator=(const SsoWeather&) = delete;
 
         SsoWeather()
-            : _service(nullptr)
+            : _implementation(nullptr)
+            , _service(nullptr)
             , _connectionId(0)
             , _notification(this)
         {
@@ -81,6 +84,7 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(SsoWeather)
         INTERFACE_ENTRY(PluginHost::IPlugin)
+        INTERFACE_AGGREGATE(Exchange::ISsoWeather, _implementation)
         END_INTERFACE_MAP
 
     public:
@@ -93,10 +97,12 @@ namespace Plugin {
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
 
-    private:
+        Exchange::IVolumeControl* _implementation;
         PluginHost::IShell* _service;
         uint32_t _connectionId;
+
         Core::Sink<Notification> _notification;
+        
     };
 
 } // namespace Plugin
