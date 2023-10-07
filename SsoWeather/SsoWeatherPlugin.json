@@ -1,0 +1,15 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "SsoWeather Plugin",
+      "callsign": "SsoWeather",
+      "locator": "libWPESsoWeather.so",
+      "status": "beta",
+      "description": "The SsoWeather plugin that allows you to lookup basic weather info.",
+      "version": "1.0"
+    },
+    "interface": {
+      "$cppref": "{cppinterfacedir}/ISsoWeather.h"
+    }
+  }
+  

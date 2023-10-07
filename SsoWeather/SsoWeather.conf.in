@@ -1,0 +1,5 @@
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "Off")
+configuration.add("root", rootobject)

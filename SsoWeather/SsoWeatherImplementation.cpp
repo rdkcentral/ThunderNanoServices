@@ -26,9 +26,41 @@ namespace Plugin {
     
     SERVICE_REGISTRATION(SsoWeatherImplementation, 1, 0);
 
-    VolumeControlImplementation::VolumeControlImplementation() : _adminLock{} = default;
-    VolumeControlImplementation::~VolumeControlImplementation() = default;
-    
+    SsoWeatherImplementation::SsoWeatherImplementation()
+        : _temperature(0)
+        , _isRaining(false)
+    {
+    }
+
+    SsoWeatherImplementation::~SsoWeatherImplementation() = default;
+
+    uint32_t SsoWeatherImplementation::Temperature(const uint8_t temperature) 
+    {
+        _temperature = temperature;
+        TRACE(Trace::Information, (_T("Set Temperature: %i"), _temperature));
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t SsoWeatherImplementation::Temperature(uint8_t& temperature)
+    {
+        temperature = _temperature;
+        TRACE(Trace::Information, (_T("Get Temperature: %i"), _temperature));
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t SsoWeatherImplementation::IsRaining(const bool raining)
+    {
+        _raining = raining;
+        TRACE(Trace::Information, (_T("Set Temperature: %i"), _raining));
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t SsoWeatherImplementation::IsRaining(bool& raining)
+    {
+        raining = _raining;
+        TRACE(Trace::Information, (_T("Get Temperature: %i"), _raining));
+        return Core::ERROR_NONE;
+    }
 
 }  // namespace Plugin
 }  // namespace WPEFramework

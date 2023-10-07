@@ -31,24 +31,26 @@ namespace Plugin {
 
     class SsoWeatherImplementation : public Exchange:ISsoWeather {
     public:
-        SsoWeatherImplementation(const SsoWeatherImplementation&) = delete;
-        SsoWeatherImplementation& operator=(const SsoWeatherImplementation&) = delete;
-
         SsoWeatherImplementation();
         ~SsoWeatherImplementation() override;
+
+        SsoWeatherImplementation(const SsoWeatherImplementation&);
+        SsoWeatherImplementation& operator=(const SsoWeatherImplementation&);
 
         BEGIN_INTERFACE_MAP(SsoWeatherImplementation)
             INTERFACE_ENTRY(Exchange::ISsoWeather)
         END_INTERFACE_MAP
 
-        uint32_t Temperature(const uint8_t temperature) override;
-        uint32_t Temperature(uint8_t& temperature /* @out */) const override;
+        uint32_t Temperature(const uint8_t temperature) override;   // Set
+        uint32_t Temperature(uint8_t& temperature) const override;  // Get
+
         uint32_t IsRaining(const bool raining) override;
-        uint32_t IsRaining(bool& raining /* @out */) const override;
+        uint32_t IsRaining(bool& raining) const override;
     
     private:
-        Core::CriticalSection _adminLock;
-        std::unique_ptr<SsoWeatherPlatform> _platform;
+    
+        uint32_t _temperature;
+        bool _isRaining;
     };
 
 }  // namespace Plugin

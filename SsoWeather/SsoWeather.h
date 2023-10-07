@@ -21,7 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/ISsoWeather.h>
-#include <interfaces/json/JVolumeControl.h>
+// #include <interfaces/json/JVolumeControl.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -41,7 +41,6 @@ namespace Plugin {
             ~Notification() override = default;
 
         public:
-        /*Stany pluginu*/
             void Activated(RPC::IRemoteConnection* /* connection */) override
             {
                 printf("STD: Notification Activated\n");
@@ -97,12 +96,10 @@ namespace Plugin {
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
 
-        Exchange::IVolumeControl* _implementation;
+        Exchange::ISsoWeather* _implementation;
         PluginHost::IShell* _service;
         uint32_t _connectionId;
-
-        Core::Sink<Notification> _notification;
-        
+        Core::Sink<Notification> _notification; 
     };
 
 } // namespace Plugin

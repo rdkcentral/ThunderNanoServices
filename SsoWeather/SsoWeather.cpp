@@ -37,15 +37,53 @@ namespace Plugin {
     
     const string SsoWeather::Initialize(PluginHost::IShell* service)
     {
+        message = EMPTY_STRING;
+
         printf("STD: SSOWeather Activated\n");
         fprintf(stderr,"STDERR: SSOWeather Activated\n");
-        return (EMPTY_STRING);
+
+        ASSERT (_service == nullptr);
+        ASSERT (service != nullptr);
+        ASSERT (_implementation == nullptr);
+        ASSERT (_connectionId == 0);
+
+        _service = service;
+        _service->AddRef();
+        _service->Register(&_notification);
+
+        _implementation = _service->Root<Exchange::ISsoWeather>(_connectionId, 2000, _T("SsoWeatherImplementation"));
+        if (_implementation == nullptr) {
+            message = _T("Couldn't create SsoWeather instance");
+        }
+
+        return (message);
     }
 
     /* virtual */ void SsoWeather::Deinitialize(PluginHost::IShell*)
     {
         printf("STD: SSOWeather Deactivated\n");
         fprintf(stderr,"STDERR: SSOWeather Deactivated\n");
+
+        if (_service != nullptr) {
+            ASSERT (_service == service);
+
+            if (_implementation != nullptr) {
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _implementation->Release();
+                _implementation = nullptr;
+
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
+            }
+
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
+        }
     }
     
     /* virtual */ string SsoWeather::Information() const
@@ -53,6 +91,7 @@ namespace Plugin {
         // No additional info to report.
         printf("STD: SSOWeather Information\n");
         fprintf(stderr,"STDERR: SSOWeather Information\n");
+        
         return (EMPTY_STRING);
     }
 
