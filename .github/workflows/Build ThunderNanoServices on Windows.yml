@@ -2,7 +2,7 @@ name: Build ThunderNanoServices on Windows
 
 on:
   push:
-    branches: ["master"]
+    # branches: ["master"]
   pull_request:
     branches: ["master"]
   workflow_call:
@@ -139,20 +139,20 @@ jobs:
 
     - name: Build ThunderNanoServices
       shell: cmd
-      run: |
+      run: >
         cd ThunderOnWindows
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%commander%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DHCPServer%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DIALServer%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%dictionary%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%JSONRPCPlugin%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%networkControl%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%outOfProcessPlugin%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%remoteControl%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%subsystemController%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%svalbard%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%timeSync%"  "%solution%"
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%webServer%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%commander%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DHCPServer%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DIALServer%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%dictionary%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%JSONRPCPlugin%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%networkControl%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%outOfProcessPlugin%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%remoteControl%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%subsystemController%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%svalbard%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%timeSync%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%webServer%"  "%solution%"
 
     - name: Tar files
       run: tar -czvf ${{matrix.type}}${{matrix.version}}.tar.gz artifacts
