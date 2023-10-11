@@ -1,5 +1,5 @@
 configuration = JSON()
 
 rootobject = JSON()
-rootobject.add("mode", "Off")
+rootobject.add("mode", "@PLUGIN_SSOWEATHER_MODE@")
 configuration.add("root", rootobject)

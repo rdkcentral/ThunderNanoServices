@@ -17,7 +17,7 @@
  * limitations under the License.
  */
  
-#pragma once
+#pragma oncea
 
 #include <memory>
 
@@ -29,7 +29,8 @@ namespace Plugin {
 
     class SsoWeatherPlatform;
 
-    class SsoWeatherImplementation : public Exchange:ISsoWeather {
+
+    class SsoWeatherImplementation : public Exchange::ISsoWeather {
     public:
         SsoWeatherImplementation();
         ~SsoWeatherImplementation() override;

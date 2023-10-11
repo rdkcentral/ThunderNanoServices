@@ -19,8 +19,6 @@
 
 #include "SsoWeatherImplementation.h"
 
-#include "SsoWeatherPlatform.h"
-
 namespace WPEFramework {
 namespace Plugin {
     
@@ -41,7 +39,7 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    uint32_t SsoWeatherImplementation::Temperature(uint8_t& temperature)
+    uint32_t SsoWeatherImplementation::Temperature(uint8_t& temperature) const
     {
         temperature = _temperature;
         TRACE(Trace::Information, (_T("Get Temperature: %i"), _temperature));
@@ -50,15 +48,15 @@ namespace Plugin {
 
     uint32_t SsoWeatherImplementation::IsRaining(const bool raining)
     {
-        _raining = raining;
-        TRACE(Trace::Information, (_T("Set Temperature: %i"), _raining));
+        _isRaining = raining;
+        TRACE(Trace::Information, (_T("Set Temperature: %i"), _isRaining));
         return Core::ERROR_NONE;
     }
 
-    uint32_t SsoWeatherImplementation::IsRaining(bool& raining)
+    uint32_t SsoWeatherImplementation::IsRaining(bool& raining) const
     {
-        raining = _raining;
-        TRACE(Trace::Information, (_T("Get Temperature: %i"), _raining));
+        raining = _isRaining;
+        TRACE(Trace::Information, (_T("Get Temperature: %i"), raining));
         return Core::ERROR_NONE;
     }
 

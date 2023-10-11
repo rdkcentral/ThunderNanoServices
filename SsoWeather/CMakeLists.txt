@@ -28,12 +28,15 @@ set(PLUGIN_NAME SsoWeather)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+set(PLUGIN_SSOWEATHER_MODE "Local" CACHE STRING "Controls if the SsoWeather should run in its own process, in process or remote.")
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     SsoWeather.cpp
-    Module.cpp)
+    Module.cpp
+    SsoWeatherImplementation.cpp)
     
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11

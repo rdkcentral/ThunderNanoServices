@@ -37,7 +37,7 @@ namespace Plugin {
     
     const string SsoWeather::Initialize(PluginHost::IShell* service)
     {
-        message = EMPTY_STRING;
+        string message = EMPTY_STRING;
 
         printf("STD: SSOWeather Activated\n");
         fprintf(stderr,"STDERR: SSOWeather Activated\n");
@@ -59,7 +59,7 @@ namespace Plugin {
         return (message);
     }
 
-    /* virtual */ void SsoWeather::Deinitialize(PluginHost::IShell*)
+    /* virtual */ void SsoWeather::Deinitialize(PluginHost::IShell* service)
     {
         printf("STD: SSOWeather Deactivated\n");
         fprintf(stderr,"STDERR: SSOWeather Deactivated\n");
