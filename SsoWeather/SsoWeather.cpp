@@ -54,6 +54,9 @@ namespace Plugin {
         _implementation = _service->Root<Exchange::ISsoWeather>(_connectionId, 2000, _T("SsoWeatherImplementation"));
         if (_implementation == nullptr) {
             message = _T("Couldn't create SsoWeather instance");
+        } else {
+          _implementation->Register(&_weatherNotification);
+          Exchange::JSsoWeather::Register(*this, _implementation);
         }
 
         return (message);
@@ -67,7 +70,13 @@ namespace Plugin {
         if (_service != nullptr) {
             ASSERT (_service == service);
 
+            service->Unregister(&_notification);
+
             if (_implementation != nullptr) {
+
+                Exchange::JSsoWeather::Unregister(*this);
+                _implementation->Unregister(&_weatherNotification);
+
                 RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
                 VARIABLE_IS_NOT_USED uint32_t result = _implementation->Release();
                 _implementation = nullptr;

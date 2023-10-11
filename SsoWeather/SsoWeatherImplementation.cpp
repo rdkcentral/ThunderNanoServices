@@ -25,16 +25,40 @@ namespace Plugin {
     SERVICE_REGISTRATION(SsoWeatherImplementation, 1, 0);
 
     SsoWeatherImplementation::SsoWeatherImplementation()
-        : _temperature(0)
+        : _adminLock{}
+        ,_temperature(0)
         , _isRaining(false)
     {
     }
 
     SsoWeatherImplementation::~SsoWeatherImplementation() = default;
 
+    void SsoWeatherImplementation::Register(Exchange::ISsoWeather::INotification* notification)
+    {
+        ASSERT(notification);
+        _adminLock.Lock();
+        notification->AddRef();
+        _notifications.push_back(notification);
+        _adminLock.Unlock();
+    }
+
+    void SsoWeatherImplementation::Unregister(const Exchange::ISsoWeather::INotification* notification)
+    {
+        ASSERT(notification);
+        _adminLock.Lock();
+        auto item = std::find(_notifications.begin(), _notifications.end(), notification);
+        ASSERT(item != _notifications.end());
+        _notifications.erase(item);
+        (*item)->Release();
+        _adminLock.Unlock();
+    }
+
     uint32_t SsoWeatherImplementation::Temperature(const uint8_t temperature) 
     {
+        _adminLock.Lock();
         _temperature = temperature;
+        _adminLock.Unlock();
+        
         TRACE(Trace::Information, (_T("Set Temperature: %i"), _temperature));
         return Core::ERROR_NONE;
     }
@@ -48,7 +72,10 @@ namespace Plugin {
 
     uint32_t SsoWeatherImplementation::IsRaining(const bool raining)
     {
+        _adminLock.Lock();
         _isRaining = raining;
+        _adminLock.Unlock();
+
         TRACE(Trace::Information, (_T("Set Temperature: %i"), _isRaining));
         return Core::ERROR_NONE;
     }
@@ -58,6 +85,24 @@ namespace Plugin {
         raining = _isRaining;
         TRACE(Trace::Information, (_T("Get Temperature: %i"), raining));
         return Core::ERROR_NONE;
+    }
+
+    void SsoWeatherImplementation::NotifyIsRainingChange()
+    {
+        _adminLock.Lock();
+        for (auto* notification : _notifications) {
+            notification->IsRaining(_isRaining);
+        }
+        _adminLock.Unlock();
+    }
+
+    void SsoWeatherImplementation::NotifyTemperatureChange()
+    {
+        _adminLock.Lock();
+        for (auto* notification : _notifications) {
+            notification->Temperature(_temperature);
+        }
+        _adminLock.Unlock();
     }
 
 }  // namespace Plugin

@@ -21,7 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/ISsoWeather.h>
-// #include <interfaces/json/JVolumeControl.h>
+#include <interfaces/json/JSsoWeather.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -49,6 +49,7 @@ namespace Plugin {
 
             void Deactivated(RPC::IRemoteConnection* connectionId) override
             {
+                _parent.Deactivated(connectionId);
                 printf("STD: Notification Deactivated\n");
                 fprintf(stderr,"STDERR: Notification Deactivated\n");
             }
@@ -67,6 +68,38 @@ namespace Plugin {
             SsoWeather& _parent;
         };
 
+        class WeatherNotification : public Exchange::ISsoWeather::INotification {
+        public:
+            explicit WeatherNotification(SsoWeather* parent)
+                : _parent(*parent)
+            {
+                ASSERT(parent != nullptr);
+            }
+
+            ~WeatherNotification() override = default;
+
+            WeatherNotification() = delete;
+            WeatherNotification(const WeatherNotification&) = delete;
+            WeatherNotification& operator=(const WeatherNotification&) = delete;
+
+            void Temperature(const uint8_t temperature) override
+            {
+                Exchange::JSsoWeather::Event::Temperature(_parent, temperature);
+            }
+
+            void IsRaining(const bool raining) override
+            {
+                Exchange::JSsoWeather::Event::IsRaining(_parent, raining);
+            }
+
+            BEGIN_INTERFACE_MAP(WeatherNotification)
+                INTERFACE_ENTRY(Exchange::ISsoWeather::INotification)
+            END_INTERFACE_MAP
+
+        private:
+            SsoWeather& _parent;
+        };
+
     public:
         SsoWeather(const SsoWeather&) = delete;
         SsoWeather& operator=(const SsoWeather&) = delete;
@@ -76,6 +109,7 @@ namespace Plugin {
             , _service(nullptr)
             , _connectionId(0)
             , _notification(this)
+            , _weatherNotification(this)
         {
         }
 
@@ -99,7 +133,8 @@ namespace Plugin {
         Exchange::ISsoWeather* _implementation;
         PluginHost::IShell* _service;
         uint32_t _connectionId;
-        Core::Sink<Notification> _notification; 
+        Core::Sink<Notification> _notification;
+        Core::Sink<WeatherNotification> _weatherNotification;
     };
 
 } // namespace Plugin

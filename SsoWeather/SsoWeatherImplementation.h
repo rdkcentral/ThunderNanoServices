@@ -17,7 +17,7 @@
  * limitations under the License.
  */
  
-#pragma oncea
+#pragma once
 
 #include <memory>
 
@@ -28,7 +28,6 @@ namespace WPEFramework {
 namespace Plugin {
 
     class SsoWeatherPlatform;
-
 
     class SsoWeatherImplementation : public Exchange::ISsoWeather {
     public:
@@ -42,6 +41,10 @@ namespace Plugin {
             INTERFACE_ENTRY(Exchange::ISsoWeather)
         END_INTERFACE_MAP
 
+        // ISsoWeather methods
+        void Register(Exchange::ISsoWeather::INotification* observer) override;
+        void Unregister(const Exchange::ISsoWeather::INotification* observer) override;
+
         uint32_t Temperature(const uint8_t temperature) override;   // Set
         uint32_t Temperature(uint8_t& temperature) const override;  // Get
 
@@ -49,7 +52,12 @@ namespace Plugin {
         uint32_t IsRaining(bool& raining) const override;
     
     private:
-    
+        void NotifyIsRainingChange();
+        void NotifyTemperatureChange();
+
+        Core::CriticalSection _adminLock;
+        std::vector<Exchange::ISsoWeather::INotification*> _notifications;
+
         uint32_t _temperature;
         bool _isRaining;
     };
