@@ -29,11 +29,14 @@ namespace Plugin {
         };
 
         enum class ResourceType {
-            Question = 0x01,
+            Question = 0x00,
             Answer,
             Authority,
             Additional
         };
+
+
+
 
         // Assigned by IANA: https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
         enum class Type : uint16_t {
@@ -118,6 +121,24 @@ namespace Plugin {
             //     virtual DNS::Class Class() const = 0;
             // };
 
+            template <typename TYPE>
+            class Iterator {
+                ~Iterator() = default;
+
+                Iterator() = delete;
+                Iterator(Iterator&&) = delete;
+                Iterator(const Iterator&) = delete;
+                Iterator& operator=(const Iterator&) = delete;
+
+                Iterator(const Frame& parent) {}
+
+                virtual void Reset() = 0;
+                virtual bool IsValid() const = 0;
+                virtual bool Next() = 0;
+
+                virtual TYPE* Current() = 0;
+            };
+
             class Question {
             public:
                 ~Question() = default;
@@ -155,9 +176,11 @@ namespace Plugin {
                 const DNS::Class _class;
             };
 
-            class ResourceRecord {
+            class ResourceRecord : public Question {
             public:
-                ~ResourceRecord() = default;
+                static constexpr uint32_t DefaultTTL = 60;
+
+                virtual ~ResourceRecord() = default;
 
                 ResourceRecord() = delete;
                 ResourceRecord(ResourceRecord&&) = delete;
@@ -165,36 +188,13 @@ namespace Plugin {
                 ResourceRecord& operator=(ResourceRecord&&) = delete;
                 ResourceRecord& operator=(const ResourceRecord&) = delete;
 
-                ResourceRecord(const string& name, const DNS::Type type, const DNS::Class klass, uint32_t ttl)
-                    : _name(name)
-                    , _type(type)
-                    , _class(klass)
+                ResourceRecord(const string& name, const DNS::Type type, const DNS::Class klass = DNS::Class::IN, uint32_t ttl = DefaultTTL)
+                    : Question(name, type, klass)
                     , _ttl(ttl)
                 {
                 }
 
-                ResourceRecord(const DNS::Type type, const DNS::Class klass)
-                    : _name()
-                    , _type(type)
-                    , _class(klass)
-                    , _ttl()
-                {
-                }
-
             public:
-                inline const std::string& Name() const
-                {
-                    return _name;
-                }
-                inline DNS::Type Type() const
-                {
-                    return _type;
-                }
-                inline DNS::Class Class() const
-                {
-                    return _class;
-                }
-
                 inline uint32_t TimeToLive() const
                 {
                     return 0;
@@ -218,66 +218,63 @@ namespace Plugin {
                 }
 
             private:
-                std::string _name;
-                const DNS::Type _type;
-                const DNS::Class _class;
                 uint32_t _ttl;
             };
 
-            class TextRecord : public ResourceRecord {
-                ~TextRecord() = default;
+            // class TextRecord : public ResourceRecord {
+            //     ~TextRecord() = default;
 
-                TextRecord() = delete;
-                TextRecord(TextRecord&&) = delete;
-                TextRecord(const TextRecord&) = delete;
-                TextRecord& operator=(TextRecord&&) = delete;
-                TextRecord& operator=(const TextRecord&) = delete;
+            //     TextRecord() = delete;
+            //     TextRecord(TextRecord&&) = delete;
+            //     TextRecord(const TextRecord&) = delete;
+            //     TextRecord& operator=(TextRecord&&) = delete;
+            //     TextRecord& operator=(const TextRecord&) = delete;
 
-                TextRecord(const DNS::Class klass)
-                    : ResourceRecord(DNS::Type::TXT, klass)
-                {
-                }
-            };
+            //     TextRecord(const DNS::Class klass)
+            //         : ResourceRecord(DNS::Type::TXT, klass)
+            //     {
+            //     }
+            // };
 
-            class ARecord : public ResourceRecord {
-                ~ARecord() = default;
+            // class ARecord : public ResourceRecord {
+            //     ~ARecord() = default;
 
-                ARecord() = delete;
-                ARecord(ARecord&&) = delete;
-                ARecord(const ARecord&) = delete;
-                ARecord& operator=(ARecord&&) = delete;
-                ARecord& operator=(const ARecord&) = delete;
+            //     ARecord() = delete;
+            //     ARecord(ARecord&&) = delete;
+            //     ARecord(const ARecord&) = delete;
+            //     ARecord& operator=(ARecord&&) = delete;
+            //     ARecord& operator=(const ARecord&) = delete;
 
-                ARecord(const DNS::Class klass)
-                    : ResourceRecord(DNS::Type::A, klass)
-                {
-                }
+            //     ARecord(const DNS::Class klass)
+            //         : ResourceRecord(DNS::Type::A, klass)
+            //     {
+            //     }
 
-                std::string Address()
-                {
-                    return "0.0.0.0";
-                }
-            };
+            //     std::string Address()
+            //     {
+            //         return "0.0.0.0";
+            //     }
+            // };
 
-            class AAAARecord : public ResourceRecord{
-                ~AAAARecord() = default;
+            // class AAAARecord : public ResourceRecord {
+            //     ~AAAARecord() = default;
 
-                AAAARecord() = delete;
-                AAAARecord(AAAARecord&&) = delete;
-                AAAARecord(const AAAARecord&) = delete;
-                AAAARecord& operator=(AAAARecord&&) = delete;
-                AAAARecord& operator=(const AAAARecord&) = delete;
+            //     AAAARecord() = delete;
+            //     AAAARecord(AAAARecord&&) = delete;
+            //     AAAARecord(const AAAARecord&) = delete;
+            //     AAAARecord& operator=(AAAARecord&&) = delete;
+            //     AAAARecord& operator=(const AAAARecord&) = delete;
 
-                AAAARecord(const DNS::Class klass)
-                    : ResourceRecord(DNS::Type::AAAA, klass)
-                {
-                }
+            //     AAAARecord(const DNS::Class klass)
+            //         : ResourceRecord(DNS::Type::AAAA, klass)
+            //     {
+            //     }
 
-                std::string Address()
-                {
-                    return "2600:1901:0:38d7::";
-                }
-            };
+            //     std::string Address()
+            //     {
+            //         return "2600:1901:0:38d7::";
+            //     }
+            // };
 
             Frame()
             {
@@ -289,6 +286,11 @@ namespace Plugin {
             }
 
             ~Frame() = default;
+
+            inline uint16_t Length() const
+            {
+                return _buffer.Size();
+            }
 
             inline uint16_t TransactionId() const
             {
@@ -349,17 +351,17 @@ namespace Plugin {
                 return _buffer.Data();
             }
 
-            Question::Iterator Questions()
+            Iterator<Question>* Questions()
             {
-                // IIterator<IResource*>* questions(nullptr);
+                Iterator<Question>* it(nullptr);
 
-                // uint16_t count = GetNumber<uint16_t>(QueryCountOffset);
+                uint16_t count = Records(DNS::ResourceType::Question);
 
-                // if (count > 0) {
-                //     questions = new Resource::Iterator(*this); //(Core::FrameType<HeaderLength, true, uint16_t> _buffer[12], questionCount);
-                // }
+                if (((Length() > HeaderLength)) && (count > 0)) {
+                    //     questions = new Resource::Iterator(*this); //(Core::FrameType<HeaderLength, true, uint16_t> _buffer[12], questionCount);
+                }
 
-                // return questions;
+                return it;
             }
 
             // IIterator<IResource*>* Answers()
@@ -419,6 +421,11 @@ namespace Plugin {
             inline uint16_t Flags() const
             {
                 return GetNumber<uint16_t>(FlagsOffset) & FlagsBitMask;
+            }
+
+            inline uint16_t Records(const DNS::ResourceType type) const
+            {
+                return GetNumber<uint16_t>(QueryCountOffset + static_cast<const uint8_t>(type));
             }
 
             template <typename TYPE>
