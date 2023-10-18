@@ -55,8 +55,8 @@ namespace Plugin {
         if (_implementation == nullptr) {
             message = _T("Couldn't create SsoWeather instance");
         } else {
-          _implementation->Register(&_weatherNotification);
-          Exchange::JSsoWeather::Register(*this, _implementation);
+            _implementation->Register(&_weatherNotification);
+            Exchange::JSsoWeather::Register(*this, _implementation);
         }
 
         return (message);

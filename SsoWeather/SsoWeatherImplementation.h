@@ -55,11 +55,11 @@ namespace Plugin {
         void NotifyIsRainingChange();
         void NotifyTemperatureChange();
 
-        Core::CriticalSection _adminLock;
-        std::vector<Exchange::ISsoWeather::INotification*> _notifications;
-
         uint32_t _temperature;
         bool _isRaining;
+
+        Core::CriticalSection _adminLock;
+        std::vector<Exchange::ISsoWeather::INotification*> _notifications;
     };
 
 }  // namespace Plugin

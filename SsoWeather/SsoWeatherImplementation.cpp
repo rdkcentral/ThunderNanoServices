@@ -25,8 +25,8 @@ namespace Plugin {
     SERVICE_REGISTRATION(SsoWeatherImplementation, 1, 0);
 
     SsoWeatherImplementation::SsoWeatherImplementation()
-        : _adminLock{}
-        ,_temperature(0)
+        : _adminLock()
+        , _temperature(0)
         , _isRaining(false)
     {
     }
@@ -58,7 +58,8 @@ namespace Plugin {
         _adminLock.Lock();
         _temperature = temperature;
         _adminLock.Unlock();
-        
+
+        NotifyTemperatureChange();
         TRACE(Trace::Information, (_T("Set Temperature: %i"), _temperature));
         return Core::ERROR_NONE;
     }
@@ -66,6 +67,7 @@ namespace Plugin {
     uint32_t SsoWeatherImplementation::Temperature(uint8_t& temperature) const
     {
         temperature = _temperature;
+
         TRACE(Trace::Information, (_T("Get Temperature: %i"), _temperature));
         return Core::ERROR_NONE;
     }
@@ -76,6 +78,7 @@ namespace Plugin {
         _isRaining = raining;
         _adminLock.Unlock();
 
+        NotifyIsRainingChange();
         TRACE(Trace::Information, (_T("Set Temperature: %i"), _isRaining));
         return Core::ERROR_NONE;
     }
@@ -83,6 +86,7 @@ namespace Plugin {
     uint32_t SsoWeatherImplementation::IsRaining(bool& raining) const
     {
         raining = _isRaining;
+        
         TRACE(Trace::Information, (_T("Get Temperature: %i"), raining));
         return Core::ERROR_NONE;
     }

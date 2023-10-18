@@ -61,7 +61,7 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -116,13 +116,12 @@ namespace Plugin {
         ~SsoWeather() override = default;
 
         BEGIN_INTERFACE_MAP(SsoWeather)
-        INTERFACE_ENTRY(PluginHost::IPlugin)
-        INTERFACE_AGGREGATE(Exchange::ISsoWeather, _implementation)
+            INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
+            INTERFACE_AGGREGATE(Exchange::ISsoWeather, _implementation)
         END_INTERFACE_MAP
 
-    public:
         //   IPlugin methods
-        // -------------------------------------------------------------------------------------------------------
         const string Initialize(PluginHost::IShell* service) override;
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
@@ -132,7 +131,9 @@ namespace Plugin {
 
         Exchange::ISsoWeather* _implementation;
         PluginHost::IShell* _service;
+        
         uint32_t _connectionId;
+
         Core::Sink<Notification> _notification;
         Core::Sink<WeatherNotification> _weatherNotification;
     };
