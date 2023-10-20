@@ -30,34 +30,30 @@ namespace Plugin {
     public:
         class Notification : public RPC::IRemoteConnection::INotification {
         public:
+            Notification() = delete;
+
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
+
+            ~Notification() override = default;
 
             explicit Notification(SsoWeather* parent)
                 : _parent(*parent)
             {
                 ASSERT(parent != nullptr);
             }
-            ~Notification() override = default;
 
-        public:
             void Activated(RPC::IRemoteConnection* /* connection */) override
             {
-                printf("STD: Notification Activated\n");
-                fprintf(stderr,"STDERR: Notification Activated\n");
             }
 
             void Deactivated(RPC::IRemoteConnection* connectionId) override
             {
                 _parent.Deactivated(connectionId);
-                printf("STD: Notification Deactivated\n");
-                fprintf(stderr,"STDERR: Notification Deactivated\n");
             }
 
             void Terminated(RPC::IRemoteConnection* /* connection */) override
             {
-                printf("STD: Notification Terminated\n");
-                fprintf(stderr,"STDERR: Notification Terminated\n");
             }
 
             BEGIN_INTERFACE_MAP(Notification)
@@ -70,17 +66,18 @@ namespace Plugin {
 
         class WeatherNotification : public Exchange::ISsoWeather::INotification {
         public:
+            WeatherNotification() = delete;
+
+            WeatherNotification(const WeatherNotification&) = delete;
+            WeatherNotification& operator=(const WeatherNotification&) = delete;
+
+            ~WeatherNotification() override = default;
+
             explicit WeatherNotification(SsoWeather* parent)
                 : _parent(*parent)
             {
                 ASSERT(parent != nullptr);
             }
-
-            ~WeatherNotification() override = default;
-
-            WeatherNotification() = delete;
-            WeatherNotification(const WeatherNotification&) = delete;
-            WeatherNotification& operator=(const WeatherNotification&) = delete;
 
             void Temperature(const uint8_t temperature) override
             {
@@ -101,9 +98,6 @@ namespace Plugin {
         };
 
     public:
-        SsoWeather(const SsoWeather&) = delete;
-        SsoWeather& operator=(const SsoWeather&) = delete;
-
         SsoWeather()
             : _implementation(nullptr)
             , _service(nullptr)
@@ -112,6 +106,9 @@ namespace Plugin {
             , _weatherNotification(this)
         {
         }
+
+        SsoWeather(const SsoWeather&) = delete;
+        SsoWeather& operator=(const SsoWeather&) = delete;
 
         ~SsoWeather() override = default;
 
@@ -129,11 +126,11 @@ namespace Plugin {
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
 
+        uint32_t _connectionId;
+
         Exchange::ISsoWeather* _implementation;
         PluginHost::IShell* _service;
         
-        uint32_t _connectionId;
-
         Core::Sink<Notification> _notification;
         Core::Sink<WeatherNotification> _weatherNotification;
     };

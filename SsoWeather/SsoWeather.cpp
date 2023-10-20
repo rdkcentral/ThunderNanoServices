@@ -39,9 +39,6 @@ namespace Plugin {
     {
         string message = EMPTY_STRING;
 
-        printf("STD: SSOWeather Activated\n");
-        fprintf(stderr,"STDERR: SSOWeather Activated\n");
-
         ASSERT (_service == nullptr);
         ASSERT (service != nullptr);
         ASSERT (_implementation == nullptr);
@@ -64,9 +61,6 @@ namespace Plugin {
 
     /* virtual */ void SsoWeather::Deinitialize(PluginHost::IShell* service)
     {
-        printf("STD: SSOWeather Deactivated\n");
-        fprintf(stderr,"STDERR: SSOWeather Deactivated\n");
-
         if (_service != nullptr) {
             ASSERT (_service == service);
 
@@ -97,11 +91,17 @@ namespace Plugin {
     
     /* virtual */ string SsoWeather::Information() const
     {
-        // No additional info to report.
-        printf("STD: SSOWeather Information\n");
-        fprintf(stderr,"STDERR: SSOWeather Information\n");
-        
         return (EMPTY_STRING);
+    }
+
+    void SsoWeather::Deactivated(RPC::IRemoteConnection* connection)
+    {
+        if (connection->Id() == _connectionId) {
+            ASSERT(_service != nullptr);
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
+                PluginHost::IShell::DEACTIVATED,
+                PluginHost::IShell::FAILURE));
+        }
     }
 
 } // namespace Plugin
