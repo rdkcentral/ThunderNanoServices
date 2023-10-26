@@ -22,7 +22,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/src/${COMPOSITOR_BACKEND_IMPLEMENTATION
     message(FATAL_ERROR "Missing a display implementation ${COMPOSITOR_BACKEND_IMPLEMENTATION}")
 endif()
 
-message(STATUS "-- Backend ${COMPOSITOR_BACKEND_IMPLEMENTATION}")
+message(STATUS "Backend: ${COMPOSITOR_BACKEND_IMPLEMENTATION}")
 
 add_subdirectory("src/${COMPOSITOR_BACKEND_IMPLEMENTATION}")
 add_subdirectory(test)
