@@ -21,7 +21,7 @@ namespace Compositor {
         return &_planes;
     }
 
-    uint32_t TextureBuffer::Completed(const bool dirty)
+    uint32_t TextureBuffer::Completed(const bool /*dirty*/)
     {
         return 0;
     }
