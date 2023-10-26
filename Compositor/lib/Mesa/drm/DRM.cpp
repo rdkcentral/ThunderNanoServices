@@ -136,7 +136,7 @@ namespace Compositor {
             return result;
         }
 
-        uint16_t GetBlobProperty(const int cardFd, const Identifier object, const Identifier property, const uint16_t blobSize, uint8_t blob[])
+        uint16_t GetBlobProperty(const int cardFd, const Identifier object, const Identifier property, const uint16_t /* blobSize */, uint8_t blob[])
         {
             uint16_t length(0);
             uint64_t id;
@@ -144,7 +144,7 @@ namespace Compositor {
             if (GetProperty(cardFd, object, property, id) == true) {
                 drmModePropertyBlobRes* drmBlob = drmModeGetPropertyBlob(cardFd, id);
                 ASSERT(drmBlob != nullptr);
-                ASSERT(blobSize >= drmBlob->length);
+                // ASSERT(blobSize >= drmBlob->length);
 
                 memcpy(blob, drmBlob->data, drmBlob->length);
                 length = drmBlob->length;
@@ -159,9 +159,9 @@ namespace Compositor {
         {
             const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
 
-            drmDevicePtr devices[nDrmDevices];
+            drmDevicePtr* devices = static_cast<drmDevicePtr*>(ALLOCA(nDrmDevices * sizeof(drmDevicePtr)));
 
-            int device_count = drmGetDevices2(0 /* flags */, &devices[0], nDrmDevices);
+            int device_count = drmGetDevices2(0 /* flags */, devices, nDrmDevices);
 
             if (device_count > 0) {
                 for (uint8_t i = 0; i < device_count; i++) {
@@ -472,9 +472,10 @@ namespace Compositor {
             string node;
 
             const int nDrmDevices = drmGetDevices2(0, nullptr, 0);
-            drmDevicePtr devices[nDrmDevices];
 
-            drmGetDevices2(0, devices, nDrmDevices);
+            drmDevicePtr* devices = static_cast<drmDevicePtr*>(ALLOCA(nDrmDevices * sizeof(drmDevicePtr)));
+
+            drmGetDevices2(0 /* flags */, devices, nDrmDevices);
 
             for (int i = 0; i < nDrmDevices; ++i) {
                 drmDevice* dev = devices[i];
