@@ -218,8 +218,9 @@ namespace Compositor {
                 _api.eglQueryDevicesEXT(0, nullptr, &nEglDevices);
                 TRACE(Trace::EGL, ("System has %u EGL device%s", nEglDevices, (nEglDevices == 1) ? "" : "s"));
 
-                EGLDeviceEXT eglDevices[nEglDevices];
-                memset(eglDevices, 0, sizeof(eglDevices));
+                EGLDeviceEXT* eglDevices = static_cast<EGLDeviceEXT*>(ALLOCA(nEglDevices * sizeof(EGLDeviceEXT)));
+
+                memset(eglDevices, 0, sizeof(nEglDevices * sizeof(EGLDeviceEXT)));
 
                 _api.eglQueryDevicesEXT(nEglDevices, eglDevices, &nEglDevices);
 
@@ -331,7 +332,7 @@ namespace Compositor {
                 ASSERT(API::HasExtension(displayExtensions, "EGL_KHR_surfaceless_context") == true);
 
                 if ((_api.eglQueryDisplayAttribEXT != nullptr) && (_api.eglQueryDeviceStringEXT != nullptr)) {
-                    EGLAttrib device_attrib;
+                    // EGLAttrib device_attrib;
 
                     _api.eglQueryDisplayAttribEXT(_display, EGL_DEVICE_EXT, reinterpret_cast<EGLAttrib*>(&_device));
 

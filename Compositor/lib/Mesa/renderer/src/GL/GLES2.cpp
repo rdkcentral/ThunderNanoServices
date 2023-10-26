@@ -392,7 +392,9 @@ namespace Compositor {
 
                     for (auto& id : _textureIds) {
                         int len = snprintf(NULL, 0, "tex%d", index) + 1;
-                        char parameter[len];
+                        
+                        char* parameter = static_cast<char*>(ALLOCA(len));
+
                         snprintf(parameter, len, "tex%d", index++);
 
                         id = glGetUniformLocation(Id(), parameter);
@@ -587,7 +589,7 @@ namespace Compositor {
                 {
                     bool result(
                         (_buffer->Type() != Exchange::ICompositionBuffer::TYPE_DMA)
-                        || (_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES));
+                        || ((_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES)));
 
                     if ((_image != EGL_NO_IMAGE) && (_target != GL_TEXTURE_EXTERNAL_OES)) {
                         Renderer::EGL::ContextBackup backup;
@@ -603,8 +605,8 @@ namespace Compositor {
 
                 uint32_t Width() const override { return _buffer->Width(); }
                 uint32_t Height() const override { return _buffer->Height(); }
-                const GLenum Target() const { return _target; }
-                const GLuint Id() const { return _textureId; }
+                GLenum Target() const { return _target; }
+                GLuint Id() const { return _textureId; }
                 // const std::vector<GLuint>& Identifiers() const { return _textureIds; }
 
                 bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
@@ -658,7 +660,7 @@ namespace Compositor {
                 {
                     Exchange::ICompositionBuffer::IIterator* planes = _buffer->Planes(10);
 
-                    uint8_t index(0);
+                    // uint8_t index(0);
 
                     planes->Next(); // select first plane.
 
