@@ -19,4 +19,4 @@ target_link_libraries(glextinfo
         EGL::EGL
 )
 
-install(TARGETS glextinfo DESTINATION bin)
+install(TARGETS glextinfo DESTINATION bin/${NAMESPACE}Tests)

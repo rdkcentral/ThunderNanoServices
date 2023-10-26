@@ -38,4 +38,4 @@ target_link_libraries(transformationtest
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
 )
 
-install(TARGETS transformationtest DESTINATION bin)
+install(TARGETS transformationtest DESTINATION bin/${NAMESPACE}Tests)

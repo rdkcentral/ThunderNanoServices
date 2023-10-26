@@ -23,7 +23,7 @@ target_link_libraries(testclear
         SimpleWorker::SimpleWorker
 )
 
-install(TARGETS testclear DESTINATION bin)
+install(TARGETS testclear DESTINATION bin/${NAMESPACE}Tests)
 
 
 add_executable(testquads testquads.cpp)
@@ -42,7 +42,7 @@ target_link_libraries(testquads
         SimpleWorker::SimpleWorker
 )
 
-install(TARGETS testquads DESTINATION bin)
+install(TARGETS testquads DESTINATION bin/${NAMESPACE}Tests)
 
 
 add_executable(testtexture testtexture.cpp)
@@ -62,7 +62,7 @@ target_link_libraries(testtexture
         TextureBuffer::TextureBuffer
 )
 
-install(TARGETS testtexture DESTINATION bin)
+install(TARGETS testtexture DESTINATION bin/${NAMESPACE}Tests)
 
 add_executable(testdmabuf testdmabuf.cpp)
 
@@ -80,4 +80,4 @@ target_link_libraries(testdmabuf
         SimpleWorker::SimpleWorker
 )
 
-install(TARGETS testdmabuf DESTINATION bin)
+install(TARGETS testdmabuf DESTINATION bin/${NAMESPACE}Tests)
