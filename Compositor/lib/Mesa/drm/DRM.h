@@ -74,7 +74,7 @@ namespace Compositor {
     case value:               \
         return #value;
 
-        static const char* FormatString(uint32_t format)
+        static inline const char* FormatString(uint32_t format)
         {
             switch (format) {
                 CASE_TO_STRING(DRM_FORMAT_INVALID)
@@ -195,7 +195,7 @@ namespace Compositor {
             }
         }
 
-        static const char* ModifierVendorString(uint64_t modifier)
+        static inline const char* ModifierVendorString(uint64_t modifier)
         {
             uint32_t vendor = (modifier & 0xff00000000000000ULL) << 56;
 
@@ -217,7 +217,7 @@ namespace Compositor {
         }
 #undef CASE_TO_STRING
 
-        static bool HasAlpha(uint32_t drmFormat)
+        static inline bool HasAlpha(uint32_t drmFormat)
         {
             return (
                    (drmFormat == DRM_FORMAT_ARGB4444)
