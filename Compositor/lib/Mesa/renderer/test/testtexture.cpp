@@ -68,8 +68,8 @@ public:
         : _adminLock()
         , _lastFrame(0)
         , _sink(*this)
-        , _connector()
         , _renderer()
+        , _connector()
         , _fps(fps)
         , _texture(nullptr)
 
@@ -155,7 +155,7 @@ private:
             return 0;
         }
 
-        const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
+        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -168,12 +168,12 @@ private:
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { .x = (width / 2) - (renderWidth / 2), .y = (height / 2) - (renderHeight / 2), .width = renderWidth, .height = renderHeight };
+        const Compositor::Box renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
         Compositor::Matrix matrix;
-        
+
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(_texture->Width()), .height = int(_texture->Height()) };
+        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
         _renderer->Render(_texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);

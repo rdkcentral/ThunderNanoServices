@@ -145,12 +145,12 @@ int main(int /*argc*/, const char** /*argv[]*/)
     /* ############################################################## */
 
     Compositor::Matrix test5;
-    Compositor::Box box1 = { .x = 20, .y = 20, .width = 100, .height = 50 };
+    Compositor::Box box1 = { 20, 20, 100, 50 };
     Compositor::Transformation::ProjectBox(test5, box1, Compositor::Transformation::TRANSFORM_90, -0.383972, test4);
     printMatrix(test5);
 
     float wr5[9];
-    ref_box box2 = { .x = 20, .y = 20, .width = 100, .height = 50 };
+    ref_box box2 = { 20, 20, 100, 50 };
     ref_matrix_project_box(wr5, &box2, REF_TRANSFORM_90, -0.383972, wr4);
     printMatrix(wr5);
 

@@ -109,7 +109,7 @@ public:
         _renderer->Begin(buffer->Width(), buffer->Height());
         _renderer->Clear(color);
 
-        const Compositor::Box box = { .x = 0, .y = 0, .width = int(buffer->Width() / 2), .height = int(buffer->Height() / 2) };
+        const Compositor::Box box = { 0, 0, int(buffer->Width() / 2), int(buffer->Height() / 2) };
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_NORMAL, Compositor::Transformation::ToRadials(0), _renderer->Projection());
         _renderer->Quadrangle({ color[1], color[2], color[0], 1.0f }, matrix);
@@ -189,11 +189,11 @@ private:
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { .x = (width / 2) - (renderWidth / 2), .y = (height / 2) - (renderHeight / 2), .width = renderWidth, .height = renderHeight };
+        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(_texture.texture->Width()), .height = int(_texture.texture->Height()) };
+        const Compositor::Box textureBox = { 0, 0, int(_texture.texture->Width()), int(_texture.texture->Height()) };
         _renderer->Render(_texture.texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);
