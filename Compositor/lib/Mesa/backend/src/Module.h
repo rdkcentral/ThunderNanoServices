@@ -25,7 +25,6 @@
 
 #include <core/core.h>
 #include <messaging/messaging.h>
-#include <libudev.h>
 #include <CompositorTypes.h>
 #include <IBuffer.h>
 

@@ -29,7 +29,7 @@
 #include <drm.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
-#include <libudev.h>
+// #include <libudev.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -506,8 +506,8 @@ namespace Compositor {
             {
                 ASSERT(_cardFd > 0);
 
-                int setUniversalPlanes(drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1));
-                ASSERT(setUniversalPlanes == 0);
+                // int setUniversalPlanes(drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1));
+                // ASSERT(setUniversalPlanes == 0);
 
                 Core::ResourceMonitor::Instance().Register(_monitor);
 
@@ -582,9 +582,10 @@ namespace Compositor {
                     connector->Completed(false);
 
                     if (connector->Callback() != nullptr) {
-                        const struct timespec presentationTimestamp {
-                            .tv_sec = sec, .tv_nsec = usec * 1000
-                        };
+                        struct timespec presentationTimestamp;
+
+                        presentationTimestamp.tv_sec = sec;
+                        presentationTimestamp.tv_nsec = usec * 1000;
 
                         connector->Callback()->LastFrameTimestamp(Core::Time(presentationTimestamp).Ticks());
                     }
@@ -606,13 +607,13 @@ namespace Compositor {
 
             int DrmEventHandler() const
             {
-                drmEventContext eventContext = {
-                    .version = 3,
-                    .vblank_handler = nullptr,
-                    .page_flip_handler = nullptr,
-                    .page_flip_handler2 = PageFlipHandler,
-                    .sequence_handler = nullptr
-                };
+                drmEventContext eventContext;
+
+                eventContext.version = 3;
+                eventContext.vblank_handler = nullptr;
+                eventContext.page_flip_handler = nullptr;
+                eventContext.page_flip_handler2 = PageFlipHandler;
+                eventContext.sequence_handler = nullptr;
 
                 if (drmHandleEvent(_cardFd, &eventContext) != 0) {
                     TRACE(Trace::Error, ("Failed to handle drm event"));
