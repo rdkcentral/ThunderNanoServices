@@ -80,9 +80,9 @@ namespace Plugin {
             , _modifier(DRM_FORMAT_MOD_INVALID)
             , _gpuConnector()
             , _renderer()
-            , _clients()
-            , _clientBridge(*this)
             , _observers()
+            , _clientBridge(*this)
+            , _clients()
             , _lastFrame(0)
             , _background(black)
         {
@@ -171,7 +171,7 @@ namespace Plugin {
                 Bridge& operator=(const Bridge&) = delete;
 
             public:
-                Bridge(CompositorImplementation& parent)
+                Bridge(CompositorImplementation& /*parent*/)
                     : Core::PrivilegedRequest()
                 /*, _parent(parent)*/
                 {
@@ -242,7 +242,7 @@ namespace Plugin {
                 , _callsign(callsign)
                 , _opacity(0)
                 , _zIndex(0)
-                , _geometry({ .x = 0, .y = 0, .width = width, .height = height })
+                , _geometry({ 0,0, width, height })
                 , _buffer(Compositor::CreateBuffer(_parent.Native(), width, height, Compositor::PixelFormat(_parent.Format(), { _parent.Modifier() })))
                 , _sharedBuffer(*this)
                 , _texture(nullptr)
@@ -496,12 +496,12 @@ namespace Plugin {
             }
         }
 
-        const uint32_t Format() const
+        uint32_t Format() const
         {
             return _format;
         }
 
-        const uint64_t Modifier() const
+        uint64_t Modifier() const
         {
             return _modifier;
         }
@@ -551,20 +551,20 @@ namespace Plugin {
             _renderer->Begin(width, height);
             _renderer->Clear(_background);
 
-            _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
+            _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
                 if (client->Texture() == nullptr) {
                     return; // no texture to render
                 }
 
                 Exchange::IComposition::Rectangle rectangle = client->Geometry();
 
-                const Compositor::Box renderBox = { .x = int(rectangle.x), .y = int(rectangle.y), .width = int(rectangle.width), .height = int(rectangle.height) };
+                const Compositor::Box renderBox = { int(rectangle.x),int(rectangle.y), int(rectangle.width), int(rectangle.height) };
 
                 Compositor::Matrix matrix;
 
                 Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
-                const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(client->Texture()->Width()), .height = int(client->Texture()->Height()) };
+                const Compositor::Box textureBox = { 0,0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
 
                 _renderer->Render(client->Texture(), textureBox, matrix, float(client->Opacity() / Exchange::IComposition::maxOpacity));
             });
