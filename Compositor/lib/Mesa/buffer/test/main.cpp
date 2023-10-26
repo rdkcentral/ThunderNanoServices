@@ -42,7 +42,7 @@ void GetNodess(const uint32_t type, std::vector<std::string>& list)
 
     assert(nDrmDevices > 0);
 
-    drmDevicePtr devices[nDrmDevices];
+    drmDevicePtr* devices = static_cast<drmDevicePtr*>(ALLOCA(nDrmDevices * sizeof(drmDevicePtr)));
 
     drmGetDevices2(0 /* flags */, devices, nDrmDevices);
 
@@ -107,7 +107,7 @@ void GetNodess(const uint32_t type, std::vector<std::string>& list)
 //     return bitmask;
 // }
 
-int main(int argc, const char* argv[])
+int main(int /*argc*/, const char* argv[])
 {
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
     Messaging::ConsolePrinter printer(false);
@@ -182,7 +182,7 @@ int main(int argc, const char* argv[])
                 first_plane = plane;
             }
 
-            assert(plane->Accessor() >= 0);
+            // assert(plane->Accessor() >= 0);
             assert(plane->Offset() == 0);
             assert(plane->Stride() == 1920 * (32 / 8));
         }
