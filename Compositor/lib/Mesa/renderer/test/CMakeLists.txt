@@ -20,7 +20,7 @@ target_link_libraries(testclear
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
+        CompositorSimpleWorker::CompositorSimpleWorker
 )
 
 install(TARGETS testclear DESTINATION bin/${NAMESPACE}Tests)
@@ -39,7 +39,7 @@ target_link_libraries(testquads
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
+        CompositorSimpleWorker::CompositorSimpleWorker
 )
 
 install(TARGETS testquads DESTINATION bin/${NAMESPACE}Tests)
@@ -58,7 +58,7 @@ target_link_libraries(testtexture
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
+        CompositorSimpleWorker::CompositorSimpleWorker
         TextureBuffer::TextureBuffer
 )
 
@@ -77,7 +77,7 @@ target_link_libraries(testdmabuf
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
+        CompositorSimpleWorker::CompositorSimpleWorker
 )
 
 install(TARGETS testdmabuf DESTINATION bin/${NAMESPACE}Tests)

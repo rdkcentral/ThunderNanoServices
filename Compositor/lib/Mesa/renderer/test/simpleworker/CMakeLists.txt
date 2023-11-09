@@ -21,17 +21,17 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
-add_library(SimpleWorker STATIC
+add_library(CompositorSimpleWorker STATIC
     SimpleWorker.cpp)
 
-target_include_directories(SimpleWorker PUBLIC
+target_include_directories(CompositorSimpleWorker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:include/${NAMESPACE}>)
 
-target_link_libraries(SimpleWorker
+target_link_libraries(CompositorSimpleWorker
     PUBLIC
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-add_library(SimpleWorker::SimpleWorker ALIAS SimpleWorker)
+add_library(CompositorSimpleWorker::CompositorSimpleWorker ALIAS CompositorSimpleWorker)
