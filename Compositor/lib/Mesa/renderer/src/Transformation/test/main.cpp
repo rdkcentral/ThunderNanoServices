@@ -68,7 +68,7 @@ bool compareResult(const Compositor::Matrix& ml, const float wr[9])
     );
 }
 
-int main(int /*argc*/, const char** /*argv[]*/)
+int main(int /*argc*/, const char* argv[])
 {
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
     Messaging::ConsolePrinter printer(false);
@@ -83,6 +83,10 @@ int main(int /*argc*/, const char** /*argv[]*/)
     for (auto module : modules) {
         tracer.EnableMessage("TransformationTest", module, true);
     }
+
+    const char* executableName(Core::FileNameOnly(argv[0]));
+
+    printf("%s - build: %s\n", executableName, __TIMESTAMP__);
 
     /* ############################################################## */
 
