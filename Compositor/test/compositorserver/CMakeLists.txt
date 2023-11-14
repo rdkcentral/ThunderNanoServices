@@ -38,5 +38,5 @@ target_link_libraries(compositorserver
 )
 
 if(INSTALL_COMPOSITOR_SERVER_TEST)
-    install(TARGETS compositorserver RUNTIME DESTINATION bin)
+    install(TARGETS compositorserver RUNTIME DESTINATION bin/${NAMESPACE}Tests)
 endif()
