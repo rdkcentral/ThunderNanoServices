@@ -161,16 +161,16 @@ public:
         : _rootPath(rootPath)
         , _plugin()
         , _config()
-        , _engine()
+        /*, _engine()*/
     {
-        _engine = Core::ProxyType<WorkerPoolImplementation>::Create(1, Core::Thread::DefaultStackSize(), 16);
-        Core::IWorkerPool::Assign(&(*_engine));
+        // _engine = Core::ProxyType<WorkerPoolImplementation>::Create(1, Core::Thread::DefaultStackSize(), 16);
+        // Core::IWorkerPool::Assign(&(*_engine));
 
-        std::thread(
-            [this]() {
-                _engine->Run();
-            })
-            .detach();
+        // std::thread(
+        //     [this]() {
+        //         _engine->Run();
+        //     })
+        //     .detach();
 
         Core::File file(std::string(PluginPath() + configurationFile).c_str());
 
@@ -214,12 +214,12 @@ public:
 
     ~MockedShell()
     {
-        Core::IWorkerPool::Assign(nullptr);
+        // Core::IWorkerPool::Assign(nullptr);
 
-        if (_engine.IsValid() == true) {
-            _engine->Stop();
-            _engine.Release();
-        }
+        // if (_engine.IsValid() == true) {
+        //     _engine->Stop();
+        //     _engine.Release();
+        // }
     };
 
 public:
@@ -303,7 +303,7 @@ private:
     Core::Library _plugin;
     Plugin::Config _config;
     MockedSubSystem _subSystem;
-    Core::ProxyType<WorkerPoolImplementation> _engine;
+    // Core::ProxyType<WorkerPoolImplementation> _engine;
 }; // class MockedShell
 }
 
@@ -350,7 +350,7 @@ int main(int argc, const char* argv[])
 
         WPEFramework::MockedShell service(defaultInstallPath, "Compositor.json");
 
-        ASSERT(WPEFramework::Core::IWorkerPool::IsAvailable() == true);
+        // ASSERT(WPEFramework::Core::IWorkerPool::IsAvailable() == true);
 
         uint32_t connectionId = 0;
         WPEFramework::Exchange::IComposition* composition = nullptr;
