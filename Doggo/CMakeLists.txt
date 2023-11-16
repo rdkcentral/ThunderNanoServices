@@ -32,6 +32,10 @@ set(PLUGIN_DOGGO_DEVICE "/dev/watchdog0" CACHE STRING "Watchdog device to use")
 set(PLUGIN_DOGGO_INTERVAL 30 CACHE STRING "Interval in seconds for feeding the watchdog")
 set(PLUGIN_DOGGO_MARGIN 5 CACHE STRING "Marin in seconds that is still valid to feed the watchdog")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

@@ -34,6 +34,10 @@ set(PLUGIN_WIFICONTROL_AUTOCONNECT_MAXRETRIES -1 CACHE STRING "Autoconnect max r
 set(PLUGIN_WIFICONTROL_WPS_WALKTIME 125 CACHE STRING "Maximum Walk Time for WPS")
 set(PLUGIN_WIFICONTROL_WPS_DISABLED false CACHE STRING "Disable the WPS Feature")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
