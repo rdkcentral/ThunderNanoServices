@@ -20,7 +20,7 @@ namespace Texture {
         const std::vector<uint8_t> data;
     };
 
-    static const inline PixelData Red(
+    static const PixelData Red(
         1,
         1,
         4,
@@ -28,7 +28,7 @@ namespace Texture {
             255, 0, 0, 255 // Red
         });
 
-    static const inline PixelData Green(
+    static const PixelData Green(
         1,
         1,
         4,
@@ -36,7 +36,7 @@ namespace Texture {
             0, 255, 0, 255, // Green
         });
 
-    static const inline PixelData Blue(
+    static const PixelData Blue(
         1,
         1,
         4,
@@ -44,7 +44,7 @@ namespace Texture {
             0, 0, 255, 255, // Blue
         });
 
-    static const inline PixelData Simple(
+    static const PixelData Simple(
         2,
         2,
         4,
@@ -63,7 +63,7 @@ namespace Texture {
      * Endianness: Little Endian
      *
      */
-    static const inline PixelData TvTexture(
+    static const PixelData TvTexture(
         128,
         128,
         4,
