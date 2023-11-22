@@ -23,8 +23,12 @@ target_link_libraries(testclear
         CompositorSimpleWorker::CompositorSimpleWorker
 )
 
-install(TARGETS testclear DESTINATION bin/${NAMESPACE}Tests)
+set_target_properties(testclear PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+)
 
+install(TARGETS testclear DESTINATION bin/${NAMESPACE}Tests)
 
 add_executable(testquads testquads.cpp)
 
@@ -40,6 +44,11 @@ target_link_libraries(testquads
         common::renderer
         common::drm
         CompositorSimpleWorker::CompositorSimpleWorker
+)
+
+set_target_properties(testquads PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
 )
 
 install(TARGETS testquads DESTINATION bin/${NAMESPACE}Tests)
@@ -62,6 +71,11 @@ target_link_libraries(testtexture
         TextureBuffer::TextureBuffer
 )
 
+set_target_properties(testtexture PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+)
+
 install(TARGETS testtexture DESTINATION bin/${NAMESPACE}Tests)
 
 add_executable(testdmabuf testdmabuf.cpp)
@@ -78,6 +92,11 @@ target_link_libraries(testdmabuf
         common::renderer
         common::drm
         CompositorSimpleWorker::CompositorSimpleWorker
+)
+
+set_target_properties(testdmabuf PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
 )
 
 install(TARGETS testdmabuf DESTINATION bin/${NAMESPACE}Tests)
