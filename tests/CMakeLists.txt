@@ -25,7 +25,12 @@ project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
 option(STORE_TEST "Utility to verify PersistentStore and Dictionary Plugin behaviour." OFF)
+option(TEST_AUTOMATION_TOOLS "Utility to verify Thunder functions trigerred by Automation Test Tools." OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
+endif()
+
+if(TEST_AUTOMATION_TOOLS)
+    add_subdirectory(TestAutomationTools)
 endif()
