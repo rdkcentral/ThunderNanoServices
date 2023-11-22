@@ -37,8 +37,6 @@ target_link_libraries(CommonBufferDumb
 set_target_properties(CommonBufferDumb PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
         POSITION_INDEPENDENT_CODE ON
 )
 
