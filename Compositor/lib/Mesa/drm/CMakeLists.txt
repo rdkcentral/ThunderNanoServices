@@ -23,6 +23,8 @@ find_package(libdrm REQUIRED)
 
 add_library(CommonDRM STATIC DRM.cpp)
 
+target_compile_options(CommonDRM PUBLIC -Wno-psabi)
+
 target_link_libraries(CommonDRM
     PUBLIC
         libdrm::libdrm

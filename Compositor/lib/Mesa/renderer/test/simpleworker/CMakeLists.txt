@@ -34,4 +34,6 @@ target_link_libraries(CompositorSimpleWorker
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
+target_compile_options(CompositorSimpleWorker PUBLIC -Wno-psabi)
+
 add_library(CompositorSimpleWorker::CompositorSimpleWorker ALIAS CompositorSimpleWorker)
