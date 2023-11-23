@@ -23,7 +23,7 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(TestAutomationToolsImplementation, 1, 0);
+    SERVICE_REGISTRATION(TestAutomationToolsImplementation, 1, 0)
 
     TestAutomationToolsImplementation::TestAutomationToolsImplementation()
         : _adminLock{}
