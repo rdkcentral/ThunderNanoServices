@@ -31,6 +31,10 @@ set(PLUGIN_SWITCH_COBALT false CACHE BOOL "Enable switch for Cobalt plugin")
 set(PLUGIN_SWITCH_NETFLIX false CACHE BOOL "Enable switch for Netflix plugin")
 set(PLUGIN_SWITCH_WEBKITBROWSER false CACHE BOOL "Enable switch for WebKitBrowser plugin")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 # This is a plugin so we need the Plugin configuration section.
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug  REQUIRED)

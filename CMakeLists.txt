@@ -83,10 +83,6 @@ if(ENABLE_STRICT_COMPILER_SETTINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_STRICT_COMPILER_SETTINGS}")
 endif()
 
-if(BUILD_REFERENCE)
-    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
-endif()
-
 if(PLUGIN_AVS)
     add_subdirectory(AVS)
 endif()

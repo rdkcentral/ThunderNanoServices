@@ -53,6 +53,10 @@ if(PLUGIN_COMPOSITOR_OUTOFPROCESS STREQUAL "false")
     unset(PLUGIN_COMPOSITOR_OUTOFPROCESS CACHE)
 endif()
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

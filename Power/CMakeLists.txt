@@ -42,6 +42,10 @@ set(PLUGIN_POWER_IMPLEMENTATION "Linux" CACHE STRING "Implementation to be selec
 
 option(PLUGIN_POWER_MFRPERSIST_STATE "Enable device to boot to last power state on power loss reboot. [ON, OFF]." OFF)
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

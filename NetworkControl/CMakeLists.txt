@@ -31,6 +31,10 @@ set(PLUGIN_NETWORKCONTROL_AUTOSTART true CACHE STRING "Automatically start Netwo
 set(PLUGIN_NETWORKCONTROL_DHCP_RESONSE_TIMEOUT 5 CACHE STRING "Timeout per request to get a DHCP lease")
 set(PLUGIN_NETWORKCONTROL_DHCP_RETRIES 4 CACHE STRING "Times to retry to get a DHCP lease")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

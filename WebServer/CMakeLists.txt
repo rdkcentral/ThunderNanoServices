@@ -41,6 +41,10 @@ option(PLUGIN_WEBSERVER_PROXY_DEVICEINFO "Enable proxy for DeviceInfo" ${PLUGIN_
 option(PLUGIN_WEBSERVER_PROXY_DIALSERVER "Enable proxy for DIALServer" ${PLUGIN_DIALSERVER})
 option(PLUGIN_WEBSERVER_SECURITYAGENT "Enable support for SecurityAgent ([ON, OFF])." OFF)
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 

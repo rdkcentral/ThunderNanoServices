@@ -27,6 +27,10 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 set(PLUGIN_INPUTSWITCH_AUTOSTART true CACHE STRING "Automatically start InputSwitch plugin")
 
 find_package(${NAMESPACE}Plugins REQUIRED)

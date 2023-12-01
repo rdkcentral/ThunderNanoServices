@@ -45,6 +45,10 @@ set(PLUGIN_REMOTECONTROL_RFCE_NVM_LUT "DEFAULT" CACHE STRING "The NVM LUT to be 
 
 option(PLUGIN_REMOTECONTROL_CEC "Enable CEC User Control conversion support." OFF)
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(NEXUS QUIET)

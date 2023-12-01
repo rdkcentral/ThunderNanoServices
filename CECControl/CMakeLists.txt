@@ -40,6 +40,10 @@ set(CEC_DEVICE_ADAPTER_LIBRARY_NAME "_ceccontrol_device_adapter" CACHE INTERNAL 
 
 set (PLUGIN_CECCONTROL_INTERFACES "hdmi1:/dev/cec0:recorder" "hdmi2:/dev/cec1:playback")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
