@@ -71,6 +71,9 @@ namespace Compositor {
                         , _frontBuffer(0)
                     {
                         Compositor::Identifier id = _backend->Descriptor();
+
+                        //TODO if ScreenResolution_Unknown lookup current dimensions of the connected screen.
+
                         uint32_t width = Exchange::IComposition::WidthFromResolution(resolution);
                         uint32_t height = Exchange::IComposition::HeightFromResolution(resolution);
 
