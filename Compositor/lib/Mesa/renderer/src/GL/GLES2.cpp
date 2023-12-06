@@ -392,7 +392,7 @@ namespace Compositor {
 
                     for (auto& id : _textureIds) {
                         int len = snprintf(NULL, 0, "tex%d", index) + 1;
-                        
+
                         char* parameter = static_cast<char*>(ALLOCA(len));
 
                         snprintf(parameter, len, "tex%d", index++);
@@ -515,6 +515,142 @@ namespace Compositor {
                 Programs _programs;
             };
 
+            static bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
+            {
+
+                png_structp pngPointer = nullptr;
+
+                pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+                if (pngPointer == nullptr) {
+
+                    return false;
+                }
+
+                png_infop infoPointer = nullptr;
+                infoPointer = png_create_info_struct(pngPointer);
+                if (infoPointer == nullptr) {
+
+                    png_destroy_write_struct(&pngPointer, &infoPointer);
+                    return false;
+                }
+
+                // Set up error handling.
+                if (setjmp(png_jmpbuf(pngPointer))) {
+
+                    png_destroy_write_struct(&pngPointer, &infoPointer);
+                    return false;
+                }
+
+                // Set image attributes.
+                int depth = 8;
+                png_set_IHDR(pngPointer,
+                    infoPointer,
+                    width,
+                    height,
+                    depth,
+                    PNG_COLOR_TYPE_RGB,
+                    PNG_INTERLACE_NONE,
+                    PNG_COMPRESSION_TYPE_DEFAULT,
+                    PNG_FILTER_TYPE_DEFAULT);
+
+                // Initialize rows of PNG.
+                png_byte** rowLines = static_cast<png_byte**>(png_malloc(pngPointer, height * sizeof(png_byte*)));
+
+                const int pixelSize = 4; // RGBA
+
+                for (unsigned int i = 0; i < height; ++i) {
+
+                    png_byte* rowLine = static_cast<png_byte*>(png_malloc(pngPointer, sizeof(png_byte) * width * pixelSize));
+                    const uint8_t* rowSource = buffer.data() + (sizeof(png_byte) * i * width * pixelSize);
+                    rowLines[i] = rowLine;
+                    for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
+                        *rowLine++ = rowSource[j + 2]; // Red
+                        *rowLine++ = rowSource[j + 1]; // Green
+                        *rowLine++ = rowSource[j + 0]; // Blue
+                    }
+                }
+
+                bool result = false;
+
+                // Duplicate file descriptor and create File stream based on it.
+                FILE* filePointer = fopen(filename.c_str(), "wb");
+
+                if (nullptr != filePointer) {
+                    // Write the image data to "file".
+                    png_init_io(pngPointer, filePointer);
+                    png_set_rows(pngPointer, infoPointer, rowLines);
+                    png_write_png(pngPointer, infoPointer, PNG_TRANSFORM_IDENTITY, nullptr);
+                    // All went well.
+                    result = true;
+                }
+
+                // Close stream to flush and release allocated buffers
+                fclose(filePointer);
+
+                for (unsigned int i = 0; i < height; i++) {
+                    png_free(pngPointer, rowLines[i]);
+                }
+
+                png_free(pngPointer, rowLines);
+                png_destroy_write_struct(&pngPointer, &infoPointer);
+
+                return result;
+            }
+
+            static bool DumpTex(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels, GLuint textureId)
+            {
+                const Renderer::GLPixelFormat formatGL(Renderer::ConvertFormat(format));
+
+                glFinish();
+                glGetError();
+
+                GLuint fbo, bound_fbo;
+                GLint viewport[4];
+
+                // Backup framebuffer
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&bound_fbo));
+                glGetIntegerv(GL_VIEWPORT, viewport);
+
+                // Generate framebuffer
+                glGenFramebuffers(1, &fbo);
+                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+
+                glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+
+                // Bind the texture to your FBO
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
+                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+
+                // Test if everything failed
+                GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+                if (status != GL_FRAMEBUFFER_COMPLETE) {
+                    TRACE_GLOBAL(Trace::Error, ("DumpTex: failed to make complete framebuffer object %x", status));
+                    return false;
+                }
+
+                // set the viewport as the FBO won't be the same dimension as the screen
+                glViewport(box.x, box.y, box.width, box.height);
+                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+
+                pixels.clear();
+                pixels.resize(box.width * box.height * (formatGL.BitPerPixel / 8));
+
+                glReadPixels(box.x, box.y, box.width, box.height, formatGL.Format, formatGL.Type, pixels.data());
+                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+
+                // Restore framebuffer
+                glBindFramebuffer(GL_FRAMEBUFFER, bound_fbo);
+                glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
+                EGLint error = glGetError();
+
+                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(error)));
+
+                return error == GL_NO_ERROR;
+            }
+
             class GLESTexture : public IRenderer::ITexture {
             public:
                 GLESTexture() = delete;
@@ -543,6 +679,17 @@ namespace Compositor {
                     }
 
                     ASSERT(_textureId != 0);
+
+                    std::vector<uint8_t> pixels;
+                    Box box = { 0, 0, static_cast<int>(buffer->Width()), static_cast<int>(buffer->Height()) };
+
+                    if (DumpTex(box, buffer->Format(), pixels, _textureId) == true) {
+                        std::stringstream ss;
+                        ss << "gl-tex-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+                        Core::File snapshot(ss.str());
+
+                        WritePNG(ss.str(), pixels, box.width, box.height);
+                    }
                 }
 
                 virtual ~GLESTexture()
@@ -692,8 +839,7 @@ namespace Compositor {
 
                     _buffer->Completed(false);
 
-                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", 
-                        _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));   
+                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
 
             private:
@@ -876,7 +1022,7 @@ namespace Compositor {
                 PopDebug();
             }
 
-            ITexture* Texture(Exchange::ICompositionBuffer* buffer)
+            ITexture* Texture(Exchange::ICompositionBuffer* buffer) override
             {
                 return new GLESTexture(*this, buffer);
             };
@@ -964,88 +1110,6 @@ namespace Compositor {
             bool InContext() const
             {
                 return ((_egl.IsCurrent() == true) && (_frameBuffer != nullptr));
-            }
-
-            bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
-            {
-
-                png_structp pngPointer = nullptr;
-
-                pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-                if (pngPointer == nullptr) {
-
-                    return false;
-                }
-
-                png_infop infoPointer = nullptr;
-                infoPointer = png_create_info_struct(pngPointer);
-                if (infoPointer == nullptr) {
-
-                    png_destroy_write_struct(&pngPointer, &infoPointer);
-                    return false;
-                }
-
-                // Set up error handling.
-                if (setjmp(png_jmpbuf(pngPointer))) {
-
-                    png_destroy_write_struct(&pngPointer, &infoPointer);
-                    return false;
-                }
-
-                // Set image attributes.
-                int depth = 8;
-                png_set_IHDR(pngPointer,
-                    infoPointer,
-                    width,
-                    height,
-                    depth,
-                    PNG_COLOR_TYPE_RGB,
-                    PNG_INTERLACE_NONE,
-                    PNG_COMPRESSION_TYPE_DEFAULT,
-                    PNG_FILTER_TYPE_DEFAULT);
-
-                // Initialize rows of PNG.
-                png_byte** rowLines = static_cast<png_byte**>(png_malloc(pngPointer, height * sizeof(png_byte*)));
-                
-                const int pixelSize = 4; // RGBA
-
-                for (unsigned int i = 0; i < height; ++i) {
-
-                    png_byte* rowLine = static_cast<png_byte*>(png_malloc(pngPointer, sizeof(png_byte) * width * pixelSize));
-                    const uint8_t* rowSource = buffer.data() + (sizeof(png_byte) * i * width * pixelSize);
-                    rowLines[i] = rowLine;
-                    for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
-                        *rowLine++ = rowSource[j + 2]; // Red
-                        *rowLine++ = rowSource[j + 1]; // Green
-                        *rowLine++ = rowSource[j + 0]; // Blue
-                    }
-                }
-
-                bool result = false;
-                
-                // Duplicate file descriptor and create File stream based on it.
-                FILE* filePointer = fopen(filename.c_str(), "wb");
-
-                if (nullptr != filePointer) {
-                    // Write the image data to "file".
-                    png_init_io(pngPointer, filePointer);
-                    png_set_rows(pngPointer, infoPointer, rowLines);
-                    png_write_png(pngPointer, infoPointer, PNG_TRANSFORM_IDENTITY, nullptr);
-                    // All went well.
-                    result = true;
-                }
-
-                // Close stream to flush and release allocated buffers
-                fclose(filePointer);
-
-                for (unsigned int i = 0; i < height; i++) {
-                    png_free(pngPointer, rowLines[i]);
-                }
-
-                png_free(pngPointer, rowLines);
-                png_destroy_write_struct(&pngPointer, &infoPointer);
-
-                return result;
             }
 
             bool Snapshot(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels)

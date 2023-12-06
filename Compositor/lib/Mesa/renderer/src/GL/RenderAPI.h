@@ -109,15 +109,6 @@ namespace API {
     class GL {
     public:
 
-    // static void DumpTexture(){
-
-    //     std::stringstream ss;
-    //     ss << "gl-tex-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
-    //     Core::File snapshot(ss.str());
-
-
-    // }
-
 /* simple stringification operator to make errorcodes human readable */
 #define CASE_TO_STRING(value) \
     case value:         \
