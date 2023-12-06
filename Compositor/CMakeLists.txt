@@ -43,6 +43,8 @@ option(PLUGIN_COMPOSITOR_NXSERVER "Allow to use external nexus server" OFF)
 
 set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implementation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
+set(PLUGIN_COMPOSITOR_OUTPUT "card0-HDMI-A-1"  CACHE STRING "Specify the output that the compopsitor should use." )
+
 set(PLUGIN_COMPOSITOR_WESTON_TTY_LIST "1;2;3;4" CACHE STRING "TTY ids for weston drm backend")
 set(PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS "HDMI-A-1,1280x720@60.0 16:9,normal" CACHE STRING "Output configs for weston drm backend")
 set(PLUGIN_COMPOSITOR_THREAD_COUNT "2"  CACHE STRING "Specify the minimum thread count required to run in outofprocess mode")
