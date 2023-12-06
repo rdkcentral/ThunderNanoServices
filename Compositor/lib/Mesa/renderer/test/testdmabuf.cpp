@@ -35,23 +35,18 @@
 #include <IRenderer.h>
 #include <Transformation.h>
 
+#include <DRM.h>
+
 #include <drm_fourcc.h>
 
 #include <simpleworker/SimpleWorker.h>
+
+#include <DmaBuffer.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
-
-const Compositor::Color red = { 1.0f, 0.0f, 0.0f, 1.0f };
-const Compositor::Color green = { 0.0f, 1.0f, 0.0f, 1.0f };
-const Compositor::Color blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-
-struct Texture {
-    Core::ProxyType<Exchange::ICompositionBuffer> data;
-    Compositor::IRenderer::ITexture* texture;
-}; // Texture
 
 class RenderTest {
 
@@ -67,10 +62,11 @@ public:
         , _format(DRM_FORMAT_ARGB8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
+        , _textureBuffer()
         , _fps(fps)
-        , _texture()
+        , _texture(nullptr)
     {
-        _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_720p, _format, false);
+        _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, _format, false);
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created connector: %p", _connector.operator->()));
 
@@ -78,44 +74,18 @@ public:
         ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
-        // Create a dmabuf texture
-        _texture.data = Compositor::CreateBuffer(_connector->Identifier(), 100, 100, _format);
-        FillTexture(_texture.data, green);
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %p", _texture.data.operator->()));
-
-        // Create a texture in gpu memory
-        _texture.texture = _renderer->Texture(_texture.data.operator->());
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("submitted texture: %p", _texture.texture));
+        _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_connector->Identifier(), Texture::TvTexture);
+        _texture = _renderer->Texture(_textureBuffer.operator->());
+        TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %d", _texture));
     }
 
     ~RenderTest()
     {
         Stop();
 
-        _texture.texture->Release();
-        _texture.data.Release();
-
         _renderer.Release();
         _connector.Release();
-    }
-
-    void FillTexture(Core::ProxyType<Exchange::ICompositionBuffer> buffer, const Compositor::Color& color)
-    {
-        ASSERT(buffer.IsValid() == true);
-
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("filling texture with color: %f, %f, %f, %f", color[0], color[1], color[2], color[3]));
-
-        _renderer->Bind(buffer);
-        _renderer->Begin(buffer->Width(), buffer->Height());
-        _renderer->Clear(color);
-
-        const Compositor::Box box = { 0, 0, int(buffer->Width() / 2), int(buffer->Height() / 2) };
-        Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_NORMAL, Compositor::Transformation::ToRadials(0), _renderer->Projection());
-        _renderer->Quadrangle({ color[1], color[2], color[0], 1.0f }, matrix);
-
-        _renderer->End(false);
-        _renderer->Unbind();
+        _textureBuffer.Release();
     }
 
     void Start()
@@ -193,8 +163,8 @@ private:
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { 0, 0, int(_texture.texture->Width()), int(_texture.texture->Height()) };
-        _renderer->Render(_texture.texture, textureBox, matrix, 1.0f);
+        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
+        _renderer->Render(_texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);
 
@@ -220,8 +190,9 @@ private:
     const Compositor::PixelFormat _format;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
+    Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
     const uint8_t _fps;
-    Texture _texture;
+    Compositor::IRenderer::ITexture* _texture;
 }; // RenderTest
 }
 
@@ -258,7 +229,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 1);
+        WPEFramework::RenderTest test(connectorId, 10);
 
         // test.Start();
 

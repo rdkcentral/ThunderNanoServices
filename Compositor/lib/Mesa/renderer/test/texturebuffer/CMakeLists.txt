@@ -20,15 +20,30 @@ find_package(${NAMESPACE}Core CONFIG REQUIRED)
 
 find_package(libdrm REQUIRED)
 
-add_library(TextureBuffer STATIC TextureBuffer.cpp)
+add_library(PixelBuffer STATIC PixelBuffer.cpp)
 
-target_include_directories(TextureBuffer PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(PixelBuffer PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(TextureBuffer
+target_link_libraries(PixelBuffer
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         libdrm::libdrm
 )
 
-add_library(TextureBuffer::TextureBuffer ALIAS TextureBuffer)
+add_library(PixelBuffer::PixelBuffer ALIAS PixelBuffer)
+
+
+add_library(DmaBuffer STATIC DmaBuffer.cpp)
+
+target_include_directories(DmaBuffer PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+
+target_link_libraries(DmaBuffer
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        libdrm::libdrm
+        common::include
+)
+
+add_library(DmaBuffer::DmaBuffer ALIAS DmaBuffer)

@@ -43,20 +43,20 @@
 
 #include <simpleworker/SimpleWorker.h>
 
-#include <TextureBuffer.h>
+#include <PixelBuffer.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
-static Compositor::TextureBuffer textureRed(Texture::Red);
-static Compositor::TextureBuffer textureGreen(Texture::Green);
-static Compositor::TextureBuffer textureBlue(Texture::Blue);
+static Compositor::PixelBuffer textureRed(Texture::Red);
+static Compositor::PixelBuffer textureGreen(Texture::Green);
+static Compositor::PixelBuffer textureBlue(Texture::Blue);
 
-static Compositor::TextureBuffer textureSimple(Texture::Simple);
+static Compositor::PixelBuffer textureSimple(Texture::Simple);
 
-static Compositor::TextureBuffer textureTv(Texture::TvTexture);
+static Compositor::PixelBuffer textureTv(Texture::TvTexture);
 
 class RenderTest {
 public:
@@ -76,7 +76,7 @@ public:
     {
         _connector = Compositor::Connector(
             connectorId,
-            Exchange::IComposition::ScreenResolution::ScreenResolution_720p,
+            Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
             false);
 
@@ -239,8 +239,6 @@ int main(int argc, const char* argv[])
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
         WPEFramework::RenderTest test(connectorId, 15);
-
-        test.Start();
 
         char keyPress;
 

@@ -68,7 +68,7 @@ target_link_libraries(testtexture
         common::renderer
         common::drm
         CompositorSimpleWorker::CompositorSimpleWorker
-        TextureBuffer::TextureBuffer
+        PixelBuffer::PixelBuffer
 )
 
 set_target_properties(testtexture PROPERTIES
@@ -92,11 +92,14 @@ target_link_libraries(testdmabuf
         common::renderer
         common::drm
         CompositorSimpleWorker::CompositorSimpleWorker
+        DmaBuffer::DmaBuffer
 )
 
 set_target_properties(testdmabuf PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
 )
+
+target_link_directories(testdmabuf PUBLIC ${CMAKE_CURRENT_LIST_DIR/../src/GL})
 
 install(TARGETS testdmabuf DESTINATION bin/${NAMESPACE}Tests)
