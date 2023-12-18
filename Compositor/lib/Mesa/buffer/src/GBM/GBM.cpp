@@ -54,7 +54,7 @@ namespace Compositor {
                     , _descriptor(InvalidFileDescriptor)
                 {
                     _descriptor = parent.Export(_index);
-                    TRACE(Trace::Buffer, (_T("Plane[%d] %p constructed [%d, %p]"), _index, this, _descriptor, &_parent));
+                    TRACE(Trace::Buffer, (_T("Plane[%d] %p constructed [%d, %p]: stride: %d offset: %d"), _index, this, _descriptor, &_parent, _parent.Stride(_index), _parent.Offset(_index)));
                 }
                 ~Plane() override
                 {
@@ -74,8 +74,7 @@ namespace Compositor {
 
                 uint32_t Offset() const override
                 {
-                    uint32_t result = _parent.Offset(_index);
-                    return (result);
+                    return _parent.Offset(_index);
                 }
 
                 uint32_t Stride() const override
@@ -120,8 +119,6 @@ namespace Compositor {
                     for (uint8_t index = 0; index < _planeCount; index++) {
                         _planes.at(index) = Core::ProxyType<GBM::Plane>::Create(buffer, index);
                     }
-
-                    TRACE(Trace::Buffer, (_T("GBM buffer %p constructed with %d plane%s"), this, _planeCount, (_planeCount == 1) ? "" : "s"));
 
                     return _planeCount;
                 }
@@ -280,27 +277,18 @@ namespace Compositor {
         private:
             uint32_t Offset(const uint8_t planeId) const
             {
-                uint32_t result = 0;
-
                 ASSERT(IsValid() == true);
+                ASSERT(planeId < DmaBufferMaxPlanes);
 
-#ifdef HAVE_GBM_MODIFIERS
-                if ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) {
-                    result = gbm_bo_get_offset(_bo, planeId);
-                }
-#endif
-
-                return result;
+                return gbm_bo_get_offset(_bo, planeId);
             }
 
             uint32_t Stride(const uint8_t planeId) const
             {
                 ASSERT(IsValid() == true);
-#ifdef HAVE_GBM_MODIFIERS
-                return ((IsValid() == true) && (planeId < DmaBufferMaxPlanes)) ? gbm_bo_get_stride_for_plane(_bo, planeId) : 0;
-#else
-                return IsValid() ? gbm_bo_get_stride(_bo) : 0;
-#endif
+                ASSERT(planeId < DmaBufferMaxPlanes);
+
+                return gbm_bo_get_stride_for_plane(_bo, planeId);
             }
 
             int Export(const uint8_t planeId) const
