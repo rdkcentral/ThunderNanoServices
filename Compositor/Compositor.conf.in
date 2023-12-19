@@ -75,6 +75,7 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
 
 if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
     configuration.add("port", "@PLUGIN_COMPOSITOR_OUTPUT@")
+    configuration.add("clientbridge", "@PLUGIN_COMPOSITOR_CLIENTBRIDGE@")
 
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")

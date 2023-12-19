@@ -181,9 +181,18 @@ namespace Plugin {
 
         _skipURL = service->WebPrefix().length();
 
+        if ((config.ClientBridge.IsSet() == true) && (config.ClientBridge.Value().empty() == false)) {
+            std::string bridgePath = service->VolatilePath() + config.ClientBridge.Value();
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_CLIENTBRIDGE"), bridgePath, true);
+        }
+
+        if ((config.Connector.IsSet() == true) && (config.Connector.Value().empty() == false)) {
+            std::string connectorPath = service->VolatilePath() + config.Connector.Value();
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_COMMUNICATOR"), connectorPath.c_str(), true);
+        }
+
         // See if the mandatory XDG environment variable is set, otherwise we will set it.
         if (Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), result) == false) {
-
             string runTimeDir((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->PersistentPath() + config.WorkDir.Value());
 
             Core::SystemInfo::SetEnvironment(_T("XDG_RUNTIME_DIR"), runTimeDir);
@@ -196,7 +205,6 @@ namespace Plugin {
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: CompositorImplementation";
         } else {
-
             RegisterAll();
             _composition->Register(&_notification);
             _composition->Configure(_service);
@@ -213,7 +221,7 @@ namespace Plugin {
     /* virtual */ void Compositor::Deinitialize(PluginHost::IShell* service)
     {
         if (_service != nullptr) {
-	    ASSERT(_service == service);
+            ASSERT(_service == service);
 
             _service->Unregister(&_notification);
 
@@ -596,7 +604,7 @@ namespace Plugin {
 
     Exchange::IComposition::Rectangle Compositor::Geometry(const string& callsign) const
     {
-        Exchange::IComposition::Rectangle result { 0, 0, 0, 0 };
+        Exchange::IComposition::Rectangle result{ 0, 0, 0, 0 };
         Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
         if (client != nullptr) {
