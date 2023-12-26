@@ -76,7 +76,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Cobalt*) |
 | classname | string | Class name: *Cobalt* |
 | locator | string | Library name: *libWPEFrameworkCobalt.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.url | string | <sup>*(optional)*</sup> The URL that is loaded upon starting the browser |
 | configuration?.width | number | <sup>*(optional)*</sup> The width in pixels of the surface to be used by the application |

@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_SNAPSHOT_AUTOSTART true CACHE STRING "Automatically start Snapshot plugin")
+set(PLUGIN_SNAPSHOT_STARTMODE "activated" CACHE STRING "Automatically start Snapshot plugin")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 

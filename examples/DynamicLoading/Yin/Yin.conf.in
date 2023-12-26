@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_YIN_AUTOSTART@"
+startmode = "@PLUGIN_YIN_STARTMODE@"
 
 configuration = JSON()
 configuration.add("yangcallsign", "@PLUGIN_YIN_YANGCALLSIGN@")

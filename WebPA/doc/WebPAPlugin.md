@@ -72,7 +72,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *WebPA*) |
 | classname | string | Class name: *WebPA* |
 | locator | string | Library name: *libWPEFrameworkWebPA.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.interface | string | <sup>*(optional)*</sup> Interface |
 | configuration?.pingwaittime | string | <sup>*(optional)*</sup> Ping waittime timout |

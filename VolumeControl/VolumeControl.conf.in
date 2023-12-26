@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_VOLUMECONTROL_AUTOSTART@"
+startmode = "@PLUGIN_VOLUMECONTROL_STARTMODE@"
 
 configuration = JSON()
 

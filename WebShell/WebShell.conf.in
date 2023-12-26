@@ -1,1 +1,1 @@
-autostart = "@PLUGIN_WEBSHELL_AUTOSTART@"
+startmode = "@PLUGIN_WEBSHELL_STARTMODE@"

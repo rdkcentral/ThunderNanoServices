@@ -9,7 +9,7 @@ find_package(WPEFramework)
 project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
-set(PLUGIN_BACKOFFICE_AUTOSTART "true" CACHE STRING "Automatically start the plugin")
+set(PLUGIN_BACKOFFICE_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 set(PLUGIN_BACKOFFICE_SERVER_ADDRESS "localhost" CACHE STRING "Backoffice server address")
 set(PLUGIN_BACKOFFICE_SERVER_PORT "80" CACHE STRING "Backoffice server address")
 set(PLUGIN_BACKOFFICE_CUSTOMER "metrological" CACHE STRING "Customer name")

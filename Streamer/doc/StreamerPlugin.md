@@ -76,7 +76,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Streamer*) |
 | classname | string | Class name: *Streamer* |
 | locator | string | Library name: *libWPEFrameworkStreamer.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces

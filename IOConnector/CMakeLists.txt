@@ -35,7 +35,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_IOCONNECTOR_AUTOSTART true CACHE STRING "Automatically start IOConnector plugin")
+set(PLUGIN_IOCONNECTOR_STARTMODE "activated" CACHE STRING "Automatically start IOConnector plugin")
 
 add_library(${MODULE_NAME} SHARED 
     Module.cpp

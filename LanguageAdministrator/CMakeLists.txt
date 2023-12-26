@@ -27,7 +27,7 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(ICU COMPONENTS uc i18n REQUIRED)
 
-set(PLUGIN_LANGUAGEADMINISTRATOR_AUTOSTART true CACHE STRING "Automatically start LanguageAdministrator plugin")
+set(PLUGIN_LANGUAGEADMINISTRATOR_STARTMODE "activated" CACHE STRING "Automatically start LanguageAdministrator plugin")
 
 add_library(${MODULE_NAME} SHARED
     LanguageAdministrator.cpp

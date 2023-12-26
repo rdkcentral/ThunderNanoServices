@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_COMPOSITOR_AUTOSTART@"
+startmode = "@PLUGIN_COMPOSITOR_STARTMODE@"
 
 communicator = "/communicator|0777"
 
