@@ -153,7 +153,6 @@ namespace Plugin {
         Core::SinkType<ConnectionNotification> _connectionNotification;
         Core::SinkType<NetworkNotification> _networkNotification;
     };
-
 } // namespace Plugin
 } // namespace WPEFramework
 
