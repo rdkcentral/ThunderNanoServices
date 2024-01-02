@@ -17,11 +17,11 @@
  * limitations under the License.
  */
  
-#include "TestAutomationTools.h"
+#include "TestAutomationMemory.h"
 
 
 namespace WPEFramework {
-namespace TestAutomationTools {
+namespace TestAutomationMemory {
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         class MemoryObserverImpl : public Exchange::IMemory {
@@ -75,7 +75,7 @@ namespace Plugin {
 
     namespace {
 
-        static Metadata<TestAutomationTools> metadata(
+        static Metadata<TestAutomationMemory> metadata(
             // Version
             1, 0, 0,
             // Preconditions
@@ -86,73 +86,65 @@ namespace Plugin {
             {}
         );
     }
-    
-    
-    void TestAutomationTools::Register(Exchange::ITestAutomationTools::INotification* notification)
-    {
-        ASSERT(notification);
-        _adminLock.Lock();
-        notification->AddRef();
-        _notifications.push_back(notification);
-        _adminLock.Unlock();
-    }
 
-    void TestAutomationTools::Unregister(const Exchange::ITestAutomationTools::INotification* notification)
-    {
-        ASSERT(notification);
-        _adminLock.Lock();
-        auto item = std::find(_notifications.begin(), _notifications.end(), notification);
-        ASSERT(item != _notifications.end());
-        _notifications.erase(item);
-        (*item)->Release();
-        _adminLock.Unlock();
-    }
-
-    const string TestAutomationTools::Initialize(PluginHost::IShell* service)
+    const string TestAutomationMemory::Initialize(PluginHost::IShell* service)
     {
         ASSERT (_service == nullptr);
         ASSERT (service != nullptr);
         ASSERT(_memory == nullptr);
 
         _service = service;
-        _service->AddRef(); 
-        _service->Register(&_Notification);
+        _service->AddRef();
 
-        _implementation = _service->Root<Exchange::ITestAutomationToolsInternal>(_connectionId, 2000, _T("TestAutomationToolsImplementation"));
+        _memoryTestInterface = _service->Root<Exchange::TestAutomation::IMemory>(_connectionId, 2000, _T("TestAutomationMemoryImplementation"));
 
         string result;
-        if (_implementation == nullptr) {
-            result = _T("Couldn't create TestAutomationTools instance");
+        if (_memoryTestInterface == nullptr) {
+            result = _T("Couldn't create TestAutomationMemory instance");
         } else {
-            Exchange::JTestAutomationTools::Register(*this, this);
-        }
-        const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
+            Exchange::TestAutomation::JMemory::Register(*this, _memoryTestInterface);
 
-        if (connection != nullptr) {
+            // If we are configured to run OOP, the _connectionId != 0!
+            if (_connectionId == 0) {
+                _memory = WPEFramework::TestAutomationMemory::MemoryObserver(nullptr);
+            }
+            else {
+                const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
+                if (connection == nullptr) {
+                    result = _T("Test Automation Memory crashed at initialize!");
+                }
+                else {
+                    _memory = WPEFramework::TestAutomationMemory::MemoryObserver(connection);
+                    ASSERT(_memory != nullptr);
+                    connection->Release();
+                }
+            }
+            if (_memory == nullptr) {
+                result = _T("Test Automation Memory could not intantiate a Memoery observer!");
+            }
 
-            _memory = WPEFramework::TestAutomationTools::MemoryObserver(connection);
-            ASSERT(_memory != nullptr);
-
-            connection->Release();
-        }
-        else {
-            result = _T("Test Automation Tools crashed at initialize!");
+            // this->AddRef();
         }
         
         return (result);
     }
 
 
-    void TestAutomationTools::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    void TestAutomationMemory::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
+        
         ASSERT(_service == service);
 
-        service->Unregister(&_Notification);
-        Exchange::JTestAutomationTools::Unregister(*this);
-        if (_implementation != nullptr) {
+        if (_memory != nullptr) {
+            _memory->Release();
+            _memory = nullptr;
+        }
+
+        Exchange::TestAutomation::JMemory::Unregister(*this);
+        if (_memoryTestInterface != nullptr) {
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            VARIABLE_IS_NOT_USED uint32_t result =  _implementation->Release();
+            VARIABLE_IS_NOT_USED uint32_t result =  _memoryTestInterface->Release();
         
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
@@ -160,7 +152,8 @@ namespace Plugin {
                 connection->Terminate();
                 connection->Release();
             }
-            _implementation = nullptr;
+            
+            _memoryTestInterface = nullptr;
         }
         
         _service->Release();
@@ -168,13 +161,13 @@ namespace Plugin {
         
     }
 
-    string TestAutomationTools::Information() const
+    string TestAutomationMemory::Information() const
     {
         return string();
     }
 
     
-    void TestAutomationTools::Deactivated(RPC::IRemoteConnection* connection)
+    void TestAutomationMemory::Deactivated(RPC::IRemoteConnection* connection)
     {
         if (connection->Id() == _connectionId) {
             ASSERT(_service != nullptr);
@@ -183,40 +176,6 @@ namespace Plugin {
                 PluginHost::IShell::FAILURE));
         }
     }
-
-
-    Core::hresult TestAutomationTools::AllocateMemory(const uint32_t size)
-    {
-        ASSERT(_implementation != nullptr);
-        TRACE(Trace::Information, (_T("Allocate Memory Called")));
-        return _implementation->IncreaseMemory(size);
-
-    }
-
-    Core::hresult TestAutomationTools::FreeAllocatedMemory()
-    {
-        ASSERT(_implementation != nullptr);
-        TRACE(Trace::Information, (_T("Free Allocated Memory Called")));
-        return _implementation->FreeMemory();
-        
-    }
-
-    Core::hresult TestAutomationTools::TestBigString(const uint32_t length)
-    {
-        ASSERT(_implementation != nullptr);
-        const uint32_t stringLength = length * 1024;
-        string bigString;
-        bigString.resize(stringLength, 'a');
-        bigString.replace(0, 8, "testaaaa");
-        bigString.replace(bigString.length() - 8, 8, "testzzzz");
- 
-        TRACE(Trace::Information, (_T("InP: Length Of The String Is " + std::to_string(bigString.length()))));
-        TRACE(Trace::Information, (_T("InP: Content Of The String Is " + bigString)));
-
-        return _implementation->BigStringTest(bigString);
-     
-    }
-
    
 }
 }

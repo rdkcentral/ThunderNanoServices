@@ -1,0 +1,7 @@
+autostart = "@PLUGIN_TESTAUTOMATIONMEMORY_AUTOSTART@"
+
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "Local")
+configuration.add("root", rootobject)

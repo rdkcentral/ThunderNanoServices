@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(TestAutomationTools)
+project(TestAutomationMemory)
 
 cmake_minimum_required(VERSION 3.3)
 
@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_TESTAUTOMATIONTOOLS_AUTOSTART true CACHE STRING "Automatically start TestAutomationTools plugin")
+set(PLUGIN_TESTAUTOMATIONMEMORY_AUTOSTART true CACHE STRING "Automatically start TestAutomationMemory plugin")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -38,8 +38,8 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
         Module.cpp
-        TestAutomationTools.cpp
-        TestAutomationToolsImplementation.cpp)
+        TestAutomationMemory.cpp
+        TestAutomationMemoryImplementation.cpp)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 

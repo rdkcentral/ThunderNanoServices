@@ -20,7 +20,7 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_TestAutomationTools
+#define MODULE_NAME Plugin_TestAutomationComRpc
 #endif
 
 #include <plugins/plugins.h>
