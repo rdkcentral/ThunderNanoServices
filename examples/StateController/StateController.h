@@ -141,7 +141,7 @@ POP_WARNING()
         uint32_t _skipURL;
         PluginHost::IShell* _service;
         std::map<const string, Entry> _clients;
-        Core::Sink<Notification> _sink;
+        Core::SinkType<Notification> _sink;
     };
 } //namespace Plugin
 } //namespace WPEFramework

@@ -125,7 +125,7 @@ namespace Player {
                 RPC::IValueIterator* Speeds() const override
                 {
                     ASSERT(_player != nullptr);
-                    return (Core::Service<RPC::ValueIterator>::Create<RPC::IValueIterator>(_player->Speeds()));
+                    return (Core::ServiceType<RPC::ValueIterator>::Create<RPC::IValueIterator>(_player->Speeds()));
                 }
                 void Speed(const int32_t request) override
                 {
@@ -229,7 +229,7 @@ namespace Player {
                 mutable uint32_t _referenceCount;
                 Frontend& _parent;
                 uint8_t _index;
-                mutable Core::Sink<Implementation::Geometry> _geometry;
+                mutable Core::SinkType<Implementation::Geometry> _geometry;
                 IPlayerPlatform* _player;
                 IControl::ICallback* _callback;
             };
@@ -397,7 +397,7 @@ namespace Player {
                 Exchange::IStream::IElement::IIterator* iter = nullptr;
                 _adminLock.Lock();
                 if (_elements.empty() == false) {
-                    iter = Core::Service<Implementation::ElementIterator>::Create<Exchange::IStream::IElement::IIterator>(_elements);
+                    iter = Core::ServiceType<Implementation::ElementIterator>::Create<Exchange::IStream::IElement::IIterator>(_elements);
                 }
                 _adminLock.Unlock();
                 return iter;
@@ -485,7 +485,7 @@ namespace Player {
                 ReleaseElements();
                 auto& elements = _player->Elements();
                 for (auto& elem : elements) {
-                    _elements.push_back(Core::Service<Implementation::Element>::Create<Implementation::Element>(elem));
+                    _elements.push_back(Core::ServiceType<Implementation::Element>::Create<Implementation::Element>(elem));
                 }
             }
             void ReleaseElements()

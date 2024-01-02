@@ -542,7 +542,7 @@ int main(int argc, char** argv)
 
         ASSERT(client.IsValid() == true);
 
-        Core::Sink<Plugin::MathImplementation> localPerformance;
+        Core::SinkType<Plugin::MathImplementation> localPerformance;
 
         // Open up the COMRPC Client connection.
         if (client->Open(2000) != Core::ERROR_NONE) {

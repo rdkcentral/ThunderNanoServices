@@ -341,7 +341,7 @@ namespace Plugin
                     while (dns.Next() == true) {
                         elements.push_back(dns.Current());
                     }
-                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* dnsList{Core::Service<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(elements)};
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* dnsList{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(elements)};
 
                     status = _networkControl->DNS(static_cast<Exchange::INetworkControl::IStringIterator* const&>(dnsList));
                     dnsList->Release();
@@ -365,7 +365,7 @@ namespace Plugin
                     while (network.Next() == true) {
                         elements.push_back(network.Current());
                     }
-                    RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>* networkList{Core::Service<RPC::IteratorType<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>>::Create<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>(elements)};
+                    RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>* networkList{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>>::Create<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>(elements)};
 
                     status = _networkControl->Network(interface, static_cast<Exchange::INetworkControl::INetworkInfoIterator* const&>(networkList));
                     networkList->Release();

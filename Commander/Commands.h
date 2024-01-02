@@ -187,7 +187,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             PluginObserver(const string& configuration)
                 : _config()
                 , _waitEvent(true, false)
-                , _observer(Core::Service<Observer>::Create<Observer>(this))
+                , _observer(Core::ServiceType<Observer>::Create<Observer>(this))
             {
 
                 _config.FromString(configuration);

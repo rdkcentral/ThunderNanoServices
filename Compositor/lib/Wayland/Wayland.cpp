@@ -97,7 +97,7 @@ namespace Plugin {
                 server->Get(id, surface);
 
                 if (surface.IsValid() == true) {
-                    result = Core::Service<Entry>::Create<Entry>(&surface, server);
+                    result = Core::ServiceType<Entry>::Create<Entry>(&surface, server);
                 }
 
                 return (result);
@@ -408,7 +408,7 @@ namespace Plugin {
                 container.push_back((*index)->Name());
                 index++;
             }
-            return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
+            return (Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
         }
         bool Consumer(VARIABLE_IS_NOT_USED const string& name) const override
         {

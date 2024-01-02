@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
         Exchange::IWallClock* clock(nullptr);
         Sink* sink = nullptr; 
         Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
-        Math* outbound = Core::Service<Math>::Create<Math>();
+        Math* outbound = Core::ServiceType<Math>::Create<Math>();
         printf("Channel: %s:[%d]\n\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
 
         do {
@@ -266,7 +266,7 @@ int main(int argc, char* argv[])
                     }
                 }
                 else {
-                    sink = Core::Service<Sink>::Create<Sink>(10); // Fire each 10 Seconds
+                    sink = Core::ServiceType<Sink>::Create<Sink>(10); // Fire each 10 Seconds
                     uint32_t result = clock->Arm(10, sink);
                     if (result == Core::ERROR_NONE) {
                         printf("We set the callback on the wallclock. We will be updated\n");

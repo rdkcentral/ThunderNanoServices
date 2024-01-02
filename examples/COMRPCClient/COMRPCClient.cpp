@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
         Thunder::Exchange::IDictionary* pluginOnly = client.Open<Thunder::Exchange::IDictionary>(_T(""));
 
         if (pluginOnly != nullptr) {
-            Thunder::Core::Sink<Sink> sink(pluginOnly);
+            Thunder::Core::SinkType<Sink> sink(pluginOnly);
 
             pluginOnly->Register(_T("/name"), &sink);
 

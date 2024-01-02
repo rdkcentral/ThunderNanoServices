@@ -122,7 +122,7 @@ namespace WPEFramework
             uint32_t _connectionId;
             static Core::ProxyPoolType<Web::TextBody> webBodyFactory;
             uint32_t _skipURL;
-            Core::Sink<Notification> _notification;
+            Core::SinkType<Notification> _notification;
         };
     } // namespace Plugin
 } // namespace WPEFramework

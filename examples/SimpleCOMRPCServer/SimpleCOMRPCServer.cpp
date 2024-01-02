@@ -251,12 +251,12 @@ private:
             if (interfaceId == ::Exchange::IWallClock::ID) {
 
                 // Allright, request a new object that implements the requested interface.
-                result = Core::Service<Implementation>::Create<Exchange::IWallClock>();
+                result = Core::ServiceType<Implementation>::Create<Exchange::IWallClock>();
             }
             else if (interfaceId == Core::IUnknown::ID) {
 
                 // Allright, request a new object that implements the requested interface.
-                result = Core::Service<Implementation>::Create<Core::IUnknown>();
+                result = Core::ServiceType<Implementation>::Create<Core::IUnknown>();
             }
         }
         return (result);

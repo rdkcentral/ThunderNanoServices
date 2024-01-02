@@ -66,6 +66,6 @@ private:
     const string _name = _T("Statm");
 };
 
-static Statm* _singleton(Core::Service<Statm>::Create<Statm>());
+static Statm* _singleton(Core::ServiceType<Statm>::Create<Statm>());
 
 } // namespace WPEFramework

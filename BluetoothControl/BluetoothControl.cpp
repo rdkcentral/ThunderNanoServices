@@ -142,12 +142,12 @@ namespace Plugin {
             }
             else {
                 if (supportsClassic == true) {
-                    _classicAdapter = Core::Service<ClassicImpl>::Create<ClassicImpl>(*this);
+                    _classicAdapter = Core::ServiceType<ClassicImpl>::Create<ClassicImpl>(*this);
                     ASSERT(_classicAdapter != nullptr);
                 }
 
                 if (supportsLowEnergy == true) {
-                    _lowEnergyAdapter = Core::Service<LowEnergyImpl>::Create<LowEnergyImpl>(*this);
+                    _lowEnergyAdapter = Core::ServiceType<LowEnergyImpl>::Create<LowEnergyImpl>(*this);
                     ASSERT(_lowEnergyAdapter != nullptr);
                 }
 
@@ -664,7 +664,7 @@ namespace Plugin {
 
     /* virtual */ Exchange::IBluetooth::IDevice::IIterator* BluetoothControl::Devices()
     {
-        return (Core::Service<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
+        return (Core::ServiceType<DeviceImpl::IteratorImpl>::Create<IBluetooth::IDevice::IIterator>(_devices));
     }
 
     /* virtual */ uint32_t BluetoothControl::ForgetDevice(const string& address, const IBluetooth::IDevice::type type)
@@ -704,9 +704,9 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("New %s device discovered %s"), (lowEnergy ? "BLE" : "BR/EDR"), address.ToString().c_str()));
 
             if (lowEnergy == true) {
-                impl = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address);
+                impl = Core::ServiceType<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address);
             } else {
-                impl = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address);
+                impl = Core::ServiceType<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address);
             }
 
             ASSERT(impl != nullptr);
@@ -876,13 +876,13 @@ namespace Plugin {
                         if (config.Type.Value() == Bluetooth::Address::BREDR_ADDRESS) {
 
                             // Classic Bluetooth device
-                            device = Core::Service<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, &config);
+                            device = Core::ServiceType<DeviceRegular>::Create<DeviceImpl>(this, _btInterface, address, &config);
                             if (device != nullptr) {
                                 device->SecurityKey(linkKeysList);
                             }
                         } else {
                             // Bluetooth Low Energy device
-                            device = Core::Service<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, &config);
+                            device = Core::ServiceType<DeviceLowEnergy>::Create<DeviceImpl>(this, _btInterface, address, &config);
                             if (device != nullptr) {
                                 device->SecurityKey(longTermKeysList);
                                 const Bluetooth::IdentityKey& identity = device->IdentityKey();

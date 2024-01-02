@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
         TRACE_GLOBAL(Trace::Error, (_T("Failed to get composition interface [%d]"), __LINE__));
     }
     else {
-        MyCompositionListener* listener = Core::Service<MyCompositionListener>::Create<MyCompositionListener>();
+        MyCompositionListener* listener = Core::ServiceType<MyCompositionListener>::Create<MyCompositionListener>();
         composition->Register(listener);
 
         // TODO: this sets default values, should we also allow for string/path passed along on command line?

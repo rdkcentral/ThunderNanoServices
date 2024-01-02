@@ -46,7 +46,7 @@ namespace TestCore {
 
         static Exchange::ITestController::ICategory& Instance()
         {
-            static Exchange::ITestController::ICategory* _singleton(Core::Service<TestCategory2>::Create<Exchange::ITestController::ICategory>());
+            static Exchange::ITestController::ICategory* _singleton(Core::ServiceType<TestCategory2>::Create<Exchange::ITestController::ICategory>());
             return (*_singleton);
         }
 

@@ -443,7 +443,7 @@ namespace Plugin {
         Entry* _activeCallsign;
         std::map<string, Entry> _switches;
         std::list<Exchange::ISwitchBoard::INotification*> _notificationClients;
-        Core::Sink<Notification> _sink;
+        Core::SinkType<Notification> _sink;
         PluginHost::IShell* _service;
         volatile state _state;
 

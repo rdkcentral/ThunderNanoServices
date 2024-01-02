@@ -575,10 +575,10 @@ namespace Plugin {
 
                 udev_unref(udev);
 
-                _inputDevices.emplace_back(Core::Service<KeyDevice>::Create<KeyDevice>(this));
-                _inputDevices.emplace_back(Core::Service<WheelDevice>::Create<WheelDevice>(this));
-                _inputDevices.emplace_back(Core::Service<PointerDevice>::Create<PointerDevice>(this));
-                _inputDevices.emplace_back(Core::Service<TouchDevice>::Create<TouchDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<KeyDevice>::Create<KeyDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<WheelDevice>::Create<WheelDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<PointerDevice>::Create<PointerDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<TouchDevice>::Create<TouchDevice>(this));
 
                 Pair();
             }

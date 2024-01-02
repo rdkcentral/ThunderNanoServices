@@ -120,7 +120,7 @@ namespace Plugin {
 
     private:
         PluginHost::IShell* _service;
-        Core::Sink<ComNotificationSink> _comNotificationSink;
+        Core::SinkType<ComNotificationSink> _comNotificationSink;
         BluetoothAudioSink* _sink;
         BluetoothAudioSource* _source;
     };

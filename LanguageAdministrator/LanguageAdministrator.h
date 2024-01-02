@@ -193,8 +193,8 @@ namespace Plugin {
         uint32_t _connectionId;
         string _language;
         string _langSettingsFileName;
-        Core::Sink<Notification> _sink;
-        Core::Sink<LanguageTagNotification> _LanguageTagNotification;
+        Core::SinkType<Notification> _sink;
+        Core::SinkType<LanguageTagNotification> _LanguageTagNotification;
 
         std::unordered_map<string, Exchange::IApplication*> _appMap;
     };

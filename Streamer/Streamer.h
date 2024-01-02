@@ -136,7 +136,7 @@ namespace Plugin {
             Streamer& _parent;
             uint8_t _index;
             Exchange::IStream* _implementation;
-            Core::Sink<StreamSink> _streamSink;
+            Core::SinkType<StreamSink> _streamSink;
         };
 
         class ControlProxy {
@@ -206,7 +206,7 @@ namespace Plugin {
             Streamer& _parent;
             uint8_t _index;
             Exchange::IStream::IControl* _implementation;
-            Core::Sink<ControlSink> _controlSink;
+            Core::SinkType<ControlSink> _controlSink;
         };
 
         typedef std::map<uint8_t, StreamProxy> Streams;
@@ -425,7 +425,7 @@ POP_WARNING()
         PluginHost::IShell* _service;
 
         Exchange::IPlayer* _player;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
 
         // Stream and StreamControl holding areas for the RESTFull API.
         Streams _streams;

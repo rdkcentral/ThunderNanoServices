@@ -88,7 +88,7 @@ namespace TestCore {
         Exchange::ITestController::ITest::IIterator* Tests(void) const override
         {
             _adminLock.Lock();
-            auto iterator = Core::Service<TestCore::TestIterator>::Create<Exchange::ITestController::ITest::IIterator>(_tests);
+            auto iterator = Core::ServiceType<TestCore::TestIterator>::Create<Exchange::ITestController::ITest::IIterator>(_tests);
             _adminLock.Unlock();
             return iterator;
         }

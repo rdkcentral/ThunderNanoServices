@@ -69,5 +69,5 @@ private:
     const string _name = _T("Test4");
 };
 
-static Exchange::ITestController::ITest* _singleton(Core::Service<Test4>::Create<Exchange::ITestController::ITest>());
+static Exchange::ITestController::ITest* _singleton(Core::ServiceType<Test4>::Create<Exchange::ITestController::ITest>());
 } // namespace WPEFramework

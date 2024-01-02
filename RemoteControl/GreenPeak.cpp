@@ -461,7 +461,7 @@ namespace Plugin {
     };
 
     /* static */ const string GreenPeak::_resourceName("RF4CE");
-    /* static */ GreenPeak* GreenPeak::_singleton(Core::Service<GreenPeak>::Create<GreenPeak>());
+    /* static */ GreenPeak* GreenPeak::_singleton(Core::ServiceType<GreenPeak>::Create<GreenPeak>());
 }
 } // namespace WPEFramework::Plugin
 
