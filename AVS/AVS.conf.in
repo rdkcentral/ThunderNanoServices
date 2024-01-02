@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_AVS_AUTOSTART@"
+startmode = "@PLUGIN_AVS_STARTMODE@"
 
 configuration = JSON()
 

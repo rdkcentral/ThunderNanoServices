@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_DICTIONARY_AUTOSTART@"
+startmode = "@PLUGIN_DICTIONARY_STARTMODE@"
 
 configuration = JSON()
 

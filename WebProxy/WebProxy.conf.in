@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_WEBPROXY_AUTOSTART@"
+startmode = "@PLUGIN_WEBPROXY_STARTMODE@"
 
 configuration = JSON()
 

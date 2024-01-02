@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_SVALBARD_AUTOSTART@"
+startmode = "@PLUGIN_SVALBARD_STARTMODE@"
 
 configuration = JSON()
 

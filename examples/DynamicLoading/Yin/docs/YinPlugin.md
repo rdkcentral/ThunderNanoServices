@@ -68,7 +68,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Yin*) |
 | classname | string | Class name: *Yin* |
 | locator | string | Library name: *libWPEFrameworkYin.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object |  |
 | configuration?.yangcallsign | string | <sup>*(optional)*</sup> Callsign of the Yang service (typically *Yang*) |
 | configuration.etymology | string | Describes the meaning of yin |

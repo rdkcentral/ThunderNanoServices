@@ -71,7 +71,7 @@ The table below lists configuration options of the plugin.
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
 | classname | string | Class name: *InputSwitch* |
-| autostart | boolean | Determines if the plugin is to be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Methods"></a>
 # Methods

@@ -79,7 +79,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *BluetoothAudio*) |
 | classname | string | Class name: *BluetoothAudio* |
 | locator | string | Library name: *libWPEFrameworkBluetoothAudio.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | controller | string | <sup>*(optional)*</sup> Callsign of the Bluetooth controller service (typically *BluetoothControl*) |
 | server | object | <sup>*(optional)*</sup> BluetoothAudio server configuration |
 | server?.interface | number | <sup>*(optional)*</sup> Bluetooth interface to listen to for incomming connections |

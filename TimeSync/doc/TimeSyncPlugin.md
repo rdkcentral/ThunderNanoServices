@@ -76,7 +76,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *TimeSync*) |
 | classname | string | Class name: *TimeSync* |
 | locator | string | Library name: *libWPEFrameworkTimeSync.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | deferred | boolean | <sup>*(deprecated)*</sup> <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled. This parameter is deprecated and SubSystemControl could be used instead |
 | periodicity | number | <sup>*(optional)*</sup> Periodicity of time synchronization (in hours), 0 for one-off synchronization |
 | retries | number | <sup>*(optional)*</sup> Number of synchronization attempts if the source cannot be reached (may be 0) |

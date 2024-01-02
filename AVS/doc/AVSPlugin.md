@@ -75,7 +75,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *AVS*) |
 | classname | string | Class name: *AVS* |
 | locator | string | Library name: *libWPEFrameworkAVS.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration.alexaclientconfig | string | The path to the AlexaClientSDKConfig.json (e.g /usr/share/WPEFramework/AVS/AlexaClientSDKConfig.json) |
 | configuration?.smartscreenconfig | string | <sup>*(optional)*</sup> The path to the SmartScreenSDKConfig.json (e.g /usr/share/WPEFramework/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled |

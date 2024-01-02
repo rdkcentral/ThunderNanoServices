@@ -75,7 +75,7 @@ target_link_libraries(${MODULE_NAME}
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-set(PLUGIN_WEBPA_AUTOSTART false CACHE STRING "Automatically start WebPA plugin")
+set(PLUGIN_WEBPA_STARTMODE "deactivated" CACHE STRING "Automatically start WebPA plugin")
 set(PLUGIN_WEBPA_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
 write_config()

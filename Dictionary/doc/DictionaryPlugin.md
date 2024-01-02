@@ -72,7 +72,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *Dictionary*) |
 | classname | string | Class name: *Dictionary* |
 | locator | string | Library name: *libWPEFrameworkDictionary.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.storage | string | <sup>*(optional)*</sup> Filename of DataModel file (default: DataModel.json) |
 

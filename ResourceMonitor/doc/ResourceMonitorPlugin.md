@@ -72,7 +72,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *ResourceMonitor*) |
 | classname | string | Class name: *ResourceMonitor* |
 | locator | string | Library name: *libWPEFrameworkResourceMonitor.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.path | string | <sup>*(optional)*</sup> Path of resource |
 | configuration?.interval | number | <sup>*(optional)*</sup> Duration between measurements (default: 5) |

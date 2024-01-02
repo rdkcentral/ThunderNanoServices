@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_BACKOFFICE_AUTOSTART@"
+startmode = "@PLUGIN_BACKOFFICE_STARTMODE@"
 
 configuration = JSON()
 

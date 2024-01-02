@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_BLUETOOTHAUDIO_AUTOSTART@"
+startmode = "@PLUGIN_BLUETOOTHAUDIO_STARTMODE@"
 
 server = JSON()
 server.add("interface", "@PLUGIN_BLUETOOTHAUDIO_INTERFACE@")

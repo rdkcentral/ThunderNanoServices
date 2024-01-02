@@ -38,7 +38,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_BLUETOOTHREMOTECONTROL_AUTOSTART true CACHE STRING true)
+set(PLUGIN_BLUETOOTHREMOTECONTROL_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp

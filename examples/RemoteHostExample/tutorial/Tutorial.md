@@ -10,7 +10,7 @@ First thing you need to do is to enable and start RemoteInvocation plugin on the
 {
  "locator":"libWPEFrameworkRemoteInvocation.so",
  "classname":"RemoteInvocation",
- "autostart":true,
+ "startmode":"activated",
  "configuration":{
   "address":"0.0.0.0:5797",
  }
@@ -43,7 +43,7 @@ with example config of
 {
  "locator":"libWPEFrameworkRemoteHostExample.so",
  "classname":"RemoteHostExample",
- "autostart":false,
+ "startmode":"deactivated",
  "configuration":{
   "name":"Local",
   "root":{
@@ -63,7 +63,7 @@ the only difference is in config. It will look like this:
 {
  "locator":"libWPEFrameworkRemoteHostExample.so",
  "classname":"RemoteHostExample",
- "autostart":false,
+ "startmode":deactivated,
  "configuration":{
   "name":"Remote",
   "root":{

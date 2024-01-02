@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_BLUETOOTH_AUTOSTART@"
+startmode = "@PLUGIN_BLUETOOTH_STARTMODE@"
 
 configuration = JSON()
 

@@ -1,4 +1,4 @@
-autostart = "true"
+startmode = "true"
 
 configuration = JSON()
 
