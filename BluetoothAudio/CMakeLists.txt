@@ -45,10 +45,8 @@ set(PLUGIN_BLUETOOTHAUDIO_STARTMODE "activated" CACHE STRING "Automatically star
 set(PLUGIN_BLUETOOTHAUDIO_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
 set(PLUGIN_BLUETOOTHAUDIO_INTERFACE "0" CACHE STRING "Bluetooth host interface to use")
 set(PLUGIN_BLUETOOTHAUDIO_INACTIVITYTIMEOUT "5000" CACHE STRING "Server inactivity timeout")
-
 set(PLUGIN_BLUETOOTHAUDIO_SINK_LATENCY "20" CACHE STRING "Audio sink device audio latency")
 set(PLUGIN_BLUETOOTHAUDIO_SINK_CODECSBC_PRESET "HQ" CACHE STRING "Audio sink SBC codec quality preset")
-
 set(PLUGIN_BLUETOOTHAUDIO_SOURCE_CONNECTOR "/tmp/bluetoothaudiosource" CACHE STRING "Audio source connector")
 set(PLUGIN_BLUETOOTHAUDIO_SOURCE_CODECSBC_MAXBITPOOL "53" CACHE STRING "Audio source SBC codec maximum supported bitpool value")
 
