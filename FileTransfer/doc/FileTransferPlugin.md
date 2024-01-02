@@ -72,7 +72,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *FileTransfer*) |
 | classname | string | Class name: *FileTransfer* |
 | locator | string | Library name: *libWPEFrameworkFileTransfer.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.port | number | <sup>*(optional)*</sup> Port number (default: 2201) |
 | configuration?.fullfile | boolean | <sup>*(optional)*</sup> If value failse update at the end of the file (default: false) |

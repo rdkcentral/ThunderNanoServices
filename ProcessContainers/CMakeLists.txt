@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_PROCESSCONTAINERS_AUTOSTART "false" CACHE STRING "Automatically start ProcessContainers plugin")
+set(PLUGIN_PROCESSCONTAINERS_STARTMODE "deactivated" CACHE STRING "Automatically start ProcessContainers plugin")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})

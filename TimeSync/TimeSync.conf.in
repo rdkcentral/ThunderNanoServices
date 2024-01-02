@@ -1,5 +1,5 @@
 precondition = ["Internet"]
-autostart = "@PLUGIN_TIMESYNC_AUTOSTART@"
+startmode = "@PLUGIN_TIMESYNC_STARTMODE@"
 
 configuration = JSON()
 

@@ -72,7 +72,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *BackOffice*) |
 | classname | string | Class name: *BackOffice* |
 | locator | string | Library name: *libWPEFrameworkBackOffice.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object |  |
 | configuration.server_address | string | Back office server address |
 | configuration.server_port | number | Back office server port |

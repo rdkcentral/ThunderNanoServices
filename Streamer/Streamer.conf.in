@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_STREAMER_AUTOSTART@"
+startmode = "@PLUGIN_STREAMER_STARTMODE@"
 
 configuration = JSON()
 

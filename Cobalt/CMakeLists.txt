@@ -82,7 +82,7 @@ string(TOLOWER ${NAMESPACE} STORAGENAME)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 install(TARGETS ${PLUGIN_COBALT_IMPLEMENTATION} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
 
-set(PLUGIN_COBALT_AUTOSTART "false" CACHE STRING "Automatically start Cobalt plugin")
+set(PLUGIN_COBALT_STARTMODE "deactivated" CACHE STRING "Automatically start Cobalt plugin")
 set(PLUGIN_COBALT_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 set(PLUGIN_COBALT_RESUMED "true" CACHE STRING "Set Cobalt plugin resume state")
 set(PLUGIN_COBALT_RESOLUTION "720p" CACHE STRING "Browser resolution")

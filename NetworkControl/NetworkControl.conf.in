@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_NETWORKCONTROL_AUTOSTART@"
+startmode = "@PLUGIN_NETWORKCONTROL_STARTMODE@"
 
 configuration = JSON()
 

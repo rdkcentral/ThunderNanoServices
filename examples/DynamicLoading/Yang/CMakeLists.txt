@@ -30,7 +30,7 @@ set(PLUGIN_NAME Yang)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_YANG_IMPLEMENTATION "${MODULE_NAME}Impl" CACHE STRING "Library with implementation of yang")
 
-set(PLUGIN_YANG_AUTOSTART false CACHE STRING "Controls automatic start of the Yang plugin")
+set(PLUGIN_YANG_STARTMODE "deactivated" CACHE STRING "Controls automatic start of the Yang plugin")
 set(PLUGIN_YANG_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_YANG_YINCALLSIGN "Yin" CACHE STRING "Callsign of the Yin plugin")
 set(PLUGIN_YANG_ETYMOLOGY "Dark side" CACHE STRING "Describes the meaning of yang")

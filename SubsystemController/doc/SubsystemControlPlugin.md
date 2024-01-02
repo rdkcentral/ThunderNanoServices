@@ -72,5 +72,5 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *SubsystemControl*) |
 | classname | string | Class name: *SubsystemControl* |
 | locator | string | Library name: *libWPEFrameworkSubsystemControl.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 

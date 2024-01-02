@@ -40,7 +40,7 @@ option(PLUGIN_DIALSERVER_ENABLE_YOUTUBE "Enable YouTube support for DIAL server"
 option(PLUGIN_DIALSERVER_ENABLE_NETFLIX "Enable Netflix support for DIAL server" OFF)
 option(PLUGIN_DIALSERVER_ENABLE_AMAZON_PRIME "Enable Amazon Prime support for DIAL server" OFF)
 
-set(PLUGIN_DIALSERVER_AUTOSTART true CACHE STRING "Automatically start DIALServer plugin")
+set(PLUGIN_DIALSERVER_STARTMODE "activated" CACHE STRING "Automatically start DIALServer plugin")
 
 set(PLUGIN_DIALSERVER_YOUTUBE_MODE "passive" CACHE STRING "How the DIAL server should process incomming requests from Youtube (passive/active), leave empty to disable")
 set(PLUGIN_DIALSERVER_NETFLIX_MODE "passive" CACHE STRING "How the DIAL server should process incomming requests from Netflix (passive/active), leave empty to disable")

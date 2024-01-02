@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_WIFICONTROL_AUTOSTART@"
+startmode = "@PLUGIN_WIFICONTROL_STARTMODE@"
 
 configuration = JSON()
 

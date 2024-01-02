@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
 option(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL "Enable kernel connection control" OFF)
 
-set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING "Autostart")
+set(PLUGIN_BLUETOOTH_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 set(PLUGIN_BLUETOOTH_PORT "/dev/ttyAMA0" CACHE STRING "Device port")
 set(PLUGIN_BLUETOOTH_BAUDRATE 115200 CACHE STRING "Serial transmission speed in baud")
 set(PLUGIN_BLUETOOTH_NAME "Thunder" CACHE STRING "Name of the local Bluetooth device")
