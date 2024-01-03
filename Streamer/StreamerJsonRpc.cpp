@@ -394,7 +394,7 @@ namespace Plugin {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
                 Exchange::IStream::IControl::IGeometry* geometry;
-                geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.X.Value(), param.Y.Value(), control->second->Geometry()->Z(), param.Width.Value(), param.Height.Value());
+                geometry = Core::ServiceType<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.X.Value(), param.Y.Value(), control->second->Geometry()->Z(), param.Width.Value(), param.Height.Value());
                 control->second->Geometry(geometry);
                 geometry->Release();
             } else {

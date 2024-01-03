@@ -31,12 +31,16 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_BLUETOOTHSDPSERVER_AUTOSTART true CACHE STRING "Autostart")
+set(PLUGIN_BLUETOOTHSDPSERVER_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 
 set(PLUGIN_BLUETOOTHSDPSERVER_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
 set(PLUGIN_BLUETOOTHSDPSERVER_PROVIDER "Thunder" CACHE STRING "SDP service provider name")

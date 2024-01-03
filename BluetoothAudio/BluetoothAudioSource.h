@@ -286,7 +286,7 @@ namespace Plugin {
                         _lock.Lock();
 
                         string address = device->RemoteId();
-                        auto it = _devices.emplace(address, Core::Service<Device>::Create<Device>(*this, address, device)).first;
+                        auto it = _devices.emplace(address, Core::ServiceType<Device>::Create<Device>(*this, address, device)).first;
 
                         if (device->Callback(it->second) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, (_T("Failed to install device callback!")));
@@ -312,7 +312,7 @@ namespace Plugin {
             private:
                 A2DPSource& _parent;
                 Core::CriticalSection _lock;
-                Core::Sink<ControllerCallback> _controllerCallback;
+                Core::SinkType<ControllerCallback> _controllerCallback;
                 std::map<string, Device*> _devices;
             }; // class DeviceBroker
 
@@ -432,7 +432,7 @@ namespace Plugin {
                 , _lock()
                 , _bufferLock()
                 , _broker(*this)
-                , _localClient(Core::Service<LocalClient>::Create<LocalClient>(*this))
+                , _localClient(Core::ServiceType<LocalClient>::Create<LocalClient>(*this))
                 , _sink(nullptr)
                 , _state(Exchange::IBluetoothAudio::DISCONNECTED)
                 , _connector(config.Connector.Value())

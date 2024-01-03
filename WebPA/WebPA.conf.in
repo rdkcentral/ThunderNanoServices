@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_WEBPA_AUTOSTART@"
+startmode = "@PLUGIN_WEBPA_STARTMODE@"
 
 configuration = JSON()
 

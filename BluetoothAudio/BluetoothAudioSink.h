@@ -1502,7 +1502,7 @@ namespace Plugin {
         private:
             mutable Core::CriticalSection _lock;
             BluetoothAudioSink& _parent;
-            Core::Sink<DeviceCallback> _callback;
+            Core::SinkType<DeviceCallback> _callback;
             DecoupledJob _discoveryJob;
             DecoupledJob _updateJob;
             DecoupledJob _cleanupJob;

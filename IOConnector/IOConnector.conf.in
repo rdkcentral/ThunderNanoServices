@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_IOCONNECTOR_AUTOSTART@"
+startmode = "@PLUGIN_IOCONNECTOR_STARTMODE@"
 
 configuration = JSON()
 

@@ -123,7 +123,7 @@ private:
     PluginHost::IShell* _service;
 
     Exchange::IWebPA* _webpa;
-    Core::Sink<Notification> _notification;
+    Core::SinkType<Notification> _notification;
 };
 } //namespace Plugin
 } //namespace WPEFramework

@@ -177,7 +177,7 @@ namespace Plugin {
         Exchange::IBrowser* _spark;
         Exchange::IMemory* _memory;
         PluginHost::IShell* _service;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
     };
 }
 } // namespace

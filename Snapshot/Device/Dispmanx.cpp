@@ -112,6 +112,6 @@ namespace Plugin {
 {
     static Plugin::Initializer initializeDisplay;
 
-    return (Core::Service<Plugin::Dispmanx>::Create<Exchange::ICapture>());
+    return (Core::ServiceType<Plugin::Dispmanx>::Create<Exchange::ICapture>());
 }
 }

@@ -155,7 +155,7 @@ namespace Plugin {
         uint32_t get_description(const string& index, JsonData::TestController::DescriptionData& response) const;
 
         PluginHost::IShell* _service;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
         Exchange::IMemory* _memory;
         Exchange::ITestController* _testControllerImp;
         uint8_t _skipURL;

@@ -208,7 +208,7 @@ namespace Plugin {
     private:
         mutable Core::CriticalSection _adminLock;
         uint8_t _skipURL;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
         Exchange::IComposition* _composition;
         Exchange::IBrightness* _brightness;
         PluginHost::IShell* _service;

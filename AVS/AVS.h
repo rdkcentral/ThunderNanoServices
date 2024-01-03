@@ -236,9 +236,9 @@ namespace Plugin {
         PluginHost::IShell* _service;
         string _audiosourceName;
         uint32_t _connectionId;
-        Core::Sink<AudiosourceNotification> _audiosourceNotification;
-        Core::Sink<ConnectionNotification> _connectionNotification;
-        Core::Sink<DialogueNotification> _dialogueNotification;
+        Core::SinkType<AudiosourceNotification> _audiosourceNotification;
+        Core::SinkType<ConnectionNotification> _connectionNotification;
+        Core::SinkType<DialogueNotification> _dialogueNotification;
     };
 
 } // namespace Plugin

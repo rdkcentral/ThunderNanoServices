@@ -29,6 +29,10 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -96,7 +100,7 @@ install(
     TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-set(PLUGIN_SPARK_AUTOSTART "false" CACHE STRING "Automatically start Spark plugin")
+set(PLUGIN_SPARK_STARTMODE "deactivated" CACHE STRING "Automatically start Spark plugin")
 set(PLUGIN_SPARK_STARTURL "browser.js" CACHE STRING "Initial URL for Spark plugin")
 set(PLUGIN_SPARK_RESOLUTION "720p" CACHE STRING "Browser resolution")
 set(PLUGIN_SPARK_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")

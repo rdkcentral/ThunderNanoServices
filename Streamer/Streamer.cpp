@@ -309,7 +309,7 @@ namespace Plugin {
                                 if (index.Next() == true) {
                                     height = Core::NumberType<uint32_t>(index.Current()).Value();
                                 }
-                                Exchange::IStream::IControl::IGeometry* geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(X, Y, control->second->Geometry()->Z(), width, height);
+                                Exchange::IStream::IControl::IGeometry* geometry = Core::ServiceType<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(X, Y, control->second->Geometry()->Z(), width, height);
                                 control->second->Geometry(geometry);
                                 geometry->Release();
                                 result->ErrorCode = Web::STATUS_OK;

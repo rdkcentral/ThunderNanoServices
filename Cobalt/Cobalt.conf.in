@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_COBALT_AUTOSTART@"
+startmode = "@PLUGIN_COBALT_STARTMODE@"
 resumed =  "@PLUGIN_COBALT_RESUMED@"
 
 configuration = JSON()

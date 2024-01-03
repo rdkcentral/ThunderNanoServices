@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_CECCONTROL_AUTOSTART true CACHE STRING "Automatically start CECControl plugin")
+set(PLUGIN_CECCONTROL_STARTMODE "activated" CACHE STRING "Automatically start CECControl plugin")
 
 # TODO: CEC 2.0 specifies that multiple roles can be used by one device.
 set(PLUGIN_CECCONTROL_ROLES "playback" CACHE STRING "Device type")
@@ -39,6 +39,10 @@ set(CECADAPTER_LIBRARY_NAME "_cecadapter" CACHE STRING "Defines the name of the 
 set(CEC_DEVICE_ADAPTER_LIBRARY_NAME "_ceccontrol_device_adapter" CACHE INTERNAL "INTERNALLY USED")
 
 set (PLUGIN_CECCONTROL_INTERFACES "hdmi1:/dev/cec0:recorder" "hdmi2:/dev/cec1:playback")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)

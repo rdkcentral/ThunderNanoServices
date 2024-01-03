@@ -24,7 +24,7 @@ namespace TestCore {
 
     /* static */ TestCommandController& TestCommandController::Instance()
     {
-        static TestCommandController*_singleton(Core::Service<TestCommandController>::Create<TestCommandController>());;
+        static TestCommandController*_singleton(Core::ServiceType<TestCommandController>::Create<TestCommandController>());;
         return (*_singleton);
     }
 
@@ -81,7 +81,7 @@ namespace TestCore {
     {
         Exchange::ITestUtility::ICommand::IIterator* iterator = nullptr;
         _adminLock.Lock();
-        iterator = Core::Service<Iterator>::Create<Exchange::ITestUtility::ICommand::IIterator>(_commands);
+        iterator = Core::ServiceType<Iterator>::Create<Exchange::ITestUtility::ICommand::IIterator>(_commands);
         _adminLock.Unlock();
         return iterator;
     }

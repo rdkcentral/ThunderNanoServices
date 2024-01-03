@@ -80,7 +80,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *DIALServer*) |
 | classname | string | Class name: *DIALServer* |
 | locator | string | Library name: *libWPEFrameworkDIALServer.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | Server configuration |
 | configuration.name | string | User-friendly name of the device |
 | configuration.model | string | Name of the device model |

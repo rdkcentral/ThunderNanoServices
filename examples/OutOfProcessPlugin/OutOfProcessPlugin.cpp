@@ -119,7 +119,7 @@ namespace Plugin {
                         }
                         _elements.push_back(s);
                     }
-                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::Service<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
                     if ((_params != nullptr)) {
                         _browserresources->UserScripts(_params);
                         _params->Release();

@@ -126,7 +126,7 @@ POP_WARNING()
         Exchange::IBrowser* _browser;
         bool _hidden;
         bool _hasHide;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
     }; // class YouTube
 
     static Plugin::DIALServer::ApplicationRegistrationType<YouTube> _youTubeHandler;

@@ -253,7 +253,7 @@ namespace Plugin {
                 const string _reportName;
                 PluginHost::IStateControl* _stateControl;
             };
-            using CallsignMap = std::unordered_map<string, Core::Sink<StateControlObserver> >;
+            using CallsignMap = std::unordered_map<string, Core::SinkType<StateControlObserver> >;
 
         public:
             Observer(BackOffice& parent) 
@@ -403,7 +403,7 @@ namespace Plugin {
        uint32_t CreateQueryParameters(PluginHost::IShell* service, const Config& config, QueryParameters& params);
 
     private:
-        Core::Sink<Observer> _stateChangeObserver;
+        Core::SinkType<Observer> _stateChangeObserver;
         WebClient _requestSender;
     };
 

@@ -115,7 +115,7 @@ namespace Plugin {
 
                 if (index.Current().Text() == "CloseClientSession") {
                         // DELETE       <-CloseClientSession
-		        ISecureShellServer::IClient* client = Core::Service<ClientImpl>::Create<ISecureShellServer::IClient>(
+		        ISecureShellServer::IClient* client = Core::ServiceType<ClientImpl>::Create<ISecureShellServer::IClient>(
 							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->IpAddress.Value(),
 							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->TimeStamp.Value(),
 							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->Pid.Value());
@@ -159,13 +159,13 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Count: %d index: %d pid: %d IP: %s Timestamp: %s"),
                                             count, i, info[i].pid, info[i].ipaddress, info[i].timestamp));
 
-                local_clients.push_back(Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(info[i].ipaddress,
+                local_clients.push_back(Core::ServiceType<SecureShellServer::ClientImpl>::Create<ClientImpl>(info[i].ipaddress,
                                         info[i].timestamp, std::to_string(info[i].pid)));
             }
             ::free(info);
 
 	    if (local_clients.empty() == false) {
-                iter = Core::Service<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(local_clients);
+                iter = Core::ServiceType<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(local_clients);
                 TRACE(Trace::Information, (_T("Currently total %d sessions are active"), iter->Count()));
 	    }
             local_clients.clear(); // Clear all elements before we re-populate it with new elements

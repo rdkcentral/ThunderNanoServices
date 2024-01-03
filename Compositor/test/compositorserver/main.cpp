@@ -276,8 +276,8 @@ public:
     string Versions() const { return "mocked"; }
     string Callsign() const { return "mocked"; }
     Core::hresult SystemRootPath(const string& systemRootPath) { return Core::ERROR_UNAVAILABLE; };
-    PluginHost::IShell::startup Startup() const { return PluginHost::IShell::startup::ACTIVATED; }
-    Core::hresult Startup(const PluginHost::IShell::startup value) { return Core::ERROR_UNAVAILABLE; }
+    PluginHost::IShell::startmode StartMode() const { return PluginHost::IShell::startmode::ACTIVATED; }
+    Core::hresult StartMode(const PluginHost::IShell::startmode value) { return Core::ERROR_UNAVAILABLE; }
     string Substitute(const string& input) const { return input; };
     bool Resumed() const { return true; };
     Core::hresult Resumed(const bool value) { return Core::ERROR_UNAVAILABLE; };

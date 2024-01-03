@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
 option(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL "Enable kernel connection control" OFF)
 
-set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING "Autostart")
+set(PLUGIN_BLUETOOTH_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 set(PLUGIN_BLUETOOTH_PORT "/dev/ttyAMA0" CACHE STRING "Device port")
 set(PLUGIN_BLUETOOTH_BAUDRATE 115200 CACHE STRING "Serial transmission speed in baud")
 set(PLUGIN_BLUETOOTH_NAME "Thunder" CACHE STRING "Name of the local Bluetooth device")
@@ -40,6 +40,10 @@ set(PLUGIN_BLUETOOTH_CONTINUOUS_BACKGROUND_SCAN false CACHE STRING "Denotes if b
 set(PLUGIN_BLUETOOTH_PERSISTMAC false CACHE STRING "Denotes Bluetooth address shall be made persistent")
 set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SOURCE "" CACHE STRING "Callsign of the A2DP Audio Source service (if any)")
 set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SINK "" CACHE STRING "Callsign of the A2DP Audio Sink service (if any)")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)

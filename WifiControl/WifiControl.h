@@ -143,8 +143,8 @@ namespace Plugin {
         uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IWifiControl* _wifiControl;
-        Core::Sink<ConnectionNotification> _connectionNotification;
-        Core::Sink<WifiNotification> _wifiNotification;
+        Core::SinkType<ConnectionNotification> _connectionNotification;
+        Core::SinkType<WifiNotification> _wifiNotification;
     };
 
 } // namespace Plugin

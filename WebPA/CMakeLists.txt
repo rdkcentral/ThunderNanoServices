@@ -29,6 +29,10 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -71,7 +75,7 @@ target_link_libraries(${MODULE_NAME}
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
 install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-set(PLUGIN_WEBPA_AUTOSTART false CACHE STRING "Automatically start WebPA plugin")
+set(PLUGIN_WEBPA_STARTMODE "deactivated" CACHE STRING "Automatically start WebPA plugin")
 set(PLUGIN_WEBPA_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
 write_config()

@@ -29,12 +29,16 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_BLUETOOTHREMOTECONTROL_AUTOSTART true CACHE STRING true)
+set(PLUGIN_BLUETOOTHREMOTECONTROL_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp

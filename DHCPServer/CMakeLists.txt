@@ -27,13 +27,17 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_DHCPSERVER_AUTOSTART "false" CACHE STRING "Automatically start DHCPServer plugin")
+set(PLUGIN_DHCPSERVER_STARTMODE "deactivated" CACHE STRING "Automatically start DHCPServer plugin")
 set(PLUGIN_DHCPSERVER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
 # deprecated/legacy flags support
 if(PLUGIN_DHCPSERVER_OUTOFPROCESS STREQUAL "false")
     set(PLUGIN_DHCPSERVER_MODE "Off" CACHE STRING "Process mode"  FORCE)
     unset(PLUGIN_DHCPSERVER_OUTOFPROCESS CACHE)
+endif()
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)

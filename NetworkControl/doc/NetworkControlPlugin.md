@@ -76,7 +76,7 @@ The table below lists configuration options of the plugin.
 | callsign | string | Plugin instance name (default: *NetworkControl*) |
 | classname | string | Class name: *NetworkControl* |
 | locator | string | Library name: *libWPEFrameworkNetworkControl.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.dnsfile | string | <sup>*(optional)*</sup> Path to DNS resolve file (default: /etc/resolv.conf) |
 | configuration?.response | number | <sup>*(optional)*</sup> Maximum response time out of the DHCP server |

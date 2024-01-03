@@ -1,4 +1,4 @@
-autostart = "@PLUGIN_WEBSERVER_AUTOSTART@"
+startmode = "@PLUGIN_WEBSERVER_STARTMODE@"
 resumed = "@PLUGIN_WEBSERVER_RESUMED@"
 
 configuration = JSON()

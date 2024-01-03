@@ -27,12 +27,16 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_WIFICONTROL_AUTOSTART true CACHE STRING "Automatically start WifiControl plugin")
+set(PLUGIN_WIFICONTROL_STARTMODE "activated" CACHE STRING "Automatically start WifiControl plugin")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT true CACHE STRING "Automatically start to connect with configured SSID")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT_RETRYINTERVAL 30 CACHE STRING "Autoconnect Retry interval in seconds")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT_MAXRETRIES -1 CACHE STRING "Autoconnect max retries")
 set(PLUGIN_WIFICONTROL_WPS_WALKTIME 125 CACHE STRING "Maximum Walk Time for WPS")
 set(PLUGIN_WIFICONTROL_WPS_DISABLED false CACHE STRING "Disable the WPS Feature")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)

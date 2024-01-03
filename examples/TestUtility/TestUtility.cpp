@@ -55,7 +55,7 @@ namespace TestUtility {
             Core::ProcessInfo _main;
         };
 
-        Exchange::IMemory* memory_observer = (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
+        Exchange::IMemory* memory_observer = (Core::ServiceType<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
 
         return memory_observer;
     }

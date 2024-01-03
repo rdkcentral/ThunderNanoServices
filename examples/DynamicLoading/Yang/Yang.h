@@ -100,7 +100,7 @@ namespace Plugin {
 
     private:
         PluginHost::IShell *_service;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
         uint32_t _connectionId;
         Exchange::IYang *_yangImplementation;
     }; // class Yang

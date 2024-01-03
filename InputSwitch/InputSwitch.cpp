@@ -187,7 +187,7 @@ namespace Plugin {
     }
 
     RPC::IStringIterator* InputSwitch::Consumers() const /* override */ {
-        return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(_handler->Consumers().Container()));
+        return (Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(_handler->Consumers().Container()));
     }
 
     bool InputSwitch::Consumer(const string& name) const /* override */ {

@@ -9,7 +9,7 @@ find_package(WPEFramework)
 project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
-set(PLUGIN_BACKOFFICE_AUTOSTART "true" CACHE STRING "Automatically start the plugin")
+set(PLUGIN_BACKOFFICE_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 set(PLUGIN_BACKOFFICE_SERVER_ADDRESS "localhost" CACHE STRING "Backoffice server address")
 set(PLUGIN_BACKOFFICE_SERVER_PORT "80" CACHE STRING "Backoffice server address")
 set(PLUGIN_BACKOFFICE_CUSTOMER "metrological" CACHE STRING "Customer name")
@@ -21,6 +21,10 @@ set(PLUGIN_BACKOFFICE_CALLSIGN_MAPPING "" CACHE STRING "Map framework callsigns 
 set(PLUGIN_BACKOFFICE_STATE_MAPPING "Activated,load;Deactivated,unload;Resumed,open;Suspended,close" CACHE STRING "Map states in format: state1,mapping1;state2,mapping2, allowed states: Activated, Deactivated, Suspended, Resumed")
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Cryptalgo REQUIRED)

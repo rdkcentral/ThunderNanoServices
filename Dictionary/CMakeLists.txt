@@ -27,7 +27,11 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_DICTIONARY_AUTOSTART "true" CACHE STRING "Automatically start Dictionary plugin")
+set(PLUGIN_DICTIONARY_STARTMODE "activated" CACHE STRING "Automatically start Dictionary plugin")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

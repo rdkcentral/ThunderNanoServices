@@ -29,12 +29,16 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(MFRFWLibs REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_FIRMWARECONTROL_AUTOSTART false CACHE STRING "Automatically start FirmwareControl plugin")
+set(PLUGIN_FIRMWARECONTROL_STARTMODE "deactivated" CACHE STRING "Automatically start FirmwareControl plugin")
 set(PLUGIN_FIRMWARECONTROL_SOURCE_LOCATION "" CACHE STRING "Source URL or location of the firmware")
 set(PLUGIN_FIRMWARECONTROL_DOWNLOAD_LOCATION "/tmp" CACHE STRING "Location where the firmware to be downloaded")
 set(PLUGIN_FIRMWARECONTROL_WAITTIME -1 CACHE STRING "Max time to wait to finish download or install process")

@@ -150,10 +150,9 @@ namespace Plugin {
         uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::INetworkControl* _networkControl;
-        Core::Sink<ConnectionNotification> _connectionNotification;
-        Core::Sink<NetworkNotification> _networkNotification;
+        Core::SinkType<ConnectionNotification> _connectionNotification;
+        Core::SinkType<NetworkNotification> _networkNotification;
     };
-
 } // namespace Plugin
 } // namespace WPEFramework
 

@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_SVALBARD_AUTOSTART "true" CACHE STRING "Automatically start Svalbard plugin")
+set(PLUGIN_SVALBARD_STARTMODE "activated" CACHE STRING "Automatically start Svalbard plugin")
 set(PLUGIN_SVALBARD_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 set(PLUGIN_SVALBARD_LOCATION "objects" CACHE STRING "Location within VaultProvisioning persistent path to look for provisioned objects")
 
@@ -35,6 +35,10 @@ set(PLUGIN_SVALBARD_LOCATION "objects" CACHE STRING "Location within VaultProvis
 if(PLUGIN_SVALBARD_OUTOFPROCESS STREQUAL "true")
     set(PLUGIN_SVALBARD_MODE "Local" CACHE STRING "Process mode"  FORCE)
     unset(PLUGIN_SVALBARD_OUTOFPROCESS CACHE)
+endif()
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)

@@ -893,7 +893,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     DiscoverableChanged(false, adapter::BREDR);
                 }
             }
-            void AdvertisingRemoved(const uint8_t instance)
+            void AdvertisingRemoved(const uint8_t instance VARIABLE_IS_NOT_USED)
             {
                 /* This event will fire if a BLE discovery scan is complete by timeout.
                    But will not fire is the discovery is stopped by a command (!). */

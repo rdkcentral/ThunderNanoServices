@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_REMOTECONTROL_AUTOSTART true CACHE STRING "Automatically start RemoteControl plugin")
+set(PLUGIN_REMOTECONTROL_STARTMODE "activated" CACHE STRING "Automatically start RemoteControl plugin")
 set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
 set(PLUGIN_REMOTECONTROL_PASSON false CACHE STRING "Enable keys pass-through on default producer")
 set(PLUGIN_REMOTECONTROL_REPEAT_INTERVAL "100" CACHE STRING "Repeat interval for RemoteControl")
@@ -44,6 +44,10 @@ set(PLUGIN_REMOTECONTROL_RFCE_AUTOPAIRING false CACHE BOOL "Enable AutoPairing f
 set(PLUGIN_REMOTECONTROL_RFCE_NVM_LUT "DEFAULT" CACHE STRING "The NVM LUT to be used (see GreenPeakNvmLut.h)")
 
 option(PLUGIN_REMOTECONTROL_CEC "Enable CEC User Control conversion support." OFF)
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)

@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
         Thunder::Exchange::IDictionary* pluginOnly = client.Open<Thunder::Exchange::IDictionary>(_T(""));
 
         if (pluginOnly != nullptr) {
-            Thunder::Core::Sink<Sink> sink(pluginOnly);
+            Thunder::Core::SinkType<Sink> sink(pluginOnly);
 
             pluginOnly->Register(_T("/name"), &sink);
 
@@ -318,14 +318,14 @@ int main(int argc, char* argv[])
                 case 'S': {
 
                     string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
-                    if (pluginOnly->Set(_T("/name"), _T("key"), value) == true) {
+                    if (pluginOnly->Set(_T("/name"), _T("key"), value) == Thunder::Core::ERROR_NONE) {
                         printf("Set value: %s\n", value.c_str());
                     }
                     break;
                 }
                 case 'G': {
                     string value;
-                    if (pluginOnly->Get(_T("/name"), _T("key"), value) == true) {
+                    if (pluginOnly->Get(_T("/name"), _T("key"), value) == Thunder::Core::ERROR_NONE) {
                         printf("Get value: %s\n", value.c_str());
                     }
                     break;

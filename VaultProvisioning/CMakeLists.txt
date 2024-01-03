@@ -30,10 +30,14 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_VAULTPROVISIONING_AUTOSTART "true" CACHE STRING "Automatically start the plugin")
+set(PLUGIN_VAULTPROVISIONING_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
 set(PLUGIN_VAULTPROVISIONING_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_VAULTPROVISIONING_LOCATION "objects" CACHE STRING "Location within persistent path to store the provisioned objects")
 set(PLUGIN_VAULTPROVISIONING_OBJECTS "" CACHE STRING "List of objects to provision")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
