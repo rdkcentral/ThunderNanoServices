@@ -19,17 +19,25 @@
 
 #include "SimpleCOMRPCPluginServer.h"
 
-#ifdef __CORE_EXCEPTION_CATCHING__
-#include <stdexcept>
-#endif
-
 namespace WPEFramework {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SimpleCOMRPCPluginServer, 1, 0)
+    namespace {
 
-    //IPlugin
+        static Metadata<SimpleCOMRPCPluginServer> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
+    // IPlugin
     const string SimpleCOMRPCPluginServer::Initialize(PluginHost::IShell* service)  /* override */
     {
         ASSERT(service != nullptr);

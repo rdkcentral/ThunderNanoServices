@@ -209,7 +209,14 @@ POP_WARNING()
 
     void JSONRPCPlugin::SendTime(const Core::JSONRPC::Context& channel)
     {
-        Response(channel, Data::Response(Core::Time::Now().Ticks(), Data::Response::FAILURE));
+        Core::ProxyType<Web::JSONRPC::Body> message = PluginHost::IFactories::Instance().JSONRPC();
+        Data::Response data (Core::Time::Now().Ticks(), Data::Response::FAILURE);
+        string dataJSON; data.ToString(dataJSON);
+
+        message->Result = dataJSON;
+        message->Id = channel.Sequence();
+
+        JSONRPC::Response(channel.ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
     }
 
     //   Exchange::IPerformance methods
