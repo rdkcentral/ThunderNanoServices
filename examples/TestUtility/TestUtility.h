@@ -131,7 +131,7 @@ namespace Plugin {
         uint32_t set_shutdowntimeout(const Core::JSON::DecUInt32& param);
 
         PluginHost::IShell* _service;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
         Exchange::IMemory* _memory;
         Exchange::ITestUtility* _testUtilityImp;
         uint8_t _skipURL;

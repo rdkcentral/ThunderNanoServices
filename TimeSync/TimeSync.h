@@ -221,7 +221,7 @@ namespace Plugin {
         uint16_t _skipURL;
         uint32_t _periodicity;
         Exchange::ITimeSync* _client;
-        Core::Sink<Notification> _sink;
+        Core::SinkType<Notification> _sink;
         PluginHost::ISubSystem* _subSystem;
 
         Core::WorkerPool::JobType<TimeSync&> _job;

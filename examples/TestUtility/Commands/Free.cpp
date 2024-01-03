@@ -67,6 +67,6 @@ private:
     const string _name = _T("Free");
 };
 
-static Free* _singleton(Core::Service<Free>::Create<Free>());
+static Free* _singleton(Core::ServiceType<Free>::Create<Free>());
 
 } // namespace WPEFramework

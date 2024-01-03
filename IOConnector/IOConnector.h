@@ -324,7 +324,7 @@ namespace Plugin {
     private:
         Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
-        Core::Sink<Sink> _sink;
+        Core::SinkType<Sink> _sink;
         Pins _pins;
         uint8_t _skipURL;
         NotificationList _notifications;

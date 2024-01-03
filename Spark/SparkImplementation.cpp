@@ -952,7 +952,7 @@ namespace Spark {
 
     Exchange::IMemory* MemoryObserver(const uint32_t PID)
     {
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
+        return (Core::ServiceType<MemoryObserverImpl>::Create<Exchange::IMemory>(PID));
     }
 }
 } // namespace

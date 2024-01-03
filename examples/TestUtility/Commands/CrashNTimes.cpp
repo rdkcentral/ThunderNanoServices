@@ -80,6 +80,6 @@ private:
     string _name;
 };
 
-static CrashNTimes* _singleton(Core::Service<CrashNTimes>::Create<CrashNTimes>());
+static CrashNTimes* _singleton(Core::ServiceType<CrashNTimes>::Create<CrashNTimes>());
 
 } // namespace WPEFramework

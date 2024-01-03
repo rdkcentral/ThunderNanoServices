@@ -73,10 +73,10 @@ namespace Plugin {
         GlobalConfig config;
         config.FromString(_service->ConfigLine());
 
-        _source = Core::Service<BluetoothAudioSource>::Create<BluetoothAudioSource>(this);
+        _source = Core::ServiceType<BluetoothAudioSource>::Create<BluetoothAudioSource>(this);
         ASSERT(_source != nullptr);
 
-        _sink = Core::Service<BluetoothAudioSink>::Create<BluetoothAudioSink>(this);
+        _sink = Core::ServiceType<BluetoothAudioSink>::Create<BluetoothAudioSink>(this);
         ASSERT(_sink != nullptr);
 
         _source->Initialize(service, config.Controller.Value(), config.Source);

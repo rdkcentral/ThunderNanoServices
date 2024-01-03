@@ -89,7 +89,7 @@ namespace Plugin {
         Exchange::IConfiguration* _implementation;
         uint32_t _connectionId;
         PluginHost::IShell* _service;
-        Core::Sink<ConnectionNotification> _connectionNotification;
+        Core::SinkType<ConnectionNotification> _connectionNotification;
     }; // class VaultProvisioning
 
 } // namespace Plugin

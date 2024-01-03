@@ -24,7 +24,7 @@ namespace TestCore {
 
     /* static */ TestAdministrator& TestAdministrator::Instance()
     {
-        static TestAdministrator* _singleton(Core::Service<TestAdministrator>::Create<TestAdministrator>());;
+        static TestAdministrator* _singleton(Core::ServiceType<TestAdministrator>::Create<TestAdministrator>());;
         return (*_singleton);
     }
 
@@ -54,7 +54,7 @@ namespace TestCore {
     Exchange::ITestController::ICategory::IIterator* TestAdministrator::Categories()
     {
         _adminLock.Lock();
-        auto iterator = Core::Service<TestCore::CategoryIterator>::Create<Exchange::ITestController::ICategory::IIterator>(_testsCategories);
+        auto iterator = Core::ServiceType<TestCore::CategoryIterator>::Create<Exchange::ITestController::ICategory::IIterator>(_testsCategories);
         _adminLock.Unlock();
         return iterator;
     }

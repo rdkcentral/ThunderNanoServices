@@ -765,7 +765,7 @@ POP_WARNING()
             Interfaces(interfaceList);
 
             if (interfaceList.empty() != true) {
-                interfaces = Core::Service<StringList>::Create<Exchange::INetworkControl::IStringIterator>(interfaceList);
+                interfaces = Core::ServiceType<StringList>::Create<Exchange::INetworkControl::IStringIterator>(interfaceList);
                 result = Core::ERROR_NONE;
             }
              
@@ -868,7 +868,7 @@ POP_WARNING()
             }
 
             if (networksInfo.empty() != true) {
-                networks = Core::Service<NetworkInfoIteratorImplementation>::Create<NetworkInfoIteratorImplementation>(networksInfo);
+                networks = Core::ServiceType<NetworkInfoIteratorImplementation>::Create<NetworkInfoIteratorImplementation>(networksInfo);
             }
             _adminLock.Unlock();
 
@@ -902,7 +902,7 @@ POP_WARNING()
             }
 
             if (servers.empty() != true) {
-                dns = Core::Service<StringList>::Create<Exchange::INetworkControl::IStringIterator>(dnsList);
+                dns = Core::ServiceType<StringList>::Create<Exchange::INetworkControl::IStringIterator>(dnsList);
                 result = Core::ERROR_NONE;
             }
 

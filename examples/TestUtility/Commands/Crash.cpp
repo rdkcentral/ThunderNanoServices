@@ -74,6 +74,6 @@ private:
     string _name;
 };
 
-static Crash* _singleton(Core::Service<Crash>::Create<Crash>());
+static Crash* _singleton(Core::ServiceType<Crash>::Create<Crash>());
 
 } // namespace WPEFramework

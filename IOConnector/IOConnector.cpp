@@ -121,7 +121,7 @@ namespace Plugin
 
         while (index.Next() == true) {
 
-            GPIO::Pin* pin = Core::Service<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value(), index.Current().ActiveLow.Value());
+            GPIO::Pin* pin = Core::ServiceType<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value(), index.Current().ActiveLow.Value());
             uint8_t mode = 0;
 
             if (pin != nullptr) {

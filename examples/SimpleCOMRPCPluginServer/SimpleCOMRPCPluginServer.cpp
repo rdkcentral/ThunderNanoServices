@@ -34,7 +34,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         service->Register(&_comNotificationSink);
-        _wallclock = Core::Service<WallClock>::Create<WallClock>(*this);
+        _wallclock = Core::ServiceType<WallClock>::Create<WallClock>(*this);
         return (EMPTY_STRING);
     }
 

@@ -55,7 +55,7 @@ namespace TestController {
             Core::ProcessInfo _main;
         };
 
-        return (Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
+        return (Core::ServiceType<MemoryObserverImpl>::Create<Exchange::IMemory>(connection));
     }
 } // namespace TestController
 

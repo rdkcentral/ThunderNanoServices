@@ -309,7 +309,7 @@ POP_WARNING()
     private:
         WallClockNotifier _notifier;
         WallClock* _wallclock;
-        Core::Sink<ComNotificationSink> _comNotificationSink;
+        Core::SinkType<ComNotificationSink> _comNotificationSink;
     };
 }
 }

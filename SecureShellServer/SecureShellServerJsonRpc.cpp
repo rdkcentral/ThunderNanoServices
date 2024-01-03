@@ -90,7 +90,7 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 	ClientImpl* client =
-		Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.IpAddress.Value(), params.TimeStamp.Value(), params.Pid.Value());
+		Core::ServiceType<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.IpAddress.Value(), params.TimeStamp.Value(), params.Pid.Value());
 
         if(params.Pid.IsSet() == true) {
             TRACE(Trace::Information, (_T("closing client session with pid: %s"), params.Pid.Value()));

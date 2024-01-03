@@ -74,6 +74,6 @@ private:
     const string _name = _T("Malloc");
 };
 
-static Malloc* _singleton(Core::Service<Malloc>::Create<Malloc>());
+static Malloc* _singleton(Core::ServiceType<Malloc>::Create<Malloc>());
 
 } // namespace WPEFramework

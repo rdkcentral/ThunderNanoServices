@@ -89,7 +89,7 @@ POP_WARNING()
         uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IConfiguration* _svalbard;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
     };
 
 } // Namespace Plugin.

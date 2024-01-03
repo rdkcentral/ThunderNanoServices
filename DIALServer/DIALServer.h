@@ -859,7 +859,7 @@ namespace Plugin {
 
                 if (_application == nullptr) {
                     // since we still have nothing, fall back to the default
-                    _application = Core::Service<Default>::Create<IApplication>(service, info, parent);
+                    _application = Core::ServiceType<Default>::Create<IApplication>(service, info, parent);
                 }
             }
             ~AppInformation()
@@ -1148,7 +1148,7 @@ namespace Plugin {
             public:
                 IApplication* Create(PluginHost::IShell* shell, const Config::App& config, DIALServer* parent) override
                 {
-                    return (Core::Service<HANDLER>::template Create<IApplication>(shell, config, parent));
+                    return (Core::ServiceType<HANDLER>::template Create<IApplication>(shell, config, parent));
                 }
             };
 
@@ -1301,7 +1301,7 @@ POP_WARNING()
         string _dialPath;
         DIALServerImpl* _dialServiceImpl;
         Core::ProxyType<Web::TextBody> _deviceInfo;
-        Core::Sink<Notification> _sink;
+        Core::SinkType<Notification> _sink;
         std::map<const string, AppInformation> _appInfo;
         bool _deprecatedAPI;
     };

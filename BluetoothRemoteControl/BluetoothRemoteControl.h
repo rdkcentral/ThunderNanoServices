@@ -690,7 +690,7 @@ namespace Plugin {
                 }
                 else {
                     TRACE(Flow, (_T("Created a decoder for %s type: [%s]"), _manufacturerName.c_str(), enumValue.Data()));
-                    _audioProfile = Core::Service<AudioProfile>::Create<AudioProfile>(
+                    _audioProfile = Core::ServiceType<AudioProfile>::Create<AudioProfile>(
                         config.Codec.Value(),
                         config.Channels.Value(),
                         config.SampleRate.Value(),
@@ -1211,7 +1211,7 @@ namespace Plugin {
             GATTSocket::Command _command;
             Exchange::IBluetooth::IDevice* _device;
             Decoupling _decoupling;
-            Core::Sink<Sink> _sink;
+            Core::SinkType<Sink> _sink;
 
             // This is the Name, as depicted by the Bluetooth device (generic IF)
             string _name;

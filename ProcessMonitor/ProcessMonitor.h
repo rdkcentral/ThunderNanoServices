@@ -280,7 +280,7 @@ public:
     string Information() const override;
 
 private:
-    Core::Sink<Notification> _notification;
+    Core::SinkType<Notification> _notification;
 };
 }
 }

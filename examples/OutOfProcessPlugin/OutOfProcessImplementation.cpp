@@ -473,7 +473,7 @@ POP_WARNING()
                 headers.emplace_back(std::move(s));
             }
 
-            header = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(headers);
+            header = Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(headers);
 
             return Core::ERROR_NONE;
         }
@@ -497,7 +497,7 @@ POP_WARNING()
                 scripts.emplace_back(std::move(s));
             }
 
-            uris = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(scripts);
+            uris = Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(scripts);
 
             return Core::ERROR_NONE;
         }
@@ -540,7 +540,7 @@ POP_WARNING()
                 sheets.emplace_back(std::move(s));
             }
 
-            uris = Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(sheets);
+            uris = Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(sheets);
 
             return Core::ERROR_NONE;
         }
@@ -682,7 +682,7 @@ POP_WARNING()
         std::list<PluginHost::IStateControl::INotification*> _notificationClients;
         std::list<Exchange::IBrowser::INotification*> _browserClients;
         PluginHost::IStateControl::state _state;
-        Core::Sink<PluginMonitor> _sink;
+        Core::SinkType<PluginMonitor> _sink;
         PluginHost::IShell* _service;
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
@@ -745,7 +745,7 @@ namespace OutOfProcessPlugin {
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         ASSERT(connection != nullptr);
-        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        Exchange::IMemory* result = Core::ServiceType<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
         return (result);
     }
 }

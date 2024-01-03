@@ -986,7 +986,7 @@ namespace Plugin
         uint32_t Networks(INetworkInfoIterator*& networkInfoList) const override
         {
             _adminLock.Lock();
-            networkInfoList = Core::Service<NetworkInfoIteratorImplementation>::Create<INetworkInfoIterator>(_networks);
+            networkInfoList = Core::ServiceType<NetworkInfoIteratorImplementation>::Create<INetworkInfoIterator>(_networks);
             _adminLock.Unlock();
             return (networkInfoList != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
@@ -997,7 +997,7 @@ namespace Plugin
             _adminLock.Lock();
             SecurityMap::const_iterator index(_securities.find(ssid));
             if (index != _securities.end()) {
-                securityMethods = Core::Service<SecurityInfoIteratorImplementation>::Create<ISecurityIterator>(index->second);
+                securityMethods = Core::ServiceType<SecurityInfoIteratorImplementation>::Create<ISecurityIterator>(index->second);
             }
             _adminLock.Unlock();
             return (securityMethods != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
@@ -1014,7 +1014,7 @@ namespace Plugin
             });
             _adminLock.Unlock();
 
-            configs = Core::Service<StringIteratorImplementation>::Create<IStringIterator>(configList);
+            configs = Core::ServiceType<StringIteratorImplementation>::Create<IStringIterator>(configList);
             return (configs != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
 

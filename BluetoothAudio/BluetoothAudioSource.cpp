@@ -42,7 +42,7 @@ namespace Plugin {
         _controller = controller;
         ASSERT(controller.empty() == false);
 
-        _source = Core::Service<A2DPSource>::Create<A2DPSource>(*this, config);
+        _source = Core::ServiceType<A2DPSource>::Create<A2DPSource>(*this, config);
         ASSERT(_source != nullptr);
 
         SignallingServer::Instance().Register(_source);

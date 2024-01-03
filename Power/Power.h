@@ -262,7 +262,7 @@ POP_WARNING()
         Core::CriticalSection _adminLock;
         uint32_t _skipURL;
         Clients _clients;
-        Core::Sink<Notification> _sink;
+        Core::SinkType<Notification> _sink;
         std::list<Exchange::IPower::INotification*> _notificationClients;
         uint32_t _powerKey;
         bool _controlClients;
