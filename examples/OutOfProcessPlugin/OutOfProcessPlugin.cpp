@@ -357,13 +357,6 @@ namespace Plugin {
                             stringSize = 128;
                         }
                     }
-                    PluginHost::IDispatcher* dispatcher(_browser->QueryInterface<PluginHost::IDispatcher>());
-                    const uint32_t stringLength = stringSize * 1024;
-                    std::string myString;
-                    myString.resize(stringLength, 'a');
-                    myString.replace(0, 8, "testabcd");
-                    myString.replace(myString.length() - 8, 8, "testabcd");
-                    dispatcher->Validate("", "", myString);
                 } else if (index.Remainder() == _T("Notify4K")) {
                     string message;
                     for (uint32_t teller = 0; teller < ((4 * 1024) + 64); teller++) {
