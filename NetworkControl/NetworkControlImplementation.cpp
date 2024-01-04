@@ -36,11 +36,13 @@ namespace Plugin
     public:
         class Entry : public Core::JSON::Container {
         public:
+            Entry& operator=(Entry&&) = delete;
             Entry& operator=(const Entry&) = delete;
 
             Entry()
                 : Core::JSON::Container()
                 , Interface()
+                , MAC()
                 , Source()
                 , Mode(Exchange::INetworkControl::ModeType::DYNAMIC)
                 , Address()
@@ -56,6 +58,7 @@ namespace Plugin
                 , _broadcast()
             {
                 Add(_T("interface"), &Interface);
+                Add(_T("mac"), &MAC);
                 Add(_T("source"), &Source);
                 Add(_T("mode"), &Mode);
                 Add(_T("address"), &Address);
@@ -70,9 +73,45 @@ namespace Plugin
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
+            Entry(Entry&& move)
+                : Core::JSON::Container()
+                , Interface(move.Interface)
+                , MAC(move.MAC)
+                , Source(move.Source)
+                , Mode(move.Mode)
+                , Address(move.Address)
+                , Mask(move.Mask)
+                , Gateway(move.Gateway)
+                , LeaseTime(move.LeaseTime)
+                , RenewalTime(move.RenewalTime)
+                , RebindingTime(move.RebindingTime)
+                , Xid(move.Xid)
+                , DNS(move.DNS)
+                , TimeOut(move.TimeOut)
+                , Retries(move.Retries)
+                , _broadcast(move._broadcast)
+            {
+                Add(_T("interface"), &Interface);
+                Add(_T("mac"), &MAC);
+                Add(_T("source"), &Source);
+                Add(_T("mode"), &Mode);
+                Add(_T("address"), &Address);
+                Add(_T("mask"), &Mask);
+                Add(_T("gateway"), &Gateway);
+                Add(_T("broadcast"), &_broadcast);
+                Add(_T("leaseTime"), &LeaseTime);
+                Add(_T("renewalTime"), &RenewalTime);
+                Add(_T("rebindingTime"), &RebindingTime);
+                Add(_T("xid"), &Xid);
+                Add(_T("dns"), &DNS);
+                Add(_T("timeout"), &TimeOut);
+                Add(_T("retries"), &Retries);
+            }
+ 
             Entry(const Entry& copy)
                 : Core::JSON::Container()
                 , Interface(copy.Interface)
+                , MAC(copy.MAC)
                 , Source(copy.Source)
                 , Mode(copy.Mode)
                 , Address(copy.Address)
@@ -88,6 +127,7 @@ namespace Plugin
                 , _broadcast(copy._broadcast)
             {
                 Add(_T("interface"), &Interface);
+                Add(_T("mac"), &MAC);
                 Add(_T("source"), &Source);
                 Add(_T("mode"), &Mode);
                 Add(_T("address"), &Address);
@@ -106,6 +146,7 @@ namespace Plugin
 
         public:
             Core::JSON::String Interface;
+            Core::JSON::String MAC;
             Core::JSON::String Source;
             Core::JSON::EnumType<Exchange::INetworkControl::ModeType> Mode;
             Core::JSON::String Address;
@@ -352,7 +393,9 @@ POP_WARNING()
 
         class Config : public Core::JSON::Container {
         public:
+            Config(Config&&) = delete;
             Config(const Config&) = delete;
+            Config& operator=(Config&&) = delete;
             Config& operator=(const Config&) = delete;
 
             Config()
@@ -729,6 +772,13 @@ POP_WARNING()
                     } else {
                         DHCPEngine& engine = AddInterface(interfaceName, index.Current());
                         if (hardware.IsUp() == false) {
+                            if (index.Current().MAC.IsSet() == true) {
+                                uint8_t buffer[6];
+                                Core::FromHexString(index.Current().MAC.Value(), buffer, sizeof(buffer), ':');
+                                if (hardware.MACAddress(buffer) != Core::ERROR_NONE) {
+                                    SYSLOG(Logging::Startup, (_T("Interface [%s], could not set requested MAC address"), interfaceName.c_str()));
+                                }
+                            }
                             hardware.Up(true);
                         } else {
                             Reload(interfaceName, (engine.Info().Mode() == Exchange::INetworkControl::ModeType::DYNAMIC));
