@@ -1,4 +1,4 @@
-startmode = "false"
+startmode = "Deactivated"
 
 configuration = JSON()
 
