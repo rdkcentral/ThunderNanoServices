@@ -1,7 +1,8 @@
-autostart = "@PLUGIN_TESTAUTOMATIONCOMRPC_AUTOSTART@"
+startmode = "@PLUGIN_TESTAUTOMATIONCOMRPC_STARTMODE@"
+resumed = "@PLUGIN_TESTAUTOMATIONCOMRPC_RESUMED@"
 
 configuration = JSON()
 
-rootobject = JSON()
-rootobject.add("mode", "Local")
-configuration.add("root", rootobject)
+root = JSON()
+root.add("mode", "@PLUGIN_TESTAUTOMATIONCOMRPC_MODE@")
+configuration.add("root", root)
