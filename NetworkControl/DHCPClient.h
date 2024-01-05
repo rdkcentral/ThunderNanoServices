@@ -111,7 +111,7 @@ namespace Plugin {
 
 
     public:
-        static constexpr uint8_t MACSize = UDPv4Frame::MACSize;
+        static constexpr uint8_t MACSize = 6;
 
         // DHCP constants (see RFC 2131 section 4.1)
         static constexpr uint16_t DefaultDHCPServerPort = 67;
@@ -509,13 +509,13 @@ namespace Plugin {
             return (_interfaceName);
         }
         void UpdateMAC(const uint8_t buffer[], const uint8_t size VARIABLE_IS_NOT_USED) {
-            ASSERT(size == _udpFrame.MACSize);
+            ASSERT(size == MACSize);
             _udpFrame.SourceMAC(buffer);
         }
         uint8_t MAC(uint8_t buffer[], const uint8_t size) const {
             uint8_t loaded = 0;
             if (_udpFrame.IsBroadcastMAC(_udpFrame.SourceMAC()) == false) {
-                loaded = std::min(size, _udpFrame.MACSize);
+                loaded = std::min(size, MACSize);
                 memcpy(buffer, _udpFrame.SourceMAC(), loaded);
             }
             return (loaded);
