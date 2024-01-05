@@ -38,7 +38,7 @@ namespace Plugin {
             INTERFACE_ENTRY(Exchange::TestAutomation::IMemory)
         END_INTERFACE_MAP
 
-        // IMemoryInternal Methods
+        // IMemory Methods
         Core::hresult AllocateMemory(const uint32_t memorySize) override
         {
             uint32_t result = Core::ERROR_NONE;
@@ -61,12 +61,14 @@ namespace Plugin {
                     result = Core::ERROR_GENERAL;
 
                 } else {   
+                    TRACE(Trace::Information, (_T("Memory Allocated Successfully!!!")));
                     _adminLock.Unlock();
                 }
             }
             else {
                 TRACE(Trace::Information, (_T("Memory Already Allocated! Clear First To Prevent Leaking!!!")));
                 result = Core::ERROR_GENERAL;
+                _adminLock.Unlock();
             }
             return result;
         }

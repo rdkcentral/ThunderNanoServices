@@ -27,7 +27,9 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_TESTAUTOMATIONCOMRPC_AUTOSTART true CACHE STRING "Automatically start TestAutomationComRpc plugin")
+set(PLUGIN_TESTAUTOMATIONCOMRPC_STARTMODE "activated" CACHE STRING "Automatically start TestAutomationComRpc plugin")
+set(PLUGIN_TESTAUTOMATIONCOMRPC_RESUMED "true" CACHE STRING "Set TestAutomationComRpc resume state")
+set(PLUGIN_TESTAUTOMATIONCOMRPC_MODE "Local" CACHE STRING "Controls if the TestAutomationComRpc should run in its own process, in process or remote.")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 

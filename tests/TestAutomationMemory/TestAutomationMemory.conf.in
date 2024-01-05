@@ -1,7 +1,8 @@
-autostart = "@PLUGIN_TESTAUTOMATIONMEMORY_AUTOSTART@"
+startmode = "@PLUGIN_TESTAUTOMATIONMEMORY_STARTMODE@"
+resumed = "@PLUGIN_TESTAUTOMATIONMEMORY_RESUMED@"
 
 configuration = JSON()
 
-rootobject = JSON()
-rootobject.add("mode", "Local")
-configuration.add("root", rootobject)
+root = JSON()
+root.add("mode", "@PLUGIN_TESTAUTOMATIONMEMORY_MODE@")
+configuration.add("root", root)

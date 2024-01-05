@@ -120,7 +120,7 @@ namespace Plugin {
                 }
             }
             if (_memory == nullptr) {
-                result = _T("Test Automation Memory could not intantiate a Memoery observer!");
+                result = _T("Test Automation Memory could not intantiate a Memory observer!");
             }
 
             // this->AddRef();
