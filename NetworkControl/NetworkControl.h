@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef PLUGIN_NETWORKCONTROL_H
-#define PLUGIN_NETWORKCONTROL_H
+#pragma once
 
 #include "Module.h"
 #include "DHCPClient.h"
@@ -37,13 +36,14 @@ namespace Plugin {
         class ConnectionNotification : public RPC::IRemoteConnection::INotification {
         public:
             ConnectionNotification() = delete;
+            ConnectionNotification(ConnectionNotification&&) = delete;
             ConnectionNotification(const ConnectionNotification&) = delete;
+            ConnectionNotification& operator=(ConnectionNotification&&) = delete;
             ConnectionNotification& operator=(const ConnectionNotification&) = delete;
 
-            explicit ConnectionNotification(NetworkControl* parent)
-                : _parent(*parent)
+            explicit ConnectionNotification(NetworkControl& parent)
+                : _parent(parent)
             {
-                ASSERT(parent != nullptr);
             }
             ~ConnectionNotification() override = default;
 
@@ -69,20 +69,19 @@ namespace Plugin {
 
         class NetworkNotification : public Exchange::INetworkControl::INotification {
         public:
-            explicit NetworkNotification(NetworkControl* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-
-            ~NetworkNotification() override
-            {
-            }
-
             NetworkNotification() = delete;
+            NetworkNotification(NetworkNotification&&) = delete;
             NetworkNotification(const NetworkNotification&) = delete;
+            NetworkNotification& operator=(NetworkNotification&&) = delete;
             NetworkNotification& operator=(const NetworkNotification&) = delete;
 
+            explicit NetworkNotification(NetworkControl& parent)
+                : _parent(parent)
+            {
+            }
+            ~NetworkNotification() override = default;
+
+        public:
             void Update(const string& interface) override
             {
                 Exchange::JNetworkControl::Event::Update(_parent, interface);
@@ -99,21 +98,26 @@ namespace Plugin {
     public:
         class StatusData : public Core::JSON::Container {
         public:
+            StatusData(StatusData&&) = delete;
+            StatusData(const StatusData&) = delete;
+            StatusData& operator=(StatusData&&) = delete;
+            StatusData& operator=(const StatusData&) = delete;
+
             StatusData()
                 : Core::JSON::Container()
             {
                 Add(_T("statustype"), &StatusType);
             }
-
-            StatusData(const StatusData&) = delete;
-            StatusData& operator=(const StatusData&) = delete;
+            ~StatusData() override = default;
 
         public:
             Core::JSON::EnumType<Exchange::INetworkControl::StatusType> StatusType;
         };
 
     public:
+        NetworkControl(NetworkControl&&) = delete;
         NetworkControl(const NetworkControl&) = delete;
+        NetworkControl& operator=(NetworkControl&&) = delete;
         NetworkControl& operator=(const NetworkControl&) = delete;
 
         NetworkControl();
@@ -155,5 +159,3 @@ namespace Plugin {
     };
 } // namespace Plugin
 } // namespace WPEFramework
-
-#endif // PLUGIN_NETWORKCONTROL_H

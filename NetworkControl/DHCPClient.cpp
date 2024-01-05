@@ -23,6 +23,7 @@ namespace WPEFramework {
 
 namespace Plugin {
 
+    /* static */ constexpr uint8_t DHCPClient::MACSize;
     /* static */ constexpr uint8_t DHCPClient::MagicCookie[];
     static Core::NodeId BroadcastClientNode (_T("0.0.0.0"), DHCPClient::DefaultDHCPClientPort, Core::NodeId::TYPE_IPV4);
     static Core::NodeId BroadcastServerNode (_T("255.255.255.255"), DHCPClient::DefaultDHCPServerPort, Core::NodeId::TYPE_IPV4);
