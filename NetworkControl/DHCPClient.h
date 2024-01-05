@@ -111,7 +111,7 @@ namespace Plugin {
 
 
     public:
-        static constexpr uint8_t MACSize = 6;
+        static constexpr uint8_t MACSize = UDPv4Frame::MACSize;
 
         // DHCP constants (see RFC 2131 section 4.1)
         static constexpr uint16_t DefaultDHCPServerPort = 67;
