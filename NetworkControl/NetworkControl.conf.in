@@ -9,12 +9,14 @@ configuration.add("retries", "@PLUGIN_NETWORKCONTROL_DHCP_RETRIES@")
 interface_list = []
 
 if "@PLUGIN_NETWORKCONTROL_INTERFACES@":
-    for interface in "@PLUGIN_NETWORKCONTROL_INTERFACES@".split(';'):
-        interface_attr = interface.split(':')
-        if len(interface_attr) == 5:
+    for interface in "@PLUGIN_NETWORKCONTROL_INTERFACES@".split('|'):
+        interface_attr = interface.split(';')
+        if len(interface_attr) == 6:
             interface_config = JSON()
             interface_config.add("interface", interface_attr[0])
             interface_config.add("mode", interface_attr[1])
+            if interface_attr[5]:
+                interface_config.add("mac", interface_attr[5])
             if interface_attr[2]:
                 interface_config.add("address", interface_attr[2])
             if interface_attr[3]:
