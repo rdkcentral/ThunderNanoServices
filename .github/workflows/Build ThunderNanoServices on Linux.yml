@@ -12,7 +12,7 @@ jobs:
 
   ThunderInterfaces:
     needs: Thunder
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/Build ThunderInterfaces on Linux.yml@master
+    uses: VeithMetro/ThunderInterfaces/.github/workflows/Linux build template.yml@development/actions
 
   ThunderNanoServices:
     needs: ThunderInterfaces
