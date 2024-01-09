@@ -13,4 +13,4 @@ jobs:
 
   ThunderNanoServices:
     needs: ThunderInterfaces
-    uses: VeithMetro/ThunderNanoServices/.github/workflows/Linux build template.yml@master
+    uses: VeithMetro/ThunderNanoServices/.github/workflows/Linux build template.yml@development/actions
