@@ -100,7 +100,7 @@ install(
     TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
 
-set(PLUGIN_SPARK_STARTMODE "deactivated" CACHE STRING "Automatically start Spark plugin")
+set(PLUGIN_SPARK_STARTMODE "Deactivated" CACHE STRING "Automatically start Spark plugin")
 set(PLUGIN_SPARK_STARTURL "browser.js" CACHE STRING "Initial URL for Spark plugin")
 set(PLUGIN_SPARK_RESOLUTION "720p" CACHE STRING "Browser resolution")
 set(PLUGIN_SPARK_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")

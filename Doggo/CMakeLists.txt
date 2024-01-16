@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_DOGGO_STARTMODE "deactivated" CACHE STRING "Automatically start Doggo plugin")
+set(PLUGIN_DOGGO_STARTMODE "Deactivated" CACHE STRING "Automatically start Doggo plugin")
 set(PLUGIN_DOGGO_DEVICE "/dev/watchdog0" CACHE STRING "Watchdog device to use")
 set(PLUGIN_DOGGO_INTERVAL 30 CACHE STRING "Interval in seconds for feeding the watchdog")
 set(PLUGIN_DOGGO_MARGIN 5 CACHE STRING "Marin in seconds that is still valid to feed the watchdog")
