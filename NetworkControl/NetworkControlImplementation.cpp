@@ -29,18 +29,18 @@ namespace Plugin
     class NetworkControlImplementation : public Exchange::INetworkControl,
                                          public Exchange::IConfiguration {
 
-        static constexpr const TCHAR* NameServer = _T("nameserver ");
-        using StringList = RPC::IteratorType<Exchange::INetworkControl::IStringIterator>;
-        using NetworkInfoIteratorImplementation = RPC::IteratorType<Exchange::INetworkControl::INetworkInfoIterator>;
-
     public:
+        using NameServers = DHCPClient::NameServers;
+
         class Entry : public Core::JSON::Container {
         public:
+            Entry& operator=(Entry&&) = delete;
             Entry& operator=(const Entry&) = delete;
 
             Entry()
                 : Core::JSON::Container()
                 , Interface()
+                , MAC()
                 , Source()
                 , Mode(Exchange::INetworkControl::ModeType::DYNAMIC)
                 , Address()
@@ -56,6 +56,7 @@ namespace Plugin
                 , _broadcast()
             {
                 Add(_T("interface"), &Interface);
+                Add(_T("mac"), &MAC);
                 Add(_T("source"), &Source);
                 Add(_T("mode"), &Mode);
                 Add(_T("address"), &Address);
@@ -70,9 +71,45 @@ namespace Plugin
                 Add(_T("timeout"), &TimeOut);
                 Add(_T("retries"), &Retries);
             }
+            Entry(Entry&& move)
+                : Core::JSON::Container()
+                , Interface(move.Interface)
+                , MAC(move.MAC)
+                , Source(move.Source)
+                , Mode(move.Mode)
+                , Address(move.Address)
+                , Mask(move.Mask)
+                , Gateway(move.Gateway)
+                , LeaseTime(move.LeaseTime)
+                , RenewalTime(move.RenewalTime)
+                , RebindingTime(move.RebindingTime)
+                , Xid(move.Xid)
+                , DNS(move.DNS)
+                , TimeOut(move.TimeOut)
+                , Retries(move.Retries)
+                , _broadcast(move._broadcast)
+            {
+                Add(_T("interface"), &Interface);
+                Add(_T("mac"), &MAC);
+                Add(_T("source"), &Source);
+                Add(_T("mode"), &Mode);
+                Add(_T("address"), &Address);
+                Add(_T("mask"), &Mask);
+                Add(_T("gateway"), &Gateway);
+                Add(_T("broadcast"), &_broadcast);
+                Add(_T("leaseTime"), &LeaseTime);
+                Add(_T("renewalTime"), &RenewalTime);
+                Add(_T("rebindingTime"), &RebindingTime);
+                Add(_T("xid"), &Xid);
+                Add(_T("dns"), &DNS);
+                Add(_T("timeout"), &TimeOut);
+                Add(_T("retries"), &Retries);
+            }
+ 
             Entry(const Entry& copy)
                 : Core::JSON::Container()
                 , Interface(copy.Interface)
+                , MAC(copy.MAC)
                 , Source(copy.Source)
                 , Mode(copy.Mode)
                 , Address(copy.Address)
@@ -88,6 +125,7 @@ namespace Plugin
                 , _broadcast(copy._broadcast)
             {
                 Add(_T("interface"), &Interface);
+                Add(_T("mac"), &MAC);
                 Add(_T("source"), &Source);
                 Add(_T("mode"), &Mode);
                 Add(_T("address"), &Address);
@@ -106,6 +144,7 @@ namespace Plugin
 
         public:
             Core::JSON::String Interface;
+            Core::JSON::String MAC;
             Core::JSON::String Source;
             Core::JSON::EnumType<Exchange::INetworkControl::ModeType> Mode;
             Core::JSON::String Address;
@@ -146,8 +185,6 @@ namespace Plugin
         };
 
     private:
-        using Store = Core::JSON::ArrayType<Entry>;
-
         class Settings {
         public:
             Settings& operator= (const Settings& rhs) = delete;
@@ -273,16 +310,18 @@ namespace Plugin
             Core::IPNode _address;
             Core::NodeId _gateway;
             Core::NodeId _broadcast;
-            std::list<Core::NodeId> _dns;
+            NameServers _dns;
         };
 
         class AdapterObserver : public WPEFramework::Core::AdapterObserver::INotification {
         public:
             AdapterObserver() = delete;
+            AdapterObserver(AdapterObserver&&) = delete;
             AdapterObserver(const AdapterObserver&) = delete;
+            AdapterObserver& operator=(AdapterObserver&&) = delete;
             AdapterObserver& operator=(const AdapterObserver&) = delete;
 
-PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+            PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             AdapterObserver(NetworkControlImplementation& parent)
                 : _parent(parent)
                 , _adminLock()
@@ -291,7 +330,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
                 , _job(*this)
             {
             }
-POP_WARNING()
+            POP_WARNING()
             ~AdapterObserver() override = default;
 
         public:
@@ -312,7 +351,7 @@ POP_WARNING()
                 _job.Revoke();
             }
  
-            virtual void Event(const string& interface) override
+            void Event(const string& interface) override
             {
                 _adminLock.Lock();
 
@@ -352,7 +391,9 @@ POP_WARNING()
 
         class Config : public Core::JSON::Container {
         public:
+            Config(Config&&) = delete;
             Config(const Config&) = delete;
+            Config& operator=(Config&&) = delete;
             Config& operator=(const Config&) = delete;
 
             Config()
@@ -384,18 +425,19 @@ POP_WARNING()
             Core::JSON::Boolean Open;
         };
 
-
         class DHCPEngine : private DHCPClient::ICallback {
         private:
             static constexpr uint32_t AckWaitTimeout = 1000; // 1 second is a life time for a server to respond!
 
         public:
             DHCPEngine() = delete;
+            DHCPEngine(DHCPEngine&&) = delete;
             DHCPEngine(const DHCPEngine&) = delete;
+            DHCPEngine& operator=(DHCPEngine&&) = delete;
             DHCPEngine& operator=(const DHCPEngine&) = delete;
 
-PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
-             DHCPEngine(NetworkControlImplementation& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries, const Entry& info)
+            PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+            DHCPEngine(NetworkControlImplementation& parent, const string& interfaceName, const uint8_t waitTimeSeconds, const uint8_t maxRetries, const Entry& info)
                 : _parent(parent)
                 , _retries(0)
                 , _maxRetries(maxRetries)
@@ -411,7 +453,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
 
                     if (source.IsValid() == true) {
                         // Extract the DNS that where associated with this DHCP..
-                        std::list<Core::NodeId> dns;
+                        NameServers dns;
 
                         Core::JSON::ArrayType<Core::JSON::String>::ConstIterator entries(info.DNS.Elements());
 
@@ -427,7 +469,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
                     }
                 }
             }
-POP_WARNING()
+            POP_WARNING()
            ~DHCPEngine() = default;
 
         public:
@@ -534,7 +576,7 @@ POP_WARNING()
             const Settings& Info() const {
                 return (_settings);
             }
-            const std::list<Core::NodeId>& DNS() const {
+            const NameServers& DNS() const {
                 return (_client.Lease().DNS());
             }
             bool HasActiveLease() const {
@@ -542,8 +584,16 @@ POP_WARNING()
             }
             void Get(Entry& info) const
             {
+                uint8_t mac[DHCPClient::MACSize];
+               
                 info.Mode = _settings.Mode();
                 info.Interface = _client.Interface();
+                if (_client.MAC(mac, sizeof(mac)) == DHCPClient::MACSize) {
+                    string macString;
+                    Core::ToHexString(mac, DHCPClient::MACSize, macString, ':');
+                    info.MAC = macString;
+                }
+
                 if (_client.HasActiveLease() == true) {
                     if (_settings.Address().IsValid() == true) {
                         info.Address = _settings.Address().HostAddress();
@@ -603,11 +653,21 @@ POP_WARNING()
             Core::WorkerPool::JobType<DHCPEngine&> _job;
             Settings _settings;
         };
-        using DHCPEngineList = std::list<DHCPEngine>;
+
+        using Store = Core::JSON::ArrayType<Entry>;
+        using NetworkConfigs = std::unordered_map<string, Entry>;
+        using RequiredSets = std::vector<string>;
+        using Networks = std::unordered_map<string, DHCPEngine>;
+        using Notifications = std::vector<Exchange::INetworkControl::INotification*>;
+        using StringList = RPC::IteratorType<Exchange::INetworkControl::IStringIterator>;
+        using NetworkInfoIteratorImplementation = RPC::IteratorType<Exchange::INetworkControl::INetworkInfoIterator>;
 
     public:
+        NetworkControlImplementation(NetworkControlImplementation&&) = delete;
         NetworkControlImplementation(const NetworkControlImplementation&) = delete;
+        NetworkControlImplementation& operator= (NetworkControlImplementation&&) = delete;
         NetworkControlImplementation& operator= (const NetworkControlImplementation&) = delete;
+
         NetworkControlImplementation()
             : _adminLock()
             , _config()
@@ -636,6 +696,7 @@ POP_WARNING()
             }
         }
 
+    public:
         uint32_t Register(Exchange::INetworkControl::INotification* notification) override
         {
             ASSERT(notification);
@@ -727,7 +788,7 @@ POP_WARNING()
                     if (hardware.IsValid() == false) {
                         SYSLOG(Logging::Startup, (_T("Interface [%s], not available"), interfaceName.c_str()));
                     } else {
-                        DHCPEngine& engine = AddInterface(interfaceName, index.Current());
+                        DHCPEngine& engine = AddInterface(hardware, index.Current());
                         if (hardware.IsUp() == false) {
                             hardware.Up(true);
                         } else {
@@ -818,7 +879,7 @@ POP_WARNING()
             _adminLock.Lock();
             if (interface.empty() != true) {
 
-                std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(interface));
+                Networks::iterator entry(_dhcpInterfaces.find(interface));
                 if (entry != _dhcpInterfaces.end()) {
                     Core::AdapterIterator adapter(entry->first);
                     if (adapter.IsValid() == true) {
@@ -840,7 +901,7 @@ POP_WARNING()
             _adminLock.Lock();
 
             if (interface.empty() != true) {
-                std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(interface));
+                Networks::iterator entry(_dhcpInterfaces.find(interface));
                 if (entry != _dhcpInterfaces.end()) {
                     if (entry->second.Info().Mode() == Exchange::INetworkControl::ModeType::STATIC) {
                         result = Reload(entry->first, false);
@@ -892,7 +953,7 @@ POP_WARNING()
         uint32_t DNS(Exchange::INetworkControl::IStringIterator*& dns) const override
         {
             uint32_t result = Core::ERROR_UNAVAILABLE;
-            std::list<Core::NodeId> servers;
+            NameServers servers;
             DNS(servers);
 
             std::list<string> dnsList;
@@ -937,10 +998,19 @@ POP_WARNING()
         END_INTERFACE_MAP
 
     private:
-        DHCPEngine& AddInterface(const string& interfaceName, const Entry& entry)
+        DHCPEngine& AddInterface(Core::AdapterIterator& hardware, const Entry& entry)
         {
-            std::map<const string, const Entry>::const_iterator more(_info.find(interfaceName));
+            string interfaceName(hardware.Name());
+            NetworkConfigs::const_iterator more(_info.find(interfaceName));
             const Entry& info = (more != _info.end()? more->second : entry);
+
+            if ( (entry.MAC.IsSet() == true) && ((!entry.MAC.IsNull()) || (info.MAC.IsSet() && (!info.MAC.IsNull()))) ) {
+                uint8_t buffer[DHCPClient::MACSize];
+                Core::FromHexString(entry.MAC.IsNull() ? info.MAC.Value() : entry.MAC.Value(), buffer, sizeof(buffer), ':');
+                if (hardware.MACAddress(buffer) != Core::ERROR_NONE) {
+                    SYSLOG(Logging::Startup, (_T("Interface [%s], could not set requested MAC address"), interfaceName.c_str()));
+                }
+            }
 
             auto element = _dhcpInterfaces.emplace(std::piecewise_construct,
                 std::forward_as_tuple(interfaceName),
@@ -951,10 +1021,9 @@ POP_WARNING()
 
         uint32_t Reload(const string& interfaceName, const bool dynamic)
         {
-
             uint32_t result = Core::ERROR_UNKNOWN_KEY;
 
-            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
+            Networks::iterator index(_dhcpInterfaces.find(interfaceName));
 
             if (index != _dhcpInterfaces.end()) {
 
@@ -964,6 +1033,10 @@ POP_WARNING()
                     SYSLOG(Logging::Notification, (_T("Adapter [%s] not available or in the wrong state."), interfaceName.c_str()));
                 }
                 else {
+                    uint8_t mac[6];
+                    adapter.MACAddress(mac, sizeof(mac));
+                    index->second.UpdateMAC(mac, sizeof(mac));
+
                     if (index->second.Info().Address().IsValid() == true) {
                         result = SetIP(adapter, index->second.Info().Address(), index->second.Info().Gateway(), index->second.Info().Broadcast(), true);
                     }
@@ -971,9 +1044,6 @@ POP_WARNING()
                         SYSLOG(Logging::Notification, (_T("Invalid Static IP address: %s, for interface: %s"), index->second.Info().Address().HostAddress().c_str(), interfaceName.c_str()));
                     }
                     if (dynamic == true) {
-                        uint8_t mac[6];
-                        adapter.MACAddress(mac, sizeof(mac));
-                        index->second.UpdateMAC(mac, sizeof(mac));
                         index->second.Discover(index->second.Info().Address());
                         result = Core::ERROR_NONE;
                     }
@@ -1079,7 +1149,7 @@ POP_WARNING()
             Loads list of previously saved offers and adds it to unleased list
             for requesting in future.
         */
-        bool Load(const string& filename, std::map<const string, const Entry>& info)
+        bool Load(const string& filename, NetworkConfigs& info)
         {
             bool result = false;
 
@@ -1153,7 +1223,7 @@ POP_WARNING()
 
             while (adapter.Next() == true) {
                 const string name (adapter.Name());
-                std::map<const string, DHCPEngine>::iterator index (_dhcpInterfaces.find(name));
+                Networks::iterator index (_dhcpInterfaces.find(name));
 
                 if (index != _dhcpInterfaces.end()) {
                     bool hasValidIP = ExternallyAccessible(adapter);
@@ -1185,7 +1255,7 @@ POP_WARNING()
 
         void Accepted(const string& interfaceName, const DHCPClient::Offer& offer)
         {
-            std::map<const string, DHCPEngine>::iterator entry(_dhcpInterfaces.find(interfaceName));
+            Networks::iterator entry(_dhcpInterfaces.find(interfaceName));
 
             if (entry != _dhcpInterfaces.end()) {
 
@@ -1219,7 +1289,7 @@ POP_WARNING()
         {
             _adminLock.Lock();
 
-            std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
+            Networks::iterator index(_dhcpInterfaces.find(interfaceName));
 
             if (index != _dhcpInterfaces.end()) {
 
@@ -1289,11 +1359,11 @@ POP_WARNING()
 
                 offset = (static_cast<uint16_t>(file.Size()) - reduction);
 
-                std::list<Core::NodeId> servers;
+                NameServers servers;
                 DNS(servers);
 
                 for (const Core::NodeId& entry : servers) {
-                    data += string(NameServer) + entry.HostAddress() + '\n';
+                    data += string("nameserver ") + entry.HostAddress() + '\n';
                 }
 
                 data += endMarker;
@@ -1311,7 +1381,7 @@ POP_WARNING()
 
             if (adapter.IsValid() == true) {
 
-                std::map<const string, DHCPEngine>::iterator index(_dhcpInterfaces.find(interfaceName));
+                Networks::iterator index(_dhcpInterfaces.find(interfaceName));
 
                 // Send a message with the state of the adapter.
                 string message = string(_T("{ \"interface\": \"")) + interfaceName + string(_T("\", \"running\": \"")) + string(adapter.IsRunning() ? _T("true") : _T("false")) + string(_T("\", \"up\": \"")) + string(adapter.IsUp() ? _T("true") : _T("false")) + _T("\", \"event\": \"");
@@ -1354,7 +1424,7 @@ POP_WARNING()
                                 Core::AdapterIterator hardware(interfaceName);
 
                                 if (hardware.IsValid() == true) {
-                                    DHCPEngine& engine = AddInterface(interfaceName, listIndex.Current());
+                                    DHCPEngine& engine = AddInterface(hardware, listIndex.Current());
 
                                     if (hardware.IsUp() == false) {
                                         hardware.Up(true);
@@ -1387,7 +1457,7 @@ POP_WARNING()
             }
         }
 
-        uint32_t NetworkInfo(const std::map<const string, DHCPEngine>::const_iterator& engine, std::list<Exchange::INetworkControl::NetworkInfo>& networksInfo) const
+        uint32_t NetworkInfo(const Networks::const_iterator& engine, std::list<Exchange::INetworkControl::NetworkInfo>& networksInfo) const
         {
             Exchange::INetworkControl::NetworkInfo networkInfo;
             networkInfo.address = engine->second.Info().Address().HostAddress();
@@ -1403,7 +1473,7 @@ POP_WARNING()
         {
             uint32_t result = Core::ERROR_NONE;
 
-            std::map<const string, DHCPEngine>::const_iterator engine(_dhcpInterfaces.find(interface));
+            Networks::const_iterator engine(_dhcpInterfaces.find(interface));
             _adminLock.Lock();
             if (engine != _dhcpInterfaces.end()) {
                 _adminLock.Unlock();
@@ -1434,7 +1504,7 @@ POP_WARNING()
             return result;
         }
  
-        void DNS(std::list<Core::NodeId>& servers) const
+        void DNS(NameServers& servers) const
         {
             _adminLock.Lock();
 
@@ -1469,18 +1539,18 @@ POP_WARNING()
     private:
         mutable Core::CriticalSection _adminLock;
         Config _config;
-        std::map<const string, const Entry> _info;
+        NetworkConfigs _info;
         string _dnsFile;
         string _persistentStoragePath;
         uint8_t _responseTime;
         uint8_t _retries;
-        std::list<Core::NodeId> _dns;
-        std::list<string> _requiredSet;
-        std::map<const string, DHCPEngine> _dhcpInterfaces;
+        NameServers _dns;
+        RequiredSets _requiredSet;
+        Networks _dhcpInterfaces;
         AdapterObserver _observer;
         bool _open;
         PluginHost::IShell* _service;
-        std::vector<Exchange::INetworkControl::INotification*> _notifications;
+        Notifications _notifications;
     };
 
     SERVICE_REGISTRATION(NetworkControlImplementation, 1, 0)
