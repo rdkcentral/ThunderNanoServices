@@ -217,17 +217,6 @@ namespace Plugin {
 
             _service->Unregister(&_notification);
 
-            // We would actually need to handle setting the Graphics event in the CompositorImplementation. For now, we do it here.
-            PluginHost::ISubSystem* subSystems = _service->SubSystems();
-
-            ASSERT(subSystems != nullptr);
-
-            if (subSystems != nullptr) {
-                // Set Graphics event. We need to set up a handler for this at a later moment
-                subSystems->Set(PluginHost::ISubSystem::NOT_GRAPHICS, nullptr);
-                subSystems->Release();
-            }
-
             if (_composition != nullptr) {
                 UnregisterAll();
                 _composition->Unregister(&_notification);

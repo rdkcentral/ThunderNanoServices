@@ -105,7 +105,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void WebServer::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void WebServer::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         if (_service != nullptr) {
             ASSERT(_service == _service);
@@ -113,14 +113,6 @@ namespace Plugin {
             _service->Unregister(&_notification);
 
             if (_server != nullptr) {
-
-                PluginHost::ISubSystem* subSystem = service->SubSystems();
-                if (subSystem != nullptr) {
-                    if (subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
-                        subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
-                        subSystem->Release();
-                    }
-                }
 
                 if (_memory != nullptr) {
                     _memory->Release();
