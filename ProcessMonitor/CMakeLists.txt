@@ -50,7 +50,7 @@ target_link_libraries(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
-set(PLUGIN_PROCESSMONITOR_STARTMODE "deactivated" CACHE STRING "Automatically start ProcessMonitor plugin")
+set(PLUGIN_PROCESSMONITOR_STARTMODE "Deactivated" CACHE STRING "Automatically start ProcessMonitor plugin")
 set(PLUGIN_PROCESSMONITOR_EXITTIMEOUT "2" CACHE STRING "Exit timeout for ProcessMonitor plugin")
 
 write_config()
