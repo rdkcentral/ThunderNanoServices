@@ -187,9 +187,12 @@ namespace Plugin {
                     }
 
                     _parent.Completed(false);
+
+                    Core::ResourceMonitor::Instance().Register(*this);
                 }
                 virtual ~SharedBuffer()
                 {
+                    Core::ResourceMonitor::Instance().Unregister(*this);
                 }
 
                 uint32_t AddRef() const override
