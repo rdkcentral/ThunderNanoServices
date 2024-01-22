@@ -136,6 +136,7 @@ namespace Plugin {
             , _background(black)
             , _engine()
             , _dispatcher(nullptr)
+            , _handler(*this)
         {
         }
 
@@ -182,6 +183,7 @@ namespace Plugin {
                     while ((planes->Next() == true) && (planes->IsValid() == true)) {
                         ASSERT(planes->IsValid() == true);
                         BaseClass::Add(planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset());
+                        TRACE(Trace::Information, (_T("Client[%d] Added shared plane %" PRIuPTR " with stride: %d, offset=%d"), parent.Identifier(), planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset()));
                     }
 
                     _parent.Completed(false);
@@ -258,6 +260,7 @@ namespace Plugin {
 
                     if (index == _shareable.end()) {
                         _shareable.push_back(buffer);
+                        TRACE(Trace::Information, (_T("Buffer %d Announced"), buffer->Identifier()));
                     }
                 }
 
@@ -271,6 +274,7 @@ namespace Plugin {
 
                     if (index != _shareable.end()) {
                         _shareable.erase(index);
+                        TRACE(Trace::Information, (_T("Buffer %d Revoked"), buffer->Identifier()));
                     }
                 }
 
@@ -296,6 +300,8 @@ namespace Plugin {
             {
                 ASSERT(_buffer.IsValid());
                 _parent.Announce(*this);
+
+                TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
             }
 
             ~Client() override
@@ -432,6 +438,78 @@ namespace Plugin {
             Compositor::IRenderer::ITexture* _texture; // the texture handle that is known in the GPU/Renderer.
         }; // class Client
 
+        class ClientHandler {
+        private:
+            using Client = std::pair<Exchange::IComposition::IClient*, bool>;
+            using Clients = std::vector<Client>;
+
+        private:
+            ClientHandler() = delete;
+            ClientHandler(const ClientHandler&) = delete;
+            ClientHandler& operator=(const ClientHandler&) = delete;
+
+        public:
+            ClientHandler(CompositorImplementation& parent)
+                : _clients()
+                , _adminLock()
+                , _parent(parent)
+                , _job(*this)
+            {
+            }
+            ~ClientHandler()
+            {
+                _job.Revoke();
+                _clients.clear();
+            }
+
+        public:
+            void Attached(Exchange::IComposition::IClient* element)
+            {
+                _adminLock.Lock();
+                element->AddRef();
+                _clients.push_back({ element, true });
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
+            void Detached(Exchange::IComposition::IClient* element)
+            {
+                _adminLock.Lock();
+                element->AddRef();
+                _clients.push_back({ element, false });
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
+            void Dispatch()
+            {
+                _adminLock.Lock();
+
+                while (_clients.size()) {
+                    Client client = _clients.back();
+                    _clients.pop_back();
+                    _adminLock.Unlock();
+
+                    if (client.second == true) {
+                        _parent.Attached(client.first);
+                    } else {
+                        _parent.Detached(client.first);
+                    }
+
+                    client.first->Release();
+
+                    _adminLock.Lock();
+                }
+                _adminLock.Unlock();
+            }
+
+        private:
+            Clients _clients;
+            Core::CriticalSection _adminLock;
+            CompositorImplementation& _parent;
+            Core::WorkerPool::JobType<ClientHandler&> _job;
+        };
+
     public:
         /**
          * Exchange::IComposition methods
@@ -488,7 +566,7 @@ namespace Plugin {
                     _dispatcher.reset(nullptr);
                     _engine.Release();
                     _clientBridge.Close();
-                        result                        = Core::ERROR_UNAVAILABLE;
+                    result = Core::ERROR_UNAVAILABLE;
                 }
             }
 
@@ -505,8 +583,10 @@ namespace Plugin {
 
             _observers.push_back(notification);
 
-            // _clients.Visit(
-            //     [=](const string& name, const Core::ProxyType<Client>& element) { notification->Attached(name, &(*element)); });
+            _clients.Visit(
+                [=](const string& name, const Core::ProxyType<Client>& element) {
+                    notification->Attached(name, &(*element));
+                });
         }
 
         void Unregister(Exchange::IComposition::INotification* notification) override
@@ -519,8 +599,10 @@ namespace Plugin {
 
             if (index != _observers.end()) {
 
-                // _clients.Visit(
-                //     [=](const string& name, const Core::ProxyType<Client>& element) { silence ( element ); notification -> Detached ( name ) ; });
+                _clients.Visit(
+                    [=](const string& name, const Core::ProxyType<Client>& /*element*/) {
+                        notification->Detached(name);
+                    });
 
                 _observers.erase(index);
 
@@ -531,28 +613,36 @@ namespace Plugin {
         }
 
     private:
+        void Attached(Exchange::IComposition::IClient* client)
+        {
+            for (auto& observer : _observers) {
+                observer->Attached(client->Name(), client);
+            }
+        }
+        void Detached(Exchange::IComposition::IClient* client)
+        {
+            for (auto& observer : _observers) {
+                observer->Detached(client->Name());
+            }
+        }
+
         void Announce(Client& client)
         {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
             client.Texture(_renderer->Texture(&client));
-
-            for (auto& observer : _observers) {
-                observer->Attached(client.Name(), &client);
-            }
-
             _clientBridge.Announce(client.Buffer());
+
+            _handler.Attached(&client);
         }
 
         void Revoke(Client& client)
         {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-            _clientBridge.Revoke(client.Buffer());
+            _handler.Detached(&client);
 
-            for (auto& observer : _observers) {
-                observer->Detached(client.Name());
-            }
+            _clientBridge.Revoke(client.Buffer());
 
             if (client.Texture() != nullptr) {
                 client.Texture()->Release();
@@ -670,6 +760,7 @@ namespace Plugin {
         Compositor::Color _background;
         Core::ProxyType<RPC::InvokeServer> _engine;
         std::unique_ptr<DisplayDispatcher> _dispatcher;
+        ClientHandler _handler;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
