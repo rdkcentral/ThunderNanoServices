@@ -24,7 +24,7 @@ find_package(WPEFramework)
 set(PLUGIN_NAME SwitchBoard)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-set(PLUGIN_SWITCHBOARD_STARTMODE "activated" CACHE BOOL "Automatically start SwitchBoard plugin")
+set(PLUGIN_SWITCHBOARD_STARTMODE "Activated" CACHE BOOL "Automatically start SwitchBoard plugin")
 set(PLUGIN_SWITCHBOARD_DEFAULT ""  CACHE STRING "Callsign of the plugin to be activated in case nothing is active.")
 set(PLUGIN_SWITCH_AMAZON false CACHE BOOL "Enable switch for Amazon plugin")
 set(PLUGIN_SWITCH_COBALT false CACHE BOOL "Enable switch for Cobalt plugin")

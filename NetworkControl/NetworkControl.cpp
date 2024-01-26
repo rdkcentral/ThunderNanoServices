@@ -50,8 +50,8 @@ namespace Plugin
         , _connectionId(0)
         , _service(nullptr)
         , _networkControl()
-        , _connectionNotification(this)
-        , _networkNotification(this)
+        , _connectionNotification(*this)
+        , _networkNotification(*this)
     {
     }
 

@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_WEBSHELL_STARTMODE "activated" CACHE STRING "Automatically start WebShell plugin")
+set(PLUGIN_WEBSHELL_STARTMODE "Activated" CACHE STRING "Automatically start WebShell plugin")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})

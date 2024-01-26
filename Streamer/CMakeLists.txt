@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_STREAMER_STARTMODE "activated" CACHE STRING "Automatically start Streamer plugin")
+set(PLUGIN_STREAMER_STARTMODE "Activated" CACHE STRING "Automatically start Streamer plugin")
 set(PLUGIN_STREAMER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
 # deprecated/legacy flags support

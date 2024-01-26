@@ -466,7 +466,7 @@ public:
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(VARIABLE_IS_NOT_USED const bool& visiblity) override
+    uint32_t Visible(VARIABLE_IS_NOT_USED const bool visiblity) override
     {
         return Core::ERROR_UNAVAILABLE;
     }

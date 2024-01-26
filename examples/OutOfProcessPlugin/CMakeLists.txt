@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_OUTOFPROCESSPLUGIN_STARTMODE "activated" CACHE STRING "Automatically start OutOfProcessPlugin")
+set(PLUGIN_OUTOFPROCESSPLUGIN_STARTMODE "Activated" CACHE STRING "Automatically start OutOfProcessPlugin")
 set(PLUGIN_OUTOFPROCESSPLUGIN_RESUMED "true" CACHE STRING "Set OutOfProcessPlugin resume state")
 set(PLUGIN_OUTOFPROCESSPLUGIN_MODE "Local" CACHE STRING "Controls if the OutOfProcessPlugin should run in its own process, in process or remote.")
 
