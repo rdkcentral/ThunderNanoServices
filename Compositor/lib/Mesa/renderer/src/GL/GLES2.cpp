@@ -611,44 +611,43 @@ namespace Compositor {
                 glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&bound_fbo));
                 glGetIntegerv(GL_VIEWPORT, viewport);
 
+                glActiveTexture(GL_TEXTURE0);
+
                 // Generate framebuffer
                 glGenFramebuffers(1, &fbo);
-                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+                TRACE_GLOBAL(Trace::Information, ("DumpTex glGenFramebuffers result: %s", API::GL::ErrorString(glGetError())));
 
                 glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+                TRACE_GLOBAL(Trace::Information, ("DumpTex glBindFramebuffer result: %s", API::GL::ErrorString(glGetError())));
 
                 // Bind the texture to your FBO
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
-                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+                TRACE_GLOBAL(Trace::Information, ("DumpTex glFramebufferTexture2D result: %s", API::GL::ErrorString(glGetError())));
 
                 // Test if everything failed
                 GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                TRACE_GLOBAL(Trace::Information, ("DumpTex glCheckFramebufferStatus result: %s", API::GL::ErrorString(glGetError())));
 
                 if (status != GL_FRAMEBUFFER_COMPLETE) {
                     TRACE_GLOBAL(Trace::Error, ("DumpTex: failed to make complete framebuffer object %x", status));
-                    return false;
+                    // return false;
                 }
 
                 // set the viewport as the FBO won't be the same dimension as the screen
                 glViewport(box.x, box.y, box.width, box.height);
-                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+                TRACE_GLOBAL(Trace::Information, ("DumpTex glViewport result: %s", API::GL::ErrorString(glGetError())));
 
                 pixels.clear();
                 pixels.resize(box.width * box.height * (formatGL.BitPerPixel / 8));
 
                 glReadPixels(box.x, box.y, box.width, box.height, formatGL.Format, formatGL.Type, pixels.data());
-                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(glGetError())));
+                TRACE_GLOBAL(Trace::Information, ("DumpTex glReadPixels result: %s", API::GL::ErrorString(glGetError())));
 
                 // Restore framebuffer
                 glBindFramebuffer(GL_FRAMEBUFFER, bound_fbo);
                 glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
-                EGLint error = glGetError();
-
-                TRACE_GLOBAL(Trace::Error, ("DumpTex result: %s", API::GL::ErrorString(error)));
-
-                return error == GL_NO_ERROR;
+                return glGetError() == GL_NO_ERROR;
             }
 
             class GLESTexture : public IRenderer::ITexture {
@@ -680,16 +679,16 @@ namespace Compositor {
 
                     ASSERT(_textureId != 0);
 
-                    std::vector<uint8_t> pixels;
-                    Box box = { 0, 0, static_cast<int>(buffer->Width()), static_cast<int>(buffer->Height()) };
+                    // std::vector<uint8_t> pixels;
+                    // Box box = { 0, 0, static_cast<int>(buffer->Width()), static_cast<int>(buffer->Height()) };
 
-                    if (DumpTex(box, buffer->Format(), pixels, _textureId) == true) {
-                        std::stringstream ss;
-                        ss << "gl-tex-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
-                        Core::File snapshot(ss.str());
+                    // if (DumpTex(box, buffer->Format(), pixels, _textureId) == true) {
+                    //     std::stringstream ss;
+                    //     ss << "gl-tex-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+                    //     Core::File snapshot(ss.str());
 
-                        WritePNG(ss.str(), pixels, box.width, box.height);
-                    }
+                    //     WritePNG(ss.str(), pixels, box.width, box.height);
+                    // }
                 }
 
                 virtual ~GLESTexture()
@@ -781,11 +780,12 @@ namespace Compositor {
                     bool external(false);
 
                     Renderer::EGL::ContextBackup backup;
+                    GLenum error(GL_NO_ERROR);
 
                     _parent.Egl().SetCurrent();
+                    ASSERT(eglGetError() == EGL_SUCCESS);
 
                     _image = _parent.Egl().CreateImage(_buffer, external);
-
                     ASSERT(_image != EGL_NO_IMAGE);
 
                     _target = (external == true) ? GL_TEXTURE_EXTERNAL_OES : GL_TEXTURE_2D;
@@ -797,6 +797,8 @@ namespace Compositor {
                     glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
                     _parent.Gles().glEGLImageTargetTexture2DOES(_target, _image);
+                    error = glGetError();
+                    TRACE(Trace::GL, ("glEGLImageTargetTexture2DOES: [%04x] %s", error, API::GL::ErrorString(error)));
 
                     glBindTexture(_target, 0);
 

@@ -474,6 +474,8 @@ namespace Compositor {
                 imageAttributes.Append(EGL_HEIGHT, buffer->Height());
                 imageAttributes.Append(EGL_LINUX_DRM_FOURCC_EXT, buffer->Format());
 
+                TRACE(Trace::Information, ("plane 0 info fd=%" PRIuPTR " stride=%d offset=%d", plane->Accessor(), plane->Stride(), plane->Offset()));
+
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, plane->Accessor());
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, plane->Offset());
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, plane->Stride());
@@ -482,7 +484,6 @@ namespace Compositor {
 
                 if (planes->Next() == true) {
                     plane = planes->Plane();
-
                     ASSERT(plane != nullptr);
 
                     imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, plane->Accessor());
@@ -522,7 +523,7 @@ namespace Compositor {
                 //                 std::stringstream hexLine;
 
                 //                 for (uint16_t i(0); i < imageAttributes.Size(); i++) {
-                //                     const int att(imageAttributes[i]);
+                //                     const int att(imageAttributes[size_t(i)]);
 
                 //                     hexLine << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << att << std::nouppercase;
 
@@ -539,6 +540,9 @@ namespace Compositor {
                 // #endif
 
                 result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, imageAttributes);
+
+                TRACE(Trace::EGL, ("EGL image created result:%s", API::EGL::ErrorString(eglGetError())));
+                ASSERT(eglGetError() == EGL_SUCCESS);
             }
 
             external = IsExternOnly(buffer->Format(), buffer->Modifier());
