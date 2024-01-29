@@ -34,7 +34,11 @@ namespace Plugin {
             // Terminations
             {},
             // Controls
-            { subsystem::PLATFORM, subsystem::GRAPHICS });
+            {
+#ifdef PROVIDES_PLATORM
+                subsystem::PLATFORM,
+#endif
+                subsystem::GRAPHICS });
     }
 
     static string PrimaryName(const string& layerName)
@@ -215,7 +219,7 @@ namespace Plugin {
             _brightness = _composition->QueryInterface<Exchange::IBrightness>();
         }
 
-        // On succes return empty, to indicate there is no error text.
+        // On success return empty, to indicate there is no error text.
         return message;
     }
     /* virtual */ void Compositor::Deinitialize(PluginHost::IShell* service)
@@ -474,10 +478,12 @@ namespace Plugin {
 
             Exchange::IComposition::IClient* removedclient = it->second;
 
-            TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
             _clients.erase(it);
 
             removedclient->Release();
+            TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
+        } else {
+            TRACE(Trace::Error, (_T("No entry for %s found to detach"), it->first.c_str()));
         }
 
         _adminLock.Unlock();
