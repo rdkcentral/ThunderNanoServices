@@ -267,6 +267,8 @@ namespace Compositor {
             }
             void Render() override
             {
+                // Nothing to render here.
+                ASSERT(false);
             }
 
             Exchange::ICompositionBuffer::DataType Type() const

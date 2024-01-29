@@ -36,7 +36,7 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 namespace Plugin {
-
+    const Compositor::Color pink = { 1.0f, 0.411f, 0.705f, 1.0f };
     const Compositor::Color black = { 0.f, 0.f, 0.f, 1.0f };
 
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
@@ -133,7 +133,7 @@ namespace Plugin {
             , _clientBridge(*this)
             , _clients()
             , _lastFrame(0)
-            , _background(black)
+            , _background(pink)
             , _engine()
             , _dispatcher(nullptr)
             , _handler(*this)
@@ -294,7 +294,7 @@ namespace Plugin {
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
                 : _parent(parent)
                 , _callsign(callsign)
-                , _opacity(0)
+                , _opacity(128)
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
                 , _buffer(Compositor::CreateBuffer(_parent.Native(), width, height, Compositor::PixelFormat(_parent.Format(), { _parent.Modifier() })))
@@ -389,7 +389,7 @@ namespace Plugin {
             }
             void Render() override
             {
-                _buffer->Render();
+                _parent.RequestRender();
             }
             uint32_t Width() const override
             {
@@ -539,11 +539,11 @@ namespace Plugin {
 
             std::string bridgePath = service->VolatilePath() + config.ClientBridge.Value();
 
+            RenderScene();
+
             result = _clientBridge.Open(bridgePath);
 
             if (result == Core::ERROR_NONE) {
-                // Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_CLIENTBRIDGE"), bridgePath, true);
-
                 std::string connectorPath = service->VolatilePath() + config.Connector.Value();
 
                 ASSERT(_dispatcher == nullptr);
@@ -553,8 +553,6 @@ namespace Plugin {
                 _dispatcher.reset(new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine));
 
                 if (_dispatcher->IsListening()) {
-                    // Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_COMMUNICATOR"), _dispatcher->Connector().c_str(), true);
-
                     PluginHost::ISubSystem* subSystems = service->SubSystems();
 
                     ASSERT(subSystems != nullptr);
@@ -572,7 +570,6 @@ namespace Plugin {
                     result = Core::ERROR_UNAVAILABLE;
                 }
             }
-
             return (result);
         }
 
@@ -663,6 +660,11 @@ namespace Plugin {
             return _modifier;
         }
 
+        void RequestRender()
+        {
+            RenderScene();
+        }
+
     public:
         /**
          * Exchange::IComposition::IDisplay methods
@@ -702,10 +704,31 @@ namespace Plugin {
         {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
+            ASSERT((_gpuConnector.IsValid() == true) && (_renderer.IsValid() == true));
+
             const uint16_t width(_gpuConnector->Width());
             const uint16_t height(_gpuConnector->Height());
 
             _renderer->Bind(_gpuConnector);
+
+            // TODO: remove this, its only to show 
+            // the canvas is refreshed.
+            // =====================================
+            static uint8_t _previousIndex = 0;
+            static uint32_t  frame = 0;            
+            const uint8_t index((_previousIndex + 1) % 3);
+
+            _background[index] += frame / 2000.0f;
+            _background[_previousIndex] -= frame / 2000.0f;
+
+            if (_background[_previousIndex] < 0.0f) {
+                _background[index] = 1.0f;
+                _background[_previousIndex] = 0.0f;
+                _previousIndex = index;
+            }
+
+            frame++;
+            // =====================================
 
             _renderer->Begin(width, height);
             _renderer->Clear(_background);
