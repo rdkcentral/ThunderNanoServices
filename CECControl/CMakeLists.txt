@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_CECCONTROL_STARTMODE "activated" CACHE STRING "Automatically start CECControl plugin")
+set(PLUGIN_CECCONTROL_STARTMODE "Activated" CACHE STRING "Automatically start CECControl plugin")
 
 # TODO: CEC 2.0 specifies that multiple roles can be used by one device.
 set(PLUGIN_CECCONTROL_ROLES "playback" CACHE STRING "Device type")
