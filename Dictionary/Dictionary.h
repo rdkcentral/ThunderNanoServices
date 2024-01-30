@@ -134,10 +134,10 @@ namespace Plugin {
             }
             // IUnknown implementation
             // -----------------------------------------------
-            void AddRef() const override
+            uint32_t AddRef() const override
             {
                 ASSERT(_lifeTime != nullptr);
-                _lifeTime->AddRef();
+                return(_lifeTime->AddRef());
             }
             uint32_t Release() const override
             {
