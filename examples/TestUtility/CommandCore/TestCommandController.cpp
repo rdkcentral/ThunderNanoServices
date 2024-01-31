@@ -38,7 +38,7 @@ namespace TestCore {
         }
         iterator->Release();
         _adminLock.Unlock();
-    };
+    }
 
     void TestCommandController::Announce(Exchange::ITestUtility::ICommand* command)
     {
