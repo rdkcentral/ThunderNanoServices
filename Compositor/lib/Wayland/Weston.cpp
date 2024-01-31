@@ -461,9 +461,10 @@ namespace Weston {
             {
                 return _id;
             }
-            void AddRef() const override
+            uint32_t AddRef() const override
             {
                 Core::InterlockedIncrement(_refCount);
+                return Core::ERROR_NONE;
             }
             uint32_t Release() const override
             {
