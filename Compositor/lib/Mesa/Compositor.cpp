@@ -143,9 +143,9 @@ namespace Plugin {
                 {
                 }
 
-                void AddRef() const override
+                uint32_t AddRef() const override
                 {
-                    _parent.AddRef();
+                    return _parent.AddRef();
                 }
 
                 uint32_t Release() const override
@@ -308,14 +308,15 @@ namespace Plugin {
              * Exchange::ICompositionBuffer methods
              */
 
-            void AddRef() const override
+            uint32_t AddRef() const override
             {
                 // We are not a reference counted object, so do nothing.
+                return (Core::ERROR_COMPOSIT_OBJECT);
             }
             uint32_t Release() const override
             {
                 // We are not a reference counted object, so do nothing.
-                return (0);
+                return (Core::ERROR_COMPOSIT_OBJECT);
             }
 
             uint32_t Identifier() const override

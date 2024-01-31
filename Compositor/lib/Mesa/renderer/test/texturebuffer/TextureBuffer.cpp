@@ -4,13 +4,14 @@
 
 namespace WPEFramework {
 namespace Compositor {
-    void TextureBuffer::AddRef() const
+    uint32_t TextureBuffer::AddRef() const
     {
+        return (Core::ERROR_COMPOSIT_OBJECT);
     }
 
     uint32_t TextureBuffer::Release() const
     {
-        return 0;
+        return (Core::ERROR_COMPOSIT_OBJECT);
     }
 
     uint32_t TextureBuffer::Identifier() const { return 0; }

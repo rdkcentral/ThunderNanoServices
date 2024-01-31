@@ -99,7 +99,7 @@ namespace Compositor {
 
         virtual ~TextureBuffer() = default;
 
-        void AddRef() const override;
+        uint32_t AddRef() const override;
 
         uint32_t Release() const override;
 
