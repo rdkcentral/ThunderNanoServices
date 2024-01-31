@@ -29,7 +29,7 @@ public:
     Statm& operator=(const Statm&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::InputInfo;
+    using Parameter = JsonData::TestUtility::ParameterInfo;
 
     Statm()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Provides information about system memory allocation"),

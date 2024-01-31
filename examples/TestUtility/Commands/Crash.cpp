@@ -30,7 +30,7 @@ public:
     Crash& operator=(const Crash&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::InputInfo;
+    using Parameter = JsonData::TestUtility::ParameterInfo;
 
     Crash()
         : TestCommandBase(
