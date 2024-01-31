@@ -44,12 +44,13 @@ public:
     ~Keyboard() override = default;
 
 public:
-    virtual void AddRef() const override
+    virtual uint32_t AddRef() const override
     {
+        return (Core::ERROR_COMPOSIT_OBJECT);
     }
     virtual uint32_t Release() const override
     {
-        return 0;
+        return (Core::ERROR_COMPOSIT_OBJECT);
     }
     virtual void KeyMap(const char information[], const uint16_t size) override
     {
