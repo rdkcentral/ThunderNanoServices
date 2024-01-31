@@ -102,14 +102,6 @@ namespace Plugin {
                     connection->Terminate();
                     connection->Release();
                 }
-
-                PluginHost::ISubSystem* subSystem = service->SubSystems();
-                if (subSystem != nullptr) {
-                    if (subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
-                        subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
-                        subSystem->Release();
-                    }
-                }
             }
 
             _service->Release();
