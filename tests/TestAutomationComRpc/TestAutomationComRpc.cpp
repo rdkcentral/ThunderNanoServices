@@ -45,8 +45,8 @@ namespace Plugin {
         _service = service;
         _service->AddRef(); 
 
-        _implementation = _service->Root<Exchange::TestAutomation::IComRpc::IComRpcInternal>(_connectionId, 2000, _T("TestAutomationComRpcImplementation"));
-        Exchange::TestAutomation::JComRpc::Register(*this, this);
+        _implementation = _service->Root<QualityAssurance::IComRpc::IComRpcInternal>(_connectionId, 2000, _T("TestAutomationComRpcImplementation"));
+        QualityAssurance::JComRpc::Register(*this, this);
         
         string result;
         if (_implementation == nullptr) {
@@ -65,7 +65,7 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        Exchange::TestAutomation::JComRpc::Unregister(*this);
+        QualityAssurance::JComRpc::Unregister(*this);
         if (_implementation != nullptr) {
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 

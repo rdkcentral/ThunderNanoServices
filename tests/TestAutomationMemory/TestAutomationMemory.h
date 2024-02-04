@@ -22,8 +22,8 @@
 
 
 #include "Module.h"
-#include <interfaces/ITestAutomation.h>
-#include <interfaces/json/JTestAutomationMemory.h>
+#include <qa_interfaces/ITestAutomation.h>
+#include <qa_interfaces/json/JMemory.h>
 #include <interfaces/IMemory.h>
 
 namespace WPEFramework {
@@ -33,6 +33,8 @@ namespace Plugin {
     public:
         TestAutomationMemory(const TestAutomationMemory&) = delete;
         TestAutomationMemory& operator=(const TestAutomationMemory&) = delete;
+        TestAutomationMemory(TestAutomationMemory&&) = delete;
+        TestAutomationMemory& operator=(TestAutomationMemory&&) = delete;
 
         TestAutomationMemory()
             : _memoryTestInterface(nullptr)
@@ -51,7 +53,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(TestAutomationMemory)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_AGGREGATE(Exchange::TestAutomation::IMemory, _memoryTestInterface)
+            INTERFACE_AGGREGATE(QualityAssurance::IMemory, _memoryTestInterface)
             INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         END_INTERFACE_MAP
 
@@ -65,7 +67,7 @@ namespace Plugin {
     private:
        void Deactivated(RPC::IRemoteConnection* connection);
 
-        Exchange::TestAutomation::IMemory* _memoryTestInterface;
+        QualityAssurance::IMemory* _memoryTestInterface;
         uint32_t _connectionId;
         Exchange::IMemory* _memory;
         PluginHost::IShell* _service;
