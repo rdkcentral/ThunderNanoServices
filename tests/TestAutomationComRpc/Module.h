@@ -24,7 +24,6 @@
 #endif
 
 #include <plugins/plugins.h>
-// #include <tracing/tracing.h>
 #include <messaging/messaging.h>
 
 #undef EXTERNAL

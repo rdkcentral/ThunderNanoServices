@@ -19,24 +19,26 @@
  
 
 #include "Module.h"
-#include <interfaces/ITestAutomation.h>
+#include <qa_interfaces/ITestAutomation.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class TestAutomationComRpcImplementation : public Exchange::TestAutomation::IComRpc::IComRpcInternal {
+    class TestAutomationComRpcImplementation : public QualityAssurance::IComRpc::IComRpcInternal {
         
     public:
         TestAutomationComRpcImplementation(const TestAutomationComRpcImplementation&) = delete;
         TestAutomationComRpcImplementation& operator=(const TestAutomationComRpcImplementation&) = delete;
+        TestAutomationComRpcImplementation(TestAutomationComRpcImplementation&&) = delete;
+        TestAutomationComRpcImplementation& operator=(TestAutomationComRpcImplementation&&) = delete;
 
-        TestAutomationComRpcImplementation()
+        TestAutomationComRpcImplementation() 
         {
         }
         ~TestAutomationComRpcImplementation() override = default;
 
         BEGIN_INTERFACE_MAP(TestAutomationComRpcImplementation)
-            INTERFACE_ENTRY(Exchange::TestAutomation::IComRpc::IComRpcInternal)
+            INTERFACE_ENTRY(QualityAssurance::IComRpc::IComRpcInternal)
         END_INTERFACE_MAP
 
         // IComRpcInternal Methods

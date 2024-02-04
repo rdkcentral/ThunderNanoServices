@@ -22,16 +22,19 @@
 
 
 #include "Module.h"
-#include <interfaces/ITestAutomation.h>
-#include <interfaces/json/JTestAutomationComRpc.h>
+#include <qa_interfaces/ITestAutomation.h>
+#include <qa_interfaces/json/JComRpc.h>
+
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class TestAutomationComRpc : public PluginHost::IPlugin, public Exchange::TestAutomation::IComRpc, public PluginHost::JSONRPC {
+    class TestAutomationComRpc : public PluginHost::IPlugin, public QualityAssurance::IComRpc, public PluginHost::JSONRPC {
     public:
         TestAutomationComRpc(const TestAutomationComRpc&) = delete;
         TestAutomationComRpc& operator=(const TestAutomationComRpc&) = delete;
+        TestAutomationComRpc(TestAutomationComRpc&&) = delete;
+        TestAutomationComRpc& operator=(TestAutomationComRpc&&) = delete;
 
         TestAutomationComRpc()
             : _implementation(nullptr)
@@ -49,7 +52,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(TestAutomationComRpc)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_ENTRY(Exchange::TestAutomation::IComRpc)
+            INTERFACE_ENTRY(QualityAssurance::IComRpc)
         END_INTERFACE_MAP
 
         //   ITestAutomationComRpc Methods
@@ -64,7 +67,7 @@ namespace Plugin {
     private:
        void Deactivated(RPC::IRemoteConnection* connection);
 
-        Exchange::TestAutomation::IComRpc::IComRpcInternal* _implementation;
+        QualityAssurance::IComRpc::IComRpcInternal* _implementation;
 
         uint32_t _connectionId;
         PluginHost::IShell* _service;

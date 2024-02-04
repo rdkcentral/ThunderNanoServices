@@ -31,7 +31,7 @@ namespace TestAutomationMemory {
             MemoryObserverImpl& operator=(const MemoryObserverImpl&) = delete;
 
             MemoryObserverImpl(const RPC::IRemoteConnection* connection)
-                : _main(connection  == 0 ? Core::ProcessInfo().Id() : connection->RemoteId())
+                : _main(connection  == nullptr ? Core::ProcessInfo().Id() : connection->RemoteId())
             {
             }
             ~MemoryObserverImpl() = default;
@@ -96,13 +96,13 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
-        _memoryTestInterface = _service->Root<Exchange::TestAutomation::IMemory>(_connectionId, 2000, _T("TestAutomationMemoryImplementation"));
+        _memoryTestInterface = _service->Root<QualityAssurance::IMemory>(_connectionId, 2000, _T("TestAutomationMemoryImplementation"));
 
         string result;
         if (_memoryTestInterface == nullptr) {
             result = _T("Couldn't create TestAutomationMemory instance");
         } else {
-            Exchange::TestAutomation::JMemory::Register(*this, _memoryTestInterface);
+            QualityAssurance::JMemory::Register(*this, _memoryTestInterface);
 
             // If we are configured to run OOP, the _connectionId != 0!
             if (_connectionId == 0) {
@@ -140,7 +140,7 @@ namespace Plugin {
             _memory = nullptr;
         }
 
-        Exchange::TestAutomation::JMemory::Unregister(*this);
+        QualityAssurance::JMemory::Unregister(*this);
         if (_memoryTestInterface != nullptr) {
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 

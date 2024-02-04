@@ -23,26 +23,28 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    class TestAutomationMemoryImplementation : public Exchange::TestAutomation::IMemory {
+    class TestAutomationMemoryImplementation : public QualityAssurance::IMemory {
     public:
         TestAutomationMemoryImplementation(const TestAutomationMemoryImplementation&) = delete;
         TestAutomationMemoryImplementation& operator=(const TestAutomationMemoryImplementation&) = delete;
+        TestAutomationMemoryImplementation(TestAutomationMemoryImplementation&&) = delete;
+        TestAutomationMemoryImplementation& operator=(TestAutomationMemoryImplementation&&) = delete;
 
         TestAutomationMemoryImplementation()
         : _adminLock{}
+        , _memoryAllocationData{nullptr}
         {
         }
         ~TestAutomationMemoryImplementation() override = default;
 
         BEGIN_INTERFACE_MAP(TestAutomationMemoryImplementation)
-            INTERFACE_ENTRY(Exchange::TestAutomation::IMemory)
+            INTERFACE_ENTRY(QualityAssurance::IMemory)
         END_INTERFACE_MAP
 
         // IMemory Methods
         Core::hresult AllocateMemory(const uint32_t memorySize) override
         {
             uint32_t result = Core::ERROR_NONE;
-            printf("TestAutomationMemory::AllocateMemory -> Method called!\n");
             _adminLock.Lock();
             if (memorySize > 0 && _memoryAllocationData == nullptr)
             {
@@ -75,8 +77,6 @@ namespace Plugin {
         
         Core::hresult FreeAllocatedMemory() override
         {
-            printf("TestAutomationMemory::FreeAllocatedMemory -> Method called!\n");
-        
             if (_memoryAllocationData != nullptr) {
                 TRACE(Trace::Information, (_T("Memory Allocation Cleared!!!")));
                 delete[] _memoryAllocationData;

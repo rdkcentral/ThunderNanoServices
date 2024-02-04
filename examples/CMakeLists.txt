@@ -26,12 +26,10 @@ message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
 option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
-option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
-option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
-option(PLUGIN_CONFIGUPDATEEXAMPLE "Include Sample plugin to get/set plugins config" OFF)
+option(PLUGIN_CONFIGUPDATEEXAMPLE "Include Sample plugin to get/set plugins config" ON)
 option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" OFF)
 option(EXAMPLE_IOCONNECTOR_TEST "Include IOConnector test suite" OFF)
 option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message control" OFF)
@@ -40,14 +38,6 @@ option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
-endif()
-
-if(PLUGIN_TESTUTILITY)
-    add_subdirectory(TestUtility)
-endif()
-
-if(PLUGIN_TESTCONTROLLER)
-    add_subdirectory(TestController)
 endif()
 
 if(PLUGIN_JSONRPC)
