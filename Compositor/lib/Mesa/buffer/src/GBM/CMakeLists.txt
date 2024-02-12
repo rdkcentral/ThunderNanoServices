@@ -23,6 +23,8 @@ find_package(gbm REQUIRED)
 
 add_library(CommonBufferGBM STATIC GBM.cpp)
 
+option(ENABLE_DUMP_ON_COMPLETED "Dump a png appon completing the buffer" OFF)
+
 target_link_libraries(CommonBufferGBM 
     PUBLIC
         common::include
@@ -33,6 +35,12 @@ target_link_libraries(CommonBufferGBM
         gbm::gbm
         common::drm
 )
+
+if(ENABLE_DUMP_ON_COMPLETED)
+    find_package(PNG REQUIRED)
+    target_compile_definitions(CommonBufferGBM PRIVATE ENABLE_DUMP=1)
+    target_link_libraries(CommonBufferGBM PRIVATE PNG::PNG)
+endif()
 
 target_compile_definitions(CommonBufferGBM
     PRIVATE

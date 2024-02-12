@@ -25,6 +25,10 @@
 #include <xf86drmMode.h>
 #include <DRM.h>
 
+#ifdef ENABLE_DUMP
+#include <png.h>
+#endif
+
 MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace WPEFramework {
@@ -39,6 +43,29 @@ namespace Compositor {
 #else
             static constexpr uint8_t DmaBufferMaxPlanes = 1;
 #endif
+
+            static void PrintBufferInfo(gbm_bo* buffer)
+            {
+                if (buffer != nullptr) {
+                    const uint32_t height(gbm_bo_get_height(buffer));
+                    const uint32_t width(gbm_bo_get_width(buffer));
+                    const uint32_t format(gbm_bo_get_format(buffer));
+                    const uint64_t modifier(gbm_bo_get_modifier(buffer));
+
+                    char* formatName = drmGetFormatName(format);
+                    char* modifierName = drmGetFormatModifierName(modifier);
+
+                    TRACE_GLOBAL(Trace::Buffer, (_T("GBM buffer %dx%d, format %s (0x%08" PRIX32 "), modifier %s (0x%016" PRIX64 ")"), width, height, formatName ? formatName : "<Unknown>", format, modifierName ? modifierName : "<Unknown>", modifier));
+
+                    if (formatName) {
+                        free(formatName);
+                    }
+
+                    if (modifierName) {
+                        free(modifierName);
+                    }
+                }
+            }
 
             // using Iterator = Core::IteratorType<Planes, Exchange::ICompositionBuffer*, Planes::iterator>;
             class Plane : public Exchange::ICompositionBuffer::IPlane {
@@ -202,6 +229,8 @@ namespace Compositor {
                         _bo = nullptr;
                     }
                 }
+
+                PrintBufferInfo(_bo);
             }
             ~GBM() override
             {
@@ -259,12 +288,21 @@ namespace Compositor {
                 }
                 return (nullptr);
             }
-            uint32_t Completed(const bool /*changed*/) override
+
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_PARAMETERS)
+            uint32_t Completed(const bool changed) override
             {
                 Unlock();
                 // TODO, Implement me!
+#ifdef ENABLE_DUMP
+                if (changed == true) {
+                    Dump();
+                }
+#endif
                 return ~0;
             }
+            POP_WARNING()
+
             void Render() override
             {
                 // Nothing to render here.
@@ -277,6 +315,98 @@ namespace Compositor {
             }
 
         private:
+#ifdef ENABLE_DUMP
+            struct format {
+                uint32_t format;
+                bool is_bgr;
+            };
+
+            uint32_t Dump()
+            {
+                uint32_t stride = 0;
+                void* map_data = NULL;
+
+                png_bytep data = reinterpret_cast<png_bytep>(gbm_bo_map(_bo, 0, 0, Width(), Height(), GBM_BO_TRANSFER_READ, &stride, &map_data));
+
+                if (data) {
+                    std::stringstream filename;
+                    filename << "gbm-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+
+                    Core::File snapshot(filename.str());
+                    WritePNG(filename.str(), Format(), Width(), Height(), stride, false, data);
+
+                    gbm_bo_unmap(_bo, map_data);
+                } else {
+                    TRACE(Trace::Buffer, (_T("Dump: failed to map gbm bo")));
+                }
+
+                return 0;
+            }
+
+            void WritePNG(const std::string& filename, uint32_t format, int width, int height, int stride, bool invertY, png_bytep data)
+            {
+
+                const struct format formats[] = {
+                    { DRM_FORMAT_XRGB8888, true },
+                    { DRM_FORMAT_ARGB8888, true },
+                    { DRM_FORMAT_XBGR8888, false },
+                    { DRM_FORMAT_ABGR8888, false },
+                };
+
+                const struct format* fmt = NULL;
+
+                for (size_t i = 0; i < sizeof(formats) / sizeof(formats[0]); ++i) {
+                    if (formats[i].format == format) {
+                        fmt = &formats[i];
+                        break;
+                    }
+                }
+
+                if (fmt == NULL) {
+                    fprintf(stderr, "unsupported format %" PRIu32 "\n", format);
+                    return;
+                }
+
+                FILE* filePointer = fopen(filename.c_str(), "wb");
+
+                if (filePointer == NULL) {
+                    fprintf(stderr, "failed to open output file\n");
+                    return;
+                }
+
+                png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+                png_infop info = png_create_info_struct(png);
+
+                png_init_io(png, filePointer);
+
+                png_set_IHDR(png, info, width, height, 8, PNG_COLOR_TYPE_RGBA,
+                    PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+                    PNG_FILTER_TYPE_DEFAULT);
+
+                if (fmt->is_bgr) {
+                    png_set_bgr(png);
+                }
+
+                png_write_info(png, info);
+
+                for (size_t i = 0; i < (size_t)height; ++i) {
+                    png_bytep row;
+                    if (invertY) {
+                        row = data + (height - i - 1) * stride;
+                    } else {
+                        row = data + i * stride;
+                    }
+                    png_write_row(png, row);
+                }
+
+                png_write_end(png, NULL);
+
+                png_destroy_write_struct(&png, &info);
+
+                // Close stream to flush and release allocated buffers
+                fclose(filePointer);
+            }
+#endif
             uint32_t Offset(const uint8_t planeId) const
             {
                 ASSERT(IsValid() == true);
