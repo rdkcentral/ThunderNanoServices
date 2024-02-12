@@ -98,6 +98,7 @@ namespace Compositor {
 #define PushDebug()
 #define PopDebug()
 #endif
+            // Framebuffers are usually connected to an output, it's the buffer for the composition to be rendered on.
             class FrameBuffer {
             public:
                 FrameBuffer() = delete;
@@ -542,13 +543,12 @@ namespace Compositor {
                 }
 
                 // Set image attributes.
-                int depth = 8;
                 png_set_IHDR(pngPointer,
                     infoPointer,
                     width,
                     height,
-                    depth,
-                    PNG_COLOR_TYPE_RGB,
+                    8,
+                    PNG_COLOR_TYPE_RGBA,
                     PNG_INTERLACE_NONE,
                     PNG_COMPRESSION_TYPE_DEFAULT,
                     PNG_FILTER_TYPE_DEFAULT);
@@ -564,6 +564,8 @@ namespace Compositor {
                     const uint8_t* rowSource = buffer.data() + (sizeof(png_byte) * i * width * pixelSize);
                     rowLines[i] = rowLine;
                     for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
+                        // PNG has ARGB
+                        *rowLine++ = rowSource[j + 3]; // Alpha
                         *rowLine++ = rowSource[j + 2]; // Red
                         *rowLine++ = rowSource[j + 1]; // Green
                         *rowLine++ = rowSource[j + 0]; // Blue
@@ -660,7 +662,7 @@ namespace Compositor {
                     : _refCount(1)
                     , _parent(parent)
                     , _target(GL_TEXTURE_2D)
-                    , _textureId()
+                    , _textureId(0)
                     , _image(EGL_NO_IMAGE)
                     , _buffer(buffer)
                 {
@@ -759,13 +761,13 @@ namespace Compositor {
                 {
                     bool result(false);
 
-                    if (_buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+                    if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
                         ExternalProgram* program = _parent.Programs().QueryType<ExternalProgram>();
                         ASSERT(program != nullptr);
                         result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
                     }
 
-                    if (_buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+                    if ((_target == GL_TEXTURE_2D)) {
                         RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
                         ASSERT(program != nullptr);
                         result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
@@ -802,7 +804,7 @@ namespace Compositor {
 
                     glBindTexture(_target, 0);
 
-                    TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d", _textureId, _buffer->Width(), _buffer->Height()));
+                    TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d external=%s", _textureId, _buffer->Width(), _buffer->Height(), external ? "true" : "false"));
                 }
 
                 void ImportPixelBuffer()

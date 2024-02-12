@@ -384,8 +384,6 @@ namespace Compositor {
             if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
                 EGLint nModifiers(0);
                 _api.eglQueryDmaBufModifiersEXT(_display, format, 0, nullptr, nullptr, &nModifiers);
-                TRACE(Trace::EGL, ("Found %d modifiers", nModifiers));
-
                 modifiers.resize(nModifiers);
                 externals.resize(nModifiers);
 
@@ -415,19 +413,35 @@ namespace Compositor {
             }
 
             for (const auto& format : formats) {
-                TRACE(Trace::EGL, ("Scanning format \'%c\' \'%c\' \'%c\' \'%c\'", //
-                                      char(format & 0xff), char((format >> 8) & 0xff), //
-                                      char((format >> 16) & 0xff), char((format >> 24) & 0xff)));
-
                 std::vector<uint64_t> modifiers;
-
                 /**
                  * Indicates if the matching modifier is only supported for
                  * use with the GL_TEXTURE_EXTERNAL_OES texture target
                  */
                 std::vector<EGLBoolean> externals;
 
+                std::stringstream line;
+
                 GetModifiers(format, modifiers, externals);
+
+                char* formatName = drmGetFormatName(format);
+
+                line << formatName << ", modifiers: ";
+
+                free(formatName);
+
+                for (uint8_t i(0); i < modifiers.size(); i++) {
+                    char* modifierName = drmGetFormatModifierName(modifiers.at(i));
+
+                    if (modifierName) {
+                        line << modifierName << (externals.at(i) ? "*" : "");
+                        free(modifierName);
+                    }
+
+                    line << ((i < (modifiers.size() - 1)) ? ", " : "");
+                }
+
+                TRACE(Trace::EGL, (_T("FormatInfo: %s"), line.str().c_str()));
 
                 pixelFormats.emplace_back(format, modifiers);
             }

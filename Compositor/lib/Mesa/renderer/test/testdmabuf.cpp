@@ -59,7 +59,7 @@ public:
         : _adminLock()
         , _lastFrame(0)
         , _sink(*this)
-        , _format(DRM_FORMAT_ARGB8888, { DRM_FORMAT_MOD_LINEAR })
+        , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
         , _textureBuffer()
@@ -76,7 +76,9 @@ public:
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_connector->Identifier(), Texture::TvTexture);
         _texture = _renderer->Texture(_textureBuffer.operator->());
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %d", _texture));
+        ASSERT(_texture != nullptr);
+        ASSERT(_texture->IsValid());
+        TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %p", _texture));
     }
 
     ~RenderTest()
@@ -151,8 +153,8 @@ private:
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        const uint16_t renderWidth(256);
-        const uint16_t renderHeight(256);
+        const uint16_t renderWidth(720);
+        const uint16_t renderHeight(720);
 
         _renderer->Bind(_connector);
 
@@ -218,8 +220,8 @@ int main(int argc, const char* argv[])
         const std::vector<string> modules = {
             "CompositorRenderTest",
             "CompositorBuffer",
-            "CompositorBackend",
-            "CompositorRenderer",
+            "CompositorBackendOFF",
+            "CompositorRendererOFF",
             "DRMCommon"
         };
 
@@ -229,9 +231,9 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 10);
+        WPEFramework::RenderTest test(connectorId, 30);
 
-        // test.Start();
+        test.Start();
 
         char keyPress;
 

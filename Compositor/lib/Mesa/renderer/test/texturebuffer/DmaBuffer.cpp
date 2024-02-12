@@ -83,13 +83,12 @@ namespace Compositor {
         }
 
         // Set image attributes.
-        int depth = 8;
         png_set_IHDR(pngPointer,
             infoPointer,
             width,
             height,
-            depth,
-            PNG_COLOR_TYPE_RGB,
+            8,
+            PNG_COLOR_TYPE_RGBA,
             PNG_INTERLACE_NONE,
             PNG_COMPRESSION_TYPE_DEFAULT,
             PNG_FILTER_TYPE_DEFAULT);
@@ -105,9 +104,10 @@ namespace Compositor {
             const uint8_t* rowSource = buffer.data() + (sizeof(png_byte) * i * width * pixelSize);
             rowLines[i] = rowLine;
             for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
-                *rowLine++ = rowSource[j + 2]; // Red
-                *rowLine++ = rowSource[j + 1]; // Green
                 *rowLine++ = rowSource[j + 0]; // Blue
+                *rowLine++ = rowSource[j + 1]; // Green
+                *rowLine++ = rowSource[j + 2]; // Red
+                *rowLine++ = rowSource[j + 3]; // Alpha
             }
         }
 
