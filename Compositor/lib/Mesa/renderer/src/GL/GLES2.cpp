@@ -68,8 +68,9 @@ namespace Compositor {
                 const void* /*user*/)
             {
                 std::stringstream line;
-                line << ", source: " << Compositor::API::GL::SourceString(src)
-                     << ", type: " << Compositor::API::GL::TypeString(type) << ", message: \"" << msg << "\"";
+                line << "[" << Compositor::API::GL::SourceString(src)
+                     << "](" << Compositor::API::GL::TypeString(type)
+                     << "): " << msg;
 
                 switch (severity) {
                 case GL_DEBUG_SEVERITY_HIGH_KHR: {
@@ -617,18 +618,13 @@ namespace Compositor {
 
                 // Generate framebuffer
                 glGenFramebuffers(1, &fbo);
-                TRACE_GLOBAL(Trace::Information, ("DumpTex glGenFramebuffers result: %s", API::GL::ErrorString(glGetError())));
-
                 glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-                TRACE_GLOBAL(Trace::Information, ("DumpTex glBindFramebuffer result: %s", API::GL::ErrorString(glGetError())));
 
                 // Bind the texture to your FBO
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
-                TRACE_GLOBAL(Trace::Information, ("DumpTex glFramebufferTexture2D result: %s", API::GL::ErrorString(glGetError())));
 
                 // Test if everything failed
                 GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-                TRACE_GLOBAL(Trace::Information, ("DumpTex glCheckFramebufferStatus result: %s", API::GL::ErrorString(glGetError())));
 
                 if (status != GL_FRAMEBUFFER_COMPLETE) {
                     TRACE_GLOBAL(Trace::Error, ("DumpTex: failed to make complete framebuffer object %x", status));
@@ -637,13 +633,11 @@ namespace Compositor {
 
                 // set the viewport as the FBO won't be the same dimension as the screen
                 glViewport(box.x, box.y, box.width, box.height);
-                TRACE_GLOBAL(Trace::Information, ("DumpTex glViewport result: %s", API::GL::ErrorString(glGetError())));
 
                 pixels.clear();
                 pixels.resize(box.width * box.height * (formatGL.BitPerPixel / 8));
 
                 glReadPixels(box.x, box.y, box.width, box.height, formatGL.Format, formatGL.Type, pixels.data());
-                TRACE_GLOBAL(Trace::Information, ("DumpTex glReadPixels result: %s", API::GL::ErrorString(glGetError())));
 
                 // Restore framebuffer
                 glBindFramebuffer(GL_FRAMEBUFFER, bound_fbo);
@@ -681,16 +675,7 @@ namespace Compositor {
 
                     ASSERT(_textureId != 0);
 
-                    // std::vector<uint8_t> pixels;
-                    // Box box = { 0, 0, static_cast<int>(buffer->Width()), static_cast<int>(buffer->Height()) };
-
-                    // if (DumpTex(box, buffer->Format(), pixels, _textureId) == true) {
-                    //     std::stringstream ss;
-                    //     ss << "gl-tex-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
-                    //     Core::File snapshot(ss.str());
-
-                    //     WritePNG(ss.str(), pixels, box.width, box.height);
-                    // }
+                    //Snapshot();
                 }
 
                 virtual ~GLESTexture()
@@ -777,12 +762,25 @@ namespace Compositor {
                 }
 
             private:
+                void Snapshot() const
+                {
+                    std::vector<uint8_t> pixels;
+                    Box box = { 0, 0, static_cast<int>(_buffer->Width()), static_cast<int>(_buffer->Height()) };
+
+                    if (DumpTex(box, _buffer->Format(), pixels, _textureId) == true) {
+                        std::stringstream ss;
+                        ss << "gles2-rgba-texture-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+                        Core::File snapshot(ss.str());
+
+                        WritePNG(ss.str(), pixels, box.width, box.height);
+                    }
+                }
+
                 void ImportDMABuffer()
                 {
                     bool external(false);
 
                     Renderer::EGL::ContextBackup backup;
-                    GLenum error(GL_NO_ERROR);
 
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetError() == EGL_SUCCESS);
@@ -798,9 +796,10 @@ namespace Compositor {
                     glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+                    //glTexParameteri(_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    //glTexParameteri(_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
                     _parent.Gles().glEGLImageTargetTexture2DOES(_target, _image);
-                    error = glGetError();
-                    TRACE(Trace::GL, ("glEGLImageTargetTexture2DOES: [%04x] %s", error, API::GL::ErrorString(error)));
 
                     glBindTexture(_target, 0);
 
@@ -853,7 +852,6 @@ namespace Compositor {
                 GLuint _textureId;
                 EGLImageKHR _image;
                 Exchange::ICompositionBuffer* _buffer;
-                Program::VariantType _programVariant;
             }; //  class GLESTexture
 
         public:
@@ -990,7 +988,7 @@ namespace Compositor {
                     Box box = { 0, 0, static_cast<int>(_viewportWidth), static_cast<int>(_viewportHeight) };
                     if (Snapshot(box, DRM_FORMAT_ARGB8888, pixels) == true) {
                         std::stringstream ss;
-                        ss << "egl-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+                        ss << "renderer-end-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
                         Core::File snapshot(ss.str());
 
                         WritePNG(ss.str(), pixels, _viewportWidth, _viewportHeight);
