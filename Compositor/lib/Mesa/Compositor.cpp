@@ -263,7 +263,7 @@ namespace Plugin {
 
                     if (index == _shareable.end()) {
                         _shareable.push_back(buffer);
-                        TRACE(Trace::Information, (_T("Buffer %d Announced"), buffer->Identifier()));
+                        TRACE(Trace::Information, (_T("SharedBuffer %d Announced"), buffer->Identifier()));
                     }
                 }
 
@@ -277,7 +277,7 @@ namespace Plugin {
 
                     if (index != _shareable.end()) {
                         _shareable.erase(index);
-                        TRACE(Trace::Information, (_T("Buffer %d Revoked"), buffer->Identifier()));
+                        TRACE(Trace::Information, (_T("SharedBuffer %d Revoked"), buffer->Identifier()));
                     }
                 }
 
@@ -294,7 +294,7 @@ namespace Plugin {
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
                 : _parent(parent)
                 , _callsign(callsign)
-                , _opacity(128)
+                , _opacity(255)
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
                 , _buffer(Compositor::CreateBuffer(_parent.Native(), width, height, Compositor::PixelFormat(_parent.Format(), { _parent.Modifier() })))
@@ -389,7 +389,7 @@ namespace Plugin {
             }
             void Render() override
             {
-                _parent.RequestRender();
+                _parent.RequestRender(*this);
             }
             uint32_t Width() const override
             {
@@ -660,7 +660,7 @@ namespace Plugin {
             return _modifier;
         }
 
-        void RequestRender()
+        void RequestRender(Client& client VARIABLE_IS_NOT_USED)
         {
             RenderScene();
         }
@@ -710,26 +710,6 @@ namespace Plugin {
             const uint16_t height(_gpuConnector->Height());
 
             _renderer->Bind(_gpuConnector);
-
-            // TODO: remove this, its only to show 
-            // the canvas is refreshed.
-            // =====================================
-            static uint8_t _previousIndex = 0;
-            static uint32_t  frame = 0;            
-            const uint8_t index((_previousIndex + 1) % 3);
-
-            _background[index] += frame / 2000.0f;
-            _background[_previousIndex] -= frame / 2000.0f;
-
-            if (_background[_previousIndex] < 0.0f) {
-                _background[index] = 1.0f;
-                _background[_previousIndex] = 0.0f;
-                _previousIndex = index;
-            }
-
-            frame++;
-            // =====================================
-
             _renderer->Begin(width, height);
             _renderer->Clear(_background);
 
@@ -743,11 +723,11 @@ namespace Plugin {
                 const Compositor::Box renderBox = { int(rectangle.x), int(rectangle.y), int(rectangle.width), int(rectangle.height) };
 
                 Compositor::Matrix matrix;
-
                 Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
                 const Compositor::Box textureBox = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
-
+                // FIXME!!!
+                // Opacity is not yet working....
                 _renderer->Render(client->Texture(), textureBox, matrix, float(client->Opacity() / Exchange::IComposition::maxOpacity));
             });
 
