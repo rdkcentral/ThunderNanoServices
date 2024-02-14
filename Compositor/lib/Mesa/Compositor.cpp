@@ -36,7 +36,7 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 namespace Plugin {
-
+    const Compositor::Color pink = { 1.0f, 0.411f, 0.705f, 1.0f };
     const Compositor::Color black = { 0.f, 0.f, 0.f, 1.0f };
 
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
@@ -52,12 +52,14 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , ClientBridge(_T("clientbridge"))
+                , Connector("connector")
                 , Port("HDMI-A-1")
                 , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
             {
-                Add(_T("client_bridge"), &ClientBridge);
+                Add(_T("clientbridge"), &ClientBridge);
+                Add(_T("connector"), &Connector);
                 Add(_T("port"), &Port);
                 Add(_T("resolution"), &Resolution);
                 Add(_T("format"), &Format);
@@ -67,10 +69,57 @@ namespace Plugin {
             ~Config() override = default;
 
             Core::JSON::String ClientBridge;
+            Core::JSON::String Connector;
             Core::JSON::String Port;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
             Core::JSON::HexUInt32 Format;
             Core::JSON::HexUInt64 Modifier;
+        };
+
+        class DisplayDispatcher : public RPC::Communicator {
+        public:
+            DisplayDispatcher() = delete;
+            DisplayDispatcher(const DisplayDispatcher&) = delete;
+            DisplayDispatcher& operator=(const DisplayDispatcher&) = delete;
+
+            DisplayDispatcher(
+                const Core::NodeId& source,
+                const std::string& proxyStubPath,
+                Exchange::IComposition::IDisplay* parentInterface,
+                const Core::ProxyType<RPC::InvokeServer>& engine)
+                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
+                , _parentInterface(parentInterface)
+            {
+                if (_parentInterface != nullptr) {
+                    _parentInterface->AddRef();
+                }
+                Open(Core::infinite);
+            }
+            ~DisplayDispatcher() override
+            {
+                if (_parentInterface != nullptr) {
+                    _parentInterface->Release();
+                }
+
+                Close(Core::infinite);
+            }
+
+        private:
+            void* Acquire(const string&, const uint32_t interfaceId, const uint32_t versionId) override
+            {
+                void* result = nullptr;
+
+                if (((versionId == 1) || (versionId == static_cast<uint32_t>(~0))) && ((interfaceId == Exchange::IComposition::IDisplay::ID) || (interfaceId == Core::IUnknown::ID))) {
+                    _parentInterface->AddRef();
+                    result = _parentInterface;
+                    TRACE(Trace::Information, ("IDisplay[%p] interface acquired", result));
+                }
+
+                return result;
+            }
+
+        private:
+            Exchange::IComposition::IDisplay* _parentInterface;
         };
 
     public:
@@ -80,16 +129,25 @@ namespace Plugin {
             , _modifier(DRM_FORMAT_MOD_INVALID)
             , _gpuConnector()
             , _renderer()
-            , _clients()
-            , _clientBridge(*this)
             , _observers()
+            , _clientBridge(*this)
+            , _clients()
             , _lastFrame(0)
-            , _background(black)
+            , _background(pink)
+            , _engine()
+            , _dispatcher(nullptr)
+            , _handler(*this)
         {
         }
 
         ~CompositorImplementation() override
         {
+            _dispatcher.reset(nullptr);
+
+            if (_engine.IsValid()) {
+                _engine.Release();
+            }
+
             _clientBridge.Close();
             _clients.Clear();
             _renderer.Release();
@@ -122,25 +180,19 @@ namespace Plugin {
                     Exchange::ICompositionBuffer::IIterator* planes = _parent.Planes(10);
                     ASSERT(planes != nullptr);
 
-                    uint16_t nPlanes(0);
-
                     while ((planes->Next() == true) && (planes->IsValid() == true)) {
                         ASSERT(planes->IsValid() == true);
-
-                        Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
-                        ASSERT(plane != nullptr);
-
-                        BaseClass::Add(plane->Accessor(), plane->Stride(), plane->Offset());
-
-                        TRACE(Trace::Information, ("Added plane accessor=%" PRIx64 " stride=%d offset=%d", plane->Accessor(), plane->Stride(), plane->Offset()));
-
-                        ++nPlanes;
+                        BaseClass::Add(planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset());
+                        TRACE(Trace::Information, (_T("Client[%d] Added shared plane %" PRIuPTR " with stride: %d, offset=%d"), parent.Identifier(), planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset()));
                     }
 
                     _parent.Completed(false);
+
+                    Core::ResourceMonitor::Instance().Register(*this);
                 }
                 virtual ~SharedBuffer()
                 {
+                    Core::ResourceMonitor::Instance().Unregister(*this);
                 }
 
                 uint32_t AddRef() const override
@@ -171,7 +223,7 @@ namespace Plugin {
                 Bridge& operator=(const Bridge&) = delete;
 
             public:
-                Bridge(CompositorImplementation& parent)
+                Bridge(CompositorImplementation& /*parent*/)
                     : Core::PrivilegedRequest()
                 /*, _parent(parent)*/
                 {
@@ -211,6 +263,7 @@ namespace Plugin {
 
                     if (index == _shareable.end()) {
                         _shareable.push_back(buffer);
+                        TRACE(Trace::Information, (_T("SharedBuffer %d Announced"), buffer->Identifier()));
                     }
                 }
 
@@ -224,6 +277,7 @@ namespace Plugin {
 
                     if (index != _shareable.end()) {
                         _shareable.erase(index);
+                        TRACE(Trace::Information, (_T("SharedBuffer %d Revoked"), buffer->Identifier()));
                     }
                 }
 
@@ -240,15 +294,17 @@ namespace Plugin {
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
                 : _parent(parent)
                 , _callsign(callsign)
-                , _opacity(0)
+                , _opacity(255)
                 , _zIndex(0)
-                , _geometry({ .x = 0, .y = 0, .width = width, .height = height })
+                , _geometry({ 0, 0, width, height })
                 , _buffer(Compositor::CreateBuffer(_parent.Native(), width, height, Compositor::PixelFormat(_parent.Format(), { _parent.Modifier() })))
                 , _sharedBuffer(*this)
                 , _texture(nullptr)
             {
                 ASSERT(_buffer.IsValid());
                 _parent.Announce(*this);
+
+                TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
             }
 
             ~Client() override
@@ -333,7 +389,7 @@ namespace Plugin {
             }
             void Render() override
             {
-                _buffer->Render();
+                _parent.RequestRender(*this);
             }
             uint32_t Width() const override
             {
@@ -380,21 +436,82 @@ namespace Plugin {
             uint32_t _opacity; // the opacity of the surface on the composition
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
-            Core::ProxyType<Exchange::ICompositionBuffer> _buffer; // the actual buffer we are rendering on.
-            const SharedBuffer _sharedBuffer; //
-            Compositor::IRenderer::ITexture* _texture;
+            Core::ProxyType<Exchange::ICompositionBuffer> _buffer; // the actual GMB/DRMDumb buffer for the client to draw on.
+            const SharedBuffer _sharedBuffer; // the exported file descriptors pointing to _buffer planes.
+            Compositor::IRenderer::ITexture* _texture; // the texture handle that is known in the GPU/Renderer.
         }; // class Client
 
-        void PlatformReady(PluginHost::IShell* service)
-        {
-            PluginHost::ISubSystem* subSystems(service->SubSystems());
-            ASSERT(subSystems != nullptr);
-            if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                subSystems->Release();
+        class ClientHandler {
+        private:
+            using Client = std::pair<Exchange::IComposition::IClient*, bool>;
+            using Clients = std::vector<Client>;
+
+        private:
+            ClientHandler() = delete;
+            ClientHandler(const ClientHandler&) = delete;
+            ClientHandler& operator=(const ClientHandler&) = delete;
+
+        public:
+            ClientHandler(CompositorImplementation& parent)
+                : _clients()
+                , _adminLock()
+                , _parent(parent)
+                , _job(*this)
+            {
             }
-        }
+            ~ClientHandler()
+            {
+                _job.Revoke();
+                _clients.clear();
+            }
+
+        public:
+            void Attached(Exchange::IComposition::IClient* element)
+            {
+                _adminLock.Lock();
+                element->AddRef();
+                _clients.push_back({ element, true });
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
+            void Detached(Exchange::IComposition::IClient* element)
+            {
+                _adminLock.Lock();
+                element->AddRef();
+                _clients.push_back({ element, false });
+                _job.Submit();
+                _adminLock.Unlock();
+            }
+
+            void Dispatch()
+            {
+                _adminLock.Lock();
+
+                while (_clients.size()) {
+                    Client client = _clients.back();
+                    _clients.pop_back();
+                    _adminLock.Unlock();
+
+                    if (client.second == true) {
+                        _parent.Attached(client.first);
+                    } else {
+                        _parent.Detached(client.first);
+                    }
+
+                    client.first->Release();
+
+                    _adminLock.Lock();
+                }
+                _adminLock.Unlock();
+            }
+
+        private:
+            Clients _clients;
+            Core::CriticalSection _adminLock;
+            CompositorImplementation& _parent;
+            Core::WorkerPool::JobType<ClientHandler&> _job;
+        };
 
     public:
         /**
@@ -415,19 +532,44 @@ namespace Plugin {
             _resolution = config.Resolution.Value();
 
             _gpuConnector = Compositor::Connector(_port, _resolution, _format, false);
-
             ASSERT(_gpuConnector.IsValid());
 
             _renderer = Compositor::IRenderer::Instance(_gpuConnector->Identifier());
+            ASSERT(_renderer.IsValid());
 
-            std::string bridgePath = service->VolatilePath() + "/" + config.ClientBridge.Value();
+            std::string bridgePath = service->VolatilePath() + config.ClientBridge.Value();
 
-            _clientBridge.Open(bridgePath);
+            RenderScene();
 
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_CLIENTBRIDGE"), bridgePath, true);
+            result = _clientBridge.Open(bridgePath);
 
-            PlatformReady(service);
+            if (result == Core::ERROR_NONE) {
+                std::string connectorPath = service->VolatilePath() + config.Connector.Value();
 
+                ASSERT(_dispatcher == nullptr);
+
+                _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+
+                _dispatcher.reset(new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine));
+
+                if (_dispatcher->IsListening()) {
+                    PluginHost::ISubSystem* subSystems = service->SubSystems();
+
+                    ASSERT(subSystems != nullptr);
+
+                    if (subSystems != nullptr) {
+                        subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                        subSystems->Release();
+                    }
+
+                    TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
+                } else {
+                    _dispatcher.reset(nullptr);
+                    _engine.Release();
+                    _clientBridge.Close();
+                    result = Core::ERROR_UNAVAILABLE;
+                }
+            }
             return (result);
         }
 
@@ -441,8 +583,10 @@ namespace Plugin {
 
             _observers.push_back(notification);
 
-            // _clients.Visit(
-            //     [=](const string& name, const Core::ProxyType<Client>& element) { notification->Attached(name, &(*element)); });
+            _clients.Visit(
+                [=](const string& name, const Core::ProxyType<Client>& element) {
+                    notification->Attached(name, &(*element));
+                });
         }
 
         void Unregister(Exchange::IComposition::INotification* notification) override
@@ -455,8 +599,10 @@ namespace Plugin {
 
             if (index != _observers.end()) {
 
-                // _clients.Visit(
-                //     [=](const string& name, const Core::ProxyType<Client>& element) { silence ( element ); notification -> Detached ( name ) ; });
+                _clients.Visit(
+                    [=](const string& name, const Core::ProxyType<Client>& /*element*/) {
+                        notification->Detached(name);
+                    });
 
                 _observers.erase(index);
 
@@ -467,28 +613,36 @@ namespace Plugin {
         }
 
     private:
+        void Attached(Exchange::IComposition::IClient* client)
+        {
+            for (auto& observer : _observers) {
+                observer->Attached(client->Name(), client);
+            }
+        }
+        void Detached(Exchange::IComposition::IClient* client)
+        {
+            for (auto& observer : _observers) {
+                observer->Detached(client->Name());
+            }
+        }
+
         void Announce(Client& client)
         {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
             client.Texture(_renderer->Texture(&client));
-
-            for (auto& observer : _observers) {
-                observer->Attached(client.Name(), &client);
-            }
-
             _clientBridge.Announce(client.Buffer());
+
+            _handler.Attached(&client);
         }
 
         void Revoke(Client& client)
         {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-            _clientBridge.Revoke(client.Buffer());
+            _handler.Detached(&client);
 
-            for (auto& observer : _observers) {
-                observer->Detached(client.Name());
-            }
+            _clientBridge.Revoke(client.Buffer());
 
             if (client.Texture() != nullptr) {
                 client.Texture()->Release();
@@ -496,14 +650,19 @@ namespace Plugin {
             }
         }
 
-        const uint32_t Format() const
+        uint32_t Format() const
         {
             return _format;
         }
 
-        const uint64_t Modifier() const
+        uint64_t Modifier() const
         {
             return _modifier;
+        }
+
+        void RequestRender(Client& client VARIABLE_IS_NOT_USED)
+        {
+            RenderScene();
         }
 
     public:
@@ -525,6 +684,8 @@ namespace Plugin {
         {
             IClient* client = nullptr;
 
+            TRACE(Trace::Information, (_T("Create a %dx%d surface for client %s, "), width, height, name.c_str()));
+
             Core::ProxyType<Client> object = _clients.Instance<Client>(name, *this, name, width, height);
 
             ASSERT(object.IsValid() == true);
@@ -534,7 +695,7 @@ namespace Plugin {
                 client->AddRef();
             }
 
-            TRACE(Trace::Information, (_T("Create a %dx%d surface for client %s, "), width, height, name.c_str()));
+            TRACE(Trace::Information, (_T("Created client[%p] %s, "), client, name.c_str()));
 
             return client;
         }
@@ -543,29 +704,30 @@ namespace Plugin {
         {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
+            ASSERT((_gpuConnector.IsValid() == true) && (_renderer.IsValid() == true));
+
             const uint16_t width(_gpuConnector->Width());
             const uint16_t height(_gpuConnector->Height());
 
             _renderer->Bind(_gpuConnector);
-
             _renderer->Begin(width, height);
             _renderer->Clear(_background);
 
-            _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
+            _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
                 if (client->Texture() == nullptr) {
                     return; // no texture to render
                 }
 
                 Exchange::IComposition::Rectangle rectangle = client->Geometry();
 
-                const Compositor::Box renderBox = { .x = int(rectangle.x), .y = int(rectangle.y), .width = int(rectangle.width), .height = int(rectangle.height) };
+                const Compositor::Box renderBox = { int(rectangle.x), int(rectangle.y), int(rectangle.width), int(rectangle.height) };
 
                 Compositor::Matrix matrix;
-
                 Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
-                const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(client->Texture()->Width()), .height = int(client->Texture()->Height()) };
-
+                const Compositor::Box textureBox = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
+                // FIXME!!!
+                // Opacity is not yet working....
                 _renderer->Render(client->Texture(), textureBox, matrix, float(client->Opacity() / Exchange::IComposition::maxOpacity));
             });
 
@@ -602,6 +764,9 @@ namespace Plugin {
         Client::Container _clients;
         uint64_t _lastFrame;
         Compositor::Color _background;
+        Core::ProxyType<RPC::InvokeServer> _engine;
+        std::unique_ptr<DisplayDispatcher> _dispatcher;
+        ClientHandler _handler;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)

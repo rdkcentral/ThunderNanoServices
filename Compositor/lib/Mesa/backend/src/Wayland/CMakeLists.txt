@@ -64,8 +64,6 @@ target_link_libraries(WaylandBackend
 set_target_properties(WaylandBackend PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
         POSITION_INDEPENDENT_CODE ON
 )
 

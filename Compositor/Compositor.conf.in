@@ -74,12 +74,13 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
             configuration.add("outputs", output_configs_list)
 
 if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
-    configuration.add("port", "HDMI-A")
+    configuration.add("port", "@PLUGIN_COMPOSITOR_OUTPUT@")
+    configuration.add("clientbridge", "@PLUGIN_COMPOSITOR_CLIENTBRIDGE@")
 
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")
 rootconfig.add("locator", "@PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB@")
-if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "RPI":
+if ("@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "RPI") or ("@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa"):
     if "@PLUGIN_COMPOSITOR_MODE@" == "Local":
         rootconfig.add("threads", "@PLUGIN_COMPOSITOR_THREAD_COUNT@")
 configuration.add("root", rootconfig)

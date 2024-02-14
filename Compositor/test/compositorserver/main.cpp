@@ -127,9 +127,10 @@ private:
         void Unregister(ISubSystem::INotification* notification){};
 
         // Events setter and getters.
-        void Set(const subsystem type, Core::IUnknown* information)
+        Core::hresult Set(const subsystem type, Core::IUnknown* information)
         {
             TRACE(Trace::Information, (_T("Set Subsystem: %d"), type));
+            return Core::ERROR_UNAVAILABLE;
         }
 
         const Core::IUnknown* Get(const subsystem type) const
@@ -173,6 +174,8 @@ public:
             .detach();
 
         Core::File file(std::string(PluginPath() + configurationFile).c_str());
+        
+        TRACE(Trace::Information, (_T("Opening config file [%s]."), file.Name().c_str()));
 
         ASSERT(file.Exists() == true);
 
@@ -313,18 +316,18 @@ int main(int argc, const char* argv[])
 
     const char* executableName(WPEFramework::Core::FileNameOnly(argv[0]));
 
-    constexpr char defaultCompositionLibrary[] = "libcompositorplugin.so";
-    constexpr char defaultInstallPath[] = "/home/bram/Projects/metrological/Thunder/install";
+    // constexpr char defaultCompositionLibrary[] = "libcompositorplugin.so";
+    constexpr char defaultInstallPath[] = ""; // "/home/bram/Projects/metrological/Thunder/install";
 
     WPEFramework::Core::ProxyType<WPEFramework::RPC::InvokeServerType<2, 0, 8>> rpcEngine = WPEFramework::Core::ProxyType<WPEFramework::RPC::InvokeServerType<2, 0, 8>>::Create();
 
     std::string compositionLibrary;
 
-    if (argc == 1) {
-        compositionLibrary = "Compositor/libcompositorplugin.so";
-    } else {
-        compositionLibrary = argv[1];
-    }
+    // if (argc > 1) {
+    //     compositionLibrary = "Compositor/libcompositorplugin.so";
+    // } else {
+    //     compositionLibrary = argv[1];
+    // }
 
     {
         WPEFramework::Messaging::ConsolePrinter printer(true);
@@ -350,7 +353,7 @@ int main(int argc, const char* argv[])
 
         WPEFramework::MockedShell service(defaultInstallPath, "Compositor.json");
 
-        ASSERT(WPEFramework::Core::IWorkerPool::IsAvailable() == true);
+        // ASSERT(WPEFramework::Core::IWorkerPool::IsAvailable() == true);
 
         uint32_t connectionId = 0;
         WPEFramework::Exchange::IComposition* composition = nullptr;

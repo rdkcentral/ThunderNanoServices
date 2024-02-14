@@ -49,8 +49,6 @@ target_link_libraries(CommonRendererGLES
 set_target_properties(CommonRendererGLES PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
         POSITION_INDEPENDENT_CODE ON
 )
 

@@ -15,6 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# TODO: fix warnings in these tests
+add_compile_options( 
+    -Wno-unused-variable 
+    -Wno-unused-function 
+    -Wno-unused-parameter)
+    
 option(BUILD_COMPOSITOR_TEST_CLIENT "Build compositor test client" OFF)
 option(BUILD_COMPOSITOR_TEST_SERVER "Build compositor test server" OFF)
 

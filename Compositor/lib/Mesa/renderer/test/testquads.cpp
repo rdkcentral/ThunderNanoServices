@@ -60,8 +60,8 @@ public:
         : _adminLock()
         , _lastFrame(0)
         , _sink(*this)
-        , _connector()
         , _renderer()
+        , _connector()
         , _fps(fps)
 
     {
@@ -144,7 +144,7 @@ private:
             return 0;
         }
 
-        const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
+        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -156,7 +156,7 @@ private:
 
         for (int y = -128; y < height; y += 128) {
             for (int x = -128; x < width; x += 128) {
-                const Compositor::Box box = { .x = x, .y = y, .width = 128, .height = 128 };
+                const Compositor::Box box = { x, y, 128, 128 };
 
                 const Compositor::Color color = { 255.f / x, 255.f / y, 255.f / (x + y), 1.f };
 
