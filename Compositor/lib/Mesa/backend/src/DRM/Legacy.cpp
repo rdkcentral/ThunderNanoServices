@@ -70,7 +70,7 @@ namespace Compositor {
 
                     if (drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms) != 0) {
                         TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d", connector->IsEnabled() ? "on" : "off", connector->ConnectorId()));
-                        return result = Core::ERROR_GENERAL;
+                        return Core::ERROR_GENERAL;
                     }
 
                     constexpr uint32_t X = 0;
@@ -82,6 +82,7 @@ namespace Compositor {
                      */
                     if ((drmResult = drmModeSetCrtc(fd, connector->CtrControllerId(), connector->FrameBufferId(), X, Y, connectorIds.empty() ? nullptr : connectorIds.data(), connectorIds.size(), const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
                         TRACE(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", connector->CtrControllerId(), drmResult, strerror(errno)));
+                        return Core::ERROR_INCOMPLETE_CONFIG;
                     }
 
                     /*
