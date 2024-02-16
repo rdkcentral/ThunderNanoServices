@@ -40,8 +40,7 @@ namespace Compositor {
      *
      *
      * @param connector  Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
-     * @param width  Width in pixels
-     * @param height Height in pixels
+     * @param resolution  resolution for the connector, this can be ignored by some backends
      * @param format Pixel layout for this buffer
      *
      * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
@@ -49,8 +48,7 @@ namespace Compositor {
     EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> Connector(
         const string& connector,
         const Exchange::IComposition::ScreenResolution resolution,
-        const Compositor::PixelFormat& format,
-        bool forceResolution,
+        const Compositor::PixelFormat& format
         ICallback* callback = nullptr);
 
     /**

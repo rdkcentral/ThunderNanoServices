@@ -91,7 +91,7 @@ int main(int argc, const char* argv[])
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::Connector(ConnectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+                    framebuffer = Compositor::Connector(ConnectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
                 }
                 break;
