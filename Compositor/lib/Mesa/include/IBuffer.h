@@ -48,7 +48,7 @@ namespace Compositor {
     EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> Connector(
         const string& connector,
         const Exchange::IComposition::ScreenResolution resolution,
-        const Compositor::PixelFormat& format
+        const Compositor::PixelFormat& format,
         ICallback* callback = nullptr);
 
     /**
