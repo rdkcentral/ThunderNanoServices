@@ -508,10 +508,6 @@ namespace Plugin {
 
             ASSERT(subSystems != nullptr);
 
-            if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-            }
-
             // As there are currently two flavors of the potential Wayland Compositor Implementations, e.g.
             // Westeros and Weston, we do not want to decide here which one we instantiate. We have given both
             // implemntations a "generic" handle that starts the compositor. Here we just instantiate the

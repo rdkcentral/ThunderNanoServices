@@ -369,7 +369,6 @@ namespace Plugin {
             PluginHost::ISubSystem* subSystems(service->SubSystems());
             ASSERT(subSystems != nullptr);
             if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
                 subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
                 subSystems->Release();
             }
