@@ -697,9 +697,10 @@ namespace Compositor {
                 /**
                  *  IRenderer::ITexture
                  */
-                virtual void AddRef() const
+                virtual uint32_t AddRef() const
                 {
                     Core::InterlockedIncrement(_refCount);
+                    return Core::ERROR_NONE;
                 };
                 virtual uint32_t Release() const
                 {

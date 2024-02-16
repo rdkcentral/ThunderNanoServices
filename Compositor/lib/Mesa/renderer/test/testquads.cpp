@@ -67,7 +67,7 @@ public:
     {
         _connector = Compositor::Connector(
             connectorId,
-            Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,
+            Exchange::IComposition::ScreenResolution::ScreenResolution_720p,
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
             false);
 

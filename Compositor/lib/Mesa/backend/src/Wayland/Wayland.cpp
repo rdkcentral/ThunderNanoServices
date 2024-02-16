@@ -1006,10 +1006,10 @@ namespace Compositor {
      *
      * @return A `Core::ProxyType` object that wraps an instance of `Exchange::ICompositionBuffer`.
      */
-    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback)
+    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance("");
-        return backend.Output(name, resolution, format, force, callback);
+        return backend.Output(name, resolution, format, callback);
     }
 } // namespace Compositor
 } // namespace WPEFramework

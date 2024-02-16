@@ -66,7 +66,7 @@ public:
         , _fps(fps)
         , _texture(nullptr)
     {
-        _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, _format, false);
+        _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, _format);
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created connector: %p", _connector.operator->()));
 
