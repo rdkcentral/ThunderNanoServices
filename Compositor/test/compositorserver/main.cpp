@@ -120,8 +120,8 @@ private:
         END_INTERFACE_MAP
 
         // No reference counting for this object.
-        uint32_t AddRef() const {return Core::ERROR_NONE;}
-        uint32_t Release() const { return 0; }
+        uint32_t AddRef() const { return Core::ERROR_COMPOSIT_OBJECT; }
+        uint32_t Release() const { return Core::ERROR_COMPOSIT_OBJECT; }
 
         void Register(ISubSystem::INotification* notification){};
         void Unregister(ISubSystem::INotification* notification){};

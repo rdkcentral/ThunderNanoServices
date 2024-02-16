@@ -6,12 +6,12 @@ namespace WPEFramework {
 namespace Compositor {
     uint32_t PixelBuffer::AddRef() const
     {
-        return Core::ERROR_NONE;
+        return Core::ERROR_COMPOSIT_OBJECT;
     }
 
     uint32_t PixelBuffer::Release() const
     {
-        return Core::ERROR_NONE;
+        return Core::ERROR_COMPOSIT_OBJECT;
     }
 
     uint32_t PixelBuffer::Identifier() const { return 0; }
