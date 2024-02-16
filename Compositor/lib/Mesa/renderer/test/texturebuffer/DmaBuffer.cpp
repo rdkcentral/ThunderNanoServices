@@ -113,14 +113,14 @@ namespace Compositor {
         }
     };
 
-    void DmaBuffer::AddRef() const
+    uint32_t DmaBuffer::AddRef() const
     {
-        // return _source.AddRef();
+        return Core::ERROR_COMPOSIT_OBJECT; // return _source.AddRef();
     }
 
     uint32_t DmaBuffer::Release() const
     {
-        return 0; //_source.Release();
+        return Core::ERROR_COMPOSIT_OBJECT; //_source.Release();
     }
 
     uint32_t DmaBuffer::Identifier() const

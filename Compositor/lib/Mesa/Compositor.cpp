@@ -531,7 +531,7 @@ namespace Plugin {
             _port = config.Port.Value();
             _resolution = config.Resolution.Value();
 
-            _gpuConnector = Compositor::Connector(_port, _resolution, _format, false);
+            _gpuConnector = Compositor::Connector(_port, _resolution, _format);
             ASSERT(_gpuConnector.IsValid());
 
             _renderer = Compositor::IRenderer::Instance(_gpuConnector->Identifier());
