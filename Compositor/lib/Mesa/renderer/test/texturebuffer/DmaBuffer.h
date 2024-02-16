@@ -95,7 +95,7 @@ namespace Compositor {
 
         virtual ~DmaBuffer();
 
-        void AddRef() const override;
+        uint32_t AddRef() const override;
         uint32_t Release() const override;
 
         uint32_t Identifier() const override;

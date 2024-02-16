@@ -120,7 +120,7 @@ private:
         END_INTERFACE_MAP
 
         // No reference counting for this object.
-        void AddRef() const {}
+        uint32_t AddRef() const {return Core::ERROR_NONE;}
         uint32_t Release() const { return 0; }
 
         void Register(ISubSystem::INotification* notification){};
@@ -262,7 +262,7 @@ public:
     string SystemRootPath() const { return _rootPath; }
 
     // No reference counting for this object.
-    void AddRef() const {}
+    uint32_t AddRef() const { return Core::ERROR_NONE;}
     uint32_t Release() const { return 0; }
 
     /**
