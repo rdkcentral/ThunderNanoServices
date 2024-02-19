@@ -63,6 +63,7 @@ namespace Compositor {
                     DoubleBuffer() = delete;
                     DoubleBuffer(DoubleBuffer&&) = delete;
                     DoubleBuffer(const DoubleBuffer&) = delete;
+                    DoubleBuffer& operator=(DoubleBuffer&&) = delete;
                     DoubleBuffer& operator=(const DoubleBuffer&) = delete;
 
                     DoubleBuffer(Core::ProxyType<DRM> backend, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format)
@@ -146,6 +147,7 @@ namespace Compositor {
                 ConnectorImplementation() = delete;
                 ConnectorImplementation(ConnectorImplementation&&) = delete;
                 ConnectorImplementation(const ConnectorImplementation&) = delete;
+                ConnectorImplementation& operator=(ConnectorImplementation&&) = delete;
                 ConnectorImplementation& operator=(const ConnectorImplementation&) = delete;
 
                 ConnectorImplementation(string gpu, const string& connector, const Compositor::PixelFormat format, Compositor::ICallback* callback)
@@ -347,7 +349,12 @@ namespace Compositor {
                             for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
                                 if (drmModeResources->crtcs[c] == encoder->crtc_id) {
                                     crtc = drmModeGetCrtc(_backend->Descriptor(), drmModeResources->crtcs[c]);
-                                    break;
+                                    if (crtc->buffer_id != 0) {
+                                        break;
+                                    }
+                                    else {
+                                        drmModeFreeCrtc(crtc);
+                                    }
                                 }
                             }
 
@@ -531,43 +538,56 @@ namespace Compositor {
             using CommitRegister = std::unordered_map<uint32_t, ConnectorImplementation*>;
 
         public:
+            DRM(DRM&&) = delete;
             DRM(const DRM&) = delete;
+            DRM& operator=(DRM&&) = delete;
             DRM& operator=(const DRM&) = delete;
 
             DRM() = delete;
 
-            DRM(const string& gpuNode)
+            explicit DRM(const string& gpuNode)
                 : _adminLock()
                 , _cardFd(Compositor::DRM::OpenGPU(gpuNode))
                 , _monitor(*this)
                 , _output(IOutput::Instance())
                 , _pendingCommits()
             {
-                ASSERT(_cardFd > 0);
+                if (_cardFd > 0) {
+                    if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
+                        int realError = errno;
+                        TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(realError)));
+                        close(_cardFd);
+                        _cardFd = 0;
+                    }
+                    else {
+                        Core::ResourceMonitor::Instance().Register(_monitor);
 
-                int setUniversalPlanes(drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1));
-                ASSERT(setUniversalPlanes == 0);
-
-                Core::ResourceMonitor::Instance().Register(_monitor);
-
-                char* name = drmGetDeviceNameFromFd2(_cardFd);
-                drmVersion* version = drmGetVersion(_cardFd);
-                TRACE(Trace::Information, ("Initialized DRM backend for %s (%s)", name, version->name));
-                drmFreeVersion(version);
+                        if (TRACE_ENABLED(Trace::Information)) {
+                            drmVersion* version = drmGetVersion(_cardFd);
+                            TRACE(Trace::Information, ("Initialized DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_cardFd), version->name));
+                            drmFreeVersion(version);
+                        }
+                    }
+                }
             }
-
             virtual ~DRM()
             {
-                Core::ResourceMonitor::Instance().Unregister(_monitor);
+                if (_cardFd > 0) {
+                    Core::ResourceMonitor::Instance().Unregister(_monitor);
 
-                char* name = drmGetDeviceNameFromFd2(_cardFd);
-                drmVersion* version = drmGetVersion(_cardFd);
-                TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", name, version->name));
-                drmFreeVersion(version);
+                    if (TRACE_ENABLED(Trace::Information)) {
+                        drmVersion* version = drmGetVersion(_cardFd);
+                        TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_cardFd), version->name));
+                        drmFreeVersion(version);
+                    }
 
-                if (_cardFd) {
                     close(_cardFd);
                 }
+            }
+
+        public:
+            bool IsValid() const {
+                return (_cardFd > 0);
             }
 
         private:
@@ -668,44 +688,44 @@ namespace Compositor {
 
             Identifier FindConnectorId(const string& connectorName)
             {
-                ASSERT(_cardFd > 0);
-
-                drmModeResPtr resources = drmModeGetResources(_cardFd);
-
-                ASSERT(resources != nullptr);
-
                 Identifier connectorId(InvalidIdentifier);
 
-                TRACE_GLOBAL(Trace::Backend, ("Lets see if we can find connector: %s", connectorName.c_str()));
+                if (_cardFd > 0) {
+                    drmModeResPtr resources = drmModeGetResources(_cardFd);
 
-                if ((_cardFd > 0) && (resources != nullptr)) {
-                    for (uint8_t i = 0; i < resources->count_connectors; i++) {
-                        drmModeConnectorPtr connector = drmModeGetConnector(_cardFd, resources->connectors[i]);
+                    ASSERT(resources != nullptr);
 
-                        if (nullptr != connector) {
-                            char name[59];
-                            int nameLength;
-                            nameLength = snprintf(name, sizeof(name), "%s-%u", drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id);
-                            name[nameLength] = '\0';
+                    TRACE_GLOBAL(Trace::Backend, ("Lets see if we can find connector: %s", connectorName.c_str()));
 
-                            if (connectorName.compare(name) == 0) {
-                                TRACE_GLOBAL(Trace::Backend, ("Found connector %s", name));
-                                connectorId = connector->connector_id;
-                                break;
-                            } else {
-                                TRACE_GLOBAL(Trace::Backend, ("Passed out on connector %s", name));
+                    if ((_cardFd > 0) && (resources != nullptr)) {
+                        for (uint8_t i = 0; i < resources->count_connectors; i++) {
+                            drmModeConnectorPtr connector = drmModeGetConnector(_cardFd, resources->connectors[i]);
+
+                            if (nullptr != connector) {
+                                char name[59];
+                                int nameLength;
+                                nameLength = snprintf(name, sizeof(name), "%s-%u", drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id);
+                                name[nameLength] = '\0';
+
+                                if (connectorName.compare(name) == 0) {
+                                    TRACE_GLOBAL(Trace::Backend, ("Found connector %s", name));
+                                    connectorId = connector->connector_id;
+                                    break;
+                                } else {
+                                    TRACE_GLOBAL(Trace::Backend, ("Passed out on connector %s", name));
+                                }
+
+                                drmModeFreeConnector(connector);
                             }
-
-                            drmModeFreeConnector(connector);
                         }
                     }
-                }
 
-                if ((connectorId == InvalidIdentifier)) {
-                    TRACE_GLOBAL(Trace::Error, ("Unable to find connector %s", connectorName.c_str()));
-                }
+                    if ((connectorId == InvalidIdentifier)) {
+                        TRACE_GLOBAL(Trace::Error, ("Unable to find connector %s", connectorName.c_str()));
+                    }
 
-                ASSERT(connectorId != InvalidIdentifier);
+                    ASSERT(connectorId != InvalidIdentifier);
+                }
 
                 return connectorId;
             }
