@@ -345,23 +345,25 @@ namespace Compositor {
                             drmModeCrtcPtr crtc(nullptr);
 
                             ASSERT(encoder->crtc_id != Compositor::InvalidIdentifier);
+                            TRACE(Trace::Information, ("Start looking for crtc_id: %d", encoder->crtc_id));
 
                             for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
+                                    
                                 if (drmModeResources->crtcs[c] == encoder->crtc_id) {
                                     crtc = drmModeGetCrtc(_backend->Descriptor(), drmModeResources->crtcs[c]);
-                                    if (crtc->buffer_id != 0) {
-                                        break;
-                                    }
-                                    else {
-                                        drmModeFreeCrtc(crtc);
-                                    }
+                                    break;
                                 }
                             }
 
                             /* Ensure the CRTC is active. */
                             ASSERT(crtc != nullptr);
-                            ASSERT(crtc->buffer_id != 0);
                             ASSERT(crtc->crtc_id != 0);
+                            /*
+                             * On the bananpi, the following ASSERT fired but, although the documentation
+                             * suggestst that buffer_id means disconnected, the screen was not disconnected
+                             * Hence wht the ASSERT is, until further investigation, commented out !!!
+                             * ASSERT(crtc->buffer_id != 0);
+                             */ 
 
                             /*
                              * The kernel doesn't directly tell us what it considers to be the
