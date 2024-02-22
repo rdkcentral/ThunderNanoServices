@@ -481,9 +481,9 @@ namespace Plugin {
             _clients.erase(it);
 
             removedclient->Release();
-            TRACE(Trace::Information, (_T("Client %s detached"), it->first.c_str()));
+            TRACE(Trace::Information, (_T("Client %s detached"), name.c_str()));
         } else {
-            TRACE(Trace::Error, (_T("No entry for %s found to detach"), it->first.c_str()));
+            TRACE(Trace::Error, (_T("No entry for %s found to detach"), name.c_str()));
         }
 
         _adminLock.Unlock();

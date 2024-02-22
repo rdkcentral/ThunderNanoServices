@@ -17,6 +17,9 @@
 
 option(INSTALL_COMPOSITOR_CLIENT_TEST "Build compositor client test app" ON)
 
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Core CONFIG REQUIRED)
+
 find_package(GLESv2 REQUIRED)
 find_package(EGL REQUIRED)
 find_package(PNG REQUIRED)
@@ -33,8 +36,9 @@ set_target_properties(CompositorTest PROPERTIES
 
 target_link_libraries(CompositorTest
     PRIVATE
-    CompileSettingsDebug::CompileSettingsDebug
-    compositorclient::compositorclient
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        CompileSettingsDebug::CompileSettingsDebug
+        compositorclient::compositorclient
         PNG::PNG       
          ${EGL_LIBRARIES}
          ${GLESV2_LIBRARIES}
