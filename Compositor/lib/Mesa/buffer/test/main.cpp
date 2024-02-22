@@ -180,8 +180,8 @@ int main(int /*argc*/, const char* argv[])
                 first_plane = plane;
             }
 
-            const uint32_t offset(plane->Offset());
-            const uint32_t stride(plane->Stride());
+            VARIABLE_IS_NOT_USED const uint32_t offset(plane->Offset());
+            VARIABLE_IS_NOT_USED const uint32_t stride(plane->Stride());
 
             // assert(plane->Accessor() >= 0);
             assert(offset == 0);
