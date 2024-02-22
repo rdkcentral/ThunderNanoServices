@@ -16,7 +16,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
+#ifndef MODULE_NAME
+#define MODULE_NAME CompositorTestClient
+#endif
+
 #include <chrono>
 #include <iostream>
 #include <signal.h>
@@ -30,7 +34,10 @@
 #include <GLES2/gl2ext.h>
 #include <png.h>
 
+#include <core/core.h>
 #include <compositor/Client.h>
+
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 
@@ -46,11 +53,11 @@ public:
 public:
     virtual uint32_t AddRef() const override
     {
-        return (Core::ERROR_COMPOSIT_OBJECT);
+        return (WPEFramework::Core::ERROR_COMPOSIT_OBJECT);
     }
     virtual uint32_t Release() const override
     {
-        return (Core::ERROR_COMPOSIT_OBJECT);
+        return (WPEFramework::Core::ERROR_COMPOSIT_OBJECT);
     }
     virtual void KeyMap(const char information[], const uint16_t size) override
     {
