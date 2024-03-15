@@ -100,6 +100,11 @@ namespace Backend {
         ~AtomicCrtc() override = default;
 
     public:
+        void Reevaluate() override
+        {
+            // _doModeSet = true;
+        }
+
         uint32_t Commit(const int fd, const IConnector* connector, const uint32_t flags, void* userData) override
         {
             ASSERT(connector->drmFd > 0);

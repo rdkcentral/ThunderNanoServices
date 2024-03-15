@@ -62,6 +62,11 @@ namespace Backend {
          * @return uint32_t Core::ERROR_NONE at success, error code otherwise.
          */
         virtual uint32_t Commit(const int fd, const IConnector* connector, uint32_t flags, void* userData) = 0;
+
+        /**
+         * @brief This will be called when something is changed within the hardware.   
+        */
+        virtual void Reevaluate() = 0;
     };
 } // namespace Backend
 } // namespace Compositor
