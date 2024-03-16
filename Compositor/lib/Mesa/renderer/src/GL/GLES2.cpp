@@ -1043,7 +1043,7 @@ namespace Compositor {
 
                     Matrix gl_matrix;
                     Transformation::Multiply(gl_matrix, _projection, transformation);
-                    Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_FLIPPED_180], transformation);
+                    Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_NORMAL], transformation);
                     Transformation::Transpose(gl_matrix, gl_matrix);
 
                     const GLfloat x1 = region.x / glesTexture->Width();
