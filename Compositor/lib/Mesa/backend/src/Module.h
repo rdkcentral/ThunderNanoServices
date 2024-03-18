@@ -72,6 +72,40 @@ namespace Trace {
         std::string _text;
     }; // class Backend
 
+    class Frame {
+    public:
+        Frame() = delete;
+        Frame(Frame&&) = delete;
+        Frame(const Frame&) = delete;
+        Frame& operator=(const Frame&) = delete;
+
+        Frame(const TCHAR formatter[], ...)
+        {
+            va_list ap;
+            va_start(ap, formatter);
+            Core::Format(_text, formatter, ap);
+            va_end(ap);
+        }
+        explicit Frame(const string& text)
+            : _text(Core::ToString(text))
+        {
+        }
+        ~Frame() = default;
+
+    public:
+        const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        std::string _text;
+    }; // class Frame
+
 } // namespace Trace
 
 } // namespace WPEFramework
