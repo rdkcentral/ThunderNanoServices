@@ -861,8 +861,7 @@ namespace Compositor {
             GLES& operator=(GLES const&) = delete;
 
             GLES(int drmDevFd)
-                : _drmDevFd(drmDevFd)
-                , _egl(drmDevFd)
+                : _egl(drmDevFd)
                 , _frameBuffer(nullptr)
                 , _viewportWidth(0)
                 , _viewportHeight(0)
@@ -1163,7 +1162,6 @@ namespace Compositor {
             static API::GL _gles;
 
         private:
-            int _drmDevFd;
             EGL _egl;
             std::unique_ptr<FrameBuffer> _frameBuffer;
             uint32_t _viewportWidth;
