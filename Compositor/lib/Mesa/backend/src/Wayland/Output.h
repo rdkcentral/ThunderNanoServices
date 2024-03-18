@@ -76,7 +76,7 @@ namespace Compositor {
             WaylandOutput(WaylandOutput&&) = delete;
             WaylandOutput(const WaylandOutput&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
-            WaylandOutput(Wayland::IBackend& backend, const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format);
+            WaylandOutput(Wayland::IBackend& backend, const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format);
 
             virtual ~WaylandOutput();
 
@@ -126,7 +126,6 @@ namespace Compositor {
             uint32_t _width;
             uint32_t _format;
             uint64_t _modifier;
-            Exchange::IComposition::ScreenResolution _resolution;
             Compositor::Matrix _matrix;
             Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
             Core::Event _signal;

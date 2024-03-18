@@ -66,7 +66,11 @@ public:
         , _fps(fps)
         , _texture(nullptr)
     {
-        _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, _format);
+        _connector = Compositor::Connector(
+            connectorId,
+            { 0, 0, 1080, 1920 },
+            _format);
+
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created connector: %p", _connector.operator->()));
 
@@ -79,6 +83,8 @@ public:
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %p", _texture));
+
+        NewFrame(Core::Time::Now().Ticks());
     }
 
     ~RenderTest()
@@ -148,7 +154,7 @@ private:
             return 0;
         }
 
-        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
+        VARIABLE_IS_NOT_USED const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -163,7 +169,7 @@ private:
 
         const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
         const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
         _renderer->Render(_texture, textureBox, matrix, 1.0f);
@@ -231,7 +237,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 30);
+        WPEFramework::RenderTest test(connectorId, 60);
 
         test.Start();
 

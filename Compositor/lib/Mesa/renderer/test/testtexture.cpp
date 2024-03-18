@@ -76,7 +76,7 @@ public:
     {
         _connector = Compositor::Connector(
             connectorId,
-            Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,
+            { 0, 0, 1080, 1920 },
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }));
 
         ASSERT(_connector.IsValid());
@@ -86,6 +86,8 @@ public:
         _texture = _renderer->Texture(&textureTv);
 
         ASSERT(_renderer.IsValid());
+
+        NewFrame(Core::Time::Now().Ticks());
     }
 
     ~RenderTest()
@@ -170,7 +172,7 @@ private:
         const Compositor::Box renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
         Compositor::Matrix matrix;
 
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
         const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
         _renderer->Render(_texture, textureBox, matrix, 1.0f);
@@ -237,7 +239,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 15);
+        WPEFramework::RenderTest test(connectorId, 60);
 
         char keyPress;
 

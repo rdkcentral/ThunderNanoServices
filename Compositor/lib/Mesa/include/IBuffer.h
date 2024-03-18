@@ -27,9 +27,19 @@
 namespace WPEFramework {
 
 namespace Compositor {
+    namespace Rectangle {
+        constexpr Exchange::IComposition::Rectangle Default()
+        {
+            return { 0, 0, 0, 0 };
+        }
 
-    struct ICallback
-    {
+        constexpr bool IsDefault(const Exchange::IComposition::Rectangle& rectangle)
+        {
+            return (rectangle.x == 0) && (rectangle.y == 0) && (rectangle.height == 0) && (rectangle.width == 0);
+        }
+    }
+
+    struct ICallback {
         virtual ~ICallback() = default;
         virtual void LastFrameTimestamp(const uint64_t time) = 0;
     }; // struct ICallback
@@ -40,14 +50,14 @@ namespace Compositor {
      *
      *
      * @param connector  Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
-     * @param resolution  resolution for the connector, this can be ignored by some backends
+     * @param rectangle  the area that this connector covers in the composition
      * @param format Pixel layout for this buffer
      *
      * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
      */
     EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> Connector(
         const string& connector,
-        const Exchange::IComposition::ScreenResolution resolution,
+        const Exchange::IComposition::Rectangle& rectangle,
         const Compositor::PixelFormat& format,
         ICallback* callback = nullptr);
 
@@ -68,4 +78,4 @@ namespace Compositor {
         const PixelFormat& format);
 
 } // namespace Compositor
-} // namespace WPEFramework 
+} // namespace WPEFramework
