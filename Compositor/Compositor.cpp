@@ -170,7 +170,7 @@ namespace Plugin {
     {
         string message;
         string result;
-
+        
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_composition == nullptr);
@@ -185,14 +185,14 @@ namespace Plugin {
 
         _skipURL = service->WebPrefix().length();
 
-        if ((config.ClientBridge.IsSet() == true) && (config.ClientBridge.Value().empty() == false)) {
-            std::string bridgePath = service->VolatilePath() + config.ClientBridge.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_CLIENTBRIDGE"), bridgePath, true);
+        if ((config.BufferConnector.IsSet() == true) && (config.BufferConnector.Value().empty() == false)) {
+            std::string bufferPath = service->VolatilePath() + config.BufferConnector.Value();
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_BUFFER_CONNECTOR"), bufferPath, true);
         }
 
-        if ((config.Connector.IsSet() == true) && (config.Connector.Value().empty() == false)) {
-            std::string connectorPath = service->VolatilePath() + config.Connector.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_COMMUNICATOR"), connectorPath.c_str(), true);
+        if ((config.DisplayConnector.IsSet() == true) && (config.DisplayConnector.Value().empty() == false)) {
+            std::string displayPath = service->VolatilePath() + config.DisplayConnector.Value();
+            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_DISPLAY_CONNECTOR"), displayPath, true);
         }
 
         // See if the mandatory XDG environment variable is set, otherwise we will set it.
