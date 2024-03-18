@@ -46,34 +46,83 @@ namespace Plugin {
 
         class Config : public Core::JSON::Container {
         public:
+            class OutputConfig : public Core::JSON::Container {
+            public:
+                OutputConfig& operator=(const OutputConfig&) = delete;
+                OutputConfig()
+                    : Core::JSON::Container()
+                    , Connector("card0-HDMI-A-1")
+                    , X(0)
+                    , Y(0)
+                    , Height(0)
+                    , Width(0)
+                {
+                    Init();
+                }
+
+                OutputConfig(const OutputConfig& other)
+                    : Core::JSON::Container()
+                    , Connector(other.Connector)
+                    , X(other.X)
+                    , Y(other.Y)
+                    , Height(other.Height)
+                    , Width(other.Width)
+                {
+                    Init();
+                }
+
+                ~OutputConfig() override = default;
+
+            private:
+                void Init()
+                {
+                    Add(_T("connector"), &Connector);
+                    Add(_T("x"), &X);
+                    Add(_T("y"), &Y);
+                    Add(_T("height"), &Height);
+                    Add(_T("width"), &Width);
+                }
+
+            public:
+                Core::JSON::String Connector;
+                Core::JSON::DecUInt16 X;
+                Core::JSON::DecUInt16 Y;
+                Core::JSON::DecUInt16 Height;
+                Core::JSON::DecUInt16 Width;
+            };
+
             Config(const Config&) = delete;
             Config& operator=(const Config&) = delete;
 
             Config()
                 : Core::JSON::Container()
-                , ClientBridge(_T("clientbridge"))
-                , Connector("connector")
-                , Port("HDMI-A-1")
-                , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
+                , BufferConnector(_T("bufferconnector"))
+                , DisplayConnector("displayconnector")
+                , Height(0)
+                , Width(0)
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
+                , Outputs()
             {
-                Add(_T("clientbridge"), &ClientBridge);
-                Add(_T("connector"), &Connector);
-                Add(_T("port"), &Port);
-                Add(_T("resolution"), &Resolution);
+                Add(_T("bufferconnector"), &BufferConnector);
+                Add(_T("displayconnector"), &DisplayConnector);
+                Add(_T("height"), &Height);
+                Add(_T("width"), &Width);
                 Add(_T("format"), &Format);
                 Add(_T("modifier"), &Modifier);
+                Add(_T("outputs"), &Outputs);
             }
 
             ~Config() override = default;
 
-            Core::JSON::String ClientBridge;
-            Core::JSON::String Connector;
-            Core::JSON::String Port;
-            Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
+            Core::JSON::String BufferConnector;
+            Core::JSON::String DisplayConnector;
+            Core::JSON::String GPU;
+            Core::JSON::DecUInt16 Height;
+            Core::JSON::DecUInt16 Width;
             Core::JSON::HexUInt32 Format;
             Core::JSON::HexUInt64 Modifier;
+            Core::JSON::ArrayType<OutputConfig> Outputs;
         };
 
         class DisplayDispatcher : public RPC::Communicator {
@@ -122,12 +171,14 @@ namespace Plugin {
             Exchange::IComposition::IDisplay* _parentInterface;
         };
 
+        using OutputRegister = std::list<Core::ProxyType<Exchange::ICompositionBuffer>>;
+
     public:
         CompositorImplementation()
             : _adminLock()
             , _format(DRM_FORMAT_INVALID)
             , _modifier(DRM_FORMAT_MOD_INVALID)
-            , _gpuConnector()
+            , _outputs()
             , _renderer()
             , _observers()
             , _clientBridge(*this)
@@ -136,6 +187,9 @@ namespace Plugin {
             , _background(pink)
             , _engine()
             , _dispatcher(nullptr)
+            , _canvasBuffer()
+            , _canvasTexture(nullptr)
+            , _gpuIdentifier(0)
         {
         }
 
@@ -150,7 +204,10 @@ namespace Plugin {
             _clientBridge.Close();
             _clients.Clear();
             _renderer.Release();
-            _gpuConnector.Release();
+
+            for (auto output : _outputs) {
+                output.Release();
+            }
         }
 
         BEGIN_INTERFACE_MAP(CompositorImplementation)
@@ -457,23 +514,46 @@ namespace Plugin {
 
             _format = config.Format.Value();
             _modifier = config.Modifier.Value();
-            _port = config.Port.Value();
-            _resolution = config.Resolution.Value();
 
-            _gpuConnector = Compositor::Connector(_port, _resolution, _format);
-            ASSERT(_gpuConnector.IsValid());
+            // FIXME: this needs to be moved to a plugin and the the buffer should be shared via
+            //        a CompositorBuffer. For now embed the outputs in the compositor.
+            if (config.Outputs.IsSet() == true) {
+                auto index = config.Outputs.Elements();
 
-            _renderer = Compositor::IRenderer::Instance(_gpuConnector->Identifier());
+                while (index.Next() == true) {
+                    Exchange::IComposition::Rectangle rectangle;
+
+                    rectangle.x = index.Current().X.Value();
+                    rectangle.y = index.Current().Y.Value();
+                    rectangle.width = index.Current().Width.Value();
+                    rectangle.height = index.Current().Height.Value();
+
+                    _outputs.emplace_back<Core::ProxyType<Exchange::ICompositionBuffer>>(Compositor::Connector(index.Current().Connector.Value(), rectangle, _format));
+
+                    ASSERT(_outputs.back().IsValid());
+
+                    if (_gpuIdentifier == 0) {
+                        _gpuIdentifier = _outputs.back()->Identifier();
+                    }
+                }
+            }
+
+            _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
             ASSERT(_renderer.IsValid());
 
-            std::string bridgePath = service->VolatilePath() + config.ClientBridge.Value();
+            _canvasBuffer = Compositor::CreateBuffer(_gpuIdentifier, config.Width.Value(), config.Height.Value(), _format);
+            ASSERT(_canvasBuffer.IsValid());
 
-            RenderScene();
+            _canvasTexture = _renderer->Texture(_canvasBuffer.operator->());
+            ASSERT(_canvasTexture != nullptr);
 
+            RenderCanvas();
+
+            std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
             result = _clientBridge.Open(bridgePath);
 
             if (result == Core::ERROR_NONE) {
-                std::string connectorPath = service->VolatilePath() + config.Connector.Value();
+                std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
 
                 ASSERT(_dispatcher == nullptr);
 
@@ -496,6 +576,10 @@ namespace Plugin {
                     _dispatcher.reset(nullptr);
                     _engine.Release();
                     _clientBridge.Close();
+
+                    _canvasTexture->Release();
+                    _canvasBuffer.Release();
+
                     result = Core::ERROR_UNAVAILABLE;
                 }
             }
@@ -588,7 +672,7 @@ namespace Plugin {
 
         void RequestRender(Client& client VARIABLE_IS_NOT_USED)
         {
-            RenderScene();
+            RenderCanvas();
         }
 
     public:
@@ -598,7 +682,7 @@ namespace Plugin {
 
         WPEFramework::Core::instance_id Native() const override
         {
-            return (_gpuConnector->Identifier());
+            return (_gpuIdentifier);
         }
 
         string Port() const override
@@ -626,17 +710,14 @@ namespace Plugin {
             return client;
         }
 
-        uint64_t RenderScene()
+        uint64_t RenderCanvas()
         {
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-            ASSERT((_gpuConnector.IsValid() == true) && (_renderer.IsValid() == true));
+            ASSERT((_canvasBuffer.IsValid() == true) && (_renderer.IsValid() == true));
 
-            const uint16_t width(_gpuConnector->Width());
-            const uint16_t height(_gpuConnector->Height());
-
-            _renderer->Bind(_gpuConnector);
-            _renderer->Begin(width, height);
+            _renderer->Bind(_canvasBuffer);
+            _renderer->Begin(_canvasBuffer->Width(), _canvasBuffer->Height());
             _renderer->Clear(_background);
 
             _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
@@ -648,20 +729,53 @@ namespace Plugin {
 
                 const Compositor::Box renderBox = { int(rectangle.x), int(rectangle.y), int(rectangle.width), int(rectangle.height) };
 
-                Compositor::Matrix matrix;
-                Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
+                Compositor::Matrix clientProjection;
+                Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
-                const Compositor::Box textureBox = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
+                const Compositor::Box clientArea = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
+
                 // FIXME!!!
                 // Opacity is not yet working....
-                _renderer->Render(client->Texture(), textureBox, matrix, float(client->Opacity() / Exchange::IComposition::maxOpacity));
+                _renderer->Render(client->Texture(), clientArea, clientProjection, float(client->Opacity() / Exchange::IComposition::maxOpacity));
             });
 
             _renderer->End(false);
-
-            _gpuConnector->Render();
-
             _renderer->Unbind();
+
+            RenderOutputs();
+
+            return Core::Time::Now().Ticks();
+        }
+
+        uint64_t RenderOutputs()
+        {
+            for (auto output : _outputs) {
+                ASSERT((output.IsValid() == true) && (_renderer.IsValid() == true));
+
+                _renderer->Bind(output);
+                _renderer->Begin(output->Width(), output->Height()); // set viewport for render
+
+                const Compositor::Box renderBox = { 0, 0, int(output->Width()), int(output->Height()) };
+
+                Compositor::Matrix canvasProjection;
+                Compositor::Transformation::ProjectBox(canvasProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
+
+                // what part of the canvas do we want to render on this output
+                const Compositor::Box canvasArea = {
+                    0, // X
+                    0, // Y
+                    int(_canvasTexture->Width()),
+                    int(_canvasTexture->Height())
+                };
+
+                _renderer->Render(_canvasTexture, canvasArea, canvasProjection, 1.0);
+
+                _renderer->End(false);
+
+                output->Render(); // Blit to screen
+
+                _renderer->Unbind();
+            }
 
             return Core::Time::Now().Ticks();
         }
@@ -674,16 +788,15 @@ namespace Plugin {
 
         Exchange::IComposition::ScreenResolution Resolution() const override
         {
-            return _resolution;
+            return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
         }
 
     private:
         mutable Core::CriticalSection _adminLock;
         string _port;
-        Exchange::IComposition::ScreenResolution _resolution;
         uint32_t _format;
         uint64_t _modifier;
-        Core::ProxyType<Exchange::ICompositionBuffer> _gpuConnector;
+        OutputRegister _outputs;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         std::list<Exchange::IComposition::INotification*> _observers;
         Client::Bridge _clientBridge;
@@ -692,6 +805,9 @@ namespace Plugin {
         Compositor::Color _background;
         Core::ProxyType<RPC::InvokeServer> _engine;
         std::unique_ptr<DisplayDispatcher> _dispatcher;
+        Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
+        Compositor::IRenderer::ITexture* _canvasTexture;
+        uint32_t _gpuIdentifier;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
