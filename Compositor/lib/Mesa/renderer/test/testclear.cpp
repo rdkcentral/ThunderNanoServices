@@ -68,8 +68,8 @@ public:
 
     {
         _connector = Compositor::Connector(
-            connectorId,
-            Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,
+            connectorId, 
+            { 0, 0, 1080, 1920 }, 
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }));
 
         ASSERT(_connector.IsValid());
@@ -77,6 +77,8 @@ public:
         _renderer = Compositor::IRenderer::Instance(_connector->Identifier());
 
         ASSERT(_renderer.IsValid());
+
+        NewFrame(Core::Time::Now().Ticks());
     }
 
     ~ClearTest()
@@ -219,7 +221,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        ClearTest test(connectorId, 15);
+        ClearTest test(connectorId, 60);
 
         char keyPress;
 

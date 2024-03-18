@@ -67,7 +67,7 @@ public:
     {
         _connector = Compositor::Connector(
             connectorId,
-            Exchange::IComposition::ScreenResolution::ScreenResolution_720p,
+            { 0, 0, 1080, 1920 },
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }));
 
         ASSERT(_connector.IsValid());
@@ -75,6 +75,8 @@ public:
         _renderer = Compositor::IRenderer::Instance(_connector->Identifier());
 
         ASSERT(_renderer.IsValid());
+
+        NewFrame(Core::Time::Now().Ticks());
     }
 
     ~RenderTest()
@@ -160,7 +162,7 @@ private:
                 const Compositor::Color color = { 255.f / x, 255.f / y, 255.f / (x + y), 1.f };
 
                 Compositor::Matrix matrix;
-                Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
+                Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
                 _renderer->Quadrangle(color, matrix);
             }
@@ -228,7 +230,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(connectorId, 15);
+        RenderTest test(connectorId, 60);
 
         char keyPress;
 

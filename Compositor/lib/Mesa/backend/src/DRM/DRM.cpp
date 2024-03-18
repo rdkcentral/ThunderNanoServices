@@ -58,90 +58,90 @@ namespace Compositor {
 
             class ConnectorImplementation : public Exchange::ICompositionBuffer, public IOutput::IConnector {
             private:
-                class DoubleBuffer : public Exchange::ICompositionBuffer {
-                public:
-                    DoubleBuffer() = delete;
-                    DoubleBuffer(DoubleBuffer&&) = delete;
-                    DoubleBuffer(const DoubleBuffer&) = delete;
-                    DoubleBuffer& operator=(DoubleBuffer&&) = delete;
-                    DoubleBuffer& operator=(const DoubleBuffer&) = delete;
+                // class DoubleBuffer : public Exchange::ICompositionBuffer {
+                // public:
+                //     DoubleBuffer() = delete;
+                //     DoubleBuffer(DoubleBuffer&&) = delete;
+                //     DoubleBuffer(const DoubleBuffer&) = delete;
+                //     DoubleBuffer& operator=(DoubleBuffer&&) = delete;
+                //     DoubleBuffer& operator=(const DoubleBuffer&) = delete;
 
-                    DoubleBuffer(Core::ProxyType<DRM> backend, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat format)
-                        : _backend(backend)
-                        , _buffers()
-                        , _backBuffer(1)
-                        , _frontBuffer(0)
-                    {
-                        Compositor::Identifier id = _backend->Descriptor();
+                //     DoubleBuffer(Core::ProxyType<DRM> backend, const Compositor::PixelFormat format)
+                //         : _backend(backend)
+                //         , _buffers()
+                //         , _backBuffer(1)
+                //         , _frontBuffer(0)
+                //     {
+                //         Compositor::Identifier id = _backend->Descriptor();
 
-                        // TODO if ScreenResolution_Unknown lookup current dimensions of the connected screen.
+                //         // TODO if ScreenResolution_Unknown lookup current dimensions of the connected screen.
 
-                        uint32_t width = Exchange::IComposition::WidthFromResolution(resolution);
-                        uint32_t height = Exchange::IComposition::HeightFromResolution(resolution);
+                //         uint32_t width = Exchange::IComposition::WidthFromResolution(resolution);
+                //         uint32_t height = Exchange::IComposition::HeightFromResolution(resolution);
 
-                        for (auto& buffer : _buffers) {
-                            buffer.data = Compositor::CreateBuffer(id, width, height, format);
-                            buffer.identifier = Compositor::DRM::CreateFrameBuffer(id, buffer.data.operator->());
-                        }
-                    }
+                //         for (auto& buffer : _buffers) {
+                //             buffer.data = Compositor::CreateBuffer(id, width, height, format);
+                //             buffer.identifier = Compositor::DRM::CreateFrameBuffer(id, buffer.data.operator->());
+                //         }
+                //     }
 
-                    virtual ~DoubleBuffer() override
-                    {
-                        for (auto& buffer : _buffers) {
-                            Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.identifier);
-                            buffer.data.Release();
-                        }
+                //     virtual ~DoubleBuffer() override
+                //     {
+                //         for (auto& buffer : _buffers) {
+                //             Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.identifier);
+                //             buffer.data.Release();
+                //         }
 
-                        _backend.Release();
-                    }
-                    /**
-                     * Exchange::ICompositionBuffer implementation
-                     */
-                    uint32_t Identifier() const override
-                    {
-                        return _buffers.at(_backBuffer).data->Identifier();
-                    }
-                    IIterator* Planes(const uint32_t timeoutMs) override
-                    {
-                        return _buffers.at(_backBuffer).data->Planes(timeoutMs);
-                    }
-                    uint32_t Completed(const bool dirty) override
-                    {
-                        return _buffers.at(_backBuffer).data->Completed(dirty);
-                    }
-                    void Render() override
-                    {
-                        return _buffers.at(_backBuffer).data->Render();
-                    }
-                    uint32_t Width() const override
-                    {
-                        return _buffers.at(_backBuffer).data->Width();
-                    }
-                    uint32_t Height() const override
-                    {
-                        return _buffers.at(_backBuffer).data->Height();
-                    }
-                    uint32_t Format() const
-                    {
-                        return _buffers.at(_backBuffer).data->Format();
-                    }
-                    uint64_t Modifier() const override
-                    {
-                        return _buffers.at(_backBuffer).data->Modifier();
-                    }
+                //         _backend.Release();
+                //     }
+                //     /**
+                //      * Exchange::ICompositionBuffer implementation
+                //      */
+                //     uint32_t Identifier() const override
+                //     {
+                //         return _buffers.at(_backBuffer).data->Identifier();
+                //     }
+                //     IIterator* Planes(const uint32_t timeoutMs) override
+                //     {
+                //         return _buffers.at(_backBuffer).data->Planes(timeoutMs);
+                //     }
+                //     uint32_t Completed(const bool dirty) override
+                //     {
+                //         return _buffers.at(_backBuffer).data->Completed(dirty);
+                //     }
+                //     void Render() override
+                //     {
+                //         return _buffers.at(_backBuffer).data->Render();
+                //     }
+                //     uint32_t Width() const override
+                //     {
+                //         return _buffers.at(_backBuffer).data->Width();
+                //     }
+                //     uint32_t Height() const override
+                //     {
+                //         return _buffers.at(_backBuffer).data->Height();
+                //     }
+                //     uint32_t Format() const
+                //     {
+                //         return _buffers.at(_backBuffer).data->Format();
+                //     }
+                //     uint64_t Modifier() const override
+                //     {
+                //         return _buffers.at(_backBuffer).data->Modifier();
+                //     }
 
-                    Compositor::Identifier Swap()
-                    {
-                        std::swap(_backBuffer, _frontBuffer);
-                        return _buffers.at(_frontBuffer).identifier;
-                    }
+                //     Compositor::Identifier Swap()
+                //     {
+                //         std::swap(_backBuffer, _frontBuffer);
+                //         return _buffers.at(_frontBuffer).identifier;
+                //     }
 
-                private:
-                    Core::ProxyType<DRM> _backend;
-                    std::array<FrameBuffer, 2> _buffers;
-                    uint8_t _backBuffer;
-                    uint8_t _frontBuffer;
-                };
+                // private:
+                //     Core::ProxyType<DRM> _backend;
+                //     std::array<FrameBuffer, 2> _buffers;
+                //     uint8_t _backBuffer;
+                //     uint8_t _frontBuffer;
+                // };
 
             public:
                 ConnectorImplementation() = delete;
@@ -150,7 +150,7 @@ namespace Compositor {
                 ConnectorImplementation& operator=(ConnectorImplementation&&) = delete;
                 ConnectorImplementation& operator=(const ConnectorImplementation&) = delete;
 
-                ConnectorImplementation(string gpu, const string& connector, const Compositor::PixelFormat format, Compositor::ICallback* callback)
+                ConnectorImplementation(string gpu, const string& connector, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::ICallback* callback)
                     : _backend(_backends.Instance<Backend::DRM>(gpu, gpu))
                     , _connectorId(_backend->FindConnectorId(connector))
                     , _ctrController(InvalidIdentifier)
@@ -348,7 +348,7 @@ namespace Compositor {
                             TRACE(Trace::Information, ("Start looking for crtc_id: %d", encoder->crtc_id));
 
                             for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
-                                    
+
                                 if (drmModeResources->crtcs[c] == encoder->crtc_id) {
                                     crtc = drmModeGetCrtc(_backend->Descriptor(), drmModeResources->crtcs[c]);
                                     break;
@@ -363,7 +363,7 @@ namespace Compositor {
                              * suggestst that buffer_id means disconnected, the screen was not disconnected
                              * Hence wht the ASSERT is, until further investigation, commented out !!!
                              * ASSERT(crtc->buffer_id != 0);
-                             */ 
+                             */
 
                             /*
                              * The kernel doesn't directly tell us what it considers to be the
@@ -560,8 +560,7 @@ namespace Compositor {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(realError)));
                         close(_cardFd);
                         _cardFd = 0;
-                    }
-                    else {
+                    } else {
                         Core::ResourceMonitor::Instance().Register(_monitor);
 
                         if (TRACE_ENABLED(Trace::Information)) {
@@ -588,13 +587,16 @@ namespace Compositor {
             }
 
         public:
-            bool IsValid() const {
+            bool IsValid() const
+            {
                 return (_cardFd > 0);
             }
 
         private:
             uint32_t PageFlip(ConnectorImplementation& connector)
             {
+                _tpageflipstart = Core::Time::Now().Ticks();
+
                 uint32_t result(Core::ERROR_NONE);
 
                 if (connector.CtrControllerId() != Compositor::InvalidIdentifier) {
@@ -653,8 +655,9 @@ namespace Compositor {
 
                     connector->Release();
                 }
-
                 _adminLock.Unlock();
+                const uint64_t tpageflipend(Core::Time::Now().Ticks());
+                TRACE(Trace::Frame, ("Pageflip took %" PRIu64 "us", (tpageflipend - _tpageflipstart)));
             }
 
             static void PageFlipHandler(int /*cardFd*/, unsigned /*seq*/, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
@@ -738,6 +741,7 @@ namespace Compositor {
             Monitor _monitor;
             IOutput& _output;
             CommitRegister _pendingCommits;
+            uint64_t _tpageflipstart;
         }; // class DRM
 
         /* static */ Core::ProxyMapType<string, DRM> DRM::ConnectorImplementation::_backends;
@@ -761,7 +765,7 @@ namespace Compositor {
 
     } // namespace Backend
 
-    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::ScreenResolution /*resolution*/, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
+    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
     {
         ASSERT(drmAvailable() == 1);
 
@@ -776,7 +780,7 @@ namespace Compositor {
 
         static Core::ProxyMapType<string, Exchange::ICompositionBuffer> gbmConnectors;
 
-        return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connector, gpu, connector, format, callback);
+        return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connector, gpu, connector, rectangle, format, callback);
     }
 } // namespace Compositor
 } // WPEFramework

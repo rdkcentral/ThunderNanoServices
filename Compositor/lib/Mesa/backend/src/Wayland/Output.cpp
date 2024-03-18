@@ -142,19 +142,18 @@ namespace Compositor {
             .discarded = onPresentationFeedbackDiscarded,
         };
 
-        WaylandOutput::WaylandOutput(Wayland::IBackend& backend, const string& name,
-            const Exchange::IComposition::ScreenResolution resolution,
-            const Compositor::PixelFormat& format, const bool force)
+        WaylandOutput::WaylandOutput(
+            Wayland::IBackend& backend, const string& name,
+            const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
             : _backend(backend)
             , _surface(nullptr)
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
             , _topLevelSurface(nullptr)
-            , _height(720)
-            , _width(1280)
+            , _height(0)
+            , _width(0)
             , _format()
             , _modifier()
-            , _resolution(resolution)
             , _buffer()
             , _signal(false, true)
             , _commitSequence(0)
@@ -167,8 +166,13 @@ namespace Compositor {
             ASSERT(_format != DRM_FORMAT_INVALID);
             ASSERT(_modifier != DRM_FORMAT_MOD_INVALID);
 
-            _width = Exchange::IComposition::WidthFromResolution(resolution);
-            _height = Exchange::IComposition::HeightFromResolution(resolution);
+            if (Compositor::Rectangle::IsDefault(rectangle)) {
+                _width = 1280;
+                _height = 720;
+            } else {
+                _width = rectangle.width;
+                _height = rectangle.height;
+            }
 
             _surface = _backend.Surface();
 

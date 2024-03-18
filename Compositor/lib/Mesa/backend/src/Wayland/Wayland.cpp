@@ -129,7 +129,7 @@ namespace Compositor {
 
             int Dispatch(const uint32_t events) const;
 
-            Core::ProxyType<Exchange::ICompositionBuffer> Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback);
+            Core::ProxyType<Exchange::ICompositionBuffer> Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, Compositor::ICallback* callback);
 
         private:
             mutable uint32_t _refCount;
@@ -544,7 +544,7 @@ namespace Compositor {
                 xdg_activation_v1_destroy(_wlXdgActivationV1);
             }
 
-            if(_wlZwpLinuxDmabufFeedbackV1 != nullptr) {
+            if (_wlZwpLinuxDmabufFeedbackV1 != nullptr) {
                 zwp_linux_dmabuf_feedback_v1_destroy(_wlZwpLinuxDmabufFeedbackV1);
             }
 
@@ -851,10 +851,10 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback)
+        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
         {
 
-            return _windows.Instance<Backend::WaylandOutput>(name, *this, name, resolution, format, force);
+            return _windows.Instance<Backend::WaylandOutput>(name, *this, name, rectangle, format);
         }
 
         struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
@@ -995,8 +995,7 @@ namespace Compositor {
      * implementation backend.
      *
      * @param name A string representing the name of the output device to connect to.
-     * @param resolution The screen resolution of the composition buffer. It specifies the number of pixels
-     * on the screen in terms of width and height.
+     * @param rectangle  the area that this connector covers in the composition
      * @param format The format parameter is of type Compositor::PixelFormat and represents the pixel
      * format of the composition buffer. It specifies how the color information of each pixel is stored in
      * memory. Examples of pixel formats include RGBA, BGRA, and ARGB.
@@ -1006,10 +1005,11 @@ namespace Compositor {
      *
      * @return A `Core::ProxyType` object that wraps an instance of `Exchange::ICompositionBuffer`.
      */
-    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
+    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance("");
-        return backend.Output(name, resolution, format, callback);
+
+        return backend.Output(name, rectangle, format, callback);
     }
 } // namespace Compositor
 } // namespace WPEFramework
