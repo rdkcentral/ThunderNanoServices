@@ -8,36 +8,34 @@ configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
 if "@PLUGIN_COMPOSITOR_CONNECTOR@":
     configuration.add("connector", "@PLUGIN_COMPOSITOR_CONNECTOR@")
 
-if boolean("@PLUGIN_COMPOSITOR_NXSERVER@"):
-
-    memory_settings = JSON()
-    memory_settings.add("gfx", "@PLUGIN_COMPOSITOR_MEMORY_GFX@")
-    memory_settings.add("gfx2", "@PLUGIN_COMPOSITOR_MEMORY_GFX2@")
-    memory_settings.add("restricted", "@PLUGIN_COMPOSITOR_MEMORY_RESTRICTED@")
-    memory_settings.add("main", "@PLUGIN_COMPOSITOR_MEMORY_MAIN@")
-    memory_settings.add("export", "@PLUGIN_COMPOSITOR_MEMORY_EXPORT@")
-    memory_settings.add("secureGFX", "@PLUGIN_COMPOSITOR_MEMORY_SECURE_GFX@")
-    memory_settings.add("client", "@PLUGIN_COMPOSITOR_MEMORY_CLIENT@")
-    configuration.add("memory", memory_settings)
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Nexus":
+    if boolean("@PLUGIN_COMPOSITOR_NXSERVER@"):
+        memory_settings = JSON()
+        memory_settings.add("gfx", "@PLUGIN_COMPOSITOR_MEMORY_GFX@")
+        memory_settings.add("gfx2", "@PLUGIN_COMPOSITOR_MEMORY_GFX2@")
+        memory_settings.add("restricted", "@PLUGIN_COMPOSITOR_MEMORY_RESTRICTED@")
+        memory_settings.add("main", "@PLUGIN_COMPOSITOR_MEMORY_MAIN@")
+        memory_settings.add("export", "@PLUGIN_COMPOSITOR_MEMORY_EXPORT@")
+        memory_settings.add("secureGFX", "@PLUGIN_COMPOSITOR_MEMORY_SECURE_GFX@")
+        memory_settings.add("client", "@PLUGIN_COMPOSITOR_MEMORY_CLIENT@")
+        configuration.add("memory", memory_settings)
 
     if boolean("@PLUGIN_COMPOSITOR_ALLOW_UNAUTHENTICATED_CLIENTS@"):
         configuration.add("authentication", "true")
-    configuration.add("irmode", "@PLUGIN_COMPOSITOR_IRMODE@")
-    configuration.add("boxmode", "@PLUGIN_COMPOSITOR_BOXMODE@")
-    configuration.add("authentication", "@PLUGIN_COMPOSITOR_AUTHENTICATION@")
-    configuration.add("svp", "@PLUGIN_COMPOSITOR_SVP@")
-    configuration.add("framebufferwidth", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_WIDTH@")
-    configuration.add("framebufferheight", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_HEIGHT@")
-    configuration.add("sagepath", "@PLUGIN_COMPOSITOR_SAGE_PATH@")
-    configuration.add("pakpath", "@PLUGIN_COMPOSITOR_PAK_PATH@")
-    configuration.add("drmpath", "@PLUGIN_COMPOSITOR_DRM_PATH@")
-    configuration.add("hdcplevel", "@PLUGIN_COMPOSITOR_HDCP_LEVEL@")
-    configuration.add("hdcpversion", "@PLUGIN_COMPOSITOR_HDCP_VERSION@")
-    configuration.add("hdcp1xbinfile", "@PLUGIN_COMPOSITOR_HDCP1XBIN_PATH@")
-    configuration.add("hdcp2xbinfile", "@PLUGIN_COMPOSITOR_HDCP2XBIN_PATH@")
-    configuration.add("loudnessmode", "@PLUGIN_COMPOSITOR_LOUDNESS_MODE@")
-
-if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Nexus":
+        configuration.add("irmode", "@PLUGIN_COMPOSITOR_IRMODE@")
+        configuration.add("boxmode", "@PLUGIN_COMPOSITOR_BOXMODE@")
+        configuration.add("authentication", "@PLUGIN_COMPOSITOR_AUTHENTICATION@")
+        configuration.add("svp", "@PLUGIN_COMPOSITOR_SVP@")
+        configuration.add("framebufferwidth", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_WIDTH@")
+        configuration.add("framebufferheight", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_HEIGHT@")
+        configuration.add("sagepath", "@PLUGIN_COMPOSITOR_SAGE_PATH@")
+        configuration.add("pakpath", "@PLUGIN_COMPOSITOR_PAK_PATH@")
+        configuration.add("drmpath", "@PLUGIN_COMPOSITOR_DRM_PATH@")
+        configuration.add("hdcplevel", "@PLUGIN_COMPOSITOR_HDCP_LEVEL@")
+        configuration.add("hdcpversion", "@PLUGIN_COMPOSITOR_HDCP_VERSION@")
+        configuration.add("hdcp1xbinfile", "@PLUGIN_COMPOSITOR_HDCP1XBIN_PATH@")
+        configuration.add("hdcp2xbinfile", "@PLUGIN_COMPOSITOR_HDCP2XBIN_PATH@")
+        configuration.add("loudnessmode", "@PLUGIN_COMPOSITOR_LOUDNESS_MODE@")
 
     if "@PLUGIN_COMPOSITOR_HARDWAREREADY@" and int("@PLUGIN_COMPOSITOR_HARDWAREREADY@") > 0:
         configuration.add("hardwareready", "@PLUGIN_COMPOSITOR_HARDWAREREADY@")
