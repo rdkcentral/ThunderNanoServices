@@ -20,8 +20,6 @@
 #pragma once
 
 #include <CompositorTypes.h>
-#include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
 
 namespace WPEFramework {
 namespace Compositor {

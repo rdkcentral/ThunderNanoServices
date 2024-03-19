@@ -20,6 +20,7 @@
 #include "../Module.h"
 #include "IOutput.h"
 
+#include <IBackend.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
 
