@@ -30,7 +30,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include <IBuffer.h>
+#include <IBackend.h>
 
 using namespace WPEFramework;
 

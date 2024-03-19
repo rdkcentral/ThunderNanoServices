@@ -24,6 +24,7 @@
 #include <interfaces/IComposition.h>
 #include <interfaces/ICompositionBuffer.h>
 
+#include <IBackend.h>
 #include <IBuffer.h>
 #include <IRenderer.h>
 #include <Transformation.h>

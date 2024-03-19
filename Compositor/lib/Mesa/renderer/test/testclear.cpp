@@ -35,6 +35,7 @@
 
 #include <inttypes.h>
 
+#include <IBackend.h>
 #include <IBuffer.h>
 #include <IRenderer.h>
 #include <Transformation.h>
