@@ -3,4 +3,8 @@ callsign = "Privacy"
 
 configuration = JSON()
 
-configuration.add("storagelocation", "Disk")
+rootobject = JSON()
+rootobject.add("mode", "Local")
+rootobject.add("locator", "lib@MODULE_NAME@.so")
+configuration.add("root", rootobject)
+

@@ -94,6 +94,6 @@ if (EXAMPLE_SIMPLECOMRPC_TEST)
     add_subdirectory(SimpleCOMRPCClient)
 endif()
 
-if (EXAMPLE_FIREBOLTPLUGIN)
+#if (EXAMPLE_FIREBOLTPLUGIN)
     add_subdirectory(FireboltPrivacy)
-endif()
+#endif()

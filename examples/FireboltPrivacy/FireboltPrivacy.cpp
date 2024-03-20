@@ -66,16 +66,18 @@ namespace Plugin
         _fireboltPrivacy = service->Root<Exchange::IFireboltPrivacy>(_connectionId, RPC::CommunicationTimeOut, _T("FireboltPrivacyImplementation"));
         if (_fireboltPrivacy != nullptr) {
             _fireboltPrivacy->Register(&_connectionNotification);
-            Exchange::JFireboltPrivacy::Register(*this, _fireboltPrivacy);
 
             Exchange::IConfiguration* configFireboltPrivacy = _fireboltPrivacy->QueryInterface<Exchange::IConfiguration>();
             if (configFireboltPrivacy != nullptr) {
                 if (configFireboltPrivacy->Configure(service) != Core::ERROR_NONE) {
                     message = _T("FireboltPrivacy could not be configured.");
                 }
+                else {
+                    Exchange::JFireboltPrivacy::Register(*this, _fireboltPrivacy);
+                }
                 configFireboltPrivacy->Release();
                 configFireboltPrivacy = nullptr;
-            }
+            } 
         }
         else {
             message = _T("FireboltPrivacy could not be instantiated.");
@@ -88,8 +90,7 @@ namespace Plugin
     void FireboltPrivacy::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         if (_service != nullptr) {
-	    ASSERT(_service == service);
-
+            ASSERT(_service == service);
             _service->Unregister(&_connectionNotification);
 
             if (_fireboltPrivacy != nullptr) {
@@ -117,6 +118,7 @@ namespace Plugin
 
     string FireboltPrivacy::Information() const
     {
+        SYSLOG(Logging::Error, (_T("Entry: %s"), __FUNCTION__ ));
         // No additional info to report.
         return (string());
     }
@@ -124,6 +126,7 @@ namespace Plugin
 
     void FireboltPrivacy::Deactivated(RPC::IRemoteConnection* connection)
     {
+        SYSLOG(Logging::Error, (_T("Entry: %s"), __FUNCTION__ ));
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
         if (_connectionId == connection->Id()) {
@@ -133,6 +136,7 @@ namespace Plugin
     }
 
     void FireboltPrivacy::OnAllowResumePointsChanged(const bool allowResumePoint) {
+        SYSLOG(Logging::Error, (_T("Entry: %s"), __FUNCTION__ ));
         Exchange::JFireboltPrivacy::Event::OnAllowResumePointsChanged(*this, allowResumePoint);
     }
 } // namespace Plugin
