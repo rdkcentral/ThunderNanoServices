@@ -44,7 +44,7 @@ namespace Plugin
         : _connectionId(0)
         , _service(nullptr)
         , _fireboltPrivacy(nullptr)
-        , _connectionNotification(*this)
+        , _notificationSink(*this)
     {
     }
 
@@ -61,19 +61,16 @@ namespace Plugin
 
         // Register the Process::Notification stuff. The Remote process might die before we get a
         // change to "register" the sink for these events !!! So do it ahead of instantiation.
-        _service->Register(&_connectionNotification);
+        _service->Register(&_notificationSink);
 
         _fireboltPrivacy = service->Root<Exchange::IFireboltPrivacy>(_connectionId, RPC::CommunicationTimeOut, _T("FireboltPrivacyImplementation"));
         if (_fireboltPrivacy != nullptr) {
-            _fireboltPrivacy->Register(&_connectionNotification);
+            _fireboltPrivacy->Register(&_notificationSink);
 
             Exchange::IConfiguration* configFireboltPrivacy = _fireboltPrivacy->QueryInterface<Exchange::IConfiguration>();
             if (configFireboltPrivacy != nullptr) {
                 if (configFireboltPrivacy->Configure(service) != Core::ERROR_NONE) {
                     message = _T("FireboltPrivacy could not be configured.");
-                }
-                else {
-                    Exchange::JFireboltPrivacy::Register(*this, _fireboltPrivacy);
                 }
                 configFireboltPrivacy->Release();
                 configFireboltPrivacy = nullptr;
@@ -82,6 +79,7 @@ namespace Plugin
         else {
             message = _T("FireboltPrivacy could not be instantiated.");
         }
+        Exchange::JFireboltPrivacy::Register(*this, _fireboltPrivacy);
 
         // On success return empty, to indicate there is no error text.
         return (message);
@@ -91,16 +89,16 @@ namespace Plugin
     {
         if (_service != nullptr) {
             ASSERT(_service == service);
-            _service->Unregister(&_connectionNotification);
+            _service->Unregister(&_notificationSink);
 
             if (_fireboltPrivacy != nullptr) {
+                _fireboltPrivacy->Unregister(&_notificationSink);
                 Exchange::JFireboltPrivacy::Unregister(*this);
-                _fireboltPrivacy->Unregister(&_connectionNotification);
 
                 RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
                 VARIABLE_IS_NOT_USED uint32_t result = _fireboltPrivacy->Release();
-                _fireboltPrivacy = nullptr;
                 ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                _fireboltPrivacy = nullptr;
 
                 // The connection can disappear in the meantime...
                 if (connection != nullptr) {
@@ -118,7 +116,6 @@ namespace Plugin
 
     string FireboltPrivacy::Information() const
     {
-        SYSLOG(Logging::Error, (_T("Entry: %s"), __FUNCTION__ ));
         // No additional info to report.
         return (string());
     }
@@ -126,7 +123,6 @@ namespace Plugin
 
     void FireboltPrivacy::Deactivated(RPC::IRemoteConnection* connection)
     {
-        SYSLOG(Logging::Error, (_T("Entry: %s"), __FUNCTION__ ));
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
         if (_connectionId == connection->Id()) {
@@ -136,7 +132,6 @@ namespace Plugin
     }
 
     void FireboltPrivacy::OnAllowResumePointsChanged(const bool allowResumePoint) {
-        SYSLOG(Logging::Error, (_T("Entry: %s"), __FUNCTION__ ));
         Exchange::JFireboltPrivacy::Event::OnAllowResumePointsChanged(*this, allowResumePoint);
     }
 } // namespace Plugin

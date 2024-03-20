@@ -32,19 +32,19 @@ namespace Plugin {
     class FireboltPrivacy : public PluginHost::IPlugin,
                            public PluginHost::JSONRPC {
     private:
-        class ConnectionNotification : public RPC::IRemoteConnection::INotification, public Exchange::IFireboltPrivacy::INotification {
+        class NotificationHandler : public RPC::IRemoteConnection::INotification, public Exchange::IFireboltPrivacy::INotification {
         public:
-            ConnectionNotification() = delete;
-            ConnectionNotification(const ConnectionNotification&) = delete;
-            ConnectionNotification(ConnectionNotification&&) = delete;
-            ConnectionNotification& operator=(const ConnectionNotification&) = delete;
-            ConnectionNotification& operator=(ConnectionNotification&&) = delete;
+            NotificationHandler() = delete;
+            NotificationHandler(const NotificationHandler&) = delete;
+            NotificationHandler(NotificationHandler&&) = delete;
+            NotificationHandler& operator=(const NotificationHandler&) = delete;
+            NotificationHandler& operator=(NotificationHandler&&) = delete;
 
-            ConnectionNotification(FireboltPrivacy& parent)
+            NotificationHandler(FireboltPrivacy& parent)
                 : _parent(parent)
             {
             }
-            ~ConnectionNotification() override = default;
+            ~NotificationHandler() override = default;
 
         public:
             void Activated(RPC::IRemoteConnection*  /* connection */) override
@@ -63,7 +63,7 @@ namespace Plugin {
             {
                 _parent.OnAllowResumePointsChanged(allowResumePoint);
             }
-            BEGIN_INTERFACE_MAP(ConnectionNotification)
+            BEGIN_INTERFACE_MAP(NotificationHandler)
                 INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
                 INTERFACE_ENTRY(Exchange::IFireboltPrivacy::INotification)
             END_INTERFACE_MAP
@@ -103,7 +103,7 @@ namespace Plugin {
         uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IFireboltPrivacy* _fireboltPrivacy;
-        Core::SinkType<ConnectionNotification> _connectionNotification;
+        Core::SinkType<NotificationHandler> _notificationSink;
         
     };
 
