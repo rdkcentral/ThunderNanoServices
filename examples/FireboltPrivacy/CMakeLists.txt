@@ -28,7 +28,6 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_FIREBOLTPRIVACY_AUTOSTART "Activated" CACHE STRING "Automatically start FireboltPrivacy plugin")
-#set(PLUGIN_FIREBOLTPRIVACY_IMPLEMENTATION "${MODULE_NAME}Impl" CACHE STRING "Specify a library with a FireboltPrivacy implementation." ) 
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
@@ -41,9 +40,6 @@ add_library(${MODULE_NAME} SHARED
     FireboltPrivacyImplementation.cpp
     Module.cpp)
 
-#add_library(${PLUGIN_FIREBOLTPRIVACY_IMPLEMENTATION} SHARED
-    #FireboltPrivacyImplementation.cpp
-    #Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -55,20 +51,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-#set_target_properties(${PLUGIN_FIREBOLTPRIVACY_IMPLEMENTATION} PROPERTIES
-        #CXX_STANDARD 11
-        #CXX_STANDARD_REQUIRED YES)
-
-#target_link_libraries(${PLUGIN_FIREBOLTPRIVACY_IMPLEMENTATION} 
-    #PRIVATE
-        #CompileSettingsDebug::CompileSettingsDebug
-        #${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        #${NAMESPACE}Definitions::${NAMESPACE}Definitions)
-
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
-
-#install(TARGETS ${PLUGIN_FIREBOLTPRIVACY_IMPLEMENTATION} 
-    #DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
 
 write_config()
