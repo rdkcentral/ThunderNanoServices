@@ -26,7 +26,8 @@ namespace WPEFramework {
 namespace Compositor {
     struct ICallback {
         virtual ~ICallback() = default;
-        virtual void LastFrameTimestamp(const uint64_t time) = 0;
+        virtual void LastFrameTimestamp(Exchange::ICompositionBuffer::buffer_id id, const uint64_t time) = 0;
+        virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) = 0;
     }; // struct ICallback
 
     /**
