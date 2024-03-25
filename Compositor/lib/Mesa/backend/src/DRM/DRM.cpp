@@ -58,92 +58,6 @@ namespace Compositor {
             };
 
             class ConnectorImplementation : public Exchange::ICompositionBuffer, public IOutput::IConnector {
-            private:
-                // class DoubleBuffer : public Exchange::ICompositionBuffer {
-                // public:
-                //     DoubleBuffer() = delete;
-                //     DoubleBuffer(DoubleBuffer&&) = delete;
-                //     DoubleBuffer(const DoubleBuffer&) = delete;
-                //     DoubleBuffer& operator=(DoubleBuffer&&) = delete;
-                //     DoubleBuffer& operator=(const DoubleBuffer&) = delete;
-
-                //     DoubleBuffer(Core::ProxyType<DRM> backend, const Compositor::PixelFormat format)
-                //         : _backend(backend)
-                //         , _buffers()
-                //         , _backBuffer(1)
-                //         , _frontBuffer(0)
-                //     {
-                //         Compositor::Identifier id = _backend->Descriptor();
-
-                //         // TODO if ScreenResolution_Unknown lookup current dimensions of the connected screen.
-
-                //         uint32_t width = Exchange::IComposition::WidthFromResolution(resolution);
-                //         uint32_t height = Exchange::IComposition::HeightFromResolution(resolution);
-
-                //         for (auto& buffer : _buffers) {
-                //             buffer.data = Compositor::CreateBuffer(id, width, height, format);
-                //             buffer.identifier = Compositor::DRM::CreateFrameBuffer(id, buffer.data.operator->());
-                //         }
-                //     }
-
-                //     virtual ~DoubleBuffer() override
-                //     {
-                //         for (auto& buffer : _buffers) {
-                //             Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.identifier);
-                //             buffer.data.Release();
-                //         }
-
-                //         _backend.Release();
-                //     }
-                //     /**
-                //      * Exchange::ICompositionBuffer implementation
-                //      */
-                //     uint32_t Identifier() const override
-                //     {
-                //         return _buffers.at(_backBuffer).data->Identifier();
-                //     }
-                //     IIterator* Planes(const uint32_t timeoutMs) override
-                //     {
-                //         return _buffers.at(_backBuffer).data->Planes(timeoutMs);
-                //     }
-                //     uint32_t Completed(const bool dirty) override
-                //     {
-                //         return _buffers.at(_backBuffer).data->Completed(dirty);
-                //     }
-                //     void Render() override
-                //     {
-                //         return _buffers.at(_backBuffer).data->Render();
-                //     }
-                //     uint32_t Width() const override
-                //     {
-                //         return _buffers.at(_backBuffer).data->Width();
-                //     }
-                //     uint32_t Height() const override
-                //     {
-                //         return _buffers.at(_backBuffer).data->Height();
-                //     }
-                //     uint32_t Format() const
-                //     {
-                //         return _buffers.at(_backBuffer).data->Format();
-                //     }
-                //     uint64_t Modifier() const override
-                //     {
-                //         return _buffers.at(_backBuffer).data->Modifier();
-                //     }
-
-                //     Compositor::Identifier Swap()
-                //     {
-                //         std::swap(_backBuffer, _frontBuffer);
-                //         return _buffers.at(_frontBuffer).identifier;
-                //     }
-
-                // private:
-                //     Core::ProxyType<DRM> _backend;
-                //     std::array<FrameBuffer, 2> _buffers;
-                //     uint8_t _backBuffer;
-                //     uint8_t _frontBuffer;
-                // };
-
             public:
                 ConnectorImplementation() = delete;
                 ConnectorImplementation(ConnectorImplementation&&) = delete;
@@ -179,6 +93,10 @@ namespace Compositor {
                         ASSERT(_buffer.IsValid());
                         ASSERT(_bufferId != InvalidIdentifier);
 
+                        if (callback != nullptr) {
+                            callback->Display(Identifier(), drmGetDeviceNameFromFd2(_backend->Descriptor()));
+                        }
+
                         TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
                     }
                 }
@@ -198,7 +116,7 @@ namespace Compositor {
                  */
                 uint32_t Identifier() const override
                 {
-                    return _backend->Descriptor(); //_buffer->Identifier();
+                    return _buffer->Identifier();
                 }
                 IIterator* Planes(const uint32_t timeoutMs) override
                 {
@@ -493,8 +411,6 @@ namespace Compositor {
                 Compositor::Identifier _bufferId;
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
 
-                // Core::ProxyObject<DoubleBuffer> _buffer;
-
                 Compositor::DRM::PropertyRegister _connectorProperties;
                 Compositor::DRM::PropertyRegister _crtcProperties;
                 Compositor::DRM::PropertyRegister _planeProperties;
@@ -651,7 +567,7 @@ namespace Compositor {
                         presentationTimestamp.tv_sec = sec;
                         presentationTimestamp.tv_nsec = usec * 1000;
 
-                        connector->Callback()->LastFrameTimestamp(Core::Time(presentationTimestamp).Ticks());
+                        connector->Callback()->LastFrameTimestamp(connector->Identifier(), Core::Time(presentationTimestamp).Ticks());
                     }
 
                     connector->Release();
