@@ -180,6 +180,7 @@ namespace Plugin {
             , _format(DRM_FORMAT_INVALID)
             , _modifier(DRM_FORMAT_MOD_INVALID)
             , _outputs()
+            , _sink(*this)
             , _renderer()
             , _observers()
             , _clientBridge(*this)
@@ -190,7 +191,9 @@ namespace Plugin {
             , _dispatcher(nullptr)
             , _canvasBuffer()
             , _canvasTexture(nullptr)
+            , _canvasShare(nullptr)
             , _gpuIdentifier(0)
+            , _gpuNode()
         {
         }
 
@@ -202,9 +205,17 @@ namespace Plugin {
                 _engine.Release();
             }
 
+            _clientBridge.Revoke(_canvasShare.get());
+            _canvasShare.reset(nullptr);
+
             _clientBridge.Close();
             _clients.Clear();
             _renderer.Release();
+
+            if (_gpuIdentifier > 0) {
+                ::close(_gpuIdentifier);
+                _gpuIdentifier = -1;
+            }
 
             for (auto output : _outputs) {
                 output.Release();
@@ -217,72 +228,74 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        class Client : public Exchange::IComposition::IClient, public Exchange::ICompositionBuffer {
+        class SharedBuffer : public Compositor::CompositorBufferType<4> {
         private:
-            class SharedBuffer : public Compositor::CompositorBufferType<4> {
-            private:
-                using BaseClass = WPEFramework::Compositor::CompositorBufferType<4>;
+            using BaseClass = WPEFramework::Compositor::CompositorBufferType<4>;
 
-            public:
-                SharedBuffer() = delete;
-                SharedBuffer(const SharedBuffer&) = delete;
-                SharedBuffer& operator=(const SharedBuffer&) = delete;
+        public:
+            SharedBuffer() = delete;
+            SharedBuffer(const SharedBuffer&) = delete;
+            SharedBuffer& operator=(const SharedBuffer&) = delete;
 
-            public:
-                SharedBuffer(Client& parent)
-                    : BaseClass(parent.Name(), parent.Identifier(), parent.Width(), parent.Height(), parent.Format(), parent.Modifier(), parent.Type())
-                    , _parent(parent)
-                {
+        public:
+            SharedBuffer(Exchange::ICompositionBuffer* parent)
+                : BaseClass(std::to_string(parent->Identifier()), parent->Identifier(), parent->Width(), parent->Height(), parent->Format(), parent->Modifier(), parent->Type())
+                , _parent(parent)
+            {
 
-                    Exchange::ICompositionBuffer::IIterator* planes = _parent.Planes(10);
-                    ASSERT(planes != nullptr);
+                Exchange::ICompositionBuffer::IIterator* planes = _parent->Planes(10);
+                ASSERT(planes != nullptr);
 
-                    while ((planes->Next() == true) && (planes->IsValid() == true)) {
-                        ASSERT(planes->IsValid() == true);
-                        BaseClass::Add(planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset());
-                        TRACE(Trace::Information, (_T("Client[%d] Added shared plane %" PRIuPTR " with stride: %d, offset=%d"), parent.Identifier(), planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset()));
-                    }
-
-                    _parent.Completed(false);
-
-                    Core::ResourceMonitor::Instance().Register(*this);
-                }
-                virtual ~SharedBuffer()
-                {
-                    Core::ResourceMonitor::Instance().Unregister(*this);
+                while ((planes->Next() == true) && (planes->IsValid() == true)) {
+                    ASSERT(planes->IsValid() == true);
+                    BaseClass::Add(planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset());
+                    TRACE(Trace::Information, (_T("Client[%d] Added shared plane %" PRIuPTR " with stride: %d, offset=%d"), parent->Identifier(), planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset()));
                 }
 
-                uint32_t AddRef() const override
-                {
-                    return _parent.AddRef();
-                }
+                _parent->Completed(false);
 
-                uint32_t Release() const override
-                {
-                    return _parent.Release();
-                }
+                Core::ResourceMonitor::Instance().Register(*this);
+            }
+            virtual ~SharedBuffer()
+            {
+                Core::ResourceMonitor::Instance().Unregister(*this);
+            }
 
-                void Render() override
-                {
-                    _parent.Render();
-                }
+            uint32_t AddRef() const override
+            {
+                return _parent->AddRef();
+            }
 
-            private:
-                Client& _parent;
-            }; // class SharedBuffer
+            uint32_t Release() const override
+            {
+                return _parent->Release();
+            }
 
+            void Render() override
+            {
+                _parent->Render();
+            }
+
+        private:
+            Exchange::ICompositionBuffer* _parent;
+        }; // class SharedBuffer
+
+        class Client : public Exchange::IComposition::IClient, public Exchange::ICompositionBuffer {
         public:
             using Container = Core::ProxyMapType<string, Client>;
 
             class Bridge : public Core::PrivilegedRequest {
-            private:
-                Bridge(const Bridge&) = delete;
-                Bridge& operator=(const Bridge&) = delete;
+                static constexpr uint32_t DisplayId = 0;
 
             public:
-                Bridge(CompositorImplementation& /*parent*/)
+                Bridge(const Bridge&) = delete;
+                Bridge& operator=(const Bridge&) = delete;
+                Bridge() = delete;
+
+                Bridge(CompositorImplementation& parent)
                     : Core::PrivilegedRequest()
-                /*, _parent(parent)*/
+                    , _parent(parent)
+                    , _shareable()
                 {
                 }
 
@@ -295,15 +308,21 @@ namespace Plugin {
                 {
                     uint8_t result(0);
 
-                    Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
+                    if (id == DisplayId) {
+                        ASSERT(maxSize > 0);
+                        container[0] = _parent.Native();
+                        result = 1;
+                    } else {
+                        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-                    for (const SharedBuffer* buffer : _shareable) {
+                        for (const SharedBuffer* buffer : _shareable) {
 
-                        ASSERT(buffer != nullptr);
+                            ASSERT(buffer != nullptr);
 
-                        if (buffer->Identifier() == id) {
-                            result = buffer->Descriptors(maxSize, container);
-                            break;
+                            if (buffer->Identifier() == id) {
+                                result = buffer->Descriptors(maxSize, container);
+                                break;
+                            }
                         }
                     }
 
@@ -340,6 +359,7 @@ namespace Plugin {
 
             private:
                 mutable Core::CriticalSection _adminLock;
+                CompositorImplementation& _parent;
                 std::list<const SharedBuffer*> _shareable;
             }; // class Bridge
 
@@ -355,7 +375,7 @@ namespace Plugin {
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
                 , _buffer(Compositor::CreateBuffer(_parent.Native(), width, height, Compositor::PixelFormat(_parent.Format(), { _parent.Modifier() })))
-                , _sharedBuffer(*this)
+                , _sharedBuffer(this)
                 , _texture(nullptr)
             {
                 ASSERT(_buffer.IsValid());
@@ -500,6 +520,33 @@ namespace Plugin {
             Compositor::IRenderer::ITexture* _texture; // the texture handle that is known in the GPU/Renderer.
         }; // class Client
 
+        class OutputSink : public Compositor::ICallback {
+        public:
+            OutputSink(const OutputSink&) = delete;
+            OutputSink& operator=(const OutputSink&) = delete;
+            OutputSink() = delete;
+
+            OutputSink(CompositorImplementation& parent)
+                : _parent(parent)
+            {
+            }
+
+            virtual ~OutputSink() = default;
+
+            virtual void LastFrameTimestamp(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint64_t time VARIABLE_IS_NOT_USED) override
+            {
+            }
+
+            virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
+            {
+                TRACE(Trace::Information, (_T("Connector id %d opened on %s"), id, node.c_str()));
+                _parent.HandleGPUNode(node);
+            }
+
+        private:
+            CompositorImplementation& _parent;
+        };
+
     public:
         /**
          * Exchange::IComposition methods
@@ -529,15 +576,18 @@ namespace Plugin {
                     rectangle.width = index.Current().Width.Value();
                     rectangle.height = index.Current().Height.Value();
 
-                    _outputs.emplace_back<Core::ProxyType<Exchange::ICompositionBuffer>>(Compositor::Connector(index.Current().Connector.Value(), rectangle, _format));
+                    _outputs.emplace_back<Core::ProxyType<Exchange::ICompositionBuffer>>(Compositor::Connector(index.Current().Connector.Value(), rectangle, _format, &_sink));
+
+                    TRACE(Trace::Information, ("Initialzed connector %s", index.Current().Connector.Value().c_str()));
 
                     ASSERT(_outputs.back().IsValid());
-
-                    if (_gpuIdentifier == 0) {
-                        _gpuIdentifier = _outputs.back()->Identifier();
-                    }
                 }
             }
+
+            ASSERT(_gpuNode.empty() == false);
+
+            _gpuIdentifier = ::open(_gpuNode.c_str(), O_RDWR | O_CLOEXEC);
+            ASSERT(_gpuIdentifier > 0);
 
             _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
             ASSERT(_renderer.IsValid());
@@ -547,6 +597,9 @@ namespace Plugin {
 
             _canvasTexture = _renderer->Texture(_canvasBuffer.operator->());
             ASSERT(_canvasTexture != nullptr);
+
+            _canvasShare.reset(new SharedBuffer(_canvasBuffer.operator->()));
+            _clientBridge.Announce(_canvasShare.get());
 
             RenderCanvas();
 
@@ -676,6 +729,15 @@ namespace Plugin {
             RenderCanvas();
         }
 
+        void HandleGPUNode(const std::string node)
+        {
+            if (_gpuNode.empty() == true) {
+                _gpuNode = node;
+            }
+
+            ASSERT(_gpuNode.compare(node) == 0); // we assume only 1 GPU is used.
+        }
+
     public:
         /**
          * Exchange::IComposition::IDisplay methods
@@ -683,12 +745,13 @@ namespace Plugin {
 
         WPEFramework::Core::instance_id Native() const override
         {
-            return (_gpuIdentifier);
+            return _gpuIdentifier;
         }
 
         string Port() const override
         {
-            return _port;
+            // Who cares on what port we are running...
+            return string();
         }
 
         IComposition::IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override
@@ -731,7 +794,7 @@ namespace Plugin {
                 const Compositor::Box renderBox = { int(rectangle.x), int(rectangle.y), int(rectangle.width), int(rectangle.height) };
 
                 Compositor::Matrix clientProjection;
-                Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
+                Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
 
                 const Compositor::Box clientArea = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
 
@@ -781,12 +844,11 @@ namespace Plugin {
             return Core::Time::Now().Ticks();
         }
 
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format) override
+        // Useless Resolution functions, this should be controlled by DisplayControl
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
         {
-            TRACE(Trace::Error, (_T("FixMe: Could not set resolution to %s. This is still a to do"), Core::EnumerateType<Exchange::IComposition::ScreenResolution>(format).Data()));
             return (Core::ERROR_UNAVAILABLE);
         }
-
         Exchange::IComposition::ScreenResolution Resolution() const override
         {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
@@ -794,10 +856,10 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _adminLock;
-        string _port;
         uint32_t _format;
         uint64_t _modifier;
         OutputRegister _outputs;
+        OutputSink _sink;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         std::list<Exchange::IComposition::INotification*> _observers;
         Client::Bridge _clientBridge;
@@ -808,7 +870,9 @@ namespace Plugin {
         std::unique_ptr<DisplayDispatcher> _dispatcher;
         Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
         Compositor::IRenderer::ITexture* _canvasTexture;
+        std::unique_ptr<SharedBuffer> _canvasShare;
         uint32_t _gpuIdentifier;
+        std::string _gpuNode;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
