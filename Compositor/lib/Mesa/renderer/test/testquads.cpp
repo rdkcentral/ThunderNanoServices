@@ -42,13 +42,11 @@
 
 #include <drm_fourcc.h>
 
-#include <simpleworker/SimpleWorker.h>
-
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 using namespace WPEFramework;
 
-namespace {
+namespace WPEFramework  {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
@@ -57,13 +55,15 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const uint8_t fps)
+    RenderTest(const std::string& connectorId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
+
         : _adminLock()
-        , _lastFrame(0)
-        , _sink(*this)
         , _renderer()
         , _connector()
-        , _fps(fps)
+        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
+        , _rotations(rotationsPerSecond)
+        , _running(false)
+        , _render()
 
     {
         _connector = Compositor::Connector(
@@ -77,7 +77,7 @@ public:
 
         ASSERT(_renderer.IsValid());
 
-        NewFrame(Core::Time::Now().Ticks());
+        NewFrame();
     }
 
     ~RenderTest()
@@ -93,8 +93,8 @@ public:
         TRACE(Trace::Information, ("Starting RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        _lastFrame = Core::Time::Now().Ticks();
-        Core::SimpleWorker::Instance().Submit(&_sink);
+
+        _render = std::thread(&RenderTest::Render, this);
     }
 
     void Stop()
@@ -102,51 +102,36 @@ public:
         TRACE(Trace::Information, ("Stopping RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        Core::SimpleWorker::Instance().Revoke(&_sink);
-        _lastFrame = 0;
+
+        if (_running) {
+            _running = false;
+            _render.join();
+        }
     }
 
     bool Running() const
     {
-        return (_lastFrame != 0);
+        return _running;
     }
 
 private:
-    class Sink : public Core::SimpleWorker::ICallback {
-    public:
-        Sink() = delete;
-        Sink(const Sink&) = delete;
-        Sink& operator=(const Sink&) = delete;
+    void Render()
+    {
+        _running = true;
 
-        Sink(RenderTest& parent)
-            : _parent(parent)
-        {
+        while (_running) {
+            const auto next = _period - NewFrame();
+            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
         }
+    }
 
-        virtual ~Sink() = default;
-
-    public:
-        uint64_t Activity(const uint64_t time)
-        {
-            return _parent.NewFrame(time);
-        }
-
-    private:
-        RenderTest& _parent;
-    };
-
-    uint64_t NewFrame(const uint64_t scheduledTime)
+    std::chrono::microseconds NewFrame()
     {
         static float rotation = 0.f;
 
+        const auto start = std::chrono::high_resolution_clock::now();
+
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-        if (Running() == false) {
-            TRACE(Trace::Information, ("Canceling render attempt"));
-            return 0;
-        }
-
-        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -156,9 +141,11 @@ private:
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        for (int y = -128; y < height; y += 128) {
-            for (int x = -128; x < width; x += 128) {
-                const Compositor::Box box = { x, y, 128, 128 };
+        constexpr int16_t squareSize(300);
+
+        for (int y = -squareSize; y < height; y += squareSize) {
+            for (int x = -squareSize; x < width; x += squareSize) {
+                const Compositor::Box box = { x, y, squareSize, squareSize };
 
                 const Compositor::Color color = { 255.f / x, 255.f / y, 255.f / (x + y), 1.f };
 
@@ -175,25 +162,20 @@ private:
 
         _renderer->Unbind();
 
-        // TODO rotate with a delta time
-        rotation += 0.05;
-        if (rotation > 2 * M_PI) {
-            rotation = 0.f;
-        }
+        rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 
-        _lastFrame = scheduledTime;
-
-        return scheduledTime + ((Core::Time::MilliSecondsPerSecond * Core::Time::TicksPerMillisecond) / _fps);
+        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
 private:
     mutable Core::CriticalSection _adminLock;
-    uint64_t _lastFrame;
-    Sink _sink;
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
-    const uint8_t _fps;
     uint8_t _previousIndex;
+    const std::chrono::microseconds _period;
+    const float _rotations;
+    bool _running;
+    std::thread _render;
 }; // RenderTest
 
 }
@@ -220,8 +202,8 @@ int main(int argc, const char* argv[])
         const std::vector<string> modules = {
             "CompositorRenderTest",
             "CompositorBuffer",
-            "CompositorBackend",
-            "CompositorRenderer",
+            "CompositorBackendOff",
+            "CompositorRendererOff",
             "DRMCommon"
         };
 
@@ -231,7 +213,9 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(connectorId, 60);
+        WPEFramework::RenderTest test(connectorId, 100, 5);
+
+        test.Start();
 
         char keyPress;
 
