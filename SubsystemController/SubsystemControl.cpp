@@ -411,6 +411,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::PLATFORM,  PluginHost::ISubSystem::subsystem::PLATFORM);
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::STREAMING, PluginHost::ISubSystem::subsystem::STREAMING);
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::WEBSOURCE, PluginHost::ISubSystem::subsystem::WEBSOURCE);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::INSTALLATION, PluginHost::ISubSystem::subsystem::INSTALLATION);
     }
 POP_WARNING()
 
