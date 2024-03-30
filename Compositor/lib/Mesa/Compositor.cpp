@@ -40,6 +40,8 @@ namespace Plugin {
     const Compositor::Color pink = { 1.0f, 0.411f, 0.705f, 1.0f };
     const Compositor::Color black = { 0.f, 0.f, 0.f, 1.0f };
 
+    const std::chrono::microseconds renderThrottle = std::chrono::microseconds(std::chrono::seconds(1)) / 60;
+
     class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
     private:
         CompositorImplementation(const CompositorImplementation&) = delete;
@@ -468,7 +470,12 @@ namespace Plugin {
             }
             void Render() override
             {
+                const auto start = std::chrono::high_resolution_clock::now();
+
                 _parent.RequestRender(*this);
+
+                const auto next = renderThrottle - std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+                std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
             }
             uint32_t Width() const override
             {
