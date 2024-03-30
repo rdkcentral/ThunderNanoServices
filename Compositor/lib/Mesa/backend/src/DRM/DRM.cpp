@@ -471,12 +471,12 @@ namespace Compositor {
                 , _output(IOutput::Instance())
                 , _pendingCommits()
             {
-                if (_cardFd > 0) {
+                if (_cardFd != Compositor::InvalidFileDescriptor) {
                     if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
                         int realError = errno;
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(realError)));
                         close(_cardFd);
-                        _cardFd = 0;
+                        _cardFd = Compositor::InvalidFileDescriptor;
                     } else {
                         Core::ResourceMonitor::Instance().Register(_monitor);
 
@@ -487,6 +487,8 @@ namespace Compositor {
                         }
                     }
                 }
+
+                ASSERT(_cardFd != Compositor::InvalidFileDescriptor);
             }
             virtual ~DRM()
             {
