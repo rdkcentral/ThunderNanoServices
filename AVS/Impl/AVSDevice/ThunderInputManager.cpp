@@ -102,8 +102,12 @@ namespace Plugin {
     void ThunderInputManager::AVSController::Register(INotification* notification)
     {
         ASSERT(notification != nullptr);
-        notification->AddRef();
-        m_notifications.push_back(notification);
+        auto item = std::find(m_notifications.begin(), m_notifications.end(), notification);
+        ASSERT(item == m_notifications.end());
+        if (item == m_notifications.end()) {
+            notification->AddRef();
+            m_notifications.push_back(notification);
+        }
     }
 
     void ThunderInputManager::AVSController::Unregister(const INotification* notification)
@@ -111,6 +115,7 @@ namespace Plugin {
         ASSERT(notification != nullptr);
 
         auto item = std::find(m_notifications.begin(), m_notifications.end(), notification);
+        ASSERT(item != m_notifications.end());
         if (item != m_notifications.end()) {
             m_notifications.erase(item);
             (*item)->Release();

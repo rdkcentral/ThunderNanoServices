@@ -63,6 +63,8 @@ namespace GPIO {
         public:
             void Register(IInputPin::INotification* sink) 
             {
+                ASSERT(sink != nullptr);
+
                 _parent.Lock();
                 ObserverList::iterator index = std::find(_observerList.begin(), _observerList.end(), sink);
                 ASSERT (index == _observerList.end());
@@ -75,6 +77,8 @@ namespace GPIO {
 
             void Unregister(IInputPin::INotification* sink) 
             {
+                ASSERT(sink != nullptr);
+
                 _parent.Lock();
                 ObserverList::iterator index = std::find(_observerList.begin(), _observerList.end(), sink);
                 ASSERT (index != _observerList.end());

@@ -39,20 +39,30 @@ namespace Plugin {
     void VolumeControlImplementation::Register(Exchange::IVolumeControl::INotification* notification)
     {
         ASSERT(notification);
+
         _adminLock.Lock();
-        notification->AddRef();
-        _notifications.push_back(notification);
+        auto item = std::find(_notifications.begin(), _notifications.end(), notification);
+        ASSERT(item == _notifications.end());
+
+        if (item == _notifications.end()) {
+            notification->AddRef();
+            _notifications.push_back(notification);
+        }
         _adminLock.Unlock();
     }
 
     void VolumeControlImplementation::Unregister(const Exchange::IVolumeControl::INotification* notification)
     {
         ASSERT(notification);
+
         _adminLock.Lock();
         auto item = std::find(_notifications.begin(), _notifications.end(), notification);
         ASSERT(item != _notifications.end());
-        _notifications.erase(item);
-        (*item)->Release();
+
+        if (item != _notifications.end()) {
+            _notifications.erase(item);
+            (*item)->Release();
+        }
         _adminLock.Unlock();
     }
 

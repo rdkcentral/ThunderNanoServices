@@ -168,21 +168,27 @@ namespace Plugin {
 
     void Power::Register(Exchange::IPower::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
-        ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end());
+        std::list<Exchange::IPower::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+        ASSERT(index == _notificationClients.end());
 
-        _notificationClients.push_back(sink);
-        sink->AddRef();
+        if (index == _notificationClients.end()) {
+            _notificationClients.push_back(sink);
+            sink->AddRef();
+            TRACE(Trace::Information, (_T("Registered a sink on the power")));
+        }
 
         _adminLock.Unlock();
-
-        TRACE(Trace::Information, (_T("Registered a sink on the power")));
     }
 
     void Power::Unregister(Exchange::IPower::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         std::list<Exchange::IPower::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));

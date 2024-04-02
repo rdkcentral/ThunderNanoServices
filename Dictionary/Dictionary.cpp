@@ -322,6 +322,8 @@ namespace Plugin {
 
     /* virtual */ void Dictionary::Register(const string& nameSpace, struct Exchange::IDictionary::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
 #ifdef __DEBUG__
@@ -343,6 +345,8 @@ namespace Plugin {
 
     /* virtual */ void Dictionary::Unregister(const string& nameSpace, struct Exchange::IDictionary::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         bool found = false;
 
         _adminLock.Lock();

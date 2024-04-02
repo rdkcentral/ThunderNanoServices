@@ -700,10 +700,17 @@ namespace Plugin
         uint32_t Register(Exchange::INetworkControl::INotification* notification) override
         {
             ASSERT(notification);
-            _adminLock.Lock();
-            notification->AddRef();
-            _notifications.push_back(notification);
-            _adminLock.Unlock();
+
+            if (notification) { 
+                _adminLock.Lock();
+                auto item = std::find(_notifications.begin(), _notifications.end(), notification);
+                ASSERT(item == _notifications.end());
+                if (item == _notifications.end()) {
+                    notification->AddRef();
+                    _notifications.push_back(notification);
+                }
+                _adminLock.Unlock();
+            }
 
             return Core::ERROR_NONE;
         }
@@ -711,12 +718,14 @@ namespace Plugin
         uint32_t Unregister(Exchange::INetworkControl::INotification* notification) override
         {
             ASSERT(notification);
-            _adminLock.Lock();
-            auto item = std::find(_notifications.begin(), _notifications.end(), notification);
-            ASSERT(item != _notifications.end());
-            _notifications.erase(item);
-            (*item)->Release();
-            _adminLock.Unlock();
+            if (notification) { 
+                _adminLock.Lock();
+                auto item = std::find(_notifications.begin(), _notifications.end(), notification);
+                ASSERT(item != _notifications.end());
+                _notifications.erase(item);
+                (*item)->Release();
+                _adminLock.Unlock();
+            }
 
             return Core::ERROR_NONE;
         }

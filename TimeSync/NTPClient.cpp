@@ -137,18 +137,24 @@ POP_WARNING()
 
     /* virtual */ void NTPClient::Register(Exchange::ITimeSync::INotification* notification)
     {
+        ASSERT(notification != nullptr);
+
         _adminLock.Lock();
 
-        ASSERT(std::find(_clients.begin(), _clients.end(), notification) == _clients.end());
+        std::list<Exchange::ITimeSync::INotification*>::iterator index(std::find(_clients.begin(), _clients.end(), notification));
+        ASSERT(index == _clients.end());
 
-        notification->AddRef();
-        _clients.push_back(notification);
+        if (index == _clients.end()) {
+            notification->AddRef();
+            _clients.push_back(notification);
+        }
 
         _adminLock.Unlock();
     }
 
     /* virtual */ void NTPClient::Unregister(Exchange::ITimeSync::INotification* notification)
     {
+        ASSERT(notification != nullptr);
 
         _adminLock.Lock();
 
