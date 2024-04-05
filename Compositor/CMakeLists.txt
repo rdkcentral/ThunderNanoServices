@@ -44,7 +44,7 @@ option(PLUGIN_COMPOSITOR_NXSERVER "Allow to use external nexus server" OFF)
 set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implementation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
 
-set(PLUGIN_COMPOSITOR_OUTPUTS "card0-HDMI-A-1;0;0;1080;1920"  CACHE STRING "Specify the outputs (name1;x;y;h;w|name2;x;y;h;w) that the compopsitor should use." )
+set(PLUGIN_COMPOSITOR_OUTPUTS "HDMI-A-1;0;0;1080;1920"  CACHE STRING "Specify the outputs (name1;x;y;h;w|name2;x;y;h;w) that the compopsitor should use." )
 set(PLUGIN_COMPOSITOR_CANVAS_HEIGHT "720"  CACHE STRING "Specify the height of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_CANVAS_WIDTH "1280"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_BUFFER_CONNECTOR "buffer|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )

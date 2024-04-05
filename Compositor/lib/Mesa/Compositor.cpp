@@ -54,7 +54,7 @@ namespace Plugin {
                 OutputConfig& operator=(const OutputConfig&) = delete;
                 OutputConfig()
                     : Core::JSON::Container()
-                    , Connector("card0-HDMI-A-1")
+                    , Connector("HDMI-A-1")
                     , X(0)
                     , Y(0)
                     , Height(0)
