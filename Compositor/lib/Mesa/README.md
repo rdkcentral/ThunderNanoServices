@@ -5,7 +5,7 @@
 ### Backend
 The backend is responsible for bliting the composition to a connector. It holds the framebuffers and controls the GPU. It depends on the ```DRIVER_MODESET``` or ```DRIVER_ATOMIC``` capabilities of the driver there for is should open a cardx node.
 
-## Allocator
+### Allocator
 Used to allocate buffers in the GPU, this uses the ```DRIVER_GEM``` so it will work both cardx and renderDxxx nodes. 
 
 ### Renderer
