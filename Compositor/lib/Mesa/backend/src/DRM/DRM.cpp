@@ -533,6 +533,10 @@ namespace Compositor {
                 , _pendingCommits()
             {
                 if (_cardFd != Compositor::InvalidFileDescriptor) {
+                    if (drmSetMaster(_cardFd) != 0) {
+                        TRACE(Trace::Error, ("Could not become DRM master. Error: [%s]", strerror(errno)));
+                    }
+
                     if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
                         close(_cardFd);
@@ -548,6 +552,10 @@ namespace Compositor {
             {
                 if (_cardFd > 0) {
                     Core::ResourceMonitor::Instance().Unregister(_monitor);
+
+                    if ((drmIsMaster(_cardFd) != 0) && (drmDropMaster(_cardFd) != 0)) {
+                        TRACE(Trace::Error, ("Could not drop DRM master. Error: [%s]", strerror(errno)));
+                    }
 
                     if (TRACE_ENABLED(Trace::Information)) {
                         drmVersion* version = drmGetVersion(_cardFd);
