@@ -55,7 +55,7 @@ public:
     ClearTest(const ClearTest&) = delete;
     ClearTest& operator=(const ClearTest&) = delete;
 
-    ClearTest(const std::string& connectorId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
+    ClearTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
         : _adminLock()
         , _renderer()
         , _connector()
@@ -66,6 +66,7 @@ public:
         , _rotation(0)
         , _running(false)
         , _render()
+        , _renderFd(::open(renderId.c_str(), O_RDWR))
 
     {
         _connector = Compositor::Connector(
@@ -75,7 +76,7 @@ public:
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_connector->Identifier());
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
 
         ASSERT(_renderer.IsValid());
 
@@ -88,6 +89,8 @@ public:
 
         _renderer.Release();
         _connector.Release();
+
+        ::close(_renderFd);
     }
 
     void Start()
@@ -193,20 +196,49 @@ private:
     float _rotation;
     bool _running;
     std::thread _render;
+    int _renderFd;
 
 }; // ClearTest
+class ConsoleOptions : public Core::Options {
+public:
+    ConsoleOptions(int argumentCount, TCHAR* arguments[])
+        : Core::Options(argumentCount, arguments, _T("o:r:h"))
+        , RenderNode("/dev/dri/card0")
+        , Output(RenderNode)
+    {
+        Parse();
+    }
+    ~ConsoleOptions()
+    {
+    }
 
+public:
+    const TCHAR* RenderNode;
+    const TCHAR* Output;
+
+private:
+    virtual void Option(const TCHAR option, const TCHAR* argument)
+    {
+        switch (option) {
+        case 'o':
+            Output = argument;
+            break;
+        case 'r':
+            RenderNode = argument;
+            break;
+        case 'h':
+        default:
+            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>]\n");
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }
+};
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
-    std::string connectorId;
-
-    if (argc == 1) {
-        connectorId = "card1-HDMI-A-1";
-    } else {
-        connectorId = argv[1];
-    }
+    ConsoleOptions options(argc, argv);
 
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
 
@@ -220,8 +252,8 @@ int main(int argc, const char* argv[])
         const std::vector<string> modules = {
             "CompositorClearTest",
             "CompositorBuffer",
-            "CompositorBackendOff",
-            "CompositorRendererOff",
+            "CompositorBackend",
+            "CompositorRenderer",
             "DRMCommon"
         };
 
@@ -231,7 +263,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        ClearTest test(connectorId, 250, 10);
+        ClearTest test(options.Output, options.RenderNode, 1, 10);
 
         test.Start();
 

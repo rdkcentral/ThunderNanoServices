@@ -54,7 +54,7 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
         : _adminLock()
         , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
@@ -65,6 +65,7 @@ public:
         , _rotations(rotationsPerSecond)
         , _running(false)
         , _render()
+        , _renderFd(::open(renderId.c_str(), O_RDWR))
     {
         _connector = Compositor::Connector(
             connectorId,
@@ -74,11 +75,11 @@ public:
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created connector: %p", _connector.operator->()));
 
-        _renderer = Compositor::IRenderer::Instance(_connector->Identifier());
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
-        _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_connector->Identifier(), Texture::TvTexture);
+        _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
         _texture = _renderer->Texture(_textureBuffer.operator->());
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
@@ -94,6 +95,8 @@ public:
         _renderer.Release();
         _connector.Release();
         _textureBuffer.Release();
+
+        ::close(_renderFd);
     }
 
     void Start()
@@ -180,18 +183,49 @@ private:
     const float _rotations;
     bool _running;
     std::thread _render;
+    int _renderFd;
 }; // RenderTest
+
+class ConsoleOptions : public Core::Options {
+public:
+    ConsoleOptions(int argumentCount, TCHAR* arguments[])
+        : Core::Options(argumentCount, arguments, _T("o:r:h"))
+        , RenderNode("/dev/dri/card0")
+        , Output(RenderNode)
+    {
+        Parse();
+    }
+    ~ConsoleOptions()
+    {
+    }
+
+public:
+    const TCHAR* RenderNode;
+    const TCHAR* Output;
+
+private:
+    virtual void Option(const TCHAR option, const TCHAR* argument)
+    {
+        switch (option) {
+        case 'o':
+            Output = argument;
+            break;
+        case 'r':
+            RenderNode = argument;
+            break;
+        case 'h':
+        default:
+            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>]\n");
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }
+};
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
-    std::string connectorId;
-
-    if (argc == 1) {
-        connectorId = "card1-HDMI-A-1";
-    } else {
-        connectorId = argv[1];
-    }
+    WPEFramework::ConsoleOptions options(argc, argv);
 
     WPEFramework::Messaging::LocalTracer& tracer = WPEFramework::Messaging::LocalTracer::Open();
 
@@ -205,8 +239,8 @@ int main(int argc, const char* argv[])
         const std::vector<string> modules = {
             "CompositorRenderTest",
             "CompositorBuffer",
-            "CompositorBackendOFF",
-            "CompositorRendererOFF",
+            "CompositorBackend",
+            "CompositorRenderer",
             "DRMCommon"
         };
 
@@ -216,7 +250,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 120, 10);
+        WPEFramework::RenderTest test(options.Output, options.RenderNode, 120, 10);
 
         test.Start();
 
