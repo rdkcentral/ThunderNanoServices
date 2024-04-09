@@ -101,6 +101,8 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , BufferConnector(_T("bufferconnector"))
                 , DisplayConnector("displayconnector")
+                , GPU("card0")
+                , Render("card0")
                 , Height(0)
                 , Width(0)
                 , Format(DRM_FORMAT_ARGB8888)
@@ -109,6 +111,8 @@ namespace Plugin {
             {
                 Add(_T("bufferconnector"), &BufferConnector);
                 Add(_T("displayconnector"), &DisplayConnector);
+                Add(_T("gpu"), &GPU);
+                Add(_T("render"), &Render);
                 Add(_T("height"), &Height);
                 Add(_T("width"), &Width);
                 Add(_T("format"), &Format);
@@ -121,6 +125,7 @@ namespace Plugin {
             Core::JSON::String BufferConnector;
             Core::JSON::String DisplayConnector;
             Core::JSON::String GPU;
+            Core::JSON::String Render;
             Core::JSON::DecUInt16 Height;
             Core::JSON::DecUInt16 Width;
             Core::JSON::HexUInt32 Format;
@@ -196,6 +201,7 @@ namespace Plugin {
             , _canvasShare(nullptr)
             , _gpuIdentifier(0)
             , _gpuNode()
+            , _renderNode()
         {
         }
 
@@ -393,7 +399,10 @@ namespace Plugin {
 
                 if (_texture != nullptr) {
                     _texture->Release();
+                    _texture = nullptr;
                 }
+
+                _parent.RequestRender();
 
                 TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
             }
@@ -736,6 +745,11 @@ namespace Plugin {
             RenderCanvas();
         }
 
+        void RequestRender()
+        {
+            RenderCanvas();
+        }
+
         void HandleGPUNode(const std::string node)
         {
             if (_gpuNode.empty() == true) {
@@ -820,6 +834,8 @@ namespace Plugin {
 
         uint64_t RenderOutputs()
         {
+            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
+
             for (auto output : _outputs) {
                 ASSERT((output.IsValid() == true) && (_renderer.IsValid() == true));
 
@@ -880,6 +896,7 @@ namespace Plugin {
         std::unique_ptr<SharedBuffer> _canvasShare;
         uint32_t _gpuIdentifier;
         std::string _gpuNode;
+        std::string _renderNode;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
