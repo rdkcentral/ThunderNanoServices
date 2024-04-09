@@ -70,8 +70,8 @@ namespace Compositor {
 
                     uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
 
-                    if (drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms) != 0) {
-                        TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d", connector->IsEnabled() ? "on" : "off", connector->ConnectorId()));
+                    if ((drmResult = drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms)) != 0) {
+                        TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", connector->ConnectorId(), drmResult, strerror(errno)));
                         return Core::ERROR_GENERAL;
                     }
 

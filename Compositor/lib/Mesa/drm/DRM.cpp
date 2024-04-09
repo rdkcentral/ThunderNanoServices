@@ -213,10 +213,10 @@ namespace Compositor {
                 if (lease_fd >= 0) {
                     return lease_fd;
                 } else if (lease_fd != -EINVAL && lease_fd != -EOPNOTSUPP) {
-                    TRACE_GLOBAL(Trace::Error, ("drmModeCreateLease failed"));
+                    TRACE_GLOBAL(Trace::Error, ("drmModeCreateLease failed %s", strerror(errno)));
                     return InvalidFileDescriptor;
                 }
-                TRACE_GLOBAL(Trace::Information, ("drmModeCreateLease failed, falling back to plain open"));
+                TRACE_GLOBAL(Trace::Information, ("drmModeCreateLease failed: %s, falling back to plain open", strerror(errno)));
             } else {
                 TRACE_GLOBAL(Trace::Information, ("DRM is not in master mode"));
             }
@@ -256,7 +256,7 @@ namespace Compositor {
             // DRM backend, or because we're on split render/display machine), we need
             // to use the legacy DRM authentication mechanism to have the permission to
             // manipulate buffers.
-            if (drmGetNodeTypeFromFd(newFd) == DRM_NODE_PRIMARY) {
+            if (drmIsMaster(fd) && drmGetNodeTypeFromFd(newFd) == DRM_NODE_PRIMARY) {
                 drm_magic_t magic(0);
                 int ret(0);
 
