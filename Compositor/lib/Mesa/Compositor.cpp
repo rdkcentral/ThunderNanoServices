@@ -600,9 +600,13 @@ namespace Plugin {
                 }
             }
 
-            ASSERT(_gpuNode.empty() == false);
+            if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
+                _gpuIdentifier = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
+            } else {
+                ASSERT(_gpuNode.empty() == false);
+                _gpuIdentifier = ::open(_gpuNode.c_str(), O_RDWR | O_CLOEXEC);
+            }
 
-            _gpuIdentifier = ::open(_gpuNode.c_str(), O_RDWR | O_CLOEXEC);
             ASSERT(_gpuIdentifier > 0);
 
             _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
