@@ -150,7 +150,12 @@ namespace Compositor {
                         ASSERT(_bufferId != InvalidIdentifier);
 
                         if (callback != nullptr) {
-                            callback->Display(Identifier(), drmGetDeviceNameFromFd2(_backend->Descriptor()));
+                            char* node = drmGetDeviceNameFromFd2(_backend->Descriptor());
+
+                            if (node) {
+                                callback->Display(Identifier(), node);
+                                free(node);
+                            }
                         }
 
                         TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
@@ -502,7 +507,7 @@ namespace Compositor {
                 void Handle(const uint16_t events) override
                 {
                     if (((events & POLLIN) != 0) || ((events & POLLPRI) != 0)) {
-                        _parent.DrmEventHandler();
+                        _parent.DrmEventHandler(Descriptor());
                     }
                 }
 
@@ -529,13 +534,11 @@ namespace Compositor {
             {
                 if (_cardFd != Compositor::InvalidFileDescriptor) {
                     if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
-                        int realError = errno;
-                        TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(realError)));
+                        TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
                         close(_cardFd);
                         _cardFd = Compositor::InvalidFileDescriptor;
                     } else {
                         Core::ResourceMonitor::Instance().Register(_monitor);
-
                     }
                 }
 
@@ -578,7 +581,7 @@ namespace Compositor {
                         connector.AddRef();
 
                         if ((result = _output.Commit(_cardFd, &connector, DRM_MODE_PAGE_FLIP_EVENT, this)) != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, ("Pageflip failed for CRTC %u", connector.CtrControllerId()));
+                            TRACE(Trace::Error, ("DRM Commit failed for CRTC %u", connector.CtrControllerId()));
                         } else {
                             _pendingCommits.emplace(std::piecewise_construct,
                                 std::forward_as_tuple(connector.CtrControllerId()),
@@ -630,7 +633,7 @@ namespace Compositor {
                 TRACE(Trace::Frame, ("Pageflip took %" PRIu64 "us", (tpageflipend - _tpageflipstart)));
             }
 
-            static void PageFlipHandler(int /*cardFd*/, unsigned /*seq*/, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
+            static void PageFlipHandlerV2(int cardFd VARIABLE_IS_NOT_USED, unsigned seq VARIABLE_IS_NOT_USED, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
             {
                 ASSERT(userData != nullptr);
 
@@ -639,17 +642,17 @@ namespace Compositor {
                 backend->FinishPageFlip(crtc_id, sec, usec);
             }
 
-            int DrmEventHandler() const
+            int DrmEventHandler(int fd) const
             {
                 drmEventContext eventContext;
 
                 eventContext.version = 3;
                 eventContext.vblank_handler = nullptr;
                 eventContext.page_flip_handler = nullptr;
-                eventContext.page_flip_handler2 = PageFlipHandler;
+                eventContext.page_flip_handler2 = PageFlipHandlerV2;
                 eventContext.sequence_handler = nullptr;
 
-                if (drmHandleEvent(_cardFd, &eventContext) != 0) {
+                if (drmHandleEvent(fd, &eventContext) != 0) {
                     TRACE(Trace::Error, ("Failed to handle drm event"));
                 }
 
