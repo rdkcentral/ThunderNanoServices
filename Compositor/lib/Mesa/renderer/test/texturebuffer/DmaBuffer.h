@@ -7,7 +7,7 @@
 
 #include "Textures.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     class DmaBuffer : public Exchange::ICompositionBuffer {
         class Plane : public Exchange::ICompositionBuffer::IPlane {

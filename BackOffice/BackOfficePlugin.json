@@ -3,7 +3,7 @@
     "info": {
         "title": "BackOffice Plugin",
         "callsign": "BackOffice",
-        "locator": "libWPEFrameworkBackOffice.so",
+        "locator": "libThunderBackOffice.so",
         "status": "development",
         "description": "The BackOffice plugin responsible for monitoring lifecycle of observables and passing this info to the server",
         "version": "1.0"

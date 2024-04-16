@@ -26,7 +26,7 @@
 #include <interfaces/IExternalBase.h>
 #include <interfaces/IInputPin.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace GPIO {
 
@@ -242,6 +242,6 @@ namespace GPIO {
         Core::ProxyObject<TimedPin> _timedPin;
     };
 }
-} // namespace WPEFramework::GPIO
+} // namespace Thunder::GPIO
 
 #endif // __LINUX_GPIO_H__

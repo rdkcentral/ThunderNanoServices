@@ -23,7 +23,7 @@
 #include "Utils.h"
 #include "DataModel.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace WebPA {
 
@@ -60,4 +60,4 @@ private:
 };
 
 } // WebPA
-} // WPEFramework
+} // Thunder

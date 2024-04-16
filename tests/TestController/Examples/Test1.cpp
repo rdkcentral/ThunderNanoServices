@@ -24,7 +24,7 @@
 #include "TestCategory1.h"
 #include <qa_interfaces/ITestController.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 class Test1 : public TestBase {
 public:
@@ -69,4 +69,4 @@ private:
 };
 
 static QualityAssurance::ITestController::ITest* _singleton(Core::ServiceType<Test1>::Create<QualityAssurance::ITestController::ITest>());
-} // namespace WPEFramework
+} // namespace Thunder

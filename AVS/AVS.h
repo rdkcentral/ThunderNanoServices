@@ -30,7 +30,7 @@
 #include "SmartScreen/SmartScreen.h"
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class AVS
@@ -242,4 +242,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

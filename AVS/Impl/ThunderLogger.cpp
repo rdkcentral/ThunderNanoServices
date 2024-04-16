@@ -21,10 +21,10 @@
 
 #include "TraceCategories.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
-    // using namespace WPEFramework;
+    // using namespace Thunder;
     using namespace alexaClientSDK::avsCommon::utils;
     using namespace alexaClientSDK::avsCommon::utils::logger;
 
@@ -67,7 +67,7 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 namespace alexaClientSDK {
 namespace avsCommon {
@@ -76,7 +76,7 @@ namespace avsCommon {
 
             std::shared_ptr<alexaClientSDK::avsCommon::utils::logger::Logger> getThunderLogger()
             {
-                return WPEFramework::Plugin::ThunderLogger::instance();
+                return Thunder::Plugin::ThunderLogger::instance();
             }
 
         } // namespace logger

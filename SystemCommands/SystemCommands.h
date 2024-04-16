@@ -25,7 +25,7 @@
 
 #include "SystemCommandsImplementation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SystemCommands : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::ISystemCommands, public PluginHost::JSONRPC {
@@ -73,4 +73,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

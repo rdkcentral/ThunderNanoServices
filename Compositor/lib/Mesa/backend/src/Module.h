@@ -34,7 +34,7 @@
 #endif
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Trace {
 
@@ -108,4 +108,4 @@ namespace Trace {
 
 } // namespace Trace
 
-} // namespace WPEFramework
+} // namespace Thunder

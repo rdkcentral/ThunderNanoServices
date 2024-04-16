@@ -19,7 +19,7 @@
 
 #include "BluetoothAudio.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

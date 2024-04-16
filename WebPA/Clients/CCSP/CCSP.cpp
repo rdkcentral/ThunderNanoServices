@@ -33,14 +33,14 @@ int Parodus2CCSPMain();
 }
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Client {
 
     static constexpr char CCSPConfigLink[] = "/tmp/ccsp_msg.cfg";
 
 class CCSP :
-    public Exchange::IWebPA::IWebPAClient, public WPEFramework::Core::Thread {
+    public Exchange::IWebPA::IWebPAClient, public Thunder::Core::Thread {
 
 private:
     CCSP(const CCSP&) = delete;
@@ -149,8 +149,8 @@ uint32_t CCSP::Worker()
     Parodus2CCSPMain();
 
     TRACE(Trace::Information, (_T("End of Worker\n")));
-    return WPEFramework::Core::infinite;
+    return Thunder::Core::infinite;
 }
 
 } // Client
-} //WPEFramework
+} //Thunder

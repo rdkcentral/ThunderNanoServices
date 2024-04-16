@@ -24,7 +24,7 @@
 #define MAX_PARAM_LENGTH (2 * 1024)
 #define WEBPA_FREE(__x__) if(__x__ != nullptr) { free((void*)(__x__)); __x__ = nullptr;}
 
-namespace WPEFramework {
+namespace Thunder {
 class Utils {
 public:
     Utils(const Utils&) = delete;
@@ -248,4 +248,4 @@ private:
 
 }; // Utils
 
-} // WPEFramework
+} // Thunder

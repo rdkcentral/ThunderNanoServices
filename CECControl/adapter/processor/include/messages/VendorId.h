@@ -22,7 +22,7 @@
 #include <CECMessage.h>
 #include <vector>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         class VendorID : public ExchangeType<GIVE_DEVICE_VENDOR_ID, DEVICE_VENDOR_ID, VendorID> {
@@ -56,4 +56,4 @@ namespace CEC {
     } // namespace Message
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

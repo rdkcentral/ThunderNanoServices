@@ -23,7 +23,7 @@
 #include <interfaces/IStream.h>
 #include "Administrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

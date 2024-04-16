@@ -26,9 +26,9 @@
 #include <fstream>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
-using namespace WPEFramework;
+using namespace Thunder;
 
-namespace WPEFramework {
+namespace Thunder {
 
     class TextConnector : public Core::SocketDatagram {
 

@@ -19,7 +19,7 @@
  
 #include "TestCommandController.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     /* static */ TestCommandController& TestCommandController::Instance()
@@ -86,4 +86,4 @@ namespace TestCore {
         return iterator;
     }
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

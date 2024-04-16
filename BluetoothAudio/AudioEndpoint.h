@@ -23,7 +23,7 @@
 #include "DebugTracing.h"
 #include <bluetooth/audio/codecs/SBC.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

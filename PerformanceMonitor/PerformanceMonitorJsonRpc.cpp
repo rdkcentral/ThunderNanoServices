@@ -20,7 +20,7 @@
 #include "PerformanceMonitor.h"
 #include <interfaces/json/JsonData_PerformanceMonitor.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     using namespace JsonData::PerformanceMonitor;

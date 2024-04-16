@@ -19,7 +19,7 @@
 
 #include "HID.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace USB {
 

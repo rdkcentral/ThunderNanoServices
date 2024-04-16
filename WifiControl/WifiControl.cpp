@@ -20,7 +20,7 @@
 #include "WifiControl.h"
 #include <interfaces/IConfiguration.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin
 {
@@ -439,4 +439,4 @@ namespace Plugin
         }
     }
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

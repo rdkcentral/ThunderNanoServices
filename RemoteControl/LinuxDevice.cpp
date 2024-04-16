@@ -23,7 +23,7 @@
 #include <libudev.h>
 #include <linux/uinput.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static char Locator[] = _T("/dev/input");
@@ -78,27 +78,27 @@ namespace Plugin {
             }
             bool Pair() override
             {
-                ProducerEvent(WPEFramework::Exchange::ProducerEvents::PairingStarted);
+                ProducerEvent(Thunder::Exchange::ProducerEvents::PairingStarted);
                 bool result = _parent->Pair();
                 if (result) {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::PairingSuccess);
+                            Thunder::Exchange::ProducerEvents::PairingSuccess);
                 } else {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::PairingFailed);
+                            Thunder::Exchange::ProducerEvents::PairingFailed);
                 }
                 return result;
             }
             bool Unpair(string bindingId) override
             {
-                ProducerEvent(WPEFramework::Exchange::ProducerEvents::UnpairingStarted);
+                ProducerEvent(Thunder::Exchange::ProducerEvents::UnpairingStarted);
                 bool result = _parent->Unpair(bindingId);
                 if (result) {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::UnpairingSuccess);
+                            Thunder::Exchange::ProducerEvents::UnpairingSuccess);
                 } else {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::UnpairingFailed);
+                            Thunder::Exchange::ProducerEvents::UnpairingFailed);
                 }
                 return result;
             }

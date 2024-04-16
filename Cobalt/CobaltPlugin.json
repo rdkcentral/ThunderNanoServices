@@ -3,7 +3,7 @@
   "info": {
     "title": "Cobalt Plugin",
     "callsign": "Cobalt",
-    "locator": "libWPEFrameworkCobalt.so",
+    "locator": "libThunderCobalt.so",
     "status": "alpha",
     "description": "The Cobalt plugin provides web browsing functionality based on the Cobalt engine.",
     "version": "1.0"

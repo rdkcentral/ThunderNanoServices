@@ -19,7 +19,7 @@
  
 #include "GPIO.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(GPIO::Pin::trigger_mode)
 
@@ -319,6 +319,6 @@ namespace GPIO
         return (Core::ERROR_NONE);
     }
 }
-} // namespace WPEFramework::Linux
+} // namespace Thunder::Linux
 
 #pragma GCC diagnostic pop

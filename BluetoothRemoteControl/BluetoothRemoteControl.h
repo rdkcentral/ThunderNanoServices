@@ -30,7 +30,7 @@
 #include <interfaces/IVoiceHandler.h>
 #include <interfaces/json/JsonData_BluetoothRemoteControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

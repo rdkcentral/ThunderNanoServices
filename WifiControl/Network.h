@@ -22,7 +22,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WPASupplicant {
 
     class Controller;
@@ -435,6 +435,6 @@ namespace WPASupplicant {
         string _ssid;
     };
 }
-} // namespace WPEFramework::WPASupplicant
+} // namespace Thunder::WPASupplicant
 
 #endif // WPASUPPLICANT_NETWORK_H

@@ -22,7 +22,7 @@
 
 #include "CrashCore.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class Crash : public TestCommandBase {
 public:
@@ -76,4 +76,4 @@ private:
 
 static Crash* _singleton(Core::ServiceType<Crash>::Create<Crash>());
 
-} // namespace WPEFramework
+} // namespace Thunder

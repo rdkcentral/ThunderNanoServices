@@ -23,7 +23,7 @@ extern "C" {
 #include <wifi_client_hal.h>
 }
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WPASupplicant {
 
     Controller::Controller()

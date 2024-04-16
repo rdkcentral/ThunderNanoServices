@@ -31,10 +31,10 @@ int ParodusServiceMain(int argc, char** argv);
 }
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 class WebPAImplementation :
-    public Exchange::IWebPA, public WPEFramework::Core::Thread {
+    public Exchange::IWebPA, public Thunder::Core::Thread {
 private:
     class Config : public Core::JSON::Container {
     public:
@@ -122,7 +122,7 @@ public:
 
         Core::Process::Options webpaService(_T("WebPAService"));
 
-        // Get the point of entry on WPEFramework..
+        // Get the point of entry on Thunder..
         Core::AdapterIterator interface;
         if (config.Interface.Value().empty() == false) {
             Core::AdapterIterator index = Core::AdapterIterator(config.Interface.Value());
@@ -261,7 +261,7 @@ private:
     
         ::free(parameters);
         TRACE(Trace::Information, (_T("End of Worker\n")));
-        return WPEFramework::Core::infinite;
+        return Thunder::Core::infinite;
     }
 
     inline bool IsValidInterface(Core::AdapterIterator interface) {

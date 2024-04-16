@@ -24,7 +24,7 @@
 #include <fstream>
 #include "../FileTransfer/Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin
 {
     class FileObserver : public Core::FileSystemMonitor::ICallback {
@@ -351,4 +351,4 @@ namespace Plugin
                 OnChangeFile _fileUpdate;
     };
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

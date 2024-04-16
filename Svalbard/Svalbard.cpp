@@ -19,7 +19,7 @@
 
 #include "Svalbard.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {

@@ -17,7 +17,7 @@
 
 set(TARGET Device)
 
-find_package(WPEFramework REQUIRED)
+find_package(Thunder REQUIRED)
 find_package(Procps REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -46,4 +46,4 @@ target_link_libraries(${TARGET}
 set_target_properties(${TARGET} PROPERTIES SUFFIX ".profile")
 set_target_properties(${TARGET} PROPERTIES PREFIX "")
 
-install(TARGETS ${TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/WPEFramework/${PROJECT_NAME})
+install(TARGETS ${TARGET} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/Thunder/${PROJECT_NAME})

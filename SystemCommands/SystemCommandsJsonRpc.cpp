@@ -23,7 +23,7 @@
 #include <interfaces/json/JsonData_SystemCommands.h>
 #include "SystemCommands.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -61,5 +61,5 @@ namespace Plugin {
 
 } // namespace Plugin
 
-} // namespace WPEFramework
+} // namespace Thunder
 

@@ -23,7 +23,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class CompositorImplementation : public Exchange::IComposition {
@@ -467,4 +467,4 @@ namespace Plugin {
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

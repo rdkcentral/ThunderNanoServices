@@ -20,7 +20,7 @@
 #include "InputSwitch.h"
 #include <interfaces/json/JsonData_InputSwitch.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -239,4 +239,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

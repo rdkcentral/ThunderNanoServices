@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Texture {
 
     struct PixelData {

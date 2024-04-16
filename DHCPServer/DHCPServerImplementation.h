@@ -22,7 +22,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -966,6 +966,6 @@ namespace Plugin {
         static Core::ProxyPoolType<Response> _responseFactory;
     };
 }
-} // Namespace WPEFramework::plugin
+} // Namespace Thunder::plugin
 
 #endif // __DHCPSERVERIMPLEMENTATION_H__

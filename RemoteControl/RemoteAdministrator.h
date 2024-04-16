@@ -22,7 +22,7 @@
 #include "Module.h"
 #include <interfaces/IKeyHandler.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Remotes {
 
     class RemoteAdministrator {

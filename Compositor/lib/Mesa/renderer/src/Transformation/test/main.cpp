@@ -16,7 +16,7 @@ extern "C" {
 
 #include <sstream>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -176,7 +176,7 @@ int main(int /*argc*/, const char* argv[])
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));
     tracer.Close();
-    WPEFramework::Core::Singleton::Dispose();
+    Thunder::Core::Singleton::Dispose();
 
     return 0;
 }

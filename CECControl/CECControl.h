@@ -22,7 +22,7 @@
 
 #include <plugins/plugins.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     class CECControl : public PluginHost::IPlugin {
     public:
@@ -91,4 +91,4 @@ namespace Plugin {
         Config _config;
     }; // class CECControl
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

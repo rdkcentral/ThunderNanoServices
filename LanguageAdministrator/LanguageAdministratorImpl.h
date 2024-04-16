@@ -22,7 +22,7 @@
 #include "Module.h"
 #include <interfaces/ILanguageTag.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class LanguageAdministratorImpl : public Exchange::ILanguageTag {
@@ -53,4 +53,4 @@ namespace Plugin {
     };
 
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

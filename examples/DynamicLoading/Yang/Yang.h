@@ -23,7 +23,7 @@
 #include <interfaces/IYang.h>
 #include <interfaces/JYang.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

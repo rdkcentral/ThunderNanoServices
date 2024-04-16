@@ -23,7 +23,7 @@
 #include <cryptography/cryptography.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

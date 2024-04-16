@@ -19,7 +19,7 @@
 
 #include "BluetoothRemoteControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::BluetoothRemoteControl::recorder)
 
@@ -214,12 +214,12 @@ namespace Plugin {
         return { };
     }
 
-    void BluetoothRemoteControl::Inbound(WPEFramework::Web::Request& /* request */)
+    void BluetoothRemoteControl::Inbound(Thunder::Web::Request& /* request */)
     {
         // Not needed
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::Process(const WPEFramework::Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::Process(const Thunder::Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
         TRACE(Trace::Information, (_T("Received BluetoothRemoteControl request")));

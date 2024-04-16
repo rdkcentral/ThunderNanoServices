@@ -3,7 +3,7 @@
   "info": {
     "title": "WebPA Plugin",
     "callsign": "WebPA",
-    "locator": "libWPEFrameworkWebPA.so",
+    "locator": "libThunderWebPA.so",
     "status": "alpha",
     "description": "The WebPA plugin provides web browsing functionality based on the WebPA engine.",
     "version": "1.0"

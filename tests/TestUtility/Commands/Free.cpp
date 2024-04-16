@@ -21,7 +21,7 @@
 #include "../CommandCore/TestCommandController.h"
 #include "MemoryAllocation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class Free : public TestCommandBase {
 public:
@@ -69,4 +69,4 @@ private:
 
 static Free* _singleton(Core::ServiceType<Free>::Create<Free>());
 
-} // namespace WPEFramework
+} // namespace Thunder

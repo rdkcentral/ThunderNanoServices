@@ -25,7 +25,7 @@
 #include "PlayerPlatform.h"
 #include "Administrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Player {
 

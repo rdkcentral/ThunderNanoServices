@@ -23,7 +23,7 @@
 #include <stdexcept>
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace OutOfProcessPlugin {
 
@@ -146,7 +146,7 @@ namespace Plugin {
 
                     RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
                     if (remoteConnection != nullptr) {
-                        _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(remoteConnection);
+                        _memory = Thunder::OutOfProcessPlugin::MemoryObserver(remoteConnection);
                         ASSERT(_memory != nullptr);
                         remoteConnection->Release();
                     }

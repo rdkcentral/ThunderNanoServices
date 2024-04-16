@@ -4,7 +4,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     class BackOffice : public PluginHost::IPlugin {
     public:
@@ -114,10 +114,10 @@ namespace Plugin {
                 }
             }
             // Notification of a Partial Request received, time to attach a body..
-            void LinkBody(Core::ProxyType<WPEFramework::Web::Response>& element VARIABLE_IS_NOT_USED) override {
+            void LinkBody(Core::ProxyType<Thunder::Web::Response>& element VARIABLE_IS_NOT_USED) override {
                 // We are not expected to receive Bodies with the incoming message, so drop it...
             }
-            void Received(Core::ProxyType<WPEFramework::Web::Response>& element) override {
+            void Received(Core::ProxyType<Thunder::Web::Response>& element) override {
 
                 _job.Revoke();
 
@@ -137,7 +137,7 @@ namespace Plugin {
 
                 _lock.Unlock();
             }
-            void Send(const Core::ProxyType<WPEFramework::Web::Request>& request VARIABLE_IS_NOT_USED) override
+            void Send(const Core::ProxyType<Thunder::Web::Request>& request VARIABLE_IS_NOT_USED) override
             {
                 // Oke the request has been send, lets wait for the response..
             }
@@ -155,7 +155,7 @@ namespace Plugin {
                 _lock.Unlock();
             }
 
-            Core::ProxyType<WPEFramework::Web::Response> Element() {
+            Core::ProxyType<Thunder::Web::Response> Element() {
                 return (PluginHost::IFactories::Instance().Response());
             }
 
@@ -181,7 +181,7 @@ namespace Plugin {
                 _message.UserAgent  = _userAgent;
                 _message.Connection = Web::Request::CONNECTION_KEEPALIVE;
 
-                BaseClass::Submit(Core::ProxyType<WPEFramework::Web::Request>(_message));
+                BaseClass::Submit(Core::ProxyType<Thunder::Web::Request>(_message));
                 _job.Reschedule(Core::Time::Now().Add(MaximumWaitTime));
             }
 
@@ -191,7 +191,7 @@ namespace Plugin {
             string _queryParameters;
             string _hostAddress;
             string _userAgent;
-            Core::ProxyObject<WPEFramework::Web::Request> _message;
+            Core::ProxyObject<Thunder::Web::Request> _message;
             Core::ThreadPool::JobType<WebClient&> _job;
         };
         class Observer : public PluginHost::IPlugin::INotification {

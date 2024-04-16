@@ -24,7 +24,7 @@
 #include "Parameter.h"
 #include "DataModel.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 class Adapter {
@@ -106,4 +106,4 @@ private:
 };
 
 } // WebPA
-} // WPEFramework
+} // Thunder

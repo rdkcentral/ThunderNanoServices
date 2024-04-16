@@ -21,7 +21,7 @@
 
 #include <interfaces/IKeyHandler.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 
@@ -428,4 +428,4 @@ namespace Plugin
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -21,7 +21,7 @@
 
 #include <CECMessage.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         class OSDString : public ExchangeType<SET_OSD_STRING, NO_OPCODE, OSDString, false> {
@@ -53,4 +53,4 @@ namespace CEC {
     } // namespace Message
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

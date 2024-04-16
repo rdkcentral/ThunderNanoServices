@@ -44,9 +44,9 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-using namespace WPEFramework;
+using namespace Thunder;
 
-namespace WPEFramework  {
+namespace Thunder  {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
@@ -219,7 +219,7 @@ private:
 
 int main(int argc, char* argv[])
 {
-    WPEFramework::ConsoleOptions options(argc, argv);
+    Thunder::ConsoleOptions options(argc, argv);
 
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
 
@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(options.Output, options.RenderNode, 100, 5);
+        Thunder::RenderTest test(options.Output, options.RenderNode, 100, 5);
 
         test.Start();
 

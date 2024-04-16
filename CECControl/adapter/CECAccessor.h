@@ -35,7 +35,7 @@
 
 #include <string>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class CECAccessor : public IAccessor {
     private:
@@ -264,7 +264,7 @@ namespace CEC {
                 if ((result < msg.Size()) && (msg.Size() >= 1)) {
                     bool broadcast(false);
 
-                    WPEFramework::CEC::Processor::Instance().Process(msg, broadcast);
+                    Thunder::CEC::Processor::Instance().Process(msg, broadcast);
 
                     uint32_t result = Transmit(follower, (!broadcast) ? initiator : CEC_LOGICAL_ADDRESS_BROADCAST, msg.Size(), msg.Data());
 
@@ -321,4 +321,4 @@ namespace CEC {
         AdapterMap _adapters;
     }; // class CECAccessor
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

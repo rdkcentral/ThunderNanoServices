@@ -4,7 +4,7 @@
 
 #include "Textures.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     class PixelBuffer : public Exchange::ICompositionBuffer {
 
@@ -128,5 +128,5 @@ namespace Compositor {
         Pixels _pixels;
         Iterator _planes;
     }; // class PixelBuffer
-} // namespace WPEFramework
+} // namespace Thunder
 } // namespace Compositor

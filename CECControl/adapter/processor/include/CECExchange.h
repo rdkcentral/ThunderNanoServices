@@ -23,7 +23,7 @@
 
 #include <CECTypes.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         class Exchange;
@@ -87,4 +87,4 @@ namespace CEC {
         }; // class Factory
     }// namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

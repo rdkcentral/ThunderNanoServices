@@ -23,7 +23,7 @@
 #include <interfaces/json/JsonData_DHCPServer.h>
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class DHCPServer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {

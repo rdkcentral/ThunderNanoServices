@@ -19,7 +19,7 @@
 
 #include "Administrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Decoders {
 

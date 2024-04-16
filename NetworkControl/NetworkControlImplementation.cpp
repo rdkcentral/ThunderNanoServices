@@ -22,7 +22,7 @@
 #include <interfaces/IConfiguration.h>
 #include <interfaces/INetworkControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin
 {
@@ -313,7 +313,7 @@ namespace Plugin
             NameServers _dns;
         };
 
-        class AdapterObserver : public WPEFramework::Core::AdapterObserver::INotification {
+        class AdapterObserver : public Thunder::Core::AdapterObserver::INotification {
         public:
             AdapterObserver() = delete;
             AdapterObserver(AdapterObserver&&) = delete;
@@ -1561,5 +1561,5 @@ namespace Plugin
 
     SERVICE_REGISTRATION(NetworkControlImplementation, 1, 0)
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 

@@ -23,7 +23,7 @@
 
 #include <qa_interfaces/ITestUtility.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestCommandController : virtual public Core::IUnknown {
@@ -104,4 +104,4 @@ namespace TestCore {
         TestCommandContainer _commands;
     };
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

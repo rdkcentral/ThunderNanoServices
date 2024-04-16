@@ -22,7 +22,7 @@
 
 #include <interfaces/IConfiguration.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {

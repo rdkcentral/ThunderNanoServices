@@ -19,7 +19,7 @@
  
 #include "Handler.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 #ifdef __cplusplus
 extern "C" {

@@ -29,7 +29,7 @@
 #include <interfaces/json/JMath.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Data::Response::state)
 
@@ -271,4 +271,4 @@ POP_WARNING()
     }
 } // namespace Plugin
 
-} // namespace WPEFramework
+} // namespace Thunder

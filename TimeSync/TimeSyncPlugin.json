@@ -3,7 +3,7 @@
   "info": {
     "title": "Time Sync Plugin",
     "callsign": "TimeSync",
-    "locator": "libWPEFrameworkTimeSync.so",
+    "locator": "libThunderTimeSync.so",
     "status": "production",
     "description": "The Time Sync plugin provides time synchronization functionality from various time sources (e.g. NTP).",
     "version": "1.0"

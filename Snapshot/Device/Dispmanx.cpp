@@ -22,7 +22,7 @@
 #include <bcm_host.h>
 #include <interfaces/ICapture.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Initializer {

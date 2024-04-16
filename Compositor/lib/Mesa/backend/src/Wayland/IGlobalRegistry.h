@@ -19,7 +19,7 @@
 #pragma once
 #include <wayland-client.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Backend {
         namespace Wayland {
@@ -32,4 +32,4 @@ namespace Compositor {
         } //    namespace Wayland
     } //    namespace Backend
 } //    namespace Compositor
-} //   namespace WPEFramework
+} //   namespace Thunder

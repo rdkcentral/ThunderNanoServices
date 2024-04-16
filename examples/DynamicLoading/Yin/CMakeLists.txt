@@ -19,7 +19,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(Yin)
 
-find_package(WPEFramework)
+find_package(Thunder)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)

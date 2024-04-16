@@ -3,7 +3,7 @@
   "info": {
     "title": "Bluetooth Audio Plugin",
     "callsign": "BluetoothAudio",
-    "locator": "libWPEFrameworkBluetoothAudio.so",
+    "locator": "libThunderBluetoothAudio.so",
     "status": "alpha",
     "description": [ "The Bluetooth Audio Sink plugin enables audio streaming to Bluetooth audio sink devices.",
                      "The plugin is sink a from the host device stack perspective; in Bluetooth topology the host device becomes in fact an audio source.",

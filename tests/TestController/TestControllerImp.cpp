@@ -23,7 +23,7 @@
 
 #include "Core/TestAdministrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestControllerImp : public QualityAssurance::ITestController {

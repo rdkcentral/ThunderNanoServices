@@ -21,7 +21,7 @@
 
 #include <gst/gst.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Player {
     namespace Implementation {
         namespace {

@@ -18,7 +18,7 @@
 set(TARGET GenericAdapter)
 message("Setup ${TARGET} v${PROJECT_VERSION}...")
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 

@@ -31,7 +31,7 @@
 // within the plugin to make it available. 
 #include <interfaces/IMath.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -319,7 +319,7 @@ namespace Plugin {
             JSONRPCChannel(const JSONRPCChannel& copy) = delete;
             JSONRPCChannel& operator=(const JSONRPCChannel&) = delete;
         public:
-            JSONRPCChannel(const WPEFramework::Core::NodeId& remoteNode, JSONRPCPlugin& parent)
+            JSONRPCChannel(const Thunder::Core::NodeId& remoteNode, JSONRPCPlugin& parent)
                 : Core::SocketServerType<JSONRPCServer<INTERFACE>>(remoteNode)
                 , _parent(parent)
             {
@@ -655,4 +655,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -22,7 +22,7 @@
 
 #include "CrashCore.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class CrashNTimes : public TestCommandBase {
 public:
@@ -82,4 +82,4 @@ private:
 
 static CrashNTimes* _singleton(Core::ServiceType<CrashNTimes>::Create<CrashNTimes>());
 
-} // namespace WPEFramework
+} // namespace Thunder

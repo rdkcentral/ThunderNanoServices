@@ -3,7 +3,7 @@
   "info": {
     "title": "Firmware Control Plugin",
     "callsign": "FirmwareControl",
-    "locator": "libWPEFrameworkFirmwareControl.so",
+    "locator": "libThunderFirmwareControl.so",
     "status": "alpha",
     "description": "Control Firmware upgrade to the device",
     "version": "1.0"

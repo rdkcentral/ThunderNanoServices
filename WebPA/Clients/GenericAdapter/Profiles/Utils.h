@@ -23,7 +23,7 @@
 
 #define MAX_PARAM_LENGTH (2 * 1024)
 
-namespace WPEFramework {
+namespace Thunder {
 class Utils {
 public:
     Utils(const Utils&) = delete;
@@ -68,7 +68,7 @@ public:
         return ret;
     }
 }; // Utils
-} // WPEFramework
+} // Thunder
 
 
 

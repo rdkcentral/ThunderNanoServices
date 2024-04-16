@@ -19,7 +19,7 @@
 
 #include "LanguageAdministrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -206,4 +206,4 @@ namespace Plugin {
         }
     }
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -26,7 +26,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class Math : public Exchange::IMath {
 public:
@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
                             clock = client->Acquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
                         }
                         else {
-                            WPEFramework::PluginHost::IShell* controller = client->Acquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            Thunder::PluginHost::IShell* controller = client->Acquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
                             if (controller == nullptr) {
                                 printf("Could not get the IShell* interface from the controller to execute the QueryInterfaceByCallsign!\n");
                             }
