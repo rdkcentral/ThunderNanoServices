@@ -360,8 +360,8 @@ namespace Plugin {
                     std::list<const SharedBuffer*>::iterator index(std::find(_shareable.begin(), _shareable.end(), buffer));
 
                     if (index != _shareable.end()) {
+                        TRACE(Trace::Information, (_T("SharedBuffer %d Revoked"), (*index)->Identifier()));
                         _shareable.erase(index);
-                        TRACE(Trace::Information, (_T("SharedBuffer %d Revoked"), buffer->Identifier()));
                     }
                 }
 
@@ -392,15 +392,16 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
             }
 
-            ~Client() override
+            virtual ~Client() override
             {
                 _parent.Revoke(*this);
-                _buffer.Release();
 
                 if (_texture != nullptr) {
                     _texture->Release();
                     _texture = nullptr;
                 }
+
+                _buffer.Release();
 
                 _parent.RequestRender();
 
@@ -792,9 +793,8 @@ namespace Plugin {
             if (object.IsValid() == true) {
                 client = &(*object);
                 client->AddRef();
+                TRACE(Trace::Information, (_T("Created client[%p] %s, "), client, name.c_str()));
             }
-
-            TRACE(Trace::Information, (_T("Created client[%p] %s, "), client, name.c_str()));
 
             return client;
         }

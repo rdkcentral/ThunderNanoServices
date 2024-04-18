@@ -1180,6 +1180,8 @@ namespace Compositor {
 
     Core::ProxyType<IRenderer> IRenderer::Instance(Core::instance_id identifier)
     {
+        ASSERT(int(identifier) >= 0);  // this should be a valid file descriptor.
+
         static Core::ProxyMapType<Core::instance_id, IRenderer> glRenderers;
 
         return glRenderers.Instance<Renderer::GLES>(identifier, static_cast<int>(identifier));

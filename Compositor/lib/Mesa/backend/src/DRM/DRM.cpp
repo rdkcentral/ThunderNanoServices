@@ -487,7 +487,7 @@ namespace Compositor {
             };
 
         private:
-            class Monitor : virtual public Core::IResource {
+            class Monitor : public Core::IResource {
             public:
                 Monitor() = delete;
                 Monitor(const DRM& parent)
