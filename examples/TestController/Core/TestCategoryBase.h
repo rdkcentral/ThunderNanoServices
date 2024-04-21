@@ -69,7 +69,11 @@ namespace TestCore {
             ASSERT(test != nullptr);
 
             _adminLock.Lock();
-            _tests.erase(test->Name());
+            auto found = _tests.find(test->Name());
+            ASSERT(found != _tests.end());
+            if (found != _tests.end()) {
+                _tests.erase(test->Name());
+            }
             _adminLock.Unlock();
         }
 

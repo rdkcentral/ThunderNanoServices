@@ -325,13 +325,17 @@ POP_WARNING()
         {
             _adminLock.Lock();
 
+            std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+
             // Make sure a sink is not registered multiple times.
-            ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end());
+            ASSERT(index == _notificationClients.end());
 
-            _notificationClients.push_back(sink);
-            sink->AddRef();
+            if (index == _notificationClients.end()) {
+                _notificationClients.push_back(sink);
+                sink->AddRef();
 
-            TRACE(Trace::Information, (_T("IStateControl::INotification Registered: %p"), sink));
+                TRACE(Trace::Information, (_T("IStateControl::INotification Registered: %p"), sink));
+            }
             _adminLock.Unlock();
         }
 
@@ -354,20 +358,28 @@ POP_WARNING()
         }
         void Register(Exchange::IBrowser::INotification* sink) override
         {
+            ASSERT(sink != nullptr);
+
             _adminLock.Lock();
+            
+	    std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
 
             // Make sure a sink is not registered multiple times.
-            ASSERT(std::find(_browserClients.begin(), _browserClients.end(), sink) == _browserClients.end());
+            ASSERT(index == _browserClients.end());
 
-            _browserClients.push_back(sink);
-            sink->AddRef();
+            if (index == _browserClients.end()) {
+                _browserClients.push_back(sink);
+                sink->AddRef();
 
-            TRACE(Trace::Information, (_T("IBrowser::INotification Registered: %p"), sink));
+                TRACE(Trace::Information, (_T("IBrowser::INotification Registered: %p"), sink));
+            }
             _adminLock.Unlock();
         }
 
         virtual void Unregister(Exchange::IBrowser::INotification* sink)
         {
+            ASSERT(sink != nullptr);
+
             _adminLock.Lock();
 
             std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));

@@ -740,16 +740,22 @@ POP_WARNING()
 
         void Register(PluginHost::IStateControl::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
 
             // Only subscribe an interface once.
-            ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
+            std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
+            ASSERT(index == _observers.end());
 
-            // We will keep a reference to this observer, reference it..
-            notification->AddRef();
-            _observers.push_back(notification);
+            if (index == _observers.end()) {
+                // We will keep a reference to this observer, reference it..
+                notification->AddRef();
+                _observers.push_back(notification);
+            }
         }
         void Unregister(PluginHost::IStateControl::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
 

@@ -36,20 +36,28 @@ namespace Plugin {
     void LanguageAdministratorImpl::Register(Exchange::ILanguageTag::INotification* notification)
     {
         ASSERT(notification);
+
         _adminLock.Lock();
-        notification->AddRef();
-        _notifications.push_back(notification);
+        auto item = find(_notifications.begin(), _notifications.end(), notification);
+        ASSERT(item == _notifications.end());
+        if (item == _notifications.end()) {
+            notification->AddRef();
+            _notifications.push_back(notification);
+        }
         _adminLock.Unlock();
     }
 
     void LanguageAdministratorImpl::Unregister(const Exchange::ILanguageTag::INotification* notification)
     {
         ASSERT(notification);
+
         _adminLock.Lock();
         auto item = find(_notifications.begin(), _notifications.end(), notification);
         ASSERT(item != _notifications.end());
-        _notifications.erase(item);
-        (*item)->Release();
+        if (item != _notifications.end()) {
+            _notifications.erase(item);
+            (*item)->Release();
+        }
         _adminLock.Unlock();
     }
 

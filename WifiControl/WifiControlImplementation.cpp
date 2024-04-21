@@ -886,8 +886,12 @@ namespace Plugin
         {
             ASSERT(notification);
             _adminLock.Lock();
-            notification->AddRef();
-            _notifications.push_back(notification);
+            auto item = std::find(_notifications.begin(), _notifications.end(), notification);
+            ASSERT(item == _notifications.end());
+            if (item == _notifications.end()) {
+                notification->AddRef();
+                _notifications.push_back(notification);
+            }
             _adminLock.Unlock();
 
             return Core::ERROR_NONE;
@@ -899,8 +903,10 @@ namespace Plugin
             _adminLock.Lock();
             auto item = std::find(_notifications.begin(), _notifications.end(), notification);
             ASSERT(item != _notifications.end());
-            _notifications.erase(item);
-            (*item)->Release();
+            if (item != _notifications.end()) {
+                _notifications.erase(item);
+                (*item)->Release();
+            }
             _adminLock.Unlock();
 
             return Core::ERROR_NONE;

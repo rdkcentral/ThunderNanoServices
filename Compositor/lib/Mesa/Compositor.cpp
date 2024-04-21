@@ -504,22 +504,28 @@ namespace Plugin {
 
         void Register(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-            ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
+            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
+            ASSERT(index == _observers.end());
 
-            notification->AddRef();
+            if (index == _observers.end()) {
+                notification->AddRef();
 
-            _observers.push_back(notification);
-
-            _clients.Visit(
-                [=](const string& name, const Core::ProxyType<Client>& element) {
-                    notification->Attached(name, &(*element));
-                });
+                _observers.push_back(notification);
+                _clients.Visit(
+                    [=](const string& name, const Core::ProxyType<Client>& element) {
+                        notification->Attached(name, &(*element));
+                    });
+            }
         }
 
         void Unregister(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             _adminLock.Lock();
 
             std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));

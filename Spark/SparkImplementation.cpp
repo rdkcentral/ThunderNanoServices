@@ -713,19 +713,27 @@ POP_WARNING()
         }
         void Register(Exchange::IBrowser::INotification* sink) override
         {
+            ASSERT(sink != nullptr);
+
             _adminLock.Lock();
 
-            // Make sure a sink is not registered multiple times.
-            ASSERT(std::find(_sparkClients.begin(), _sparkClients.end(), sink) == _sparkClients.end());
+	    std::list<Exchange::IBrowser::INotification*>::iterator index(
+                std::find(_sparkClients.begin(), _sparkClients.end(), sink));
 
-            _sparkClients.push_back(sink);
-            sink->AddRef();
+            // Make sure a sink is not registered multiple times.
+            ASSERT(index == _sparkClients.end());
+
+            if (index == _sparkClients.end()) {
+                _sparkClients.push_back(sink);
+                sink->AddRef();
+            }
 
             _adminLock.Unlock();
         }
 
         void Unregister(Exchange::IBrowser::INotification* sink) override
         {
+            ASSERT(sink != nullptr);
             _adminLock.Lock();
 
             std::list<Exchange::IBrowser::INotification*>::iterator index(
@@ -744,19 +752,27 @@ POP_WARNING()
 
         void Register(PluginHost::IStateControl::INotification* sink) override
         {
+            ASSERT(sink != nullptr);
+
             _adminLock.Lock();
 
-            // Make sure a sink is not registered multiple times.
-            ASSERT(std::find(_stateControlClients.begin(), _stateControlClients.end(), sink) == _stateControlClients.end());
+            std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_stateControlClients.begin(), _stateControlClients.end(), sink));
 
-            _stateControlClients.push_back(sink);
-            sink->AddRef();
+            // Make sure a sink is not registered multiple times.
+            ASSERT(index == _stateControlClients.end());
+
+            if (index == _stateControlClients.end()) {
+                _stateControlClients.push_back(sink);
+                sink->AddRef();
+            }
 
             _adminLock.Unlock();
         }
 
         void Unregister(PluginHost::IStateControl::INotification* sink) override
         {
+            ASSERT(sink != nullptr);
+
             _adminLock.Lock();
 
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_stateControlClients.begin(), _stateControlClients.end(), sink));

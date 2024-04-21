@@ -241,25 +241,38 @@ namespace Plugin {
 
         void Register(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             _adminLock.Lock();
-            ASSERT(std::find(_observers.begin(), _observers.end(), notification)
-                == _observers.end());
-            notification->AddRef();
-            _observers.push_back(notification);
-            auto index(_clients.begin());
-            while (index != _clients.end()) {
-                notification->Attached(index->first, index->second.clientInterface);
-                index++;
+
+            std::list<Exchange::IComposition::INotification*>::iterator it(
+                std::find(_observers.begin(), _observers.end(), notification));
+
+            ASSERT(it == _observers.end());
+
+            if (it == _observers.end()) {
+                notification->AddRef();
+                _observers.push_back(notification);
+
+                auto index(_clients.begin());
+                while (index != _clients.end()) {
+                    notification->Attached(index->first, index->second.clientInterface);
+                    index++;
+                }
             }
             _adminLock.Unlock();
         }
 
         void Unregister(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             _adminLock.Lock();
             std::list<Exchange::IComposition::INotification*>::iterator index(
                 std::find(_observers.begin(), _observers.end(), notification));
+
             ASSERT(index != _observers.end());
+
             if (index != _observers.end()) {
                 _observers.erase(index);
                 notification->Release();

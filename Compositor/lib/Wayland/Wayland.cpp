@@ -347,27 +347,36 @@ namespace Plugin {
         }
         /* virtual */ void Register(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             // Do not double register a notification sink.
             g_implementationLock.Lock();
-            ASSERT(std::find(_compositionClients.begin(), _compositionClients.end(), notification) == _compositionClients.end());
 
-            notification->AddRef();
+            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
+            ASSERT(index == _compositionClients.end());
 
-            _compositionClients.push_back(notification);
+            if (index == _compositionClients.end()) {
+                notification->AddRef();
 
-            std::list<Entry*>::iterator index(_clients.begin());
+                _compositionClients.push_back(notification);
 
-            while (index != _clients.end()) {
+                std::list<Entry*>::iterator index(_clients.begin());
+                ASSERT(index != _clients.end());
 
-                if ((*index)->IsActive() == true) {
-                    notification->Attached((*index)->Name(), *index);
+                while (index != _clients.end()) {
+
+                    if ((*index)->IsActive() == true) {
+                        notification->Attached((*index)->Name(), *index);
+                    }
+                    index++;
                 }
-                index++;
             }
             g_implementationLock.Unlock();
         }
         /* virtual */ void Unregister(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             g_implementationLock.Lock();
             std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
 

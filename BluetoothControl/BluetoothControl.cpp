@@ -567,19 +567,23 @@ namespace Plugin {
 
     /* virtual */ uint32_t BluetoothControl::Register(IBluetooth::INotification* notification)
     {
+        ASSERT(notification != nullptr);
         _adminLock.Lock();
 
+        std::list<IBluetooth::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
+
         // Make sure a sink is not registered multiple times.
-        ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
+        ASSERT(index  == _observers.end());
 
-        _observers.push_back(notification);
-        notification->AddRef();
+        if (index  == _observers.end()) {
+            _observers.push_back(notification);
+            notification->AddRef();
 
-        // Allright iterate over all devices, so thay get announced by the observer..
-        for (std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) {
-            notification->Update(*index);
+            // Allright iterate over all devices, so thay get announced by the observer..
+            for (std::list<DeviceImpl*>::iterator index = _devices.begin(), end = _devices.end(); index != end; ++index) {
+                notification->Update(*index);
+            }
         }
-
         _adminLock.Unlock();
 
         return (Core::ERROR_NONE);
@@ -587,6 +591,8 @@ namespace Plugin {
 
     /* virtual */ uint32_t BluetoothControl::Unregister(IBluetooth::INotification* notification)
     {
+        ASSERT(notification != nullptr);
+
         _adminLock.Lock();
 
         std::list<IBluetooth::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));

@@ -228,29 +228,36 @@ namespace Plugin
 
     /* virtual */ void IOConnector::Register(Exchange::IExternal::ICatalog::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
-        ASSERT(std::find(_notifications.begin(), _notifications.end(), sink) == _notifications.end());
+        NotificationList::iterator index = std::find(_notifications.begin(), _notifications.end(), sink);
+        ASSERT(index == _notifications.end());
 
-        _notifications.push_back(sink);
-        sink->AddRef();
+        if (index == _notifications.end()) {
+            _notifications.push_back(sink);
+            sink->AddRef();
 
-        // report all the IExternals we have
-        for (std::pair<const uint32_t, PinHandler>& product : _pins) {
-            sink->Activated(product.second.Pin());
+            // report all the IExternals we have
+            for (std::pair<const uint32_t, PinHandler>& product : _pins) {
+                sink->Activated(product.second.Pin());
+            }
         }
-
         _adminLock.Unlock();
     }
 
     /* virtual */ void IOConnector::Unregister(Exchange::IExternal::ICatalog::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         // Make sure a sink is not unregistered multiple times.
         NotificationList::iterator index = std::find(_notifications.begin(), _notifications.end(), sink);
 
+        ASSERT(index != _notifications.end());
         if (index != _notifications.end()) {
             (*index)->Release();
             _notifications.erase(index);
