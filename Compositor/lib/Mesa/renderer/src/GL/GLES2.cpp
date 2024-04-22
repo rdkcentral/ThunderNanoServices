@@ -861,8 +861,7 @@ namespace Compositor {
             GLES& operator=(GLES const&) = delete;
 
             GLES(int drmDevFd)
-                : _drmDevFd(drmDevFd)
-                , _egl(drmDevFd)
+                : _egl(drmDevFd)
                 , _frameBuffer(nullptr)
                 , _viewportWidth(0)
                 , _viewportHeight(0)
@@ -1043,7 +1042,7 @@ namespace Compositor {
 
                     Matrix gl_matrix;
                     Transformation::Multiply(gl_matrix, _projection, transformation);
-                    Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_FLIPPED_180], transformation);
+                    Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_NORMAL], transformation);
                     Transformation::Transpose(gl_matrix, gl_matrix);
 
                     const GLfloat x1 = region.x / glesTexture->Width();
@@ -1163,7 +1162,6 @@ namespace Compositor {
             static API::GL _gles;
 
         private:
-            int _drmDevFd;
             EGL _egl;
             std::unique_ptr<FrameBuffer> _frameBuffer;
             uint32_t _viewportWidth;
@@ -1182,6 +1180,8 @@ namespace Compositor {
 
     Core::ProxyType<IRenderer> IRenderer::Instance(Core::instance_id identifier)
     {
+        ASSERT(int(identifier) >= 0);  // this should be a valid file descriptor.
+
         static Core::ProxyMapType<Core::instance_id, IRenderer> glRenderers;
 
         return glRenderers.Instance<Renderer::GLES>(identifier, static_cast<int>(identifier));

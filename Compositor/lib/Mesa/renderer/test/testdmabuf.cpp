@@ -31,6 +31,7 @@
 #include <vector>
 #include <inttypes.h>
 
+#include <IBackend.h>
 #include <IBuffer.h>
 #include <IRenderer.h>
 #include <Transformation.h>
@@ -38,8 +39,6 @@
 #include <DRM.h>
 
 #include <drm_fourcc.h>
-
-#include <simpleworker/SimpleWorker.h>
 
 #include <DmaBuffer.h>
 
@@ -55,30 +54,40 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const uint8_t fps)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
         : _adminLock()
-        , _lastFrame(0)
-        , _sink(*this)
         , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
         , _textureBuffer()
-        , _fps(fps)
         , _texture(nullptr)
+        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
+        , _rotations(rotationsPerSecond)
+        , _running(false)
+        , _render()
+        , _renderFd(::open(renderId.c_str(), O_RDWR))
     {
-        _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, _format);
+        _connector = Compositor::Connector(
+            connectorId,
+            { 0, 0, 1080, 1920 },
+            _format);
+
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created connector: %p", _connector.operator->()));
 
-        _renderer = Compositor::IRenderer::Instance(_connector->Identifier());
+        ASSERT(_renderFd >= 0);
+
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
-        _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_connector->Identifier(), Texture::TvTexture);
+        _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
         _texture = _renderer->Texture(_textureBuffer.operator->());
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %p", _texture));
+
+        NewFrame();
     }
 
     ~RenderTest()
@@ -88,6 +97,8 @@ public:
         _renderer.Release();
         _connector.Release();
         _textureBuffer.Release();
+
+        ::close(_renderFd);
     }
 
     void Start()
@@ -95,8 +106,7 @@ public:
         TRACE(Trace::Information, ("Starting RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        _lastFrame = Core::Time::Now().Ticks();
-        Core::SimpleWorker::Instance().Submit(&_sink);
+        _render = std::thread(&RenderTest::Render, this);
     }
 
     void Stop()
@@ -104,51 +114,36 @@ public:
         TRACE(Trace::Information, ("Stopping RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        Core::SimpleWorker::Instance().Revoke(&_sink);
-        _lastFrame = 0;
+
+        if (_running) {
+            _running = false;
+            _render.join();
+        }
     }
 
     bool Running() const
     {
-        return (_lastFrame != 0);
+        return _running;
     }
 
 private:
-    class Sink : public Core::SimpleWorker::ICallback {
-    public:
-        Sink() = delete;
-        Sink(const Sink&) = delete;
-        Sink& operator=(const Sink&) = delete;
+    void Render()
+    {
+        _running = true;
 
-        Sink(RenderTest& parent)
-            : _parent(parent)
-        {
+        while (_running) {
+            const auto next = _period - NewFrame();
+            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
         }
+    }
 
-        virtual ~Sink() = default;
-
-    public:
-        uint64_t Activity(const uint64_t time)
-        {
-            return _parent.NewFrame(time);
-        }
-
-    private:
-        RenderTest& _parent;
-    };
-
-    uint64_t NewFrame(const uint64_t scheduledTime)
+    std::chrono::microseconds NewFrame()
     {
         static float rotation = 0.f;
 
+        const auto start = std::chrono::high_resolution_clock::now();
+
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-        if (Running() == false) {
-            TRACE(Trace::Information, ("Canceling render attempt"));
-            return 0;
-        }
-
-        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -163,7 +158,7 @@ private:
 
         const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
         const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
         _renderer->Render(_texture, textureBox, matrix, 1.0f);
@@ -174,39 +169,65 @@ private:
 
         _renderer->Unbind();
 
-        // TODO rotate with a delta time
-        rotation += 0.05;
-        if (rotation > 2 * M_PI) {
-            rotation = 0.f;
-        }
+        rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 
-        _lastFrame = scheduledTime;
-
-        return scheduledTime + ((Core::Time::MilliSecondsPerSecond * Core::Time::TicksPerMillisecond) / _fps);
+        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
 private:
     mutable Core::CriticalSection _adminLock;
-    uint64_t _lastFrame;
-    Sink _sink;
     const Compositor::PixelFormat _format;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
-    const uint8_t _fps;
     Compositor::IRenderer::ITexture* _texture;
+    const std::chrono::microseconds _period;
+    const float _rotations;
+    bool _running;
+    std::thread _render;
+    int _renderFd;
 }; // RenderTest
+
+class ConsoleOptions : public Core::Options {
+public:
+    ConsoleOptions(int argumentCount, TCHAR* arguments[])
+        : Core::Options(argumentCount, arguments, _T("o:r:h"))
+        , RenderNode("/dev/dri/card0")
+        , Output(RenderNode)
+    {
+        Parse();
+    }
+    ~ConsoleOptions()
+    {
+    }
+
+public:
+    const TCHAR* RenderNode;
+    const TCHAR* Output;
+
+private:
+    virtual void Option(const TCHAR option, const TCHAR* argument)
+    {
+        switch (option) {
+        case 'o':
+            Output = argument;
+            break;
+        case 'r':
+            RenderNode = argument;
+            break;
+        case 'h':
+        default:
+            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>]\n");
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }
+};
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
-    std::string connectorId;
-
-    if (argc == 1) {
-        connectorId = "card1-HDMI-A-1";
-    } else {
-        connectorId = argv[1];
-    }
+    WPEFramework::ConsoleOptions options(argc, argv);
 
     WPEFramework::Messaging::LocalTracer& tracer = WPEFramework::Messaging::LocalTracer::Open();
 
@@ -220,8 +241,8 @@ int main(int argc, const char* argv[])
         const std::vector<string> modules = {
             "CompositorRenderTest",
             "CompositorBuffer",
-            "CompositorBackendOFF",
-            "CompositorRendererOFF",
+            "CompositorBackend",
+            "CompositorRenderer",
             "DRMCommon"
         };
 
@@ -231,7 +252,7 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 30);
+        WPEFramework::RenderTest test(options.Output, options.RenderNode, 120, 10);
 
         test.Start();
 

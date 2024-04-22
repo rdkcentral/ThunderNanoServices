@@ -23,6 +23,9 @@
 #include <messaging/messaging.h>
 #include <array>
 
+#include <interfaces/IComposition.h>
+#include <interfaces/ICompositionBuffer.h>
+
 namespace WPEFramework {
 
 namespace Compositor {
@@ -33,6 +36,18 @@ struct Box {
     int width;
     int height;
 };
+
+namespace Rectangle {
+    constexpr Exchange::IComposition::Rectangle Default()
+    {
+        return { 0, 0, 0, 0 };
+    }
+
+    constexpr bool IsDefault(const Exchange::IComposition::Rectangle& rectangle)
+    {
+        return (rectangle.x == 0) && (rectangle.y == 0) && (rectangle.height == 0) && (rectangle.width == 0);
+    }
+}
 
 using Identifier = uintptr_t;
 using Matrix = std::array<float, 9>;
