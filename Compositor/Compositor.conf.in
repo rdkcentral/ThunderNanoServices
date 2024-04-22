@@ -1,7 +1,5 @@
 startmode = "@PLUGIN_COMPOSITOR_STARTMODE@"
 
-communicator = "/communicator|0777"
-
 configuration = JSON()
 
 configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
