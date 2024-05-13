@@ -40,26 +40,26 @@ public:
         explicit SignatureBuilder(string const& name, JsonData::TestUtility::TypeType type, string const& comment)
             : _jsonSignature()
         {
-           	JsonData::TestUtility::InputInfo inputParam;
-			inputParam.Name = name;
-			inputParam.Type = type;
-			inputParam.Comment = comment;
+            JsonData::TestUtility::ParameterInfo inputParam;
+            inputParam.Name = name;
+            inputParam.Type = type;
+            inputParam.Comment = comment;
 
             _jsonSignature.Output = inputParam;
         }
 
-        explicit SignatureBuilder(const JsonData::TestUtility::InputInfo& inputParam)
-                    : _jsonSignature()
-		{
-			_jsonSignature.Output = inputParam;
-		}
+        explicit SignatureBuilder(const JsonData::TestUtility::ParameterInfo& inputParam)
+            : _jsonSignature()
+        {
+            _jsonSignature.Output = inputParam;
+        }
 
         SignatureBuilder& InputParameter(const string& name, JsonData::TestUtility::TypeType type, const string& comment)
         {
-        	JsonData::TestUtility::InputInfo inputParam;
-        	inputParam.Name = name;
-        	inputParam.Type = type;
-        	inputParam.Comment = comment;
+            JsonData::TestUtility::ParameterInfo inputParam;
+            inputParam.Name = name;
+            inputParam.Type = type;
+            inputParam.Comment = comment;
             _jsonSignature.Input.Add(inputParam);
 
             return (*this);

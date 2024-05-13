@@ -30,8 +30,6 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include <libudev.h>
-
 #include <IBuffer.h>
 
 using namespace WPEFramework;
@@ -86,14 +84,14 @@ int main(int argc, const char* argv[])
             case 'S': {
                 if (framebuffer.IsValid() == true) {
                     framebuffer->Render();
-                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer: %u", framebuffer->Identifier()));
-                    break;
+                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer: %u", framebuffer->Identifier()));    
                 }
+                break;
             }
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::Connector(ConnectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format, false);
+                    framebuffer = Compositor::Connector(ConnectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
                 }
                 break;

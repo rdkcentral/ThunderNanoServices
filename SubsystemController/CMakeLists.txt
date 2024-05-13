@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_SUBSYSTEMCONTROL_STARTMODE "activated" CACHE STRING "Automatically start SubsystemControl plugin")
+set(PLUGIN_SUBSYSTEMCONTROL_STARTMODE "Activated" CACHE STRING "Automatically start SubsystemControl plugin")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})

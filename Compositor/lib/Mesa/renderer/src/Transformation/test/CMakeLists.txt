@@ -27,7 +27,6 @@ add_subdirectory(ref_matrix)
 set_target_properties(transformationtest PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES
-    VERSION ${PROJECT_VERSION}
 )
 
 target_link_libraries(transformationtest
@@ -38,4 +37,4 @@ target_link_libraries(transformationtest
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
 )
 
-install(TARGETS transformationtest DESTINATION bin)
+install(TARGETS transformationtest DESTINATION bin/${NAMESPACE}Tests)

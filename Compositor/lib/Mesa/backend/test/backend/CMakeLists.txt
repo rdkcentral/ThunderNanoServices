@@ -31,4 +31,4 @@ target_link_libraries(backendtest
         common::drm
 )
 
-install(TARGETS backendtest DESTINATION bin)
+install(TARGETS backendtest DESTINATION bin/${NAMESPACE}Tests)

@@ -233,13 +233,6 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
-        PluginHost::ISubSystem* subSystems(service->SubSystems());
-        ASSERT(subSystems != nullptr);
-        if (subSystems != nullptr) {
-            subSystems->Set(PluginHost::ISubSystem::NOT_BLUETOOTH, nullptr);
-            subSystems->Release();
-        }
-
         if (Connector().IsOpen() == true) {
 
             Exchange::JBluetoothControl::Unregister(*this);

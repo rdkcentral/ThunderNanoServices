@@ -86,10 +86,14 @@ namespace Plugin {
                 , System(_T("Controller"))
                 , WorkDir()
                 , InputSwitch(_T("InputSwitch"))
+                , ClientBridge(_T("clientbridge"))
+                , Connector("connector")
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
                 Add(_T("inputswitch"), &InputSwitch);
+                Add(_T("clientbridge"), &ClientBridge);
+                Add(_T("connector"), &Connector);
             }
             ~Config() = default;
 
@@ -97,6 +101,8 @@ namespace Plugin {
             Core::JSON::String System;
             Core::JSON::String WorkDir;
             Core::JSON::String InputSwitch;
+            Core::JSON::String ClientBridge;
+            Core::JSON::String Connector;
         };
 
         class Data : public Core::JSON::Container {

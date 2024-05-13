@@ -76,7 +76,7 @@ namespace Compositor {
             WaylandOutput(WaylandOutput&&) = delete;
             WaylandOutput(const WaylandOutput&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
-            WaylandOutput(Wayland::IBackend& backend, const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force);
+            WaylandOutput(Wayland::IBackend& backend, const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format);
 
             virtual ~WaylandOutput();
 

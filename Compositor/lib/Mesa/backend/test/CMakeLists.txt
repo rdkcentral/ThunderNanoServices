@@ -16,4 +16,4 @@
 # limitations under the License.
 
 add_subdirectory(backend)
-add_subdirectory(scandrm)
+# add_subdirectory(scandrm)

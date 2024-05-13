@@ -104,7 +104,7 @@ namespace Compositor {
 
             virtual ~WaylandImplementation();
 
-            void AddRef() const override;
+            uint32_t AddRef() const override;
             uint32_t Release() const override;
 
             wl_surface* Surface() const override;
@@ -555,9 +555,10 @@ namespace Compositor {
             wl_display_disconnect(_wlDisplay);
         }
 
-        void WaylandImplementation::AddRef() const
+        uint32_t WaylandImplementation::AddRef() const
         {
             Core::InterlockedIncrement(_refCount);
+            return Core::ERROR_NONE;
         }
 
         uint32_t WaylandImplementation::Release() const
@@ -1005,10 +1006,10 @@ namespace Compositor {
      *
      * @return A `Core::ProxyType` object that wraps an instance of `Exchange::ICompositionBuffer`.
      */
-    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, const bool force, Compositor::ICallback* callback)
+    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance("");
-        return backend.Output(name, resolution, format, force, callback);
+        return backend.Output(name, resolution, format, callback);
     }
 } // namespace Compositor
 } // namespace WPEFramework

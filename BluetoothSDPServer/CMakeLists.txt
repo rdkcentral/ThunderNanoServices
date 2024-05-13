@@ -40,7 +40,7 @@ find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_BLUETOOTHSDPSERVER_STARTMODE "activated" CACHE STRING "Automatically start the plugin")
+set(PLUGIN_BLUETOOTHSDPSERVER_STARTMODE "Activated" CACHE STRING "Automatically start the plugin")
 
 set(PLUGIN_BLUETOOTHSDPSERVER_CONTROLLER "BluetoothControl" CACHE STRING "Bluetooth controller callsign")
 set(PLUGIN_BLUETOOTHSDPSERVER_PROVIDER "Thunder" CACHE STRING "SDP service provider name")

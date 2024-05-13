@@ -6,7 +6,7 @@
 
 namespace WPEFramework {
 namespace Compositor {
-    class TextureBuffer : public Exchange::ICompositionBuffer {
+    class PixelBuffer : public Exchange::ICompositionBuffer {
 
         using Pixel = std::array<uint8_t, 4>;
 
@@ -21,7 +21,7 @@ namespace Compositor {
 
             Exchange::ICompositionBuffer::buffer_id Accessor() const override
             {
-                return reinterpret_cast<Exchange::ICompositionBuffer::buffer_id>(_source.data);
+                return reinterpret_cast<Exchange::ICompositionBuffer::buffer_id>(_source.data.data());
             }
 
             uint32_t Stride() const override
@@ -50,7 +50,7 @@ namespace Compositor {
         
         class Iterator : public Exchange::ICompositionBuffer::IIterator {
         public:
-            Iterator(TextureBuffer& parent)
+            Iterator(PixelBuffer& parent)
                 : _parent(parent)
                 , _index(0)
             {
@@ -81,25 +81,25 @@ namespace Compositor {
             }
 
         private:
-            TextureBuffer& _parent;
+            PixelBuffer& _parent;
             uint8_t _index;
         };
 
     public:
-        TextureBuffer() = delete;
+        PixelBuffer() = delete;
 
-        TextureBuffer(const Texture::PixelData& source)
+        PixelBuffer(const Texture::PixelData& source)
             : _pixels(source)
             , _planes(*this)
         {
         }
 
-        TextureBuffer(const TextureBuffer&) = delete;
-        TextureBuffer& operator=(const TextureBuffer&) = delete;
+        PixelBuffer(const PixelBuffer&) = delete;
+        PixelBuffer& operator=(const PixelBuffer&) = delete;
 
-        virtual ~TextureBuffer() = default;
+        virtual ~PixelBuffer() = default;
 
-        void AddRef() const override;
+        uint32_t AddRef() const override;
 
         uint32_t Release() const override;
 
@@ -127,6 +127,6 @@ namespace Compositor {
     private:
         Pixels _pixels;
         Iterator _planes;
-    }; // class TextureBuffer
+    }; // class PixelBuffer
 } // namespace WPEFramework
 } // namespace Compositor

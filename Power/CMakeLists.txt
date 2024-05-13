@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_POWER_STARTMODE "activated" CACHE STRING true)
+set(PLUGIN_POWER_STARTMODE "Activated" CACHE STRING true)
 set(PLUGIN_POWER_GPIOPIN "" CACHE STRING "GPIO pin number")
 set(PLUGIN_POWER_GPIOTYPE "" CACHE STRING "GPIO type")
 # PLUGIN_POWER_POWER_KEY is for setting the keycode of the key that needs to be configured as power button.

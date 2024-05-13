@@ -29,7 +29,7 @@ public:
     Free& operator=(const Free&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::InputInfo;
+    using Parameter = JsonData::TestUtility::ParameterInfo;
 
     Free()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Releases previously allocated memory"),

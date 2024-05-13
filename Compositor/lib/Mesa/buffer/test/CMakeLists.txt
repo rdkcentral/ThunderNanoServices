@@ -33,4 +33,4 @@ target_link_libraries(buffertest
         common::drm
 )
 
-install(TARGETS buffertest DESTINATION bin)
+install(TARGETS buffertest DESTINATION bin/${NAMESPACE}Tests)

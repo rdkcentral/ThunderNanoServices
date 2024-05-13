@@ -31,7 +31,7 @@ namespace Compositor {
         struct ITexture {
             virtual ~ITexture() = default;
 
-            virtual void AddRef() const = 0;
+            virtual uint32_t AddRef() const = 0;
             virtual uint32_t Release() const = 0;
 
             virtual bool IsValid() const = 0;

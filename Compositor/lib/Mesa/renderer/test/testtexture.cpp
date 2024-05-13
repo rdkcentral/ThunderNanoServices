@@ -43,20 +43,20 @@
 
 #include <simpleworker/SimpleWorker.h>
 
-#include <TextureBuffer.h>
+#include <PixelBuffer.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
-static Compositor::TextureBuffer textureRed(Texture::Red);
-static Compositor::TextureBuffer textureGreen(Texture::Green);
-static Compositor::TextureBuffer textureBlue(Texture::Blue);
+static Compositor::PixelBuffer textureRed(Texture::Red);
+static Compositor::PixelBuffer textureGreen(Texture::Green);
+static Compositor::PixelBuffer textureBlue(Texture::Blue);
 
-static Compositor::TextureBuffer textureSimple(Texture::Simple);
+static Compositor::PixelBuffer textureSimple(Texture::Simple);
 
-static Compositor::TextureBuffer textureTv(Texture::TvTexture);
+static Compositor::PixelBuffer textureTv(Texture::TvTexture);
 
 class RenderTest {
 public:
@@ -68,17 +68,16 @@ public:
         : _adminLock()
         , _lastFrame(0)
         , _sink(*this)
-        , _connector()
         , _renderer()
+        , _connector()
         , _fps(fps)
         , _texture(nullptr)
 
     {
         _connector = Compositor::Connector(
             connectorId,
-            Exchange::IComposition::ScreenResolution::ScreenResolution_720p,
-            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
-            false);
+            Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }));
 
         ASSERT(_connector.IsValid());
 
@@ -155,7 +154,7 @@ private:
             return 0;
         }
 
-        const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
+        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -168,12 +167,12 @@ private:
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { .x = (width / 2) - (renderWidth / 2), .y = (height / 2) - (renderHeight / 2), .width = renderWidth, .height = renderHeight };
+        const Compositor::Box renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
         Compositor::Matrix matrix;
-        
+
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(_texture->Width()), .height = int(_texture->Height()) };
+        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
         _renderer->Render(_texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);
@@ -239,8 +238,6 @@ int main(int argc, const char* argv[])
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
         WPEFramework::RenderTest test(connectorId, 15);
-
-        test.Start();
 
         char keyPress;
 

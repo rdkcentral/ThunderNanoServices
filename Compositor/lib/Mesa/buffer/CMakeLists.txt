@@ -23,7 +23,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/src/${COMPOSITOR_BUFFER_IMPLEMENTATION}
     message(FATAL_ERROR "Missing a buffer implementation for ${COMPOSITOR_BUFFER_IMPLEMENTATION}")
 endif()
 
-message(STATUS "-- Buffer ${COMPOSITOR_BUFFER_IMPLEMENTATION}")
+message(STATUS "Buffer: ${COMPOSITOR_BUFFER_IMPLEMENTATION}")
 
 add_subdirectory("src/${COMPOSITOR_BUFFER_IMPLEMENTATION}")
 add_subdirectory(test)
