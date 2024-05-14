@@ -173,8 +173,17 @@ namespace Plugin
             return result;
         }
 
-        Core::hresult GetAllowResumePoints(const string& appId, bool& allowResumePoints /* @out */) const override {
-            SYSLOG(Logging::Error, (_T("Getting allow resume points: %s"), appId.c_str()));
+        Core::hresult GetStorageLocation(StorageLocation& value /* @out */) const override {
+            if (_inMemory) {
+                value = StorageLocation::InMemory;
+            } else {
+                value = StorageLocation::Disk;
+            }
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult GetAllowResumePoints(bool& allowResumePoints /* @out */) const override {
+            SYSLOG(Logging::Error, (_T("Getting allow resume points:")));
             if (_inMemory) {
                 _adminLock.Lock();
                 allowResumePoints = _allowResumePoints;
@@ -191,8 +200,7 @@ namespace Plugin
             return Core::ERROR_NONE;
         }
 
-        Core::hresult SetAllowResumePoints(const string& appId, const bool& allowResumePoints ) override {
-            SYSLOG(Logging::Error, (_T("Setting allow resume points: %s"), appId.c_str()));
+        Core::hresult SetAllowResumePoints(const bool& allowResumePoints ) override {
             if (_inMemory) {
                 _adminLock.Lock();
                 _allowResumePoints = allowResumePoints;

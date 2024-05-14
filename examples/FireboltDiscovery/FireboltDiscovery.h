@@ -22,17 +22,19 @@
 
 #include "Module.h"
 
-#include <interfaces/IFireboltPrivacy.h>
-#include <interfaces/json/JFireboltPrivacy.h>
-#include <interfaces/json/JsonData_FireboltPrivacy.h>
+#include <interfaces/IFireboltDiscovery.h>
+#include <interfaces/json/JFireboltDiscovery.h>
+#include <interfaces/json/JsonData_FireboltDiscovery.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    class FireboltPrivacy : public PluginHost::IPlugin,
-                           public PluginHost::JSONRPC {
+    class FireboltDiscovery : public PluginHost::IPlugin
+                            , public PluginHost::JSONRPC
+                            , public Exchange::JSONRPC::IFireboltDiscovery {
     private:
-        class NotificationHandler : public RPC::IRemoteConnection::INotification, public Exchange::IFireboltPrivacy::INotification {
+#if 0
+        class NotificationHandler : public RPC::IRemoteConnection::INotification, public Exchange::IFireboltDiscovery::INotification {
         public:
             NotificationHandler() = delete;
             NotificationHandler(const NotificationHandler&) = delete;
@@ -40,7 +42,7 @@ namespace Plugin {
             NotificationHandler& operator=(const NotificationHandler&) = delete;
             NotificationHandler& operator=(NotificationHandler&&) = delete;
 
-            NotificationHandler(FireboltPrivacy& parent)
+            NotificationHandler(FireboltDiscovery& parent)
                 : _parent(parent)
             {
             }
@@ -65,26 +67,27 @@ namespace Plugin {
             }
             BEGIN_INTERFACE_MAP(NotificationHandler)
                 INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
-                INTERFACE_ENTRY(Exchange::IFireboltPrivacy::INotification)
+                INTERFACE_ENTRY(Exchange::IFireboltDiscovery::INotification)
             END_INTERFACE_MAP
 
         private:
-            FireboltPrivacy& _parent;
+            FireboltDiscovery& _parent;
         };
+#endif
     public:
-        FireboltPrivacy(const FireboltPrivacy&) = delete;
-        FireboltPrivacy(FireboltPrivacy&&) = delete;
-        FireboltPrivacy& operator=(const FireboltPrivacy&) = delete;
-        FireboltPrivacy& operator=(FireboltPrivacy&) = delete;
+        FireboltDiscovery(const FireboltDiscovery&) = delete;
+        FireboltDiscovery(FireboltDiscovery&&) = delete;
+        FireboltDiscovery& operator=(const FireboltDiscovery&) = delete;
+        FireboltDiscovery& operator=(FireboltDiscovery&) = delete;
 
-        FireboltPrivacy();
-        ~FireboltPrivacy() override = default;
+        FireboltDiscovery();
+        ~FireboltDiscovery() override = default;
 
         // Build QueryInterface implementation, specifying all possible interfaces to be returned.
-        BEGIN_INTERFACE_MAP(FireboltPrivacy)
+        BEGIN_INTERFACE_MAP(FireboltDiscovery)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_AGGREGATE(Exchange::IFireboltPrivacy, _fireboltPrivacy)
+            //INTERFACE_AGGREGATE(Exchange::IFDiscovery, _fireboltDiscovery)
         END_INTERFACE_MAP
 
     public:
@@ -93,18 +96,16 @@ namespace Plugin {
         const string Initialize(PluginHost::IShell* service) override;
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
+        Core::hresult SignIn(const Core::JSONRPC::Context& context, const bool param ) override;
 
 
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
-        void OnAllowResumePointsChanged(const bool allowResumePoint);
-        PluginHost::JSONRPC::classification CheckToken(const string& token, const string& method, const string& parameters);
 
     private:
         uint32_t _connectionId;
         PluginHost::IShell* _service;
-        Exchange::IFireboltPrivacy* _fireboltPrivacy;
-        Core::SinkType<NotificationHandler> _notificationSink;
+        Exchange::IFDiscovery* _fireboltDiscovery;
         
     };
 

@@ -27,7 +27,7 @@ ENUM_CONVERSION_BEGIN(Plugin::Dictionary::enumType)
     { Plugin::Dictionary::enumType::PERSISTENT, _TXT("persistent") },
     { Plugin::Dictionary::enumType::CLOSURE, _TXT("closure") },
 
-    ENUM_CONVERSION_END(Plugin::Dictionary::enumType);
+    ENUM_CONVERSION_END(Plugin::Dictionary::enumType)
 
 namespace Plugin {
 
