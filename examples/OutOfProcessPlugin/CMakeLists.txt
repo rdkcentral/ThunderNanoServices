@@ -34,6 +34,7 @@ set(PLUGIN_OUTOFPROCESSPLUGIN_MODE "Local" CACHE STRING "Controls if the OutOfPr
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(compositorclient REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
 Module.cpp
@@ -49,7 +50,9 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        compositorclient::compositorclient
+        )
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION lib/${STORAGE_DIRECTORY}/plugins)

@@ -21,6 +21,7 @@
 #include "OutOfProcessPlugin.h"
 #include <interfaces/ITimeSync.h>
 
+#include "Thunder/compositor/Client.h"
 #include <thread>
 
 #ifdef __CORE_EXCEPTION_CATCHING__
@@ -135,6 +136,7 @@ POP_WARNING()
                 , Destruct(1000)
                 , Single(false)
                 , ExternalAccess(_T("/tmp/oopexample"))
+                , CompositorClientTest(false)
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("config"), &Init);
@@ -142,6 +144,7 @@ POP_WARNING()
                 Add(_T("destruct"), &Destruct);
                 Add(_T("single"), &Single);
                 Add(_T("accessor"), &ExternalAccess);
+                Add(_T("compositorclienttest"), &CompositorClientTest);
             }
             ~Config() override = default;
 
@@ -152,6 +155,7 @@ POP_WARNING()
             Core::JSON::DecUInt32 Destruct;
             Core::JSON::Boolean Single;
             Core::JSON::String ExternalAccess;
+            Core::JSON::Boolean CompositorClientTest;
         };
 
     public:
@@ -237,6 +241,12 @@ POP_WARNING()
                 _engine.Release();
                 TRACE(Trace::Information, (_T("Destructed _externalAccess")));
             }
+            if (_display) {
+                if (_surface) {
+                    _surface->Release();
+                }
+                _display->Release();
+            }
 
             if (_service) {
                 TRACE(Trace::Information, (_T("Releasing service")));
@@ -311,6 +321,14 @@ POP_WARNING()
 
             return (result);
         }
+        void ConnectCompositorClient(const string& callsign)
+        {
+            _display = Thunder::Compositor::IDisplay::Instance(callsign);
+            if (_display) {
+                _surface = _display->Create(callsign + "Display", 1080, 920);
+            }
+        }
+
         string GetURL() const override
         {
             TRACE(Trace::Information, (_T("Requested URL: [%s]"), _requestedURL.c_str()));
@@ -362,7 +380,7 @@ POP_WARNING()
 
             _adminLock.Lock();
             
-	    std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
+            std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
 
             // Make sure a sink is not registered multiple times.
             ASSERT(index == _browserClients.end());
@@ -641,6 +659,9 @@ POP_WARNING()
                 abort();
             }
 
+            if (_config.CompositorClientTest.IsSet() == true && _config.CompositorClientTest.Value() == true) {
+                ConnectCompositorClient(_service->Callsign());
+            }
             // Just do nothing :-)
             Block();
 
@@ -668,6 +689,9 @@ POP_WARNING()
         PluginHost::IShell* _service;
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
+
+        WPEFramework::Compositor::IDisplay* _display;
+        WPEFramework::Compositor::IDisplay::ISurface* _surface;
 
         StateType _type;
         Core::WorkerPool::JobType<OutOfProcessImplementation&> _job;
