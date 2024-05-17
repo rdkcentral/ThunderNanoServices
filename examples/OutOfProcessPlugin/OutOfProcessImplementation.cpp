@@ -30,6 +30,15 @@
 namespace WPEFramework {
 namespace Plugin {
 
+    static Core::NodeId CompositorConnector()
+    {
+        string connector;
+        if ((Core::SystemInfo::GetEnvironment(_T("COMPOSITOR"), connector) == false) || (connector.empty() == true)) {
+            connector = _T("/tmp/compositor");
+        }
+        return (Core::NodeId(connector.c_str()));
+    }
+
     class TooMuchInfo {
         // -------------------------------------------------------------------
         // This object should not be copied or assigned. Prevent the copy
@@ -363,7 +372,7 @@ POP_WARNING()
                 Core::ProxyType<RPC::InvokeServer> engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
                 ASSERT(engine.IsValid() == true);
 
-                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Connector(), Core::ProxyType<Core::IIPCServer>(engine));
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(), Core::ProxyType<Core::IIPCServer>(engine));
                 ASSERT(_compositerServerRPCConnection.IsValid() == true);
 
             } else {
@@ -372,7 +381,7 @@ POP_WARNING()
                 Core::ProxyType<RPC::InvokeServerType<2,0,8>> engine = Core::ProxyType<RPC::InvokeServerType<2,0,8>>::Create();
                 ASSERT(engine.IsValid() == true);
 
-                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Connector(), Core::ProxyType<Core::IIPCServer>(engine));
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(), Core::ProxyType<Core::IIPCServer>(engine));
                 ASSERT(_compositerServerRPCConnection.IsValid() == true);
 
             }
