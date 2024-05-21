@@ -24,5 +24,6 @@
 #endif
 
 #include <core/core.h>
-#include <messaging/messaging.h>
 #include <com/com.h>
+#include <messaging/messaging.h>
+#include <definitions/definitions.h>

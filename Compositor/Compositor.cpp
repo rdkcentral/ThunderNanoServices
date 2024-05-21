@@ -183,7 +183,7 @@ namespace Plugin {
         Compositor::Config config;
         config.FromString(service->ConfigLine());
 
-        _skipURL = service->WebPrefix().length();
+        _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         if ((config.BufferConnector.IsSet() == true) && (config.BufferConnector.Value().empty() == false)) {
             std::string bufferPath = service->VolatilePath() + config.BufferConnector.Value();
@@ -281,7 +281,7 @@ namespace Plugin {
 
         Core::ProxyType<Web::Response> result(responseFactory.Element());
         Core::TextSegmentIterator
-            index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+            index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
 
         // If there is an entry, the first one will always be a '/', skip this one..
         index.Next();
