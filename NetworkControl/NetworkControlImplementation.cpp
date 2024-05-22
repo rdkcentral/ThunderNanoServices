@@ -743,7 +743,7 @@ namespace Plugin
             Core::File dnsFile(_dnsFile);
             if (dnsFile.Exists() == false) {
                 if (dnsFile.Create() == false) {
-                    SYSLOG(Logging::Startup, (_T("Could not create DNS configuration file [%s]"), _dnsFile.c_str()));
+                    SYSLOG(Logging::Activate, (_T("Could not create DNS configuration file [%s]"), _dnsFile.c_str()));
                 } else {
                     dnsFile.Close();
 
@@ -766,7 +766,7 @@ namespace Plugin
             if (_persistentStoragePath.empty() == false) {
                 if (Core::Directory(_persistentStoragePath.c_str()).CreatePath() == false) {
                     _persistentStoragePath.clear();
-                    SYSLOG(Logging::Startup, (_T("Failed to create storage for network info: %s"), _persistentStoragePath.c_str()));
+                    SYSLOG(Logging::Activate, (_T("Failed to create storage for network info: %s"), _persistentStoragePath.c_str()));
                 }
                 _persistentStoragePath += _T("Data.json");
             }
@@ -792,7 +792,7 @@ namespace Plugin
                     Core::AdapterIterator hardware(interfaceName);
 
                     if (hardware.IsValid() == false) {
-                        SYSLOG(Logging::Startup, (_T("Interface [%s], not available"), interfaceName.c_str()));
+                        SYSLOG(Logging::Activate, (_T("Interface [%s], not available"), interfaceName.c_str()));
                     } else {
                         DHCPEngine& engine = AddInterface(hardware, index.Current());
                         if (hardware.IsUp() == false) {
@@ -1014,7 +1014,7 @@ namespace Plugin
                 uint8_t buffer[DHCPClient::MACSize];
                 Core::FromHexString(entry.MAC.IsNull() ? info.MAC.Value() : entry.MAC.Value(), buffer, sizeof(buffer), ':');
                 if (hardware.MACAddress(buffer) != Core::ERROR_NONE) {
-                    SYSLOG(Logging::Startup, (_T("Interface [%s], could not set requested MAC address"), interfaceName.c_str()));
+                    SYSLOG(Logging::Activate, (_T("Interface [%s], could not set requested MAC address"), interfaceName.c_str()));
                 }
             }
 
@@ -1377,7 +1377,7 @@ namespace Plugin
                 ::memcpy(&(file[offset]), data.c_str(), data.length());
                 file.Sync();
 
-                SYSLOG(Logging::Startup, (_T("DNS functionality updated [%s]"), _dnsFile.c_str()));
+                SYSLOG(Logging::Activate, (_T("DNS functionality updated [%s]"), _dnsFile.c_str()));
             }
         }
 

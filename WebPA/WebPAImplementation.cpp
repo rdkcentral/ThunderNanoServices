@@ -201,7 +201,7 @@ public:
         _adminLock.Unlock();
 
         if (clientSize == 0) {
-            SYSLOG(Logging::Startup, (_T("No WebPA Clients registered, please wait for sometime to get client ready")));
+            SYSLOG(Logging::Activate, (_T("No WebPA Clients registered, please wait for sometime to get client ready")));
         }
 
         return result;

@@ -67,7 +67,7 @@ namespace Plugin {
             PluginHost::ISubSystem* subSystem = service->SubSystems();
             if (subSystem != nullptr) {
                 if (subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
-                    SYSLOG(Logging::Startup, (_T("Streamer is not defined as External !!")));
+                    SYSLOG(Logging::Activate, (_T("Streamer is not defined as External !!")));
                 } else {
                     subSystem->Set(PluginHost::ISubSystem::STREAMING, nullptr);
                 }

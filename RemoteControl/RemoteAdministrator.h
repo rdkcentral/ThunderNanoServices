@@ -430,9 +430,9 @@ namespace Remotes {
 
                 if (result != Core::ERROR_NONE) {
                     if (callback == nullptr) {
-                        SYSLOG(Logging::Startup, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Activate, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
                     } else {
-                        SYSLOG(Logging::Shutdown, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Deactivate, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
                     }
                 }
 
@@ -455,9 +455,9 @@ namespace Remotes {
 
                 if (result != Core::ERROR_NONE) {
                     if (callback == nullptr) {
-                        SYSLOG(Logging::Startup, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Activate, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
                     } else {
-                        SYSLOG(Logging::Shutdown, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Deactivate, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
                     }
                 }
 
@@ -480,9 +480,9 @@ namespace Remotes {
 
                 if (result != Core::ERROR_NONE) {
                     if (callback == nullptr) {
-                        SYSLOG(Logging::Startup, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Activate, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
                     } else {
-                        SYSLOG(Logging::Shutdown, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Deactivate, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
                     }
                 }
 
@@ -505,9 +505,9 @@ namespace Remotes {
 
                 if (result != Core::ERROR_NONE) {
                     if (callback == nullptr) {
-                        SYSLOG(Logging::Startup, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Activate, (_T("Failed to initialize %s, error [%d]"), (*index)->Name(), result));
                     } else {
-                        SYSLOG(Logging::Shutdown, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
+                        SYSLOG(Logging::Deactivate, (_T("Failed to deinitialize %s, error [%d]"), (*index)->Name(), result));
                     }
                 }
 
