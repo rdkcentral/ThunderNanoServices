@@ -68,8 +68,9 @@ namespace Compositor {
                 const void* /*user*/)
             {
                 std::stringstream line;
-                line << ", source: " << Compositor::API::GL::SourceString(src)
-                     << ", type: " << Compositor::API::GL::TypeString(type) << ", message: \"" << msg << "\"";
+                line << "[" << Compositor::API::GL::SourceString(src)
+                     << "](" << Compositor::API::GL::TypeString(type)
+                     << "): " << msg;
 
                 switch (severity) {
                 case GL_DEBUG_SEVERITY_HIGH_KHR: {
@@ -98,6 +99,7 @@ namespace Compositor {
 #define PushDebug()
 #define PopDebug()
 #endif
+            // Framebuffers are usually connected to an output, it's the buffer for the composition to be rendered on.
             class FrameBuffer {
             public:
                 FrameBuffer() = delete;
@@ -392,7 +394,9 @@ namespace Compositor {
 
                     for (auto& id : _textureIds) {
                         int len = snprintf(NULL, 0, "tex%d", index) + 1;
-                        char parameter[len];
+
+                        char* parameter = static_cast<char*>(ALLOCA(len));
+
                         snprintf(parameter, len, "tex%d", index++);
 
                         id = glGetUniformLocation(Id(), parameter);
@@ -513,6 +517,135 @@ namespace Compositor {
                 Programs _programs;
             };
 
+            static bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
+            {
+
+                png_structp pngPointer = nullptr;
+
+                pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+                if (pngPointer == nullptr) {
+
+                    return false;
+                }
+
+                png_infop infoPointer = nullptr;
+                infoPointer = png_create_info_struct(pngPointer);
+                if (infoPointer == nullptr) {
+
+                    png_destroy_write_struct(&pngPointer, &infoPointer);
+                    return false;
+                }
+
+                // Set up error handling.
+                if (setjmp(png_jmpbuf(pngPointer))) {
+
+                    png_destroy_write_struct(&pngPointer, &infoPointer);
+                    return false;
+                }
+
+                // Set image attributes.
+                png_set_IHDR(pngPointer,
+                    infoPointer,
+                    width,
+                    height,
+                    8,
+                    PNG_COLOR_TYPE_RGBA,
+                    PNG_INTERLACE_NONE,
+                    PNG_COMPRESSION_TYPE_DEFAULT,
+                    PNG_FILTER_TYPE_DEFAULT);
+
+                // Initialize rows of PNG.
+                png_byte** rowLines = static_cast<png_byte**>(png_malloc(pngPointer, height * sizeof(png_byte*)));
+
+                const int pixelSize = 4; // RGBA
+
+                for (unsigned int i = 0; i < height; ++i) {
+
+                    png_byte* rowLine = static_cast<png_byte*>(png_malloc(pngPointer, sizeof(png_byte) * width * pixelSize));
+                    const uint8_t* rowSource = buffer.data() + (sizeof(png_byte) * i * width * pixelSize);
+                    rowLines[i] = rowLine;
+                    for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
+                        // PNG has ARGB
+                        *rowLine++ = rowSource[j + 3]; // Alpha
+                        *rowLine++ = rowSource[j + 2]; // Red
+                        *rowLine++ = rowSource[j + 1]; // Green
+                        *rowLine++ = rowSource[j + 0]; // Blue
+                    }
+                }
+
+                bool result = false;
+
+                // Duplicate file descriptor and create File stream based on it.
+                FILE* filePointer = fopen(filename.c_str(), "wb");
+
+                if (nullptr != filePointer) {
+                    // Write the image data to "file".
+                    png_init_io(pngPointer, filePointer);
+                    png_set_rows(pngPointer, infoPointer, rowLines);
+                    png_write_png(pngPointer, infoPointer, PNG_TRANSFORM_IDENTITY, nullptr);
+                    // All went well.
+                    result = true;
+                }
+
+                // Close stream to flush and release allocated buffers
+                fclose(filePointer);
+
+                for (unsigned int i = 0; i < height; i++) {
+                    png_free(pngPointer, rowLines[i]);
+                }
+
+                png_free(pngPointer, rowLines);
+                png_destroy_write_struct(&pngPointer, &infoPointer);
+
+                return result;
+            }
+
+            static bool DumpTex(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels, GLuint textureId)
+            {
+                const Renderer::GLPixelFormat formatGL(Renderer::ConvertFormat(format));
+
+                glFinish();
+                glGetError();
+
+                GLuint fbo, bound_fbo;
+                GLint viewport[4];
+
+                // Backup framebuffer
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&bound_fbo));
+                glGetIntegerv(GL_VIEWPORT, viewport);
+
+                glActiveTexture(GL_TEXTURE0);
+
+                // Generate framebuffer
+                glGenFramebuffers(1, &fbo);
+                glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+                // Bind the texture to your FBO
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureId, 0);
+
+                // Test if everything failed
+                GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+                if (status != GL_FRAMEBUFFER_COMPLETE) {
+                    TRACE_GLOBAL(Trace::Error, ("DumpTex: failed to make complete framebuffer object %x", status));
+                    // return false;
+                }
+
+                // set the viewport as the FBO won't be the same dimension as the screen
+                glViewport(box.x, box.y, box.width, box.height);
+
+                pixels.clear();
+                pixels.resize(box.width * box.height * (formatGL.BitPerPixel / 8));
+
+                glReadPixels(box.x, box.y, box.width, box.height, formatGL.Format, formatGL.Type, pixels.data());
+
+                // Restore framebuffer
+                glBindFramebuffer(GL_FRAMEBUFFER, bound_fbo);
+                glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
+                return glGetError() == GL_NO_ERROR;
+            }
+
             class GLESTexture : public IRenderer::ITexture {
             public:
                 GLESTexture() = delete;
@@ -523,7 +656,7 @@ namespace Compositor {
                     : _refCount(1)
                     , _parent(parent)
                     , _target(GL_TEXTURE_2D)
-                    , _textureId()
+                    , _textureId(0)
                     , _image(EGL_NO_IMAGE)
                     , _buffer(buffer)
                 {
@@ -541,6 +674,8 @@ namespace Compositor {
                     }
 
                     ASSERT(_textureId != 0);
+
+                    //Snapshot();
                 }
 
                 virtual ~GLESTexture()
@@ -562,9 +697,10 @@ namespace Compositor {
                 /**
                  *  IRenderer::ITexture
                  */
-                virtual void AddRef() const
+                virtual uint32_t AddRef() const
                 {
                     Core::InterlockedIncrement(_refCount);
+                    return Core::ERROR_NONE;
                 };
                 virtual uint32_t Release() const
                 {
@@ -587,7 +723,7 @@ namespace Compositor {
                 {
                     bool result(
                         (_buffer->Type() != Exchange::ICompositionBuffer::TYPE_DMA)
-                        || (_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES));
+                        || ((_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES)));
 
                     if ((_image != EGL_NO_IMAGE) && (_target != GL_TEXTURE_EXTERNAL_OES)) {
                         Renderer::EGL::ContextBackup backup;
@@ -603,21 +739,21 @@ namespace Compositor {
 
                 uint32_t Width() const override { return _buffer->Width(); }
                 uint32_t Height() const override { return _buffer->Height(); }
-                const GLenum Target() const { return _target; }
-                const GLuint Id() const { return _textureId; }
+                GLenum Target() const { return _target; }
+                GLuint Id() const { return _textureId; }
                 // const std::vector<GLuint>& Identifiers() const { return _textureIds; }
 
                 bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
                     bool result(false);
 
-                    if (_buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+                    if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
                         ExternalProgram* program = _parent.Programs().QueryType<ExternalProgram>();
                         ASSERT(program != nullptr);
                         result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
                     }
 
-                    if (_buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+                    if ((_target == GL_TEXTURE_2D)) {
                         RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
                         ASSERT(program != nullptr);
                         result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
@@ -627,6 +763,20 @@ namespace Compositor {
                 }
 
             private:
+                void Snapshot() const
+                {
+                    std::vector<uint8_t> pixels;
+                    Box box = { 0, 0, static_cast<int>(_buffer->Width()), static_cast<int>(_buffer->Height()) };
+
+                    if (DumpTex(box, _buffer->Format(), pixels, _textureId) == true) {
+                        std::stringstream ss;
+                        ss << "gles2-rgba-texture-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+                        Core::File snapshot(ss.str());
+
+                        WritePNG(ss.str(), pixels, box.width, box.height);
+                    }
+                }
+
                 void ImportDMABuffer()
                 {
                     bool external(false);
@@ -634,9 +784,9 @@ namespace Compositor {
                     Renderer::EGL::ContextBackup backup;
 
                     _parent.Egl().SetCurrent();
+                    ASSERT(eglGetError() == EGL_SUCCESS);
 
                     _image = _parent.Egl().CreateImage(_buffer, external);
-
                     ASSERT(_image != EGL_NO_IMAGE);
 
                     _target = (external == true) ? GL_TEXTURE_EXTERNAL_OES : GL_TEXTURE_2D;
@@ -647,18 +797,21 @@ namespace Compositor {
                     glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+                    //glTexParameteri(_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    //glTexParameteri(_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
                     _parent.Gles().glEGLImageTargetTexture2DOES(_target, _image);
 
                     glBindTexture(_target, 0);
 
-                    TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d", _textureId, _buffer->Width(), _buffer->Height()));
+                    TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d external=%s", _textureId, _buffer->Width(), _buffer->Height(), external ? "true" : "false"));
                 }
 
                 void ImportPixelBuffer()
                 {
                     Exchange::ICompositionBuffer::IIterator* planes = _buffer->Planes(10);
 
-                    uint8_t index(0);
+                    // uint8_t index(0);
 
                     planes->Next(); // select first plane.
 
@@ -690,8 +843,7 @@ namespace Compositor {
 
                     _buffer->Completed(false);
 
-                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", 
-                        _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));   
+                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
 
             private:
@@ -701,7 +853,6 @@ namespace Compositor {
                 GLuint _textureId;
                 EGLImageKHR _image;
                 Exchange::ICompositionBuffer* _buffer;
-                Program::VariantType _programVariant;
             }; //  class GLESTexture
 
         public:
@@ -710,8 +861,7 @@ namespace Compositor {
             GLES& operator=(GLES const&) = delete;
 
             GLES(int drmDevFd)
-                : _drmDevFd(drmDevFd)
-                , _egl(drmDevFd)
+                : _egl(drmDevFd)
                 , _frameBuffer(nullptr)
                 , _viewportWidth(0)
                 , _viewportHeight(0)
@@ -838,7 +988,7 @@ namespace Compositor {
                     Box box = { 0, 0, static_cast<int>(_viewportWidth), static_cast<int>(_viewportHeight) };
                     if (Snapshot(box, DRM_FORMAT_ARGB8888, pixels) == true) {
                         std::stringstream ss;
-                        ss << "egl-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
+                        ss << "renderer-end-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
                         Core::File snapshot(ss.str());
 
                         WritePNG(ss.str(), pixels, _viewportWidth, _viewportHeight);
@@ -874,7 +1024,7 @@ namespace Compositor {
                 PopDebug();
             }
 
-            ITexture* Texture(Exchange::ICompositionBuffer* buffer)
+            ITexture* Texture(Exchange::ICompositionBuffer* buffer) override
             {
                 return new GLESTexture(*this, buffer);
             };
@@ -892,7 +1042,7 @@ namespace Compositor {
 
                     Matrix gl_matrix;
                     Transformation::Multiply(gl_matrix, _projection, transformation);
-                    Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_FLIPPED_180], transformation);
+                    Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_NORMAL], transformation);
                     Transformation::Transpose(gl_matrix, gl_matrix);
 
                     const GLfloat x1 = region.x / glesTexture->Width();
@@ -964,88 +1114,6 @@ namespace Compositor {
                 return ((_egl.IsCurrent() == true) && (_frameBuffer != nullptr));
             }
 
-            bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
-            {
-
-                png_structp pngPointer = nullptr;
-
-                pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-                if (pngPointer == nullptr) {
-
-                    return false;
-                }
-
-                png_infop infoPointer = nullptr;
-                infoPointer = png_create_info_struct(pngPointer);
-                if (infoPointer == nullptr) {
-
-                    png_destroy_write_struct(&pngPointer, &infoPointer);
-                    return false;
-                }
-
-                // Set up error handling.
-                if (setjmp(png_jmpbuf(pngPointer))) {
-
-                    png_destroy_write_struct(&pngPointer, &infoPointer);
-                    return false;
-                }
-
-                // Set image attributes.
-                int depth = 8;
-                png_set_IHDR(pngPointer,
-                    infoPointer,
-                    width,
-                    height,
-                    depth,
-                    PNG_COLOR_TYPE_RGB,
-                    PNG_INTERLACE_NONE,
-                    PNG_COMPRESSION_TYPE_DEFAULT,
-                    PNG_FILTER_TYPE_DEFAULT);
-
-                // Initialize rows of PNG.
-                png_byte** rowLines = static_cast<png_byte**>(png_malloc(pngPointer, height * sizeof(png_byte*)));
-                
-                const int pixelSize = 4; // RGBA
-
-                for (unsigned int i = 0; i < height; ++i) {
-
-                    png_byte* rowLine = static_cast<png_byte*>(png_malloc(pngPointer, sizeof(png_byte) * width * pixelSize));
-                    const uint8_t* rowSource = buffer.data() + (sizeof(png_byte) * i * width * pixelSize);
-                    rowLines[i] = rowLine;
-                    for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
-                        *rowLine++ = rowSource[j + 2]; // Red
-                        *rowLine++ = rowSource[j + 1]; // Green
-                        *rowLine++ = rowSource[j + 0]; // Blue
-                    }
-                }
-
-                bool result = false;
-                
-                // Duplicate file descriptor and create File stream based on it.
-                FILE* filePointer = fopen(filename.c_str(), "wb");
-
-                if (nullptr != filePointer) {
-                    // Write the image data to "file".
-                    png_init_io(pngPointer, filePointer);
-                    png_set_rows(pngPointer, infoPointer, rowLines);
-                    png_write_png(pngPointer, infoPointer, PNG_TRANSFORM_IDENTITY, nullptr);
-                    // All went well.
-                    result = true;
-                }
-
-                // Close stream to flush and release allocated buffers
-                fclose(filePointer);
-
-                for (unsigned int i = 0; i < height; i++) {
-                    png_free(pngPointer, rowLines[i]);
-                }
-
-                png_free(pngPointer, rowLines);
-                png_destroy_write_struct(&pngPointer, &infoPointer);
-
-                return result;
-            }
-
             bool Snapshot(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels)
             {
                 PushDebug();
@@ -1094,7 +1162,6 @@ namespace Compositor {
             static API::GL _gles;
 
         private:
-            int _drmDevFd;
             EGL _egl;
             std::unique_ptr<FrameBuffer> _frameBuffer;
             uint32_t _viewportWidth;
@@ -1113,6 +1180,8 @@ namespace Compositor {
 
     Core::ProxyType<IRenderer> IRenderer::Instance(Core::instance_id identifier)
     {
+        ASSERT(int(identifier) >= 0);  // this should be a valid file descriptor.
+
         static Core::ProxyMapType<Core::instance_id, IRenderer> glRenderers;
 
         return glRenderers.Instance<Renderer::GLES>(identifier, static_cast<int>(identifier));

@@ -30,7 +30,7 @@ public:
     CrashNTimes& operator=(const CrashNTimes&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::InputInfo;
+    using Parameter = JsonData::TestUtility::ParameterInfo;
 
     CrashNTimes()
         : TestCommandBase(TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault N times in a row")),

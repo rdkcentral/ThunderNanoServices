@@ -56,7 +56,7 @@ namespace Compositor {
         extern uint16_t GetBlobProperty(const int cardFd, const Identifier object, const Identifier property, const uint16_t blobSize, uint8_t blob[]);
 
         extern void GetNodes(const uint32_t type, std::vector<std::string>& list);
-
+        extern bool HasCapability(const int cardFd, const uint64_t option);
         /*
          * Re-open the DRM node to avoid GEM handle ref'counting issues.
          * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
@@ -74,7 +74,7 @@ namespace Compositor {
     case value:               \
         return #value;
 
-        static const char* FormatString(uint32_t format)
+        static inline const char* FormatString(uint32_t format)
         {
             switch (format) {
                 CASE_TO_STRING(DRM_FORMAT_INVALID)
@@ -195,7 +195,7 @@ namespace Compositor {
             }
         }
 
-        static const char* ModifierVendorString(uint64_t modifier)
+        static inline const char* ModifierVendorString(uint64_t modifier)
         {
             uint32_t vendor = (modifier & 0xff00000000000000ULL) << 56;
 
@@ -217,7 +217,7 @@ namespace Compositor {
         }
 #undef CASE_TO_STRING
 
-        static bool HasAlpha(uint32_t drmFormat)
+        static inline bool HasAlpha(uint32_t drmFormat)
         {
             return (
                    (drmFormat == DRM_FORMAT_ARGB4444)

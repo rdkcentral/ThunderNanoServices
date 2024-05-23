@@ -73,14 +73,6 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
-        PluginHost::ISubSystem* subSystems(service->SubSystems());
-        ASSERT(subSystems != nullptr);
-
-        if (subSystems != nullptr) {
-            subSystems->Set(PluginHost::ISubSystem::NOT_CRYPTOGRAPHY, nullptr);
-            subSystems->Release();
-        }
-
         if (_service != nullptr) {
             ASSERT(_service == service);
 

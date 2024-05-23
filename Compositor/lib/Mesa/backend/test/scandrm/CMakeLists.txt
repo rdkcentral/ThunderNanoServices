@@ -34,4 +34,4 @@ target_link_libraries(scandrm
         gbm::gbm
 )
 
-install(TARGETS scandrm DESTINATION bin)
+install(TARGETS scandrm DESTINATION bin/${NAMESPACE}Tests)

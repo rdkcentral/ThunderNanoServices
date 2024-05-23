@@ -26,6 +26,8 @@ set(ENABLE_ATOMIC OFF CACHE BOOL "Enable the atomic API for KMS/DRM Backend")
 
 add_library(CommonBackendDRM STATIC DRM.cpp)
 
+message(STATUS "   Atomic: ${ENABLE_ATOMIC}")
+
 if(ENABLE_ATOMIC)
     target_sources(CommonBackendDRM PRIVATE Atomic.cpp)
 else()
@@ -48,8 +50,6 @@ target_link_libraries(CommonBackendDRM
 set_target_properties(CommonBackendDRM PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_VERSION_MAJOR}
         POSITION_INDEPENDENT_CODE ON
 )
 

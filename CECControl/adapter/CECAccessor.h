@@ -170,12 +170,17 @@ namespace CEC {
 
             uint32_t Register(INotification* notification) override
             {
+                ASSERT(notification != nullptr);
+
                 Core::SafeSyncType<Core::CriticalSection> scopedLock(_observersLock);
 
                 // Make sure a sink is not registered multiple times.
-                ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
+                auto index(std::find(_observers.begin(), _observers.end(), notification));
+                ASSERT(index == _observers.end());
 
-                _observers.push_back(notification);
+                if (index == _observers.end()) {
+                    _observers.push_back(notification);
+                }
                 // notification->AddRef();
 
                 return Core::ERROR_NONE;
@@ -183,6 +188,8 @@ namespace CEC {
 
             uint32_t Unregister(INotification* notification) override
             {
+                ASSERT(notification != nullptr);
+
                 Core::SafeSyncType<Core::CriticalSection> scopedLock(_observersLock);
 
                 auto index(std::find(_observers.begin(), _observers.end(), notification));

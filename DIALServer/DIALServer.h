@@ -1047,6 +1047,8 @@ namespace Plugin {
         public:
             void Register(PluginHost::IShell* service, const string& webServer, const string& switchBoard)
             {
+                ASSERT(service != nullptr);
+
                 // This method needs to be Unregistered, before you can Regsiter it..
                 ASSERT((_webServer.empty() == true) && (_switchBoard.empty() == true));
 
@@ -1060,6 +1062,8 @@ namespace Plugin {
 
             void Unregister(PluginHost::IShell* service)
             {
+                ASSERT(service != nullptr);
+
                 if ((_webServer.empty() == false) || (_switchBoard.empty() == false)) {
                     service->Unregister(this);
 

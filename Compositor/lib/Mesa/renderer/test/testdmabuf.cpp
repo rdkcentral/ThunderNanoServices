@@ -31,27 +31,21 @@
 #include <vector>
 #include <inttypes.h>
 
+#include <IBackend.h>
 #include <IBuffer.h>
 #include <IRenderer.h>
 #include <Transformation.h>
 
+#include <DRM.h>
+
 #include <drm_fourcc.h>
 
-#include <simpleworker/SimpleWorker.h>
+#include <DmaBuffer.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace WPEFramework {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
-
-const Compositor::Color red = { 1.0f, 0.0f, 0.0f, 1.0f };
-const Compositor::Color green = { 0.0f, 1.0f, 0.0f, 1.0f };
-const Compositor::Color blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-
-struct Texture {
-    Core::ProxyType<Exchange::ICompositionBuffer> data;
-    Compositor::IRenderer::ITexture* texture;
-}; // Texture
 
 class RenderTest {
 
@@ -60,62 +54,51 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const uint8_t fps)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
         : _adminLock()
-        , _lastFrame(0)
-        , _sink(*this)
-        , _format(DRM_FORMAT_ARGB8888, { DRM_FORMAT_MOD_LINEAR })
+        , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
-        , _fps(fps)
-        , _texture()
+        , _textureBuffer()
+        , _texture(nullptr)
+        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
+        , _rotations(rotationsPerSecond)
+        , _running(false)
+        , _render()
+        , _renderFd(::open(renderId.c_str(), O_RDWR))
     {
-        _connector = Compositor::Connector(connectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_720p, _format, false);
+        _connector = Compositor::Connector(
+            connectorId,
+            { 0, 0, 1080, 1920 },
+            _format);
+
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created connector: %p", _connector.operator->()));
 
-        _renderer = Compositor::IRenderer::Instance(_connector->Identifier());
+        ASSERT(_renderFd >= 0);
+
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
-        // Create a dmabuf texture
-        _texture.data = Compositor::CreateBuffer(_connector->Identifier(), 100, 100, _format);
-        FillTexture(_texture.data, green);
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %p", _texture.data.operator->()));
+        _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
+        _texture = _renderer->Texture(_textureBuffer.operator->());
+        ASSERT(_texture != nullptr);
+        ASSERT(_texture->IsValid());
+        TRACE_GLOBAL(WPEFramework::Trace::Information, ("created texture: %p", _texture));
 
-        // Create a texture in gpu memory
-        _texture.texture = _renderer->Texture(_texture.data.operator->());
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("submitted texture: %p", _texture.texture));
+        NewFrame();
     }
 
     ~RenderTest()
     {
         Stop();
 
-        _texture.texture->Release();
-        _texture.data.Release();
-
         _renderer.Release();
         _connector.Release();
-    }
+        _textureBuffer.Release();
 
-    void FillTexture(Core::ProxyType<Exchange::ICompositionBuffer> buffer, const Compositor::Color& color)
-    {
-        ASSERT(buffer.IsValid() == true);
-
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("filling texture with color: %f, %f, %f, %f", color[0], color[1], color[2], color[3]));
-
-        _renderer->Bind(buffer);
-        _renderer->Begin(buffer->Width(), buffer->Height());
-        _renderer->Clear(color);
-
-        const Compositor::Box box = { .x = 0, .y = 0, .width = int(buffer->Width() / 2), .height = int(buffer->Height() / 2) };
-        Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_NORMAL, Compositor::Transformation::ToRadials(0), _renderer->Projection());
-        _renderer->Quadrangle({ color[1], color[2], color[0], 1.0f }, matrix);
-
-        _renderer->End(false);
-        _renderer->Unbind();
+        ::close(_renderFd);
     }
 
     void Start()
@@ -123,8 +106,7 @@ public:
         TRACE(Trace::Information, ("Starting RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        _lastFrame = Core::Time::Now().Ticks();
-        Core::SimpleWorker::Instance().Submit(&_sink);
+        _render = std::thread(&RenderTest::Render, this);
     }
 
     void Stop()
@@ -132,69 +114,54 @@ public:
         TRACE(Trace::Information, ("Stopping RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        Core::SimpleWorker::Instance().Revoke(&_sink);
-        _lastFrame = 0;
+
+        if (_running) {
+            _running = false;
+            _render.join();
+        }
     }
 
     bool Running() const
     {
-        return (_lastFrame != 0);
+        return _running;
     }
 
 private:
-    class Sink : public Core::SimpleWorker::ICallback {
-    public:
-        Sink() = delete;
-        Sink(const Sink&) = delete;
-        Sink& operator=(const Sink&) = delete;
+    void Render()
+    {
+        _running = true;
 
-        Sink(RenderTest& parent)
-            : _parent(parent)
-        {
+        while (_running) {
+            const auto next = _period - NewFrame();
+            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
         }
+    }
 
-        virtual ~Sink() = default;
-
-    public:
-        uint64_t Activity(const uint64_t time)
-        {
-            return _parent.NewFrame(time);
-        }
-
-    private:
-        RenderTest& _parent;
-    };
-
-    uint64_t NewFrame(const uint64_t scheduledTime)
+    std::chrono::microseconds NewFrame()
     {
         static float rotation = 0.f;
 
+        const auto start = std::chrono::high_resolution_clock::now();
+
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-        if (Running() == false) {
-            TRACE(Trace::Information, ("Canceling render attempt"));
-            return 0;
-        }
-
-        // const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        const uint16_t renderWidth(256);
-        const uint16_t renderHeight(256);
+        const uint16_t renderWidth(720);
+        const uint16_t renderHeight(720);
 
         _renderer->Bind(_connector);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { .x = (width / 2) - (renderWidth / 2), .y = (height / 2) - (renderHeight / 2), .width = renderWidth, .height = renderHeight };
+        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, rotation, _renderer->Projection());
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { .x = 0, .y = 0, .width = int(_texture.texture->Width()), .height = int(_texture.texture->Height()) };
-        _renderer->Render(_texture.texture, textureBox, matrix, 1.0f);
+        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
+        _renderer->Render(_texture, textureBox, matrix, 1.0f);
 
         _renderer->End(false);
 
@@ -202,38 +169,65 @@ private:
 
         _renderer->Unbind();
 
-        // TODO rotate with a delta time
-        rotation += 0.05;
-        if (rotation > 2 * M_PI) {
-            rotation = 0.f;
-        }
+        rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 
-        _lastFrame = scheduledTime;
-
-        return scheduledTime + ((Core::Time::MilliSecondsPerSecond * Core::Time::TicksPerMillisecond) / _fps);
+        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
 private:
     mutable Core::CriticalSection _adminLock;
-    uint64_t _lastFrame;
-    Sink _sink;
     const Compositor::PixelFormat _format;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
-    const uint8_t _fps;
-    Texture _texture;
+    Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
+    Compositor::IRenderer::ITexture* _texture;
+    const std::chrono::microseconds _period;
+    const float _rotations;
+    bool _running;
+    std::thread _render;
+    int _renderFd;
 }; // RenderTest
+
+class ConsoleOptions : public Core::Options {
+public:
+    ConsoleOptions(int argumentCount, TCHAR* arguments[])
+        : Core::Options(argumentCount, arguments, _T("o:r:h"))
+        , RenderNode("/dev/dri/card0")
+        , Output(RenderNode)
+    {
+        Parse();
+    }
+    ~ConsoleOptions()
+    {
+    }
+
+public:
+    const TCHAR* RenderNode;
+    const TCHAR* Output;
+
+private:
+    virtual void Option(const TCHAR option, const TCHAR* argument)
+    {
+        switch (option) {
+        case 'o':
+            Output = argument;
+            break;
+        case 'r':
+            RenderNode = argument;
+            break;
+        case 'h':
+        default:
+            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>]\n");
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }
+};
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
-    std::string connectorId;
-
-    if (argc == 1) {
-        connectorId = "card1-HDMI-A-1";
-    } else {
-        connectorId = argv[1];
-    }
+    WPEFramework::ConsoleOptions options(argc, argv);
 
     WPEFramework::Messaging::LocalTracer& tracer = WPEFramework::Messaging::LocalTracer::Open();
 
@@ -258,9 +252,9 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(connectorId, 1);
+        WPEFramework::RenderTest test(options.Output, options.RenderNode, 120, 10);
 
-        // test.Start();
+        test.Start();
 
         char keyPress;
 

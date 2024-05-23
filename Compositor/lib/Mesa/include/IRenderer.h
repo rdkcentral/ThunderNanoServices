@@ -20,8 +20,6 @@
 #pragma once
 
 #include <CompositorTypes.h>
-#include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
 
 namespace WPEFramework {
 namespace Compositor {
@@ -31,7 +29,7 @@ namespace Compositor {
         struct ITexture {
             virtual ~ITexture() = default;
 
-            virtual void AddRef() const = 0;
+            virtual uint32_t AddRef() const = 0;
             virtual uint32_t Release() const = 0;
 
             virtual bool IsValid() const = 0;

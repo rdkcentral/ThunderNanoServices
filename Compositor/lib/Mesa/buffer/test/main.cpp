@@ -42,7 +42,7 @@ void GetNodess(const uint32_t type, std::vector<std::string>& list)
 
     assert(nDrmDevices > 0);
 
-    drmDevicePtr devices[nDrmDevices];
+    drmDevicePtr* devices = static_cast<drmDevicePtr*>(ALLOCA(nDrmDevices * sizeof(drmDevicePtr)));
 
     drmGetDevices2(0 /* flags */, devices, nDrmDevices);
 
@@ -83,14 +83,14 @@ void GetNodess(const uint32_t type, std::vector<std::string>& list)
 //                 if (conn_name == NULL) {
 //                     conn_name = "Unknown";
 //                 }
-                
+
 //                 uint32_t possible_crtcs = drmModeConnectorGetPossibleCrtcs(fd, drm_conn);
 
 //                 if (possible_crtcs == 0) {
 //                     TRACE_GLOBAL(Trace::Error, ("No crtcs found on %s", conn_name));
 //                 }
 
-//                 TRACE_GLOBAL(Trace::Error, ("Connector type type=%s id=%d connection=0x%02X crtcs=0x%04X", 
+//                 TRACE_GLOBAL(Trace::Error, ("Connector type type=%s id=%d connection=0x%02X crtcs=0x%04X",
 //                         conn_name, connector->connector_type_id, connector->connection, possible_crtcs));
 
 //                 if ((type == connector->connector_type) && (connector->connection == DRM_MODE_CONNECTED)) {
@@ -107,7 +107,7 @@ void GetNodess(const uint32_t type, std::vector<std::string>& list)
 //     return bitmask;
 // }
 
-int main(int argc, const char* argv[])
+int main(int /*argc*/, const char* argv[])
 {
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
     Messaging::ConsolePrinter printer(false);
@@ -134,8 +134,6 @@ int main(int argc, const char* argv[])
 
     int fdCard = open("/dev/dri/card0", O_RDWR);
     int fdRender = open("/dev/dri/renderD128", O_RDWR);
-
-    
 
     assert(fdCard > 0);
     assert(fdRender > 0);
@@ -182,14 +180,17 @@ int main(int argc, const char* argv[])
                 first_plane = plane;
             }
 
-            assert(plane->Accessor() >= 0);
-            assert(plane->Offset() == 0);
-            assert(plane->Stride() == 1920 * (32 / 8));
+            VARIABLE_IS_NOT_USED const uint32_t offset(plane->Offset());
+            VARIABLE_IS_NOT_USED const uint32_t stride(plane->Stride());
+
+            // assert(plane->Accessor() >= 0);
+            assert(offset == 0);
+            assert(stride == 1920 * (32 / 8));
         }
 
         index->Reset();
         index->Next();
-        
+
         assert(first_plane == index->Plane());
 
         buffer.Release();

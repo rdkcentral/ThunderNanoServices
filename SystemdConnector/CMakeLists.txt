@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_SYSTEMDCONNECTOR_STARTMODE "activated" CACHE STRING "Automatically start SystemdConnector plugin")
+set(PLUGIN_SYSTEMDCONNECTOR_STARTMODE "Activated" CACHE STRING "Automatically start SystemdConnector plugin")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})

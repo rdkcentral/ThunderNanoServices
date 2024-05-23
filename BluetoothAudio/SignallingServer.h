@@ -493,23 +493,30 @@ namespace Plugin {
     public:
         void Register(IObserver* observer)
         {
+            ASSERT(observer != nullptr);
+
             // Register a new AVDTP connection observer.
 
             _observersLock.Lock();
 
-            ASSERT(std::find(_observers.begin(), _observers.end(), observer) == _observers.end());
+            auto it = std::find(_observers.begin(), _observers.end(), observer);
+            ASSERT(it == _observers.end());
 
-            _observers.push_back(observer);
-
+            if (it == _observers.end()) {
+                _observers.push_back(observer);
+            }
             _observersLock.Unlock();
         }
         void Unregister(const IObserver* observer)
         {
+            ASSERT(observer != nullptr);
+
             // Unregister an AVDTP connection observer.
 
             _observersLock.Lock();
 
             auto it = std::find(_observers.begin(), _observers.end(), observer);
+            ASSERT(it != _observers.end());
 
             if (it != _observers.end()) {
                 _observers.erase(it);

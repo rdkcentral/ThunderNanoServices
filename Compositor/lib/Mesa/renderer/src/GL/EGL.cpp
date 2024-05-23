@@ -218,8 +218,9 @@ namespace Compositor {
                 _api.eglQueryDevicesEXT(0, nullptr, &nEglDevices);
                 TRACE(Trace::EGL, ("System has %u EGL device%s", nEglDevices, (nEglDevices == 1) ? "" : "s"));
 
-                EGLDeviceEXT eglDevices[nEglDevices];
-                memset(eglDevices, 0, sizeof(eglDevices));
+                EGLDeviceEXT* eglDevices = static_cast<EGLDeviceEXT*>(ALLOCA(nEglDevices * sizeof(EGLDeviceEXT)));
+
+                memset(eglDevices, 0, sizeof(nEglDevices * sizeof(EGLDeviceEXT)));
 
                 _api.eglQueryDevicesEXT(nEglDevices, eglDevices, &nEglDevices);
 
@@ -331,7 +332,7 @@ namespace Compositor {
                 ASSERT(API::HasExtension(displayExtensions, "EGL_KHR_surfaceless_context") == true);
 
                 if ((_api.eglQueryDisplayAttribEXT != nullptr) && (_api.eglQueryDeviceStringEXT != nullptr)) {
-                    EGLAttrib device_attrib;
+                    // EGLAttrib device_attrib;
 
                     _api.eglQueryDisplayAttribEXT(_display, EGL_DEVICE_EXT, reinterpret_cast<EGLAttrib*>(&_device));
 
@@ -383,8 +384,6 @@ namespace Compositor {
             if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
                 EGLint nModifiers(0);
                 _api.eglQueryDmaBufModifiersEXT(_display, format, 0, nullptr, nullptr, &nModifiers);
-                TRACE(Trace::EGL, ("Found %d modifiers", nModifiers));
-
                 modifiers.resize(nModifiers);
                 externals.resize(nModifiers);
 
@@ -414,19 +413,35 @@ namespace Compositor {
             }
 
             for (const auto& format : formats) {
-                TRACE(Trace::EGL, ("Scanning format \'%c\' \'%c\' \'%c\' \'%c\'", //
-                                      char(format & 0xff), char((format >> 8) & 0xff), //
-                                      char((format >> 16) & 0xff), char((format >> 24) & 0xff)));
-
                 std::vector<uint64_t> modifiers;
-
                 /**
                  * Indicates if the matching modifier is only supported for
                  * use with the GL_TEXTURE_EXTERNAL_OES texture target
                  */
                 std::vector<EGLBoolean> externals;
 
+                std::stringstream line;
+
                 GetModifiers(format, modifiers, externals);
+
+                char* formatName = drmGetFormatName(format);
+
+                line << formatName << ", modifiers: ";
+
+                free(formatName);
+
+                for (uint8_t i(0); i < modifiers.size(); i++) {
+                    char* modifierName = drmGetFormatModifierName(modifiers.at(i));
+
+                    if (modifierName) {
+                        line << modifierName << (externals.at(i) ? "*" : "");
+                        free(modifierName);
+                    }
+
+                    line << ((i < (modifiers.size() - 1)) ? ", " : "");
+                }
+
+                TRACE(Trace::EGL, (_T("FormatInfo: %s"), line.str().c_str()));
 
                 pixelFormats.emplace_back(format, modifiers);
             }
@@ -473,6 +488,8 @@ namespace Compositor {
                 imageAttributes.Append(EGL_HEIGHT, buffer->Height());
                 imageAttributes.Append(EGL_LINUX_DRM_FOURCC_EXT, buffer->Format());
 
+                TRACE(Trace::Information, ("plane 0 info fd=%" PRIuPTR " stride=%d offset=%d", plane->Accessor(), plane->Stride(), plane->Offset()));
+
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, plane->Accessor());
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, plane->Offset());
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, plane->Stride());
@@ -481,7 +498,6 @@ namespace Compositor {
 
                 if (planes->Next() == true) {
                     plane = planes->Plane();
-
                     ASSERT(plane != nullptr);
 
                     imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, plane->Accessor());
@@ -521,7 +537,7 @@ namespace Compositor {
                 //                 std::stringstream hexLine;
 
                 //                 for (uint16_t i(0); i < imageAttributes.Size(); i++) {
-                //                     const int att(imageAttributes[i]);
+                //                     const int att(imageAttributes[size_t(i)]);
 
                 //                     hexLine << "0x" << std::uppercase << std::setfill('0') << std::setw(8) << std::hex << att << std::nouppercase;
 
@@ -538,6 +554,9 @@ namespace Compositor {
                 // #endif
 
                 result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, imageAttributes);
+
+                TRACE(Trace::EGL, ("EGL image created result:%s", API::EGL::ErrorString(eglGetError())));
+                ASSERT(eglGetError() == EGL_SUCCESS);
             }
 
             external = IsExternOnly(buffer->Format(), buffer->Modifier());

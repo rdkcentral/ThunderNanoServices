@@ -34,9 +34,6 @@
 
 #include "RenderAPI.h"
 
-#include <fragment-shader.h>
-#include <vertex-shader.h>
-
 struct gbm_device;
 namespace WPEFramework {
 namespace Compositor {

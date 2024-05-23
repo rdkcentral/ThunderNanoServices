@@ -20,7 +20,7 @@
 #include "Module.h"
 #include "OutOfProcessPlugin.h"
 #include <interfaces/ITimeSync.h>
-
+#include <interfaces/IComposition.h>
 #include <thread>
 
 #ifdef __CORE_EXCEPTION_CATCHING__
@@ -135,6 +135,7 @@ POP_WARNING()
                 , Destruct(1000)
                 , Single(false)
                 , ExternalAccess(_T("/tmp/oopexample"))
+                , CompositorClientTest(false)
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("config"), &Init);
@@ -142,6 +143,7 @@ POP_WARNING()
                 Add(_T("destruct"), &Destruct);
                 Add(_T("single"), &Single);
                 Add(_T("accessor"), &ExternalAccess);
+                Add(_T("compositorclienttest"), &CompositorClientTest);
             }
             ~Config() override = default;
 
@@ -152,6 +154,7 @@ POP_WARNING()
             Core::JSON::DecUInt32 Destruct;
             Core::JSON::Boolean Single;
             Core::JSON::String ExternalAccess;
+            Core::JSON::Boolean CompositorClientTest;
         };
 
     public:
@@ -201,6 +204,45 @@ POP_WARNING()
             Exchange::IBrowser* _parentInterface;
         };
 
+        class CompositorRemoteAccess : public Exchange::IComposition::IClient {
+        public:
+            CompositorRemoteAccess(const CompositorRemoteAccess&) = delete;
+            CompositorRemoteAccess& operator= (const CompositorRemoteAccess&) = delete;
+            CompositorRemoteAccess() = default;
+            ~CompositorRemoteAccess() override = default;
+
+        public:
+            string Name() const override
+            {
+                return "OutOfProcessCompositor";
+            }
+            void Opacity(const uint32_t) override {}
+            uint32_t Geometry(const Exchange::IComposition::Rectangle&) override
+            {
+                return 0;
+            }
+            Exchange::IComposition::Rectangle Geometry() const override
+            {
+                Exchange::IComposition::Rectangle rectangle = {0, 0, 1080, 920};
+                return rectangle;
+            }
+            uint32_t ZOrder(const uint16_t) override
+            {
+                return 0;
+            }
+            uint32_t ZOrder() const override
+            {
+                return 0;
+            }
+            BEGIN_INTERFACE_MAP(CompositorRemoteAccess)
+                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            END_INTERFACE_MAP
+
+        private:
+
+            Exchange::IComposition::Rectangle _destination;
+        };
+
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         OutOfProcessImplementation()
             : Core::Thread(0, _T("OutOfProcessImplementation"))
@@ -212,6 +254,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _service(nullptr)
             , _engine()
             , _externalAccess(nullptr)
+            , _compositerServerRPCConnection()
             , _type(SHOW)
             , _job(*this)
         {
@@ -237,6 +280,8 @@ POP_WARNING()
                 _engine.Release();
                 TRACE(Trace::Information, (_T("Destructed _externalAccess")));
             }
+
+            DestroyCompositerServerRPCConnection();
 
             if (_service) {
                 TRACE(Trace::Information, (_T("Releasing service")));
@@ -311,6 +356,49 @@ POP_WARNING()
 
             return (result);
         }
+        void CreateCompositerServerRPCConnection() {
+            if (Core::WorkerPool::IsAvailable() == true) {
+                // If we are in the same process space as where a WorkerPool is registered (Main Process or
+                // hosting ptocess) use, it!
+                Core::ProxyType<RPC::InvokeServer> engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
+                ASSERT(engine.IsValid() == true);
+
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Connector(), Core::ProxyType<Core::IIPCServer>(engine));
+                ASSERT(_compositerServerRPCConnection.IsValid() == true);
+
+            } else {
+                // Seems we are not in a process space initiated from the Main framework process or its hosting process.
+                // Nothing more to do than to create a workerpool for RPC our selves !
+                Core::ProxyType<RPC::InvokeServerType<2,0,8>> engine = Core::ProxyType<RPC::InvokeServerType<2,0,8>>::Create();
+                ASSERT(engine.IsValid() == true);
+
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Connector(), Core::ProxyType<Core::IIPCServer>(engine));
+                ASSERT(_compositerServerRPCConnection.IsValid() == true);
+
+            }
+
+            uint32_t result = _compositerServerRPCConnection->Open(RPC::CommunicationTimeOut);
+            if (result != Core::ERROR_NONE) {
+                _compositerServerRPCConnection.Release();
+            } else {
+                _compositorRemoteAccess = Core::ServiceType<CompositorRemoteAccess>::Create<CompositorRemoteAccess>();
+                result = _compositerServerRPCConnection->Offer(_compositorRemoteAccess);
+                if (result != Core::ERROR_NONE) {
+                    printf(_T("Could not offer IClient interface with callsign %s to Compositor. Error: %s\n"), _compositorRemoteAccess->Name().c_str(), Core::NumberType<uint32_t>(result).Text().c_str());
+                }
+	    }
+	}
+        void DestroyCompositerServerRPCConnection() {
+            if (_compositerServerRPCConnection.IsValid() == true) {
+                uint32_t result = _compositerServerRPCConnection->Revoke(_compositorRemoteAccess);
+
+                if (result != Core::ERROR_NONE) {
+                    printf(_T("Could not revoke IClient interface with callsign %s to Compositor. Error: %s\n"), _compositorRemoteAccess->Name().c_str(), Core::NumberType<uint32_t>(result).Text().c_str());
+                }
+                _compositorRemoteAccess->Release();
+                _compositerServerRPCConnection.Release();
+            }
+        }
         string GetURL() const override
         {
             TRACE(Trace::Information, (_T("Requested URL: [%s]"), _requestedURL.c_str()));
@@ -325,13 +413,17 @@ POP_WARNING()
         {
             _adminLock.Lock();
 
+            std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+
             // Make sure a sink is not registered multiple times.
-            ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end());
+            ASSERT(index == _notificationClients.end());
 
-            _notificationClients.push_back(sink);
-            sink->AddRef();
+            if (index == _notificationClients.end()) {
+                _notificationClients.push_back(sink);
+                sink->AddRef();
 
-            TRACE(Trace::Information, (_T("IStateControl::INotification Registered: %p"), sink));
+                TRACE(Trace::Information, (_T("IStateControl::INotification Registered: %p"), sink));
+            }
             _adminLock.Unlock();
         }
 
@@ -354,20 +446,28 @@ POP_WARNING()
         }
         void Register(Exchange::IBrowser::INotification* sink) override
         {
+            ASSERT(sink != nullptr);
+
             _adminLock.Lock();
+            
+            std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
 
             // Make sure a sink is not registered multiple times.
-            ASSERT(std::find(_browserClients.begin(), _browserClients.end(), sink) == _browserClients.end());
+            ASSERT(index == _browserClients.end());
 
-            _browserClients.push_back(sink);
-            sink->AddRef();
+            if (index == _browserClients.end()) {
+                _browserClients.push_back(sink);
+                sink->AddRef();
 
-            TRACE(Trace::Information, (_T("IBrowser::INotification Registered: %p"), sink));
+                TRACE(Trace::Information, (_T("IBrowser::INotification Registered: %p"), sink));
+            }
             _adminLock.Unlock();
         }
 
         virtual void Unregister(Exchange::IBrowser::INotification* sink)
         {
+            ASSERT(sink != nullptr);
+
             _adminLock.Lock();
 
             std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
@@ -463,7 +563,6 @@ POP_WARNING()
         }
 
         // IBrowserResources (added so we can test lengthty calls back to Thunder )
-
         uint32_t Headers(IStringIterator*& header ) const override {
             std::list<string> headers;
             for(uint16_t i = 0; i<1000; ++i) {
@@ -629,6 +728,10 @@ POP_WARNING()
                 abort();
             }
 
+            if (_config.CompositorClientTest.IsSet() == true && _config.CompositorClientTest.Value() == true) {
+                CreateCompositerServerRPCConnection();
+            }
+
             // Just do nothing :-)
             Block();
 
@@ -654,8 +757,12 @@ POP_WARNING()
         PluginHost::IStateControl::state _state;
         Core::SinkType<PluginMonitor> _sink;
         PluginHost::IShell* _service;
+
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
+
+        CompositorRemoteAccess* _compositorRemoteAccess;
+        Core::ProxyType<RPC::CommunicatorClient> _compositerServerRPCConnection;
 
         StateType _type;
         Core::WorkerPool::JobType<OutOfProcessImplementation&> _job;

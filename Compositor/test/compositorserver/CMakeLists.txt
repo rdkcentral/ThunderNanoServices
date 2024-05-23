@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-option(INSTALL_COMPOSITOR_SERVER_TEST "Build compositor server test app" ON)
+option(INSTALL_COMPOSITOR_SERVER_TEST "Install compositor server test app" ON)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
@@ -34,9 +34,8 @@ target_link_libraries(compositorserver
         ${NAMESPACE}CompositorBufferType::${NAMESPACE}CompositorBufferType
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         CompileSettingsDebug::CompileSettingsDebug
-        platform::implementation
 )
 
 if(INSTALL_COMPOSITOR_SERVER_TEST)
-    install(TARGETS compositorserver RUNTIME DESTINATION bin)
+    install(TARGETS compositorserver RUNTIME DESTINATION bin/${NAMESPACE}Tests)
 endif()

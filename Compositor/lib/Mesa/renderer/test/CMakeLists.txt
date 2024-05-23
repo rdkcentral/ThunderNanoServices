@@ -4,7 +4,6 @@ find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
 
-add_subdirectory(simpleworker)
 add_subdirectory(texturebuffer)
 
 add_executable(testclear testclear.cpp)
@@ -20,11 +19,14 @@ target_link_libraries(testclear
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
 )
 
-install(TARGETS testclear DESTINATION bin)
+set_target_properties(testclear PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+)
 
+install(TARGETS testclear DESTINATION bin/${NAMESPACE}Tests)
 
 add_executable(testquads testquads.cpp)
 
@@ -39,10 +41,14 @@ target_link_libraries(testquads
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
 )
 
-install(TARGETS testquads DESTINATION bin)
+set_target_properties(testquads PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+)
+
+install(TARGETS testquads DESTINATION bin/${NAMESPACE}Tests)
 
 
 add_executable(testtexture testtexture.cpp)
@@ -58,11 +64,15 @@ target_link_libraries(testtexture
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
-        TextureBuffer::TextureBuffer
+        PixelBuffer::PixelBuffer
 )
 
-install(TARGETS testtexture DESTINATION bin)
+set_target_properties(testtexture PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+)
+
+install(TARGETS testtexture DESTINATION bin/${NAMESPACE}Tests)
 
 add_executable(testdmabuf testdmabuf.cpp)
 
@@ -77,7 +87,14 @@ target_link_libraries(testdmabuf
         common::backend
         common::renderer
         common::drm
-        SimpleWorker::SimpleWorker
+        DmaBuffer::DmaBuffer
 )
 
-install(TARGETS testdmabuf DESTINATION bin)
+set_target_properties(testdmabuf PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+)
+
+target_link_directories(testdmabuf PUBLIC ${CMAKE_CURRENT_LIST_DIR/../src/GL})
+
+install(TARGETS testdmabuf DESTINATION bin/${NAMESPACE}Tests)

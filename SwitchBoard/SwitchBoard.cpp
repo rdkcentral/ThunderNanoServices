@@ -197,25 +197,32 @@ POP_WARNING()
 
     void SwitchBoard::Register(Exchange::ISwitchBoard::INotification* notification)
     {
+        ASSERT(notification != nullptr);
+
         _adminLock.Lock();
 
-        ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), notification) == _notificationClients.end());
+        std::list<Exchange::ISwitchBoard::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), notification));
 
-        _notificationClients.push_back(notification);
+        ASSERT(index == _notificationClients.end());
+
+        if (index == _notificationClients.end()) {
+            _notificationClients.push_back(notification);
+        }
 
         _adminLock.Unlock();
     }
 
     void SwitchBoard::Unregister(Exchange::ISwitchBoard::INotification* notification)
     {
+        ASSERT(notification != nullptr);
+
         _adminLock.Lock();
 
         std::list<Exchange::ISwitchBoard::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), notification));
 
         ASSERT(index != _notificationClients.end());
 
-        if (index != _notificationClients.end())
-        {
+        if (index != _notificationClients.end()) {
             _notificationClients.erase(index);
         }
 

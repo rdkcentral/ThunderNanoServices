@@ -255,6 +255,8 @@ namespace Plugin {
         }
         uint32_t Register(Exchange::IYang::INotification* notification)
         {
+            ASSERT(notification != nullptr);
+
             uint32_t result = Core::ERROR_BAD_REQUEST;
 
             _lock.Lock();
@@ -271,6 +273,8 @@ namespace Plugin {
         }
         uint32_t Unregister(const Exchange::IYang::INotification* notification)
         {
+            ASSERT(notification != nullptr);
+
             uint32_t result = Core::ERROR_BAD_REQUEST;
 
             _lock.Lock();

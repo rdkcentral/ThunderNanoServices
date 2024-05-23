@@ -29,7 +29,7 @@ public:
     Malloc& operator=(const Malloc&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::InputInfo;
+    using Parameter = JsonData::TestUtility::ParameterInfo;
 
     Malloc()
         : TestCommandBase(TestCommandBase::DescriptionBuilder("Allocates desired kB in memory and holds it"),

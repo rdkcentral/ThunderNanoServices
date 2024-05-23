@@ -20,8 +20,6 @@ add_library(CommonTransformation INTERFACE)
 set_target_properties(CommonTransformation PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES
-    VERSION ${PROJECT_VERSION}
-    SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
 target_include_directories(CommonTransformation

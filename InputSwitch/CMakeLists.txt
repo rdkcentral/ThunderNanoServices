@@ -31,7 +31,7 @@ if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
-set(PLUGIN_INPUTSWITCH_STARTMODE "activated" CACHE STRING "Automatically start InputSwitch plugin")
+set(PLUGIN_INPUTSWITCH_STARTMODE "Activated" CACHE STRING "Automatically start InputSwitch plugin")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

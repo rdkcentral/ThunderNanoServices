@@ -15,4 +15,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_library(ref_matrix ref_matrix.c)
+add_library(ref_matrix OBJECT ref_matrix.c)

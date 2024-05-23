@@ -215,6 +215,7 @@ namespace Plugin {
             public:
                 void Register(PluginHost::IShell* plugin) {
 
+                    ASSERT(plugin != nullptr);
                     ASSERT(_stateControl == nullptr);
 
                     _stateControl = plugin->QueryInterface<PluginHost::IStateControl>();
