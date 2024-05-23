@@ -45,7 +45,7 @@ namespace TestCore {
         ASSERT(command != nullptr);
 
         _adminLock.Lock();
-        std::pair<TestCommandContainer::iterator, bool> returned = _commands.insert(TestCommandContainerPair(command->Name(), command));
+        VARIABLE_IS_NOT_USED std::pair<TestCommandContainer::iterator, bool> returned = _commands.insert(TestCommandContainerPair(command->Name(), command));
         ASSERT((returned.second == true) && "Test command already exists!");
         _adminLock.Unlock();
     }
