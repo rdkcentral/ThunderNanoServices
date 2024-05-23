@@ -21,7 +21,7 @@
 
 #include "../Module.h"
 
-#include <interfaces/ITestUtility.h>
+#include <qa_interfaces/ITestUtility.h>
 
 namespace WPEFramework {
 namespace TestCore {
