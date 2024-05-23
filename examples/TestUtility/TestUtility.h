@@ -23,7 +23,7 @@
 
 #include "CommandCore/TestCommandController.h"
 #include <interfaces/IMemory.h>
-#include <interfaces/ITestUtility.h>
+#include <qa_interfaces/ITestUtility.h>
 #include <interfaces/json/JsonData_TestUtility.h>
 
 namespace WPEFramework {
