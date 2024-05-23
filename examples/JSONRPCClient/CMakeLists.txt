@@ -15,8 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+find_package(WPEFramework)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}WebSocket REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
 find_package(securityagent QUIET)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -31,6 +34,8 @@ target_link_libraries(JSONRPCClient
         PRIVATE
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
+        ${NAMESPACE}Core::${NAMESPACE}Core
         CompileSettingsDebug::CompileSettingsDebug
     )
 
