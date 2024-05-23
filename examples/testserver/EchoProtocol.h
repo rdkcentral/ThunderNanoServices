@@ -54,7 +54,7 @@ namespace TestSystem {
             // Generate the message
             uint16_t index = 0;
             uint16_t requiredLength;
-            Crypto::Random(requiredLength, static_cast<const uint16_t>(8), static_cast<const uint16_t>(2048));
+            Crypto::Random(requiredLength, static_cast<uint16_t>(8), static_cast<uint16_t>(2048));
             string myMessage = Core::NumberType<uint16_t, false, BASE_HEXADECIMAL>(requiredLength).Text();
 
             if (requiredLength < _minLength) {
@@ -131,7 +131,7 @@ namespace TestSystem {
         }
         JSONObjectFactory(const JSONObjectFactory&);
         JSONObjectFactory& operator=(const JSONObjectFactory&);
-        ~JSONObjectFactory() override = default;
+        ~JSONObjectFactory() = default;
 
     public:
         static JSONObjectFactory& Instance()

@@ -88,7 +88,7 @@
 #include <interfaces/IDictionary.h>
 #include <iostream>
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE);
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace Thunder = WPEFramework;
 
@@ -209,7 +209,7 @@ private:
     Thunder::Core::IIPCServer* _announceHandler;
 };
 
-int main(int argc, char* argv[])
+int main(int /* argc */, char** /* argv */)
 {
     bool directLink = true;
 

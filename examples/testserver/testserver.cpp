@@ -261,7 +261,9 @@ namespace TestSystem {
         };
 
         char keyPress;
+#if 0
         bool flagState = false;
+#endif
 
         do {
             keyPress = toupper(getchar());
