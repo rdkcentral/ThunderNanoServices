@@ -22,18 +22,18 @@
 #include "../Module.h"
 
 #include "../Core/TestAdministrator.h"
-#include <interfaces/ITestController.h>
+#include <qa_interfaces/ITestController.h>
 
 namespace WPEFramework {
 namespace TestCore {
 
-    class TestCategoryBase : public Exchange::ITestController::ICategory {
+    class TestCategoryBase : public QualityAssurance::ITestController::ICategory {
     public:
         TestCategoryBase(const TestCategoryBase&) = delete;
         TestCategoryBase& operator=(const TestCategoryBase&) = delete;
 
         TestCategoryBase()
-            : Exchange::ITestController::ICategory()
+            : QualityAssurance::ITestController::ICategory()
             , _adminLock()
             , _tests()
         {
@@ -50,7 +50,7 @@ namespace TestCore {
         }
 
         // ITestCategory methods
-        void Register(Exchange::ITestController::ITest* test) override
+        void Register(QualityAssurance::ITestController::ITest* test) override
         {
             ASSERT(test != nullptr);
 
@@ -64,7 +64,7 @@ namespace TestCore {
             _adminLock.Unlock();
         }
 
-        void Unregister(Exchange::ITestController::ITest* test) override
+        void Unregister(QualityAssurance::ITestController::ITest* test) override
         {
             ASSERT(test != nullptr);
 
@@ -77,9 +77,9 @@ namespace TestCore {
             _adminLock.Unlock();
         }
 
-        Exchange::ITestController::ITest* Test(const string& name) const override
+        QualityAssurance::ITestController::ITest* Test(const string& name) const override
         {
-            Exchange::ITestController::ITest* result = nullptr;
+            QualityAssurance::ITestController::ITest* result = nullptr;
             _adminLock.Lock();
             auto found = _tests.find(name);
             if (found != _tests.end()) {
@@ -89,10 +89,10 @@ namespace TestCore {
             return result;
         }
 
-        Exchange::ITestController::ITest::IIterator* Tests(void) const override
+        QualityAssurance::ITestController::ITest::IIterator* Tests(void) const override
         {
             _adminLock.Lock();
-            auto iterator = Core::ServiceType<TestCore::TestIterator>::Create<Exchange::ITestController::ITest::IIterator>(_tests);
+            auto iterator = Core::ServiceType<TestCore::TestIterator>::Create<QualityAssurance::ITestController::ITest::IIterator>(_tests);
             _adminLock.Unlock();
             return iterator;
         }

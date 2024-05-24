@@ -78,7 +78,7 @@ namespace Plugin {
         _service->AddRef();
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
         _service->Register(&_notification);
-        _testControllerImp = _service->Root<Exchange::ITestController>(_connection, ImplWaitTime, _T("TestControllerImp"));
+        _testControllerImp = _service->Root<QualityAssurance::ITestController>(_connection, ImplWaitTime, _T("TestControllerImp"));
 
         if (_testControllerImp != nullptr) {
             RegisterAll();
@@ -204,7 +204,7 @@ namespace Plugin {
         }
     }
 
-    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::TestCategories(Exchange::ITestController::ICategory::IIterator* categories) const
+    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::TestCategories(QualityAssurance::ITestController::ICategory::IIterator* categories) const
     {
         Core::JSON::ArrayType<Core::JSON::String> testCategories;
 
@@ -220,7 +220,7 @@ namespace Plugin {
         return testCategories;
     }
 
-    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::Tests(Exchange::ITestController::ITest::IIterator* tests) const
+    Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestController::Tests(QualityAssurance::ITestController::ITest::IIterator* tests) const
     {
         Core::JSON::ArrayType<Core::JSON::String> testsItems;
 
@@ -243,7 +243,7 @@ namespace Plugin {
         OverallTestResults jsonResults;
 
         if (categoryName == EMPTY_STRING) {
-            Exchange::ITestController::ICategory::IIterator* categories = _testControllerImp->Categories();
+            QualityAssurance::ITestController::ICategory::IIterator* categories = _testControllerImp->Categories();
 
             if (categories != nullptr) {
                 while (categories->Next()) {
@@ -261,7 +261,7 @@ namespace Plugin {
                 }
             }
         } else {
-            Exchange::ITestController::ICategory* category = _testControllerImp->Category(categoryName);
+            QualityAssurance::ITestController::ICategory* category = _testControllerImp->Category(categoryName);
 
             if (category != nullptr) {
                 TestPreparation(category, categoryName);
@@ -288,7 +288,7 @@ namespace Plugin {
         string response = EMPTY_STRING;
         OverallTestResults jsonResults;
 
-        Exchange::ITestController::ICategory* category = _testControllerImp->Category(categoryName);
+        QualityAssurance::ITestController::ICategory* category = _testControllerImp->Category(categoryName);
 
         if (category != nullptr) {
             TestPreparation(category, categoryName);
@@ -309,11 +309,11 @@ namespace Plugin {
         return response;
     }
 
-    void TestController::TestPreparation(Exchange::ITestController::ICategory* const category, const string& categoryName)
+    void TestController::TestPreparation(QualityAssurance::ITestController::ICategory* const category, const string& categoryName)
     {
         if (_prevCategory != categoryName) {
             if (_prevCategory != EMPTY_STRING) {
-                Exchange::ITestController::ICategory* prevCategory = _testControllerImp->Category(_prevCategory);
+                QualityAssurance::ITestController::ICategory* prevCategory = _testControllerImp->Category(_prevCategory);
                 if (prevCategory != nullptr)
                     prevCategory->TearDown();
             }

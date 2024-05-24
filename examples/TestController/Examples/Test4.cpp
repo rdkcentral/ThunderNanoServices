@@ -22,7 +22,7 @@
 #include "../Core/TestBase.h"
 #include "../Core/Trace.h"
 #include "TestCategory2.h"
-#include <interfaces/ITestController.h>
+#include <qa_interfaces/ITestController.h>
 
 namespace WPEFramework {
 
@@ -69,5 +69,5 @@ private:
     const string _name = _T("Test4");
 };
 
-static Exchange::ITestController::ITest* _singleton(Core::ServiceType<Test4>::Create<Exchange::ITestController::ITest>());
+static QualityAssurance::ITestController::ITest* _singleton(Core::ServiceType<Test4>::Create<QualityAssurance::ITestController::ITest>());
 } // namespace WPEFramework

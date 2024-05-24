@@ -17,14 +17,14 @@
  * limitations under the License.
  */
  
-#include "interfaces/ITestController.h"
+#include <qa_interfaces/ITestController.h>
 
 #include "../Module.h"
 #include "TestMetadata.h"
 
 namespace WPEFramework {
 
-class TestBase : public Exchange::ITestController::ITest {
+class TestBase : public QualityAssurance::ITestController::ITest {
 public:
     TestBase(const TestBase&) = delete;
     TestBase& operator=(const TestBase&) = delete;
@@ -56,7 +56,7 @@ public:
     };
 
     explicit TestBase(const DescriptionBuilder& description)
-        : Exchange::ITestController::ITest()
+        : QualityAssurance::ITestController::ITest()
         , _description(description.ToString())
     {
     }
@@ -70,7 +70,7 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(TestBase)
-    INTERFACE_ENTRY(Exchange::ITestController::ITest)
+    INTERFACE_ENTRY(QualityAssurance::ITestController::ITest)
     END_INTERFACE_MAP
 
 private:

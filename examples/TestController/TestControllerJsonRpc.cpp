@@ -18,7 +18,7 @@
  */
  
 #include "Module.h"
-#include <interfaces/json/JsonData_TestController.h>
+#include <qa_interfaces/json/JsonData_TestController.h>
 #include "TestController.h"
 
 namespace WPEFramework {

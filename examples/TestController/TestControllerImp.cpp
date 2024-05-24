@@ -19,14 +19,14 @@
  
 #include "Module.h"
 
-#include <interfaces/ITestController.h>
+#include <qa_interfaces/ITestController.h>
 
 #include "Core/TestAdministrator.h"
 
 namespace WPEFramework {
 namespace TestCore {
 
-    class TestControllerImp : public Exchange::ITestController {
+    class TestControllerImp : public QualityAssurance::ITestController {
     public:
         TestControllerImp() = default;
         TestControllerImp(const TestControllerImp&) = delete;
@@ -58,7 +58,7 @@ namespace TestCore {
         }
 
         BEGIN_INTERFACE_MAP(TestControllerImp)
-        INTERFACE_ENTRY(Exchange::ITestController)
+        INTERFACE_ENTRY(QualityAssurance::ITestController)
         END_INTERFACE_MAP
     private:
     };

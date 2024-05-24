@@ -28,7 +28,7 @@ namespace TestCore {
         return (*_singleton);
     }
 
-    void TestAdministrator::Announce(Exchange::ITestController::ICategory* category)
+    void TestAdministrator::Announce(QualityAssurance::ITestController::ICategory* category)
     {
         ASSERT(category != nullptr);
 
@@ -42,7 +42,7 @@ namespace TestCore {
         _adminLock.Unlock();
     }
 
-    void TestAdministrator::Revoke(Exchange::ITestController::ICategory* category)
+    void TestAdministrator::Revoke(QualityAssurance::ITestController::ICategory* category)
     {
         ASSERT(category != nullptr);
 
@@ -51,17 +51,17 @@ namespace TestCore {
         _adminLock.Unlock();
     }
 
-    Exchange::ITestController::ICategory::IIterator* TestAdministrator::Categories()
+    QualityAssurance::ITestController::ICategory::IIterator* TestAdministrator::Categories()
     {
         _adminLock.Lock();
-        auto iterator = Core::ServiceType<TestCore::CategoryIterator>::Create<Exchange::ITestController::ICategory::IIterator>(_testsCategories);
+        auto iterator = Core::ServiceType<TestCore::CategoryIterator>::Create<QualityAssurance::ITestController::ICategory::IIterator>(_testsCategories);
         _adminLock.Unlock();
         return iterator;
     }
 
-    Exchange::ITestController::ICategory* TestAdministrator::Category(const string& name)
+    QualityAssurance::ITestController::ICategory* TestAdministrator::Category(const string& name)
     {
-        Exchange::ITestController::ICategory* result = nullptr;
+        QualityAssurance::ITestController::ICategory* result = nullptr;
         _adminLock.Lock();
         auto found = _testsCategories.find(name);
         if (found != _testsCategories.end()) {

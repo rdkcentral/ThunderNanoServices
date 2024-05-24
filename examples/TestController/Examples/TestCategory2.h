@@ -23,7 +23,7 @@
 
 #include "../Core/TestAdministrator.h"
 #include "../Core/TestCategoryBase.h"
-#include <interfaces/ITestController.h>
+#include <qa_interfaces/ITestController.h>
 
 namespace WPEFramework {
 namespace TestCore {
@@ -44,9 +44,9 @@ namespace TestCore {
             TestCore::TestAdministrator::Instance().Revoke(this);
         }
 
-        static Exchange::ITestController::ICategory& Instance()
+        static QualityAssurance::ITestController::ICategory& Instance()
         {
-            static Exchange::ITestController::ICategory* _singleton(Core::ServiceType<TestCategory2>::Create<Exchange::ITestController::ICategory>());
+            static QualityAssurance::ITestController::ICategory* _singleton(Core::ServiceType<TestCategory2>::Create<QualityAssurance::ITestController::ICategory>());
             return (*_singleton);
         }
 
@@ -67,7 +67,7 @@ namespace TestCore {
         };
 
         BEGIN_INTERFACE_MAP(TestCategory2)
-        INTERFACE_ENTRY(Exchange::ITestController::ICategory)
+        INTERFACE_ENTRY(QualityAssurance::ITestController::ICategory)
         END_INTERFACE_MAP
 
     private:

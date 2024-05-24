@@ -21,23 +21,23 @@
 
 #include "../Module.h"
 
-#include <interfaces/ITestController.h>
+#include <qa_interfaces/ITestController.h>
 
 namespace WPEFramework {
 namespace TestCore {
 
-    using TestsContainer = std::map<string, Exchange::ITestController::ITest*>;
-    using CategoriesContainer = std::map<string, Exchange::ITestController::ICategory*>;
+    using TestsContainer = std::map<string, QualityAssurance::ITestController::ITest*>;
+    using CategoriesContainer = std::map<string, QualityAssurance::ITestController::ICategory*>;
 
-    class TestIterator : public Exchange::ITestController::ITest::IIterator {
+    class TestIterator : public QualityAssurance::ITestController::ITest::IIterator {
     public:
         TestIterator(const TestIterator&) = delete;
         TestIterator& operator=(const TestIterator&) = delete;
 
-        using IteratorImpl = Core::IteratorMapType<TestsContainer, Exchange::ITestController::ITest*, string>;
+        using IteratorImpl = Core::IteratorMapType<TestsContainer, QualityAssurance::ITestController::ITest*, string>;
 
         explicit TestIterator(const TestsContainer& tests)
-            : Exchange::ITestController::ITest::IIterator()
+            : QualityAssurance::ITestController::ITest::IIterator()
             , _container(tests)
             , _iterator(_container)
         {
@@ -46,7 +46,7 @@ namespace TestCore {
         ~TestIterator() override = default;
 
         BEGIN_INTERFACE_MAP(TestIterator)
-        INTERFACE_ENTRY(Exchange::ITestController::ITest::IIterator)
+        INTERFACE_ENTRY(QualityAssurance::ITestController::ITest::IIterator)
         END_INTERFACE_MAP
 
         void Reset() override
@@ -64,7 +64,7 @@ namespace TestCore {
             return _iterator.Next();
         }
 
-        Exchange::ITestController::ITest* Test() const override
+        QualityAssurance::ITestController::ITest* Test() const override
         {
             return *_iterator;
         }
@@ -74,15 +74,15 @@ namespace TestCore {
         IteratorImpl _iterator;
     };
 
-    class CategoryIterator : public Exchange::ITestController::ICategory::IIterator {
+    class CategoryIterator : public QualityAssurance::ITestController::ICategory::IIterator {
     public:
         CategoryIterator(const CategoryIterator&) = delete;
         CategoryIterator& operator=(const CategoryIterator&) = delete;
 
-        using IteratorImpl = Core::IteratorMapType<CategoriesContainer, Exchange::ITestController::ICategory*, string>;
+        using IteratorImpl = Core::IteratorMapType<CategoriesContainer, QualityAssurance::ITestController::ICategory*, string>;
 
         explicit CategoryIterator(const CategoriesContainer& tests)
-            : Exchange::ITestController::ICategory::IIterator()
+            : QualityAssurance::ITestController::ICategory::IIterator()
             , _container(tests)
             , _iterator(_container)
         {
@@ -91,7 +91,7 @@ namespace TestCore {
         ~CategoryIterator() override = default;
 
         BEGIN_INTERFACE_MAP(CategoryIterator)
-        INTERFACE_ENTRY(Exchange::ITestController::ICategory::IIterator)
+        INTERFACE_ENTRY(QualityAssurance::ITestController::ICategory::IIterator)
         END_INTERFACE_MAP
 
         void Reset() override
@@ -109,7 +109,7 @@ namespace TestCore {
             return _iterator.Next();
         }
 
-        Exchange::ITestController::ICategory* Category() const override
+        QualityAssurance::ITestController::ICategory* Category() const override
         {
             return *_iterator;
         }
@@ -136,7 +136,7 @@ namespace TestCore {
         {
             for (auto& testCategory : _testsCategories) {
 
-                Exchange::ITestController::ITest::IIterator* existingTests = testCategory.second->Tests();
+                QualityAssurance::ITestController::ITest::IIterator* existingTests = testCategory.second->Tests();
                 while (existingTests->Next()) {
                     existingTests->Test()->Release();
                 }
@@ -145,12 +145,12 @@ namespace TestCore {
             }
         }
 
-        void Announce(Exchange::ITestController::ICategory* category);
-        void Revoke(Exchange::ITestController::ICategory* category);
+        void Announce(QualityAssurance::ITestController::ICategory* category);
+        void Revoke(QualityAssurance::ITestController::ICategory* category);
 
         // TestController methods
-        Exchange::ITestController::ICategory::IIterator* Categories();
-        Exchange::ITestController::ICategory* Category(const string& name);
+        QualityAssurance::ITestController::ICategory::IIterator* Categories();
+        QualityAssurance::ITestController::ICategory* Category(const string& name);
 
         BEGIN_INTERFACE_MAP(TestAdministrator)
         END_INTERFACE_MAP

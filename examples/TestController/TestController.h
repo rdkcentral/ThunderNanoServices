@@ -22,8 +22,8 @@
 #include "Module.h"
 
 #include <interfaces/IMemory.h>
-#include <interfaces/ITestController.h>
-#include <interfaces/json/JsonData_TestController.h>
+#include <qa_interfaces/ITestController.h>
+#include <qa_interfaces/json/JsonData_TestController.h>
 
 #include "Core/TestMetadata.h"
 
@@ -116,7 +116,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
-        INTERFACE_AGGREGATE(Exchange::ITestController, _testControllerImp)
+        INTERFACE_AGGREGATE(QualityAssurance::ITestController, _testControllerImp)
         END_INTERFACE_MAP
 
         //   IPlugin methods
@@ -139,10 +139,10 @@ namespace Plugin {
 
         void ProcessTermination(uint32_t pid);
 
-        void TestPreparation(Exchange::ITestController::ICategory* const category, const string& categoryName);
+        void TestPreparation(QualityAssurance::ITestController::ICategory* const category, const string& categoryName);
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
-        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestCategories(Exchange::ITestController::ICategory::IIterator* categories) const;
-        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ Tests(Exchange::ITestController::ITest::IIterator* tests) const;
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestCategories(QualityAssurance::ITestController::ICategory::IIterator* categories) const;
+        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ Tests(QualityAssurance::ITestController::ITest::IIterator* tests) const;
         string /*JSON*/ RunAll(const string& body, const string& categoryName = EMPTY_STRING);
         string /*JSON*/ RunTest(const string& body, const string& categoryName, const string& testName);
 
@@ -157,7 +157,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Core::SinkType<Notification> _notification;
         Exchange::IMemory* _memory;
-        Exchange::ITestController* _testControllerImp;
+        QualityAssurance::ITestController* _testControllerImp;
         uint8_t _skipURL;
         uint32_t _connection;
         string _prevCategory;
