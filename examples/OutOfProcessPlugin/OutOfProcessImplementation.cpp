@@ -30,6 +30,22 @@
 namespace WPEFramework {
 namespace Plugin {
 
+    static Core::NodeId CompositorConnector(const string& configuredValue)
+    {
+        Core::NodeId destination;
+        if (configuredValue.empty() == false) {
+            destination = Core::NodeId(configuredValue.c_str());
+        }
+        if (destination.IsValid() == false) {
+            string value;
+            if ((Core::SystemInfo::GetEnvironment(_T("COMPOSITOR"), value) == false) || (value.empty() == true)) {
+                value = _T("/tmp/compositor");
+            }
+            destination = Core::NodeId(value.c_str());
+        }
+        return (destination);
+    }
+
     class TooMuchInfo {
         // -------------------------------------------------------------------
         // This object should not be copied or assigned. Prevent the copy
@@ -135,7 +151,7 @@ POP_WARNING()
                 , Destruct(1000)
                 , Single(false)
                 , ExternalAccess(_T("/tmp/oopexample"))
-                , Compositor()
+                , Compositor(_T(""))
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("config"), &Init);
@@ -206,15 +222,19 @@ POP_WARNING()
 
         class CompositorRemoteAccess : public Exchange::IComposition::IClient {
         public:
+            CompositorRemoteAccess(CompositorRemoteAccess&&) = delete;
             CompositorRemoteAccess(const CompositorRemoteAccess&) = delete;
+            CompositorRemoteAccess& operator= (CompositorRemoteAccess&&) = delete;
             CompositorRemoteAccess& operator= (const CompositorRemoteAccess&) = delete;
-            CompositorRemoteAccess() = default;
+            CompositorRemoteAccess(const string& name)
+                : _name(name) {
+            }
             ~CompositorRemoteAccess() override = default;
 
         public:
             string Name() const override
             {
-                return "OutOfProcessCompositor";
+                return _name;
             }
             void Opacity(const uint32_t) override {}
             uint32_t Geometry(const Exchange::IComposition::Rectangle&) override
@@ -239,8 +259,7 @@ POP_WARNING()
             END_INTERFACE_MAP
 
         private:
-
-            Exchange::IComposition::Rectangle _destination;
+            const string _name;
         };
 
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
@@ -356,14 +375,14 @@ POP_WARNING()
 
             return (result);
         }
-        void CreateCompositerServerRPCConnection(string compositor) {
+        void CreateCompositerServerRPCConnection(const string& connection) {
             if (Core::WorkerPool::IsAvailable() == true) {
                 // If we are in the same process space as where a WorkerPool is registered (Main Process or
                 // hosting ptocess) use, it!
                 Core::ProxyType<RPC::InvokeServer> engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
                 ASSERT(engine.IsValid() == true);
 
-                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId(compositor.c_str()), Core::ProxyType<Core::IIPCServer>(engine));
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(connection), Core::ProxyType<Core::IIPCServer>(engine));
                 ASSERT(_compositerServerRPCConnection.IsValid() == true);
 
             } else {
@@ -372,7 +391,7 @@ POP_WARNING()
                 Core::ProxyType<RPC::InvokeServerType<2,0,8>> engine = Core::ProxyType<RPC::InvokeServerType<2,0,8>>::Create();
                 ASSERT(engine.IsValid() == true);
 
-                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId(compositor.c_str()), Core::ProxyType<Core::IIPCServer>(engine));
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(connection), Core::ProxyType<Core::IIPCServer>(engine));
                 ASSERT(_compositerServerRPCConnection.IsValid() == true);
 
             }
@@ -381,7 +400,7 @@ POP_WARNING()
             if (result != Core::ERROR_NONE) {
                 _compositerServerRPCConnection.Release();
             } else {
-                _compositorRemoteAccess = Core::ServiceType<CompositorRemoteAccess>::Create<CompositorRemoteAccess>();
+                _compositorRemoteAccess = Core::ServiceType<CompositorRemoteAccess>::Create<CompositorRemoteAccess>(_service->Callsign());
                 result = _compositerServerRPCConnection->Offer(_compositorRemoteAccess);
                 if (result != Core::ERROR_NONE) {
                     printf(_T("Could not offer IClient interface with callsign %s to Compositor. Error: %s\n"), _compositorRemoteAccess->Name().c_str(), Core::NumberType<uint32_t>(result).Text().c_str());
@@ -693,9 +712,11 @@ POP_WARNING()
     private:
         virtual uint32_t Worker()
         {
-            TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
-            // First Sleep the expected time..
-            SleepMs(_config.Sleep.Value() * 1000);
+            if (_config.Sleep.Value() > 0) {
+                TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
+                // First Sleep the expected time..
+                SleepMs(_config.Sleep.Value() * 1000);
+            }
 
             _adminLock.Lock();
 
