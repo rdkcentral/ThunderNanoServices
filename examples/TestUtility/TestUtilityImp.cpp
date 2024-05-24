@@ -20,7 +20,7 @@
 #include "Module.h"
 
 #include "CommandCore/TestCommandController.h"
-#include <interfaces/ITestUtility.h>
+#include <qa_interfaces/ITestUtility.h>
 
 namespace WPEFramework {
 namespace TestCore {
