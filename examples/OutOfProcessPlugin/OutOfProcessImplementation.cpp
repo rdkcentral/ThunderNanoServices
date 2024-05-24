@@ -749,7 +749,7 @@ POP_WARNING()
                 abort();
             }
 
-            if ((_config.Compositor.IsSet() == true) && (_config.Compositor.Value().empty() == false)) {
+            if (_config.Compositor.IsSet() == true) {
                 CreateCompositerServerRPCConnection(_config.Compositor.Value());
             }
 
