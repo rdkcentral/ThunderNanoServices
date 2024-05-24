@@ -38,6 +38,6 @@ target_link_libraries(${MODULE_NAME}
         
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
 
 write_config(PLUGINS ${PLUGIN_NAME} CLASSNAME ${PLUGIN_NAME})

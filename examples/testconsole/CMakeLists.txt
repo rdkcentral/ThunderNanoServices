@@ -23,4 +23,4 @@ target_link_libraries(testconsole
         ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS testconsole DESTINATION bin)
+install(TARGETS testconsole DESTINATION ${CMAKE_INSTALL_BINDIR})

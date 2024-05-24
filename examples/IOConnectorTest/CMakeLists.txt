@@ -38,4 +38,4 @@ target_include_directories(IOConnectorTest
          "${PROJECT_SOURCE_DIR}/tests"
 )
 
-install(TARGETS IOConnectorTest DESTINATION bin)
+install(TARGETS IOConnectorTest DESTINATION ${CMAKE_INSTALL_BINDIR})

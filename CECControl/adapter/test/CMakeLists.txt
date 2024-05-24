@@ -36,4 +36,4 @@ target_link_libraries(cec_accessor_test PRIVATE
     ${NAMESPACE}Core::${NAMESPACE}Core
     ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer)
 
-install(TARGETS cec_accessor_test DESTINATION bin)
+install(TARGETS cec_accessor_test DESTINATION ${CMAKE_INSTALL_BINDIR})
