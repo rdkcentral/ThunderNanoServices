@@ -30,15 +30,6 @@
 namespace WPEFramework {
 namespace Plugin {
 
-    static Core::NodeId CompositorConnector()
-    {
-        string connector;
-        if ((Core::SystemInfo::GetEnvironment(_T("COMPOSITOR"), connector) == false) || (connector.empty() == true)) {
-            connector = _T("/tmp/compositor");
-        }
-        return (Core::NodeId(connector.c_str()));
-    }
-
     class TooMuchInfo {
         // -------------------------------------------------------------------
         // This object should not be copied or assigned. Prevent the copy
@@ -144,7 +135,7 @@ POP_WARNING()
                 , Destruct(1000)
                 , Single(false)
                 , ExternalAccess(_T("/tmp/oopexample"))
-                , CompositorClientTest(false)
+                , Compositor()
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("config"), &Init);
@@ -152,7 +143,7 @@ POP_WARNING()
                 Add(_T("destruct"), &Destruct);
                 Add(_T("single"), &Single);
                 Add(_T("accessor"), &ExternalAccess);
-                Add(_T("compositorclienttest"), &CompositorClientTest);
+                Add(_T("compositor"), &Compositor);
             }
             ~Config() override = default;
 
@@ -163,7 +154,7 @@ POP_WARNING()
             Core::JSON::DecUInt32 Destruct;
             Core::JSON::Boolean Single;
             Core::JSON::String ExternalAccess;
-            Core::JSON::Boolean CompositorClientTest;
+            Core::JSON::String Compositor;
         };
 
     public:
@@ -365,14 +356,14 @@ POP_WARNING()
 
             return (result);
         }
-        void CreateCompositerServerRPCConnection() {
+        void CreateCompositerServerRPCConnection(string compositor) {
             if (Core::WorkerPool::IsAvailable() == true) {
                 // If we are in the same process space as where a WorkerPool is registered (Main Process or
                 // hosting ptocess) use, it!
                 Core::ProxyType<RPC::InvokeServer> engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
                 ASSERT(engine.IsValid() == true);
 
-                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(), Core::ProxyType<Core::IIPCServer>(engine));
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId(compositor.c_str()), Core::ProxyType<Core::IIPCServer>(engine));
                 ASSERT(_compositerServerRPCConnection.IsValid() == true);
 
             } else {
@@ -381,7 +372,7 @@ POP_WARNING()
                 Core::ProxyType<RPC::InvokeServerType<2,0,8>> engine = Core::ProxyType<RPC::InvokeServerType<2,0,8>>::Create();
                 ASSERT(engine.IsValid() == true);
 
-                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(), Core::ProxyType<Core::IIPCServer>(engine));
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(Core::NodeId(compositor.c_str()), Core::ProxyType<Core::IIPCServer>(engine));
                 ASSERT(_compositerServerRPCConnection.IsValid() == true);
 
             }
@@ -737,8 +728,8 @@ POP_WARNING()
                 abort();
             }
 
-            if (_config.CompositorClientTest.IsSet() == true && _config.CompositorClientTest.Value() == true) {
-                CreateCompositerServerRPCConnection();
+            if (_config.Compositor.IsSet() == true) {
+                CreateCompositerServerRPCConnection(_config.Compositor.Value());
             }
 
             // Just do nothing :-)
