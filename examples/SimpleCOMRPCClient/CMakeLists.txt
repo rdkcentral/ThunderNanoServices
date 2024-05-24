@@ -33,4 +33,4 @@ target_link_libraries(SimpleCOMRPCClient
         CompileSettingsDebug::CompileSettingsDebug
     )
 
-install(TARGETS SimpleCOMRPCClient DESTINATION bin)
+install(TARGETS SimpleCOMRPCClient DESTINATION ${CMAKE_INSTALL_BINDIR})

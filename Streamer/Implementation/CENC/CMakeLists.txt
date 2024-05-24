@@ -50,4 +50,4 @@ target_link_libraries(${LIB_NAME}
         ${GST_LIBRARIES})
 
 install(TARGETS ${LIB_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
