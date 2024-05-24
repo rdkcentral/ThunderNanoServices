@@ -23,7 +23,7 @@
 
 namespace WPEFramework {
 
-class TestCommandBase : public Exchange::ITestUtility::ICommand {
+class TestCommandBase : public QualityAssurance::ITestUtility::ICommand {
 public:
     TestCommandBase() = delete;
     TestCommandBase(const TestCommandBase&) = delete;
@@ -110,7 +110,7 @@ public:
 
 public:
     explicit TestCommandBase(const DescriptionBuilder& description, const SignatureBuilder& signature)
-        : Exchange::ITestUtility::ICommand()
+        : QualityAssurance::ITestUtility::ICommand()
         , _description(description.ToString())
         , _signature(signature.ToString())
     {

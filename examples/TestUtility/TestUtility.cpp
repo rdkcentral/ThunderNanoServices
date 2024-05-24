@@ -82,7 +82,7 @@ namespace Plugin {
         config.FromString(_service->ConfigLine());
 
         _service->Register(&_notification);
-        _testUtilityImp = _service->Root<Exchange::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
+        _testUtilityImp = _service->Root<QualityAssurance::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
             RegisterAll();
@@ -197,7 +197,7 @@ namespace Plugin {
         string response = EMPTY_STRING;
         Metadata testCommands;
 
-        Exchange::ITestUtility::ICommand::IIterator* supportedCommands = _testUtilityImp->Commands();
+        QualityAssurance::ITestUtility::ICommand::IIterator* supportedCommands = _testUtilityImp->Commands();
         ASSERT(supportedCommands != nullptr);
 
         while (supportedCommands->Next()) {
@@ -230,7 +230,7 @@ namespace Plugin {
                     executed = true;
                 }
             } else {
-                Exchange::ITestUtility::ICommand* command = _testUtilityImp->Command(index.Current().Text());
+                QualityAssurance::ITestUtility::ICommand* command = _testUtilityImp->Command(index.Current().Text());
 
                 if (command) {
                     if (!index.Next() && ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT))) {

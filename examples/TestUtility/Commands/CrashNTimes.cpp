@@ -50,7 +50,7 @@ public:
     }
 
     BEGIN_INTERFACE_MAP(CrashNTimes)
-    INTERFACE_ENTRY(Exchange::ITestUtility::ICommand)
+    INTERFACE_ENTRY(QualityAssurance::ITestUtility::ICommand)
     END_INTERFACE_MAP
 
 public:

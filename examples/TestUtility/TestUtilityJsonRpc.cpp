@@ -66,7 +66,7 @@ namespace Plugin {
 
         if (params.Command.IsSet() == true)
         {
-            Exchange::ITestUtility::ICommand* command = _testUtilityImp->Command(params.Command.Value());
+            QualityAssurance::ITestUtility::ICommand* command = _testUtilityImp->Command(params.Command.Value());
 
             if (command) {
                 string tmpParams, tmpResponse;
@@ -96,7 +96,7 @@ namespace Plugin {
 
         if (params.Command.IsSet() == true)
         {
-            Exchange::ITestUtility::ICommand* command = _testUtilityImp->Command(params.Command.Value());
+            QualityAssurance::ITestUtility::ICommand* command = _testUtilityImp->Command(params.Command.Value());
 
             if (command) {
                 if ((params.Delay.IsSet() == true) || (params.Count.IsSet() == true)) {
@@ -121,7 +121,7 @@ namespace Plugin {
     {
         TRACE(Trace::Information, (_T("*** Call endpoint_commands ***")));
 
-        Exchange::ITestUtility::ICommand::IIterator* supportedCommands = _testUtilityImp->Commands();
+        QualityAssurance::ITestUtility::ICommand::IIterator* supportedCommands = _testUtilityImp->Commands();
         ASSERT(supportedCommands != nullptr);
 
         while (supportedCommands->Next()) {
@@ -146,7 +146,7 @@ namespace Plugin {
 
         if (index != "")
         {
-            Exchange::ITestUtility::ICommand* command = _testUtilityImp->Command(index);
+            QualityAssurance::ITestUtility::ICommand* command = _testUtilityImp->Command(index);
 
             if (command) {
                 if (response.FromString(command->Description()) == true) {
@@ -171,7 +171,7 @@ namespace Plugin {
 
         if (index != "")
         {
-            Exchange::ITestUtility::ICommand* command = _testUtilityImp->Command(index);
+            QualityAssurance::ITestUtility::ICommand* command = _testUtilityImp->Command(index);
 
             if (command) {
                 if (response.FromString(command->Signature()) == true) {

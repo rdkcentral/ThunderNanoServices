@@ -30,7 +30,7 @@ namespace TestCore {
 
     TestCommandController::~TestCommandController() {
         _adminLock.Lock();
-        Exchange::ITestUtility::ICommand::IIterator* iterator = Commands();
+        QualityAssurance::ITestUtility::ICommand::IIterator* iterator = Commands();
         while(iterator->Next()) {
             if (iterator->Command()->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
                 TRACE(Trace::Information, (_T("Command %s in not properly destructed!"), iterator->Command()->Name().c_str()));
@@ -40,7 +40,7 @@ namespace TestCore {
         _adminLock.Unlock();
     }
 
-    void TestCommandController::Announce(Exchange::ITestUtility::ICommand* command)
+    void TestCommandController::Announce(QualityAssurance::ITestUtility::ICommand* command)
     {
         ASSERT(command != nullptr);
 
@@ -50,7 +50,7 @@ namespace TestCore {
         _adminLock.Unlock();
     }
 
-    void TestCommandController::Revoke(Exchange::ITestUtility::ICommand* command)
+    void TestCommandController::Revoke(QualityAssurance::ITestUtility::ICommand* command)
     {
         ASSERT(command != nullptr);
 
@@ -59,12 +59,12 @@ namespace TestCore {
         _adminLock.Unlock();
     }
 
-    Exchange::ITestUtility::ICommand* TestCommandController::Command(const string& name)
+    QualityAssurance::ITestUtility::ICommand* TestCommandController::Command(const string& name)
     {
-        Exchange::ITestUtility::ICommand* command = nullptr;
+        QualityAssurance::ITestUtility::ICommand* command = nullptr;
 
         _adminLock.Lock();
-        Exchange::ITestUtility::ICommand::IIterator* iter = Commands();
+        QualityAssurance::ITestUtility::ICommand::IIterator* iter = Commands();
 
         while (iter->Next()) {
             if (iter->Command()->Name() == name) {
@@ -77,11 +77,11 @@ namespace TestCore {
         return command;
     }
 
-    Exchange::ITestUtility::ICommand::IIterator* TestCommandController::Commands(void) const
+    QualityAssurance::ITestUtility::ICommand::IIterator* TestCommandController::Commands(void) const
     {
-        Exchange::ITestUtility::ICommand::IIterator* iterator = nullptr;
+        QualityAssurance::ITestUtility::ICommand::IIterator* iterator = nullptr;
         _adminLock.Lock();
-        iterator = Core::ServiceType<Iterator>::Create<Exchange::ITestUtility::ICommand::IIterator>(_commands);
+        iterator = Core::ServiceType<Iterator>::Create<QualityAssurance::ITestUtility::ICommand::IIterator>(_commands);
         _adminLock.Unlock();
         return iterator;
     }
