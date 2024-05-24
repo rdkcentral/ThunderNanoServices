@@ -224,7 +224,10 @@ namespace Plugin {
             config.FromString(service->ConfigLine());
 
             _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+            ASSERT(_engine.IsValid() == true);
+
             _externalAccess = new ExternalAccess(*this, Core::NodeId(config.Connector.Value().c_str()), service->ProxyStubPath(), _engine);
+            ASSERT(_externalAccess != nullptr);
 
             if (_externalAccess->IsListening() == true) {
                 PlatformReady(service);
