@@ -55,5 +55,5 @@ target_compile_definitions(CompositorTest
         ${GLESV2_DEFINITIONS})
 
 if(INSTALL_COMPOSITOR_CLIENT_TEST)
-    install(TARGETS CompositorTest DESTINATION bin/${NAMESPACE}Tests)
+    install(TARGETS CompositorTest DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
 endif(INSTALL_COMPOSITOR_CLIENT_TEST)

@@ -34,4 +34,4 @@ target_include_directories(${PLUGIN_NAME}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core)
 
-install(TARGETS ${PLUGIN_NAME} DESTINATION bin)
+install(TARGETS ${PLUGIN_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
