@@ -18,9 +18,7 @@ find_package(${NAMESPACE}Core)
 find_package(${NAMESPACE}COM)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(ProxyStubGenerator_DIR "/home/lukasz/Desktop/builds/rpi3b+_vc4/build1/buildroot/output/build/wpeframework-custom/Tools/cmake" ${ProxyStubGenerator_DIR})
 find_package(ProxyStubGenerator REQUIRED)
-
 
 if(NOT GENERATOR_SEARCH_PATH)
     set(GENERATOR_SEARCH_PATH ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/include/${NAMESPACE})
