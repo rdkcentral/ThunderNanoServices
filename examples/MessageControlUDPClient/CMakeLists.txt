@@ -32,4 +32,4 @@ target_link_libraries(${PLUGIN_NAME}
     PRIVATE
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
-install(TARGETS ${PLUGIN_NAME} DESTINATION bin)
+install(TARGETS ${PLUGIN_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})

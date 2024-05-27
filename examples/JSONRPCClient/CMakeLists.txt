@@ -54,4 +54,4 @@ target_include_directories(JSONRPCClient
          "${PROJECT_SOURCE_DIR}/tests"
 )
 
-install(TARGETS JSONRPCClient DESTINATION bin)
+install(TARGETS JSONRPCClient DESTINATION ${CMAKE_INSTALL_BINDIR})
