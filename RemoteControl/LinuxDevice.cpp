@@ -552,8 +552,8 @@ namespace Plugin {
                 _pipe[1] = -1;
             } else {
                 _typeToName.emplace(std::piecewise_construct,
-                  std::forward_as_tuple(type::KEYBOARD),
-                  std::forward_as_tuple(std::vector<string>({ _T("KEYBOARD") })));
+                    std::forward_as_tuple(type::KEYBOARD),
+                    std::forward_as_tuple(std::vector<string>({ _T("KEYBOARD"), _T("IR_KEYPAD") })));
                 _typeToName.emplace(std::piecewise_construct,
                   std::forward_as_tuple(type::MOUSE),
                   std::forward_as_tuple(std::vector<string>({ _T("MOUSE") })));
