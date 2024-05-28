@@ -26,8 +26,8 @@ find_package(PortAudio)
 find_package(Asio REQUIRED)
 find_package(PryonLite)
 
-set(THUNDER_PLUGIN_AVS_SMARTSCREEN_SOURCES)
-list(APPEND THUNDER_PLUGIN_AVS_SMARTSCREEN_SOURCES
+set(PLUGIN_AVS_SMARTSCREEN_SOURCES)
+list(APPEND PLUGIN_AVS_SMARTSCREEN_SOURCES
     SmartScreen.cpp
     ../Module.cpp
     ../ThunderLogger.cpp
@@ -36,12 +36,12 @@ list(APPEND THUNDER_PLUGIN_AVS_SMARTSCREEN_SOURCES
 add_definitions(-DENABLE_SMART_SCREEN_SUPPORT)
 
 if(PLUGIN_AVS_ENABLE_KWD_SUPPORT)
-    list(APPEND THUNDER_PLUGIN_AVS_SMARTSCREEN_SOURCES ../PryonKeywordDetector.cpp)
+    list(APPEND PLUGIN_AVS_SMARTSCREEN_SOURCES ../PryonKeywordDetector.cpp)
     add_definitions(-DKWD_PRYON)
 endif()
 
 set_source_files_properties(SmartScreen.cpp PROPERTIES COMPILE_FLAGS "-fexceptions" )
-add_library(${MODULE_NAME} ${THUNDER_PLUGIN_AVS_SMARTSCREEN_SOURCES})
+add_library(${MODULE_NAME} ${PLUGIN_AVS_SMARTSCREEN_SOURCES})
 
 set_target_properties(${MODULE_NAME}
     PROPERTIES

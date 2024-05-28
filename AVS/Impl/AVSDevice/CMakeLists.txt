@@ -23,8 +23,8 @@ find_package(PortAudio)
 find_package(PryonLite)
 find_package(Thunder REQUIRED)
 
-set(THUNDER_PLUGIN_AVS_AVSDEVICE_SOURCES)
-list(APPEND THUNDER_PLUGIN_AVS_AVSDEVICE_SOURCES
+set(PLUGIN_AVS_AVSDEVICE_SOURCES)
+list(APPEND PLUGIN_AVS_AVSDEVICE_SOURCES
     AVSDevice.cpp
     ThunderInputManager.cpp
     ../Module.cpp
@@ -32,11 +32,11 @@ list(APPEND THUNDER_PLUGIN_AVS_AVSDEVICE_SOURCES
 )
 set_source_files_properties(AVSDevice.cpp  PROPERTIES COMPILE_FLAGS "-fexceptions")
 if(PLUGIN_AVS_ENABLE_KWD_SUPPORT)
-    list(APPEND THUNDER_PLUGIN_AVS_AVSDEVICE_SOURCES ../PryonKeywordDetector.cpp)
+    list(APPEND PLUGIN_AVS_AVSDEVICE_SOURCES ../PryonKeywordDetector.cpp)
     add_definitions(-DKWD_PRYON)
 endif()
 
-add_library(${MODULE_NAME} ${THUNDER_PLUGIN_AVS_AVSDEVICE_SOURCES})
+add_library(${MODULE_NAME} ${PLUGIN_AVS_AVSDEVICE_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
