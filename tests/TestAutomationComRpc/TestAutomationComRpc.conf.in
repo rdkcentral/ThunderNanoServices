@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_TESTAUTOMATIONCOMRPC_STARTMODE@"
+resumed = "@PLUGIN_TESTAUTOMATIONCOMRPC_RESUMED@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTAUTOMATIONCOMRPC_MODE@")
+configuration.add("root", root)
