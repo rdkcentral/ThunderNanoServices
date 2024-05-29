@@ -30,7 +30,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include <IBuffer.h>
+#include <IBackend.h>
 
 using namespace WPEFramework;
 
@@ -46,7 +46,6 @@ int main(int argc, const char* argv[])
     } else {
         ConnectorId = argv[1];
     }
-
 
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
     Messaging::ConsolePrinter printer(false);
@@ -71,6 +70,8 @@ int main(int argc, const char* argv[])
 
         Core::ProxyType<Exchange::ICompositionBuffer> framebuffer;
 
+        const Exchange::IComposition::Rectangle rectangle = { 0, 0, 1080, 1920 };
+
         char keyPress;
 
         do {
@@ -84,14 +85,14 @@ int main(int argc, const char* argv[])
             case 'S': {
                 if (framebuffer.IsValid() == true) {
                     framebuffer->Render();
-                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer: %u", framebuffer->Identifier()));    
+                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer: %u", framebuffer->Identifier()));
                 }
                 break;
             }
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::Connector(ConnectorId, Exchange::IComposition::ScreenResolution::ScreenResolution_1080p, format);
+                    framebuffer = Compositor::Connector(ConnectorId, rectangle, format);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
                 }
                 break;
@@ -101,7 +102,7 @@ int main(int argc, const char* argv[])
                 if (framebuffer.IsValid() == true) {
                     uint32_t id = framebuffer->Identifier();
                     uint32_t res = framebuffer.Release();
-                    TRACE_GLOBAL(Trace::Information, ("Released framebuffer %u(%d)", id,  res));
+                    TRACE_GLOBAL(Trace::Information, ("Released framebuffer %u(%d)", id, res));
                 }
                 break;
             }

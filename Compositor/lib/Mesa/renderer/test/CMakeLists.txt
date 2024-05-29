@@ -4,7 +4,6 @@ find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
 
-add_subdirectory(simpleworker)
 add_subdirectory(texturebuffer)
 
 add_executable(testclear testclear.cpp)
@@ -20,7 +19,6 @@ target_link_libraries(testclear
         common::backend
         common::renderer
         common::drm
-        CompositorSimpleWorker::CompositorSimpleWorker
 )
 
 set_target_properties(testclear PROPERTIES
@@ -43,7 +41,6 @@ target_link_libraries(testquads
         common::backend
         common::renderer
         common::drm
-        CompositorSimpleWorker::CompositorSimpleWorker
 )
 
 set_target_properties(testquads PROPERTIES
@@ -67,7 +64,6 @@ target_link_libraries(testtexture
         common::backend
         common::renderer
         common::drm
-        CompositorSimpleWorker::CompositorSimpleWorker
         PixelBuffer::PixelBuffer
 )
 
@@ -91,7 +87,6 @@ target_link_libraries(testdmabuf
         common::backend
         common::renderer
         common::drm
-        CompositorSimpleWorker::CompositorSimpleWorker
         DmaBuffer::DmaBuffer
 )
 

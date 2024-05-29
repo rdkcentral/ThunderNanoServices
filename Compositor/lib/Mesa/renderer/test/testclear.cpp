@@ -35,13 +35,12 @@
 
 #include <inttypes.h>
 
+#include <IBackend.h>
 #include <IBuffer.h>
 #include <IRenderer.h>
 #include <Transformation.h>
 
 #include <drm_fourcc.h>
-
-#include <simpleworker/SimpleWorker.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -56,27 +55,32 @@ public:
     ClearTest(const ClearTest&) = delete;
     ClearTest& operator=(const ClearTest&) = delete;
 
-    ClearTest(const std::string& connectorId, const uint8_t fps)
+    ClearTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
         : _adminLock()
-        , _lastFrame(0)
-        , _sink(*this)
         , _renderer()
         , _connector()
         , _color(red)
-        , _fps(fps)
         , _previousIndex(0)
+        , _period(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond)
+        , _rotationPeriod(std::chrono::seconds(rotationsPerSecond))
+        , _rotation(0)
+        , _running(false)
+        , _render()
+        , _renderFd(::open(renderId.c_str(), O_RDWR))
 
     {
         _connector = Compositor::Connector(
             connectorId,
-            Exchange::IComposition::ScreenResolution::ScreenResolution_1080p,
+            { 0, 0, 1080, 1920 },
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }));
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_connector->Identifier());
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
 
         ASSERT(_renderer.IsValid());
+
+        NewFrame();
     }
 
     ~ClearTest()
@@ -85,6 +89,8 @@ public:
 
         _renderer.Release();
         _connector.Release();
+
+        ::close(_renderFd);
     }
 
     void Start()
@@ -92,8 +98,8 @@ public:
         TRACE(Trace::Information, ("Starting ClearTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        _lastFrame = Core::Time::Now().Ticks();
-        Core::SimpleWorker::Instance().Submit(&_sink);
+
+        _render = std::thread(&ClearTest::Render, this);
     }
 
     void Stop()
@@ -101,62 +107,63 @@ public:
         TRACE(Trace::Information, ("Stopping ClearTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-        Core::SimpleWorker::Instance().Revoke(&_sink);
-        _lastFrame = 0;
+
+        if (_running) {
+            _running = false;
+            _render.join();
+        }
     }
 
     bool Running() const
     {
-        return (_lastFrame != 0);
+        return _running;
     }
 
 private:
-    class Sink : public Core::SimpleWorker::ICallback {
-    public:
-        Sink() = delete;
-        Sink(const Sink&) = delete;
-        Sink& operator=(const Sink&) = delete;
-
-        Sink(ClearTest& parent)
-            : _parent(parent)
-        {
-        }
-
-        virtual ~Sink() = default;
-
-    public:
-        uint64_t Activity(const uint64_t time)
-        {
-            return _parent.NewFrame(time);
-        }
-
-    private:
-        ClearTest& _parent;
-    };
-
-    uint64_t NewFrame(const uint64_t scheduledTime)
+    void Render()
     {
-        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
+        _running = true;
 
-        if (Running() == false) {
-            TRACE(Trace::Information, ("Canceling render attempt"));
-            return 0;
+        while (_running) {
+            const auto next = _period - NewFrame();
+            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
         }
+    }
 
-        const long ms((scheduledTime - _lastFrame) / (Core::Time::TicksPerMillisecond));
+    Compositor::Color hsv2rgb(float H, float S, float V)
+    {
+        Compositor::Color RGB;
 
-        const uint8_t index((_previousIndex + 1) % 3);
+        float P, Q, T, fract;
 
-        _color[index] += ms / 2000.0f;
-        _color[_previousIndex] -= ms / 2000.0f;
+        (H == 360.) ? (H = 0.) : (H /= 60.);
+        fract = H - floor(H);
 
-        if (_color[_previousIndex] < 0.0f) {
-            _color[index] = 1.0f;
-            _color[_previousIndex] = 0.0f;
-            _previousIndex = index;
-        }
+        P = V * (1. - S);
+        Q = V * (1. - S * fract);
+        T = V * (1. - S * (1. - fract));
 
-        // TRACE(Trace::Information, ("%f FPS, Colour[r=%f, g=%f, b=%f, a=%f]", float(Core::Time::MilliSecondsPerSecond / ms), _color[0], _color[1], _color[2], _color[3]));
+        if (0. <= H && H < 1.)
+            RGB = { V, T, P, 1. };
+        else if (1. <= H && H < 2.)
+            RGB = { Q, V, P, 1. };
+        else if (2. <= H && H < 3.)
+            RGB = { P, V, T, 1. };
+        else if (3. <= H && H < 4.)
+            RGB = { P, Q, V, 1. };
+        else if (4. <= H && H < 5.)
+            RGB = { T, P, V, 1. };
+        else if (5. <= H && H < 6.)
+            RGB = { V, P, Q, 1. };
+        else
+            RGB = { 0., 0., 0., 1. };
+
+        return RGB;
+    }
+
+    std::chrono::microseconds NewFrame()
+    {
+        const auto start = std::chrono::high_resolution_clock::now();
 
         _renderer->Bind(_connector);
 
@@ -168,33 +175,70 @@ private:
 
         _renderer->Unbind();
 
-        _lastFrame = scheduledTime;
+        _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / _period.count()));
 
-        return scheduledTime + ((Core::Time::MilliSecondsPerSecond * Core::Time::TicksPerMillisecond) / _fps);
+        if (_rotation >= 360)
+            _rotation = 0;
+
+        _color = hsv2rgb(_rotation, .9, .7);
+
+        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
 private:
     mutable Core::CriticalSection _adminLock;
-    uint64_t _lastFrame;
-    Sink _sink;
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
     Compositor::Color _color;
-    const uint8_t _fps;
     uint8_t _previousIndex;
-}; // ClearTest
+    const std::chrono::microseconds _period;
+    const std::chrono::seconds _rotationPeriod;
+    float _rotation;
+    bool _running;
+    std::thread _render;
+    int _renderFd;
 
+}; // ClearTest
+class ConsoleOptions : public Core::Options {
+public:
+    ConsoleOptions(int argumentCount, TCHAR* arguments[])
+        : Core::Options(argumentCount, arguments, _T("o:r:h"))
+        , RenderNode("/dev/dri/card0")
+        , Output(RenderNode)
+    {
+        Parse();
+    }
+    ~ConsoleOptions()
+    {
+    }
+
+public:
+    const TCHAR* RenderNode;
+    const TCHAR* Output;
+
+private:
+    virtual void Option(const TCHAR option, const TCHAR* argument)
+    {
+        switch (option) {
+        case 'o':
+            Output = argument;
+            break;
+        case 'r':
+            RenderNode = argument;
+            break;
+        case 'h':
+        default:
+            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>]\n");
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }
+};
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
-    std::string connectorId;
-
-    if (argc == 1) {
-        connectorId = "card1-HDMI-A-1";
-    } else {
-        connectorId = argv[1];
-    }
+    ConsoleOptions options(argc, argv);
 
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
 
@@ -219,7 +263,9 @@ int main(int argc, const char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        ClearTest test(connectorId, 15);
+        ClearTest test(options.Output, options.RenderNode, 1, 10);
+
+        test.Start();
 
         char keyPress;
 

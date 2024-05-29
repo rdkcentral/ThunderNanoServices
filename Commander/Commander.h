@@ -177,6 +177,8 @@ namespace Plugin {
         public:
             inline void Register(const string& className, Exchange::ICommand::IFactory* factory)
             {
+                ASSERT(factory != nullptr);
+
                 _adminLock.Lock();
 
                 std::map<const string, Exchange::ICommand::IFactory*>::iterator index(_factory.find(className));

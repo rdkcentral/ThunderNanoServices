@@ -1,43 +1,39 @@
 startmode = "@PLUGIN_COMPOSITOR_STARTMODE@"
 
-communicator = "/communicator|0777"
-
 configuration = JSON()
 
 configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
 if "@PLUGIN_COMPOSITOR_CONNECTOR@":
     configuration.add("connector", "@PLUGIN_COMPOSITOR_CONNECTOR@")
 
-if boolean("@PLUGIN_COMPOSITOR_NXSERVER@"):
-
-    memory_settings = JSON()
-    memory_settings.add("gfx", "@PLUGIN_COMPOSITOR_MEMORY_GFX@")
-    memory_settings.add("gfx2", "@PLUGIN_COMPOSITOR_MEMORY_GFX2@")
-    memory_settings.add("restricted", "@PLUGIN_COMPOSITOR_MEMORY_RESTRICTED@")
-    memory_settings.add("main", "@PLUGIN_COMPOSITOR_MEMORY_MAIN@")
-    memory_settings.add("export", "@PLUGIN_COMPOSITOR_MEMORY_EXPORT@")
-    memory_settings.add("secureGFX", "@PLUGIN_COMPOSITOR_MEMORY_SECURE_GFX@")
-    memory_settings.add("client", "@PLUGIN_COMPOSITOR_MEMORY_CLIENT@")
-    configuration.add("memory", memory_settings)
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Nexus":
+    if boolean("@PLUGIN_COMPOSITOR_NXSERVER@"):
+        memory_settings = JSON()
+        memory_settings.add("gfx", "@PLUGIN_COMPOSITOR_MEMORY_GFX@")
+        memory_settings.add("gfx2", "@PLUGIN_COMPOSITOR_MEMORY_GFX2@")
+        memory_settings.add("restricted", "@PLUGIN_COMPOSITOR_MEMORY_RESTRICTED@")
+        memory_settings.add("main", "@PLUGIN_COMPOSITOR_MEMORY_MAIN@")
+        memory_settings.add("export", "@PLUGIN_COMPOSITOR_MEMORY_EXPORT@")
+        memory_settings.add("secureGFX", "@PLUGIN_COMPOSITOR_MEMORY_SECURE_GFX@")
+        memory_settings.add("client", "@PLUGIN_COMPOSITOR_MEMORY_CLIENT@")
+        configuration.add("memory", memory_settings)
 
     if boolean("@PLUGIN_COMPOSITOR_ALLOW_UNAUTHENTICATED_CLIENTS@"):
         configuration.add("authentication", "true")
-    configuration.add("irmode", "@PLUGIN_COMPOSITOR_IRMODE@")
-    configuration.add("boxmode", "@PLUGIN_COMPOSITOR_BOXMODE@")
-    configuration.add("authentication", "@PLUGIN_COMPOSITOR_AUTHENTICATION@")
-    configuration.add("svp", "@PLUGIN_COMPOSITOR_SVP@")
-    configuration.add("framebufferwidth", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_WIDTH@")
-    configuration.add("framebufferheight", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_HEIGHT@")
-    configuration.add("sagepath", "@PLUGIN_COMPOSITOR_SAGE_PATH@")
-    configuration.add("pakpath", "@PLUGIN_COMPOSITOR_PAK_PATH@")
-    configuration.add("drmpath", "@PLUGIN_COMPOSITOR_DRM_PATH@")
-    configuration.add("hdcplevel", "@PLUGIN_COMPOSITOR_HDCP_LEVEL@")
-    configuration.add("hdcpversion", "@PLUGIN_COMPOSITOR_HDCP_VERSION@")
-    configuration.add("hdcp1xbinfile", "@PLUGIN_COMPOSITOR_HDCP1XBIN_PATH@")
-    configuration.add("hdcp2xbinfile", "@PLUGIN_COMPOSITOR_HDCP2XBIN_PATH@")
-    configuration.add("loudnessmode", "@PLUGIN_COMPOSITOR_LOUDNESS_MODE@")
-
-if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Nexus":
+        configuration.add("irmode", "@PLUGIN_COMPOSITOR_IRMODE@")
+        configuration.add("boxmode", "@PLUGIN_COMPOSITOR_BOXMODE@")
+        configuration.add("authentication", "@PLUGIN_COMPOSITOR_AUTHENTICATION@")
+        configuration.add("svp", "@PLUGIN_COMPOSITOR_SVP@")
+        configuration.add("framebufferwidth", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_WIDTH@")
+        configuration.add("framebufferheight", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_HEIGHT@")
+        configuration.add("sagepath", "@PLUGIN_COMPOSITOR_SAGE_PATH@")
+        configuration.add("pakpath", "@PLUGIN_COMPOSITOR_PAK_PATH@")
+        configuration.add("drmpath", "@PLUGIN_COMPOSITOR_DRM_PATH@")
+        configuration.add("hdcplevel", "@PLUGIN_COMPOSITOR_HDCP_LEVEL@")
+        configuration.add("hdcpversion", "@PLUGIN_COMPOSITOR_HDCP_VERSION@")
+        configuration.add("hdcp1xbinfile", "@PLUGIN_COMPOSITOR_HDCP1XBIN_PATH@")
+        configuration.add("hdcp2xbinfile", "@PLUGIN_COMPOSITOR_HDCP2XBIN_PATH@")
+        configuration.add("loudnessmode", "@PLUGIN_COMPOSITOR_LOUDNESS_MODE@")
 
     if "@PLUGIN_COMPOSITOR_HARDWAREREADY@" and int("@PLUGIN_COMPOSITOR_HARDWAREREADY@") > 0:
         configuration.add("hardwareready", "@PLUGIN_COMPOSITOR_HARDWAREREADY@")
@@ -74,8 +70,31 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
             configuration.add("outputs", output_configs_list)
 
 if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
-    configuration.add("port", "@PLUGIN_COMPOSITOR_OUTPUT@")
-    configuration.add("clientbridge", "@PLUGIN_COMPOSITOR_CLIENTBRIDGE@")
+    configuration.add("height", "@PLUGIN_COMPOSITOR_CANVAS_HEIGHT@")
+    configuration.add("width", "@PLUGIN_COMPOSITOR_CANVAS_WIDTH@")
+    configuration.add("bufferconnector", "@PLUGIN_COMPOSITOR_BUFFER_CONNECTOR@")
+    configuration.add("displayconnector", "@PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR@")
+    
+    if "@PLUGIN_COMPOSITOR_OUTPUTS@":
+        outputs = []
+        for output in "@PLUGIN_COMPOSITOR_OUTPUTS@".split('|'):
+            output_paramaters = output.split(';')
+            print(output_paramaters)
+            if len(output_paramaters) >= 1:
+                output_config = JSON()
+                output_config.add("connector", output_paramaters[0])
+
+                if len(output_paramaters) >= 3:
+                    output_config.add("x", output_paramaters[1])
+                    output_config.add("y", output_paramaters[2])
+
+                if len(output_paramaters) >= 5:
+                    output_config.add("width", output_paramaters[3])
+                    output_config.add("height", output_paramaters[4])
+                
+                outputs.append(output_config)
+
+        configuration.add("outputs", outputs)
 
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")

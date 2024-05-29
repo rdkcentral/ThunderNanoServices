@@ -252,6 +252,8 @@ namespace Plugin {
             }
             void Register(PluginHost::IStateControl::INotification* sink) {
 
+                ASSERT(sink != nullptr);
+
                 PluginHost::IStateControl* control(_shell->QueryInterface<PluginHost::IStateControl>());
 
                 if (control != nullptr) {
@@ -261,6 +263,8 @@ namespace Plugin {
                 }
             }
             void Unregister(PluginHost::IStateControl::INotification* sink) {
+
+                ASSERT(sink != nullptr);
 
                 PluginHost::IStateControl* control(_shell->QueryInterface<PluginHost::IStateControl>());
 

@@ -187,6 +187,12 @@ namespace Compositor {
             }
         }
 
+        bool HasCapability(const int cardFd, const uint64_t option)
+        {
+            uint64_t cap(0);
+            int r = drmGetCap(cardFd, option, &cap);
+            return ((r == 0) && (cap > 0));
+        }
         /*
          * Re-open the DRM node to avoid GEM handle ref'counting issues.
          * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
@@ -195,7 +201,7 @@ namespace Compositor {
         int ReopenNode(int fd, bool openRenderNode)
         {
             if (drmGetDeviceNameFromFd2(fd) == nullptr) {
-                TRACE_GLOBAL(Trace::Error, ("Is this not a descriptor to a DRM Node... =^..^= "));
+                TRACE_GLOBAL(Trace::Error, ("%d is not a descriptor to a DRM Node... =^..^= ", fd));
                 return InvalidFileDescriptor;
             }
 
@@ -207,10 +213,10 @@ namespace Compositor {
                 if (lease_fd >= 0) {
                     return lease_fd;
                 } else if (lease_fd != -EINVAL && lease_fd != -EOPNOTSUPP) {
-                    TRACE_GLOBAL(Trace::Error, ("drmModeCreateLease failed"));
+                    TRACE_GLOBAL(Trace::Error, ("drmModeCreateLease failed %s", strerror(errno)));
                     return InvalidFileDescriptor;
                 }
-                TRACE_GLOBAL(Trace::Information, ("drmModeCreateLease failed, falling back to plain open"));
+                TRACE_GLOBAL(Trace::Information, ("drmModeCreateLease failed: %s, falling back to plain open", strerror(errno)));
             } else {
                 TRACE_GLOBAL(Trace::Information, ("DRM is not in master mode"));
             }
@@ -242,9 +248,7 @@ namespace Compositor {
                 TRACE_GLOBAL(Trace::Error, ("Failed to open DRM node '%s'", name));
                 free(name);
                 return InvalidFileDescriptor;
-            } else {
-                TRACE_GLOBAL(Trace::Information, ("DRM Node opened: %s", name));
-            }
+            } 
 
             free(name);
 
@@ -252,8 +256,8 @@ namespace Compositor {
             // DRM backend, or because we're on split render/display machine), we need
             // to use the legacy DRM authentication mechanism to have the permission to
             // manipulate buffers.
-            if (drmGetNodeTypeFromFd(newFd) == DRM_NODE_PRIMARY) {
-                drm_magic_t magic;
+            if (drmIsMaster(fd) && drmGetNodeTypeFromFd(newFd) == DRM_NODE_PRIMARY) {
+                drm_magic_t magic(0);
                 int ret(0);
 
                 if ((ret = drmGetMagic(newFd, &magic)) < 0) {
@@ -509,19 +513,14 @@ namespace Compositor {
 
             ASSERT(drmAvailable() > 0);
 
-            if (drmAvailable() > 0) {
+            std::vector<string> nodes;
 
-                std::vector<string> nodes;
+            GetNodes(DRM_NODE_PRIMARY, nodes);
 
-                GetNodes(DRM_NODE_PRIMARY, nodes);
+            const auto& it = std::find(nodes.cbegin(), nodes.cend(), gpuNode);
 
-                const auto& it = std::find(nodes.cbegin(), nodes.cend(), gpuNode);
-
-                if (it != nodes.end()) {
-                    fd = open(it->c_str(), O_RDWR | O_CLOEXEC);
-                } else {
-                    TRACE_GLOBAL(Trace::Error, ("Could not find gpu %s", gpuNode.c_str()));
-                }
+            if (it != nodes.end()) {
+                fd = open(it->c_str(), O_RDWR | O_CLOEXEC);
             }
 
             return fd;

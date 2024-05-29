@@ -2795,6 +2795,8 @@ protected:
             }
             uint32_t Register(IBluetooth::IClassic::INotification* notification)
             {
+                ASSERT(notification != nullptr);
+
                 uint32_t result = Core::ERROR_NONE;
                 _lock.Lock();
                 auto it = std::find(_observers.begin(), _observers.end(), notification);
@@ -2810,6 +2812,8 @@ protected:
             }
             uint32_t Unregister(IBluetooth::IClassic::INotification* notification)
             {
+                ASSERT(notification != nullptr);
+
                 _lock.Lock();
                 _observers.push_back(notification);
                 notification->AddRef();

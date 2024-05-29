@@ -35,8 +35,18 @@ namespace Compositor {
             LegacyCrtc(const LegacyCrtc&) = delete;
             LegacyCrtc& operator=(const LegacyCrtc&) = delete;
 
-            LegacyCrtc() = default;
+            LegacyCrtc()
+                : _gammaSize(0)
+                , _doModeSet(true)
+            {
+            }
+
             ~LegacyCrtc() = default;
+
+            void Reevaluate() override
+            {
+                _doModeSet = true;
+            }
 
             uint32_t Commit(const int fd, const IConnector* connector, const uint32_t flags, void* userData) override
             {
@@ -44,19 +54,11 @@ namespace Compositor {
 
                 ASSERT(connector != nullptr);
 
-                /*
-                 * TODO: Before we commit ideally we should do a test if the current mode is matching the mode expected.
-                 *       If this differs we need ask the kernel to modeset the gpu to the expected mode.
-                 *
-                 *       For now always modeset...
-                 */
-                constexpr bool doModeSet = true;
-
                 ASSERT((flags & ~DRM_MODE_PAGE_FLIP_FLAGS) == 0); // only allow page flip flags
 
                 int drmResult(0);
 
-                if (doModeSet == true) {
+                if (_doModeSet == true) {
                     std::vector<uint32_t> connectorIds;
 
                     const drmModeModeInfo* mode(nullptr);
@@ -68,8 +70,8 @@ namespace Compositor {
 
                     uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
 
-                    if (drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms) != 0) {
-                        TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d", connector->IsEnabled() ? "on" : "off", connector->ConnectorId()));
+                    if ((drmResult = drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms)) != 0) {
+                        TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", connector->ConnectorId(), drmResult, strerror(errno)));
                         return Core::ERROR_GENERAL;
                     }
 
@@ -84,15 +86,16 @@ namespace Compositor {
                         TRACE(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", connector->CtrControllerId(), drmResult, strerror(errno)));
                         return Core::ERROR_INCOMPLETE_CONFIG;
                     }
-
+                    
                     /*
                      * clear cursor image
                      */
                     if ((drmResult = drmModeSetCursor(fd, connector->CtrControllerId(), 0, 0, 0)) != 0) {
                         TRACE(Trace::Error, ("Failed to clear cursor: [%d] %s", drmResult, strerror(errno)));
                     }
-                }
 
+                    _doModeSet = false;
+                }
                 /*
                  * Request the kernel to do a page flip. The "DRM_MODE_PAGE_FLIP_EVENT" flags will notify us when the next vblank is active
                  */
@@ -109,6 +112,7 @@ namespace Compositor {
 
         private:
             signed int _gammaSize;
+            bool _doModeSet;
         }; // class LegacyCrtc
 
         /* static */ IOutput& IOutput::Instance()
