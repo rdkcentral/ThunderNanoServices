@@ -94,6 +94,7 @@ jobs:
         -DPLUGIN_TESTCONTROLLER=ON \
         -DPLUGIN_FILETRANSFER=ON \
         -DPLUGIN_STATECONTROLLER=ON \
+        -DPLUGIN_CONFIGUPDATEEXAMPLE=on \
         ${{steps.plugins.outputs.first_match}}
         cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
 
