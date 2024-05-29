@@ -257,7 +257,7 @@ static void async_callback(const Data::Response& response)
 class Callbacks {
 public:
     void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
-        printf("Finally we are triggered. Pointer to: %p @ %s\n", static_cast<void*>(const_cast<Core::JSONRPC::Error*>(result)), Core::Time(response.Time.Value()).ToRFC1123().c_str());
+        printf("Finally we are triggered. Pointer to: %p @ %s\n", (void*)result, Core::Time(response.Time.Value()).ToRFC1123().c_str());
     }
 };
 
