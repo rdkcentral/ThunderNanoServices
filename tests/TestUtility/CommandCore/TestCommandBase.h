@@ -19,7 +19,7 @@
  
 #include "../Module.h"
 #include <qa_interfaces/json/JsonData_TestUtility.h>
-#include <qa_interfaces/ITestUtility.h>
+#include "qa_interfaces/ITestUtility.h"
 
 namespace WPEFramework {
 

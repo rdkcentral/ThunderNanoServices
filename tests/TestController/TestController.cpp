@@ -101,7 +101,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void TestController::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    /* virtual */ void TestController::Deinitialize(VARIABLE_IS_NOT_USED PluginHost::IShell* service)
     {
         if (_service != nullptr) {
             ASSERT(_service == service);

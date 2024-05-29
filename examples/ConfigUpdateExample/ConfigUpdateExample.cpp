@@ -58,16 +58,17 @@ namespace Plugin {
                         TRACE(Trace::Information, (_T("New SystemRootPath[%s] = %s"), callsign.c_str(), shell->SystemRootPath().c_str()));
                     }
                 }
-                PluginHost::IController* controller = service->QueryInterfaceByCallsign<PluginHost::IController>(EMPTY_STRING);
+                Exchange::Controller::IConfiguration* controller = service->QueryInterfaceByCallsign<Exchange::Controller::IConfiguration>(EMPTY_STRING);
                 if (controller != nullptr) {
                     controller->Persist();
+                    controller->Release();
                 }
             }
         }
         return message;
     }
 
-    /* virtual */ void ConfigUpdateExample::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void ConfigUpdateExample::Deinitialize(VARIABLE_IS_NOT_USED PluginHost::IShell* service)
     {
         ASSERT(_service == service);
 

@@ -102,7 +102,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void TestUtility::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    /* virtual */ void TestUtility::Deinitialize(VARIABLE_IS_NOT_USED PluginHost::IShell* service)
     {
         if (_service != nullptr) {
             ASSERT(_service == service);
