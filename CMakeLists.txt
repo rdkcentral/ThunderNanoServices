@@ -17,6 +17,7 @@
 
 cmake_minimum_required(VERSION 3.3)
 project(NanoServices)
+include(GNUInstallDirs)
 
 find_package(WPEFramework)
 
