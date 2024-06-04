@@ -30,7 +30,7 @@
 #include <interfaces/IWifiControl.h>
 #include <interfaces/json/JWifiControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin
 {
@@ -1478,4 +1478,4 @@ namespace Plugin
 
     SERVICE_REGISTRATION(WifiControlImplementation, 1, 0)
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

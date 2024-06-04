@@ -46,7 +46,7 @@
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Backend {
 
@@ -1012,4 +1012,4 @@ namespace Compositor {
         return backend.Output(name, rectangle, format, callback);
     }
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

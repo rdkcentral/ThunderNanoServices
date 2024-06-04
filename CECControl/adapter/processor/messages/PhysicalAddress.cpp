@@ -21,7 +21,7 @@
 
 #include <CECMessage.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -59,4 +59,4 @@ namespace CEC {
         static Service::PhysicalAddress service_physical_address;
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

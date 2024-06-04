@@ -3,7 +3,7 @@
 #include <CECIAdapterAccessor.h>
 #include <CECIDeviceAdapter.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class Adapter : public IAdapterAccesor {
     private:
@@ -103,4 +103,4 @@ namespace CEC {
         logical_address_t _currentFollower;
     }; // class Adapter
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

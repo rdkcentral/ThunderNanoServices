@@ -5,7 +5,7 @@
 
 #include <string>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class Adapter;
 
@@ -22,4 +22,4 @@ namespace CEC {
         virtual ~IAccessor() = default;
     }; // struct IAccessor
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

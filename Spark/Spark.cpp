@@ -19,7 +19,7 @@
  
 #include "Spark.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Spark {
 
@@ -86,7 +86,7 @@ namespace Plugin {
 
                 const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
                 if (connection != nullptr) {
-                    _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
+                    _memory = Thunder::Spark::MemoryObserver(connection->RemoteId());
                     ASSERT(_memory != nullptr);
                     connection->Release();
                 }

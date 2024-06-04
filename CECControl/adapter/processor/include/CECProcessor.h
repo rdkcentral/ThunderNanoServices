@@ -23,7 +23,7 @@
 
 #include <CECTypes.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class Service;
 
@@ -87,4 +87,4 @@ namespace CEC {
 
     }; // class Processor
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

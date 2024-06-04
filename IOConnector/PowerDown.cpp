@@ -23,7 +23,7 @@
 
 #include <interfaces/IPower.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -131,4 +131,4 @@ namespace Plugin {
     static HandlerAdministrator::Entry<PowerDown> handler;
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

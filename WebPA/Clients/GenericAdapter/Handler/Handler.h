@@ -26,7 +26,7 @@
 #include <interfaces/IWebPA.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 
 class NotificationHandler {
 public:

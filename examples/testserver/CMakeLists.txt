@@ -4,12 +4,12 @@ find_package(${NAMESPACE}WebSocket REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set (WPEFRAMEWORK_TEST_TESTSERVER_SOURCES
+set (PLUGIN_TEST_TESTSERVER_SOURCES
         testserver.cpp
         DataContainer.cpp
 )
 
-add_executable(testserver ${WPEFRAMEWORK_TEST_TESTSERVER_SOURCES})
+add_executable(testserver ${PLUGIN_TEST_TESTSERVER_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11

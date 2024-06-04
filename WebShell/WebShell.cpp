@@ -19,7 +19,7 @@
 
 #include "WebShell.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {

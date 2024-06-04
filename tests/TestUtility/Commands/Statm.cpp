@@ -21,7 +21,7 @@
 #include "../CommandCore/TestCommandController.h"
 #include "MemoryAllocation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class Statm : public TestCommandBase {
 public:
@@ -68,4 +68,4 @@ private:
 
 static Statm* _singleton(Core::ServiceType<Statm>::Create<Statm>());
 
-} // namespace WPEFramework
+} // namespace Thunder

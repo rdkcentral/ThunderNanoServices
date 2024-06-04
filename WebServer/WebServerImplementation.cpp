@@ -24,7 +24,7 @@
 #include <securityagent/securityagent.h>
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(5);

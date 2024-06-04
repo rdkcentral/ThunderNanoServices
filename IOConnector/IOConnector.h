@@ -26,7 +26,7 @@
 
 #include <interfaces/IExternal.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class IOConnector
@@ -331,6 +331,6 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 #endif // IOCONNECTOR_H

@@ -3,7 +3,7 @@
   "info": {
     "title": "Yin Plugin",
     "callsign": "Yin",
-    "locator": "libWPEFrameworkYin.so",
+    "locator": "libThunderYin.so",
     "status": "alpha",
     "version": "1.0"
   },

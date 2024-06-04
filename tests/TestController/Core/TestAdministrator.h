@@ -23,7 +23,7 @@
 
 #include <qa_interfaces/ITestController.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     using TestsContainer = std::map<string, QualityAssurance::ITestController::ITest*>;
@@ -159,4 +159,4 @@ namespace TestCore {
         CategoriesContainer _testsCategories;
     };
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

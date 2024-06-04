@@ -24,9 +24,9 @@
 
 #include <CECTypes.h>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     // OperationFrame  |[OpCode 1][Parameters 0-13]|
     class OperationFrame : public Core::FrameType<0, false, uint8_t> {
@@ -133,4 +133,4 @@ namespace CEC {
     };
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

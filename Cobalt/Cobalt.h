@@ -27,7 +27,7 @@
 #include <interfaces/json/JsonData_StateControl.h>
 #include <interfaces/json/JApplication.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class Cobalt: public PluginHost::IPlugin,

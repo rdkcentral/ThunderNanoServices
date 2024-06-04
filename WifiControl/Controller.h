@@ -26,7 +26,7 @@
 // Interface specification taken from:
 // https://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WPASupplicant {
 
     class Controller : public Core::StreamType<Core::SocketDatagram> {
@@ -2338,6 +2338,6 @@ namespace WPASupplicant {
         WpsRequest _wpsRequest;
     };
 }
-} // namespace WPEFramework::WPASupplicant
+} // namespace Thunder::WPASupplicant
 
 #endif // WPASUPPLICANT_CONTROLLER_H

@@ -19,7 +19,7 @@
 
 #include "DIALServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {

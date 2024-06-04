@@ -26,7 +26,7 @@
 #include <interfaces/IComposition.h>
 #include <interfaces/ICompositionBuffer.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Compositor {
 
@@ -124,4 +124,4 @@ private:
      std::vector<uint64_t> _modifiers;
 }; // class PixelFormat
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

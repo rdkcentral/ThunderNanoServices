@@ -19,7 +19,7 @@
  
 #pragma once
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestStart {
@@ -106,4 +106,4 @@ namespace TestCore {
     };
 
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

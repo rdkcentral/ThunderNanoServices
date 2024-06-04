@@ -55,7 +55,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
@@ -73,7 +73,7 @@ The table below lists configuration options of the plugin.
 | :-------- | :-------- | :-------- |
 | callsign | string | Plugin instance name (default: *SystemCommands*) |
 | classname | string | Class name: *SystemCommands* |
-| locator | string | Library name: *libWPEFrameworkSystemCommands.so* |
+| locator | string | Library name: *libThunderSystemCommands.so* |
 | startmode | string | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Interfaces"></a>

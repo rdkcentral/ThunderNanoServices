@@ -24,7 +24,7 @@
 #include <interfaces/json/JBluetoothAudioSource.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

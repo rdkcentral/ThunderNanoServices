@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     class ResourceMonitorImplementation : public Exchange::IResourceMonitor {
     private:
@@ -354,4 +354,4 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(ResourceMonitorImplementation, 1, 0)
 } /* namespace Plugin */
-} // namespace WPEFramework
+} // namespace Thunder

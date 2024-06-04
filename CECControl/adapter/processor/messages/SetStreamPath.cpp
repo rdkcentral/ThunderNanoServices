@@ -33,7 +33,7 @@
 //     Initator: TV with device selection menu
 //     Follower: All Sources and CEC Switches
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -65,4 +65,4 @@ namespace CEC {
         static Service::SetStreamPath set_stream_path;
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

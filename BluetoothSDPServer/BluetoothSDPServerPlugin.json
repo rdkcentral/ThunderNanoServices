@@ -3,7 +3,7 @@
   "info": {
     "title": "Bluetooth SDP Server Plugin",
     "callsign": "BluetoothSDPServer",
-    "locator": "libWPEFrameworkBluetoothSDPServer.so",
+    "locator": "libThunderBluetoothSDPServer.so",
     "status": "alpha",
     "description": [ "The Bluetooth SDP Server runs a service discovery server for Bluetooth devices.",
                      "The SDP server may be required for some audio source devices and is mandatory for discovery by nearby audio sink devices. "],

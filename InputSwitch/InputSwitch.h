@@ -23,7 +23,7 @@
 #include <interfaces/IInputSwitch.h>
 #include <interfaces/json/JsonData_InputSwitch.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class InputSwitch : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IInputSwitch, public PluginHost::JSONRPC {
@@ -124,4 +124,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

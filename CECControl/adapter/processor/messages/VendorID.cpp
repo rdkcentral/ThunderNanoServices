@@ -24,7 +24,7 @@
 // VendorID' are IEEE Organizationally Unique Identifiers
 // IDs list http://standards-oui.ieee.org/oui/oui.txt
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -66,4 +66,4 @@ namespace CEC {
 
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

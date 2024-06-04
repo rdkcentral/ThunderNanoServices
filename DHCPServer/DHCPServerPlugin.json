@@ -3,7 +3,7 @@
   "info": {
     "title": "DHCP Server Plugin",
     "callsign": "DHCPServer",
-    "locator": "libWPEFrameworkDHCPServer.so",
+    "locator": "libThunderDHCPServer.so",
     "status": "production",
     "version": "1.0",
     "acronyms": {

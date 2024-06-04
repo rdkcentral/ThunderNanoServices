@@ -3,7 +3,7 @@
   "info": {
     "title": "Bluetooth Remote Control Plugin",
     "callsign": "BluetoothRemoteControl",
-    "locator": "libWPEFrameworkBluetoothRemoteControl.so",
+    "locator": "libThunderBluetoothRemoteControl.so",
     "status": "alpha",
     "description": "The Bluetooth Remote Control plugin allows configuring and enabling Bluetooth remote control units.",
     "version": "1.0"

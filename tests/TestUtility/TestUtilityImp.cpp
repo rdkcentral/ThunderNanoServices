@@ -22,7 +22,7 @@
 #include "CommandCore/TestCommandController.h"
 #include <qa_interfaces/ITestUtility.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestUtilityImp : public QualityAssurance::ITestUtility {

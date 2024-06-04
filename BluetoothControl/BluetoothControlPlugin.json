@@ -3,7 +3,7 @@
   "info": {
     "title": "Bluetooth Control Plugin",
     "callsign": "BluetoothControl",
-    "locator": "libWPEFrameworkBluetoothControl.so",
+    "locator": "libThunderBluetoothControl.so",
     "status": "alpha",
     "description": "The Bluetooth Control plugin allows Bluetooth device administration.",
     "version": "1.0"

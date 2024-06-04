@@ -21,7 +21,7 @@
 
 #include "BluetoothSDPServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::BluetoothSDPServer::Config::ServiceConfig::serviceclass) { Plugin::BluetoothSDPServer::Config::ServiceConfig::UNSPECIFIED, _TXT("unspecified") },
     { Plugin::BluetoothSDPServer::Config::ServiceConfig::A2DP_AUDIO_SINK, _TXT("a2dp-audio-sink") },

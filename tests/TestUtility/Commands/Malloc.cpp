@@ -21,7 +21,7 @@
 #include "../CommandCore/TestCommandController.h"
 #include "MemoryAllocation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class Malloc : public TestCommandBase {
 public:
@@ -76,4 +76,4 @@ private:
 
 static Malloc* _singleton(Core::ServiceType<Malloc>::Create<Malloc>());
 
-} // namespace WPEFramework
+} // namespace Thunder

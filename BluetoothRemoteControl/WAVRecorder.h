@@ -21,7 +21,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace WAV {
 
@@ -106,4 +106,4 @@ private:
     uint32_t _fileSize;
 };
 
-} } // namespace WPEFramework::WAV
+} } // namespace Thunder::WAV

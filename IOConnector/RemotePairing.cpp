@@ -23,7 +23,7 @@
 
 #include <interfaces/IKeyHandler.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -102,4 +102,4 @@ namespace Plugin {
     static HandlerAdministrator::Entry<RemotePairing> handler;
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

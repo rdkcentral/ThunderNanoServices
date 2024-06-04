@@ -24,7 +24,7 @@
 #include "Controller.h"
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Network::key)
 
@@ -260,4 +260,4 @@ namespace WPASupplicant {
         }
     }
 }
-} // WPEFramework::WPASupplicant
+} // Thunder::WPASupplicant

@@ -21,7 +21,7 @@
 
 #include "CompositorTypes.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Compositor {
     struct ICallback {
@@ -47,4 +47,4 @@ namespace Compositor {
         const Compositor::PixelFormat& format,
         ICallback* callback = nullptr);
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

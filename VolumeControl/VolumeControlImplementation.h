@@ -24,7 +24,7 @@
 #include "Module.h"
 #include <interfaces/IVolumeControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class VolumeControlPlatform;
@@ -60,4 +60,4 @@ namespace Plugin {
     };
 
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

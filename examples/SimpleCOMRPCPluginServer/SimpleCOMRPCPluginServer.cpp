@@ -19,7 +19,7 @@
 
 #include "SimpleCOMRPCPluginServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

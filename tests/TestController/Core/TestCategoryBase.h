@@ -24,7 +24,7 @@
 #include "../Core/TestAdministrator.h"
 #include <qa_interfaces/ITestController.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestCategoryBase : public QualityAssurance::ITestController::ICategory {
@@ -102,4 +102,4 @@ namespace TestCore {
         TestsContainer _tests;
     };
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

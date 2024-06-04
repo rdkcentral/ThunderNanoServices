@@ -21,7 +21,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -828,4 +828,4 @@ namespace Plugin {
         Core::Time _expired;
     };
 }
-} // namespace WPEFramework::Plugin
+} // namespace Thunder::Plugin

@@ -41,7 +41,7 @@ extern bool gDirtyRectsEnabled;
 extern rtThreadQueue* gUIThreadQueue;
 extern bool topSparkView;
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SparkImplementation : public Exchange::IBrowser, public PluginHost::IStateControl {

@@ -27,7 +27,7 @@
 
 extern int StarboardMain(int argc, char **argv);
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class CobaltImplementation:

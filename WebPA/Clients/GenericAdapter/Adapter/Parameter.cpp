@@ -19,7 +19,7 @@
  
 #include "Parameter.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 Parameter::Parameter(Handler* handler, DataModel* dataModel)
@@ -149,4 +149,4 @@ WebPAStatus Parameter::Values(const Data& parameter)
 }
 
 } // WebPA
-} // WPEFramework
+} // Thunder

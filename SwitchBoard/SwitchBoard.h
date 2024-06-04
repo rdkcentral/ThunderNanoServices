@@ -22,7 +22,7 @@
 #include "Module.h"
 #include <interfaces/ISwitchBoard.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SwitchBoard : public PluginHost::IPlugin, PluginHost::IWeb, Exchange::ISwitchBoard {
@@ -455,4 +455,4 @@ namespace Plugin {
     };
 
 }
-}  // namespace WPEFramework::Plugin
+}  // namespace Thunder::Plugin

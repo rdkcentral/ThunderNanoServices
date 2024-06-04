@@ -25,7 +25,7 @@
 #include <interfaces/IComposition.h>
 #include <interfaces/IResourceCenter.h>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " [so-file containing platform impl]" << std::endl;
         std::cerr << "For example:" << std::endl;
-        std::cerr << "   " << argv[0] << " /usr/share/WPEFramework/Compositor/libplatformplugin.so" << std::endl;
+        std::cerr << "   " << argv[0] << " /usr/share/Thunder/Compositor/libplatformplugin.so" << std::endl;
 
         return 1;
     }

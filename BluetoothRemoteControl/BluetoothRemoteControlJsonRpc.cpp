@@ -21,7 +21,7 @@
 #include "BluetoothRemoteControl.h"
 #include <interfaces/json/JsonData_BluetoothRemoteControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

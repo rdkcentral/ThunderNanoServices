@@ -23,7 +23,7 @@
 #include "Module.h"
 #include <interfaces/ICommand.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Commander : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::ICommand::IRegistration {

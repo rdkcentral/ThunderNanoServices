@@ -19,7 +19,7 @@
  
 #include "TestAdministrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     /* static */ TestAdministrator& TestAdministrator::Instance()
@@ -71,4 +71,4 @@ namespace TestCore {
         return result;
     }
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

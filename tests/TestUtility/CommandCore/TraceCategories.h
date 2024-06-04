@@ -19,7 +19,7 @@
  
 #pragma once
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestLifeCycle {
@@ -79,4 +79,4 @@ namespace TestCore {
     };
 
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

@@ -21,7 +21,7 @@
 
 #include <CompositorTypes.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     struct EXTERNAL IRenderer {
         virtual ~IRenderer() = default;
@@ -190,4 +190,4 @@ namespace Compositor {
 
 } // namespace Compositor
 
-} // namespace WPEFramework
+} // namespace Thunder

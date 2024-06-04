@@ -21,7 +21,7 @@
 
 #include "IAdapter.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class DeviceInfo;
 

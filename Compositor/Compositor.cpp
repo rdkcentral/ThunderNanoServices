@@ -20,7 +20,7 @@
 #include "Compositor.h"
 #include <interfaces/IInputSwitch.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -744,4 +744,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

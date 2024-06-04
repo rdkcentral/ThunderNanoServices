@@ -22,7 +22,7 @@
 #include <interfaces/json/JsonData_StateControl.h>
 #include "Spark.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -205,4 +205,4 @@ namespace Plugin {
 
 } // namespace Plugin
 
-} // namespace WPEFramework
+} // namespace Thunder

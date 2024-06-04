@@ -20,7 +20,7 @@
 #include "NTPClient.h"
 #include <stdio.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     constexpr uint32_t WaitForResponse = 2000;
@@ -403,4 +403,4 @@ POP_WARNING()
    }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -1,6 +1,6 @@
 #include "Input.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Backend {
         Input::Input()
@@ -68,4 +68,4 @@ namespace Compositor {
         }
     } //    namespace Backend
 } //    namespace Compositor
-} //   namespace WPEFramework
+} //   namespace Thunder

@@ -20,7 +20,7 @@
 #include "TimeSync.h"
 #include "NTPClient.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -214,4 +214,4 @@ POP_WARNING()
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

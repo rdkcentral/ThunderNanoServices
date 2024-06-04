@@ -21,7 +21,7 @@
 #include "interfaces/IRemoteHostExample.h"
 #include "RemoteHostExample.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Exchange {
 
     class RemoteHostExampleImpl : public RPC::RemoteLinker, IRemoteHostExample {

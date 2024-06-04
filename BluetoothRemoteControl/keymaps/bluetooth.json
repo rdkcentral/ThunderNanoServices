@@ -1,1 +1,17 @@
-Notus S2.json
+[
+        { "$comment": "KEY_MUTE",         "code": 14811136, "key": 113 },
+        { "$comment": "KEY_POWER",        "code": 3145728,  "key": 116 },
+        { "$comment": "KEY_LEFT",         "code": 4456448,  "key": 105 },
+        { "$comment": "KEY_UP",           "code": 4325376,  "key": 103 },
+        { "$comment": "KEY_RIGHT",        "code": 4521984,  "key": 106 },
+        { "$comment": "KEY_DOWN",         "code": 4390912,  "key": 108 },
+        { "$comment": "KEY_ENTER",        "code": 4259840,  "key": 28  },
+        { "$comment": "KEY_BACKSPACE",    "code": 2490368, "key": 14  },
+        { "$comment": "KEY_HOME",         "code": 2293760, "key": 102 },
+        { "$comment": "KEY_MENU",         "code": 10682368, "key": 139 },
+        { "$comment": "KEY_VOLUMEUP",     "code": 15269888, "key": 115 },
+        { "$comment": "KEY_VOLUMEDOWN",   "code": 15335424, "key": 114 },
+        { "$comment": "KEY_PLAYPAUSE",    "code": 13434880, "key": 164 },
+        { "$comment": "KEY_CHANNELUP",    "code": 10223616, "key": 402 },
+        { "$comment": "KEY_CHANNELDOWN",  "code": 10289152, "key": 403 }
+]

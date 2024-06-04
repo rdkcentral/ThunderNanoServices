@@ -34,7 +34,7 @@
 
 #include <libudev.h>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -58,7 +58,7 @@ static const char* PlaneTypeString(uint64_t type)
 
 uint32_t GetProperty(const int cardFd, const uint32_t objectId, const uint32_t propertyId, uint64_t& value)
 {
-    uint32_t result(WPEFramework::Core::ERROR_NOT_SUPPORTED);
+    uint32_t result(Thunder::Core::ERROR_NOT_SUPPORTED);
 
     drmModeObjectProperties* properties = drmModeObjectGetProperties(cardFd, objectId, DRM_MODE_OBJECT_ANY);
 
@@ -76,7 +76,7 @@ uint32_t GetProperty(const int cardFd, const uint32_t objectId, const uint32_t p
 
             if (currentPropertyId == propertyId) {
                 value = properties->prop_values[i];
-                result = WPEFramework::Core::ERROR_NONE;
+                result = Thunder::Core::ERROR_NONE;
                 break;
             }
         }
@@ -106,7 +106,7 @@ bool GetPropertyIds(const int cardFd, const uint32_t objectId, const uint32_t ty
 
         drmModeFreeObjectProperties(properties);
     } else {
-        TRACE_GLOBAL(WPEFramework::Trace::Error, ("Failed to get DRM object properties"));
+        TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to get DRM object properties"));
         return false;
     }
 
@@ -126,9 +126,9 @@ void ScanResources(const int cardFd)
 
     uint32_t possible_crtcs(0);
 
-    TRACE_GLOBAL(WPEFramework::Trace::Information, ("%d CRT controllers reported", resources->count_crtcs));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, ("%d connectors reported", resources->count_connectors));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, ("%d Plane%s reported", planeResources->count_planes, (planeResources->count_planes == 1) ? "" : "s"));
+    TRACE_GLOBAL(Thunder::Trace::Information, ("%d CRT controllers reported", resources->count_crtcs));
+    TRACE_GLOBAL(Thunder::Trace::Information, ("%d connectors reported", resources->count_connectors));
+    TRACE_GLOBAL(Thunder::Trace::Information, ("%d Plane%s reported", planeResources->count_planes, (planeResources->count_planes == 1) ? "" : "s"));
 
     if (resources->count_crtcs <= 0)
         return;
@@ -147,7 +147,7 @@ void ScanResources(const int cardFd)
 
         drmModeCrtc* drmCrtc = drmModeGetCrtc(cardFd, id);
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("\nCRTC[%u]\nid=%u\nproperties[%d]=%s", i, id, registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("\nCRTC[%u]\nid=%u\nproperties[%d]=%s", i, id, registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
 
         drmModeFreeCrtc(drmCrtc);
     }
@@ -163,7 +163,7 @@ void ScanResources(const int cardFd)
         possible_crtcs = drmModeConnectorGetPossibleCrtcs(cardFd, connector);
 
         if (possible_crtcs == 0) {
-            TRACE_GLOBAL(WPEFramework::Trace::Error, ("No CRT controllers found for %s-%u", drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id));
+            TRACE_GLOBAL(Thunder::Trace::Error, ("No CRT controllers found for %s-%u", drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id));
         }
 
         std::vector<Compositor::DRM::Identifier> crtcs;
@@ -174,7 +174,7 @@ void ScanResources(const int cardFd)
             }
         }
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("\nConnector[%u]\nid=%u\nCRTCs=%s\nproperties[%d]=%s", i, id, Compositor::DRM::IdentifierString(crtcs, true).c_str(), registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("\nConnector[%u]\nid=%u\nCRTCs=%s\nproperties[%d]=%s", i, id, Compositor::DRM::IdentifierString(crtcs, true).c_str(), registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
 
         drmModeFreeConnector(connector);
     }
@@ -211,7 +211,7 @@ void ScanResources(const int cardFd)
 
         GetProperty(cardFd, id, typPropId, planeType);
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("\nPlane[%u]:\nid=%u\ntype=%s\nCRTCs=%s\nproperties[%d]=%s", i, id, PlaneTypeString(planeType), Compositor::DRM::IdentifierString(crtcs, true).c_str(), registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("\nPlane[%u]:\nid=%u\ntype=%s\nCRTCs=%s\nproperties[%d]=%s", i, id, PlaneTypeString(planeType), Compositor::DRM::IdentifierString(crtcs, true).c_str(), registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
 
         drmModeFreePlane(drmPlane);
     }
@@ -236,20 +236,20 @@ uint64_t CapabilityValue(const int cardFd, const uint64_t option)
 
 void CheckCapabilities(const int cardFd)
 {
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_ADDFB2_MODIFIERS: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_ADDFB2_MODIFIERS) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_ADDFB2_MODIFIERS)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_ASYNC_PAGE_FLIP: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_ASYNC_PAGE_FLIP) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_ASYNC_PAGE_FLIP)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_CRTC_IN_VBLANK_EVENT: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_CRTC_IN_VBLANK_EVENT) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_CRTC_IN_VBLANK_EVENT)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_CURSOR_HEIGHT: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_CURSOR_HEIGHT) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_CURSOR_HEIGHT)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_CURSOR_WIDTH: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_CURSOR_WIDTH) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_CURSOR_WIDTH)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_DUMB_BUFFER: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_DUMB_BUFFER) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_DUMB_BUFFER)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_DUMB_PREFERRED_DEPTH: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_DUMB_PREFERRED_DEPTH) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_DUMB_PREFERRED_DEPTH)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_DUMB_PREFER_SHADOW: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_DUMB_PREFER_SHADOW) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_DUMB_PREFER_SHADOW)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_PAGE_FLIP_TARGET: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_PAGE_FLIP_TARGET) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_PAGE_FLIP_TARGET)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_SYNCOBJ: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_SYNCOBJ) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_SYNCOBJ)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_SYNCOBJ_TIMELINE: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_SYNCOBJ_TIMELINE) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_SYNCOBJ_TIMELINE)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_TIMESTAMP_MONOTONIC: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_TIMESTAMP_MONOTONIC) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_TIMESTAMP_MONOTONIC)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_VBLANK_HIGH_CRTC: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_VBLANK_HIGH_CRTC) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_VBLANK_HIGH_CRTC)));
-    TRACE_GLOBAL(WPEFramework::Trace::Information, (" - DRM_CAP_PRIME: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_PRIME) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_PRIME)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_ADDFB2_MODIFIERS: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_ADDFB2_MODIFIERS) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_ADDFB2_MODIFIERS)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_ASYNC_PAGE_FLIP: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_ASYNC_PAGE_FLIP) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_ASYNC_PAGE_FLIP)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_CRTC_IN_VBLANK_EVENT: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_CRTC_IN_VBLANK_EVENT) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_CRTC_IN_VBLANK_EVENT)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_CURSOR_HEIGHT: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_CURSOR_HEIGHT) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_CURSOR_HEIGHT)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_CURSOR_WIDTH: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_CURSOR_WIDTH) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_CURSOR_WIDTH)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_DUMB_BUFFER: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_DUMB_BUFFER) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_DUMB_BUFFER)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_DUMB_PREFERRED_DEPTH: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_DUMB_PREFERRED_DEPTH) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_DUMB_PREFERRED_DEPTH)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_DUMB_PREFER_SHADOW: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_DUMB_PREFER_SHADOW) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_DUMB_PREFER_SHADOW)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_PAGE_FLIP_TARGET: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_PAGE_FLIP_TARGET) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_PAGE_FLIP_TARGET)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_SYNCOBJ: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_SYNCOBJ) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_SYNCOBJ)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_SYNCOBJ_TIMELINE: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_SYNCOBJ_TIMELINE) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_SYNCOBJ_TIMELINE)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_TIMESTAMP_MONOTONIC: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_TIMESTAMP_MONOTONIC) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_TIMESTAMP_MONOTONIC)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_VBLANK_HIGH_CRTC: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_VBLANK_HIGH_CRTC) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_VBLANK_HIGH_CRTC)));
+    TRACE_GLOBAL(Thunder::Trace::Information, (" - DRM_CAP_PRIME: %ssupported value: %" PRIu64, HasCapability(cardFd, DRM_CAP_PRIME) ? "" : "not ", CapabilityValue(cardFd, DRM_CAP_PRIME)));
 }
 
 void Scan()
@@ -262,7 +262,7 @@ void Scan()
         int fd = open(node.c_str(), O_RDWR);
         char* name = drmGetDeviceNameFromFd2(fd);
         drmVersion* version = drmGetVersion(fd);
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Opened DRM device %s (%s)", name, version->name));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("Opened DRM device %s (%s)", name, version->name));
         drmFreeVersion(version);
         int setUniversalPlanes(drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1));
 
@@ -292,7 +292,7 @@ int main(int /*argc*/, const char* argv[])
     }
 
     {
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Starting %s build %s", argv[0], __TIMESTAMP__));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("Starting %s build %s", argv[0], __TIMESTAMP__));
 
         char keyPress;
 
@@ -329,7 +329,7 @@ int main(int /*argc*/, const char* argv[])
 
     TRACE_GLOBAL(Trace::Information, ("Testing Done..."));
     tracer.Close();
-    WPEFramework::Core::Singleton::Dispose();
+    Thunder::Core::Singleton::Dispose();
 
     return 0;
 }

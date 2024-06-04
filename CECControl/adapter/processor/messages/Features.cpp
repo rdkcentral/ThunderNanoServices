@@ -32,7 +32,7 @@ When a device makes such updates that one or more of the operands of the <Report
 it shall broadcast a <Report Features> message with the up-to-date operand values.
 */
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -127,4 +127,4 @@ namespace CEC {
         static Service::Features service_features;
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

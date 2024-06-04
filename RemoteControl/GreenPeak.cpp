@@ -58,7 +58,7 @@ static uint8_t _bindingId = static_cast<uint8_t>(~0);
  *  GreenPeak C++ Wrapper class. Hide C artifacts
  *****************************************************************************/
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static uint32_t LoadModule(const string& moduleName)
@@ -463,7 +463,7 @@ namespace Plugin {
     /* static */ const string GreenPeak::_resourceName("RF4CE");
     /* static */ GreenPeak* GreenPeak::_singleton(Core::ServiceType<GreenPeak>::Create<GreenPeak>());
 }
-} // namespace WPEFramework::Plugin
+} // namespace Thunder::Plugin
 
 /*****************************************************************************
  * All intersting C stuff. Lowlevel Greenpeak stuff...
@@ -471,7 +471,7 @@ namespace Plugin {
 
 extern "C" {
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 void gpApplication_IndicateBindSuccessToMiddleware(UInt8 bindingRef, UInt8 profileId);
 void gpApplication_IndicateBindFailureToMiddleware(UInt8 result);
@@ -588,11 +588,11 @@ static void gpApplication_BindConfirm(gpRf4ce_Result_t result, UInt8 bindingRef,
 static void gpApplication_UnBindConfirm(gpRf4ce_Result_t result)
 {
     if (result == gpRf4ce_ResultSuccess) {
-        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingSuccess);
+        Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::UnpairingSuccess);
     } else if (result == gpRf4ce_ResultDiscoveryTimeout) {
-        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingTimedout);
+        Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::UnpairingTimedout);
     } else {
-        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingFailed);
+        Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::UnpairingFailed);
     }
 }
 
@@ -851,7 +851,7 @@ static void target_DoR4ceReset(void)
 static void target_ActivatePairing()
 {
     Plugin::GreenPeak::Report(string("Entering the PairingMode."));
-    WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::PairingStarted);
+    Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::PairingStarted);
 #if 1
     gpApplication_ZRCBindSetup(false, true);
 #else
@@ -871,7 +871,7 @@ static void target_ActivatePairing()
 static void target_ActivateUnpairing()
 {
     Plugin::GreenPeak::Report(string("Unpairing."));
-    WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::UnpairingStarted);
+    Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::UnpairingStarted);
     gpApplication_ZRCUnbind(_bindingId);
 }
 
@@ -896,7 +896,7 @@ void gpRf4ce_cbDpiDisableConfirm(gpRf4ce_Result_t result)
 void gpApplication_IndicateBindSuccessToMiddleware(UInt8 bindingRef, UInt8 profileId)
 {
     GP_LOG_SYSTEM_PRINTF("Bind Success. BindId: 0x%x, ProfileId: 0x%x", 0, bindingRef, profileId);
-    WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::PairingSuccess);
+    Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::PairingSuccess);
 }
 
 void gpApplication_IndicateBindFailureToMiddleware(gpRf4ce_Result_t result)
@@ -904,11 +904,11 @@ void gpApplication_IndicateBindFailureToMiddleware(gpRf4ce_Result_t result)
     GP_LOG_SYSTEM_PRINTF("Bind Failure. Status 0x%x", 0, result);
     if (result == gpRf4ce_ResultDiscoveryTimeout)
     {
-        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::PairingTimedout);
+        Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::PairingTimedout);
     }
     else
     {
-        WPEFramework::Plugin::GreenPeak::SendEvent(WPEFramework::Exchange::ProducerEvents::PairingFailed);
+        Thunder::Plugin::GreenPeak::SendEvent(Thunder::Exchange::ProducerEvents::PairingFailed);
     }
 }
 

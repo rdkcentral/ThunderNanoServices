@@ -19,7 +19,7 @@
 
 #include "RemoteAdministrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Remotes {
 
     /* static */ RemoteAdministrator& RemoteAdministrator::Instance()

@@ -31,7 +31,7 @@
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
 namespace Renderer {
     class DRMDumb : public Exchange::ICompositionBuffer {
@@ -283,4 +283,4 @@ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer (DRM::Identifier iden
 }
 
 } // namespace Compositor
-} //namespace WPEFramework
+} //namespace Thunder

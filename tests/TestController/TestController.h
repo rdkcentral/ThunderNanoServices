@@ -27,7 +27,7 @@
 
 #include "Core/TestMetadata.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TestController : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -164,4 +164,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -2,7 +2,7 @@
 
 #include <drm_fourcc.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     uint32_t PixelBuffer::AddRef() const
     {
@@ -58,5 +58,5 @@ namespace Compositor {
     {
         return _pixels;
     }
-} // namespace WPEFramework
+} // namespace Thunder
 } // namespace Compositor

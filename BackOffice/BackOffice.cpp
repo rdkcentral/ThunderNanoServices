@@ -1,7 +1,7 @@
 // Copyright (c) 2022 Metrological. All rights reserved.
 #include "BackOffice.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
     ENUM_CONVERSION_BEGIN(Plugin::BackOffice::reportstate)
 

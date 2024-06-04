@@ -25,7 +25,7 @@
 #include "Module.h"
 #include "interfaces/json/JsonData_Containers.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Containers : public PluginHost::IPlugin, PluginHost::JSONRPC {
@@ -69,4 +69,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

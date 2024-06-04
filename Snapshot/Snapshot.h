@@ -23,7 +23,7 @@
 #include "Module.h"
 #include <interfaces/ICapture.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Snapshot : public PluginHost::IPlugin, public PluginHost::IWeb {

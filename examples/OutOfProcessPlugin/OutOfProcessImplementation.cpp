@@ -27,7 +27,7 @@
 #include <stdexcept>
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static Core::NodeId CompositorConnector(const string& configuredValue)
@@ -847,4 +847,4 @@ namespace OutOfProcessPlugin {
         return (result);
     }
 }
-} // namespace WPEFramework::OutOfProcessPlugin
+} // namespace Thunder::OutOfProcessPlugin

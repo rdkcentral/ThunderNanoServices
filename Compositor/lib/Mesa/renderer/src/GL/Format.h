@@ -8,7 +8,7 @@
 
 #include <drm_fourcc.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Renderer {
         struct GLPixelFormat {
@@ -45,4 +45,4 @@ namespace Compositor {
 
     } // namespace Renderer
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

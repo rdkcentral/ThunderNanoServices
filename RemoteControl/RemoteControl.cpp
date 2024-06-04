@@ -22,7 +22,7 @@
 #include "RemoteAdministrator.h"
 #include "RemoteControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static const string DefaultMappingTable(_T("default"));

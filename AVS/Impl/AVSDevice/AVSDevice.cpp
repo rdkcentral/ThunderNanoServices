@@ -64,7 +64,7 @@
 #include <cctype>
 #include <fstream>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     SERVICE_REGISTRATION(AVSDevice, 1, 0)

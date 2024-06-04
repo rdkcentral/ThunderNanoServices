@@ -22,7 +22,7 @@
 #include "Handler.h"
 #include "Notifier.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 class Attribute {
@@ -54,4 +54,4 @@ private:
 };
 
 } // WebPA
-} // WPEFramework
+} // Thunder

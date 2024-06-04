@@ -24,7 +24,7 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Player {
     namespace Implementation {
 

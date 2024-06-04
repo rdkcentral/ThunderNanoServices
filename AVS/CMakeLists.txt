@@ -19,7 +19,7 @@ project(AVS)
 
 cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 
-find_package(WPEFramework REQUIRED)
+find_package(Thunder REQUIRED)
 
 project_version(1.0.0)
 
@@ -46,7 +46,7 @@ set(PLUGIN_AVS_NAME "AVS" CACHE STRING "The plugin name")
 set(PLUGIN_AVS_STARTMODE "Deactivated" CACHE STRING "Automatically start plugin")
 set(PLUGIN_AVS_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_AVS_PLATFORM "rpi3" CACHE STRING "Platform name (currently only rpi3)")
-set(PLUGIN_AVS_DATA_PATH "/usr/share/WPEFramework/" CACHE STRING "Path were AVS data will be stored")
+set(PLUGIN_AVS_DATA_PATH "/usr/share/Thunder/" CACHE STRING "Path were AVS data will be stored")
 set(PLUGIN_AVS_ALEXA_CLIENT_CONFIG "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}/AlexaClientSDKConfig.json" CACHE STRING "Path to AlexaClientSDKConfig")
 set(PLUGIN_AVS_SMART_SCREEN_CONFIG "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}/SmartScreenSDKConfig.json" CACHE STRING "Path to SmartScreenSDKConfig")
 set(PLUGIN_AVS_LOG_LEVEL "DEBUG0" CACHE STRING "Default log level for the SDK")

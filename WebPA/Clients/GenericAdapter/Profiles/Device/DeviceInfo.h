@@ -26,7 +26,7 @@
 #include "Utils.h"
 #include "WebPADataTypes.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 template<class T>
 struct FuncPtr {

@@ -20,7 +20,7 @@
 #include "Power.h"
 #include "Implementation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -43,7 +43,7 @@ namespace Plugin {
 
     extern "C" {
 
-    static void PowerStateChange(void* userData, enum WPEFramework::Exchange::IPower::PCState newState, \
+    static void PowerStateChange(void* userData, enum Thunder::Exchange::IPower::PCState newState, \
                                  Exchange::IPower::PCPhase phase) {
         reinterpret_cast<Power*>(userData)->PowerChange(newState, phase);
     }
@@ -54,7 +54,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         string message;
-        WPEFramework::Exchange::IPower::PCState persistedState = power_get_persisted_state();
+        Thunder::Exchange::IPower::PCState persistedState = power_get_persisted_state();
 
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
@@ -342,4 +342,4 @@ namespace Plugin {
     }
 
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

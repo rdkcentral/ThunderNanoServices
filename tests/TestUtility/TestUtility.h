@@ -26,7 +26,7 @@
 #include <qa_interfaces/ITestUtility.h>
 #include <qa_interfaces/json/JsonData_TestUtility.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TestUtility : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -139,4 +139,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

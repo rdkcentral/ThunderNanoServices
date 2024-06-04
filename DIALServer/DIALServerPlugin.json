@@ -3,7 +3,7 @@
   "info": {
     "title": "DIAL Server Plugin",
     "callsign": "DIALServer",
-    "locator": "libWPEFrameworkDIALServer.so",
+    "locator": "libThunderDIALServer.so",
     "status": "beta",
     "description": "The DIAL Server plugin implements the server side of the DIAL protocol, allowing second-screen devices discovering and launching applications on a first-screen device, utilizing SSDP protocol and RESTful API. For more invormation about the DIAL protocol please refer to [[DIAL](#ref.DIAL)].",
     "version": "1.0",

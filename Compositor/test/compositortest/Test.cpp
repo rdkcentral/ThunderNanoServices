@@ -39,7 +39,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace WPEFramework {
+namespace Thunder {
 
 class Keyboard : public Compositor::IDisplay::IKeyboard {
 private:
@@ -53,11 +53,11 @@ public:
 public:
     virtual uint32_t AddRef() const override
     {
-        return (WPEFramework::Core::ERROR_COMPOSIT_OBJECT);
+        return (Thunder::Core::ERROR_COMPOSIT_OBJECT);
     }
     virtual uint32_t Release() const override
     {
-        return (WPEFramework::Core::ERROR_COMPOSIT_OBJECT);
+        return (Thunder::Core::ERROR_COMPOSIT_OBJECT);
     }
     virtual void KeyMap(const char information[], const uint16_t size) override
     {
@@ -411,12 +411,12 @@ private:
     Compositor::IDisplay::ISurface* isurfaces[MAX_SURFACES];
     Keyboard* ikeyboard[MAX_SURFACES];
 };
-} // WPEFramework
+} // Thunder
 
 int main(int argc, char** argv)
 {
     srand(time(0));
-    WPEFramework::TestContext* tcontext = new WPEFramework::TestContext();
+    Thunder::TestContext* tcontext = new Thunder::TestContext();
     tcontext->run();
     return (0);
 }

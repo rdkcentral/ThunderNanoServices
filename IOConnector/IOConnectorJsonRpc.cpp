@@ -21,7 +21,7 @@
 #include "IOConnector.h"
 #include <interfaces/json/JsonData_IOConnector.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

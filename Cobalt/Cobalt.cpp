@@ -19,7 +19,7 @@
  
 #include "Cobalt.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Cobalt {
 
 class MemoryObserverImpl: public Exchange::IMemory {
@@ -148,7 +148,7 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
 
                     RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
                     if (remoteConnection != nullptr) {
-                        _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
+                        _memory = Thunder::Cobalt::MemoryObserver(remoteConnection);
                         ASSERT(_memory != nullptr);
                         remoteConnection->Release();
                     }

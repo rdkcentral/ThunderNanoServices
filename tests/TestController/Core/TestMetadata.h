@@ -21,7 +21,7 @@
 
 #include "../Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestDescription : public Core::JSON::Container {
@@ -122,4 +122,4 @@ namespace TestCore {
         Core::JSON::String Name;
     };
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder
