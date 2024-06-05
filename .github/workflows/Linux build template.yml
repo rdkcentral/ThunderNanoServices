@@ -62,23 +62,32 @@ jobs:
         -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
+        -DEXAMPLE_COMRPCCLIENT=ON \
         -DPLUGIN_CECCONTROL=ON \
         -DPLUGIN_COMMANDER=ON \
+        -DPLUGIN_CONFIGUPDATEEXAMPLE=ON \
         -DPLUGIN_DHCPSERVER=ON \
         -DPLUGIN_DIALSERVER=ON \
         -DPLUGIN_DICTIONARY=ON \
         -DPLUGIN_FILETRANSFER=ON \
-        -DPLUGIN_IOCONNECTOR=ON \
         -DPLUGIN_INPUTSWITCH=ON \
+        -DPLUGIN_IOCONNECTOR=ON \
+        -DPLUGIN_JSONRPC=ON \
         -DPLUGIN_NETWORKCONTROL=ON \
+        -DPLUGIN_OUTOFPROCESS=ON \
         -DPLUGIN_PROCESSMONITOR=ON \
         -DPLUGIN_RESOURCEMONITOR=ON \
-        -DPLUGIN_SYSTEMCOMMANDS=ON \
+        -DPLUGIN_STATECONTROLLER=ON \
         -DPLUGIN_SWITCHBOARD=ON \
+        -DPLUGIN_SYSTEMCOMMANDS=ON \
+        -DPLUGIN_TESTCONTROLLER=ON \
+        -DPLUGIN_TESTUTILITY=ON \
         -DPLUGIN_WEBPROXY=ON \
         -DPLUGIN_WEBSERVER=ON \
         -DPLUGIN_WEBSHELL=ON \
         -DPLUGIN_WIFICONTROL=ON \
+        -DSTORE_TEST=ON \
+        -DTEST_AUTOMATION_TOOLS=ON \
         ${{steps.plugins.outputs.first_match}}
         cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
 

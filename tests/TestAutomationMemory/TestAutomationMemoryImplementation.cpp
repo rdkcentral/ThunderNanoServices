@@ -18,7 +18,7 @@
  */
 #include <memory>
 #include "Module.h"
-#include <interfaces/ITestAutomation.h>
+#include <qa_interfaces/ITestAutomation.h>
 
 namespace WPEFramework {
 namespace Plugin {
