@@ -25,7 +25,7 @@
 
 #include "Tracing.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

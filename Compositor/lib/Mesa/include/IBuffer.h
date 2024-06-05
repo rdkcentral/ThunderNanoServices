@@ -21,7 +21,7 @@
 
 #include "CompositorTypes.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Compositor {
     /**
@@ -41,4 +41,4 @@ namespace Compositor {
         const PixelFormat& format);
 
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

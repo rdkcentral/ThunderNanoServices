@@ -22,7 +22,7 @@
 #include "../Module.h"
 #include "TestMetadata.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class TestBase : public QualityAssurance::ITestController::ITest {
 public:
@@ -76,4 +76,4 @@ public:
 private:
     string _description;
 };
-} // namespace WPEFramework
+} // namespace Thunder

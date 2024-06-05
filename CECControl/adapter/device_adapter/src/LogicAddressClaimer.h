@@ -6,7 +6,7 @@
 #include <cec_device_adapter.h>
 #include <simpleworker/SimpleWorker.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class LogicAddressClaimer {
     public:
@@ -92,4 +92,4 @@ namespace CEC {
     };
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

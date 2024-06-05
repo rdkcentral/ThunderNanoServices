@@ -21,7 +21,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace GPIO {
 
@@ -96,4 +96,4 @@ namespace GPIO {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

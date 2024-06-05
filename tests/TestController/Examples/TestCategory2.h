@@ -25,7 +25,7 @@
 #include "../Core/TestCategoryBase.h"
 #include <qa_interfaces/ITestController.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestCore {
 
     class TestCategory2 : public TestCore::TestCategoryBase {
@@ -74,4 +74,4 @@ namespace TestCore {
         const string _name = _T("TestCategory2");
     };
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

@@ -19,7 +19,7 @@
  
 #include "WebProxy.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::WebProxy::Config::Link::enumType){ Plugin::WebProxy::Config::Link::UDP, _TXT("udp") },
     { Plugin::WebProxy::Config::Link::TCP, _TXT("tcp") },

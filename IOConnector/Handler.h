@@ -23,7 +23,7 @@
 #include "Module.h"
 #include "GPIO.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -97,6 +97,6 @@ namespace Plugin {
         static HandlerAdministrator _administrator;
     };
 }
-} // Namespace WPEFramework::Plugin
+} // Namespace Thunder::Plugin
 
 #endif // __HANDLER_H

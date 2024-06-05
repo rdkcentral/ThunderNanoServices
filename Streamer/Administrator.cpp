@@ -20,7 +20,7 @@
 #include "Administrator.h"
 #include "Frontend.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Player {
 

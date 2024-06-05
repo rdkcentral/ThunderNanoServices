@@ -21,7 +21,7 @@
 #include <qa_interfaces/json/JsonData_TestController.h>
 #include "TestController.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

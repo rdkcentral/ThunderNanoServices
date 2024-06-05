@@ -28,7 +28,7 @@
 
 #include "../JSONRPCPlugin/Data.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
     class MathImplementation : public Exchange::IMath {
@@ -131,11 +131,11 @@ private:
         }
     }
 };
-} } //Namespace WPEFramework::JSONRPC
+} } //Namespace Thunder::JSONRPC
 
-using namespace WPEFramework;
+using namespace Thunder;
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(::JsonValue::type)
 

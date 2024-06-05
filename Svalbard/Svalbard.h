@@ -23,7 +23,7 @@
 #include <cryptography/cryptography.h>
 #include <interfaces/IConfiguration.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Svalbard : public PluginHost::IPlugin {

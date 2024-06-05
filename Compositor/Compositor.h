@@ -26,7 +26,7 @@
 #include <interfaces/json/JsonData_Compositor.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:

@@ -23,7 +23,7 @@
 #include <interfaces/IStream.h>
 #include "PlayerPlatform.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Player {
 

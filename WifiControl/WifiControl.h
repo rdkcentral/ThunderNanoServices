@@ -23,7 +23,7 @@
 #include "Module.h"
 #include <interfaces/json/JWifiControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class WifiControl : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -148,6 +148,6 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 #endif // WIFICONTROL_H

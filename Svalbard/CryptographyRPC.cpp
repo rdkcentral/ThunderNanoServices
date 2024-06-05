@@ -21,7 +21,7 @@
 #include <cryptography/cryptography.h>
 #include <interfaces/IConfiguration.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class CryptographyImplementation : virtual public Exchange::IConfiguration

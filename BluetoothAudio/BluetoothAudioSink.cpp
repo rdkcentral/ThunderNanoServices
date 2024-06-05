@@ -20,7 +20,7 @@
 #include "BluetoothAudioSink.h"
 #include "SignallingServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

@@ -22,7 +22,7 @@
 #include <functional>
 #include <memory>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class VolumeControlPlatform {
@@ -43,4 +43,4 @@ namespace Plugin {
     };
 
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

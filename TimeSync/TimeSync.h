@@ -24,7 +24,7 @@
 #include <interfaces/ITimeSync.h>
 #include <interfaces/json/JsonData_TimeSync.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TimeSync : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -228,6 +228,6 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 #endif // TIMESYNC_H

@@ -33,7 +33,7 @@ extern "C"
 }
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Implementation {
 
 class GenericAdapter : public Exchange::IWebPA::IWebPAClient, public Core::Thread {
@@ -381,4 +381,4 @@ long GenericAdapter::TimeValDiff(struct timespec *starttime, struct timespec *fi
     return msec;
 }
 } // Implementation
-} //WPEFramework
+} //Thunder

@@ -19,7 +19,7 @@
  
 #include "DataModel.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 DataModel::DataModel(Handler* handler)
     : _dmHandle(0)

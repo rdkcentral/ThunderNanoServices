@@ -31,7 +31,7 @@
 
 #include <DRM.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Renderer {
         class GLES : public IRenderer {
@@ -1188,4 +1188,4 @@ namespace Compositor {
     }
 
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

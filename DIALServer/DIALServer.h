@@ -30,7 +30,7 @@
 #include <interfaces/json/JsonData_DIALServer.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class DIALServer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC, public Exchange::IDIALServer {

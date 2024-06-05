@@ -19,7 +19,7 @@
  
 #include "StateController.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     SERVICE_REGISTRATION(StateController, 1, 0)
@@ -84,4 +84,4 @@ namespace Plugin {
     }
 
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

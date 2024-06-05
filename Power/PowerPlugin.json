@@ -3,7 +3,7 @@
   "info": {
     "title": "Power Plugin",
     "callsign": "Power",
-    "locator": "libWPEFrameworkPower.so",
+    "locator": "libThunderPower.so",
     "status": "alpha",
     "version": "1.0"
   },

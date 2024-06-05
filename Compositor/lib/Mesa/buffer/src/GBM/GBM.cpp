@@ -31,7 +31,7 @@
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Compositor {
 
@@ -495,4 +495,4 @@ namespace Compositor {
 
 } // namespace Compositor
 
-} // namespace WPEFramework
+} // namespace Thunder

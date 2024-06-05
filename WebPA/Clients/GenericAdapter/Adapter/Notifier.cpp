@@ -19,7 +19,7 @@
  
 #include "Notifier.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 Notifier::Notifier(Parameter* parameter)
@@ -225,4 +225,4 @@ void Notifier::StringToLower(string& str)
 }
 
 } // WebPA
-} // WPEFramework
+} // Thunder

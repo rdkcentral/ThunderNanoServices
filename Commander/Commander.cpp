@@ -20,7 +20,7 @@
 #include "Commander.h"
 #include "Commands.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::Commander::state)
 

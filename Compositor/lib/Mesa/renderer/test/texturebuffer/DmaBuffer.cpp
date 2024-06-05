@@ -8,7 +8,7 @@
 
 #include <png.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     DmaBuffer::DmaBuffer(int gpuFd, const Texture::PixelData& source)
         : _id(0)

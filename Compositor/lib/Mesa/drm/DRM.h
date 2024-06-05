@@ -27,7 +27,7 @@
 #include <xf86drmMode.h>
 #include <drm_fourcc.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Exchange {
     struct ICompositionBuffer;
@@ -244,4 +244,4 @@ namespace Compositor {
 
     } // namespace DRM
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

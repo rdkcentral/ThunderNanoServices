@@ -42,7 +42,7 @@ MODULE_NAME_ARCHIVE_DECLARATION
 // http://github.com/dvdhrm/docs
 // https://drmdb.emersion.fr
 //
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Compositor {
 
@@ -696,4 +696,4 @@ namespace Compositor {
         return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connectorName, connectorName, rectangle, format, callback);
     }
 } // namespace Compositor
-} // WPEFramework
+} // Thunder

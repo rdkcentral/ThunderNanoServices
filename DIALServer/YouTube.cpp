@@ -21,7 +21,7 @@
 
 #include "interfaces/IBrowser.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace DIALHandlers {
 
     class YouTube : public Plugin::DIALServer::Default {

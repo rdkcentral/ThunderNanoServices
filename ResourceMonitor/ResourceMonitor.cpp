@@ -18,7 +18,7 @@
  */
 #include "ResourceMonitor.h"
 
-namespace WPEFramework
+namespace Thunder
 {
 
     namespace Plugin
@@ -115,4 +115,4 @@ namespace WPEFramework
 
         /* static */ Core::ProxyPoolType<Web::TextBody> ResourceMonitor::webBodyFactory(4);
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -19,7 +19,7 @@
 
 #include "Doggo.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     SERVICE_REGISTRATION(Doggo, 1, 0)
@@ -88,4 +88,4 @@ namespace Plugin {
         return string();
     }
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

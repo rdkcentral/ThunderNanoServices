@@ -3,7 +3,7 @@
   "info": {
     "title": "Compositor Plugin",
     "callsign": "Compositor",
-    "locator": "libWPEFrameworkCompositor.so",
+    "locator": "libThunderCompositor.so",
     "status": "production",
     "description": [
       "Compositor gives you control over what is displayed on screen."

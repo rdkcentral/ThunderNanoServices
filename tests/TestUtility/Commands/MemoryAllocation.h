@@ -21,7 +21,7 @@
 
 #include "../Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class MemoryAllocation {
 public:
@@ -146,4 +146,4 @@ private:
     uint32_t _currentMemoryAllocation; // size in Kb
     std::list<void*> _memory;
 };
-} // namespace WPEFramework
+} // namespace Thunder

@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     static constexpr uint16_t CheckInterval = 500;
     static constexpr uint8_t CheckAttemps = 2;
@@ -33,4 +33,4 @@ namespace CEC {
     }
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

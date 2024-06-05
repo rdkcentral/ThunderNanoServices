@@ -19,7 +19,7 @@
 
 #include "TestUtility.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestUtility {
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
@@ -89,7 +89,7 @@ namespace Plugin {
 
             RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
             if (remoteConnection) {
-                _memory = WPEFramework::TestUtility::MemoryObserver(remoteConnection);
+                _memory = Thunder::TestUtility::MemoryObserver(remoteConnection);
                 ASSERT(_memory != nullptr);
                 remoteConnection->Release();
             }
@@ -257,4 +257,4 @@ namespace Plugin {
         return response;
     }
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -26,7 +26,7 @@
 #include <syslog.h>
 #include <unordered_map>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class ProcessMonitor: public PluginHost::IPlugin

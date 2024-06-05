@@ -26,7 +26,7 @@
 
 #include "IGlobalRegistry.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Backend {
 
@@ -66,4 +66,4 @@ namespace Compositor {
         }; // class Input
     } //    namespace Backend
 } //    namespace Compositor
-} //   namespace WPEFramework
+} //   namespace Thunder

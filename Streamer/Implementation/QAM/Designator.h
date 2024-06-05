@@ -23,7 +23,7 @@
 #include "Module.h"
 #include <broadcast/broadcast.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Broadcast {
 
@@ -109,6 +109,6 @@ namespace Broadcast {
         Broadcast::SpectralInversion _spectral;
     };
 } // namespace Broadcast
-} // namespace WPEFramework
+} // namespace Thunder
 
 #endif // __DESIGNATORPARSER_H

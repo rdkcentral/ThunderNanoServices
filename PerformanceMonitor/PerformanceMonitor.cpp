@@ -19,7 +19,7 @@
 
 #include "PerformanceMonitor.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -135,4 +135,4 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

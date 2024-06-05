@@ -20,7 +20,7 @@
 #include "../Module.h"
 #include "../VolumeControlPlatform.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 namespace {
@@ -62,4 +62,4 @@ std::unique_ptr<VolumeControlPlatform> VolumeControlPlatform::Create(
 }
 
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

@@ -19,7 +19,7 @@
  
 #include "ProcessMonitor.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 namespace {

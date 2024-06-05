@@ -23,7 +23,7 @@
 #include <interfaces/IWebPA.h>
 #include <set>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class WebPA : public PluginHost::IPlugin, public PluginHost::IWeb {
@@ -99,7 +99,7 @@ public:
     // The lifetime of the Service object is guaranteed till the deinitialize method is called.
     const string Initialize(PluginHost::IShell* service) override;
 
-    // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
+    // The plugin is unloaded from Thunder. This is call allows the module to notify clients
     // or to persist information if needed. After this call the plugin will unlink from the service path
     // and be deactivated. The Service object is the same as passed in during the Initialize.
     // After theis call, the lifetime of the Service object ends.
@@ -126,5 +126,5 @@ private:
     Core::SinkType<Notification> _notification;
 };
 } //namespace Plugin
-} //namespace WPEFramework
+} //namespace Thunder
 

@@ -19,7 +19,7 @@
 
 #include "DataContainer.h"
 
-namespace WPEFramework {
+namespace Thunder {
     ENUM_CONVERSION_BEGIN(DataContainer::CommandType)
 
         { DataContainer::ExecuteShell, _TXT("ExecuteShell") },

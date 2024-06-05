@@ -23,7 +23,7 @@
 #include "Module.h"
 #include "Network.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WPASupplicant { // XXX: Change ???
 
     class Controller {

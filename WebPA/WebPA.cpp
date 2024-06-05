@@ -19,7 +19,7 @@
  
 #include "WebPA.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 namespace {
@@ -142,4 +142,4 @@ void WebPA::Deactivated(RPC::IRemoteConnection* connection)
 }
 
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

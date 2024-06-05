@@ -19,7 +19,7 @@ project(BluetoothSDPServer)
 
 cmake_minimum_required(VERSION 3.3)
 
-find_package(WPEFramework)
+find_package(Thunder)
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}BluetoothAudio REQUIRED)
 

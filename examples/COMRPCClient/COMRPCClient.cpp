@@ -47,15 +47,15 @@
 // plugins:       This module contains all the functionality required to build a plugin. It contains helper 
 //                classes and the base interfaces (IPlugin, IShell, ISubsystem) for plugin development and 
 //                a helper class to do "easy" development of JSONRPC interfaces.
-// WPEProcess:    The is an application (no need to include it anywhere) to host COMRPC objects out-of-process.
+// ThunderPlugin:    The is an application (no need to include it anywhere) to host COMRPC objects out-of-process.
 //                This is the application that is instantiated as a seperate process in case that a plugin is run
 //                out-of-process.
-// WPEFramework:  This is the Thunder application and Controller Plugin. This is the Application that needs
+// Thunder:  This is the Thunder application and Controller Plugin. This is the Application that needs
 //                to be started.
 //
 // To include any of the modules in your project, each module, offers a module header file. The module header 
 // file is consistently constructed by <module location name>/<module name>.h. Since the Module location name 
-// is equal to the module name, the inclusion of a module is done with WPEFramework/<Module Name>/<Module Name>.h
+// is equal to the module name, the inclusion of a module is done with Thunder/<Module Name>/<Module Name>.h
 // 
 // Logging versus Tracing (internal/module)
 // Thunder makes a distinction between the Logging concept and the Tracing concept. 
@@ -90,7 +90,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace Thunder = WPEFramework;
+namespace Thunder;
 
 class Sink : public Thunder::Exchange::IDictionary::INotification {
 public:
@@ -254,7 +254,7 @@ int main(int /* argc */, char** /* argv */)
     // and return it to the process that requested this interface for out-of-process.
     // The calls in the plugins (WebKitBrowser plugin):
     // service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("WebKitImplementation"));
-    // will trigger the fork of a new process, that starts WPEProcess, WPEProcess, will 
+    // will trigger the fork of a new process, that starts ThunderPlugin, then it will
     // load a plugin (libWebKitBrowser.so), instantiate an object called 
     // "WebKitImplementation" and push the interface that resides on this object 
     // (Exchange::IBrowser) back over the opened COMRPC channel to the Thunder Framework.

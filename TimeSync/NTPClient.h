@@ -23,7 +23,7 @@
 #include "Module.h"
 #include <interfaces/ITimeSync.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class NTPClient : public Core::SocketDatagram, public Exchange::ITimeSync, public PluginHost::ISubSystem::ITime {
@@ -388,6 +388,6 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 #endif // TIMESYNC_NTPCLIENT_H

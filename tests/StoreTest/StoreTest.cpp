@@ -30,7 +30,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
-namespace Thunder = WPEFramework;
+namespace Thunder;
 static constexpr uint16_t MaxLoad = 50;
 typedef std::function<bool(const uint16_t)> PerformanceFunction;
 
@@ -330,7 +330,7 @@ private:
     bool _isOperational;
 };
 }
-namespace WPEFramework {
+namespace Thunder {
 namespace ReST {
 static Core::ProxyPoolType<Web::TextBody> textBodyDataFactory(4);
 

@@ -20,7 +20,7 @@
 #include "Module.h"
 #include "Yin.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

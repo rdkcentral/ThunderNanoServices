@@ -35,7 +35,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     const Compositor::Color pink = { 1.0f, 0.411f, 0.705f, 1.0f };
     const Compositor::Color black = { 0.f, 0.f, 0.f, 1.0f };
@@ -238,7 +238,7 @@ namespace Plugin {
     private:
         class SharedBuffer : public Compositor::CompositorBufferType<4> {
         private:
-            using BaseClass = WPEFramework::Compositor::CompositorBufferType<4>;
+            using BaseClass = Thunder::Compositor::CompositorBufferType<4>;
 
         public:
             SharedBuffer() = delete;
@@ -411,7 +411,7 @@ namespace Plugin {
             /**
              * Exchange::IComposition::IClient methods
              */
-            WPEFramework::Core::instance_id Native() const
+            Thunder::Core::instance_id Native() const
             {
                 return _buffer->Identifier();
             }
@@ -769,7 +769,7 @@ namespace Plugin {
          * Exchange::IComposition::IDisplay methods
          */
 
-        WPEFramework::Core::instance_id Native() const override
+        Thunder::Core::instance_id Native() const override
         {
             return _gpuIdentifier;
         }
@@ -906,4 +906,4 @@ namespace Plugin {
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

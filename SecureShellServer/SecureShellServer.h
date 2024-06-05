@@ -26,7 +26,7 @@
 #include <libdropbear.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SecureShellServer : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::ISecureShellServer, public PluginHost::JSONRPC {
@@ -240,4 +240,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

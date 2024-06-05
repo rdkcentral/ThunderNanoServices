@@ -21,7 +21,7 @@
 #include "TestUtility.h"
 #include <qa_interfaces/json/JsonData_TestUtility.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

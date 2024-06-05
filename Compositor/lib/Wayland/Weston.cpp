@@ -36,7 +36,7 @@ void weston_seat_release_keyboard(struct weston_seat*);
 extern struct weston_ring_buffer *weston_primary_flight_recorder_ring_buffer;
 }
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Implementation {
 namespace Weston {
     class Compositor : public Implementation::IServer, Core::Thread {
@@ -430,7 +430,7 @@ namespace Weston {
         };
 
     private:
-        class SurfaceData : public WPEFramework::Compositor::IDisplay::ISurface {
+        class SurfaceData : public Thunder::Compositor::IDisplay::ISurface {
         public:
             SurfaceData() = delete;
             SurfaceData(const SurfaceData&) = delete;
@@ -1742,4 +1742,4 @@ namespace Weston {
     }
 
 } // namespace Implementation
-} // namespace WPEFramework
+} // namespace Thunder

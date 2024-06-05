@@ -24,7 +24,7 @@
 #include "../CommandCore/TraceCategories.h"
 #include <fstream>
 
-namespace WPEFramework {
+namespace Thunder {
 
 class CrashCore {
 public:
@@ -186,4 +186,4 @@ private:
     mutable Core::CriticalSection _lock;
 };
 
-} // namespace WPEFramework
+} // namespace Thunder

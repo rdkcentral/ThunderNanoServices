@@ -21,7 +21,7 @@
 #include "FirmwareControl.h"
 #include <interfaces/json/JsonData_FirmwareControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

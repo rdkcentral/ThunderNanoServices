@@ -19,7 +19,7 @@
 
 #include "BluetoothControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::BluetoothControl::Config::adaptertype)
     { Plugin::BluetoothControl::Config::CLASSIC, _TXT("classic") },
@@ -320,7 +320,7 @@ namespace Plugin {
     // PluginHost::IWeb overrides
     // -------------------------------------------------------------------------------------------------------
 
-    /* virtual */ void BluetoothControl::Inbound(WPEFramework::Web::Request& request)
+    /* virtual */ void BluetoothControl::Inbound(Thunder::Web::Request& request)
     {
         Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length() - _skipURL)), false, '/');
         // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
@@ -334,7 +334,7 @@ namespace Plugin {
         }
     }
 
-    /* virtual */ Core::ProxyType<Web::Response> BluetoothControl::Process(const WPEFramework::Web::Request& request)
+    /* virtual */ Core::ProxyType<Web::Response> BluetoothControl::Process(const Thunder::Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
 

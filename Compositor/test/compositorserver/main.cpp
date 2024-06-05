@@ -32,7 +32,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace WPEFramework {
+namespace Thunder {
 class WorkerPoolImplementation : public Core::WorkerPool {
 
 private:
@@ -253,12 +253,12 @@ public:
 
     PluginHost::ISubSystem* SubSystems() { return &_subSystem; }
 
-    string PersistentPath() const { return SystemRootPath() + string("/var/wpeframework/WPEFramework/"); }
+    string PersistentPath() const { return SystemRootPath() + string("/var/thunder/Thunder/"); }
     string VolatilePath() const { return "/tmp/"; }
-    string DataPath() const { return SystemRootPath() + string("/usr/share/WPEFramework/"); }
-    string ProxyStubPath() const { return SystemRootPath() + string("/usr/lib/wpeframework/proxystubs/"); }
-    string SystemPath() const { return SystemRootPath() + string("/usr/lib/wpeframework/plugins/"); }
-    string PluginPath() const { return SystemRootPath() + string("/etc/WPEFramework/plugins/"); }
+    string DataPath() const { return SystemRootPath() + string("/usr/share/Thunder/"); }
+    string ProxyStubPath() const { return SystemRootPath() + string("/usr/lib/thunder/proxystubs/"); }
+    string SystemPath() const { return SystemRootPath() + string("/usr/lib/thunder/plugins/"); }
+    string PluginPath() const { return SystemRootPath() + string("/etc/Thunder/plugins/"); }
     string SystemRootPath() const { return _rootPath; }
 
     // No reference counting for this object.
@@ -312,14 +312,14 @@ private:
 
 int main(int argc, const char* argv[])
 {
-    WPEFramework::Messaging::LocalTracer& tracer = WPEFramework::Messaging::LocalTracer::Open();
+    Thunder::Messaging::LocalTracer& tracer = Thunder::Messaging::LocalTracer::Open();
 
-    const char* executableName(WPEFramework::Core::FileNameOnly(argv[0]));
+    const char* executableName(Thunder::Core::FileNameOnly(argv[0]));
 
     // constexpr char defaultCompositionLibrary[] = "libcompositorplugin.so";
     constexpr char defaultInstallPath[] = ""; // "/home/bram/Projects/metrological/Thunder/install";
 
-    WPEFramework::Core::ProxyType<WPEFramework::RPC::InvokeServerType<2, 0, 8>> rpcEngine = WPEFramework::Core::ProxyType<WPEFramework::RPC::InvokeServerType<2, 0, 8>>::Create();
+    Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<2, 0, 8>> rpcEngine = Thunder::Core::ProxyType<Thunder::RPC::InvokeServerType<2, 0, 8>>::Create();
 
     std::string compositionLibrary;
 
@@ -330,7 +330,7 @@ int main(int argc, const char* argv[])
     // }
 
     {
-        WPEFramework::Messaging::ConsolePrinter printer(true);
+        Thunder::Messaging::ConsolePrinter printer(true);
 
         tracer.Callback(&printer);
 
@@ -349,20 +349,20 @@ int main(int argc, const char* argv[])
             tracer.EnableMessage(module, "", true);
         }
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::MockedShell service(defaultInstallPath, "Compositor.json");
+        Thunder::MockedShell service(defaultInstallPath, "Compositor.json");
 
-        // ASSERT(WPEFramework::Core::IWorkerPool::IsAvailable() == true);
+        // ASSERT(Thunder::Core::IWorkerPool::IsAvailable() == true);
 
         uint32_t connectionId = 0;
-        WPEFramework::Exchange::IComposition* composition = nullptr;
-        WPEFramework::Exchange::IComposition::IDisplay* display = nullptr;
+        Thunder::Exchange::IComposition* composition = nullptr;
+        Thunder::Exchange::IComposition::IDisplay* display = nullptr;
 
-        void* iface = service.Root(connectionId, 2000, _T("CompositorImplementation"), WPEFramework::Exchange::IComposition::ID);
+        void* iface = service.Root(connectionId, 2000, _T("CompositorImplementation"), Thunder::Exchange::IComposition::ID);
 
         if (iface != nullptr) {
-            composition = reinterpret_cast<WPEFramework::Exchange::IComposition*>(iface);
+            composition = reinterpret_cast<Thunder::Exchange::IComposition*>(iface);
         }
 
         ASSERT(composition != nullptr);
@@ -370,16 +370,16 @@ int main(int argc, const char* argv[])
         if (composition != nullptr) {
             composition->Configure(&service);
 
-            TRACE_GLOBAL(WPEFramework::Trace::Information, (_T("Composition: %p, %dx%d"), composition, WPEFramework::Exchange::IComposition::HeightFromResolution(composition->Resolution()), WPEFramework::Exchange::IComposition::WidthFromResolution(composition->Resolution())));
+            TRACE_GLOBAL(Thunder::Trace::Information, (_T("Composition: %p, %dx%d"), composition, Thunder::Exchange::IComposition::HeightFromResolution(composition->Resolution()), Thunder::Exchange::IComposition::WidthFromResolution(composition->Resolution())));
 
-            display = composition->QueryInterface<WPEFramework::Exchange::IComposition::IDisplay>();
+            display = composition->QueryInterface<Thunder::Exchange::IComposition::IDisplay>();
 
             ASSERT(display != nullptr);
 
-            TRACE_GLOBAL(WPEFramework::Trace::Information, (_T("Display: %p, %s %dx%d"), display, display->Port().c_str(), WPEFramework::Exchange::IComposition::HeightFromResolution(display->Resolution()), WPEFramework::Exchange::IComposition::WidthFromResolution(display->Resolution())));
+            TRACE_GLOBAL(Thunder::Trace::Information, (_T("Display: %p, %s %dx%d"), display, display->Port().c_str(), Thunder::Exchange::IComposition::HeightFromResolution(display->Resolution()), Thunder::Exchange::IComposition::WidthFromResolution(display->Resolution())));
         }
 
-        WPEFramework::Exchange::IComposition::IClient* client = nullptr;
+        Thunder::Exchange::IComposition::IClient* client = nullptr;
 
         char keyPress;
 
@@ -389,11 +389,11 @@ int main(int argc, const char* argv[])
             switch (keyPress) {
             case 'C': {
                 if (client == nullptr) {
-                    client = display->CreateClient("test", WPEFramework::Exchange::IComposition::WidthFromResolution(display->Resolution()), WPEFramework::Exchange::IComposition::HeightFromResolution(display->Resolution()));
+                    client = display->CreateClient("test", Thunder::Exchange::IComposition::WidthFromResolution(display->Resolution()), Thunder::Exchange::IComposition::HeightFromResolution(display->Resolution()));
                 }
 
                 if (client != nullptr) {
-                    TRACE_GLOBAL(WPEFramework::Trace::Information, (_T("Active client: %p, %s %dx%d"), client, client->Name().c_str(), client->Geometry().width, client->Geometry().height));
+                    TRACE_GLOBAL(Thunder::Trace::Information, (_T("Active client: %p, %s %dx%d"), client, client->Name().c_str(), client->Geometry().width, client->Geometry().height));
                 }
                 break;
             }
@@ -421,11 +421,11 @@ int main(int argc, const char* argv[])
             composition->Release();
         }
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Exiting %s.... ", executableName));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("Exiting %s.... ", executableName));
     }
 
     tracer.Close();
-    WPEFramework::Core::Singleton::Dispose();
+    Thunder::Core::Singleton::Dispose();
 
     return 0;
 }

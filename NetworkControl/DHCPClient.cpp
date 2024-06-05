@@ -19,7 +19,7 @@
 
 #include "DHCPClient.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -120,4 +120,4 @@ namespace Plugin {
     {
     }
 }
-} // namespace WPEFramework::Plugin
+} // namespace Thunder::Plugin

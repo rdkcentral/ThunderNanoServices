@@ -3,7 +3,7 @@
   "info": {
     "title": "Yang Plugin",
     "callsign": "Yang",
-    "locator": "libWPEFrameworkYang.so",
+    "locator": "libThunderYang.so",
     "status": "alpha",
     "version": "1.0"
   },

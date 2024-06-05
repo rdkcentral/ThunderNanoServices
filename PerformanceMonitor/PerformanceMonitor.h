@@ -23,7 +23,7 @@
 
 #include <interfaces/json/JsonData_PerformanceMonitor.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class PerformanceMonitor : public PluginHost::IPlugin, public PluginHost::JSONRPC {
@@ -81,4 +81,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

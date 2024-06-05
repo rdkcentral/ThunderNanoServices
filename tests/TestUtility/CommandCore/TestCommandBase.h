@@ -21,7 +21,7 @@
 #include <qa_interfaces/json/JsonData_TestUtility.h>
 #include "qa_interfaces/ITestUtility.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 class TestCommandBase : public QualityAssurance::ITestUtility::ICommand {
 public:
@@ -134,4 +134,4 @@ private:
     string _description;
     string _signature;
 };
-} // namespace WPEFramework
+} // namespace Thunder

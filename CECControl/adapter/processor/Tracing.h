@@ -1,6 +1,6 @@
 #pragma once
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class Processor {
     public:
@@ -30,4 +30,4 @@ namespace CEC {
         std::string _text;
     };
 } // namespace TestCore
-} // namespace WPEFramework
+} // namespace Thunder

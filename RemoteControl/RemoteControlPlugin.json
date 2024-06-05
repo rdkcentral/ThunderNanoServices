@@ -3,7 +3,7 @@
   "info": {
     "title": "Remote Control Plugin",
     "callsign": "RemoteControl",
-    "locator": "libWPEFrameworkRemoteControl.so",
+    "locator": "libThunderRemoteControl.so",
     "status": "production",
     "description": "The RemoteControl plugin provides user-input functionality from various key-code sources (e.g. STB RC).",
     "version": "1.0"

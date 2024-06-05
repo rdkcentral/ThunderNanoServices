@@ -2,7 +2,7 @@
 #include <iostream>
 #include <memory>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class UDPMessageOutput : public Core::Messaging::IOutput {
 private:

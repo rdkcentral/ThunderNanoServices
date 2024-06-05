@@ -26,7 +26,7 @@
 
 #include <atomic>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     /// Observes user input from the console and notifies the interaction manager of the user's intentions.
@@ -83,4 +83,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

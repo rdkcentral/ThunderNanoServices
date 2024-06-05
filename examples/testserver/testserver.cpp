@@ -19,7 +19,7 @@
 
 #include "EchoProtocol.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestSystem {
     /* static */ Core::ProxyPoolType<Web::TextBody> WebServer::_textBodyFactory(5);
     /* static */ Core::ProxyPoolType<Web::Response> WebServer::_responseFactory(5);
@@ -27,21 +27,21 @@ namespace TestSystem {
     /* static */ Core::ProxyPoolType<Web::JSONBodyType<DataContainer::Command> > JSONWebServer::_commandBodyFactory(5);
 
 #ifdef __LINUX__
-    const TCHAR ConfigFile[] = _T("/home/administrator/WPEFrameworkConfig.json");
+    const TCHAR ConfigFile[] = _T("/home/administrator/ThunderConfig.json");
     const TCHAR SerialUSBPort[] = _T("/dev/ttyACM0");
 #endif
 
 #ifdef __WIN32__
-    const TCHAR ConfigFile[] = _T("C:\\Projects/WPEFrameworkConfig.json");
+    const TCHAR ConfigFile[] = _T("C:\\Projects/ThunderConfig.json");
     const TCHAR SerialUSBPort[] = _T("COM7");
 #endif
 
     extern "C" {
 
-    class ConsoleOptions : public WPEFramework::Core::Options {
+    class ConsoleOptions : public Thunder::Core::Options {
     public:
         ConsoleOptions(int argumentCount, TCHAR* arguments[])
-            : WPEFramework::Core::Options(argumentCount, arguments, _T("v:hsp:d"))
+            : Thunder::Core::Options(argumentCount, arguments, _T("v:hsp:d"))
             , LogLevel()
             , SSL(false)
             , Port(9999)
@@ -54,7 +54,7 @@ namespace TestSystem {
         }
 
     public:
-        WPEFramework::Core::OptionalType<uint8_t> LogLevel;
+        Thunder::Core::OptionalType<uint8_t> LogLevel;
         bool SSL;
         uint16_t Port;
         uint16_t Version;
@@ -106,7 +106,7 @@ namespace TestSystem {
             address = _T("0.0.0.0");
         }
 
-        WPEFramework::DataContainer::Command jsonTestCommand;
+        Thunder::DataContainer::Command jsonTestCommand;
 
         jsonTestCommand.Identifier = 1234;
         jsonTestCommand.Name = _T("TestingToFile");
@@ -123,8 +123,8 @@ namespace TestSystem {
         jsonTestCommand.Clear();
 
         {
-            WPEFramework::DataContainer::Command number2;
-            WPEFramework::DataContainer::Command number3;
+            Thunder::DataContainer::Command number2;
+            Thunder::DataContainer::Command number3;
             Core::File readFile(ConfigFile);
             readFile.Open(true);
 
@@ -138,7 +138,7 @@ namespace TestSystem {
         // Factories
         // ------------------------------------------------------------------------------------
         // Factories for JSON objects..
-        WPEFramework::TestSystem::JSONObjectFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>::Instance().CreateFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>(5);
+        Thunder::TestSystem::JSONObjectFactory<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command>>::Instance().CreateFactory<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command>>(5);
 
         //-------------------------------------------------------------------------------------------
         // [1] BASE TEXT SOCKETS !!!!!
@@ -146,7 +146,7 @@ namespace TestSystem {
         fprintf(stderr, "[1] Building Base Text Socket\n");
 
         // Build a SocketServer
-        WPEFramework::Core::SocketServerType<TextConnector> _textSocketServer(WPEFramework::Core::NodeId(address, 12341));
+        Thunder::Core::SocketServerType<TextConnector> _textSocketServer(Thunder::Core::NodeId(address, 12341));
 
         // Start lisening !!!!
         _textSocketServer.Open(0);
@@ -157,7 +157,7 @@ namespace TestSystem {
         fprintf(stderr, "[2] Building Base JSON Socket\n");
 
         // Build a SocketServer
-        WPEFramework::Core::SocketServerType<JSONConnector<Core::JSON::IElement>> _JSONSocketServer(WPEFramework::Core::NodeId(address, 12342));
+        Thunder::Core::SocketServerType<JSONConnector<Core::JSON::IElement>> _JSONSocketServer(Thunder::Core::NodeId(address, 12342));
 
         // Start lisening !!!!
         _JSONSocketServer.Open(0);
@@ -167,7 +167,7 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         fprintf(stderr, "[3] Building HTTP Sockets\n");
 
-        Core::SocketServerType<WebServer> _webServer(WPEFramework::Core::NodeId(address, 12343));
+        Core::SocketServerType<WebServer> _webServer(Thunder::Core::NodeId(address, 12343));
 
         // Start listening
         _webServer.Open(0);
@@ -177,7 +177,7 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         fprintf(stderr, "[4] Building JSON HTTP Sockets\n");
 
-        Core::SocketServerType<JSONWebServer> _jsonWebServer(WPEFramework::Core::NodeId(address, 12344));
+        Core::SocketServerType<JSONWebServer> _jsonWebServer(Thunder::Core::NodeId(address, 12344));
 
         // Start listening
         _jsonWebServer.Open(0);
@@ -187,7 +187,7 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         fprintf(stderr, "[5] Building Web Sockets for Text\n");
 
-        Core::SocketServerType<EchoWebSocketServer> _textWebSocketServer(WPEFramework::Core::NodeId(address, 12345));
+        Core::SocketServerType<EchoWebSocketServer> _textWebSocketServer(Thunder::Core::NodeId(address, 12345));
 
         // Start listening
         _textWebSocketServer.Open(0);
@@ -197,7 +197,7 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         fprintf(stderr, "[6] Building Web Sockets for JSON\n");
 
-        Core::SocketServerType<JSONWebSocketServer<Core::JSON::IElement>> _JSONWebSocketServer(WPEFramework::Core::NodeId(address, 12346));
+        Core::SocketServerType<JSONWebSocketServer<Core::JSON::IElement>> _JSONWebSocketServer(Thunder::Core::NodeId(address, 12346));
 
         // Start listening
         _JSONWebSocketServer.Open(0);
@@ -208,7 +208,7 @@ namespace TestSystem {
         fprintf(stderr, "[1] Building Stress Text Socket\n");
 
         // Build a SocketServer
-        WPEFramework::Core::SocketServerType<StressTextConnector> _stressTextSocketServer(WPEFramework::Core::NodeId(address, 12348));
+        Thunder::Core::SocketServerType<StressTextConnector> _stressTextSocketServer(Thunder::Core::NodeId(address, 12348));
 
         // Start lisening !!!!
         _stressTextSocketServer.Open(0);
@@ -216,7 +216,7 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         // [9] FILE SERVER SOCKET !!!!!
         //-------------------------------------------------------------------------------------------
-        WPEFramework::Core::SocketServerType<FileServerConnector> _fileServer(WPEFramework::Core::NodeId(address, 12349));
+        Thunder::Core::SocketServerType<FileServerConnector> _fileServer(Thunder::Core::NodeId(address, 12349));
 
         _fileServer.Open(0);
 
@@ -225,17 +225,17 @@ namespace TestSystem {
         //-------------------------------------------------------------------------------------------
         fprintf(stderr, "Building a USB/Serial bridge\n");
 
-//        WPEFramework::SerialUSB::PIC18F2550 usbToSerial(SerialUSBPort); //TODO: Enable this after including device specific code in this build
+//        Thunder::SerialUSB::PIC18F2550 usbToSerial(SerialUSBPort); //TODO: Enable this after including device specific code in this build
 
         //-------------------------------------------------------------------------------------------
         // Other testing stuff !!!!!
         //-------------------------------------------------------------------------------------------
         fprintf(stderr, "Start reading a directory\n");
 
-        WPEFramework::Core::Directory pluginDirectory(_T("C:\\Projects\\applications\\Debug"), _T("*.dll"));
+        Thunder::Core::Directory pluginDirectory(_T("C:\\Projects\\applications\\Debug"), _T("*.dll"));
 
         while (pluginDirectory.Next() == true) {
-            WPEFramework::Core::File file(pluginDirectory.Current().c_str());
+            Thunder::Core::File file(pluginDirectory.Current().c_str());
 
             if (file.Exists()) {
                 if (file.IsDirectory()) {
@@ -243,7 +243,7 @@ namespace TestSystem {
                 }
                 else {
                     // Check if we can load it..
-                    WPEFramework::Core::Library newLibrary(file.Name().c_str());
+                    Thunder::Core::Library newLibrary(file.Name().c_str());
 
                     if (newLibrary.IsLoaded()) {
                         void* handle = newLibrary.LoadFunction(_T("GetServices"));
@@ -273,7 +273,7 @@ namespace TestSystem {
             case '1': {
                 for (uint32_t teller = 0; teller < 100000; teller++) {
                     flagState = !flagState;
-                    usbToSerial.SetOutput(WPEFramework::SerialUSB::PIC18F2550::PIN_B4, flagState);
+                    usbToSerial.SetOutput(Thunder::SerialUSB::PIC18F2550::PIN_B4, flagState);
                     string version = usbToSerial.Version();
 
                     if (version != _T("<ZMD:iCP12v1>")) {
@@ -293,7 +293,7 @@ namespace TestSystem {
             case 'T': {
                 // Toggle a LED.
                 flagState = !flagState;
-                usbToSerial.SetOutput(WPEFramework::SerialUSB::PIC18F2550::PIN_B4, flagState);
+                usbToSerial.SetOutput(Thunder::SerialUSB::PIC18F2550::PIN_B4, flagState);
                 break;
             }
             case 'V': {
@@ -303,7 +303,7 @@ namespace TestSystem {
                 break;
             }
             case 'S': {
-                WPEFramework::Core::FactoryType<WPEFramework::Core::JSON::IElement, string>::Iterator index(WPEFramework::TestSystem::JSONObjectFactory::Instance().Factories());
+                Thunder::Core::FactoryType<Thunder::Core::JSON::IElement, string>::Iterator index(Thunder::TestSystem::JSONObjectFactory::Instance().Factories());
 
                 printf("Current stats:\n");
 
@@ -330,4 +330,4 @@ namespace TestSystem {
 
     } // extern "C"
 }
-} // namespace WPEFramework::TestSystem
+} // namespace Thunder::TestSystem

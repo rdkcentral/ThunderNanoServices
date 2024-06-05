@@ -4,7 +4,7 @@
     "class": "AVS",
     "title": "AVS Plugin",
     "callsign": "AVS",
-    "locator": "libWPEFrameworkAVS.so",
+    "locator": "libThunderAVS.so",
     "status": "alpha",
     "description": "The Alexa Voice Service Headless Client serves as a personal assistant",
     "version": "1.0"
@@ -17,15 +17,15 @@
         "properties": {
           "alexaclientconfig": {
             "type": "string",
-            "description": "The path to the AlexaClientSDKConfig.json (e.g /usr/share/WPEFramework/AVS/AlexaClientSDKConfig.json)"
+            "description": "The path to the AlexaClientSDKConfig.json (e.g /usr/share/Thunder/AVS/AlexaClientSDKConfig.json)"
           },
           "smartscreenconfig": {
             "type": "string",
-            "description": "The path to the SmartScreenSDKConfig.json (e.g /usr/share/WPEFramework/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled"
+            "description": "The path to the SmartScreenSDKConfig.json (e.g /usr/share/Thunder/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled"
           },
           "kwdmodelspath": {
             "type": "string",
-            "description": "Path to the Keyword Detection models (e.g /usr/share/WPEFramework/AVS/models). The path mus contain the localeToModels.json file"
+            "description": "Path to the Keyword Detection models (e.g /usr/share/Thunder/AVS/models). The path mus contain the localeToModels.json file"
           },
           "loglevel": {
             "type": "string",

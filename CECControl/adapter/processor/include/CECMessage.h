@@ -24,7 +24,7 @@
 
 #include <CECTypes.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     struct EXTERNAL IExchange {
         virtual uint8_t Serialize(const uint8_t length, uint8_t buffer[]) const = 0;

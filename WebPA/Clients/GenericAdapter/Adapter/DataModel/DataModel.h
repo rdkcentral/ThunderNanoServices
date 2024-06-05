@@ -24,7 +24,7 @@
 
 #include <tinyxml.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 typedef enum
 {

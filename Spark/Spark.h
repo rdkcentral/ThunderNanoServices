@@ -25,7 +25,7 @@
 #include <interfaces/json/JsonData_Browser.h>
 #include <interfaces/json/JsonData_StateControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Spark : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC  {

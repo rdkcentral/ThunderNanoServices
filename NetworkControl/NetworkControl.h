@@ -26,7 +26,7 @@
 #include <interfaces/INetworkControl.h>
 #include <interfaces/json/JNetworkControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class NetworkControl : public PluginHost::IPlugin,
@@ -158,4 +158,4 @@ namespace Plugin {
         Core::SinkType<NetworkNotification> _networkNotification;
     };
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

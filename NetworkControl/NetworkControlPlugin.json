@@ -3,7 +3,7 @@
   "info": {
     "title": "Network Control Plugin",
     "callsign": "NetworkControl",
-    "locator": "libWPEFrameworkNetworkControl.so",
+    "locator": "libThunderNetworkControl.so",
     "status": "production",
     "description": [
       "The Network Control plugin provides functionality for network interface management."

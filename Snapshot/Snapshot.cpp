@@ -21,7 +21,7 @@
 
 #include <png.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {

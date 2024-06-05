@@ -34,7 +34,7 @@
 #include "ServiceDiscovery.h"
 #include "SignallingServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

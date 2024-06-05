@@ -23,7 +23,7 @@ namespace {
 
 static void*              _userData = nullptr;
 static power_state_change _callback = nullptr;
-static WPEFramework::Exchange::IPower::PCState _state    = WPEFramework::Exchange::IPower::PCState::On;
+static Thunder::Exchange::IPower::PCState _state    = Thunder::Exchange::IPower::PCState::On;
 
 void power_initialize(power_state_change callback, void* userData, const char*) {
     ASSERT ((_callback != nullptr) ^ (callback != nullptr));
@@ -36,15 +36,15 @@ void power_deinitialize() {
     _userData = nullptr;
 }
 
-uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
+uint32_t power_set_state(const enum Thunder::Exchange::IPower::PCState state, const uint32_t sleepTime) {
     _state = state;
     if (_callback != nullptr) {
         _callback(_userData, state);
     }
-    return (WPEFramework::Core::ERROR_NONE);
+    return (Thunder::Core::ERROR_NONE);
 }
 
-WPEFramework::Exchange::IPower::PCState power_get_state() {
+Thunder::Exchange::IPower::PCState power_get_state() {
     return (_state);
 }
 

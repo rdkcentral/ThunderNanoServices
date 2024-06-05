@@ -24,7 +24,7 @@
 #include <mutex>
 #include <string>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     /**
@@ -50,7 +50,7 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 namespace alexaClientSDK {
 namespace avsCommon {

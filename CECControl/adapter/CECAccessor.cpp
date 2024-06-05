@@ -21,7 +21,7 @@
 
 #include "CECAccessor.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     IAccessor* IAccessor::Instance()
     {
@@ -86,4 +86,4 @@ namespace CEC {
     }
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

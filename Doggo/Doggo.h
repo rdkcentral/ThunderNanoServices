@@ -26,7 +26,7 @@
 #include <linux/watchdog.h>
 #include <sys/ioctl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     // API: https://www.kernel.org/doc/html/latest/watchdog/watchdog-api.html
@@ -157,4 +157,4 @@ namespace Plugin {
         Core::ProxyType<Core::IDispatchType<void>> _feedingTime;
     };
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

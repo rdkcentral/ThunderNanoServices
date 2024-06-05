@@ -19,7 +19,7 @@
  
 #include "WebServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace WebServer {
 
@@ -81,7 +81,7 @@ namespace Plugin {
                 else {
                     RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
                     if (connection != nullptr) {
-                        _memory = WPEFramework::WebServer::MemoryObserver(connection);
+                        _memory = Thunder::WebServer::MemoryObserver(connection);
                         ASSERT(_memory != nullptr);
                         connection->Release();
                     }

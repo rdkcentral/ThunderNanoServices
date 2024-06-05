@@ -19,7 +19,7 @@
 
 #include "ThunderInputManager.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     using namespace alexaClientSDK::avsCommon::sdkInterfaces;
@@ -175,4 +175,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

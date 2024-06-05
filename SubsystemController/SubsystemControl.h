@@ -23,7 +23,7 @@
 
 #include <interfaces/json/JsonData_SubsystemControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SubsystemControl : public PluginHost::IPlugin, public PluginHost::JSONRPC {

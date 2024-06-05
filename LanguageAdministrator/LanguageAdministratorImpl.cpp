@@ -20,7 +20,7 @@
 #include "LanguageAdministratorImpl.h"
 #include <unicode/uloc.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     SERVICE_REGISTRATION(LanguageAdministratorImpl, 1, 0)
@@ -100,4 +100,4 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

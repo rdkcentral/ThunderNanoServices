@@ -31,7 +31,7 @@
 #include "generated/presentation-time-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Backend {
         class WaylandOutput : public Exchange::ICompositionBuffer {
@@ -134,4 +134,4 @@ namespace Compositor {
 
     } // namespace Backend
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder
