@@ -20,7 +20,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SimpleCOMRPCPluginServer : public PluginHost::IPlugin {

@@ -25,7 +25,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class COMServer : public RPC::Communicator {
 private:

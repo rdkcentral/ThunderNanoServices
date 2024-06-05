@@ -22,7 +22,7 @@
 
 #include "DataContainer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestSystem {
     class StressTextFactory {
     private:
@@ -164,7 +164,7 @@ namespace TestSystem {
         TextConnector& operator=(const TextConnector&);
 
     public:
-        TextConnector(const WPEFramework::Core::NodeId& remoteNode)
+        TextConnector(const Thunder::Core::NodeId& remoteNode)
             : BaseClass(false, remoteNode.AnyInterface(), remoteNode, 1024, 1024)
             , _serverSocket(false)
             , _dataPending(false, false)
@@ -178,7 +178,7 @@ namespace TestSystem {
         }
         ~TextConnector() override
         {
-            Close(WPEFramework::Core::infinite);
+            Close(Thunder::Core::infinite);
         }
 
     public:
@@ -238,7 +238,7 @@ POP_WARNING()
     private:
         bool _serverSocket;
         string _dataReceived;
-        mutable WPEFramework::Core::Event _dataPending;
+        mutable Thunder::Core::Event _dataPending;
     };
 
     // -----------------------------------------------------------------------------------------------
@@ -256,7 +256,7 @@ POP_WARNING()
         JSONConnector& operator=(const JSONConnector&);
 
     public:
-        JSONConnector(const WPEFramework::Core::NodeId& remoteNode)
+        JSONConnector(const Thunder::Core::NodeId& remoteNode)
             : BaseClass(5, JSONObjectFactory<INTERFACE>::Instance(), false, remoteNode.AnyInterface(), remoteNode, 1024, 1024)
             , _serverSocket(false)
             , _dataPending(false, false)
@@ -270,7 +270,7 @@ POP_WARNING()
         }
         ~JSONConnector() override
         {
-            this->Close(WPEFramework::Core::infinite);
+            this->Close(Thunder::Core::infinite);
         }
 
     public:
@@ -348,7 +348,7 @@ POP_WARNING()
     private:
         bool _serverSocket;
         string _dataReceived;
-        mutable WPEFramework::Core::Event _dataPending;
+        mutable Thunder::Core::Event _dataPending;
     };
 
     // -----------------------------------------------------------------------------------------------
@@ -357,9 +357,9 @@ POP_WARNING()
     // Basic Web Echo Service, What is coming in, is send out (WebServer)
     // Basic Web Client connector. Allows you to send out a Request and receive response (WebClient)
     // -----------------------------------------------------------------------------------------------
-    class EXTERNAL WebServer : public Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, WPEFramework::Core::ProxyPoolType<Web::Request> > {
+    class EXTERNAL WebServer : public Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, Thunder::Core::ProxyPoolType<Web::Request> > {
     private:
-        typedef Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, WPEFramework::Core::ProxyPoolType<Web::Request> > BaseClass;
+        typedef Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, Thunder::Core::ProxyPoolType<Web::Request> > BaseClass;
 
         WebServer();
         WebServer(const WebServer& copy);
@@ -372,24 +372,24 @@ POP_WARNING()
         }
         ~WebServer() override
         {
-            Close(WPEFramework::Core::infinite);
+            Close(Thunder::Core::infinite);
         }
 
     public:
         // Notification of a Partial Request received, time to attach a body..
-        virtual void LinkBody(Core::ProxyType<WPEFramework::Web::Request>& element)
+        virtual void LinkBody(Core::ProxyType<Thunder::Web::Request>& element)
         {
             // Time to attach a String Body
             element->Body<Web::TextBody>(_textBodyFactory.Element());
         }
-        virtual void Received(Core::ProxyType<WPEFramework::Web::Request>& request)
+        virtual void Received(Core::ProxyType<Thunder::Web::Request>& request)
         {
             string received;
             request->ToString(received);
             printf(_T("Received: %s\n"), received.c_str());
 
             // What we get in, we should send it back :-)
-            Core::ProxyType<WPEFramework::Web::Response> response = _responseFactory.Element();
+            Core::ProxyType<Thunder::Web::Response> response = _responseFactory.Element();
             Core::ProxyType<Web::TextBody> textBody = request->Body<Web::TextBody>();
 
             // We attached it so it should be available!!!
@@ -401,7 +401,7 @@ POP_WARNING()
             response->Body<Web::TextBody>(textBody);
             Submit(response);
         }
-        virtual void Send(const Core::ProxyType<WPEFramework::Web::Response>& response)
+        virtual void Send(const Core::ProxyType<Thunder::Web::Response>& response)
         {
             string send;
             response->ToString(send);
@@ -419,46 +419,46 @@ POP_WARNING()
         }
 
     private:
-        static Core::ProxyPoolType<WPEFramework::Web::Response> _responseFactory;
+        static Core::ProxyPoolType<Thunder::Web::Response> _responseFactory;
         static Core::ProxyPoolType<Web::TextBody> _textBodyFactory;
     };
-    class EXTERNAL WebClient : public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> {
+    class EXTERNAL WebClient : public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Thunder::Core::ProxyPoolType<Web::Response>&> {
     private:
-        typedef Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> BaseClass;
+        typedef Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Thunder::Core::ProxyPoolType<Web::Response>&> BaseClass;
 
         // All requests needed by any instance of this socket class, is coming from this static factory.
         // This means that all Requests, received are shared among all WebServer sockets, hopefully limiting
         // the number of requests that need to be created.
-        static WPEFramework::Core::ProxyPoolType<Web::Response> _responseFactory;
+        static Thunder::Core::ProxyPoolType<Web::Response> _responseFactory;
 
         WebClient();
         WebClient(const WebClient& copy);
         WebClient& operator=(const WebClient&);
 
     public:
-        WebClient(const WPEFramework::Core::NodeId& remoteNode)
+        WebClient(const Thunder::Core::NodeId& remoteNode)
             : BaseClass(5, _responseFactory, false, remoteNode.AnyInterface(), remoteNode, 2048, 208)
         {
         }
         ~WebClient() override
         {
-            Close(WPEFramework::Core::infinite);
+            Close(Thunder::Core::infinite);
         }
 
     public:
         // Notification of a Partial Request received, time to attach a body..
-        virtual void LinkBody(Core::ProxyType<WPEFramework::Web::Response>& element)
+        virtual void LinkBody(Core::ProxyType<Thunder::Web::Response>& element)
         {
             // Time to attach a String Body
             element->Body<Web::TextBody>(_textBodyFactory.Element());
         }
-        virtual void Received(Core::ProxyType<WPEFramework::Web::Response>& element)
+        virtual void Received(Core::ProxyType<Thunder::Web::Response>& element)
         {
             string received;
             element->ToString(received);
             printf(_T("Received: %s\n"), received.c_str());
         }
-        virtual void Send(const Core::ProxyType<WPEFramework::Web::Request>& response)
+        virtual void Send(const Core::ProxyType<Thunder::Web::Request>& response)
         {
             string send;
             response->ToString(send);
@@ -483,17 +483,17 @@ POP_WARNING()
     // JSON Webrequest server, composit JSON object to the request/response. (JSONWebServer)
     // JSON Webrequest client, composit JSON object to the request/response. (JSONWebClient)
     // -----------------------------------------------------------------------------------------------
-    typedef WPEFramework::Web::JSONBodyType<WPEFramework::DataContainer::Command> CommandBody;
+    typedef Thunder::Web::JSONBodyType<Thunder::DataContainer::Command> CommandBody;
 
-    class JSONWebServer : public Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, WPEFramework::Core::ProxyPoolType<Web::Request>&> {
+    class JSONWebServer : public Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, Thunder::Core::ProxyPoolType<Web::Request>&> {
     private:
-        typedef Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, WPEFramework::Core::ProxyPoolType<Web::Request>&> BaseClass;
+        typedef Web::WebLinkType<Core::SocketStream, Web::Request, Web::Response, Thunder::Core::ProxyPoolType<Web::Request>&> BaseClass;
 
         // All requests needed by any instance of this socket class, is coming from this static factory.
         // This means that all Requests, received are shared among all WebServer sockets, hopefully limiting
         // the number of requests that need to be created.
-        static WPEFramework::Core::ProxyPoolType<Web::Request> _requestFactory;
-        static WPEFramework::Core::ProxyPoolType<CommandBody> _commandBodyFactory;
+        static Thunder::Core::ProxyPoolType<Web::Request> _requestFactory;
+        static Thunder::Core::ProxyPoolType<CommandBody> _commandBodyFactory;
 
         JSONWebServer();
         JSONWebServer(const JSONWebServer& copy);
@@ -506,12 +506,12 @@ POP_WARNING()
         }
         ~JSONWebServer() override
         {
-            Close(WPEFramework::Core::infinite);
+            Close(Thunder::Core::infinite);
         }
 
     public:
         // Notification of a Partial Request received, time to attach a body..
-        virtual void LinkBody(Core::ProxyType<WPEFramework::Web::Request>& element)
+        virtual void LinkBody(Core::ProxyType<Thunder::Web::Request>& element)
         {
             // Time to attach a Command Body
             element->Body<CommandBody>(_commandBodyFactory.Element());
@@ -539,33 +539,33 @@ POP_WARNING()
             }
         }
     };
-    class JSONWebClient : public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> {
+    class JSONWebClient : public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Thunder::Core::ProxyPoolType<Web::Response>&> {
     private:
-        typedef Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, WPEFramework::Core::ProxyPoolType<Web::Response>&> BaseClass;
+        typedef Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Thunder::Core::ProxyPoolType<Web::Response>&> BaseClass;
 
         // All requests needed by any instance of this socket class, is coming from this static factory.
         // This means that all Requests, received are shared among all WebServer sockets, hopefully limiting
         // the number of requests that need to be created.
-        static WPEFramework::Core::ProxyPoolType<Web::Response> _responseFactory;
-        static WPEFramework::Core::ProxyPoolType<CommandBody> _commandBodyFactory;
+        static Thunder::Core::ProxyPoolType<Web::Response> _responseFactory;
+        static Thunder::Core::ProxyPoolType<CommandBody> _commandBodyFactory;
 
         JSONWebClient();
         JSONWebClient(const JSONWebClient& copy);
         JSONWebClient& operator=(const JSONWebClient&);
 
     public:
-        JSONWebClient(const WPEFramework::Core::NodeId& remoteNode)
+        JSONWebClient(const Thunder::Core::NodeId& remoteNode)
             : BaseClass(5, _responseFactory, false, remoteNode.AnyInterface(), remoteNode, 2048, 208)
         {
         }
         ~JSONWebClient() override
         {
-            Close(WPEFramework::Core::infinite);
+            Close(Thunder::Core::infinite);
         }
 
     public:
         // Notification of a Partial Request received, time to attach a body..
-        virtual void LinkBody(Core::ProxyType<WPEFramework::Web::Response>& element)
+        virtual void LinkBody(Core::ProxyType<Thunder::Web::Response>& element)
         {
             // Time to attach a Command Body
             element->Body<CommandBody>(_commandBodyFactory.Element());
@@ -608,7 +608,7 @@ POP_WARNING()
         EchoWebSocketServer& operator=(const EchoWebSocketServer&);
 
     public:
-        EchoWebSocketServer(const SOCKET& socket, const WPEFramework::Core::NodeId& remoteNode, WPEFramework::Core::SocketServerType<EchoWebSocketServer>*)
+        EchoWebSocketServer(const SOCKET& socket, const Thunder::Core::NodeId& remoteNode, Thunder::Core::SocketServerType<EchoWebSocketServer>*)
             : BaseClass(false, true, false, socket, remoteNode, 1024, 1024)
         {
         }
@@ -681,15 +681,15 @@ POP_WARNING()
     template <typename INTERFACE>
     class JSONWebSocketServer : public Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, JSONObjectFactory<INTERFACE>&, INTERFACE> {
     private:
-        typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
+        typedef Core::StreamJSONType<Web::WebSocketServerType<Core::SocketStream>, Thunder::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
 
     private:
         JSONWebSocketServer(const JSONWebSocketServer&);
         JSONWebSocketServer& operator=(const JSONWebSocketServer&);
 
     public:
-        JSONWebSocketServer(const SOCKET& socket, const WPEFramework::Core::NodeId& remoteNode, WPEFramework::Core::SocketServerType<JSONWebSocketServer>*)
-            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), false, true, false, socket, remoteNode, 256, 256)
+        JSONWebSocketServer(const SOCKET& socket, const Thunder::Core::NodeId& remoteNode, Thunder::Core::SocketServerType<JSONWebSocketServer>*)
+            : BaseClass(5, Thunder::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), false, true, false, socket, remoteNode, 256, 256)
         {
         }
         ~JSONWebSocketServer() override = default;
@@ -740,9 +740,9 @@ POP_WARNING()
         }
     };
     template <typename INTERFACE>
-    class JSONWebSocketClient : public Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> {
+    class JSONWebSocketClient : public Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, Thunder::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> {
     private:
-        typedef Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
+        typedef Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, Thunder::TestSystem::JSONObjectFactory<INTERFACE>&, INTERFACE> BaseClass;
 
     private:
         JSONWebSocketClient(const JSONWebSocketClient&);
@@ -750,7 +750,7 @@ POP_WARNING()
 
     public:
         JSONWebSocketClient(const Core::NodeId& remoteNode)
-            : BaseClass(5, WPEFramework::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), _T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode.AnyInterface(), remoteNode, 256, 256)
+            : BaseClass(5, Thunder::TestSystem::JSONObjectFactory<INTERFACE>::Instance(), _T("/"), _T("echo"), _T(""), _T(""), false, true, false, remoteNode.AnyInterface(), remoteNode, 256, 256)
         {
         }
         ~JSONWebSocketClient() override = default;
@@ -815,7 +815,7 @@ POP_WARNING()
         StressTextConnector& operator=(const StressTextConnector&);
 
     public:
-        StressTextConnector(const WPEFramework::Core::NodeId& remoteNode)
+        StressTextConnector(const Thunder::Core::NodeId& remoteNode)
             : BaseClass(false, remoteNode.AnyInterface(), remoteNode, 1024, 1024)
             , _serverSocket(false)
             , _pending(0)
@@ -839,7 +839,7 @@ POP_WARNING()
         }
         ~StressTextConnector() override
         {
-            Close(WPEFramework::Core::infinite);
+            Close(Thunder::Core::infinite);
         }
 
     public:
@@ -1046,7 +1046,7 @@ POP_WARNING()
         StressInstanceType<CONNECTOR>& operator=(const StressInstanceType<CONNECTOR>&);
 
     public:
-        StressInstanceType(const WPEFramework::Core::NodeId& remoteNode)
+        StressInstanceType(const Thunder::Core::NodeId& remoteNode)
             : Thread(0, _T("StressTestEngine"))
             , _connector(remoteNode)
             , _fireSet(0)
@@ -1056,7 +1056,7 @@ POP_WARNING()
         }
         ~StressInstanceType()
         {
-            _connector.Close(WPEFramework::Core::infinite);
+            _connector.Close(Thunder::Core::infinite);
         }
 
     public:
@@ -1111,7 +1111,7 @@ POP_WARNING()
 
             Block();
 
-            return (WPEFramework::Core::infinite);
+            return (Thunder::Core::infinite);
         }
 
     private:
@@ -1119,6 +1119,6 @@ POP_WARNING()
         uint32_t _fireSet;
     };
 }
-} // Namepsace WPEFramework.TestSystem
+} // Namepsace Thunder.TestSystem
 
 #endif

@@ -23,7 +23,7 @@
 #include <array>
 #include <math.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Transformation {
         using TransformType = enum : uint8_t {
@@ -320,4 +320,4 @@ namespace Compositor {
         }
     } // namespace Transformation
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

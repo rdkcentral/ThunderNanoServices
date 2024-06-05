@@ -28,22 +28,22 @@ extern "C" {
 #include "mfrPowerMgr.h"
 }
 
-enum WPEFramework::Exchange::IPower::PCState power_get_persisted_state()
+enum Thunder::Exchange::IPower::PCState power_get_persisted_state()
 {
-    uint32_t lastDevicePowerState = (uint32_t)WPEFramework::Exchange::IPower::PCState::On;
+    uint32_t lastDevicePowerState = (uint32_t)Thunder::Exchange::IPower::PCState::On;
     if (pmInit()) {
         if (!pmReadPowerState(&lastDevicePowerState)) {
             /* Platform read failed; reset back to On. */
-            lastDevicePowerState = (uint32_t)WPEFramework::Exchange::IPower::PCState::On;
+            lastDevicePowerState = (uint32_t)Thunder::Exchange::IPower::PCState::On;
         }
     }
-    return ((WPEFramework::Exchange::IPower::PCState)lastDevicePowerState);
+    return ((Thunder::Exchange::IPower::PCState)lastDevicePowerState);
 }
 
-void power_set_persisted_state(const enum WPEFramework::Exchange::IPower::PCState persistedState)
+void power_set_persisted_state(const enum Thunder::Exchange::IPower::PCState persistedState)
 {
     /* We don't want PowerOff state as persisted to return to. :-) */
-    if (WPEFramework::Exchange::IPower::PCState::PowerOff != persistedState) {
+    if (Thunder::Exchange::IPower::PCState::PowerOff != persistedState) {
         /* Save current Power State for Powerloss recovery to the same State. */
         pmSavePowerState(persistedState);
     } else {

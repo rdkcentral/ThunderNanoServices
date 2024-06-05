@@ -31,7 +31,7 @@
 #define INPUT_PIN_ID    16
 #define OUTPUT_PIN_ID   20
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Sink : public Exchange::IExternal::ICatalog::INotification {
@@ -76,7 +76,7 @@ namespace Plugin {
 }
 }
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel)
 {

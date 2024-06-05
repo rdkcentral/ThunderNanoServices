@@ -20,7 +20,7 @@
 #include "Controller.h"
 #include <bitset>
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Controller::events)
 
@@ -461,4 +461,4 @@ namespace WPASupplicant {
         }
     }
 }
-} // WPEFramework::WPASupplicant
+} // Thunder::WPASupplicant

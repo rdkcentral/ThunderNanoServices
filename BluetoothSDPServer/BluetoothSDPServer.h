@@ -25,7 +25,7 @@
 
 #include "SDPServerImplementation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

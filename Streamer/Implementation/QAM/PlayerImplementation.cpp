@@ -21,7 +21,7 @@
 #include "Designator.h"
 #include <vector>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Player {
 namespace Implementation {
 

@@ -17,8 +17,9 @@
 
 cmake_minimum_required(VERSION 3.3)
 project(NanoServices)
+include(GNUInstallDirs)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 option(PLUGIN_AVS "Include AVS plugin" OFF)
 option(PLUGIN_BACKOFFICE "Include BackOffice plugin" OFF)

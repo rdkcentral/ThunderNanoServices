@@ -36,7 +36,7 @@
 #endif
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Trace {
 
 class Buffer {
@@ -50,11 +50,11 @@ public:
     {
         va_list ap;
         va_start(ap, formatter);
-        WPEFramework::Trace::Format(_text, formatter, ap);
+        Thunder::Trace::Format(_text, formatter, ap);
         va_end(ap);
     }
     explicit Buffer(const string& text)
-        : _text(WPEFramework::Core::ToString(text))
+        : _text(Thunder::Core::ToString(text))
     {
     }
     ~Buffer() = default;
@@ -74,4 +74,4 @@ private:
 }; // class Buffer
 
 } // namespace Trace
-} // namespace WPEFramework
+} // namespace Thunder

@@ -29,40 +29,40 @@ extern "C" {
 /**
  * Function definition to signal a power state change.
  */
-typedef void (*power_state_change)(void* userData, enum WPEFramework::Exchange::IPower::PCState newState, \
-                                   enum WPEFramework::Exchange::IPower::PCPhase phase);
+typedef void (*power_state_change)(void* userData, enum Thunder::Exchange::IPower::PCState newState, \
+                                   enum Thunder::Exchange::IPower::PCPhase phase);
 
 /**
  * Function to initialize and deinitialize the module
  */
 void power_initialize(power_state_change callback, void* userData, const char* config,
-        const enum WPEFramework::Exchange::IPower::PCState persistedState);
+        const enum Thunder::Exchange::IPower::PCState persistedState);
 void power_deinitialize();
 
 /**
  * Function to request a power state change 
  */
-uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime);
+uint32_t power_set_state(const enum Thunder::Exchange::IPower::PCState state, const uint32_t sleepTime);
 
 /**
  * Function to request the current power state
  */
-enum WPEFramework::Exchange::IPower::PCState power_get_state();
+enum Thunder::Exchange::IPower::PCState power_get_state();
 
 /**
  * Function to check power state is supported by platform
  */
-bool is_power_state_supported(const enum WPEFramework::Exchange::IPower::PCState state);
+bool is_power_state_supported(const enum Thunder::Exchange::IPower::PCState state);
 
 /**
  * Function to request the persistent power state from platform.
  */
-enum WPEFramework::Exchange::IPower::PCState power_get_persisted_state();
+enum Thunder::Exchange::IPower::PCState power_get_persisted_state();
 
 /**
  * Function to save current power state for persistent recovery in platform.
  */
-void power_set_persisted_state(const enum WPEFramework::Exchange::IPower::PCState);
+void power_set_persisted_state(const enum Thunder::Exchange::IPower::PCState);
 
 #ifdef __cplusplus
 }

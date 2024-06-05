@@ -32,7 +32,7 @@
 
 #include <IBackend.h>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 

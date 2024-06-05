@@ -19,7 +19,7 @@ project(Spark)
 
 cmake_minimum_required(VERSION 3.3)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -57,10 +57,10 @@ if (PLATFORM_LINUX)
             RT_PLATFORM_LINUX=ON)
 endif()
 
-if (PLATFORM_WPEFRAMEWORK)
+if (PLATFORM_THUNDER)
     target_compile_definitions(${MODULE_NAME}
         PRIVATE
-            PX_PLATFORM_WPEFRAMEWORK=ON)
+            PX_PLATFORM_THUNDER=ON)
 endif()
 
 if (PLATFORM_WAYLAND_EGL)
@@ -98,7 +98,7 @@ target_link_libraries(${MODULE_NAME}
 # Library installation section
 install(
     TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
 
 set(PLUGIN_SPARK_STARTMODE "Deactivated" CACHE STRING "Automatically start Spark plugin")
 set(PLUGIN_SPARK_STARTURL "browser.js" CACHE STRING "Initial URL for Spark plugin")

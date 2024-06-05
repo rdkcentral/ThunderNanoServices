@@ -46,7 +46,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace WPEFramework {
+namespace Thunder {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 static Compositor::PixelBuffer textureRed(Texture::Red);
@@ -228,13 +228,13 @@ private:
 
 int main(int argc, char* argv[])
 {
-    WPEFramework::ConsoleOptions options(argc, argv);
-    WPEFramework::Messaging::LocalTracer& tracer = WPEFramework::Messaging::LocalTracer::Open();
+    Thunder::ConsoleOptions options(argc, argv);
+    Thunder::Messaging::LocalTracer& tracer = Thunder::Messaging::LocalTracer::Open();
 
-    const char* executableName(WPEFramework::Core::FileNameOnly(argv[0]));
+    const char* executableName(Thunder::Core::FileNameOnly(argv[0]));
 
     {
-        WPEFramework::Messaging::ConsolePrinter printer(true);
+        Thunder::Messaging::ConsolePrinter printer(true);
 
         tracer.Callback(&printer);
 
@@ -250,9 +250,9 @@ int main(int argc, char* argv[])
             tracer.EnableMessage(module, "", true);
         }
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        WPEFramework::RenderTest test(options.Output, options.RenderNode, 60, 30);
+        Thunder::RenderTest test(options.Output, options.RenderNode, 60, 30);
 
         test.Start();
 
@@ -272,11 +272,11 @@ int main(int argc, char* argv[])
 
         } while (keyPress != 'Q');
 
-        TRACE_GLOBAL(WPEFramework::Trace::Information, ("Exiting %s.... ", executableName));
+        TRACE_GLOBAL(Thunder::Trace::Information, ("Exiting %s.... ", executableName));
     }
 
     tracer.Close();
-    WPEFramework::Core::Singleton::Dispose();
+    Thunder::Core::Singleton::Dispose();
 
     return 0;
 }

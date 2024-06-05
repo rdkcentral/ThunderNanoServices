@@ -3,7 +3,7 @@
     "info": {
       "title": "RemoteHostExample plugin",
       "callsign": "RemoteHostExample",
-      "locator": "libWPEFrameworkRemoteHostExample.so",
+      "locator": "libThunderRemoteHostExample.so",
       "status": "production",
       "description": [
         "Example of remote invocation functionality."

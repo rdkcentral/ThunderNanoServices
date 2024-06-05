@@ -22,7 +22,7 @@
 #include "DeviceInfo.h"
 #include "DeviceControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 bool DeviceControl::Initialize()
 {
@@ -178,7 +178,7 @@ extern "C" {
 #endif
 
 EXTERNAL void LoadProfile() {
-    static WPEFramework::WebPA::Administrator::ProfileImplementationType<WPEFramework::DeviceControl> Register;
+    static Thunder::WebPA::Administrator::ProfileImplementationType<Thunder::DeviceControl> Register;
 }
 
 #ifdef __cplusplus

@@ -21,7 +21,7 @@
 
 #include "VolumeControlPlatform.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     SERVICE_REGISTRATION(VolumeControlImplementation, 1, 0)
@@ -112,4 +112,4 @@ namespace Plugin {
     }
 
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

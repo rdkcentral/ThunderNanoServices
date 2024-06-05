@@ -23,7 +23,7 @@
 #include <interfaces/IYin.h>
 #include <interfaces/JYin.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

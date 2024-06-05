@@ -23,7 +23,7 @@
 #include <interfaces/json/JsonData_DeviceInfo.h>
 #include <core/JSONRPC.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 DeviceInfo::Process::ProcessList DeviceInfo::Process::_processList;
 

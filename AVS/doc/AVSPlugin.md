@@ -56,7 +56,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
@@ -74,12 +74,12 @@ The table below lists configuration options of the plugin.
 | :-------- | :-------- | :-------- |
 | callsign | string | Plugin instance name (default: *AVS*) |
 | classname | string | Class name: *AVS* |
-| locator | string | Library name: *libWPEFrameworkAVS.so* |
+| locator | string | Library name: *libThunderAVS.so* |
 | startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
-| configuration.alexaclientconfig | string | The path to the AlexaClientSDKConfig.json (e.g /usr/share/WPEFramework/AVS/AlexaClientSDKConfig.json) |
-| configuration?.smartscreenconfig | string | <sup>*(optional)*</sup> The path to the SmartScreenSDKConfig.json (e.g /usr/share/WPEFramework/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled |
-| configuration?.kwdmodelspath | string | <sup>*(optional)*</sup> Path to the Keyword Detection models (e.g /usr/share/WPEFramework/AVS/models). The path mus contain the localeToModels.json file |
+| configuration.alexaclientconfig | string | The path to the AlexaClientSDKConfig.json (e.g /usr/share/Thunder/AVS/AlexaClientSDKConfig.json) |
+| configuration?.smartscreenconfig | string | <sup>*(optional)*</sup> The path to the SmartScreenSDKConfig.json (e.g /usr/share/Thunder/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled |
+| configuration?.kwdmodelspath | string | <sup>*(optional)*</sup> Path to the Keyword Detection models (e.g /usr/share/Thunder/AVS/models). The path mus contain the localeToModels.json file |
 | configuration?.loglevel | string | <sup>*(optional)*</sup> Capitalized log level of the AVS components. Possible values: NONE, CRITICAL, ERROR, WARN, INFO. Debug log levels start from DEBUG0 up to DEBUG0 |
 | configuration.audiosource | string | The callsign of the plugin that provides the voice audio input or PORTAUDIO, when the portaudio library should be used. (e.g BluetoothRemoteControll, PORTAUDIO) |
 | configuration?.enablesmartscreen | boolean | <sup>*(optional)*</sup> Enable the SmartScreen support in the runtime. The SmartScreen functionality must be compiled in |

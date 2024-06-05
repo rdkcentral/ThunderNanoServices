@@ -19,7 +19,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(YinInterfaces)
 
-find_package(WPEFramework)
+find_package(Thunder)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(CompileSettingsDebug REQUIRED)
 
@@ -56,5 +56,5 @@ target_link_libraries(${PLUGIN_YIN_DEFINITIONS}
         ${NAMESPACE}Core::${NAMESPACE}Core
         CompileSettingsDebug::CompileSettingsDebug)
 
-install(TARGETS ${PLUGIN_YIN_MARSHALLING} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/lib/${STORAGE_DIRECTORY}/proxystubs)
-install(TARGETS ${PLUGIN_YIN_DEFINITIONS} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/lib)
+install(TARGETS ${PLUGIN_YIN_MARSHALLING} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/proxystubs)
+install(TARGETS ${PLUGIN_YIN_DEFINITIONS} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR})

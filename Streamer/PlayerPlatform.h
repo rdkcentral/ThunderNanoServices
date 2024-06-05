@@ -27,7 +27,7 @@
 #include <vector>
 #include <set>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Player {
 

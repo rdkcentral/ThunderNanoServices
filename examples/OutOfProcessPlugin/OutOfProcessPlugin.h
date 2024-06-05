@@ -26,7 +26,7 @@
 
 #include <interfaces/json/JBrowserResources.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class OutOfProcessPlugin : public PluginHost::IPluginExtended, public PluginHost::IWeb, public PluginHost::JSONRPC {

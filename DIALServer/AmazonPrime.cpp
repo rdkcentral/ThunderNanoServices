@@ -20,7 +20,7 @@
 #include "DIALServer.h"
 #include "interfaces/IAmazonPrime.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace DIALHandlers {
 
     class AmazonPrime : public Plugin::DIALServer::Default {

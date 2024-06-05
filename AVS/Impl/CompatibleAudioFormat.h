@@ -23,7 +23,7 @@
 
 #include <AVSCommon/Utils/AudioFormat.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace AudioFormatCompatibility {
@@ -63,4 +63,4 @@ namespace Plugin {
 
     } // namespace AudioFormatCompatibility
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

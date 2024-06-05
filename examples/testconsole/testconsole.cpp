@@ -22,7 +22,7 @@
 
 #include "Protocols.h"
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class ProvisioningClient : public Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Core::ProxyPoolType<Web::Response>&> {
 public:
@@ -139,17 +139,17 @@ Core::ProxyPoolType<Web::Response> ProvisioningClient::_responseFactory(2);
 Core::ProxyPoolType<ProvisioningClient::ProvisioningInfo> ProvisioningClient::_infoBodyFactory(2);
 
 // The factory for the CommandResponse messages needs to be created somewhere..
-/* static */ WPEFramework::Core::ProxyPoolType<WPEFramework::Web::Response> WPEFramework::TestSystem::WebClient::_responseFactory(5);
-/* static */ WPEFramework::Core::ProxyPoolType<WPEFramework::Web::TextBody> WPEFramework::TestSystem::WebClient::_textBodyFactory(5);
+/* static */ Thunder::Core::ProxyPoolType<Thunder::Web::Response> Thunder::TestSystem::WebClient::_responseFactory(5);
+/* static */ Thunder::Core::ProxyPoolType<Thunder::Web::TextBody> Thunder::TestSystem::WebClient::_textBodyFactory(5);
 
-/* static */ WPEFramework::Core::ProxyPoolType<WPEFramework::Web::Response> WPEFramework::TestSystem::JSONWebClient::_responseFactory(5);
-/* static */ WPEFramework::Core::ProxyPoolType<WPEFramework::TestSystem::CommandBody> WPEFramework::TestSystem::JSONWebClient::_commandBodyFactory(5);
+/* static */ Thunder::Core::ProxyPoolType<Thunder::Web::Response> Thunder::TestSystem::JSONWebClient::_responseFactory(5);
+/* static */ Thunder::Core::ProxyPoolType<Thunder::TestSystem::CommandBody> Thunder::TestSystem::JSONWebClient::_commandBodyFactory(5);
 const uint8_t STRESS_ENGINES = 10;
 
-class ConsoleOptions : public WPEFramework::Core::Options {
+class ConsoleOptions : public Thunder::Core::Options {
 public:
     ConsoleOptions(int argumentCount, TCHAR* arguments[])
-        : WPEFramework::Core::Options(argumentCount, arguments, _T("v:hsp:d"))
+        : Thunder::Core::Options(argumentCount, arguments, _T("v:hsp:d"))
         , LogLevel()
         , SSL(false)
         , Port(80)
@@ -162,7 +162,7 @@ public:
     }
 
 public:
-    WPEFramework::Core::OptionalType<uint8_t> LogLevel;
+    Thunder::Core::OptionalType<uint8_t> LogLevel;
     bool SSL;
     uint16_t Port;
     uint16_t Version;
@@ -196,7 +196,7 @@ private:
 //static const TCHAR __HASH_3__[] = _T("");
 //// HASH1 => 2fd4e1c6 7a2d28fc ed849ee1 bb76e739 1b93eb12
 //// Base64 => L9ThxnotKPzthJ7hu3bnORuT6xI=
-//WPEFramework::Core::SHA1 hash1(reinterpret_cast<const uint8_t*>(&__HASH_1__[0]), (sizeof(__HASH_1__) - 1));
+//Thunder::Core::SHA1 hash1(reinterpret_cast<const uint8_t*>(&__HASH_1__[0]), (sizeof(__HASH_1__) - 1));
 //const uint8_t* hashCode = hash1.Result();
 //for (uint8_t teller = 0; teller < 20; teller++)
 //{
@@ -204,13 +204,13 @@ private:
 //}
 //printf("\n");
 //string baseHash1;
-//WPEFramework::Core::ToString(hash1.Result(), 5 * sizeof(uint32_t), true, baseHash1);
+//Thunder::Core::ToString(hash1.Result(), 5 * sizeof(uint32_t), true, baseHash1);
 //printf("Hash1 = %s\n", baseHash1.c_str());
 
 //// Lets see if we can translate it back
 //uint8_t buffer[24];
 //uint16_t bufferLength = sizeof(buffer);
-//uint16_t location = WPEFramework::Core::FromString(baseHash1, buffer, bufferLength);
+//uint16_t location = Thunder::Core::FromString(baseHash1, buffer, bufferLength);
 
 //if (baseHash1[location] == '=')
 //{
@@ -224,16 +224,16 @@ private:
 
 //// HASH2 => de9f2c7f d25e1b3a fad3e85a 0bd17d9b 100db4b3
 //// Base64 => 3p8sf9JeGzr60+haC9F9mxANtLM=
-//WPEFramework::Core::SHA1 hash2(reinterpret_cast<const uint8_t*>(&__HASH_2__[0]), (sizeof(__HASH_2__)-1));
+//Thunder::Core::SHA1 hash2(reinterpret_cast<const uint8_t*>(&__HASH_2__[0]), (sizeof(__HASH_2__)-1));
 //string baseHash2;
-//WPEFramework::Core::ToString(hash2.Result(), 5 * sizeof(uint32_t), true, baseHash2);
+//Thunder::Core::ToString(hash2.Result(), 5 * sizeof(uint32_t), true, baseHash2);
 //printf("Hash2 = %s\n", baseHash2.c_str());
 
 //// HASH3 => da39a3ee 5e6b4b0d 3255bfef 95601890 afd80709
 //// Base64 => 2jmj7l5rSw0yVb/vlWAYkK/YBwk=
-//WPEFramework::Core::SHA1 hash3(reinterpret_cast<const uint8_t*>(&__HASH_3__[0]), (sizeof(__HASH_3__)-1));
+//Thunder::Core::SHA1 hash3(reinterpret_cast<const uint8_t*>(&__HASH_3__[0]), (sizeof(__HASH_3__)-1));
 //string baseHash3;
-//WPEFramework::Core::ToString(hash3.Result(), 5 * sizeof(uint32_t), true, baseHash3);
+//Thunder::Core::ToString(hash3.Result(), 5 * sizeof(uint32_t), true, baseHash3);
 //printf("Hash3 = %s\n", baseHash3.c_str());
 
 typedef enum {
@@ -244,7 +244,7 @@ typedef enum {
 
 } CommandType;
 
-namespace WPEFramework {
+namespace Thunder {
     ENUM_CONVERSION_BEGIN(CommandType)
 
     { ExecuteShell, _TXT("ExecuteShell") },
@@ -279,7 +279,7 @@ public:
     Core::JSON::ArrayType<Core::JSON::DecUInt16> Settings;
 };
 
-class CommandRequest : public WPEFramework::Core::JSON::Container {
+class CommandRequest : public Thunder::Core::JSON::Container {
 private:
     CommandRequest(const CommandRequest&);
     CommandRequest& operator=(const CommandRequest&);
@@ -322,7 +322,7 @@ void TestParser1()
     command->Params.Command = PlayerControl;
 
     string text, response, typeIdentifier;
-    WPEFramework::Core::JSON::Tester<1, Core::JSON::LabelType<CommandRequest> > smallParser;
+    Thunder::Core::JSON::Tester<1, Core::JSON::LabelType<CommandRequest> > smallParser;
 
     // Convert command to JSON(text)
     smallParser.ToString(command, text);
@@ -341,7 +341,7 @@ void TestParser1()
     text.clear();
     response.clear();
 
-    //WPEFramework::Core::JSON::Tester<2048, Core::JSON::LabelType<CommandRequest> > bigParser;
+    //Thunder::Core::JSON::Tester<2048, Core::JSON::LabelType<CommandRequest> > bigParser;
     // Convert command to JSON(text)
     //bigParser.ToString(command, text);
     // Convert JSON(text) to received
@@ -413,77 +413,77 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         string message;
 
         // Factories for JSON objects..
-        WPEFramework::TestSystem::JSONObjectFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>::Instance().CreateFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>(5);
+        Thunder::TestSystem::JSONObjectFactory<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command>>::Instance().CreateFactory<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command>>(5);
 
         // ------------------------------------------------------------------------------------
         // [1] BASE TEXT client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::TextConnector textConnector(WPEFramework::Core::NodeId(options.Command(), 12341));
+        Thunder::TestSystem::TextConnector textConnector(Thunder::Core::NodeId(options.Command(), 12341));
 
         // ------------------------------------------------------------------------------------
         // [2] BASE JSON client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::JSONConnector<Core::JSON::IElement> JSONConnector(WPEFramework::Core::NodeId(options.Command(), 12342));
+        Thunder::TestSystem::JSONConnector<Core::JSON::IElement> JSONConnector(Thunder::Core::NodeId(options.Command(), 12342));
 
         // ------------------------------------------------------------------------------------
         // [3] WEB Client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::WebClient webConnector(WPEFramework::Core::NodeId(options.Command(), 12343));
-        WPEFramework::Core::ProxyType<WPEFramework::Web::Request> webRequest(WPEFramework::Core::ProxyType<WPEFramework::Web::Request>::Create());
-        WPEFramework::Core::ProxyType<WPEFramework::Web::TextBody> webRequestBody(WPEFramework::Core::ProxyType<WPEFramework::Web::TextBody>::Create());
-        webRequest->Body<WPEFramework::Web::TextBody>(webRequestBody);
+        Thunder::TestSystem::WebClient webConnector(Thunder::Core::NodeId(options.Command(), 12343));
+        Thunder::Core::ProxyType<Thunder::Web::Request> webRequest(Thunder::Core::ProxyType<Thunder::Web::Request>::Create());
+        Thunder::Core::ProxyType<Thunder::Web::TextBody> webRequestBody(Thunder::Core::ProxyType<Thunder::Web::TextBody>::Create());
+        webRequest->Body<Thunder::Web::TextBody>(webRequestBody);
 
         // ------------------------------------------------------------------------------------
         // [4] JSON WEB Client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::JSONWebClient jsonWebConnector(WPEFramework::Core::NodeId(options.Command(), 12344));
-        WPEFramework::Core::ProxyType<WPEFramework::Web::Request> jsonRequest(WPEFramework::Core::ProxyType<WPEFramework::Web::Request>::Create());
-        WPEFramework::Core::ProxyType<WPEFramework::TestSystem::CommandBody> jsonRequestBody(WPEFramework::Core::ProxyType<WPEFramework::TestSystem::CommandBody>::Create());
-        jsonRequest->Body<WPEFramework::TestSystem::CommandBody>(jsonRequestBody);
+        Thunder::TestSystem::JSONWebClient jsonWebConnector(Thunder::Core::NodeId(options.Command(), 12344));
+        Thunder::Core::ProxyType<Thunder::Web::Request> jsonRequest(Thunder::Core::ProxyType<Thunder::Web::Request>::Create());
+        Thunder::Core::ProxyType<Thunder::TestSystem::CommandBody> jsonRequestBody(Thunder::Core::ProxyType<Thunder::TestSystem::CommandBody>::Create());
+        jsonRequest->Body<Thunder::TestSystem::CommandBody>(jsonRequestBody);
 
         // ------------------------------------------------------------------------------------
         // [5] WEB SOCKET TEXT LOCAL client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::EchoWebSocketClient webSocketLocalConnection(WPEFramework::Core::NodeId(options.Command(), 12345));
+        Thunder::TestSystem::EchoWebSocketClient webSocketLocalConnection(Thunder::Core::NodeId(options.Command(), 12345));
 
         // ------------------------------------------------------------------------------------
         // [6] WEB SOCKET JSON LOCAL client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::JSONWebSocketClient<Core::JSON::IElement> webSocketJSONConnection(WPEFramework::Core::NodeId(options.Command(), 12346));
+        Thunder::TestSystem::JSONWebSocketClient<Core::JSON::IElement> webSocketJSONConnection(Thunder::Core::NodeId(options.Command(), 12346));
 
         // ------------------------------------------------------------------------------------
         // [7] WEB SOCKET TEXT REMOTE client
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::EchoWebSocketClient webSocketRemoteConnection(WPEFramework::Core::NodeId("echo.websocket.org", 80));
+        Thunder::TestSystem::EchoWebSocketClient webSocketRemoteConnection(Thunder::Core::NodeId("echo.websocket.org", 80));
 
         // ------------------------------------------------------------------------------------
         // [8] STRESS TEST TEXT SOCKET
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::StressInstanceType<WPEFramework::TestSystem::StressTextConnector>* stressEngines[STRESS_ENGINES];
+        Thunder::TestSystem::StressInstanceType<Thunder::TestSystem::StressTextConnector>* stressEngines[STRESS_ENGINES];
         for (uint8_t engine = 0; engine < STRESS_ENGINES; engine++) {
-            stressEngines[engine] = new WPEFramework::TestSystem::StressInstanceType<WPEFramework::TestSystem::StressTextConnector>(WPEFramework::Core::NodeId(options.Command(), 12348));
+            stressEngines[engine] = new Thunder::TestSystem::StressInstanceType<Thunder::TestSystem::StressTextConnector>(Thunder::Core::NodeId(options.Command(), 12348));
         }
 
         // ------------------------------------------------------------------------------------
         // [9] FILE WEB SERVER
         // ------------------------------------------------------------------------------------
-        WPEFramework::TestSystem::FileClientConnector transferFileConnection;
+        Thunder::TestSystem::FileClientConnector transferFileConnection;
 
         // ------------------------------------------------------------------------------------
         // [A] Provision Request
         // ------------------------------------------------------------------------------------
-        ProvisioningClient provisioningClient(WPEFramework::Core::NodeId("provisioning.metrological.com", 80));
+        ProvisioningClient provisioningClient(Thunder::Core::NodeId("provisioning.metrological.com", 80));
 
         int32_t randomNumber = 4526;
-        // WPEFramework::Core::Random<int32_t> (randomNumber, -70000, +70000);
+        // Thunder::Core::Random<int32_t> (randomNumber, -70000, +70000);
         printf("Random startup %d\n", randomNumber);
 
 POP_WARNING()
 
-        WPEFramework::Core::Directory pluginDirectory(_T("/usr/src"));
+        Thunder::Core::Directory pluginDirectory(_T("/usr/src"));
 
         while (pluginDirectory.Next() == true) {
-            WPEFramework::Core::File file(pluginDirectory.Current().c_str());
+            Thunder::Core::File file(pluginDirectory.Current().c_str());
 
             if (file.Exists()) {
                 if (file.IsDirectory()) {
@@ -552,15 +552,15 @@ POP_WARNING()
                 break;
             }
             case '2': {
-                WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command> > sendObject = WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command> >::Create();
+                Thunder::Core::ProxyType<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command> > sendObject = Thunder::Core::ProxyType<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command> >::Create();
 
                 sendObject->Identifier = testCount++;
                 sendObject->Name = _T("TestCommand");
-                JSONConnector.Submit(WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::IElement>(sendObject));
+                JSONConnector.Submit(Thunder::Core::ProxyType<Thunder::Core::JSON::IElement>(sendObject));
                 break;
             }
             case '3': {
-                webRequest->Verb = WPEFramework::Web::Request::HTTP_GET;
+                webRequest->Verb = Thunder::Web::Request::HTTP_GET;
                 *webRequestBody = string("Just a nice body to send");
                 webConnector.Submit(webRequest);
                 break;
@@ -578,7 +578,7 @@ POP_WARNING()
                 break;
             }
             case '6': {
-                WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command> > sendObject = WPEFramework::Core::ProxyType<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command> >::Create();
+                Thunder::Core::ProxyType<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command> > sendObject = Thunder::Core::ProxyType<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command> >::Create();
 
                 sendObject->Identifier = testCount++;
                 sendObject->Name = _T("TestCase6");
@@ -592,14 +592,14 @@ POP_WARNING()
                 break;
             }
             case '8': {
-                printf("Current Time: %s\n", WPEFramework::Core::Time::Now().ToRFC1123(true).c_str());
+                printf("Current Time: %s\n", Thunder::Core::Time::Now().ToRFC1123(true).c_str());
                 for (uint8_t engine = 0; engine < STRESS_ENGINES; engine++) {
                     stressEngines[engine]->Fire(10000);
                 }
                 break;
             }
             case '9': {
-                printf("Current Time: %s\n", WPEFramework::Core::Time::Now().ToRFC1123(true).c_str());
+                printf("Current Time: %s\n", Thunder::Core::Time::Now().ToRFC1123(true).c_str());
                 stressEngines[0]->DirectFire(10000);
                 break;
             }
@@ -626,7 +626,7 @@ POP_WARNING()
                 break;
             }
             case 'C': {
-                printf("Current status: %s\n", WPEFramework::Core::Time::Now().ToRFC1123(true).c_str());
+                printf("Current status: %s\n", Thunder::Core::Time::Now().ToRFC1123(true).c_str());
 
                 for (uint8_t engine = 0; engine < STRESS_ENGINES; engine++) {
                     printf("\nEngine number:          %d\n", engine);
@@ -636,7 +636,7 @@ POP_WARNING()
                 /* falls through */
             }
             case 'T': {
-                printf("Total status: %s\n", WPEFramework::Core::Time::Now().ToRFC1123(true).c_str());
+                printf("Total status: %s\n", Thunder::Core::Time::Now().ToRFC1123(true).c_str());
 
                 uint32_t minSize = static_cast<uint32_t>(~0);
                 uint32_t maxSize = 0;
@@ -676,8 +676,8 @@ POP_WARNING()
     }
 
     // Clear the factory we created..
-    WPEFramework::TestSystem::JSONObjectFactory<WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>>::Instance().DestroyFactory(WPEFramework::Core::JSON::LabelType<WPEFramework::DataContainer::Command>::Id());
-    WPEFramework::Core::Singleton::Dispose();
+    Thunder::TestSystem::JSONObjectFactory<Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command>>::Instance().DestroyFactory(Thunder::Core::JSON::LabelType<Thunder::DataContainer::Command>::Id());
+    Thunder::Core::Singleton::Dispose();
 
     printf("\nLeaving the main App !!!\n");
 

@@ -23,7 +23,7 @@
 
 #include <interfaces/IVoiceHandler.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Decoders {
 
@@ -63,4 +63,4 @@ namespace Decoders {
         }
     };
 
-} } // namespace WPEFramework::Decoders
+} } // namespace Thunder::Decoders

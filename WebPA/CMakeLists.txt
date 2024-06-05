@@ -19,7 +19,7 @@ project(WebPA)
 
 cmake_minimum_required(VERSION 3.3)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -51,8 +51,8 @@ set(PLUGIN_WEBPA_CCSP_CONFIGFILE "/etc/webpa_cfg.json" CACHE STRING "Config File
 set(PLUGIN_WEBPA_CCSP_DATAFILE "" CACHE STRING "Device properties file for CCSP client")
 set(PLUGIN_WEBPA_GENERICCLIENTURL "tcp://127.0.0.1:6667" CACHE STRING "URL of Generic Client to communicate with Service")
 set(PLUGIN_WEBPA_GENERICCLIENT_MAXRETRY "1" CACHE STRING "Number of retries to establish a connection with parodus service")
-set(PLUGIN_WEBPA_DATAMODELFILE "/usr/share/WPEFramework/WebPA/data-model.xml" CACHE STRING "Data Model File for Generic Adapter")
-set(PLUGIN_WEBPA_NOTIFYCONFIGFILE "/usr/share/WPEFramework/WebPA/notify_webpa_cfg.json" CACHE STRING "Notifier configuration file for Generic Adapter")
+set(PLUGIN_WEBPA_DATAMODELFILE "/usr/share/Thunder/WebPA/data-model.xml" CACHE STRING "Data Model File for Generic Adapter")
+set(PLUGIN_WEBPA_NOTIFYCONFIGFILE "/usr/share/Thunder/WebPA/notify_webpa_cfg.json" CACHE STRING "Notifier configuration file for Generic Adapter")
 
 add_library(${MODULE_NAME} SHARED
     WebPA.cpp
@@ -73,7 +73,7 @@ target_link_libraries(${MODULE_NAME}
 )
 
 string(TOLOWER ${NAMESPACE} STORAGE_DIRECTORY)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
 
 set(PLUGIN_WEBPA_STARTMODE "Deactivated" CACHE STRING "Automatically start WebPA plugin")
 set(PLUGIN_WEBPA_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")

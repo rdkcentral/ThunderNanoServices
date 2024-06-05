@@ -21,7 +21,7 @@
 
 #include <CECMessage.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         class Version : public ExchangeType<GET_CEC_VERSION, CEC_VERSION, Version> {
@@ -48,4 +48,4 @@ namespace CEC {
     } // namespace Message
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

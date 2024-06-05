@@ -22,7 +22,7 @@
 #include "Module.h"
 #include <interfaces/IConfiguration.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class VaultProvisioning : public PluginHost::IPlugin {

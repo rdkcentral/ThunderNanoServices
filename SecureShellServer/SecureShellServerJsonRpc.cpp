@@ -23,7 +23,7 @@
 #include <interfaces/json/JsonData_SecureShellServer.h>
 #include "SecureShellServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     using namespace JsonData::SecureShellServer;
@@ -104,5 +104,5 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 

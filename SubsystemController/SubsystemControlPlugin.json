@@ -3,7 +3,7 @@
   "info": {
     "title": "Subsystem Control Plugin",
     "callsign": "SubsystemControl",
-    "locator": "libWPEFrameworkSubsystemControl.so",
+    "locator": "libThunderSubsystemControl.so",
     "status": "production",
     "description": "",
     "version": "1.0"

@@ -22,7 +22,7 @@
 #include <processcontainers/ProcessContainer.h>
 #include <interfaces/json/JsonData_Containers.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

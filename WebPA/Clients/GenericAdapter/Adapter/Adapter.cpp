@@ -28,7 +28,7 @@ extern "C"
 }
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 //This class is used to interact with wdmp anonymous typedef structs, since it is not able to forward declared
@@ -592,4 +592,4 @@ void Adapter::FreeNotificationData(NotifyData* notifyData)
 }
 
 } // WebPA
-} // WPEFramework
+} // Thunder

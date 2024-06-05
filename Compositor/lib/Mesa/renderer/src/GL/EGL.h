@@ -35,7 +35,7 @@
 #include "RenderAPI.h"
 
 struct gbm_device;
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Renderer {
         class EGL {
@@ -129,4 +129,4 @@ namespace Compositor {
         }; // class EGL
     } // namespace Renderer
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

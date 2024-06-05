@@ -5,9 +5,9 @@
 
 #include <messaging/messaging.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
-    void Processor::Process(/*const cec_adapter_role_t role, */ WPEFramework::CEC::OperationFrame& operation, bool& broadcast)
+    void Processor::Process(/*const cec_adapter_role_t role, */ Thunder::CEC::OperationFrame& operation, bool& broadcast)
     {
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
@@ -72,4 +72,4 @@ namespace CEC {
         return 0;
     }
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

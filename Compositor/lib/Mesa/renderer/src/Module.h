@@ -33,7 +33,7 @@
 #include <GLES2/gl2ext.h>
 #include <drm_fourcc.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Trace {
 
 class Renderer {
@@ -46,11 +46,11 @@ public:
     {
         va_list ap;
         va_start(ap, formatter);
-        WPEFramework::Trace::Format(_text, formatter, ap);
+        Thunder::Trace::Format(_text, formatter, ap);
         va_end(ap);
     }
     explicit Renderer(const string& text)
-        : _text(WPEFramework::Core::ToString(text))
+        : _text(Thunder::Core::ToString(text))
     {
     }
 
@@ -78,11 +78,11 @@ public:
     {
         va_list ap;
         va_start(ap, formatter);
-        WPEFramework::Core::Format(_text, formatter, ap);
+        Thunder::Core::Format(_text, formatter, ap);
         va_end(ap);
     }
     explicit EGL(const string& text)
-        : _text(WPEFramework::Core::ToString(text))
+        : _text(Thunder::Core::ToString(text))
     {
     }
 
@@ -109,11 +109,11 @@ public:
     GL(const TCHAR formatter[], ...) {
         va_list ap;
         va_start(ap, formatter);
-        WPEFramework::Core::Format(_text, formatter, ap);
+        Thunder::Core::Format(_text, formatter, ap);
         va_end(ap);
     }
     explicit GL(const string& text)
-        : _text(WPEFramework::Core::ToString(text)) {
+        : _text(Thunder::Core::ToString(text)) {
     }
 
 public:
@@ -129,4 +129,4 @@ private:
 }; // class GL
 
 } // namespace Trace
-} // namespace WPEFramework
+} // namespace Thunder

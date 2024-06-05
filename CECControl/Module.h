@@ -25,7 +25,7 @@
 
 #include <core/core.h>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 #undef EXTERNAL
 #define EXTERNAL

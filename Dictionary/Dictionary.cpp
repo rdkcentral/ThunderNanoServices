@@ -19,7 +19,7 @@
  
 #include "Dictionary.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::Dictionary::enumType)
 

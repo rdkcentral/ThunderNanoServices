@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
@@ -36,4 +36,4 @@ target_link_libraries(cec_accessor_test PRIVATE
     ${NAMESPACE}Core::${NAMESPACE}Core
     ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer)
 
-install(TARGETS cec_accessor_test DESTINATION bin)
+install(TARGETS cec_accessor_test DESTINATION ${CMAKE_INSTALL_BINDIR})

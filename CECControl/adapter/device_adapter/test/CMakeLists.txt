@@ -1,4 +1,4 @@
-find_package(WPEFramework)
+find_package(Thunder)
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
@@ -25,4 +25,4 @@ target_link_libraries(cec_device_adapter_test PRIVATE
     ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
     ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
-install(TARGETS cec_device_adapter_test DESTINATION bin)
+install(TARGETS cec_device_adapter_test DESTINATION ${CMAKE_INSTALL_BINDIR})

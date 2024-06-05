@@ -37,7 +37,7 @@
 #endif
 
 extern "C" {
-namespace WPEFramework {
+namespace Thunder {
     namespace Implementation {
 
         uint32_t SetResolution(Exchange::IComposition::ScreenResolution);

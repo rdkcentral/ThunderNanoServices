@@ -23,7 +23,7 @@
 #include "Module.h"
 #include <interfaces/IDictionary.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Dictionary : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IDictionary {
@@ -365,7 +365,7 @@ namespace Plugin {
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
         const string Initialize(PluginHost::IShell* service) override;
 
-        // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
+        // The plugin is unloaded from Thunder. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
@@ -380,12 +380,12 @@ namespace Plugin {
         // Whenever a request is received, it might carry some additional data in the body. This method allows
         // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
         // in the body of the request.
-        void Inbound(WPEFramework::Web::Request& request) override;
+        void Inbound(Thunder::Web::Request& request) override;
 
         // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
         // do our thing and to return the result in the response object. Here the actual specific module work,
         // based on a a request is handled.
-        Core::ProxyType<Web::Response> Process(const WPEFramework::Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Thunder::Web::Request& request) override;
 
         //  IDictionary methods
         // -------------------------------------------------------------------------------------------------------

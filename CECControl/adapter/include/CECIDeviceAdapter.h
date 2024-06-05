@@ -2,7 +2,7 @@
 
 #include <CECTypes.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     struct EXTERNAL IDeviceAdapter {
         struct EXTERNAL INotification {
@@ -18,4 +18,4 @@ namespace CEC {
         virtual uint32_t Transmit(const cec_adapter_role_t initiator, const logical_address_t follower, const uint8_t length, const uint8_t data[]) = 0;
     }; // class adapter
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

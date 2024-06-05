@@ -23,7 +23,7 @@
 
 #include <linux/usbdevice_fs.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SystemCommandsImplementation {
@@ -56,4 +56,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

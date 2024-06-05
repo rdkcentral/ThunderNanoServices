@@ -21,7 +21,7 @@
 #include <interfaces/json/JsonData_TimeSync.h>
 #include "TimeSync.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

@@ -30,7 +30,7 @@
 //     Initator: -
 //     Follower: -
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -62,4 +62,4 @@ namespace CEC {
         static Service::OSDString osd_string;
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

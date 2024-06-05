@@ -32,7 +32,7 @@
         uint32_t endpoint_status(const JsonData::InputSwitch::SelectParamsData& params, Core::JSON::ArrayType<JsonData::InputSwitch::ChannelParamsInfo>& response);
 */
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

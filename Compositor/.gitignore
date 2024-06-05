@@ -1,4 +1,4 @@
-libWPEFrameworkCompositor.so
+libThunderCompositor.so
 Compositor.json
 lib/*/Client/compositorclientConfigVersion.cmake
 lib/*/Client/libcompositorclient.so

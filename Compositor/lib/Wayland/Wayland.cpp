@@ -24,7 +24,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     /* -------------------------------------------------------------------------------------------------------------
      * This is a singleton. Declare all C accessors to this object here
@@ -571,4 +571,4 @@ namespace Plugin {
 
 } // namespace Plugin
 
-} // namespace WPEFramework
+} // namespace Thunder

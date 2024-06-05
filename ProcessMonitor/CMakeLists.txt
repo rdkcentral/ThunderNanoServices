@@ -19,7 +19,7 @@ project(ProcessMonitor)
 
 cmake_minimum_required(VERSION 3.3)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -48,7 +48,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
 
 set(PLUGIN_PROCESSMONITOR_STARTMODE "Deactivated" CACHE STRING "Automatically start ProcessMonitor plugin")
 set(PLUGIN_PROCESSMONITOR_EXITTIMEOUT "2" CACHE STRING "Exit timeout for ProcessMonitor plugin")

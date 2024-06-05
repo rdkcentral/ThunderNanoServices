@@ -19,7 +19,7 @@
 
 #include "DHCPServerImplementation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -79,4 +79,4 @@ namespace Plugin {
     /* static */ Core::ProxyPoolType<DHCPServerImplementation::Response> DHCPServerImplementation::_responseFactory(2);
 }
 
-} // Namespace WPEFramework::plugin
+} // Namespace Thunder::plugin

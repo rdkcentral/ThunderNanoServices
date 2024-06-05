@@ -74,7 +74,7 @@
 #include <cctype>
 #include <fstream>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     SERVICE_REGISTRATION(SmartScreen, 1, 0)

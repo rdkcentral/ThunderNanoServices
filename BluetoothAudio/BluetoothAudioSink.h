@@ -34,7 +34,7 @@
 #include "ServiceDiscovery.h"
 #include "SignallingServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -1962,7 +1962,7 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_NONE;
 
-            Exchange::IBluetoothAudio::IStream* source = nullptr;
+            Exchange::IBluetoothAudio::IStream* source = _source;
 
             _lock.Lock();
 
@@ -1984,11 +1984,9 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_NONE;
 
-            Exchange::IBluetoothAudio::IStream* source = nullptr;
-
             _lock.Lock();
 
-            if (source != nullptr) {
+            if (_source != nullptr) {
                 result = _source->Speed(speed);
             }
 

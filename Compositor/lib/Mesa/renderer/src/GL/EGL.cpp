@@ -32,7 +32,7 @@
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
-namespace WPEFramework {
+namespace Thunder {
 
 #ifdef __DEBUG__
 void DebugSink(EGLenum error, const char* command, EGLint messageType, EGLLabelKHR /*threadLabel*/, EGLLabelKHR /*objectLabel*/, const char* message)
@@ -579,4 +579,4 @@ namespace Compositor {
         }
     } // namespace Renderer
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

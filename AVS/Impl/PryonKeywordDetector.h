@@ -32,7 +32,7 @@
 #include <thread>
 #include <unordered_set>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class PryonKeywordDetector : public alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector {
@@ -73,4 +73,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

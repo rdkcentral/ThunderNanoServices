@@ -3,7 +3,7 @@
   "info": {
     "title": "System Commands Plugin",
     "callsign": "SystemCommands",
-    "locator": "libWPEFrameworkSystemCommands.so",
+    "locator": "libThunderSystemCommands.so",
     "status": "beta",
     "description": "The System Commands plugin allows executing of low level actions on the system.",
     "version": "1.0"

@@ -4,12 +4,12 @@ find_package(${NAMESPACE}WebSocket REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set (WPEFRAMEWORK_TEST_TESTCONSOLE_SOURCES
+set (PLUGIN_TEST_TESTCONSOLE_SOURCES
         testconsole.cpp
         ../testserver/DataContainer.cpp
 )
 
-add_executable(testconsole ${WPEFRAMEWORK_TEST_TESTCONSOLE_SOURCES})
+add_executable(testconsole ${PLUGIN_TEST_TESTCONSOLE_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -23,4 +23,4 @@ target_link_libraries(testconsole
         ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS testconsole DESTINATION bin)
+install(TARGETS testconsole DESTINATION ${CMAKE_INSTALL_BINDIR})

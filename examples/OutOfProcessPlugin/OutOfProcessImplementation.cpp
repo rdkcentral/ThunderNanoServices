@@ -20,15 +20,31 @@
 #include "Module.h"
 #include "OutOfProcessPlugin.h"
 #include <interfaces/ITimeSync.h>
-
+#include <interfaces/IComposition.h>
 #include <thread>
 
 #ifdef __CORE_EXCEPTION_CATCHING__
 #include <stdexcept>
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
+
+    static Core::NodeId CompositorConnector(const string& configuredValue)
+    {
+        Core::NodeId destination;
+        if (configuredValue.empty() == false) {
+            destination = Core::NodeId(configuredValue.c_str());
+        }
+        if (destination.IsValid() == false) {
+            string value;
+            if ((Core::SystemInfo::GetEnvironment(_T("COMPOSITOR"), value) == false) || (value.empty() == true)) {
+                value = _T("/tmp/compositor");
+            }
+            destination = Core::NodeId(value.c_str());
+        }
+        return (destination);
+    }
 
     class TooMuchInfo {
         // -------------------------------------------------------------------
@@ -135,6 +151,7 @@ POP_WARNING()
                 , Destruct(1000)
                 , Single(false)
                 , ExternalAccess(_T("/tmp/oopexample"))
+                , Compositor(_T(""))
             {
                 Add(_T("sleep"), &Sleep);
                 Add(_T("config"), &Init);
@@ -142,6 +159,7 @@ POP_WARNING()
                 Add(_T("destruct"), &Destruct);
                 Add(_T("single"), &Single);
                 Add(_T("accessor"), &ExternalAccess);
+                Add(_T("compositor"), &Compositor);
             }
             ~Config() override = default;
 
@@ -152,6 +170,7 @@ POP_WARNING()
             Core::JSON::DecUInt32 Destruct;
             Core::JSON::Boolean Single;
             Core::JSON::String ExternalAccess;
+            Core::JSON::String Compositor;
         };
 
     public:
@@ -201,6 +220,48 @@ POP_WARNING()
             Exchange::IBrowser* _parentInterface;
         };
 
+        class CompositorRemoteAccess : public Exchange::IComposition::IClient {
+        public:
+            CompositorRemoteAccess(CompositorRemoteAccess&&) = delete;
+            CompositorRemoteAccess(const CompositorRemoteAccess&) = delete;
+            CompositorRemoteAccess& operator= (CompositorRemoteAccess&&) = delete;
+            CompositorRemoteAccess& operator= (const CompositorRemoteAccess&) = delete;
+            CompositorRemoteAccess(const string& name)
+                : _name(name) {
+            }
+            ~CompositorRemoteAccess() override = default;
+
+        public:
+            string Name() const override
+            {
+                return _name;
+            }
+            void Opacity(const uint32_t) override {}
+            uint32_t Geometry(const Exchange::IComposition::Rectangle&) override
+            {
+                return 0;
+            }
+            Exchange::IComposition::Rectangle Geometry() const override
+            {
+                Exchange::IComposition::Rectangle rectangle = {0, 0, 1080, 920};
+                return rectangle;
+            }
+            uint32_t ZOrder(const uint16_t) override
+            {
+                return 0;
+            }
+            uint32_t ZOrder() const override
+            {
+                return 0;
+            }
+            BEGIN_INTERFACE_MAP(CompositorRemoteAccess)
+                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            END_INTERFACE_MAP
+
+        private:
+            const string _name;
+        };
+
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         OutOfProcessImplementation()
             : Core::Thread(0, _T("OutOfProcessImplementation"))
@@ -212,6 +273,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _service(nullptr)
             , _engine()
             , _externalAccess(nullptr)
+            , _compositerServerRPCConnection()
             , _type(SHOW)
             , _job(*this)
         {
@@ -237,6 +299,8 @@ POP_WARNING()
                 _engine.Release();
                 TRACE(Trace::Information, (_T("Destructed _externalAccess")));
             }
+
+            DestroyCompositerServerRPCConnection();
 
             if (_service) {
                 TRACE(Trace::Information, (_T("Releasing service")));
@@ -311,6 +375,49 @@ POP_WARNING()
 
             return (result);
         }
+        void CreateCompositerServerRPCConnection(const string& connection) {
+            if (Core::WorkerPool::IsAvailable() == true) {
+                // If we are in the same process space as where a WorkerPool is registered (Main Process or
+                // hosting ptocess) use, it!
+                Core::ProxyType<RPC::InvokeServer> engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::WorkerPool::Instance());
+                ASSERT(engine.IsValid() == true);
+
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(connection), Core::ProxyType<Core::IIPCServer>(engine));
+                ASSERT(_compositerServerRPCConnection.IsValid() == true);
+
+            } else {
+                // Seems we are not in a process space initiated from the Main framework process or its hosting process.
+                // Nothing more to do than to create a workerpool for RPC our selves !
+                Core::ProxyType<RPC::InvokeServerType<2,0,8>> engine = Core::ProxyType<RPC::InvokeServerType<2,0,8>>::Create();
+                ASSERT(engine.IsValid() == true);
+
+                _compositerServerRPCConnection = Core::ProxyType<RPC::CommunicatorClient>::Create(CompositorConnector(connection), Core::ProxyType<Core::IIPCServer>(engine));
+                ASSERT(_compositerServerRPCConnection.IsValid() == true);
+
+            }
+
+            uint32_t result = _compositerServerRPCConnection->Open(RPC::CommunicationTimeOut);
+            if (result != Core::ERROR_NONE) {
+                _compositerServerRPCConnection.Release();
+            } else {
+                _compositorRemoteAccess = Core::ServiceType<CompositorRemoteAccess>::Create<CompositorRemoteAccess>(_service->Callsign());
+                result = _compositerServerRPCConnection->Offer(_compositorRemoteAccess);
+                if (result != Core::ERROR_NONE) {
+                    printf(_T("Could not offer IClient interface with callsign %s to Compositor. Error: %s\n"), _compositorRemoteAccess->Name().c_str(), Core::NumberType<uint32_t>(result).Text().c_str());
+                }
+	    }
+	}
+        void DestroyCompositerServerRPCConnection() {
+            if (_compositerServerRPCConnection.IsValid() == true) {
+                uint32_t result = _compositerServerRPCConnection->Revoke(_compositorRemoteAccess);
+
+                if (result != Core::ERROR_NONE) {
+                    printf(_T("Could not revoke IClient interface with callsign %s to Compositor. Error: %s\n"), _compositorRemoteAccess->Name().c_str(), Core::NumberType<uint32_t>(result).Text().c_str());
+                }
+                _compositorRemoteAccess->Release();
+                _compositerServerRPCConnection.Release();
+            }
+        }
         string GetURL() const override
         {
             TRACE(Trace::Information, (_T("Requested URL: [%s]"), _requestedURL.c_str()));
@@ -362,7 +469,7 @@ POP_WARNING()
 
             _adminLock.Lock();
             
-	    std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
+            std::list<Exchange::IBrowser::INotification*>::iterator index(std::find(_browserClients.begin(), _browserClients.end(), sink));
 
             // Make sure a sink is not registered multiple times.
             ASSERT(index == _browserClients.end());
@@ -475,7 +582,6 @@ POP_WARNING()
         }
 
         // IBrowserResources (added so we can test lengthty calls back to Thunder )
-
         uint32_t Headers(IStringIterator*& header ) const override {
             std::list<string> headers;
             for(uint16_t i = 0; i<1000; ++i) {
@@ -606,9 +712,11 @@ POP_WARNING()
     private:
         virtual uint32_t Worker()
         {
-            TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
-            // First Sleep the expected time..
-            SleepMs(_config.Sleep.Value() * 1000);
+            if (_config.Sleep.Value() > 0) {
+                TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
+                // First Sleep the expected time..
+                SleepMs(_config.Sleep.Value() * 1000);
+            }
 
             _adminLock.Lock();
 
@@ -641,6 +749,10 @@ POP_WARNING()
                 abort();
             }
 
+            if (_config.Compositor.IsSet() == true) {
+                CreateCompositerServerRPCConnection(_config.Compositor.Value());
+            }
+
             // Just do nothing :-)
             Block();
 
@@ -666,8 +778,12 @@ POP_WARNING()
         PluginHost::IStateControl::state _state;
         Core::SinkType<PluginMonitor> _sink;
         PluginHost::IShell* _service;
+
         Core::ProxyType<RPC::InvokeServer> _engine;
         ExternalAccess* _externalAccess;
+
+        CompositorRemoteAccess* _compositorRemoteAccess;
+        Core::ProxyType<RPC::CommunicatorClient> _compositerServerRPCConnection;
 
         StateType _type;
         Core::WorkerPool::JobType<OutOfProcessImplementation&> _job;
@@ -731,4 +847,4 @@ namespace OutOfProcessPlugin {
         return (result);
     }
 }
-} // namespace WPEFramework::OutOfProcessPlugin
+} // namespace Thunder::OutOfProcessPlugin

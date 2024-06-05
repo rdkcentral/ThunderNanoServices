@@ -23,7 +23,7 @@
 
 #include <png.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Westeros {
 
     static const char* connectorName = "/tmp/keyhandler";
@@ -556,4 +556,4 @@ namespace Implementation {
     }
 } // namespace Implementation
 }
-} // namespace WPEFramework
+} // namespace Thunder

@@ -19,7 +19,7 @@ project(CECControl)
 
 cmake_minimum_required(VERSION 3.3)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -33,7 +33,7 @@ set(PLUGIN_CECCONTROL_STARTMODE "Activated" CACHE STRING "Automatically start CE
 
 # TODO: CEC 2.0 specifies that multiple roles can be used by one device.
 set(PLUGIN_CECCONTROL_ROLES "playback" CACHE STRING "Device type")
-set(PLUGIN_CECCONTROL_NAME "WPEFramework" CACHE STRING "The name of this device")
+set(PLUGIN_CECCONTROL_NAME "Thunder" CACHE STRING "The name of this device")
 
 set(CECADAPTER_LIBRARY_NAME "_cecadapter" CACHE STRING "Defines the name of the library")
 set(CEC_DEVICE_ADAPTER_LIBRARY_NAME "_ceccontrol_device_adapter" CACHE INTERNAL "INTERNALLY USED")
@@ -78,6 +78,6 @@ target_include_directories(${MODULE_NAME}
         ${CEC_INCLUDE_DIR})
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
 
 write_config()

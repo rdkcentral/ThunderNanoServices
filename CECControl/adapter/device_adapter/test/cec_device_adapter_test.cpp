@@ -18,8 +18,8 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-using namespace WPEFramework::CEC;
-using namespace WPEFramework;
+using namespace Thunder::CEC;
+using namespace Thunder;
 
 /* Power Status Feature */
 #define CEC_MESSAGE_GIVE_DEVICE_POWER_STATUS 0x8f
@@ -409,7 +409,7 @@ int main(int argc, const char* argv[])
         tracer.Close();
     }
 
-    WPEFramework::Core::Singleton::Dispose();
+    Thunder::Core::Singleton::Dispose();
 
     return 0;
 }

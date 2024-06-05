@@ -19,7 +19,7 @@ project(SwitchBoard)
 
 cmake_minimum_required(VERSION 3.3)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 set(PLUGIN_NAME SwitchBoard)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
@@ -50,6 +50,6 @@ target_link_libraries(${MODULE_NAME}
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGENAME}/plugins)
 
 write_config()

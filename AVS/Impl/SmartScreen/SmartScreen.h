@@ -28,7 +28,7 @@
 
 #include <vector>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SmartScreen

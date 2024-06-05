@@ -26,7 +26,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Compositor {
     namespace Backend {
         class LegacyCrtc : public IOutput {
@@ -122,4 +122,4 @@ namespace Compositor {
         }
     } // namespace Backend
 } // namespace Compositor
-} // namespace WPEFramework
+} // namespace Thunder

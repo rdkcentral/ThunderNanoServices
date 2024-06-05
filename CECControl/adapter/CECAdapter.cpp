@@ -27,7 +27,7 @@
 
 #include "CECOperationFrame.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     uint32_t Adapter::Exchange(const logical_address_t follower, CEC::IExchange& exchange, const uint32_t waitTime)
     {
@@ -88,4 +88,4 @@ namespace CEC {
         return result;
     }
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

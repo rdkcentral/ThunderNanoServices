@@ -21,7 +21,7 @@
 #include "Power.h"
 #include <interfaces/json/JsonData_Power.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

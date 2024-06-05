@@ -22,7 +22,7 @@
 #include <interfaces/IMemory.h>
 #include <interfaces/IResourceMonitor.h>
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {
@@ -125,4 +125,4 @@ namespace WPEFramework
             Core::SinkType<Notification> _notification;
         };
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

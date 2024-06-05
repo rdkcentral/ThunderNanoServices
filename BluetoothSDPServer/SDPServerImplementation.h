@@ -23,7 +23,7 @@
 
 #include "DebugTracing.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

@@ -27,7 +27,7 @@
 #include <interfaces/IBluetoothAudio.h>
 #include <bluetooth/audio/bluetooth_audio.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

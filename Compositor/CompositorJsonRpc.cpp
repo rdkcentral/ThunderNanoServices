@@ -21,7 +21,7 @@
 #include "Module.h"
 #include <interfaces/json/JsonData_Compositor.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

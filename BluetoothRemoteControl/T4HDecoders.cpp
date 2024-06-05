@@ -19,7 +19,7 @@
 
 #include "Administrator.h"
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 namespace {
 
