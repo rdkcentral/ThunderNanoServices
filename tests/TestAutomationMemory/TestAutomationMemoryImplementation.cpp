@@ -20,7 +20,7 @@
 #include "Module.h"
 #include <qa_interfaces/ITestAutomation.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TestAutomationMemoryImplementation : public QualityAssurance::IMemory {
@@ -99,4 +99,4 @@ namespace Plugin {
     SERVICE_REGISTRATION(TestAutomationMemoryImplementation, 1, 0)
 
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

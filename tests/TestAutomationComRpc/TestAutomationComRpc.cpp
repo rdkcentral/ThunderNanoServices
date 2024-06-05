@@ -20,7 +20,7 @@
 #include "TestAutomationComRpc.h"
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
