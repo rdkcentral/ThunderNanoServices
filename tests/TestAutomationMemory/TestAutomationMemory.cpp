@@ -20,7 +20,7 @@
 #include "TestAutomationMemory.h"
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace TestAutomationMemory {
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
@@ -106,7 +106,7 @@ namespace Plugin {
 
             // If we are configured to run OOP, the _connectionId != 0!
             if (_connectionId == 0) {
-                _memory = WPEFramework::TestAutomationMemory::MemoryObserver(nullptr);
+                _memory = Thunder::TestAutomationMemory::MemoryObserver(nullptr);
             }
             else {
                 const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
@@ -114,7 +114,7 @@ namespace Plugin {
                     result = _T("Test Automation Memory crashed at initialize!");
                 }
                 else {
-                    _memory = WPEFramework::TestAutomationMemory::MemoryObserver(connection);
+                    _memory = Thunder::TestAutomationMemory::MemoryObserver(connection);
                     ASSERT(_memory != nullptr);
                     connection->Release();
                 }

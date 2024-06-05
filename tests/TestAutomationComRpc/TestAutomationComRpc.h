@@ -26,7 +26,7 @@
 #include <qa_interfaces/json/JComRpc.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TestAutomationComRpc : public PluginHost::IPlugin, public QualityAssurance::IComRpc, public PluginHost::JSONRPC {
@@ -75,7 +75,7 @@ namespace Plugin {
     };
 
 } // Namespace Plugin.
-}// namespace WPEFramework
+}// namespace Thunder
 
 
 

@@ -172,7 +172,7 @@ private:
 };
 
 namespace JSONRPC {
-class PersistentStore : public JSONRPC::SmartLinkType<Core::JSON::IElement> {
+class PersistentStore : public SmartLinkType<Core::JSON::IElement> {
 private:
     class Parameters : public Core::JSON::Container {
     public:
@@ -281,7 +281,7 @@ private:
 
 public:
     PersistentStore(const uint32_t waitTime VARIABLE_IS_NOT_USED, const Core::NodeId& node VARIABLE_IS_NOT_USED, const string& callsign VARIABLE_IS_NOT_USED)
-        : JSONRPC::SmartLinkType<Core::JSON::IElement>("PersistentStore.1", "client.monitor.2")
+        : SmartLinkType<Core::JSON::IElement>("PersistentStore.1", "client.monitor.2")
         , _isOperational(false)
     {
     }
