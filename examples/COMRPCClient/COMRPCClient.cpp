@@ -90,7 +90,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace Thunder {
+using namespace Thunder;
 
 class Sink : public Exchange::IDictionary::INotification {
 public:
@@ -404,5 +404,4 @@ int main(int /* argc */, char** /* argv */)
     printf("Completed the call Dispose\n");
 
     return 0;
-}
 }
