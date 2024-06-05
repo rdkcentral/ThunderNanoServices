@@ -507,7 +507,7 @@ POP_WARNING()
             switch (keyPress) {
             case 'A': {
                 provisioningClient.Provision();
-                /* falls throgh */
+                [[fallthrough]];
             }
             case 'B': {
                 if (openState == true) {
@@ -633,7 +633,7 @@ POP_WARNING()
                     printf("Pending message size:    %d\n", stressEngines[engine]->Pending());
                     printf("Error count:             %d\n", stressEngines[engine]->Errors());
                 }
-                /* falls through */
+                [[fallthrough]];
             }
             case 'T': {
                 printf("Total status: %s\n", Thunder::Core::Time::Now().ToRFC1123(true).c_str());

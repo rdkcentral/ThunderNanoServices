@@ -43,11 +43,11 @@ namespace Plugin {
         ~Sink() override = default;
 
     public:
-        void Activated(Exchange::IExternal* source) override
+        void Activated(Exchange::IExternal* /* source */) override
         {
             printf("Sink::Activated called\n");
         }
-        void Deactivated(Exchange::IExternal* source) override
+        void Deactivated(Exchange::IExternal* /* source */) override
         {
             printf("Sink::Deactivated called\n");
         }

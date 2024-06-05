@@ -26,6 +26,7 @@ if(PLUGIN_TESTUTILITY_OUTOFPROCESS STREQUAL "false")
     unset(PLUGIN_TESTUTILITY_OUTOFPROCESS CACHE)
 endif()
 
+find_package(WPEFramework)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)

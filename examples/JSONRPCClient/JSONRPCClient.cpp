@@ -257,7 +257,7 @@ static void async_callback(const Data::Response& response)
 class Callbacks {
 public:
     void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
-        printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value()).ToRFC1123().c_str());
+        printf("Finally we are triggered. Pointer to: %p @ %s\n", (void*)result, Core::Time(response.Time.Value()).ToRFC1123().c_str());
     }
 };
 
@@ -322,7 +322,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:    [0], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:    [0], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 16;
@@ -331,7 +331,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:   [16], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:   [16], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 128;
@@ -340,7 +340,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:  [128], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:  [128], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 256;
@@ -348,7 +348,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:  [256], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:  [256], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 512;
@@ -356,7 +356,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:  [512], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:  [512], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 1024;
@@ -364,7 +364,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();;
-    printf("Data outbound: [1024], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [1024], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 2048;
@@ -372,7 +372,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound: [2048], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [2048], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 1024 * 32;
@@ -380,7 +380,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound: [32KB], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [32KB], inbound:    [4]. Total: %lu. Average: %lu\n", time, time / MeasurementLoops);
 
 }
 
@@ -403,9 +403,9 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
         Core::StopWatch measurement;
         Exchange::IPerformance* perf = client->Acquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
         if (perf == nullptr) {
-            printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
+            printf("Instantiation failed. An performance interface was not returned. It took: %ld ticks\n", measurement.Elapsed());
         } else {
-            printf("Instantiating and retrieving the interface took: %lld ticks\n", measurement.Elapsed());
+            printf("Instantiating and retrieving the interface took: %ld ticks\n", measurement.Elapsed());
             int measure;
             do {
                 ShowPerformanceMenu();

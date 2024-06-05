@@ -39,7 +39,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void StateController::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void StateController::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
