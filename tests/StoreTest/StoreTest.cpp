@@ -333,6 +333,8 @@ private:
     bool _isOperational;
 };
 }
+}
+
 namespace Thunder {
 namespace ReST {
 static Core::ProxyPoolType<Web::TextBody> textBodyDataFactory(4);
@@ -664,5 +666,4 @@ int main(int argc VARIABLE_IS_NOT_USED, char* argv[] VARIABLE_IS_NOT_USED)
     Core::Singleton::Dispose();
 
     return 0;
-  }
 }
