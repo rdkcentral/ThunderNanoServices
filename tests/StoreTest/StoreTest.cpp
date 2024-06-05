@@ -171,7 +171,9 @@ private:
     }
 };
 
-namespace JSONRPC {
+namespace Thunder {
+  namespace JSONRPC {
+
 class PersistentStore : public SmartLinkType<Core::JSON::IElement> {
 private:
     class Parameters : public Core::JSON::Container {
@@ -662,4 +664,5 @@ int main(int argc VARIABLE_IS_NOT_USED, char* argv[] VARIABLE_IS_NOT_USED)
     Core::Singleton::Dispose();
 
     return 0;
+  }
 }
