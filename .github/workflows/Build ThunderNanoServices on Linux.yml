@@ -3,18 +3,18 @@ name: Build ThunderNanoServices on Linux
 on:
   workflow_dispatch:
   push:
-    # branches: ["master"]
+    branches: ["master"]
   pull_request:
     branches: ["master"]
 
 jobs:
   Thunder:
-    uses: rdkcentral/Thunder/.github/workflows/Linux build template.yml@development/actions-checkouts
+    uses: rdkcentral/Thunder/.github/workflows/Linux build template.yml@master
 
   ThunderInterfaces:
     needs: Thunder
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/Linux build template.yml@development/actions-checkouts
+    uses: rdkcentral/ThunderInterfaces/.github/workflows/Linux build template.yml@master
 
   ThunderNanoServices:
     needs: ThunderInterfaces
-    uses: rdkcentral/ThunderNanoServices/.github/workflows/Linux build template.yml@development/actions-checkouts
+    uses: rdkcentral/ThunderNanoServices/.github/workflows/Linux build template.yml@master
