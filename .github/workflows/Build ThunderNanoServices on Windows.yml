@@ -1,11 +1,11 @@
 name: Build ThunderNanoServices on Windows
 
 on:
+  workflow_dispatch:
   push:
     branches: ["master"]
   pull_request:
     branches: ["master"]
-  workflow_call:
 
 env:
   commander: ThunderNanoServices\Commander\Commander.vcxproj
@@ -32,10 +32,11 @@ jobs:
         type: [Debug, Release]
         version: [64, 86]
 
+# ----- Checkout & DependsOn Regex -----
     name: Build type - ${{matrix.type}}${{matrix.version}}
     steps:
     - name: Checkout ThunderOnWindows
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows
         repository: WebPlatformForEmbedded/ThunderOnWindows
@@ -43,7 +44,7 @@ jobs:
 # ----- Thunder -----
     - name: Checkout Thunder - default
       if: ${{ !contains(github.event.pull_request.body, '[DependsOn=Thunder:') }}
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/Thunder
         repository: ${{github.repository_owner}}/Thunder
@@ -59,7 +60,7 @@ jobs:
 
     - name: Checkout Thunder - ${{steps.thunder.outputs.first_match}}
       if: contains(github.event.pull_request.body, '[DependsOn=Thunder:')
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/Thunder
         repository: ${{github.repository_owner}}/Thunder
@@ -68,7 +69,7 @@ jobs:
 # ----- ThunderTools -----
     - name: Checkout ThunderTools - default
       if: ${{ !contains(github.event.pull_request.body, '[DependsOn=ThunderTools:') }}
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/ThunderTools
         repository: ${{github.repository_owner}}/ThunderTools
@@ -84,7 +85,7 @@ jobs:
 
     - name: Checkout ThunderTools - ${{steps.tools.outputs.first_match}}
       if: contains(github.event.pull_request.body, '[DependsOn=ThunderTools:')
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/ThunderTools
         repository: ${{github.repository_owner}}/ThunderTools
@@ -93,7 +94,7 @@ jobs:
 # ----- ThunderInterfaces -----
     - name: Checkout ThunderInterfaces - default
       if: ${{ !contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:') }}
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/ThunderInterfaces
         repository: ${{github.repository_owner}}/ThunderInterfaces
@@ -109,7 +110,7 @@ jobs:
 
     - name: Checkout ThunderInterfaces - ${{steps.thunderinterfaces.outputs.first_match}}
       if: contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:')
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/ThunderInterfaces
         repository: ${{github.repository_owner}}/ThunderInterfaces
@@ -117,23 +118,24 @@ jobs:
 
 # ----- Other checkouts -----
     - name: Checkout ThunderClientLibraries
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/ThunderClientLibraries
         repository: ${{github.repository_owner}}/ThunderClientLibraries
 
     - name: Checkout ThunderNanoServices
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/ThunderNanoServices
         repository: ${{github.repository_owner}}/ThunderNanoServices
 
     - name: Checkout ThunderNanoServicesRDK
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: ThunderOnWindows/ThunderNanoServicesRDK
         repository: WebPlatformForEmbedded/ThunderNanoServicesRDK
 
+# ----- Install & Build -----
     - name: Install jsonref
       run: pip install jsonref
 
@@ -154,11 +156,12 @@ jobs:
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%timeSync%"  "%solution%"
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%webServer%"  "%solution%"
 
+# ----- Upload artifacts -----
     - name: Tar files
       run: tar -czvf ${{matrix.type}}${{matrix.version}}.tar.gz artifacts
 
     - name: Upload
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ThunderNanoServices-${{matrix.type}}${{matrix.version}}-artifact
         path: ${{matrix.type}}${{matrix.version}}.tar.gz
