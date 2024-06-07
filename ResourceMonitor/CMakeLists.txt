@@ -19,7 +19,7 @@ set(PLUGIN_NAME ResourceMonitor)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 project(ResourceMonitor)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 find_package(Thunder)
 
