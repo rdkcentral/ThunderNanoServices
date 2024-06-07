@@ -21,7 +21,7 @@
 #include "Module.h"
 #include <qa_interfaces/ITestAutomation.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TestAutomationComRpcImplementation : public QualityAssurance::IComRpc::IComRpcInternal {
@@ -76,4 +76,4 @@ namespace Plugin {
     
     SERVICE_REGISTRATION(TestAutomationComRpcImplementation, 1, 0)
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

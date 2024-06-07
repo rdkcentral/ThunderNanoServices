@@ -26,7 +26,7 @@
 #include <qa_interfaces/json/JMemory.h>
 #include <interfaces/IMemory.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TestAutomationMemory : public PluginHost::IPlugin, public PluginHost::JSONRPC {
@@ -75,6 +75,6 @@ namespace Plugin {
     };
 
 } // Namespace Plugin.
-}// namespace WPEFramework
+}// namespace Thunder
 
 #endif // __TESTAUTOMATIONMEMORY_H
