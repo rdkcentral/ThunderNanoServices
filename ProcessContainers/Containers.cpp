@@ -36,15 +36,13 @@ namespace Plugin {
         );
     }
 
-
-    const string Containers::Initialize(PluginHost::IShell* service) 
+    const string Containers::Initialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         return (string());
     }
 
-    void Containers::Deinitialize(PluginHost::IShell* service) 
+    void Containers::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        
     }
 
     string Containers::Information() const 
