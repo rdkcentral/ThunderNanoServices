@@ -1355,7 +1355,7 @@ namespace Plugin
 
                 } while ((index < file.Size()) && (offset != endMarker.length()));
 
-                end = index;
+                end = ((index != 0) && (index == file.Size())) ? index - 1 : index;
                 uint16_t reduction = end - start;
 
                 if (reduction != 0) {
