@@ -67,7 +67,7 @@ set_target_properties(${PLATFORM_COMPOSITOR} PROPERTIES
 )
 
 install(TARGETS ${PLATFORM_COMPOSITOR}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/Compositor COMPONENT ${NAMESPACE}_Runtime
 )
 
 add_library(compositor::platform ALIAS ${PLATFORM_COMPOSITOR})
