@@ -34,4 +34,4 @@ target_link_libraries(COMRPCClient
         CompileSettingsDebug::CompileSettingsDebug
     )
 
-install(TARGETS COMRPCClient DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS COMRPCClient DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

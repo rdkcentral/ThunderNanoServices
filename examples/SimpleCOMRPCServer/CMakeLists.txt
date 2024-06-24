@@ -31,4 +31,4 @@ target_link_libraries(SimpleCOMRPCServer
         CompileSettingsDebug::CompileSettingsDebug
     )
 
-install(TARGETS SimpleCOMRPCServer DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS SimpleCOMRPCServer DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

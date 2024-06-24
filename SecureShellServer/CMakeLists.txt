@@ -40,7 +40,6 @@ if ( NOT LIBDROPBEAR_FOUND )
 	message(FATAL_ERROR "Package Dropbear required, but not found!")
 endif( NOT LIBDROPBEAR_FOUND) 
 
-
 add_library(${MODULE_NAME} SHARED
     SecureShellServer.cpp
     SecureShellServerJsonRpc.cpp
@@ -62,6 +61,6 @@ target_link_libraries(${MODULE_NAME}
 	${LIBDROPBEAR_LIBRARIES} -lz -lutil -lpthread -lcrypt)
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins  COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

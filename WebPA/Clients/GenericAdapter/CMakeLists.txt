@@ -30,7 +30,6 @@ find_package(TinyXML REQUIRED)
 find_package(WDMP-C REQUIRED)
 find_package(WRP-C REQUIRED)
 
-
 add_library(${TARGET} SHARED
     Handler/Handler.cpp
     Adapter/DataModel/DataModel.cpp
@@ -71,10 +70,10 @@ set_target_properties(${TARGET} PROPERTIES SUFFIX ".webpa")
 set_target_properties(${TARGET} PROPERTIES PREFIX "")
 install(
     TARGETS ${TARGET}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebPA
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/WebPA COMPONENT ${NAMESPACE}_Runtime
 )
 install(
     FILES data-model.xml
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebPA)
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/WebPA COMPONENT ${NAMESPACE}_Runtime)
 
 add_subdirectory(Profiles)

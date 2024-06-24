@@ -50,6 +50,6 @@ target_link_libraries(${MODULE_NAME}
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGENAME}/plugins)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGENAME}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()
