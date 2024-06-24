@@ -62,7 +62,7 @@ function(WaylandGenerator)
 
             get_filename_component(DEFENITION_FILE_PATH ${DEFENITION} REALPATH)
             get_filename_component(DEFENITION ${DEFENITION_FILE_PATH} NAME_WE)
-            message(STATUS "Found ${DEFENITION_FILE_PATH}")
+            message(VERBOSE "Found ${DEFENITION_FILE_PATH}")
         else()
             string(REGEX REPLACE "-" ";" DEFENITION_LIST "${DEFENITION}")
 
@@ -92,12 +92,12 @@ function(WaylandGenerator)
             if(NOT EXISTS ${DEFENITION_FILE_PATH})
                 message(FATAL_ERROR "could not find ${DEFENITION}.xml")
             else()
-                message(STATUS "Found ${DEFENITION_FILE_PATH}")
+                message(VERBOSE "Found ${DEFENITION_FILE_PATH}")
             endif()
         endif()
 
         if(NOT ${Argument_SKIP_CLIENT_HEADER})
-            message(STATUS "Generating ${DEFENITION}-client-protocol.h")
+            message(VERBOSE "Generating ${DEFENITION}-client-protocol.h")
 
             list(APPEND HEADERS "${CMAKE_CURRENT_BINARY_DIR}/generated/${DEFENITION}-protocol.c")
 
@@ -107,7 +107,7 @@ function(WaylandGenerator)
         endif()
 
         if(NOT ${Argument_SKIP_PRIVATE_CODE})
-            message(STATUS "Generating ${DEFENITION}-protocol.c")
+            message(VERBOSE "Generating ${DEFENITION}-protocol.c")
 
             list(APPEND SOURCES "${CMAKE_CURRENT_BINARY_DIR}/generated/${DEFENITION}-protocol.c")
 
