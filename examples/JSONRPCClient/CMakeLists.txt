@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(WPEFramework)
+find_package(Thunder)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}WebSocket REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
