@@ -26,7 +26,7 @@ add_library(CompositorSimpleWorker STATIC
 
 target_include_directories(CompositorSimpleWorker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
-    $<INSTALL_INTERFACE:include/${NAMESPACE}>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE}>)
 
 target_link_libraries(CompositorSimpleWorker
     PUBLIC

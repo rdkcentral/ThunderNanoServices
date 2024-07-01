@@ -33,4 +33,4 @@ target_link_libraries(buffertest
         common::drm
 )
 
-install(TARGETS buffertest DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS buffertest DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)

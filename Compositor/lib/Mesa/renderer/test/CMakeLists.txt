@@ -26,7 +26,7 @@ set_target_properties(testclear PROPERTIES
         CXX_STANDARD_REQUIRED YES
 )
 
-install(TARGETS testclear DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS testclear DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)
 
 add_executable(testquads testquads.cpp)
 
@@ -48,7 +48,7 @@ set_target_properties(testquads PROPERTIES
         CXX_STANDARD_REQUIRED YES
 )
 
-install(TARGETS testquads DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS testquads DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)
 
 
 add_executable(testtexture testtexture.cpp)
@@ -72,7 +72,7 @@ set_target_properties(testtexture PROPERTIES
         CXX_STANDARD_REQUIRED YES
 )
 
-install(TARGETS testtexture DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS testtexture DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)
 
 add_executable(testdmabuf testdmabuf.cpp)
 
@@ -97,4 +97,4 @@ set_target_properties(testdmabuf PROPERTIES
 
 target_link_directories(testdmabuf PUBLIC ${CMAKE_CURRENT_LIST_DIR/../src/GL})
 
-install(TARGETS testdmabuf DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS testdmabuf DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)

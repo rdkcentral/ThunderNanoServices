@@ -23,4 +23,4 @@ target_link_libraries(platformserver
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS platformserver 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+    DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

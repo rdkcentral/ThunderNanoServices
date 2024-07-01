@@ -17,7 +17,7 @@
 
 project(SwitchBoard)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 find_package(Thunder)
 
@@ -50,6 +50,6 @@ target_link_libraries(${MODULE_NAME}
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGENAME}/plugins)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGENAME}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

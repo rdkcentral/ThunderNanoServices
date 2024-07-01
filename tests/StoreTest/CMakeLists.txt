@@ -35,4 +35,4 @@ target_link_libraries(StoreTest
         CompileSettingsDebug::CompileSettingsDebug
     )
 
-install(TARGETS StoreTest DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS StoreTest DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Test)

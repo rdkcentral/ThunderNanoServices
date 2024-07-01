@@ -37,4 +37,4 @@ target_link_libraries(transformationtest
         ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
 )
 
-install(TARGETS transformationtest DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS transformationtest DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)

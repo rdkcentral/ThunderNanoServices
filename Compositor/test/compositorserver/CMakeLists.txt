@@ -37,5 +37,5 @@ target_link_libraries(compositorserver
 )
 
 if(INSTALL_COMPOSITOR_SERVER_TEST)
-    install(TARGETS compositorserver RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+    install(TARGETS compositorserver RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)
 endif()

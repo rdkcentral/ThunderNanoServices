@@ -17,7 +17,7 @@
 
 project(RemoteControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 find_package(Thunder)
 
@@ -131,23 +131,23 @@ if (PLUGIN_REMOTECONTROL_DEVINPUT)
 endif()
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 install(
 	FILES linux-windows.json
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
-	COMPONENT ${MODULE_NAME})
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/RemoteControl
+	COMPONENT ${NAMESPACE}_Runtime)
 
 install(
 	FILES web-remote.json
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
-	COMPONENT ${MODULE_NAME})
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/RemoteControl
+	COMPONENT ${NAMESPACE}_Runtime)
 
 if(PLUGIN_REMOTECONTROL_CEC)
 install(
 	FILES cec-remote.json
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
-	COMPONENT ${MODULE_NAME})
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/RemoteControl
+	COMPONENT ${NAMESPACE}_Runtime)
 endif()
 
 write_config()

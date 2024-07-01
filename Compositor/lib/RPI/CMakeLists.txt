@@ -38,5 +38,5 @@ set_target_properties(${TARGET} PROPERTIES
         FRAMEWORK FALSE)
 
 install(TARGETS ${TARGET}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/Compositor COMPONENT ${NAMESPACE}_Runtime
         )

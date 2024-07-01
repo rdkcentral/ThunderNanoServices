@@ -34,4 +34,4 @@ target_link_libraries(scandrm
         gbm::gbm
 )
 
-install(TARGETS scandrm DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS scandrm DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)

@@ -31,4 +31,4 @@ target_link_libraries(backendtest
         common::drm
 )
 
-install(TARGETS backendtest DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS backendtest DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)

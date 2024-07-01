@@ -19,4 +19,4 @@ target_link_libraries(glextinfo
         EGL::EGL
 )
 
-install(TARGETS glextinfo DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests)
+install(TARGETS glextinfo DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)
