@@ -1,0 +1,10 @@
+startmode = "@PLUGIN_FIREBOLTDISCOVERY_AUTOSTART@"
+callsign = "Privacy"
+
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "Local")
+rootobject.add("locator", "lib@MODULE_NAME@.so")
+configuration.add("root", rootobject)
+
