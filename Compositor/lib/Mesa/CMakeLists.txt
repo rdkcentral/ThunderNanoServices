@@ -31,7 +31,7 @@ find_package(libdrm REQUIRED)
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
 
-set(COMPOSITOR_DISPLAY_IMPLEMENTATION  "DRM" CACHE STRING "Defines which display implementation is used")
+set(COMPOSITOR_BUFFER_IMPLEMENTATION  "GBM" CACHE STRING "Defines which buffer implementation is used")
 set(COMPOSITOR_RENDERER_IMPLEMENTATION "GL" CACHE STRING "Defines which renderer implementation is used")
 set(COMPOSITOR_BACKEND_IMPLEMENTATION  "DRM" CACHE STRING "Defines which backend implementation is used")
 
