@@ -1355,10 +1355,10 @@ namespace Plugin
 
                 } while ((index < file.Size()) && (offset != endMarker.length()));
 
-                end = index;
+                end = ((index != 0) && (index == file.Size())) ? index - 1 : index;
                 uint16_t reduction = end - start;
 
-                if (reduction != 0) {
+                if ((reduction != 0) && ((file.Size() - end) != 0)) {
                     // move everything after de marker, over the marker sections.
                     ::memcpy(&(file[start]), &file[end], static_cast<uint16_t>(file.Size()) - end);
                 }
