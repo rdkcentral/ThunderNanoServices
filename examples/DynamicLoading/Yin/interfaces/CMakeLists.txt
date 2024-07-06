@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 project(YinInterfaces)
 
@@ -56,5 +56,5 @@ target_link_libraries(${PLUGIN_YIN_DEFINITIONS}
         ${NAMESPACE}Core::${NAMESPACE}Core
         CompileSettingsDebug::CompileSettingsDebug)
 
-install(TARGETS ${PLUGIN_YIN_MARSHALLING} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/proxystubs)
-install(TARGETS ${PLUGIN_YIN_DEFINITIONS} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR})
+install(TARGETS ${PLUGIN_YIN_MARSHALLING} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/proxystubs COMPONENT ${NAMESPACE}_Runtime)
+install(TARGETS ${PLUGIN_YIN_DEFINITIONS} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR} COMPONENT ${NAMESPACE}_Runtime)

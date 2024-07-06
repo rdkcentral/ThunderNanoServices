@@ -23,4 +23,4 @@ target_link_libraries(testserver
         ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS testserver DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS testserver DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Test)
