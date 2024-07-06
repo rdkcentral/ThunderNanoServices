@@ -25,4 +25,4 @@ target_link_libraries(cec_device_adapter_test PRIVATE
     ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
     ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
-install(TARGETS cec_device_adapter_test DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS cec_device_adapter_test DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Test)

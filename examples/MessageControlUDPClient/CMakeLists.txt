@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 set(PLUGIN_NAME UDPMessageOutput)
 
 find_package(${NAMESPACE}Messaging REQUIRED)
@@ -32,4 +32,4 @@ target_link_libraries(${PLUGIN_NAME}
     PRIVATE
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
-install(TARGETS ${PLUGIN_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS ${PLUGIN_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

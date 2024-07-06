@@ -48,4 +48,4 @@ target_link_libraries(${LIB_NAME}
         ${NAMESPACE}Broadcast::${NAMESPACE}Broadcast)
 
 install(TARGETS ${LIB_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${NAMESPACE}_Development)

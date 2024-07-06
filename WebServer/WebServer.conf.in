@@ -12,7 +12,7 @@ if "@PLUGIN_WEBSERVER_GROUP@":
 configuration.add("root", root)
 
 configuration.add("port", "@PLUGIN_WEBSERVER_PORT@")
-configuration.add("binding", "0.0.0.0")
+configuration.add("binding", "@PLUGIN_WEBSERVER_BINDING@")
 configuration.add("path", "@PLUGIN_WEBSERVER_PATH@")
 
 if boolean("@PLUGIN_WEBSERVER_PROXY_DEVICEINFO@") or boolean("@PLUGIN_WEBSERVER_PROXY_DIALSERVER@"):

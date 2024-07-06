@@ -17,7 +17,7 @@
 
 project(FirmwareControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 find_package(Thunder)
 
@@ -66,6 +66,6 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_CURRENT_LIST_DIR})
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()
