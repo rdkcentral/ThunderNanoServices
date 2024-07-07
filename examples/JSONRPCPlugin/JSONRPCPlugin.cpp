@@ -40,15 +40,27 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
 
 ENUM_CONVERSION_END(Data::Response::state)
 
-namespace Plugin
-{
+namespace Plugin {
+
+    namespace {
+
+        static Metadata<JSONRPCPlugin> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
     PluginHost::JSONRPC::classification JSONRPCPlugin::Validation(const string& token VARIABLE_IS_NOT_USED, const string& method, const string& parameters VARIABLE_IS_NOT_USED) {
         return (method != _T("checkvalidation") ? PluginHost::JSONRPC::classification::VALID : PluginHost::JSONRPC::classification::INVALID);
     }
 
-    SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0)
-
-PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+    PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     JSONRPCPlugin::JSONRPCPlugin()
         : PluginHost::JSONRPC({ 2, 3, 4 }, [&](const string& token, const string& method, const string& parameters) -> PluginHost::JSONRPC::classification { return (Validation(token, method, parameters)); }) // version 2, 3 and 4 of the interface, use this as the default :-)
         , _window()
@@ -62,7 +74,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     {
         RegisterAll();
     }
-POP_WARNING()
+    POP_WARNING()
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
     {
         UnregisterAll();

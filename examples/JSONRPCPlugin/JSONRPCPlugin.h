@@ -66,9 +66,7 @@ namespace Plugin {
             {
                 Add(_T("connector"), &Connector);
             }
-            ~Config()
-            {
-            }
+            ~Config() = default;
 
         public:
             Core::JSON::String Connector;
