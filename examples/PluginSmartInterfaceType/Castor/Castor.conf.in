@@ -1,0 +1,6 @@
+startmode = "@PLUGIN_CASTOR_STARTMODE@"
+
+configuration = JSON()
+configuration.add("polluxcallsign", "@PLUGIN_CASTOR_POLLUXCALLSIGN@")
+
+
