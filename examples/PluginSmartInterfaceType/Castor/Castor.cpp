@@ -21,6 +21,7 @@
 
 #include "Castor.h"
 #include <interfaces/json/JMath.h>
+#include <interfaces/IConfiguration.h>
 
 namespace Thunder {
 
@@ -45,18 +46,32 @@ namespace Plugin {
 
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
+        ASSERT(_mathImplementation == nullptr);
+        ASSERT(_connectionId == 0);
 
         _service = service;
         _service->AddRef();
+        _service->Register(&_notification);
 
-        Configure(Config(_service->ConfigLine()));
+        _mathImplementation = _service->Root<Exchange::IMath>(_connectionId, 2000, _T("CastorImplementation"));
+        ASSERT(_mathImplementation != nullptr);
 
-        uint32_t result = BaseClass::Open(_service, _polluxCallsign);
-        if( result != Core::ERROR_NONE ) {
-            message =  _T("Failed to open pollux link");
+        if (_mathImplementation == nullptr) {
+            message = _T("Castor could not be instantiated");
+        } else {
+            Exchange::IConfiguration* configure = _mathImplementation->QueryInterface<Exchange::IConfiguration>();
+            if (configure != nullptr) {
+                uint32_t result = configure->Configure(_service);
+                configure->Release();
+                if(result != Core::ERROR_NONE) {
+                message = _T("Castor could not be configured");
+                }
+            } else {
+                message = _T("Castor implementation did not provide a configuration interface");
+            }
+
+            Exchange::JMath::Register(*this, _mathImplementation);
         }
-
-        Exchange::JMath::Register(*this, this);
 
         return (message);
     }
@@ -64,12 +79,26 @@ namespace Plugin {
     void Castor::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         if (_service != nullptr) {
-
             ASSERT(_service == service);
 
-            Exchange::JMath::Unregister(*this);
+            if (_mathImplementation != nullptr) {
+                Exchange::JMath::Unregister(*this);
 
-            BaseClass::Close();
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED const uint32_t result = _mathImplementation->Release();
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                _mathImplementation = nullptr;
+
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
+            }
+
+            _service->Unregister(&_notification);
+
+            _connectionId = 0;
 
             _service->Release();
             _service = nullptr;
@@ -80,45 +109,16 @@ namespace Plugin {
     {
         return {};
     }
-    
-    uint32_t Castor::Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const  
-    {
-        uint32_t result = Core::ERROR_NONE;
-        const IMath* math = BaseClass::Interface();
-        if(math != nullptr) {
-            result = math->Add(A, B, sum);
-            math->Release();
-            if(result == Core::ERROR_NONE) {
-                TRACE(Trace::Information, (_T("Called Pollux::Add on behalf of Castor")));
-            } else {
-                TRACE(Trace::Error, (_T("Error %u calling Pollux Add"), result));
-            }
-        } else {
-            TRACE(Trace::Error, (_T("Could not call Add, Pollux was not available")));
-            result = Core::ERROR_UNAVAILABLE;
-        }
-        return (result);
-    }
 
-    uint32_t Castor::Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const 
+    void Castor::Deactivated(RPC::IRemoteConnection* connection)
     {
-        uint32_t result = Core::ERROR_NONE;
-        const IMath* math = BaseClass::Interface();
-        if(math != nullptr) {
-            result = math->Sub(A, B, sum);
-            math->Release();
-            if(result == Core::ERROR_NONE) {
-                TRACE(Trace::Information, (_T("Called Pollux::Sub on behalf of Castor")));
-            } else {
-                TRACE(Trace::Error, (_T("Error %u calling Pollux Sub"), result));
-            }
-        } else {
-            TRACE(Trace::Error, (_T("Could not call Add, Pollux was not available")));
-            result = Core::ERROR_UNAVAILABLE;
-        }
-        return (result);
-    }
+        if (connection->Id() == _connectionId) {
+            ASSERT(_service != nullptr);
 
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
+                PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+        }
+    }
 
 } // namespace Plugin
 

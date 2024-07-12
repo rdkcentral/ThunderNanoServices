@@ -31,10 +31,12 @@ set(PLUGIN_NAME Castor)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 set(PLUGIN_CASTOR_STARTMODE "Activated" CACHE STRING "Controls automatic start of the Castor plugin")
+set(PLUGIN_CASTOR_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_CASTOR_POLLUXCALLSIGN "Pollux" CACHE STRING "Callsign of the Pollux plugin")
 
 add_library(${MODULE_NAME} SHARED
     Castor.cpp
+    CastorImplementation.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES

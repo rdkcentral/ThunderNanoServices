@@ -28,43 +28,48 @@ namespace Thunder {
 namespace Plugin {
 
     class Castor : public PluginHost::IPlugin
-                 , public PluginHost::JSONRPC
-                 , public Exchange::IMath
-                 , public Thunder::RPC::PluginSmartInterfaceType<Thunder::Exchange::IMath> {
-    private:
-        using BaseClass = Thunder::RPC::PluginSmartInterfaceType<Thunder::Exchange::IMath>;
+                 , public PluginHost::JSONRPC {
 
-        class Config : Core::JSON::Container {
+    private:
+        class Notification : public RPC::IRemoteConnection::INotification {
         public:
-            Config(const string& configLine)
-                : Core::JSON::Container()
-                , PolluxCallsign()
+            Notification(Castor& parent)
+                : _parent(parent)
             {
-                Add(_T("polluxcallsign"), &PolluxCallsign);
-                FromString(configLine);
+            }
+            ~Notification() override = default;
+
+            Notification() = delete;
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
+            Notification(Notification&&) = delete;
+            Notification& operator=(Notification&&) = delete;
+
+        public:
+            // RPC::IRemoteConnection::INotification overrides
+            void Activated(RPC::IRemoteConnection*) override
+            {
+            }
+            void Deactivated(RPC::IRemoteConnection* connection) override
+            {
+                _parent.Deactivated(connection);
             }
 
-            ~Config() = default;
-
-            Config() = delete;
-            Config(const Config&) = delete;
-            Config& operator=(const Config&) = delete;
-            Config(Config&&) = delete;
-            Config& operator=(Config&&) = delete;
-
         public:
-            Core::JSON::String PolluxCallsign;
-        }; // class Config
+            BEGIN_INTERFACE_MAP(Notification)
+                INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            END_INTERFACE_MAP
 
-        void Configure(const Config& config)
-        {
-            _polluxCallsign = config.PolluxCallsign;
-        }
+        private:
+            Castor& _parent;
+        }; // class Notification
 
     public:
         Castor()
             : _service(nullptr)
-            , _polluxCallsign()
+            , _notification(*this)
+            , _connectionId(0)
+            , _mathImplementation(nullptr)
         {
         }
         ~Castor() override = default;
@@ -80,21 +85,21 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell *service) override;
         string Information() const override;
 
-        // IMath overrides
-        uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
-        uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const override;
+    private:
+        void Deactivated(RPC::IRemoteConnection* connection);
 
     public:
         BEGIN_INTERFACE_MAP(Castor)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_ENTRY(Exchange::IMath)
+            INTERFACE_AGGREGATE(Exchange::IMath, _mathImplementation)
         END_INTERFACE_MAP
 
     private:
         PluginHost::IShell *_service;
-        string _polluxCallsign;
-
+        Core::SinkType<Notification> _notification;
+        uint32_t _connectionId;
+        Exchange::IMath *_mathImplementation;
     }; // class Castor
 
 } // namespace Plugin
