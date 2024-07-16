@@ -1,0 +1,11 @@
+startmode = "@PLUGIN_CASTOR_STARTMODE@"
+
+configuration = JSON()
+configuration.add("polluxcallsign", "@PLUGIN_CASTOR_POLLUXCALLSIGN@")
+
+root = JSON()
+root.add("mode", "@PLUGIN_CASTOR_MODE@")
+root.add("threads", 2)
+
+configuration.add("root", root)
+
