@@ -63,6 +63,7 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
+option(PLUGIN_HELLOWORLD "Include HelloWorld plugin" OFF)
 
 if(ENABLE_STRICT_COMPILER_SETTINGS)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -81,6 +82,10 @@ if(ENABLE_STRICT_COMPILER_SETTINGS)
     endif()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_STRICT_CXX_COMPILER_SETTINGS}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_STRICT_COMPILER_SETTINGS}")
+endif()
+
+if(PLUGIN_HELLOWORLD)
+    add_subdirectory(HelloWorld)
 endif()
 
 if(PLUGIN_AVS)
