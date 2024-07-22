@@ -331,7 +331,6 @@ namespace Plugin {
                         TRACE(Trace::Information, (_T("Added client %s."), name.c_str()));
                     }
 
-                    client->AddRef();
                     _clients.emplace(std::piecewise_construct,
                         std::forward_as_tuple(name),
                         std::forward_as_tuple(client, Resolution()));
