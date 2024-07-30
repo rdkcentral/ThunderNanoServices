@@ -79,7 +79,7 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
                     ${REMOTECONTROL_IMPLEMENTATION_PATH}/IRRemote.cpp)
         else()
             include(GetExternalCode)
-            set(REMOTECONTROL_IMPLEMENTATION_VERSION "master" CACHE STRING "RemoteControl implementation version: commit_id_or_tag_or_branch_name")
+            set(REMOTECONTROL_IMPLEMENTATION_VERSION "R4" CACHE STRING "RemoteControl implementation version: commit_id_or_tag_or_branch_name")
             set(REMOTECONTROL_IMPLEMENTATION_REPOSITORY "https://code.rdkcentral.com/r/soc/broadcom/components/rdkcentral/thundernanoservices/RemoteControl" CACHE STRING "RemoteControl implementation repository")
             GetExternalCode(
                 GIT_REPOSITORY ${REMOTECONTROL_IMPLEMENTATION_REPOSITORY}
