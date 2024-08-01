@@ -44,8 +44,8 @@ static void Measure(const string& interface, const string& callSign, Performance
     uint64_t freeRamBefore = systemInfo.GetFreeRam();
     Core::StopWatch measurement;
 
-    printf("CPU Load: Before Test:  %lu\n", loadBefore);
-    printf("Free Memory: Before Test: %lu\n", freeRamBefore);
+    printf("CPU Load: Before Test:  %llu\n", loadBefore);
+    printf("Free Memory: Before Test: %llu\n", freeRamBefore);
     uint64_t loadInBetween, loadPeak = loadBefore;
     uint64_t freeRamBetween, freeRamPeak = freeRamBefore;
     for (uint32_t run = 0; run < MaxLoad; run++) {
@@ -69,9 +69,9 @@ static void Measure(const string& interface, const string& callSign, Performance
     if (loadPeak > loadBefore) {
         loadDiff = static_cast<uint64_t>(loadPeak - loadBefore);
     }
-    printf("Performance: Total: %lu. Average: %lu\n", time, time / MaxLoad);
-    printf("Free Memory: After = %lu, Diff = %lu\n", freeRamPeak, memDiff);
-    printf("CPU Load: After = %lu, Diff = %lu\n", loadPeak, loadDiff);
+    printf("Performance: Total: %llu. Average: %llu\n", time, time / MaxLoad);
+    printf("Free Memory: After = %llu, Diff = %llu\n", freeRamPeak, memDiff);
+    printf("CPU Load: After = %llu, Diff = %llu\n", loadPeak, loadDiff);
 }
 
 class Dictionary : public RPC::SmartInterfaceType<Exchange::IDictionary > {
