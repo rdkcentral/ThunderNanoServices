@@ -403,9 +403,9 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
         Core::StopWatch measurement;
         Exchange::IPerformance* perf = client->Acquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
         if (perf == nullptr) {
-            printf("Instantiation failed. An performance interface was not returned. It took: %ld ticks\n", measurement.Elapsed());
+            printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
         } else {
-            printf("Instantiating and retrieving the interface took: %ld ticks\n", measurement.Elapsed());
+            printf("Instantiating and retrieving the interface took: %lld ticks\n", measurement.Elapsed());
             int measure;
             do {
                 ShowPerformanceMenu();
