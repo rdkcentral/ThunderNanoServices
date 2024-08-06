@@ -133,7 +133,6 @@ int main(int argc, char** argv)
             Core::ProxyType<RPC::CommunicatorClient>::Create(
                 comChannel,
                 Core::ProxyType<Core::IIPCServer>(engine)));
-        engine->Announcements(client->Announcement());
 
         ASSERT(client.IsValid() == true);
 

@@ -15,19 +15,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.15)
-
 project(Yang)
 
+cmake_minimum_required(VERSION 3.15)
+
 find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug REQUIRED)
 
-set(PLUGIN_NAME Yang)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_YANG_IMPLEMENTATION "${MODULE_NAME}Impl" CACHE STRING "Library with implementation of yang")
 
 set(PLUGIN_YANG_STARTMODE "Deactivated" CACHE STRING "Controls automatic start of the Yang plugin")

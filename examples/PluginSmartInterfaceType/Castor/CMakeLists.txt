@@ -15,20 +15,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.15)
-
 project(Castor)
 
+cmake_minimum_required(VERSION 3.15)
+
 find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug REQUIRED)
-
-set(PLUGIN_NAME Castor)
-
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
 set(PLUGIN_CASTOR_STARTMODE "Activated" CACHE STRING "Controls automatic start of the Castor plugin")
 set(PLUGIN_CASTOR_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
@@ -56,4 +59,3 @@ install(TARGETS ${MODULE_NAME}
 DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
     
 write_config()
-    
