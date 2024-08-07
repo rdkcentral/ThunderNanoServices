@@ -3,7 +3,7 @@
     "info": {
       "title": "TestAutomationComRpc Plugin",
       "callsign": "TestAutomationComRpc",
-      "locator": "libWPEFrameworkTestAutomationComRpc.so",
+      "locator": "libThunderTestAutomationComRpc.so",
       "status": "production",
       "description": "TestAutomationComRpc helps you to validate COMRPC messages via Automated Tests",
       "version": "1.0"

@@ -3,7 +3,7 @@
     "info": {
       "title": "TestAutomationMemory Plugin",
       "callsign": "TestAutomationMemory",
-      "locator": "libWPEFrameworkTestAutomationMemory.so",
+      "locator": "libThunderTestAutomationMemory.so",
       "status": "production",
       "description": "TestAutomationMemory manipulates memory usage for Automated Tests.",
       "version": "1.0"
