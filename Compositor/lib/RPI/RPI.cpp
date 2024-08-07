@@ -141,6 +141,13 @@ namespace Plugin {
                 _handler.Revoke(element);
             }
 
+            virtual void Dangling(const Core::IUnknown* element, const uint32_t interfaceID)
+            {
+                if (interfaceID == Exchange::IComposition::IClient::ID) {
+                    _handler.Revoke(element);
+                }
+            }
+
         private:
             CompositorImplementation::ClientHandler _handler;
         };
@@ -374,6 +381,7 @@ namespace Plugin {
                 client->Release();
 
             } else {
+                client->Release();
                 _adminLock.Unlock();
             }
 

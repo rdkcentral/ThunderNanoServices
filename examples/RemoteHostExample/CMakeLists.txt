@@ -15,8 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME RemoteHostExample)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(RemoteHostExample)
+
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_REMOTEHOSTEXAMPLE_MODE "Distributed" CACHE STRING "Set process running mode")
 

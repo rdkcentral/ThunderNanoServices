@@ -14,6 +14,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+project(SimpleCOMRPCInterface)
+
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 find_package(${NAMESPACE}Core)
 find_package(${NAMESPACE}COM)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -31,19 +44,17 @@ list(APPEND INTERFACES_HEADERS Module.h)
 
 file(GLOB PROXY_STUB_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/generated/ProxyStubs*.cpp")
 
-set(TARGET ${NAMESPACE}SimpleCOMRPCInterface)
-
-add_library(${TARGET} SHARED
+add_library(${MODULE_NAME} SHARED
         ${PROXY_STUB_SOURCES}        
         Module.cpp
         )
 
-target_link_libraries(${TARGET}
+target_link_libraries(${MODULE_NAME}
         PRIVATE
                 ${NAMESPACE}COM::${NAMESPACE}COM
         )
 
-target_link_libraries(${TARGET}
+target_link_libraries(${MODULE_NAME}
         PRIVATE
           CompileSettingsDebug::CompileSettingsDebug
         )
@@ -57,7 +68,7 @@ set_target_properties(${TargetMarshalling} PROPERTIES
         )
 
 install(
-        TARGETS ${TARGET}  EXPORT ${TARGET}Targets
+        MODULE_NAMES ${MODULE_NAME}  EXPORT ${MODULE_NAME}Targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${NAMESPACE_LIB}/proxystubs COMPONENT ${NAMESPACE}_Development
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${NAMESPACE_LIB}/proxystubs COMPONENT ${NAMESPACE}_Runtime
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime
@@ -66,4 +77,4 @@ install(
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE}/proxystubs  
 )
 
-InstallCMakeConfig(TARGETS ${TARGET})
+InstallCMakeConfig(MODULE_NAMES ${MODULE_NAME})
