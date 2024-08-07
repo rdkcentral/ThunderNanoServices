@@ -21,6 +21,7 @@
 
 namespace Thunder {
 namespace TestUtility {
+
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         class MemoryObserverImpl : public Exchange::IMemory {
@@ -64,6 +65,8 @@ namespace TestUtility {
 namespace Plugin {
     SERVICE_REGISTRATION(TestUtility, 1, 0)
 
+    static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Core::JSON::String>>> jsonStringListFactory(1);
+
     /* virtual */ const string TestUtility::Initialize(PluginHost::IShell* service)
     {
         string message;
@@ -85,7 +88,7 @@ namespace Plugin {
         _testUtilityImp = _service->Root<QualityAssurance::ITestUtility>(_connection, ImplWaitTime, _T("TestUtilityImp"));
 
         if (_testUtilityImp != nullptr) {
-            RegisterAll();
+            Thunder::QualityAssurance::JTestUtility::Register(*this, _testUtilityImp);
 
             RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connection);
             if (remoteConnection) {
@@ -110,8 +113,8 @@ namespace Plugin {
             _service->Unregister(&_notification);
 
             if (_testUtilityImp != nullptr) {
+                Thunder::QualityAssurance::JTestUtility::Unregister(*this);
 
-                UnregisterAll();
                 if (_memory != nullptr) {
                     if (_memory->Release() != Core::ERROR_DESTRUCTION_SUCCEEDED) {
                         TRACE(Trace::Information, (_T("Memory observer in TestUtility is not properly destructed")));
@@ -145,116 +148,12 @@ namespace Plugin {
         return ((_T("The purpose of this plugin is provide ability to execute functional tests.")));
     }
 
-    static Core::ProxyPoolType<Web::TextBody> _testUtilityMetadata(2);
-
-    /* virtual */ void TestUtility::Inbound(Web::Request& request)
-    {
-        if ((request.Verb == Web::Request::HTTP_POST) || (request.Verb == Web::Request::HTTP_PUT)) {
-            request.Body(_testUtilityMetadata.Element());
-        }
-    }
-
-    /* virtual */ Core::ProxyType<Web::Response> TestUtility::Process(const Web::Request& request)
-    {
-        ASSERT(_skipURL <= request.Path.length());
-        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
-
-        if (_testUtilityImp != nullptr) {
-            Core::ProxyType<Web::TextBody> body(_testUtilityMetadata.Element());
-            string requestBody = EMPTY_STRING;
-
-            if (((request.Verb == Web::Request::HTTP_POST) || (request.Verb == Web::Request::HTTP_PUT)) && (request.HasBody())) {
-                requestBody = (*request.Body<Web::TextBody>());
-            }
-
-            (*body) = HandleRequest(request.Verb, request.Path, _skipURL, requestBody);
-            if ((*body) != EMPTY_STRING) {
-                result->Body<Web::TextBody>(body);
-                result->ErrorCode = Web::STATUS_OK;
-                result->Message = (_T("OK"));
-                result->ContentType = Web::MIMETypes::MIME_JSON;
-            } else {
-                result->ErrorCode = Web::STATUS_BAD_REQUEST;
-                result->Message = (_T("Method is not supported"));
-            }
-        } else {
-            result->ErrorCode = Web::STATUS_METHOD_NOT_ALLOWED;
-            result->Message = (_T("Test controller does not exist"));
-        }
-        return result;
-    }
-
     void TestUtility::Deactivated(RPC::IRemoteConnection* process)
     {
         if (_connection == process->Id()) {
             ASSERT(_service != nullptr);
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
-    }
-
-    string /*JSON*/ TestUtility::TestCommands(void)
-    {
-        string response = EMPTY_STRING;
-        Metadata testCommands;
-
-        QualityAssurance::ITestUtility::ICommand::IIterator* supportedCommands = _testUtilityImp->Commands();
-        ASSERT(supportedCommands != nullptr);
-
-        while (supportedCommands->Next()) {
-            Core::JSON::String name;
-            name = supportedCommands->Command()->Name();
-            testCommands.TestCommands.Add(name);
-        }
-        testCommands.ToString(response);
-
-        return response;
-    }
-
-    string /*JSON*/ TestUtility::HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/)
-    {
-        bool executed = false;
-        // Return empty result in case of issue
-        string /*JSON*/ response = EMPTY_STRING;
-
-        Core::TextSegmentIterator index(Core::TextFragment(path, skipUrl, path.length() - skipUrl), false, '/');
-        index.Next();
-        index.Next();
-        // Here process request other than:
-        // /Service/<CALLSIGN>/TestCommands
-        // /Service/<CALLSIGN>/<TEST_COMMAND_NAME>/...
-
-        if (index.IsValid()) {
-            if (index.Current().Text() == _T("TestCommands")) {
-                if ((!index.Next()) && (type == Web::Request::HTTP_GET)) {
-                    response = TestCommands();
-                    executed = true;
-                }
-            } else {
-                QualityAssurance::ITestUtility::ICommand* command = _testUtilityImp->Command(index.Current().Text());
-
-                if (command) {
-                    if (!index.Next() && ((type == Web::Request::HTTP_POST) || (type == Web::Request::HTTP_PUT))) {
-                        // Execute test command
-                        response = command->Execute(body);
-                        executed = true;
-                    } else  if (type == Web::Request::HTTP_GET) {
-                        if (index.IsValid() && (index.Current().Text() == _T("Description")) && (!index.Next())) {
-                            response = command->Description();
-                            executed = true;
-                        } else if (index.IsValid() && (index.Current().Text() == _T("Parameters")) && (!index.Next())) {
-                            response = command->Signature();
-                            executed = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!executed) {
-            TRACE(Trace::Fatal, (_T("*** Test case method not found !!! ***")));
-        }
-
-        return response;
     }
 } // namespace Plugin
 } // namespace Thunder

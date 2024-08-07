@@ -29,11 +29,9 @@ public:
     Statm& operator=(const Statm&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::ParameterInfo;
-
     Statm()
-        : TestCommandBase(TestCommandBase::DescriptionBuilder("Provides information about system memory allocation"),
-              TestCommandBase::SignatureBuilder("memory", JsonData::TestUtility::TypeType::NUMBER, "memory statistics in KB"))
+        : TestCommandBase(_T("Provides information about system memory allocation"),
+              TestCommandBase::SignatureBuilder("memory", QualityAssurance::ITestUtility::ParameterInfo::Type::NUMBER, "memory statistics in KB"))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);

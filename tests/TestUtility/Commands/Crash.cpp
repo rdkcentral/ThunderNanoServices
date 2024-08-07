@@ -30,13 +30,13 @@ public:
     Crash& operator=(const Crash&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::ParameterInfo;
+    using Parameter = JsonData::TestUtility::ParameterInfoInfo;
 
     Crash()
         : TestCommandBase(
-              TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault resulting in crash")),
+              _T("Cause segmenation fault resulting in crash"),
               TestCommandBase::SignatureBuilder(Parameter())
-                  .InputParameter("crashDelay", JsonData::TestUtility::TypeType::NUMBER, "delay in ms before actual crash"))
+                  .InputParameter("crashDelay", QualityAssurance::ITestUtility::ParameterInfo::Type::NUMBER, "delay in ms before actual crash"))
         , _crashCore(CrashCore::Instance())
         , _name(_T("Crash"))
     {
@@ -55,7 +55,7 @@ public:
 public:
     virtual string /*JSON*/ Execute(const string& params) final
     {
-        JsonData::TestUtility::RuncrashParamsData input;
+        JsonData::TestUtility::RunCrashParamsData::CrashInfoData input;
         uint8_t crashDelay = CrashCore::DefaultCrashDelay;
         string responseString = _T("");
 

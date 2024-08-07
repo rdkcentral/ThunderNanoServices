@@ -29,11 +29,9 @@ public:
     Free& operator=(const Free&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::ParameterInfo;
-
     Free()
-        : TestCommandBase(TestCommandBase::DescriptionBuilder("Releases previously allocated memory"),
-              TestCommandBase::SignatureBuilder("memory", JsonData::TestUtility::TypeType::NUMBER, "memory statistics in KB"))
+        : TestCommandBase(_T("Releases previously allocated memory"),
+              TestCommandBase::SignatureBuilder("memory", QualityAssurance::ITestUtility::ParameterInfo::Type::NUMBER, "memory statistics in KB"))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);

@@ -35,7 +35,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_library(${MODULE_NAME} SHARED
         Module.cpp
         TestController.cpp
-        TestControllerJsonRpc.cpp
         TestControllerImp.cpp
         Core/TestAdministrator.cpp
         Examples/Test1.cpp

@@ -109,7 +109,7 @@ public:
     {
         string jsonResponse = EMPTY_STRING;
 
-        JsonData::TestUtility::RunmemoryResultData response;
+        JsonData::TestUtility::MemoryResultData response;
         uint32_t allocated, size, resident;
 
         Statm(allocated, size, resident);

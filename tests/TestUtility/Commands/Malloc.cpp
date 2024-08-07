@@ -29,12 +29,10 @@ public:
     Malloc& operator=(const Malloc&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::ParameterInfo;
-
     Malloc()
-        : TestCommandBase(TestCommandBase::DescriptionBuilder("Allocates desired kB in memory and holds it"),
-              TestCommandBase::SignatureBuilder("memory",JsonData::TestUtility::TypeType::NUMBER, "memory statistics in KB")
-                  .InputParameter("size", JsonData::TestUtility::TypeType::NUMBER, "memory in kB for allocation"))
+        : TestCommandBase(_T("Allocates desired kB in memory and holds it"),
+              TestCommandBase::SignatureBuilder("memory", QualityAssurance::ITestUtility::ParameterInfo::Type::NUMBER, "memory statistics in KB")
+                  .InputParameter("size", QualityAssurance::ITestUtility::ParameterInfo::Type::NUMBER, "memory in kB for allocation"))
         , _memoryAdmin(MemoryAllocation::Instance())
     {
         TestCore::TestCommandController::Instance().Announce(this);
@@ -49,7 +47,7 @@ public:
     // ICommand methods
     string Execute(const string& params) final
     {
-        JsonData::TestUtility::RunmemoryParamsData input;
+        JsonData::TestUtility::RunMemoryParamsData::MemoryInfoData input;
         uint32_t size;
 
         if ((input.FromString(params) == true) && (input.Size.IsSet())) {

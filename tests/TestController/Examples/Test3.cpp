@@ -32,7 +32,7 @@ public:
     Test3& operator=(const Test3&) = delete;
 
     Test3()
-        : TestBase(TestBase::DescriptionBuilder("Test 3 description"))
+        : TestBase(_T("Test 3 description"))
     {
         TestCore::TestCategory2::Instance().Register(this);
     }

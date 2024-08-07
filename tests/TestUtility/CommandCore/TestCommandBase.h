@@ -18,8 +18,7 @@
  */
  
 #include "../Module.h"
-#include <qa_interfaces/json/JsonData_TestUtility.h>
-#include "qa_interfaces/ITestUtility.h"
+#include <qa_interfaces/json/JTestUtility.h>
 
 namespace Thunder {
 
@@ -37,30 +36,30 @@ public:
         SignatureBuilder& operator=(const SignatureBuilder&) = delete;
 
     public:
-        explicit SignatureBuilder(string const& name, JsonData::TestUtility::TypeType type, string const& comment)
+        explicit SignatureBuilder(string const& name, QualityAssurance::ITestUtility::ParameterInfo::Type type, string const& comment)
             : _jsonSignature()
         {
-            JsonData::TestUtility::ParameterInfo inputParam;
-            inputParam.Name = name;
-            inputParam.Type = type;
-            inputParam.Comment = comment;
+            JsonData::TestUtility::ParameterInfoInfo param;
+            param.Name = name;
+            param.Type = type;
+            param.Comment = comment;
 
-            _jsonSignature.Output = inputParam;
+            _jsonSignature.Output = param;
         }
 
-        explicit SignatureBuilder(const JsonData::TestUtility::ParameterInfo& inputParam)
+        explicit SignatureBuilder(const JsonData::TestUtility::ParameterInfoInfo& param)
             : _jsonSignature()
         {
-            _jsonSignature.Output = inputParam;
+            _jsonSignature.Output = param;
         }
 
-        SignatureBuilder& InputParameter(const string& name, JsonData::TestUtility::TypeType type, const string& comment)
+        SignatureBuilder& InputParameter(const string& name, QualityAssurance::ITestUtility::ParameterInfo::Type type, const string& comment)
         {
-            JsonData::TestUtility::ParameterInfo inputParam;
-            inputParam.Name = name;
-            inputParam.Type = type;
-            inputParam.Comment = comment;
-            _jsonSignature.Input.Add(inputParam);
+            JsonData::TestUtility::ParameterInfoInfo param;
+            param.Name = name;
+            param.Type = type;
+            param.Comment = comment;
+            _jsonSignature.Input.Add(param);
 
             return (*this);
         }
@@ -77,41 +76,13 @@ public:
             return outString;
         }
 
-        JsonData::TestUtility::ParametersData _jsonSignature;
-    };
-
-    class DescriptionBuilder {
-    public:
-        DescriptionBuilder() = delete;
-        DescriptionBuilder(const DescriptionBuilder&) = delete;
-        DescriptionBuilder& operator=(const DescriptionBuilder&) = delete;
-
-    public:
-        explicit DescriptionBuilder(const string& description)
-            : _jsonDescription()
-        {
-            _jsonDescription.Description = description;
-        }
-
-        ~DescriptionBuilder() = default;
-
-    private:
-        friend class TestCommandBase;
-        string ToString() const
-        {
-            string outString;
-            _jsonDescription.ToString(outString);
-
-            return outString;
-        }
-
-        JsonData::TestUtility::DescriptionData _jsonDescription;
+        JsonData::TestUtility::ParametersResultData _jsonSignature;
     };
 
 public:
-    explicit TestCommandBase(const DescriptionBuilder& description, const SignatureBuilder& signature)
+    explicit TestCommandBase(const string& description, const SignatureBuilder& signature)
         : QualityAssurance::ITestUtility::ICommand()
-        , _description(description.ToString())
+        , _description(description)
         , _signature(signature.ToString())
     {
     }

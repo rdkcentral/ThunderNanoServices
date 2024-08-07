@@ -30,12 +30,12 @@ public:
     CrashNTimes& operator=(const CrashNTimes&) = delete;
 
 public:
-    using Parameter = JsonData::TestUtility::ParameterInfo;
+    using Parameter = JsonData::TestUtility::ParameterInfoInfo;
 
     CrashNTimes()
-        : TestCommandBase(TestCommandBase::DescriptionBuilder(_T("Cause segmenation fault N times in a row")),
+        : TestCommandBase(_T("Cause segmenation fault N times in a row"),
               TestCommandBase::SignatureBuilder(Parameter())
-                  .InputParameter("crashCount", JsonData::TestUtility::TypeType::NUMBER, "how many times Crash will be executed consecutively"))
+                  .InputParameter("crashCount", QualityAssurance::ITestUtility::ParameterInfo::Type::NUMBER, "how many times Crash will be executed consecutively"))
         , _crashCore(CrashCore::Instance())
         , _name(_T("CrashNTimes"))
     {
@@ -56,7 +56,7 @@ public:
 public:
     virtual string Execute(const string& params) final
     {
-        JsonData::TestUtility::RuncrashParamsData input;
+        JsonData::TestUtility::RunCrashParamsData::CrashInfoData input;
         string responseString = _T("");
         uint8_t crashCount = 0;
 

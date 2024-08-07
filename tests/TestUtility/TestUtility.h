@@ -23,13 +23,12 @@
 
 #include "CommandCore/TestCommandController.h"
 #include <interfaces/IMemory.h>
-#include <qa_interfaces/ITestUtility.h>
-#include <qa_interfaces/json/JsonData_TestUtility.h>
+#include <qa_interfaces/json/JTestUtility.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class TestUtility : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class TestUtility : public PluginHost::IPlugin, public PluginHost::JSONRPC {
     public:
         // maximum wait time for process to be spawned
         static constexpr uint32_t ImplWaitTime = 1000;
@@ -97,7 +96,6 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(TestUtility)
         INTERFACE_ENTRY(PluginHost::IPlugin)
-        INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(QualityAssurance::ITestUtility, _testUtilityImp)
@@ -109,26 +107,11 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-        //  IWeb methods
-        // -------------------------------------------------------------------------------------------------------
-        void Inbound(Web::Request& request) override;
-        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
-
     private:
         void Deactivated(RPC::IRemoteConnection* process);
 
         void ProcessTermination(uint32_t _connection);
         string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
-        string /*JSON*/ TestCommands(void);
-
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_runmemory(const JsonData::TestUtility::RunmemoryParamsData& params, JsonData::TestUtility::RunmemoryResultData& response);
-        uint32_t endpoint_runcrash(const JsonData::TestUtility::RuncrashParamsData& params);
-        uint32_t get_commands(Core::JSON::ArrayType<Core::JSON::String>& response) const;
-        uint32_t get_description(const string& index, JsonData::TestUtility::DescriptionData& response) const;
-        uint32_t get_parameters(const string& index, JsonData::TestUtility::ParametersData& response) const;
-        uint32_t set_shutdowntimeout(const Core::JSON::DecUInt32& param);
 
         PluginHost::IShell* _service;
         Core::SinkType<Notification> _notification;

@@ -22,15 +22,14 @@
 #include "Module.h"
 
 #include <interfaces/IMemory.h>
-#include <qa_interfaces/ITestController.h>
-#include <qa_interfaces/json/JsonData_TestController.h>
+#include <qa_interfaces/json/JTestController.h>
 
 #include "Core/TestMetadata.h"
 
 namespace Thunder {
 namespace Plugin {
 
-    class TestController : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class TestController : public PluginHost::IPlugin, public PluginHost::JSONRPC {
     public:
         // maximum wait time for process to be spawned
         static constexpr uint32_t ImplWaitTime = 1000;
@@ -78,24 +77,6 @@ namespace Plugin {
             Core::JSON::ArrayType<Core::JSON::String> Tests;
         };
 
-        class OverallTestResults : public Core::JSON::Container {
-        private:
-            OverallTestResults(const OverallTestResults&) = delete;
-            OverallTestResults& operator=(const OverallTestResults&) = delete;
-
-        public:
-            OverallTestResults()
-                : Core::JSON::Container()
-                , Results()
-            {
-                Add(_T("testsResults"), &Results);
-            }
-
-            ~OverallTestResults() override = default;
-
-        public:
-            Core::JSON::ArrayType<TestCore::TestResult> Results;
-        };
 
     public:
         TestController()
@@ -105,7 +86,6 @@ namespace Plugin {
             , _testControllerImp(nullptr)
             , _skipURL(0)
             , _connection(0)
-            , _prevCategory(EMPTY_STRING)
         {
         }
 
@@ -113,7 +93,6 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(TestController)
         INTERFACE_ENTRY(PluginHost::IPlugin)
-        INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(QualityAssurance::ITestController, _testControllerImp)
@@ -125,11 +104,6 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-        //  IWeb methods
-        // -------------------------------------------------------------------------------------------------------
-        void Inbound(Web::Request& request) override ;
-        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
-
         TestController(const TestController&) = delete;
         TestController& operator=(const TestController&) = delete;
 
@@ -139,28 +113,12 @@ namespace Plugin {
 
         void ProcessTermination(uint32_t pid);
 
-        void TestPreparation(QualityAssurance::ITestController::ICategory* const category, const string& categoryName);
-        string /*JSON*/ HandleRequest(Web::Request::type type, const string& path, const uint8_t skipUrl, const string& body /*JSON*/);
-        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ TestCategories(QualityAssurance::ITestController::ICategory::IIterator* categories) const;
-        Core::JSON::ArrayType<Core::JSON::String> /*JSON*/ Tests(QualityAssurance::ITestController::ITest::IIterator* tests) const;
-        string /*JSON*/ RunAll(const string& body, const string& categoryName = EMPTY_STRING);
-        string /*JSON*/ RunTest(const string& body, const string& categoryName, const string& testName);
-
-        void RegisterAll();
-        void UnregisterAll();
-        Core::JSON::ArrayType<JsonData::TestController::RunResultDataElem> TestResults(const string& results);
-        uint32_t endpoint_run(const JsonData::TestController::RunParamsData& params, Core::JSON::ArrayType<JsonData::TestController::RunResultDataElem>& response);
-        uint32_t get_categories(Core::JSON::ArrayType<Core::JSON::String>& response) const;
-        uint32_t get_tests(const string& index, Core::JSON::ArrayType<Core::JSON::String>& response) const;
-        uint32_t get_description(const string& index, JsonData::TestController::DescriptionData& response) const;
-
         PluginHost::IShell* _service;
         Core::SinkType<Notification> _notification;
         Exchange::IMemory* _memory;
         QualityAssurance::ITestController* _testControllerImp;
         uint8_t _skipURL;
         uint32_t _connection;
-        string _prevCategory;
     };
 
 } // namespace Plugin

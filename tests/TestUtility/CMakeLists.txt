@@ -35,7 +35,6 @@ add_library(${MODULE_NAME} SHARED
         Module.cpp
         TestUtility.cpp
         TestUtilityImp.cpp
-        TestUtilityJsonRpc.cpp
         CommandCore/TestCommandController.cpp
         Commands/Malloc.cpp
         Commands/Free.cpp

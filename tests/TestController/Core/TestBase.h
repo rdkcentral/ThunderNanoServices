@@ -29,35 +29,8 @@ public:
     TestBase(const TestBase&) = delete;
     TestBase& operator=(const TestBase&) = delete;
 
-    class DescriptionBuilder {
-    public:
-        DescriptionBuilder(const DescriptionBuilder&) = delete;
-        DescriptionBuilder& operator=(const DescriptionBuilder&) = delete;
-
-        explicit DescriptionBuilder(const string& description)
-            : _jsonDescription()
-        {
-            _jsonDescription.Description = description;
-        }
-
-        ~DescriptionBuilder() = default;
-
-    private:
-        friend class TestBase;
-        string ToString() const
-        {
-            string outString;
-            _jsonDescription.ToString(outString);
-
-            return outString;
-        }
-
-        TestCore::TestDescription _jsonDescription;
-    };
-
-    explicit TestBase(const DescriptionBuilder& description)
-        : QualityAssurance::ITestController::ITest()
-        , _description(description.ToString())
+    explicit TestBase(const string& description)
+        : _description(description)
     {
     }
 
