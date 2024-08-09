@@ -26,7 +26,7 @@
 #include <interfaces/IMath.h>
 #include <interfaces/json/JsonData_Math.h>
 
-#include "../JSONRPCPlugin/Data.h"
+#include "../Plugin/Data.h"
 
 namespace Thunder {
 
