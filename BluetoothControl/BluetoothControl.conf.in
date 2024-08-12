@@ -1,0 +1,50 @@
+startmode = "@PLUGIN_BLUETOOTH_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("interface", "0")
+configuration.add("port", "@PLUGIN_BLUETOOTH_PORT@")
+configuration.add("baudrate", "@PLUGIN_BLUETOOTH_BAUDRATE@")
+
+if "@PLUGIN_BLUETOOTH_NAME@":
+    configuration.add("name", "@PLUGIN_BLUETOOTH_NAME@")
+
+if "@PLUGIN_BLUETOOTH_SHORT_NAME@":
+    configuration.add("shortname", "@PLUGIN_BLUETOOTH_SHORT_NAME@")
+
+if "@PLUGIN_BLUETOOTH_CLASS@":
+    configuration.add("class", "'@PLUGIN_BLUETOOTH_CLASS@'")
+
+if "@PLUGIN_BLUETOOTH_AUTO_PASSKEY_CONFIRM@":
+    configuration.add("autopasskeyconfirm", "@PLUGIN_BLUETOOTH_AUTO_PASSKEY_CONFIRM@")
+
+if "@PLUGIN_BLUETOOTH_CONTINUOUS_BACKGROUND_SCAN@":
+    configuration.add("continuousbackgroundscan", "@PLUGIN_BLUETOOTH_CONTINUOUS_BACKGROUND_SCAN@")
+
+if "@PLUGIN_BLUETOOTH_PERSISTMAC@":
+    configuration.add("persistmac", "@PLUGIN_BLUETOOTH_PERSISTMAC@")
+
+def UUIDs():
+    uuids = []
+
+    def UUID(uuid, callsign = "", service = 0):
+        entry = JSON()
+        entry.add("uuid", "'%s'" % uuid) # must have this double-quoted...
+        entry.add("callsign", callsign)
+        if service != 0:
+            entry.add("service", "'%s'" % service)
+        return entry
+
+    if "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SINK@" or "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SOURCE@":
+        uuids.append(UUID("110d"))
+
+    if "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SOURCE@":
+        uuids.append(UUID("110a", "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SOURCE@"))
+
+    if "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SINK@":
+        uuids.append(UUID("110b", "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SINK@", "0x20"))
+
+    return uuids
+
+configuration.add("uuids", UUIDs())
+

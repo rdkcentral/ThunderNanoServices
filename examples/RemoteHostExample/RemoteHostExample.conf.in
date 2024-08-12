@@ -1,0 +1,10 @@
+startmode = "Deactivated"
+
+configuration = JSON()
+
+configuration.add("name", "Remote")
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_REMOTEHOSTEXAMPLE_MODE@")
+rootobject.add("remoteaddress", "10.5.0.129:5797")
+configuration.add("root", rootobject)

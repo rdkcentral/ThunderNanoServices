@@ -22,13 +22,13 @@
 #include "DeviceInfo.h"
 #include "DeviceControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 bool DeviceControl::Initialize()
 {
    TRACE(Trace::Information, (string(__FUNCTION__)));
    _prefixList.push_back("Device.DeviceInfo.ProcessStatus.");
-   _prefixList.push_back("Device.DeviceInfo.MemeoryStatus.");
+   _prefixList.push_back("Device.DeviceInfo.MemoryStatus.");
    _prefixList.push_back("Device.DeviceInfo.");
    return true;
 }
@@ -177,8 +177,8 @@ void DeviceControl::CheckForUpdates()
 extern "C" {
 #endif
 
-void LoadProfile() {
-    static WPEFramework::WebPA::Administrator::ProfileImplementationType<WPEFramework::DeviceControl> Register;
+EXTERNAL void LoadProfile() {
+    static Thunder::WebPA::Administrator::ProfileImplementationType<Thunder::DeviceControl> Register;
 }
 
 #ifdef __cplusplus

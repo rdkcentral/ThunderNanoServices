@@ -17,9 +17,9 @@
 
 project(NetworkControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -27,9 +27,13 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_NETWORKCONTROL_AUTOSTART true CACHE STRING "Automatically start NetworkControl plugin")
+set(PLUGIN_NETWORKCONTROL_STARTMODE "Activated" CACHE STRING "Automatically start NetworkControl plugin")
 set(PLUGIN_NETWORKCONTROL_DHCP_RESONSE_TIMEOUT 5 CACHE STRING "Timeout per request to get a DHCP lease")
 set(PLUGIN_NETWORKCONTROL_DHCP_RETRIES 4 CACHE STRING "Times to retry to get a DHCP lease")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -37,7 +41,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     NetworkControl.cpp
-    NetworkControlJsonRpc.cpp
+    NetworkControlImplementation.cpp
     DHCPClient.cpp
     Module.cpp)
 
@@ -52,6 +56,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

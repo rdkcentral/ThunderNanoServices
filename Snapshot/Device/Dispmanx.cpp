@@ -22,7 +22,7 @@
 #include <bcm_host.h>
 #include <interfaces/ICapture.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Initializer {
@@ -112,6 +112,6 @@ namespace Plugin {
 {
     static Plugin::Initializer initializeDisplay;
 
-    return (Core::Service<Plugin::Dispmanx>::Create<Exchange::ICapture>());
+    return (Core::ServiceType<Plugin::Dispmanx>::Create<Exchange::ICapture>());
 }
 }

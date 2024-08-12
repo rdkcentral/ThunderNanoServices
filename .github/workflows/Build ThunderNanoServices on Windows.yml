@@ -1,0 +1,167 @@
+name: Build ThunderNanoServices on Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+env:
+  commander: ThunderNanoServices\Commander\Commander.vcxproj
+  devEnv: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\devenv.com
+  DHCPServer: ThunderNanoServices\DHCPServer\DHCPServer.vcxproj
+  DIALServer: ThunderNanoServices\DIALServer\DIALServer.vcxproj
+  dictionary: ThunderNanoServices\Dictionary\Dictionary.vcxproj
+  JSONRPCPlugin: ThunderNanoServices\examples\JSONRPCPlugin\JSONRPCPlugin.vcxproj
+  networkControl: ThunderNanoServices\NetworkControl\NetworkControl.vcxproj
+  outOfProcessPlugin: ThunderNanoServices\examples\OutOfProcessPlugin\OutOfProcessPlugin.vcxproj
+  remoteControl: ThunderNanoServices\RemoteControl\RemoteControl.vcxproj
+  solution: Thunder.sln
+  subsystemController: ThunderNanoServices\SubsystemController\SubsystemControl.vcxproj
+  svalbard: ThunderNanoServices\Svalbard\Svalbard.vcxproj
+  timeSync: ThunderNanoServices\TimeSync\TimeSync.vcxproj
+  webServer: ThunderNanoServices\WebServer\WebServer.vcxproj
+
+jobs:
+  ThunderNanoServices:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        type: [Debug, Release]
+        version: [64, 86]
+
+# ----- Checkout & DependsOn Regex -----
+    name: Build type - ${{matrix.type}}${{matrix.version}}
+    steps:
+    - name: Checkout ThunderOnWindows
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows
+        repository: WebPlatformForEmbedded/ThunderOnWindows
+
+# ----- Thunder -----
+    - name: Checkout Thunder - default
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=Thunder:') }}
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/Thunder
+        repository: ${{github.repository_owner}}/Thunder
+
+    - name: Regex Thunder
+      if: contains(github.event.pull_request.body, '[DependsOn=Thunder:')
+      id: thunder
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=Thunder:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout Thunder - ${{steps.thunder.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=Thunder:')
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/Thunder
+        repository: ${{github.repository_owner}}/Thunder
+        ref: ${{steps.thunder.outputs.first_match}}
+
+# ----- ThunderTools -----
+    - name: Checkout ThunderTools - default
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=ThunderTools:') }}
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/ThunderTools
+        repository: ${{github.repository_owner}}/ThunderTools
+
+    - name: Regex ThunderTools
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderTools:')
+      id: tools
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=ThunderTools:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout ThunderTools - ${{steps.tools.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderTools:')
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/ThunderTools
+        repository: ${{github.repository_owner}}/ThunderTools
+        ref: ${{steps.tools.outputs.first_match}}
+
+# ----- ThunderInterfaces -----
+    - name: Checkout ThunderInterfaces - default
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:') }}
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/ThunderInterfaces
+        repository: ${{github.repository_owner}}/ThunderInterfaces
+
+    - name: Regex ThunderInterfaces
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:')
+      id: thunderinterfaces
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=ThunderInterfaces:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout ThunderInterfaces - ${{steps.thunderinterfaces.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderInterfaces:')
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/ThunderInterfaces
+        repository: ${{github.repository_owner}}/ThunderInterfaces
+        ref: ${{steps.thunderinterfaces.outputs.first_match}}
+
+# ----- Other checkouts -----
+    - name: Checkout ThunderClientLibraries
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/ThunderClientLibraries
+        repository: ${{github.repository_owner}}/ThunderClientLibraries
+
+    - name: Checkout ThunderNanoServices
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/ThunderNanoServices
+        repository: ${{github.repository_owner}}/ThunderNanoServices
+
+    - name: Checkout ThunderNanoServicesRDK
+      uses: actions/checkout@v4
+      with:
+        path: ThunderOnWindows/ThunderNanoServicesRDK
+        repository: WebPlatformForEmbedded/ThunderNanoServicesRDK
+
+# ----- Install & Build -----
+    - name: Install jsonref
+      run: pip install jsonref
+
+    - name: Build ThunderNanoServices
+      shell: cmd
+      run: >
+        cd ThunderOnWindows
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%commander%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DHCPServer%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DIALServer%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%dictionary%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%JSONRPCPlugin%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%networkControl%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%outOfProcessPlugin%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%remoteControl%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%subsystemController%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%svalbard%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%timeSync%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%webServer%"  "%solution%"
+
+# ----- Upload artifacts -----
+    - name: Tar files
+      run: tar -czvf ${{matrix.type}}${{matrix.version}}.tar.gz artifacts
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ThunderNanoServices-${{matrix.type}}${{matrix.version}}-artifact
+        path: ${{matrix.type}}${{matrix.version}}.tar.gz

@@ -19,7 +19,7 @@
  
 #include "DataModel.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 DataModel::DataModel(Handler* handler)
     : _dmHandle(0)
@@ -68,7 +68,7 @@ int16_t DataModel::ParameterInstanceCount(const std::string& paramName) const
             if (IsValidParameter (paramName, paramType)) {
                 TRACE(Trace::Information, (_T( "Valid Parameter..! ")));
                 string name(paramName, 0, found - 1 );
-                Data param(name + "NumberOfEntries", static_cast<const int>(0));
+                Data param(name + "NumberOfEntries", 0);
 
                 FaultCode status = (static_cast<const Handler&>(*_handler)).Parameter(param);
                 if (status != FaultCode::NoFault) {

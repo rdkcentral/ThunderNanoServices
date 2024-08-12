@@ -1,0 +1,18 @@
+startmode = "@PLUGIN_SWITCHBOARD_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("default", "@PLUGIN_SWITCHBOARD_DEFAULT@")
+
+callsign_list = []
+
+if boolean("@PLUGIN_SWITCH_AMAZON@"):
+    callsign_list.append("AmazonPrime")
+if boolean("@PLUGIN_SWITCH_COBALT@"):
+    callsign_list.append("Cobalt")
+if boolean("@PLUGIN_SWITCH_NETFLIX@"):
+    callsign_list.append("Netflix")
+if boolean("@PLUGIN_SWITCH_WEBKITBROWSER@"):
+    callsign_list.append("WebKitBrowser")
+
+configuration.add("callsigns", callsign_list)

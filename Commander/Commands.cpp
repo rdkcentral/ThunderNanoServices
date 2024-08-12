@@ -19,7 +19,7 @@
  
 #include "Commands.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::Command::PluginControl::Config::state)
 

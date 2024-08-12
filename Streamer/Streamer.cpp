@@ -19,7 +19,7 @@
  
 #include "Streamer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -79,46 +79,35 @@ namespace Plugin {
             message = _T("Streamer could not be initialized.");
         }
 
-        if(message.length() != 0){
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     /* virtual */ void Streamer::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        service->Unregister(&_notification);
+            service->Unregister(&_notification);
 
-        if(_player != nullptr){
-            UnregisterAll();
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED uint32_t result = _player->Release();
-            _player = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            if (_player != nullptr) {
+                UnregisterAll();
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _player->Release();
+                _player = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            // The connection can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
-            }
-
-            PluginHost::ISubSystem* subSystem = service->SubSystems();
-            if (subSystem != nullptr) {
-                if(subSystem->IsActive(PluginHost::ISubSystem::STREAMING) == true) {
-                    subSystem->Set(PluginHost::ISubSystem::NOT_STREAMING, nullptr);
-                    subSystem->Release();
+                // The connection can disappear in the meantime...
+                if (connection != nullptr) {
+                    // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                    connection->Terminate();
+                    connection->Release();
                 }
             }
+
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
         }
-
-
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
     }
 
     /* virtual */ string Streamer::Information() const
@@ -312,7 +301,7 @@ namespace Plugin {
                                 if (index.Next() == true) {
                                     height = Core::NumberType<uint32_t>(index.Current()).Value();
                                 }
-                                Exchange::IStream::IControl::IGeometry* geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(X, Y, control->second->Geometry()->Z(), width, height);
+                                Exchange::IStream::IControl::IGeometry* geometry = Core::ServiceType<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(X, Y, control->second->Geometry()->Z(), width, height);
                                 control->second->Geometry(geometry);
                                 geometry->Release();
                                 result->ErrorCode = Web::STATUS_OK;
@@ -428,4 +417,4 @@ namespace Plugin {
     }
 
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

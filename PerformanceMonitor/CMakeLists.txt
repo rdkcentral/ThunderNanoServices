@@ -17,15 +17,19 @@
 
 project(PerformanceMonitor)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -47,8 +51,8 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
-set(PLUGIN_PROCESSMONITOR_AUTOSTART false CACHE STRING "Automatically start ProcessMonitor plugin")
+set(PLUGIN_PROCESSMONITOR_STARTMODE "Deactivated" CACHE STRING "Automatically start ProcessMonitor plugin")
 
 write_config()

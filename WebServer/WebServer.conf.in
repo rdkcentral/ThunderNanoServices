@@ -1,0 +1,34 @@
+startmode = "@PLUGIN_WEBSERVER_STARTMODE@"
+resumed = "@PLUGIN_WEBSERVER_RESUMED@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_WEBSERVER_MODE@")
+if "@PLUGIN_WEBSERVER_USER@":
+    root.add("user", "@PLUGIN_WEBSERVER_USER@")
+if "@PLUGIN_WEBSERVER_GROUP@":
+    root.add("group", "@PLUGIN_WEBSERVER_GROUP@")
+configuration.add("root", root)
+
+configuration.add("port", "@PLUGIN_WEBSERVER_PORT@")
+configuration.add("binding", "@PLUGIN_WEBSERVER_BINDING@")
+configuration.add("path", "@PLUGIN_WEBSERVER_PATH@")
+
+if boolean("@PLUGIN_WEBSERVER_PROXY_DEVICEINFO@") or boolean("@PLUGIN_WEBSERVER_PROXY_DIALSERVER@"):
+    proxy_list = []
+    if boolean("@PLUGIN_WEBSERVER_PROXY_DEVICEINFO@"):
+        proxy_config = JSON()
+        proxy_config.add("path", "/Service/DeviceInfo")
+        proxy_config.add("subst", "/Service/DeviceInfo")
+        proxy_config.add("server", "127.0.0.1:@PLUGIN_WEBSERVER_BRIDGE_PORT@")
+        proxy_list.append(proxy_config)
+
+    if boolean("@PLUGIN_WEBSERVER_PROXY_DIALSERVER@"):
+        proxy_config = JSON()
+        proxy_config.add("path", "/Service/DIALServer")
+        proxy_config.add("subst", "/Service/DIALServer")
+        proxy_config.add("server", "127.0.0.1:@PLUGIN_WEBSERVER_BRIDGE_PORT@")
+        proxy_list.append(proxy_config)
+
+    configuration.add("proxies", proxy_list)

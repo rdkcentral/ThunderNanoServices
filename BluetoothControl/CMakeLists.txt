@@ -16,9 +16,9 @@
 # limitations under the License.
 project(BluetoothControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -29,7 +29,21 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 option(PLUGIN_BLUETOOTH_DEVELOPMENT "Enable verbose tracing" ON)
 option(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL "Enable kernel connection control" OFF)
 
-set(PLUGIN_BLUETOOTH_AUTOSTART true CACHE STRING true)
+set(PLUGIN_BLUETOOTH_STARTMODE "Activated" CACHE STRING "Automatically start the plugin")
+set(PLUGIN_BLUETOOTH_PORT "/dev/ttyAMA0" CACHE STRING "Device port")
+set(PLUGIN_BLUETOOTH_BAUDRATE 115200 CACHE STRING "Serial transmission speed in baud")
+set(PLUGIN_BLUETOOTH_NAME "Thunder" CACHE STRING "Name of the local Bluetooth device")
+set(PLUGIN_BLUETOOTH_SHORT_NAME "Thunder" CACHE STRING "Short name of the local Bluetooth device")
+set(PLUGIN_BLUETOOTH_CLASS "0x000424" CACHE STRING "Class of the local Bluetooth device")
+set(PLUGIN_BLUETOOTH_AUTO_PASSKEY_CONFIRM true CACHE STRING "Denotes if passkey confirmation request should be automattically cofirmed")
+set(PLUGIN_BLUETOOTH_CONTINUOUS_BACKGROUND_SCAN false CACHE STRING "Denotes if background LE scan should be done continuously")
+set(PLUGIN_BLUETOOTH_PERSISTMAC false CACHE STRING "Denotes Bluetooth address shall be made persistent")
+set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SOURCE "" CACHE STRING "Callsign of the A2DP Audio Source service (if any)")
+set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SINK "" CACHE STRING "Callsign of the A2DP Audio Sink service (if any)")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -38,7 +52,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     BluetoothControl.cpp
-    BluetoothControlJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -57,6 +70,11 @@ if(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL)
             USE_KERNEL_CONNECTION_CONTROL)
 endif()
 
+target_compile_options(${MODULE_NAME}
+    PRIVATE
+        -Wno-psabi
+        -fdiagnostics-color=always)
+
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
@@ -65,6 +83,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

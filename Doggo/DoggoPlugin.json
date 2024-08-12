@@ -1,0 +1,15 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Doggo Plugin",
+    "callsign": "Doggo",
+    "locator": "libWPEDoggo.so",
+    "status": "beta",
+    "description": "The watchdog control plugin allows control a build-in kernel watchdog",
+    "version": "1.0"
+  },
+  "interface": {
+    "$cppref": "{cppinterfacedir}/IConfiguration.h",
+    "$cppref": "{cppinterfacedir}/IWatchDog.h"
+  }
+}

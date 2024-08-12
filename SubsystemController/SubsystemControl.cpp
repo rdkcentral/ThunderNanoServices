@@ -19,7 +19,7 @@
 
 #include "SubsystemControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -411,6 +411,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::PLATFORM,  PluginHost::ISubSystem::subsystem::PLATFORM);
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::STREAMING, PluginHost::ISubSystem::subsystem::STREAMING);
         _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::WEBSOURCE, PluginHost::ISubSystem::subsystem::WEBSOURCE);
+        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::INSTALLATION, PluginHost::ISubSystem::subsystem::INSTALLATION);
     }
 POP_WARNING()
 
@@ -431,11 +432,12 @@ POP_WARNING()
 
     void SubsystemControl::Deinitialize(PluginHost::IShell* /* service */)  /* override */
     {
-        ASSERT(_service != nullptr);
+        if (_service != nullptr) {
 
-        _service->Unregister(&_notification);
-        _service->Release();
-        _service = nullptr;
+            _service->Unregister(&_notification);
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     string SubsystemControl::Information() const /* override */
@@ -444,4 +446,4 @@ POP_WARNING()
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

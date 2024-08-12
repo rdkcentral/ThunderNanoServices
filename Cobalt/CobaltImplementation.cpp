@@ -27,7 +27,7 @@
 
 extern int StarboardMain(int argc, char **argv);
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class CobaltImplementation:
@@ -354,20 +354,28 @@ public:
 
     void Register(Exchange::IBrowser::INotification *sink) override
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
-        // Make sure a sink is not registered multiple times.
-        ASSERT(std::find(_cobaltBrowserClients.begin(), _cobaltBrowserClients.end(), sink)
-               == _cobaltBrowserClients.end());
+        std::list<Exchange::IBrowser::INotification*>::iterator index(
+                std::find(_cobaltBrowserClients.begin(), _cobaltBrowserClients.end(), sink));
 
-        _cobaltBrowserClients.push_back(sink);
-        sink->AddRef();
+        // Make sure a sink is not registered multiple times.
+        ASSERT(index == _cobaltBrowserClients.end());
+
+        if (index == _cobaltBrowserClients.end()) {
+            _cobaltBrowserClients.push_back(sink);
+            sink->AddRef();
+        }
 
         _adminLock.Unlock();
     }
 
     void Unregister(Exchange::IBrowser::INotification *sink)  override
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         std::list<Exchange::IBrowser::INotification*>::iterator index(
@@ -466,7 +474,7 @@ public:
         return Core::ERROR_UNAVAILABLE;
     }
 
-    uint32_t Visible(VARIABLE_IS_NOT_USED const bool& visiblity) override
+    uint32_t Visible(VARIABLE_IS_NOT_USED const bool visiblity) override
     {
         return Core::ERROR_UNAVAILABLE;
     }
@@ -485,22 +493,29 @@ public:
 
     void Register(PluginHost::IStateControl::INotification *sink) override
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
-        // Make sure a sink is not registered multiple times.
-        ASSERT(
+        std::list<PluginHost::IStateControl::INotification*>::iterator index(
                 std::find(_stateControlClients.begin(),
-                        _stateControlClients.end(), sink)
-                        == _stateControlClients.end());
+                        _stateControlClients.end(), sink));
 
-        _stateControlClients.push_back(sink);
-        sink->AddRef();
+        // Make sure a sink is not registered multiple times.
+        ASSERT(index == _stateControlClients.end());
+
+        if (index == _stateControlClients.end()) {
+            _stateControlClients.push_back(sink);
+            sink->AddRef();
+        }
 
         _adminLock.Unlock();
     }
 
     void Unregister(PluginHost::IStateControl::INotification *sink) override
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         std::list<PluginHost::IStateControl::INotification*>::iterator index(
@@ -654,7 +669,7 @@ private:
     PluginHost::IShell* _service;
 };
 
-SERVICE_REGISTRATION(CobaltImplementation, 1, 0);
+SERVICE_REGISTRATION(CobaltImplementation, 1, 0)
 
 }
 /* namespace Plugin */

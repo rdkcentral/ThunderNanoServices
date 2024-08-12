@@ -23,7 +23,7 @@
 #include <stdexcept>
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace OutOfProcessPlugin {
 
@@ -33,7 +33,19 @@ namespace OutOfProcessPlugin {
 
 namespace Plugin {
 
-    SERVICE_REGISTRATION(OutOfProcessPlugin, 1, 0);
+    namespace {
+
+        static Metadata<OutOfProcessPlugin> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<OutOfProcessPlugin::Data> jsonDataFactory(2);
     static Core::ProxyPoolType<Web::JSONBodyType<OutOfProcessPlugin::Data>> jsonBodyDataFactory(4);
@@ -45,6 +57,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         ASSERT(_browser == nullptr);
+        ASSERT(_browserresources == nullptr);
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_connectionId == 0);
@@ -66,6 +79,54 @@ namespace Plugin {
         if (_browser == nullptr) {
             message = _T("OutOfProcessPlugin could not be instantiated.");
         } else {
+            _browserresources = _browser->QueryInterface<Exchange::IBrowserResources>();
+            if( _browserresources != nullptr) {
+                Exchange::JBrowserResources::Register(*this, _browserresources);
+                Register("bigupdate", [this](const Core::JSONRPC::Context&, const string& params, Core::OptionalType<Core::JSON::Error>&) {
+                    uint32_t updates = 5000;
+                    string sleep("100");
+                    if(params.empty() == false) {
+                        class Params : public Core::JSON::Container {
+                        public:
+                            Params(const Params&) = delete;
+                            Params& operator=(const Params&) = delete;
+
+                            Params()
+                                : Core::JSON::Container()
+                                , Updates(5000)
+                                , Sleep("100")
+                            {
+                                Add(_T("updates"), &Updates);
+                                Add(_T("sleep"), &Sleep);
+                            }
+                            ~Params() override = default;
+
+                        public:
+                            Core::JSON::DecUInt32 Updates;
+                            Core::JSON::String Sleep;
+                        } paramscontainer;
+                        paramscontainer.FromString(params);
+                        updates = paramscontainer.Updates.Value();
+                        sleep = paramscontainer.Sleep.Value();
+                    }
+
+                    std::list<string> _elements;
+                    for(uint32_t i = 0; i<updates; ++i) {
+                        string s("UserScripts_Updated_");
+                        s += std::to_string(i);
+                        if( i == 0 ) {
+                            s = sleep;
+                        }
+                        _elements.push_back(s);
+                    }
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
+                    if ((_params != nullptr)) {
+                        _browserresources->UserScripts(_params);
+                        _params->Release();
+                    }
+                }); 
+            }
+
             _browser->Register(_notification);
 
             PluginHost::IStateControl* stateControl(_browser->QueryInterface<PluginHost::IStateControl>());
@@ -73,7 +134,6 @@ namespace Plugin {
             if (stateControl != nullptr) {
 
                 _state = stateControl;
-                _state->AddRef();
 
                 _state->Configure(_service);
                 _state->Register(_notification);
@@ -86,7 +146,7 @@ namespace Plugin {
 
                     RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
                     if (remoteConnection != nullptr) {
-                        _memory = WPEFramework::OutOfProcessPlugin::MemoryObserver(remoteConnection);
+                        _memory = Thunder::OutOfProcessPlugin::MemoryObserver(remoteConnection);
                         ASSERT(_memory != nullptr);
                         remoteConnection->Release();
                     }
@@ -99,67 +159,70 @@ namespace Plugin {
             }
         }
         
-        if (message.length() != 0) {
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     /* virtual */ void OutOfProcessPlugin::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(service == _service);
+        if (_service != nullptr) {
+	    ASSERT(_service == service);
 
-        _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
-        _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
-        _service->DisableWebServer();
+            _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(_notification));
+            _service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(_notification));
+            _service->DisableWebServer();
 
-        if(_browser != nullptr) {
-            _browser->Unregister(_notification);
-
-            if(_memory != nullptr) {
-                _memory->Release();
-                _memory = nullptr;
-            }
-
-            if (_state != nullptr) {
-                PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
-                if (sink != nullptr) {
-                    _service->Unregister(sink);
-                    sink->Release();
+            if (_browser != nullptr) {
+                if (_browserresources != nullptr) {
+                    Exchange::JBrowserResources::Unregister(*this);
+                    _browserresources->Release();
+                    _browserresources = nullptr;
                 }
-                _state->Unregister(_notification);
-                _state->Release();
-                _state = nullptr;
+                _browser->Unregister(_notification);
+
+                if (_memory != nullptr) {
+                    _memory->Release();
+                    _memory = nullptr;
+                }
+
+                if (_state != nullptr) {
+                    PluginHost::IPlugin::INotification* sink = _browser->QueryInterface<PluginHost::IPlugin::INotification>();
+                    if (sink != nullptr) {
+                        _service->Unregister(sink);
+                        sink->Release();
+                    }
+                    _state->Unregister(_notification);
+                    _state->Release();
+                    _state = nullptr;
+                }
+
+                // Stop processing:
+                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+                VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
+                _browser = nullptr;
+
+                // It should have been the last reference we are releasing, 
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger the cleanup sequence for 
+                    // out-of-process code. Which will guard 
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
 
-            // Stop processing:
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
-            VARIABLE_IS_NOT_USED uint32_t result = _browser->Release();
-            _browser = nullptr;
-
-            // It should have been the last reference we are releasing, 
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // If this was running in a (container) process...
-            if (connection != nullptr) {
-                // Lets trigger the cleanup sequence for 
-                // out-of-process code. Which will guard 
-                // that unwilling processes, get shot if
-                // not stopped friendly :-)
-                connection->Terminate();
-                connection->Release();
-            }
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
         }
-
-        _connectionId = 0;
-        _service->Release();
-        _service = nullptr;
     }
 
-       /* static */ const char* OutOfProcessPlugin::PluginStateStr(const PluginHost::IShell::state state)
+    /* static */ const char* OutOfProcessPlugin::PluginStateStr(const PluginHost::IShell::state state)
     {
         switch (state) {
         case PluginHost::IShell::DEACTIVATED:
@@ -269,6 +332,7 @@ namespace Plugin {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
                 result->Body<Web::JSONBodyType<OutOfProcessPlugin::Data>>(body);
+                
             } else if ((request.Verb == Web::Request::HTTP_POST) && (index.Next() == true) && (index.Next() == true)) {
                 result->ErrorCode = Web::STATUS_OK;
                 result->Message = "OK";
@@ -282,6 +346,17 @@ namespace Plugin {
                     _browser->Hide(true);
                 } else if (index.Remainder() == _T("Show")) {
                     _browser->Hide(false);
+
+                // Test IDispatcher with given data size
+                } else if (index.Remainder() == _T("TestValidator")) {
+                    uint32_t stringSize = 32;
+                    if (request.HasBody() == true) {
+                        stringSize = std::stoi(*(request.Body<Web::TextBody>()));
+                        if (stringSize > 128) {
+                            TRACE(Trace::Information, (_T("%u is not allowed. Size automatically set to maximum: 128K"), stringSize));
+                            stringSize = 128;
+                        }
+                    }
                 } else if (index.Remainder() == _T("Notify4K")) {
                     string message;
                     for (uint32_t teller = 0; teller < ((4 * 1024) + 64); teller++) {

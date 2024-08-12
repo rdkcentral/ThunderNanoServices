@@ -19,7 +19,7 @@
  
 #include "ProcessMonitor.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 namespace {
@@ -46,7 +46,7 @@ const string ProcessMonitor::Initialize(PluginHost::IShell* service)
     return (_T(""));
 }
 
-void ProcessMonitor::Deinitialize(PluginHost::IShell* service)
+void ProcessMonitor::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
     _notification.Close();
 }

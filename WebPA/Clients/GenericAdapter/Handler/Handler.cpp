@@ -19,7 +19,7 @@
  
 #include "Handler.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,7 +134,7 @@ uint32_t Handler::Worker()
     return Core::infinite;
 }
 
-const FaultCode Handler::Parameter(Data& parameter) const
+FaultCode Handler::Parameter(Data& parameter) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode ret = FaultCode::NoFault;
@@ -164,7 +164,7 @@ FaultCode Handler::Parameter(const Data& parameter)
     return ret;
 }
 
-const FaultCode Handler::Attribute(Data& parameter) const
+FaultCode Handler::Attribute(Data& parameter) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode ret = FaultCode::NoFault;
@@ -219,28 +219,10 @@ void Handler::ConfigureProfileControllers()
     }
 }
 
-IProfileControl* Handler::GetProfileController(const std::string& name)
+IProfileControl* Handler::GetProfileController(const std::string& name) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     IProfileControl* pRet = nullptr;
-
-    std::vector<std::string> paramComponents = SplitParam(name, '.');
-    if (paramComponents.size() > 1) {
-        std::map<const std::string, SystemProfileController>::iterator index(_systemProfileControllers.find(paramComponents[1]));
-        if (_systemProfileControllers.end() != index) {
-            pRet = index->second.control;
-        } else {
-            TRACE(Trace::Information, (_T("Could not able to find Profile controller for %s"), name.c_str()));
-        }
-    }
-
-    return pRet;
-}
-
-const IProfileControl* Handler::GetProfileController(const std::string& name) const
-{
-    TRACE(Trace::Information, (string(__FUNCTION__)));
-    const IProfileControl* pRet = nullptr;
 
     std::vector<std::string> paramComponents = SplitParam(name, '.');
     if (paramComponents.size() > 1) {

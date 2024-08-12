@@ -1,0 +1,34 @@
+startmode = "@PLUGIN_NETWORKCONTROL_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("dnsfile", "/etc/resolv.conf")
+configuration.add("timeout", "@PLUGIN_NETWORKCONTROL_DHCP_RESONSE_TIMEOUT@")
+configuration.add("retries", "@PLUGIN_NETWORKCONTROL_DHCP_RETRIES@")
+
+interface_list = []
+
+if "@PLUGIN_NETWORKCONTROL_INTERFACES@":
+    for interface in "@PLUGIN_NETWORKCONTROL_INTERFACES@".split('|'):
+        interface_attr = interface.split(';')
+
+        if len(interface_attr) >= 1:
+            interface_config = JSON()
+            interface_config.add("interface", interface_attr[0])
+            interface_config.add("mode", interface_attr[1] if (len(interface_attr) >= 2) else "Dynamic")
+
+            if (len(interface_attr) >= 6) and interface_attr[5]:
+                interface_config.add("mac", interface_attr[5])
+            
+            if (len(interface_attr) >= 3) and interface_attr[2]:
+                interface_config.add("address", interface_attr[2])
+            
+            if (len(interface_attr) >= 4) and interface_attr[3]:
+                interface_config.add("mask", interface_attr[3])
+            
+            if (len(interface_attr) >= 5) and interface_attr[4]:
+                interface_config.add("gateway", interface_attr[4])
+            
+            interface_list.append(interface_config)
+
+configuration.add("interfaces", interface_list)

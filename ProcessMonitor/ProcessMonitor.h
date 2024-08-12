@@ -26,7 +26,7 @@
 #include <syslog.h>
 #include <unordered_map>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class ProcessMonitor: public PluginHost::IPlugin
@@ -241,6 +241,9 @@ public:
         void Deactivated(RPC::IRemoteConnection*) override
         {
         }
+        void Terminated(RPC::IRemoteConnection*) override
+        {
+        }
 
         BEGIN_INTERFACE_MAP(Notification)
         INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
@@ -277,7 +280,7 @@ public:
     string Information() const override;
 
 private:
-    Core::Sink<Notification> _notification;
+    Core::SinkType<Notification> _notification;
 };
 }
 }

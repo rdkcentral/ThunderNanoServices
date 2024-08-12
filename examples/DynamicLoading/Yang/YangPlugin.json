@@ -1,0 +1,38 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Yang Plugin",
+    "callsign": "Yang",
+    "locator": "libThunderYang.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "required": [ "configuration" ],
+    "description": "Yang service configuration",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [ "etymology" ],
+        "properties": {
+          "yangcallsign": {
+            "type": "string",
+            "description": "Callsign of the Yin service (typically *Yin*)"
+          },
+          "etymology": {
+            "type": "string",
+            "description": "Describes the meaning of yang"
+          },
+          "color": {
+            "type": "string",
+            "description": "Default color of yang"
+          }
+        }
+      }
+    }
+  },
+  "interface": {
+    "$ref": "{cppinterfacedir}/IYang.h"
+  }
+}

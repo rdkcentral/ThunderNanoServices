@@ -32,7 +32,7 @@ extern "C"
 }
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class FirmwareControl : public PluginHost::IPlugin, public PluginHost::JSONRPC {
@@ -461,4 +461,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

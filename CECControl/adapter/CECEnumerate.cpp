@@ -23,7 +23,7 @@
 
 #include <core/core.h>
 
-namespace WPEFramework {
+namespace Thunder {
 ENUM_CONVERSION_BEGIN(cec_adapter_role_t)
     { CEC_DEVICE_TV, _TXT("tv") },
     { CEC_DEVICE_RECORDER, _TXT("recorder") },

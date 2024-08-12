@@ -28,7 +28,7 @@
 
 #include "../JSONRPCPlugin/Data.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
     class MathImplementation : public Exchange::IMath {
@@ -131,11 +131,11 @@ private:
         }
     }
 };
-} } //Namespace WPEFramework::JSONRPC
+} } //Namespace Thunder::JSONRPC
 
-using namespace WPEFramework;
+using namespace Thunder;
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(::JsonValue::type)
 
@@ -257,7 +257,7 @@ static void async_callback(const Data::Response& response)
 class Callbacks {
 public:
     void async_callback_complete(const Data::Response& response, const Core::JSONRPC::Error* result) {
-        printf("Finally we are triggered. Pointer to: %p @ %s\n", result, Core::Time(response.Time.Value()).ToRFC1123().c_str());
+        printf("Finally we are triggered. Pointer to: %p @ %s\n", (void*)result, Core::Time(response.Time.Value()).ToRFC1123().c_str());
     }
 };
 
@@ -322,7 +322,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:    [0], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:    [0], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 16;
@@ -331,7 +331,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:   [16], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:   [16], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 128;
@@ -340,7 +340,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:  [128], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:  [128], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 256;
@@ -348,7 +348,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:  [256], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:  [256], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 512;
@@ -356,7 +356,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound:  [512], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound:  [512], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 1024;
@@ -364,7 +364,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();;
-    printf("Data outbound: [1024], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [1024], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 2048;
@@ -372,7 +372,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound: [2048], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [2048], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
     measurement.Reset();
     length = 1024 * 32;
@@ -380,7 +380,7 @@ static void Measure(const TCHAR info[], const uint8_t patternLength, const uint8
         subject(length, dataFrame);
     }
     time = measurement.Elapsed();
-    printf("Data outbound: [32KB], inbound:    [4]. Total: %llu. Average: %llu\n", time, time / MeasurementLoops);
+    printf("Data outbound: [32KB], inbound:    [4]. Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MeasurementLoops);
 
 }
 
@@ -401,11 +401,11 @@ void MeasureCOMRPC(Core::ProxyType<RPC::CommunicatorClient>& client)
         printf("Can not measure the performance of COMRPC, there is no connection.\n");
     } else {
         Core::StopWatch measurement;
-        Exchange::IPerformance* perf = client->Aquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
+        Exchange::IPerformance* perf = client->Acquire<Exchange::IPerformance>(2000, _T("JSONRPCPlugin"), ~0);
         if (perf == nullptr) {
-            printf("Instantiation failed. An performance interface was not returned. It took: %lld ticks\n", measurement.Elapsed());
+            printf("Instantiation failed. An performance interface was not returned. It took: %" PRIu64 " ticks\n", measurement.Elapsed());
         } else {
-            printf("Instantiating and retrieving the interface took: %lld ticks\n", measurement.Elapsed());
+            printf("Instantiating and retrieving the interface took: %" PRIu64 " ticks\n", measurement.Elapsed());
             int measure;
             do {
                 ShowPerformanceMenu();
@@ -539,11 +539,10 @@ int main(int argc, char** argv)
                 comChannel, 
                 Core::ProxyType<Core::IIPCServer>(engine)
             ));
-        engine->Announcements(client->Announcement());
 
         ASSERT(client.IsValid() == true);
 
-        Core::Sink<Plugin::MathImplementation> localPerformance;
+        Core::SinkType<Plugin::MathImplementation> localPerformance;
 
         // Open up the COMRPC Client connection.
         if (client->Open(2000) != Core::ERROR_NONE) {
@@ -841,7 +840,7 @@ int main(int argc, char** argv)
             }
             case '@':
             {
-                Exchange::IMath* math = client->Aquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
+                Exchange::IMath* math = client->Acquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
                 if (math != nullptr) {
                     uint16_t A = 10;
                     uint16_t B = 5;
@@ -858,7 +857,7 @@ int main(int argc, char** argv)
                 const uint32_t PerformanceRuns = 100;
                 Plugin::MeasurementClock theClock;
                 Exchange::IMath* local = localPerformance.IUnknown::QueryInterface<Exchange::IMath>();
-                Exchange::IMath* comrpc = client->Aquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
+                Exchange::IMath* comrpc = client->Acquire<Exchange::IMath>(2000, _T("JSONRPCPlugin"), ~0);
                 JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(_T("JSONRPCPlugin.1"));
 
                 if (local != nullptr) {

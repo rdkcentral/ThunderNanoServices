@@ -21,7 +21,7 @@
 #include <interfaces/json/JsonData_Streamer.h>
 #include "Streamer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -97,7 +97,7 @@ namespace Plugin {
 
             if (id < MAX_STREAMS) {
                 Core::EnumerateType<JsonData::Streamer::StreamType> type(streamType);
-                Exchange::IStream* stream = _player->CreateStream(static_cast<WPEFramework::Exchange::IStream::streamtype>(type.Value()));
+                Exchange::IStream* stream = _player->CreateStream(static_cast<Thunder::Exchange::IStream::streamtype>(type.Value()));
 
                 if (stream != nullptr) {
                     _streams.emplace(std::piecewise_construct, std::forward_as_tuple(id), std::forward_as_tuple(*this, id, stream));
@@ -394,7 +394,7 @@ namespace Plugin {
             Controls::iterator control = _controls.find(id);
             if (control != _controls.end()) {
                 Exchange::IStream::IControl::IGeometry* geometry;
-                geometry = Core::Service<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.X.Value(), param.Y.Value(), control->second->Geometry()->Z(), param.Width.Value(), param.Height.Value());
+                geometry = Core::ServiceType<Player::Implementation::Geometry>::Create<Player::Implementation::Geometry>(param.X.Value(), param.Y.Value(), control->second->Geometry()->Z(), param.Width.Value(), param.Height.Value());
                 control->second->Geometry(geometry);
                 geometry->Release();
             } else {

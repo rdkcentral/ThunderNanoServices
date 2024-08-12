@@ -15,10 +15,10 @@
     <ClCompile Include="NetworkControl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NetworkControlJsonRpc.cpp">
+    <ClCompile Include="DHCPClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DHCPClient.cpp">
+    <ClCompile Include="NetworkControlImplementation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

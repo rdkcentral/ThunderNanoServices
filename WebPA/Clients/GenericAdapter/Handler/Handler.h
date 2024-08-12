@@ -26,7 +26,7 @@
 #include <interfaces/IWebPA.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 
 class NotificationHandler {
 public:
@@ -135,10 +135,10 @@ public:
     Handler();
     ~Handler();
 
-    const FaultCode Parameter(Data& value) const;
+    FaultCode Parameter(Data& value) const;
     FaultCode Parameter(const Data& value);
 
-    const FaultCode Attribute(Data& value) const;
+    FaultCode Attribute(Data& value) const;
     FaultCode Attribute(const Data& value);
 
     void FreeData(Data* value);
@@ -147,8 +147,7 @@ public:
 
 private:
     uint32_t Worker() override;
-    IProfileControl* GetProfileController(const std::string& value);
-    const IProfileControl* GetProfileController(const std::string& value) const;
+    IProfileControl* GetProfileController(const std::string& value) const;
     std::vector<std::string> SplitParam(std::string parameter, char delimeter) const;
 
 private:

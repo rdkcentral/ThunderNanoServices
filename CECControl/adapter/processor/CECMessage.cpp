@@ -1,7 +1,7 @@
 #include "CECMessage.h"
 #include "CECProcessor.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     Service::Service(const opcode_t requestOpCode, const opcode_t responseOpCode, const bool isBroadcast, const role_mask_t allowedRoles)
         : _requestOpCode(requestOpCode)

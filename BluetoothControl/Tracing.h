@@ -26,7 +26,7 @@
 #endif
 
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -118,6 +118,11 @@ namespace Plugin {
                     Format(_T("data=%s"), dataText.c_str());
                 }
             }
+            ManagementFlow(const Bluetooth::ManagementSocket::Info::Properties& props)
+            {
+                FORMAT_EVENT(MGMT_EV_NEW_SETTINGS);
+                Format(_T("discoverable=%d, advertising=%d"), props.IsDiscoverable(), props.IsAdvertising());
+            }
             ManagementFlow(const mgmt_ev_cmd_complete& info)
             {
                 FORMAT_EVENT(MGMT_EV_CMD_COMPLETE);
@@ -162,6 +167,16 @@ namespace Plugin {
                     default: reasonStr = "<unknown>"; break;
                 }
                 Format(_T("reason=0x%02X=%s"), info.reason, reasonStr);
+            }
+            ManagementFlow(const mgmt_ev_advertising_added& info)
+            {
+                FORMAT_EVENT(MGMT_EV_ADVERTISING_ADDED);
+                Format(_T("instance=%d"), info.instance);
+            }
+            ManagementFlow(const mgmt_ev_advertising_removed& info)
+            {
+                FORMAT_EVENT(MGMT_EV_ADVERTISING_REMOVED);
+                Format(_T("instance=%d"), info.instance);
             }
             ManagementFlow(const mgmt_ev_pin_code_request& info)
             {
@@ -210,7 +225,7 @@ namespace Plugin {
                 Format(_T("store_hint=%d, key.type=%d, key.central=%d"), info.store_hint, info.key.type, info.key.central);
 #else
                 Format(_T("store_hint=%d, key.type=%d, key.master=%d"), info.store_hint, info.key.type, info.key.master);
-#endif            
+#endif
                 Format(_T("key.enc_size=%u, key.ediv=%u, key.rand=%llu, key.val=%s"), info.key.enc_size, btohs(info.key.ediv), btohll(info.key.rand), key.c_str());
             }
         }; // class ManagementFlow

@@ -19,7 +19,7 @@
  
 #include "WebPA.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 namespace {
@@ -70,38 +70,35 @@ namespace {
         message = _T("WebPA Service could not be instantiated.");
     }
 
-    if(message.length() != 0) {
-        Deinitialize(service);
-    }
-
-
     return message;
 }
 
-/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service)
+/* virtual */ void WebPA::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
-    ASSERT(_service == service);
+    if (_service != nullptr) {
+        ASSERT(_service == service);
 
-    _service->Unregister(&_notification);
+        _service->Unregister(&_notification);
 
-    if(_webpa != nullptr){
+        if (_webpa != nullptr) {
 
-        _webpa->Deinitialize(_service);
+            _webpa->Deinitialize(_service);
 
-        RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
-        VARIABLE_IS_NOT_USED uint32_t result = _webpa->Release();
-        _webpa = nullptr;
-        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-        // The connection can disappear in the meantime...
-        if (nullptr != serviceConnection) {
-            // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-            serviceConnection->Terminate();
-            serviceConnection->Release();
+            RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
+            VARIABLE_IS_NOT_USED uint32_t result = _webpa->Release();
+            _webpa = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            // The connection can disappear in the meantime...
+            if (nullptr != serviceConnection) {
+                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                serviceConnection->Terminate();
+                serviceConnection->Release();
+            }
         }
+        _connectionId = 0;
+        _service->Release();
+        _service = nullptr;
     }
-    _connectionId = 0;
-    _service->Release()
-    _service = nullptr;
 }
 
 /* virtual */ string WebPA::Information() const
@@ -145,4 +142,4 @@ void WebPA::Deactivated(RPC::IRemoteConnection* connection)
 }
 
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

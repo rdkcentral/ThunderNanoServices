@@ -21,7 +21,7 @@
 #include <interfaces/json/JsonData_TimeSync.h>
 #include "TimeSync.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -107,7 +107,7 @@ namespace Plugin {
         if (result == Core::ERROR_NONE) {
             // Stop automatic synchronisation
             _client->Cancel();
-            Core::IWorkerPool::Instance().Revoke(_activity);
+            _job.Revoke();
 
             if (newTime.IsValid()) {
                 Core::SystemInfo::Instance().SetTime(newTime);

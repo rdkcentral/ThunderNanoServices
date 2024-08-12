@@ -3,7 +3,7 @@
   "info": {
     "title": "Bluetooth Control Plugin",
     "callsign": "BluetoothControl",
-    "locator": "libWPEFrameworkBluetoothControl.so",
+    "locator": "libThunderBluetoothControl.so",
     "status": "alpha",
     "description": "The Bluetooth Control plugin allows Bluetooth device administration.",
     "version": "1.0"
@@ -18,24 +18,50 @@
           "interface": {
             "type": "number",
             "size": "16",
-            "description": "ID of interface."
+            "description": "ID of the local Bluetooth interface"
+          },
+          "autopasskeyconfirm": {
+            "type": "boolean",
+            "description": "Enable automatic passkey confirmation (may pose a security risk)"
+          },
+          "persistmac": {
+            "type": "boolean",
+            "description": "Enable persistent Bluetooth address"
           },
           "name": {
             "type": "String",
-            "description": "Name of interface."
+            "description": "Name of the local Bluetooth interface"
+          },
+          "shortname": {
+            "type": "String",
+            "description": "Shortened name of the local Bluetooth interface"
           },
           "class": {
             "type": "number",
             "size": "32",
-            "description": "Number of Class."
+            "description": "Class of device value of the local Bluetooth interface"
           },
-          "autopasskeyconfirm": {
-            "type": "boolean",
-            "description": "Enable autopass confirm."
-          },
-          "persistmac": {
-            "type": "boolean",
-            "description": "Enable persistent MAC."
+          "uuids": {
+            "description": "UUIDs to include in the outbound EIR/AD blocks",
+            "type": "array",
+            "items": {
+              "description": "(UUID entry)",
+              "type": "object",
+              "properties": {
+                "callsign": {
+                  "type": "string",
+                  "description": "Callsign of the plugin providing the service"
+                }, 
+                "uuid": {
+                  "type": "string",
+                  "description": "UUID value (short or long)"
+                }, 
+                "service": {
+                  "type": "integer",
+                  "description": "Corresponding service bit in Class of Device value"
+                }
+              }
+            }
           }
         }
       }

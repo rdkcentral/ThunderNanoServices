@@ -1,0 +1,112 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Bluetooth Audio Plugin",
+    "callsign": "BluetoothAudio",
+    "locator": "libThunderBluetoothAudio.so",
+    "status": "alpha",
+    "description": [ "The Bluetooth Audio Sink plugin enables audio streaming to Bluetooth audio sink devices.",
+                     "The plugin is sink a from the host device stack perspective; in Bluetooth topology the host device becomes in fact an audio source.",
+                     "The plugin requires a Bluetooth controller service that will provide Bluetooth BR/EDR scanning, pairing and connection functionality; typically this is fulfiled by the *BluetoothControl* plugin."],
+    "version": "1.0",
+    "acronyms": {
+      "BR/EDR": "Basic Rate/Enhanced Data Rate",
+      "LC-SBC": "Low-Complexity SubBand Coding"
+    },
+    "terms": {
+      "bitpool": "A parameter to the LC-SBC codec that changes the encoding bitrate; the higher it is the higher the bitrate and thus the audio quality"
+    }
+  },
+  "configuration": {
+    "type": "object",
+    "required": [ "configuration" ],
+    "description": "BluetoothAudio service configuration",
+    "properties": {
+      "controller": {
+        "type": "string",
+        "description": "Callsign of the Bluetooth controller service (typically *BluetoothControl*)"
+      },
+      "server": {
+        "description": "BluetoothAudio server configuration",
+        "type": "object",
+        "properties": {
+          "interface": {
+            "type": "number",
+            "description": "Bluetooth interface to listen to for incomming connections"
+          },
+          "inactivitytimeout": {
+            "type": "number",
+            "description": "Timeout to drop inactive connections (in ms)"
+          },
+          "psm": {
+            "type": "number",
+            "description": "Port to listen to for incomming conections (typically 25)"
+          }
+        }
+      },
+      "sink": {
+        "description": "BluetoothAudio sink configuration",
+        "type": "object",
+        "required": [ "codecs" ],
+        "properties": {
+          "codecs": {
+            "type": "object",
+            "description": "Codec settings",
+            "required": [ "LC-SBC" ],
+            "properties": {
+              "LC-SBC": {
+                "type": "object",
+                "required": [ ],
+                "description": "Settings for the LC-SBC codec",
+                "properties": {
+                  "preset": {
+                    "type": "string",
+                    "enum": [ "Compatible", "LQ", "MQ", "HQ", "XQ"],
+                    "description": "Predefined audio quality setting"
+                  },
+                  "bitpool": {
+                    "type": "number",
+                    "description": "Custom audio quality based on bitpool value (used when *preset* is not specified)"
+                  },
+                  "channelmode": {
+                    "type": "string",
+                    "enum": [ "Mono", "Stereo", "JointStereo", "DualChannel" ],
+                    "description": "Channel mode for custom audio quality (used when *preset* is not specified)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "source": {
+        "description": "BluetoothAudio source configuration",
+        "type": "object",
+        "required": ["codecs" ],
+        "properties": {
+          "codecs": {
+            "type": "object",
+            "description": "Codec settings",
+            "required": [ "LC_SBC" ],
+            "properties": {
+              "LC-SBC": {
+                "type": "object",
+                "required": [ "maxbitpool" ],
+                "description": "Settings for the LC-SBC codec",
+                "properties": {
+                  "maxbitpool": {
+                    "type": "number",
+                    "description": "Maximum accepted bitpool value"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "interface": {
+    "$cppref": "{cppinterfacedir}/IBluetoothAudio.h"
+  }
+}

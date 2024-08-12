@@ -1,0 +1,11 @@
+startmode = "@PLUGIN_FILETRANSFER_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("filepath", "/var/log/messages")
+configuration.add("fullfile", "false")
+
+destination = JSON()
+destination.add("port", "2201")
+destination.add("binding", "0.0.0.0")
+configuration.add("destination", destination)

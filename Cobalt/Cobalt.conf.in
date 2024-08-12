@@ -1,0 +1,24 @@
+startmode = "@PLUGIN_COBALT_STARTMODE@"
+resumed =  "@PLUGIN_COBALT_RESUMED@"
+
+configuration = JSON()
+
+configuration.add("url", "https://www.youtube.com/tv")
+configuration.add("loglevel", "info")
+configuration.add("inspector", "@PLUGIN_COBALT_WEBINSPECTOR_ADDRESS@")
+configuration.add("height", "@PLUGIN_COBALT_HEIGHT@")
+configuration.add("width", "@PLUGIN_COBALT_WIDTH@")
+configuration.add("repeatstart", 500)
+configuration.add("repeatinterval", 50)
+configuration.add("clientidentifier", "@PLUGIN_COBALT_CLIENTIDENTIFIER@")
+configuration.add("operatorname", "@PLUGIN_COBALT_OPERATOR_NAME@")
+configuration.add("scope", "@PLUGIN_COBALT_SCOPE@")
+configuration.add("secret", "@PLUGIN_COBALT_SECRET@")
+configuration.add("playbackrates", "@PLUGIN_COBALT_PLAYBACKRATES@")
+
+root = JSON()
+root.add("mode", "@PLUGIN_COBALT_MODE@")
+root.add("locator", "lib@PLUGIN_COBALT_IMPLEMENTATION@.so")
+root.add("user", "@PLUGIN_COBALT_USER@")
+root.add("group", "@PLUGIN_COBALT_GROUP@")
+configuration.add("root", root)

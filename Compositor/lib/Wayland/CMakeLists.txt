@@ -98,7 +98,7 @@ set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE
-        DEFINE_SYMBOL WPEFRAMEWORK_PLATFORM_PLUGIN
+        DEFINE_SYMBOL THUNDER_PLATFORM_PLUGIN
 )
 
 if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
@@ -110,6 +110,10 @@ if("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Weston")
     target_link_libraries(${TARGET}
         PRIVATE
             WestonServer::WestonServer
+    )
+    install(
+        FILES config/weston.ini
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/Compositor/weston
     )
 elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     find_package(WesterosServer)
@@ -132,21 +136,13 @@ elseif("${PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION}" STREQUAL "Westeros")
     endif(WESTEROS_SERVER_FOUND)
 endif()
 
-if(PLUGIN_COMPOSITOR_VIRTUALINPUT)
-    find_package(${NAMESPACE}VirtualInput REQUIRED)
-    target_link_libraries(${TARGET} 
-        PRIVATE 
-           ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
-    )
-endif(PLUGIN_COMPOSITOR_VIRTUALINPUT)
+find_package(${NAMESPACE}VirtualInput REQUIRED)
+target_link_libraries(${TARGET} 
+    PRIVATE 
+        ${NAMESPACE}VirtualInput::${NAMESPACE}VirtualInput
+)
 
 install(
     TARGETS ${TARGET}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/Compositor
 )
-
-install(
-    FILES config/weston.ini
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor/weston
-)
-

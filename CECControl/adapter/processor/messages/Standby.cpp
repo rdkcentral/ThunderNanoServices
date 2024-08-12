@@ -24,14 +24,14 @@
 #include <interfaces/IPower.h>
 #include <plugins/Types.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace RPCLink {
     class Power : protected RPC::SmartInterfaceType<Exchange::IPower> {
     private:
         static constexpr const TCHAR* Callsign = _T("Power");
 
         using BaseClass = RPC::SmartInterfaceType<Exchange::IPower>;
-        friend class WPEFramework::Core::SingletonType<Power>;
+        friend class Thunder::Core::SingletonType<Power>;
 
     public:
         Power()
@@ -79,7 +79,7 @@ namespace RPCLink {
         }
 
     public:
-        uint32_t SetPowerState(const WPEFramework::Exchange::IPower::PCState& state)
+        uint32_t SetPowerState(const Thunder::Exchange::IPower::PCState& state)
         {
             uint32_t errorCode = Core::ERROR_UNAVAILABLE;
 
@@ -120,7 +120,7 @@ namespace CEC {
             private:
                 uint8_t Process(const uint8_t /*length*/, uint8_t /*buffer[]*/)
                 {
-                    RPCLink::Power::Instance().SetPowerState(WPEFramework::Exchange::IPower::ActiveStandby);
+                    RPCLink::Power::Instance().SetPowerState(Thunder::Exchange::IPower::ActiveStandby);
 
                     return 0;
                 }
@@ -140,18 +140,18 @@ namespace CEC {
             private:
                 uint8_t Process(const uint8_t /*length*/, uint8_t buffer[])
                 {
-                    WPEFramework::Exchange::IPower::PCState state = WPEFramework::Exchange::IPower::PowerOff;
+                    Thunder::Exchange::IPower::PCState state = Thunder::Exchange::IPower::PowerOff;
 
                     RPCLink::Power::Instance().GetPowerState(state);
 
                     switch (state) {
-                    case WPEFramework::Exchange::IPower::On:
+                    case Thunder::Exchange::IPower::On:
                         buffer[0] = POWER_STATUS_ON;
                         break;
-                    case WPEFramework::Exchange::IPower::ActiveStandby:
-                    case WPEFramework::Exchange::IPower::PassiveStandby:
-                    case WPEFramework::Exchange::IPower::SuspendToRAM:
-                    case WPEFramework::Exchange::IPower::Hibernate:
+                    case Thunder::Exchange::IPower::ActiveStandby:
+                    case Thunder::Exchange::IPower::PassiveStandby:
+                    case Thunder::Exchange::IPower::SuspendToRAM:
+                    case Thunder::Exchange::IPower::Hibernate:
                         buffer[0] = POWER_STATUS_STANDBY;
                         break;
                     default:
@@ -169,4 +169,4 @@ namespace CEC {
 
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

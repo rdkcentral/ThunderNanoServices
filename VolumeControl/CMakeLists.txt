@@ -17,9 +17,9 @@
 
 project(VolumeControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -30,7 +30,11 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 set(PLAFORM_VOLUMECONTROL volumectrlplatform)
-set(PLUGIN_VOLUMECONTROL_AUTOSTART true CACHE STRING "Automatically start VolumeControl plugin")
+set(PLUGIN_VOLUMECONTROL_STARTMODE "Activated" CACHE STRING "Automatically start VolumeControl plugin")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -106,6 +110,6 @@ else ()
 endif ()
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

@@ -1,0 +1,7 @@
+startmode = "@PLUGIN_FIRMWARECONTROL_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("source", "@PLUGIN_FIRMWARECONTROL_SOURCE_LOCATION@")
+configuration.add("download", "@PLUGIN_FIRMWARECONTROL_DOWNLOAD_LOCATION@")
+configuration.add("waittime", "@PLUGIN_FIRMWARECONTROL_WAITTIME@")

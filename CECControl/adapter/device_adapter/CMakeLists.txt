@@ -18,7 +18,8 @@
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 find_package(Threads REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 
 message(STATUS "Building ${CEC_DEVICE_ADAPTER_LIBRARY_NAME} for ${CEC_DEVICE_ADAPTER_IMPLEMENTATION}")
 
@@ -34,7 +35,8 @@ target_link_libraries(${CEC_DEVICE_ADAPTER_LIBRARY_NAME}
         _cec_common_includes
         Threads::Threads
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing)
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
 if("${CEC_DEVICE_ADAPTER_IMPLEMENTATION}" STREQUAL "Nexus")
     find_package(NEXUS REQUIRED)

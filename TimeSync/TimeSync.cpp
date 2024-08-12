@@ -20,7 +20,7 @@
 #include "TimeSync.h"
 #include "NTPClient.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -29,7 +29,7 @@ namespace Plugin {
             // Version
             1, 0, 0,
             // Preconditions
-            { subsystem::INTERNET },
+            {},
             // Terminations
             {},
             // Controls
@@ -47,10 +47,10 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     TimeSync::TimeSync()
         : _skipURL(0)
         , _periodicity(0)
-        , _client(Core::Service<NTPClient>::Create<Exchange::ITimeSync>())
-        , _activity(Core::ProxyType<PeriodicSync>::Create(_client))
+        , _client(Core::ServiceType<NTPClient>::Create<Exchange::ITimeSync>())
         , _sink(this)
-        , _service(nullptr)
+        , _subSystem(nullptr)
+        , _job(*this)
     {
         RegisterAll();
     }
@@ -64,37 +64,41 @@ POP_WARNING()
 
     /* virtual */ const string TimeSync::Initialize(PluginHost::IShell* service)
     {
-        Config config;
-        config.FromString(service->ConfigLine());
-        string version = service->Version();
-        _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
-        _periodicity = config.Periodicity.Value() * 60 /* minutes */ * 60 /* seconds */ * 1000 /* milliSeconds */;
-        bool start = (((config.Deferred.IsSet() == true) && (config.Deferred.Value() == true)) == false);
-
-        NTPClient::SourceIterator index(config.Sources.Elements());
-
-        static_cast<NTPClient*>(_client)->Initialize(index, config.Retries.Value(), config.Interval.Value());
-
         ASSERT(service != nullptr);
-        ASSERT(_service == nullptr);
-        _service = service;
-        _service->AddRef();
 
-        _sink.Initialize(_client, start);
+        string message;
+        _subSystem = service->SubSystems();
+        if (_subSystem != nullptr) {
 
-        // On success return empty, to indicate there is no error text.
-        return _T("");
+            Config config;
+            config.FromString(service->ConfigLine());
+            _skipURL = static_cast<uint16_t>(service->WebPrefix().length());
+            _periodicity = config.Periodicity.Value() * 60 /* minutes */ * 60 /* seconds */ * 1000 /* milliSeconds */;
+            bool start = (((config.Deferred.IsSet() == true) && (config.Deferred.Value() == true)) == false);
+
+            NTPClient::SourceIterator index(config.Sources.Elements());
+
+            static_cast<NTPClient*>(_client)->Initialize(index, config.Retries.Value(), config.Interval.Value());
+
+            _sink.Initialize(_client, start);
+        } else {
+            message = _T("Subsystem could not be obtained, TimeSync init failed");
+        }
+
+        return message;
     }
 
     /* virtual */ void TimeSync::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        Core::IWorkerPool::Instance().Revoke(_activity);
-        _sink.Deinitialize();
+        ASSERT(service != nullptr);
 
-        ASSERT(_service != nullptr);
-        ASSERT(_service == service);
-        _service->Release();
-        _service = nullptr;
+        if (_subSystem != nullptr) {
+            _job.Revoke();
+            _sink.Deinitialize();
+
+            _subSystem->Release();
+            _subSystem = nullptr;
+        }
     }
 
     /* virtual */ string TimeSync::Information() const
@@ -164,7 +168,7 @@ POP_WARNING()
                     if (result->ErrorCode == Web::STATUS_OK) {
                         // Stop automatic synchronisation
                         _client->Cancel();
-                        Core::IWorkerPool::Instance().Revoke(_activity);
+                        _job.Revoke();
 
                         if (newTime.IsValid()) {
                             Core::SystemInfo::Instance().SetTime(newTime);
@@ -194,7 +198,7 @@ POP_WARNING()
 
             // Seems we are synchronised with the time. Schedule the next timesync.
             TRACE(Trace::Information, (_T("Waking up again at %s."), newSyncTime.ToRFC1123(false).c_str()));
-            Core::IWorkerPool::Instance().Schedule(newSyncTime, _activity);
+            _job.Reschedule(newSyncTime);
 
             event_timechange();
         }
@@ -202,18 +206,12 @@ POP_WARNING()
 
     void TimeSync::EnsureSubsystemIsActive()
     {
-        ASSERT(_service != nullptr);
-        PluginHost::ISubSystem* subSystem = _service->SubSystems();
-        ASSERT(subSystem != nullptr);
+        ASSERT(_subSystem != nullptr);
 
-        if (subSystem != nullptr) {
-            if (subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
-                subSystem->Set(PluginHost::ISubSystem::TIME, _client);
-            }
-
-            subSystem->Release();
+        if (_subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
+            _subSystem->Set(PluginHost::ISubSystem::TIME, _client);
         }
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -1,8 +1,8 @@
-# - Try to find WDMP-C
+# - Try to find Procps
 # Once done this will define
-#  PROCPS_FOUND - System has WDMP-C
-#  PROCPS_INCLUDE_DIRS - The WDMP-C include directories
-#  PROCPS_LIBRARIES - The libraries needed to use WDMP-C
+#  PROCPS_FOUND - System has Procps
+#  PROCPS_INCLUDE_DIRS - The Procps include directories
+#  PROCPS_LIBRARIES - The libraries needed to use Procps
 #
 # Copyright (C) 2019 Metrological.
 #

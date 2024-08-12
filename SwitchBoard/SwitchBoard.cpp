@@ -19,7 +19,7 @@
  
 #include "SwitchBoard.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -45,8 +45,8 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         , _activeCallsign(nullptr)
         , _sink(this)
         , _service(nullptr)
-        , _job(Core::ProxyType<Core::IDispatchType<void>>(Core::ProxyType<Job>::Create(this)))
         , _state(INACTIVE)
+        , _job(*this)
     {
     }
 
@@ -109,17 +109,23 @@ POP_WARNING()
         return (_service != nullptr ? _T("") : _T("No group of callsigns available."));
     }
 
-    /* virtual */ void SwitchBoard::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void SwitchBoard::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
-        ASSERT(_switches.size() > 1);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
+            ASSERT(_switches.size() > 1);
 
-        Deinitialize();
-        _switches.clear();
+            for (auto& index: _switches) {
+                index.second.Unregister(&_sink);
+            }
+            _switches.clear();
 
-        _service->Unregister(&_sink);
-        _service->Release();
-        _service = nullptr;
+            Deinitialize();
+
+            _service->Unregister(&_sink);
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     /* virtual */ string SwitchBoard::Information() const
@@ -128,14 +134,14 @@ POP_WARNING()
         return (string());
     }
 
-    /* virtual */ void SwitchBoard::Inbound(Web::Request& request)
+    /* virtual */ void SwitchBoard::Inbound(Web::Request& request VARIABLE_IS_NOT_USED)
     {
         // No body required...
     }
 
     /* virtual */ Core::ProxyType<Web::Response> SwitchBoard::Process(const Web::Request& request)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::Factories::Instance().Response());
+        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
 
         TRACE(Trace::Information, (string(_T("Received request"))));
 
@@ -191,25 +197,32 @@ POP_WARNING()
 
     void SwitchBoard::Register(Exchange::ISwitchBoard::INotification* notification)
     {
+        ASSERT(notification != nullptr);
+
         _adminLock.Lock();
 
-        ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), notification) == _notificationClients.end());
+        std::list<Exchange::ISwitchBoard::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), notification));
 
-        _notificationClients.push_back(notification);
+        ASSERT(index == _notificationClients.end());
+
+        if (index == _notificationClients.end()) {
+            _notificationClients.push_back(notification);
+        }
 
         _adminLock.Unlock();
     }
 
     void SwitchBoard::Unregister(Exchange::ISwitchBoard::INotification* notification)
     {
+        ASSERT(notification != nullptr);
+
         _adminLock.Lock();
 
         std::list<Exchange::ISwitchBoard::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), notification));
 
         ASSERT(index != _notificationClients.end());
 
-        if (index != _notificationClients.end())
-        {
+        if (index != _notificationClients.end()) {
             _notificationClients.erase(index);
         }
 
@@ -415,7 +428,7 @@ POP_WARNING()
         _adminLock.Unlock();
     }
 
-    void SwitchBoard::Activated(const string& callsign, PluginHost::IShell* plugin)
+    void SwitchBoard::Activated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
     {
         _adminLock.Lock();
         std::map<string, Entry>::iterator index(_switches.find(callsign));
@@ -426,7 +439,7 @@ POP_WARNING()
         _adminLock.Unlock();
     }
 
-    void SwitchBoard::Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    void SwitchBoard::Deactivated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
     {
         _adminLock.Lock();
         std::map<string, Entry>::iterator index(_switches.find(callsign));
@@ -436,7 +449,7 @@ POP_WARNING()
             index->second.Unregister(&_sink);
             if ((_state == IDLE) && (&(index->second) == _activeCallsign)) {
                 _state = INPROGRESS;
-                PluginHost::WorkerPool::Instance().Submit(_job);
+                _job.Submit();
             }
         }
         _adminLock.Unlock();
@@ -450,7 +463,7 @@ POP_WARNING()
 
             if (_state == IDLE) {
                 _state = INPROGRESS;
-                PluginHost::WorkerPool::Instance().Submit(_job);
+                _job.Submit();
             }
 
             _adminLock.Unlock();

@@ -3,7 +3,7 @@
   "info": {
     "title": "FileTransfer Plugin",
     "callsign": "FileTransfer",
-    "locator": "libWPEFrameworkFileTransfer.so",
+    "locator": "libThunderFileTransfer.so",
     "status": "alpha",
     "description": "The FileTransfer plugin provides web browsing functionality based on the FileTransfer engine.",
     "version": "1.0"

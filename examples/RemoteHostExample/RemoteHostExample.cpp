@@ -20,10 +20,10 @@
 #include "RemoteHostExample.h"
 #include "interfaces/IRemoteInvocation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(RemoteHostExample, 1, 0);
+    SERVICE_REGISTRATION(RemoteHostExample, 1, 0)
 
     const string RemoteHostExample::Initialize(PluginHost::IShell* service) 
     {

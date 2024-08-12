@@ -1,7 +1,7 @@
-find_package(WPEFramework)
+find_package(Thunder)
 
 find_package(${NAMESPACE}Core REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(${NAMESPACE}LocalTracer REQUIRED)
 
 add_executable(cec_device_adapter_test
@@ -23,6 +23,6 @@ target_link_libraries(cec_device_adapter_test PRIVATE
     CompileSettingsDebug::CompileSettingsDebug
     ${NAMESPACE}Core::${NAMESPACE}Core
     ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer
-    ${NAMESPACE}Tracing::${NAMESPACE}Tracing)
+    ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
-install(TARGETS cec_device_adapter_test DESTINATION bin)
+install(TARGETS cec_device_adapter_test DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Test)

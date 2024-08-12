@@ -19,7 +19,7 @@
  
 #include "Spark.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Spark {
 
@@ -34,7 +34,7 @@ namespace Plugin {
             // Version
             1, 0, 0,
             // Preconditions
-            { subsystem::INTERNET, subsytem::GRAPHICS },
+            { subsystem::INTERNET, subsystem::GRAPHICS },
             // Terminations
             {},
             // Controls
@@ -86,15 +86,11 @@ namespace Plugin {
 
                 const RPC::IRemoteConnection *connection = _service->RemoteConnection(_connectionId);
                 if (connection != nullptr) {
-                    _memory = WPEFramework::Spark::MemoryObserver(connection->RemoteId());
+                    _memory = Thunder::Spark::MemoryObserver(connection->RemoteId());
                     ASSERT(_memory != nullptr);
                     connection->Release();
                 }
             }
-        }
-
-        if (message.length() != 0) {
-           Deinitialize(service);
         }
 
         return message;
@@ -102,51 +98,53 @@ namespace Plugin {
 
     /* virtual */ void Spark::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        // Make sure the Activated and Deactivated are no longer called before we
-        // start cleaning up..
-        _service->Unregister(&_notification);
+            // Make sure the Activated and Deactivated are no longer called before we
+            // start cleaning up..
+            _service->Unregister(&_notification);
 
-        if(_spark != nullptr){
-            UnregisterAll();
-            _spark->Unregister(&_notification);
+            if (_spark != nullptr) {
+                UnregisterAll();
+                _spark->Unregister(&_notification);
 
-             PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
-            // In case Spark crashed, there is no access to the statecontrol interface,
-            // check it !!
-            if (stateControl != nullptr) {
-                stateControl->Unregister(&_notification);
-                stateControl->Release();
-            } else {
-                // On behalf of the crashed process, we will release the notification sink.
-                _notification.Release();
+                PluginHost::IStateControl* stateControl(_spark->QueryInterface<PluginHost::IStateControl>());
+                // In case Spark crashed, there is no access to the statecontrol interface,
+                // check it !!
+                if (stateControl != nullptr) {
+                    stateControl->Unregister(&_notification);
+                    stateControl->Release();
+                } else {
+                    // On behalf of the crashed process, we will release the notification sink.
+                    _notification.Release();
+                }
+
+                if (_memory != nullptr) {
+                    _memory->Release();
+                    _memory = nullptr;
+                }
+
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _spark->Release();
+                _spark = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // The process can disappear in the meantime...
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
 
-            if(_memory != nullptr) {
-                _memory->Release();
-                _memory = nullptr;
-            }
-
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED uint32_t result = _spark->Release();
-            _spark = nullptr;
-            // It should have been the last reference we are releasing,
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
-            }
+            // Deinitialize what we initialized..
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
         }
-
-        // Deinitialize what we initialized..
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
     }
 
     /* virtual */ string Spark::Information() const

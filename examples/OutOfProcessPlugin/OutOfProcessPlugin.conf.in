@@ -1,0 +1,9 @@
+startmode = "@PLUGIN_OUTOFPROCESSPLUGIN_STARTMODE@"
+resumed = "@PLUGIN_OUTOFPROCESSPLUGIN_RESUMED@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_OUTOFPROCESSPLUGIN_MODE@")
+configuration.add("root", root)
+

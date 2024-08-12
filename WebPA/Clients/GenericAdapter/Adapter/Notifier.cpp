@@ -19,7 +19,7 @@
  
 #include "Notifier.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 Notifier::Notifier(Parameter* parameter)
@@ -98,6 +98,7 @@ string Notifier::Process(const NotifyData& notifyData)
                 TRACE(Trace::Information, (_T("paramValue: %d"), param->Value().Boolean()));
                 Core::JSON::Variant value(static_cast<bool>(param->Value().Integer()));
                 notfierPayload.Value = value;
+                break;
             }
             case Variant::ParamType::TypeUnsignedLong:
             {
@@ -224,4 +225,4 @@ void Notifier::StringToLower(string& str)
 }
 
 } // WebPA
-} // WPEFramework
+} // Thunder

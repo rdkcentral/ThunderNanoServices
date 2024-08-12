@@ -23,7 +23,7 @@
 #define MODULE_NAME Plugin_BluetoothRemoteControl
 #endif
 
-#include <bluetooth/bluetooth.h>
+#include <bluetooth/gatt/bluetooth_gatt.h>
 #include <plugins/plugins.h>
 
 #undef EXTERNAL

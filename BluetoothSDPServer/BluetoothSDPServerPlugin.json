@@ -1,0 +1,72 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Bluetooth SDP Server Plugin",
+    "callsign": "BluetoothSDPServer",
+    "locator": "libThunderBluetoothSDPServer.so",
+    "status": "alpha",
+    "description": [ "The Bluetooth SDP Server runs a service discovery server for Bluetooth devices.",
+                     "The SDP server may be required for some audio source devices and is mandatory for discovery by nearby audio sink devices. "],
+    "version": "1.0",
+    "acronyms": {
+      "SDP": "Service Discovery Protocol"
+    }
+  },
+  "configuration": {
+    "type": "object",
+    "required": [ "configuration" ],
+    "description": "BluetoothSDPServer service configuration",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [ "controller" ],
+        "properties": {
+          "controller": {
+            "type": "string",
+            "description": "Callsign of the Bluetooth controller service (typically *BluetoothControl*)"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Name of the service provider (e.g. device manufacturer)"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Service settings",
+              "required": [ "callsign" ],
+              "properties": {
+                "class": {
+                  "type": "string",
+                  "enum": [ "a2dp-audio-sink", "a2dp-audio-source" ],
+                  "description": "Class of the Bluetooth service"
+                },
+                "callsign": {
+                  "type": "string",
+                  "description": "Callsign of the service providing the functionality"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the service advertised over SDP"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of the service advertised over SDP"
+                },
+                "public": {
+                  "type": "boolean",
+                  "description": "Indicates if the service is listed in SDP PublicBrowseRoot group"
+                },
+                "parameters": {
+                  "type": "object",
+                  "description": "Service-specific configuration parameters",
+                  "properties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

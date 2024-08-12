@@ -28,7 +28,7 @@
 
 #include <vector>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SmartScreen
@@ -36,8 +36,7 @@ namespace Plugin {
           private alexaSmartScreenSDK::sampleApp::SampleApplication {
     public:
         SmartScreen()
-            : _service(nullptr)
-            , m_thunderVoiceHandler(nullptr)
+            : m_thunderVoiceHandler(nullptr)
         {
         }
 
@@ -91,12 +90,11 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        bool Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, const std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& configJsonStreams);
+        bool Init(PluginHost::IShell* service, const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder, const std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& configJsonStreams);
         bool InitSDKLogs(const string& logLevel);
         bool JsonConfigToStream(std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& streams, const std::string& configFile);
 
     private:
-        PluginHost::IShell* _service;
         std::shared_ptr<ThunderVoiceHandler<alexaSmartScreenSDK::sampleApp::gui::GUIManager>> m_thunderVoiceHandler;
 #if defined(KWD_PRYON)
         std::unique_ptr<alexaClientSDK::acsdkKWDImplementations::AbstractKeywordDetector> m_keywordDetector;

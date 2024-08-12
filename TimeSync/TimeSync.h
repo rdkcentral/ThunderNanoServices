@@ -24,7 +24,7 @@
 #include <interfaces/ITimeSync.h>
 #include <interfaces/json/JsonData_TimeSync.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class TimeSync : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -170,36 +170,6 @@ namespace Plugin {
             Core::JSON::DecUInt16 Periodicity;
         };
 
-        class PeriodicSync : public Core::IDispatch {
-        private:
-            PeriodicSync() = delete;
-            PeriodicSync(const PeriodicSync&) = delete;
-            PeriodicSync& operator=(const PeriodicSync&) = delete;
-
-        public:
-            PeriodicSync(Exchange::ITimeSync* timeSync)
-                : _timeSync(timeSync)
-            {
-                ASSERT(timeSync != nullptr);
-
-                _timeSync = timeSync;
-                _timeSync->AddRef();
-            }
-            ~PeriodicSync()
-            {
-                _timeSync->Release();
-            }
-
-        public:
-            void Dispatch() override
-            {
-                _timeSync->Synchronize();
-            }
-
-        private:
-            Exchange::ITimeSync* _timeSync;
-        };
-
     private:
         TimeSync(const TimeSync&) = delete;
         TimeSync& operator=(const TimeSync&) = delete;
@@ -229,6 +199,12 @@ namespace Plugin {
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
     private:
+        friend Core::ThreadPool::JobType<TimeSync&>;
+        void Dispatch()
+        {
+            TRACE(Trace::Information, (_T("TimeSync: job is dispatched")));
+            _client->Synchronize();
+        }
         void SyncedTime(const uint64_t timeTicks);
         void EnsureSubsystemIsActive();
 
@@ -245,12 +221,13 @@ namespace Plugin {
         uint16_t _skipURL;
         uint32_t _periodicity;
         Exchange::ITimeSync* _client;
-        Core::ProxyType<Core::IDispatch> _activity;
-        Core::Sink<Notification> _sink;
-        PluginHost::IShell* _service;
+        Core::SinkType<Notification> _sink;
+        PluginHost::ISubSystem* _subSystem;
+
+        Core::WorkerPool::JobType<TimeSync&> _job;
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder
 
 #endif // TIMESYNC_H

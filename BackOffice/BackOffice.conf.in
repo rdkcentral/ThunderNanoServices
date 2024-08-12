@@ -1,0 +1,15 @@
+startmode = "@PLUGIN_BACKOFFICE_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("server_address", "@PLUGIN_BACKOFFICE_SERVER_ADDRESS@")
+configuration.add("server_port", "@PLUGIN_BACKOFFICE_SERVER_PORT@")
+configuration.add("customer", "@PLUGIN_BACKOFFICE_CUSTOMER@")
+configuration.add("platform", "@PLUGIN_BACKOFFICE_PLATFORM@")
+configuration.add("country", "@PLUGIN_BACKOFFICE_COUNTRY@")
+configuration.add("type", "@PLUGIN_BACKOFFICE_TYPE@")
+configuration.add("session", "@PLUGIN_BACKOFFICE_SESSION@")
+if "@PLUGIN_BACKOFFICE_CALLSIGN_MAPPING@" != "":
+    configuration.add("callsign_mapping", "@PLUGIN_BACKOFFICE_CALLSIGN_MAPPING@".split(';'))
+if "@PLUGIN_BACKOFFICE_STATE_MAPPING@" != "":
+    configuration.add("state_mapping", "@PLUGIN_BACKOFFICE_STATE_MAPPING@".split(';'))

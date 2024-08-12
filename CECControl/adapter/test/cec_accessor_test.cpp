@@ -36,14 +36,14 @@
 
 #include <core/core.h>
 #include <localtracer/localtracer.h>
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 
 #include "../CECAccessor.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-using namespace WPEFramework::CEC;
-using namespace WPEFramework;
+using namespace Thunder::CEC;
+using namespace Thunder;
 
 namespace {
 struct conversion_entry {
@@ -146,7 +146,7 @@ public:
     {
         TRACE(Trace::Information, ("Start %s(%p) - config file: %s", __FUNCTION__, this, filename.c_str()));
 
-        WPEFramework::Core::File configFile(filename.c_str());
+        Thunder::Core::File configFile(filename.c_str());
 
         if (configFile.Exists() && configFile.Open(true)) {
             _config.IElement::FromFile(configFile);
@@ -164,7 +164,7 @@ public:
 
             string name = iface.Name.Value();
             string config = iface.Config.Value();
-            WPEFramework::CEC::IAccessor::Instance()->Announce(name, config);
+            Thunder::CEC::IAccessor::Instance()->Announce(name, config);
 
             Config::InterfaceConfig ifaceconfig;
             ifaceconfig.FromString(config);
@@ -205,7 +205,7 @@ public:
             iface.FromString(index.Current().Value());
 
             string name = iface.Name.Value();
-            WPEFramework::CEC::IAccessor::Instance()->Revoke(name);
+            Thunder::CEC::IAccessor::Instance()->Revoke(name);
         }
 
         TRACE(Trace::Information, ("Exit %s done...", __FUNCTION__));
@@ -224,7 +224,7 @@ public:
                 string interface;
                 GetAdapter(interface, role);
 
-                WPEFramework::CEC::Adapter adapter = WPEFramework::CEC::IAccessor::Instance()->GetAdapter(interface, role);
+                Thunder::CEC::Adapter adapter = Thunder::CEC::IAccessor::Instance()->GetAdapter(interface, role);
 
                 if (adapter.IsValid()) {
                     for (uint8_t dest = CEC_LOGICAL_ADDRESS_TV; dest <= CEC_LOGICAL_ADDRESS_SPECIFIC; dest++) {
@@ -252,7 +252,7 @@ public:
                 string interface;
                 GetAdapter(interface, role);
 
-                WPEFramework::CEC::Adapter adapter = WPEFramework::CEC::IAccessor::Instance()->GetAdapter(interface, role);
+                Thunder::CEC::Adapter adapter = Thunder::CEC::IAccessor::Instance()->GetAdapter(interface, role);
 
                 if (adapter.IsValid()) {
                     for (uint8_t dest = CEC_LOGICAL_ADDRESS_TV; dest <= CEC_LOGICAL_ADDRESS_SPECIFIC; dest++) {
@@ -470,7 +470,7 @@ int main(int argc, const char* argv[])
         std::cout << "Dispose...." << std::endl
                   << std::flush;
 
-        WPEFramework::Core::Singleton::Dispose();
+        Thunder::Core::Singleton::Dispose();
     }
 
     std::cout << "Ok, bye! " << std::endl

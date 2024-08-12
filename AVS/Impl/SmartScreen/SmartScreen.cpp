@@ -74,10 +74,10 @@
 #include <cctype>
 #include <fstream>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(SmartScreen, 1, 0);
+    SERVICE_REGISTRATION(SmartScreen, 1, 0)
 
     using namespace alexaClientSDK;
 
@@ -123,8 +123,6 @@ namespace Plugin {
         bool status = true;
 
         ASSERT(service != nullptr);
-        ASSERT(_service == nullptr);
-        _service = service;
 
         config.FromString(configuration);
         const std::string logLevel = config.LogLevel.Value();
@@ -185,13 +183,13 @@ namespace Plugin {
         }
 #endif
         if (status == true) {
-            status = Init(audiosource, enableKWD, pathToInputFolder, configJsonStreams);
+            status = Init(service, audiosource, enableKWD, pathToInputFolder, configJsonStreams);
         }
 
         return status;
     }
 
-    bool SmartScreen::Init(const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder VARIABLE_IS_NOT_USED, const std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& configJsonStreams)
+    bool SmartScreen::Init(PluginHost::IShell* service, const std::string& audiosource, const bool enableKWD, const std::string& pathToInputFolder VARIABLE_IS_NOT_USED, const std::shared_ptr<std::vector<std::shared_ptr<std::istream>>>& configJsonStreams)
     {
         auto builder = avsCommon::avs::initialization::InitializationParametersBuilder::create();
         if (!builder) {
@@ -667,7 +665,7 @@ namespace Plugin {
                 return false;
             }
 
-            m_thunderVoiceHandler = ThunderVoiceHandler<alexaSmartScreenSDK::sampleApp::gui::GUIManager>::create(sharedDataStream, _service, audiosource, aspInputInteractionHandler, *compatibleAudioFormat);
+            m_thunderVoiceHandler = ThunderVoiceHandler<alexaSmartScreenSDK::sampleApp::gui::GUIManager>::create(sharedDataStream, service, audiosource, aspInputInteractionHandler, *compatibleAudioFormat);
             if (!m_thunderVoiceHandler) {
                 TRACE(AVSClient, (_T("Failed to create m_thunderVoiceHandler")));
                 return false;

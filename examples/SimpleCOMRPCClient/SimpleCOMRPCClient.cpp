@@ -24,9 +24,9 @@
 #include <plugins/plugins.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE);
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class Math : public Exchange::IMath {
 public:
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
         Exchange::IWallClock* clock(nullptr);
         Sink* sink = nullptr; 
         Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
-        Math* outbound = Core::Service<Math>::Create<Math>();
+        Math* outbound = Core::ServiceType<Math>::Create<Math>();
         printf("Channel: %s:[%d]\n\n", comChannel.HostAddress().c_str(), comChannel.PortNumber());
 
         do {
@@ -175,6 +175,19 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
+            case 'R':
+                printf("Revoking our IMath interface to te otherside..!\n");
+                if (client->IsOpen() == true) {
+                    uint32_t result = client->Revoke<Exchange::IMath>(outbound);
+
+                    if (result == Core::ERROR_NONE) {
+                        printf("Our IMath nterface has been Revoked from the other side!\n");
+                    }
+                    else {
+                        printf("Our revoke has not been accepted, Error: %d!\n", result);
+                    }
+                }
+                break;
             case 'C':
                 if (clock != nullptr) {
                     printf("There is no need to create a clock, we already have one!\n");
@@ -188,10 +201,10 @@ int main(int argc, char* argv[])
                         break;
                     } else {
                         if (type == ServerType::STANDALONE_SERVER) {
-                            clock = client->Aquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
+                            clock = client->Acquire<Exchange::IWallClock>(3000, _T("WallClockImplementation"), ~0);
                         }
                         else {
-                            WPEFramework::PluginHost::IShell* controller = client->Aquire<WPEFramework::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            Thunder::PluginHost::IShell* controller = client->Acquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
                             if (controller == nullptr) {
                                 printf("Could not get the IShell* interface from the controller to execute the QueryInterfaceByCallsign!\n");
                             }
@@ -212,7 +225,7 @@ int main(int argc, char* argv[])
 
                         }
                     } else {
-                        printf("Aquired the IWallclock, ready for use\n");
+                        printf("Acquired the IWallclock, ready for use\n");
                     }
                 }
                 break;
@@ -253,7 +266,7 @@ int main(int argc, char* argv[])
                     }
                 }
                 else {
-                    sink = Core::Service<Sink>::Create<Sink>(10); // Fire each 10 Seconds
+                    sink = Core::ServiceType<Sink>::Create<Sink>(10); // Fire each 10 Seconds
                     uint32_t result = clock->Arm(10, sink);
                     if (result == Core::ERROR_NONE) {
                         printf("We set the callback on the wallclock. We will be updated\n");

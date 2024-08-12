@@ -19,7 +19,7 @@
  
 #include "FileTransfer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -48,7 +48,7 @@ namespace Plugin {
         return string();
     }
 
-    void FileTransfer::Deinitialize(PluginHost::IShell* service)
+    void FileTransfer::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         _observer.Unregister();
     }
@@ -58,4 +58,4 @@ namespace Plugin {
         return string();
     }
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

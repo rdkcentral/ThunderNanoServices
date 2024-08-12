@@ -18,7 +18,7 @@
  */
 #include "ResourceMonitor.h"
 
-namespace WPEFramework
+namespace Thunder
 {
 
     namespace Plugin
@@ -65,38 +65,35 @@ namespace WPEFramework
                 }
             }
 
-            if(message.length() != 0) {
-                Deinitialize(service);
-            }
-
             return message;
         }
 
-        void ResourceMonitor::Deinitialize(PluginHost::IShell *service)
+        void ResourceMonitor::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
         {
-            ASSERT(_service == _service);
+            if (_service != nullptr) {
+                ASSERT(_service == _service);
 
-            _service->Unregister(&_notification);
+                _service->Unregister(&_notification);
 
-            if (_monitor != nullptr)
-            {
-                RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
-                VARIABLE_IS_NOT_USED uint32_t result = _monitor->Release();
-                _monitor = nullptr;
-                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                if (_monitor != nullptr) {
 
-                // The process can disappear in the meantime...
-                if (connection != nullptr)
-                {
-                    // Connection is still there.
-                    connection->Terminate();
-                    connection->Release();
+                    RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
+                    VARIABLE_IS_NOT_USED uint32_t result = _monitor->Release();
+                    _monitor = nullptr;
+                    ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                    // The process can disappear in the meantime...
+                    if (connection != nullptr) {
+                        // Connection is still there.
+                        connection->Terminate();
+                        connection->Release();
+                    }
                 }
-            }
 
-            _connectionId = 0;
-            _service->Release();
-            _service = nullptr;
+                _connectionId = 0;
+                _service->Release();
+                _service = nullptr;
+            }
         }
 
         string ResourceMonitor::Information() const
@@ -118,4 +115,4 @@ namespace WPEFramework
 
         /* static */ Core::ProxyPoolType<Web::TextBody> ResourceMonitor::webBodyFactory(4);
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

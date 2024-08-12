@@ -94,10 +94,10 @@ public:
     {
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-        ProducerEvent(WPEFramework::Exchange::ProducerEvents::PairingStarted);
+        ProducerEvent(Thunder::Exchange::ProducerEvents::PairingStarted);
         bool _enabled = true;
 
-        ProducerEvent(WPEFramework::Exchange::ProducerEvents::PairingSuccess);
+        ProducerEvent(Thunder::Exchange::ProducerEvents::PairingSuccess);
 
         return true;
     }
@@ -105,14 +105,14 @@ public:
     {
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-        ProducerEvent(WPEFramework::Exchange::ProducerEvents::UnpairingStarted);
+        ProducerEvent(Thunder::Exchange::ProducerEvents::UnpairingStarted);
         bool _enabled = false;
 
         while (_pressedKeys.empty() == false) {
             ReleaseKey();
         }
 
-        ProducerEvent(WPEFramework::Exchange::ProducerEvents::UnpairingSuccess);
+        ProducerEvent(Thunder::Exchange::ProducerEvents::UnpairingSuccess);
 
         return true;
     }
@@ -170,7 +170,7 @@ private:
 };
 }
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -235,4 +235,4 @@ namespace CEC {
 
         } // namespace Message
     } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

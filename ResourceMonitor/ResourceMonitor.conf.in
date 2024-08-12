@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_RESOURCEMONITOR_STARTMODE@"
+resumed = "@PLUGIN_RESOURCEMONITOR_RESUMED@"
+
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_RESOURCEMONITOR_MODE@")
+configuration.add("root", rootobject)

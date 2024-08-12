@@ -26,7 +26,7 @@
 
 #include <memory>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     using namespace alexaClientSDK;
@@ -254,4 +254,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

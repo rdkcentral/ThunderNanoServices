@@ -23,7 +23,7 @@ find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
-add_library(${TARGET}
+add_library(${TARGET} SHARED
         RPI.cpp)
 
 target_link_libraries(${TARGET}
@@ -38,5 +38,5 @@ set_target_properties(${TARGET} PROPERTIES
         FRAMEWORK FALSE)
 
 install(TARGETS ${TARGET}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/Compositor COMPONENT ${NAMESPACE}_Runtime
         )

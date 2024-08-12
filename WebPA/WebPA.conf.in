@@ -1,0 +1,35 @@
+startmode = "@PLUGIN_WEBPA_STARTMODE@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_WEBPA_MODE@")
+configuration.add("root", root)
+
+configuration.add("interface", "@PLUGIN_WEBPA_INTERFACE@")
+configuration.add("pingwaittime", "@PLUGIN_WEBPA_PINGWAITTIME@")
+configuration.add("webpaurl", "@PLUGIN_WEBPA_WEBPAURL@")
+configuration.add("paroduslocalurl", "@PLUGIN_WEBPA_PARODUSLOCALURL@")
+configuration.add("partnerid", "@PLUGIN_WEBPA_PARTENRID@")
+configuration.add("webpabackoffmax", "@PLUGIN_WEBPA_BACKOFFMAX@")
+configuration.add("sslcertpath", "@PLUGIN_WEBPA_CERTPATH@")
+configuration.add("forceipv4", "true")
+
+if boolean("@PLUGIN_WEBPA_CCSP@"):
+    configuration.add("ccspclienturl", "@PLUGIN_WEBPA_CCSP_CLIENTURL@")
+    configuration.add("ccspconfigfile", "@PLUGIN_WEBPA_CCSP_CONFIGFILE@")
+    configuration.add("ccspdatafile", "@PLUGIN_WEBPA_CCSP_DATAFILE@")
+
+if boolean("@PLUGIN_WEBPA_GENERIC_ADAPTER@"):
+    configuration.add("genericclienturl", "@PLUGIN_WEBPA_GENERICCLIENTURL@")
+    configuration.add("datamodelfile", "@PLUGIN_WEBPA_DATAMODELFILE@")
+    configuration.add("notifyconfigfile", "@PLUGIN_WEBPA_NOTIFYCONFIGFILE@")
+    configuration.add("maxclientretry", "@PLUGIN_WEBPA_GENERICCLIENT_MAXRETRY@")
+
+    if boolean("@PLUGIN_WEBPA_DEVICE_INFO@"):
+        profile_list = []
+        profile_config = JSON()
+        profile_config.add("profilename", "DeviceInfo")
+        profile_config.add("profilecontrol", "DeviceControl")
+        profile_list.append(profile_config)
+        configuration.add("profiles", profile_list)

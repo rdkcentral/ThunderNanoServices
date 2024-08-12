@@ -27,7 +27,7 @@
 #include <interfaces/json/JsonData_StateControl.h>
 #include <interfaces/json/JApplication.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 class Cobalt: public PluginHost::IPlugin,
@@ -194,7 +194,7 @@ private:
     Exchange::IApplication *_application;
     Exchange::IMemory *_memory;
     PluginHost::IShell *_service;
-    Core::Sink<Notification> _notification;
+    Core::SinkType<Notification> _notification;
     string _persistentStoragePath;
 };
 }

@@ -1,0 +1,38 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Yin Plugin",
+    "callsign": "Yin",
+    "locator": "libThunderYin.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "required": [ "configuration" ],
+    "description": "Yin service configuration",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [ "etymology" ],
+        "properties": {
+          "yangcallsign": {
+            "type": "string",
+            "description": "Callsign of the Yang service (typically *Yang*)"
+          },
+          "etymology": {
+            "type": "string",
+            "description": "Describes the meaning of yin"
+          },
+          "datafile": {
+            "type": "string",
+            "description": "Name of the data file"
+          }
+        }
+      }
+    }
+  },
+  "interface": {
+    "$ref": "{cppinterfacedir}/IYin.h"
+  }
+}

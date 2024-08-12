@@ -21,7 +21,7 @@
 
 #include <png.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -224,8 +224,6 @@ namespace Plugin {
 
     /* virtual */ void Snapshot::Deinitialize(PluginHost::IShell*)
     {
-        ASSERT(_device != nullptr);
-
         if (_device != nullptr) {
             _device->Release();
             _device = nullptr;

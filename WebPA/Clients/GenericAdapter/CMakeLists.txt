@@ -18,18 +18,19 @@
 set(TARGET GenericAdapter)
 message("Setup ${TARGET} v${PROJECT_VERSION}...")
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
-find_package(WDMP-C REQUIRED)
-find_package(TinyXML REQUIRED)
-find_package(LibParodus REQUIRED)
 find_package(GLIB REQUIRED)
+find_package(LibParodus REQUIRED)
+find_package(NanoMsg REQUIRED)
+find_package(TinyXML REQUIRED)
+find_package(WDMP-C REQUIRED)
+find_package(WRP-C REQUIRED)
 
-
-add_library(${TARGET}
+add_library(${TARGET} SHARED
     Handler/Handler.cpp
     Adapter/DataModel/DataModel.cpp
     Adapter/Notifier.cpp
@@ -54,10 +55,12 @@ target_link_libraries(${TARGET}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        WDMP-C::WDMP-C
-        TinyXML::TinyXML
-        LibParodus::LibParodus
         ${GLIB_LIBRARIES}
+        LibParodus::LibParodus
+        NanoMsg::NanoMsg
+        TinyXML::TinyXML
+        WDMP-C::WDMP-C
+        WRP-C::WRP-C
 )
 
 target_compile_definitions(${TARGET} PRIVATE ${PLUGIN_DEFINITIONS})
@@ -67,10 +70,10 @@ set_target_properties(${TARGET} PROPERTIES SUFFIX ".webpa")
 set_target_properties(${TARGET} PROPERTIES PREFIX "")
 install(
     TARGETS ${TARGET}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebPA
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/WebPA COMPONENT ${NAMESPACE}_Runtime
 )
 install(
     FILES data-model.xml
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebPA)
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/WebPA COMPONENT ${NAMESPACE}_Runtime)
 
 add_subdirectory(Profiles)

@@ -23,7 +23,7 @@
 #include "Utils.h"
 #include "DataModel.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace WebPA {
 
@@ -45,11 +45,11 @@ public:
     Parameter(Handler* handler, DataModel* dataModel);
     virtual ~Parameter();
 
-    const void Values(const std::vector<std::string>& parameterNames, std::map<std::vector<Data>, WebPAStatus>& parametersList) const;
+    void Values(const std::vector<std::string>& parameterNames, std::map<std::vector<Data>, WebPAStatus>& parametersList) const;
     WebPAStatus Values(const std::vector<Data>& parameters, std::vector<WebPAStatus>& status);
 
 private:
-    const WebPAStatus Values(const std::string& parameterName, std::vector<Data>& parameters) const;
+    WebPAStatus Values(const std::string& parameterName, std::vector<Data>& parameters) const;
     WebPAStatus Values(const Data& parameter);
 
 private:
@@ -60,4 +60,4 @@ private:
 };
 
 } // WebPA
-} // WPEFramework
+} // Thunder

@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::white_circle:**
 
-A SystemCommands plugin for Thunder framework.
+SystemCommands plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -55,7 +55,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
@@ -73,15 +73,15 @@ The table below lists configuration options of the plugin.
 | :-------- | :-------- | :-------- |
 | callsign | string | Plugin instance name (default: *SystemCommands*) |
 | classname | string | Class name: *SystemCommands* |
-| locator | string | Library name: *libWPEFrameworkSystemCommands.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| locator | string | Library name: *libThunderSystemCommands.so* |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- [SystemCommands.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/SystemCommands.json)
+- [SystemCommands.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/SystemCommands.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -93,7 +93,6 @@ SystemCommands interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [usbreset](#method.usbreset) | Resets a USB device |
-
 
 <a name="method.usbreset"></a>
 ## *usbreset [<sup>method</sup>](#head.Methods)*
@@ -130,12 +129,12 @@ With this method a USB device can be reset using USBFS_RESET ioctl command.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "SystemCommands.1.usbreset",
-    "params": {
-        "device": "/dev/usb/001"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "SystemCommands.1.usbreset",
+  "params": {
+    "device": "/dev/usb/001"
+  }
 }
 ```
 
@@ -143,9 +142,9 @@ With this method a USB device can be reset using USBFS_RESET ioctl command.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 

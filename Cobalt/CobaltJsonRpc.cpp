@@ -22,7 +22,7 @@
 #include <interfaces/json/JsonData_StateControl.h>
 #include "Cobalt.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
 using namespace JsonData::Browser;
@@ -225,4 +225,4 @@ void Cobalt::event_statechange(const bool &suspended) /* StateControl */
 }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

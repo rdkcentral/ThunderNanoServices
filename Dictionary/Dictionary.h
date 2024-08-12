@@ -23,7 +23,7 @@
 #include "Module.h"
 #include <interfaces/IDictionary.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Dictionary : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IDictionary {
@@ -134,10 +134,10 @@ namespace Plugin {
             }
             // IUnknown implementation
             // -----------------------------------------------
-            void AddRef() const override
+            uint32_t AddRef() const override
             {
                 ASSERT(_lifeTime != nullptr);
-                _lifeTime->AddRef();
+                return(_lifeTime->AddRef());
             }
             uint32_t Release() const override
             {
@@ -365,7 +365,7 @@ namespace Plugin {
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
         const string Initialize(PluginHost::IShell* service) override;
 
-        // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
+        // The plugin is unloaded from Thunder. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
@@ -380,23 +380,23 @@ namespace Plugin {
         // Whenever a request is received, it might carry some additional data in the body. This method allows
         // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
         // in the body of the request.
-        void Inbound(WPEFramework::Web::Request& request) override;
+        void Inbound(Thunder::Web::Request& request) override;
 
         // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
         // do our thing and to return the result in the response object. Here the actual specific module work,
         // based on a a request is handled.
-        Core::ProxyType<Web::Response> Process(const WPEFramework::Web::Request& request) override;
+        Core::ProxyType<Web::Response> Process(const Thunder::Web::Request& request) override;
 
         //  IDictionary methods
         // -------------------------------------------------------------------------------------------------------
         // Direct method to Get a value from a key in a certain namespace from the dictionary.
         // NameSpace and key MUST be filled.
-        bool Get(const string& nameSpace, const string& key, string& value) const override;
+        Core::hresult Get(const string& nameSpace, const string& key, string& value) const override;
         IDictionary::IIterator* Get(const string& nameSpace) const override;
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
         // NameSpace and key MUST be filled.
-        bool Set(const string& nameSpace, const string& key, const string& value) override;
+        Core::hresult Set(const string& nameSpace, const string& key, const string& value) override;
         void Register(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
         void Unregister(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
 

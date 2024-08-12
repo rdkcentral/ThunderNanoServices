@@ -33,7 +33,7 @@
 #include <mutex>
 #include <thread>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     /// Responsible for making an interaction on audio data
@@ -342,4 +342,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

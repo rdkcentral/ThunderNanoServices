@@ -26,6 +26,8 @@ find_package(${NAMESPACE}Core REQUIRED)
 
 set(LIB_NAME PlayerPlatform${PLAYER_NAME})
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 add_library(${LIB_NAME} STATIC
     PlayerImplementation.cpp)
 
@@ -44,4 +46,4 @@ target_link_libraries(${LIB_NAME}
         ${GLIB_LIBRARIES})
 
 install(TARGETS ${LIB_NAME}
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)
+	DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${NAMESPACE}_Development)

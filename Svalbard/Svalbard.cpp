@@ -19,7 +19,7 @@
 
 #include "Svalbard.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -28,16 +28,15 @@ namespace Plugin {
             // Version
             1, 0, 0,
             // Preconditions
-            { subsystem::PLATFORM },
+            { subsystem::PLATFORM, subsystem::PROVISIONING },
             // Terminations
             {},
             // Controls
-            {}
+            { subsystem::CRYPTOGRAPHY }
         );
     }
 
-
-    const string Svalbard::Initialize(PluginHost::IShell* service) /* override */ 
+    const string Svalbard::Initialize(PluginHost::IShell* service) /* override */
     {
         string message;
 
@@ -54,45 +53,50 @@ namespace Plugin {
 
         if (_svalbard == nullptr) {
             message = _T("Svalbard could not be instantiated.");
-        } else {
-            printf("Svalbard - Connection Id - %u\n",_connectionId);
-            _svalbard->Configure(_service);
         }
+        else {
+            if (_svalbard->Configure(_service) == Core::ERROR_NONE) {
+                PluginHost::ISubSystem* const subSystems = service->SubSystems();
+                ASSERT(subSystems != nullptr);
 
-        if (message.length() != 0) {
-            Deinitialize(service);
+                if (subSystems != nullptr) {
+                    subSystems->Set(PluginHost::ISubSystem::CRYPTOGRAPHY, nullptr);
+                    subSystems->Release();
+                }
+            }
         }
 
         return message;
     }
 
-    void Svalbard::Deinitialize(PluginHost::IShell* service)  /* override */
+    void Svalbard::Deinitialize(PluginHost::IShell* service) /* override */
     {
-        ASSERT(_service == service);
+        ASSERT(service != nullptr);
 
-        _service->Unregister(&_notification);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        if (_svalbard != nullptr) {
+            _service->Unregister(&_notification);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            printf("Svalbard - Remote Connection  - %p\n",connection);
+            if (_svalbard != nullptr) {
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
-            _svalbard = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
+                _svalbard = nullptr;
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-            if (connection != nullptr) {
-                TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
+                if (connection != nullptr) {
+                    TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
 
-                connection->Terminate();
-                connection->Release();
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
+
+            _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
         }
-
-        _connectionId = 0;
-        _service->Release();
-        _service = nullptr;
-
     }
 
     string Svalbard::Information() const /* override */
@@ -111,5 +115,6 @@ namespace Plugin {
                 PluginHost::IShell::FAILURE));
         }
     }
+
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace

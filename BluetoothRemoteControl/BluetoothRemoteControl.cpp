@@ -19,7 +19,7 @@
 
 #include "BluetoothRemoteControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::BluetoothRemoteControl::recorder)
 
@@ -41,7 +41,7 @@ namespace Plugin {
             // Preconditions
             { subsystem::BLUETOOTH },
             // Terminations
-            { subsystem::BLUETOOTH },
+            { subsystem::NOT_BLUETOOTH },
             // Controls
             {}
         );
@@ -98,8 +98,8 @@ namespace Plugin {
 
     static const LUT<Exchange::IVoiceProducer::IProfile::codec, WAV::Recorder::codec> CodecTable({
 
-        { .from = Exchange::IVoiceProducer::IProfile::codec::PCM,   .to = WAV::Recorder::codec::PCM   },
-        { .from = Exchange::IVoiceProducer::IProfile::codec::ADPCM, .to = WAV::Recorder::codec::ADPCM }
+        { Exchange::IVoiceProducer::IProfile::codec::PCM,   WAV::Recorder::codec::PCM   },
+        { Exchange::IVoiceProducer::IProfile::codec::ADPCM, WAV::Recorder::codec::ADPCM }
 
     });
 
@@ -161,7 +161,7 @@ namespace Plugin {
                     Bluetooth::Address address (filename.c_str());
 
                     if (address.IsValid() == true)  {
-                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename);
+                        Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(filename, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                         Core::File fileData(storageDir.Current().c_str());
 
                         if (device != nullptr) {
@@ -187,24 +187,26 @@ namespace Plugin {
 
     void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        if (_recorder.IsOpen() == true) {
-            _recorder.Close();
+            if (_recorder.IsOpen() == true) {
+                _recorder.Close();
+            }
+
+            if (_gattRemote != nullptr) {
+                delete _gattRemote;
+                _gattRemote = nullptr;
+            }
+
+            if (_voiceHandler != nullptr) {
+                _voiceHandler->Release();
+                _voiceHandler = nullptr;
+            }
+
+            _service->Release();
+            _service = nullptr;
         }
-
-        if (_gattRemote != nullptr) {
-            delete _gattRemote;
-            _gattRemote = nullptr;
-        }
-
-        if (_voiceHandler != nullptr) {
-            _voiceHandler->Release();
-            _voiceHandler = nullptr;
-        }
-
-        _service->Release();
-        _service = nullptr;
     }
 
     string BluetoothRemoteControl::Information() const
@@ -212,12 +214,12 @@ namespace Plugin {
         return { };
     }
 
-    void BluetoothRemoteControl::Inbound(WPEFramework::Web::Request& /* request */)
+    void BluetoothRemoteControl::Inbound(Thunder::Web::Request& /* request */)
     {
         // Not needed
     }
 
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::Process(const WPEFramework::Web::Request& request)
+    Core::ProxyType<Web::Response> BluetoothRemoteControl::Process(const Thunder::Web::Request& request)
     {
         ASSERT(_skipURL <= request.Path.length());
         TRACE(Trace::Information, (_T("Received BluetoothRemoteControl request")));
@@ -350,7 +352,7 @@ namespace Plugin {
             ASSERT(_service != nullptr);
             Exchange::IBluetooth* bluetoothCtl(_service->QueryInterfaceByCallsign<Exchange::IBluetooth>(_controller));
             if (bluetoothCtl != nullptr) {
-                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address);
+                Exchange::IBluetooth::IDevice* device = bluetoothCtl->Device(address, Exchange::IBluetooth::IDevice::ADDRESS_LE_PUBLIC);
                 if (device != nullptr) {
                     _gattRemote = new GATTRemote(this, device, _configLine);
                     if (_gattRemote != nullptr) {
@@ -538,7 +540,7 @@ namespace Plugin {
             if (result == Core::ERROR_NONE) {
                 TRACE(Trace::Information, ("key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             } else {
-                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"))
+                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
             }
         }
 

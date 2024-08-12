@@ -1,0 +1,86 @@
+#  [  TV 1   ]    [   TV 2  ]
+#  [ 0.0.0.0 ]    [ 0.0.0.0 ]
+#  -----------    ----------
+#       3              4
+#       |              |
+#       |-----|  |-----|
+#             |  |
+# recorder--->1  2<---tuner, playback
+#          [   RPI   ]
+#          [ 3.0.0.0 ]
+#          [ 4.0.0.0 ]
+#          -----------
+#
+# [  TV 1  ]
+# {
+#   "interfaces": [
+#     {
+#       "name": "hdmi",
+#       "configuration": {
+#         "node": "/dev/cec-0",
+#         "roles": [
+#           "tv"
+#         ]
+#       }
+#     }
+#   ]
+# }
+#
+# [  TV 2  ]
+# {
+#   "interfaces": [
+#     {
+#       "name": "hdmi",
+#       "configuration": {
+#         "node": "/dev/cec-0",
+#         "roles": [
+#           "tv"
+#         ]
+#       }
+#     }
+#   ]
+# }
+#
+# [  RPI  ]
+# {
+#   "interfaces": [
+#     {
+#       "name": "front",
+#       "configuration": {
+#         "node": "/dev/cec0",
+#         "roles": [
+#           "recorder"
+#         ]
+#       }
+#     },
+#     {
+#       "name": "back",
+#       "configuration": {
+#         "node": "/dev/cec1",
+#         "roles": [
+#           "tuner",
+#           "playback"
+#         ]
+#       }
+#     }
+#   ]
+# }
+
+startmode = "@PLUGIN_CECCONTROL_STARTMODE@"
+
+configuration = JSON()
+
+if "@PLUGIN_CECCONTROL_INTERFACES@":
+    interface_list = []
+    for interface in "@PLUGIN_CECCONTROL_INTERFACES@".split(';'):
+        interface_attr = interface.split(':')
+        if len(interface_attr) == 3:
+            interface_item = JSON()
+            interface_item.add("name", interface_attr[0])
+            interface_configuration = JSON()
+            interface_configuration.add("node", interface_attr[1])
+            interface_configuration.add("roles", interface_attr[2].split(','))
+            interface_item.add("configuration", interface_configuration)
+            interface_list.append(interface_item)
+
+    configuration.add("interfaces", interface_list)

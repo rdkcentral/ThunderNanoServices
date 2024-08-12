@@ -2,14 +2,14 @@
 #include <iostream>
 #include <memory>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
-class UDPMessageOutput : public Messaging::IMessageOutput {
+class UDPMessageOutput : public Messaging::DirectOutput {
 private:
     class Channel : public Core::SocketDatagram {
     public:
         Channel(UDPMessageOutput& output, const string& binding, const uint16_t port)
-            : Core::SocketDatagram(false, Core::NodeId(binding.c_str(), port), Core::NodeId(), 0, Core::Messaging::MessageUnit::DataSize)
+            : Core::SocketDatagram(false, Core::NodeId(binding.c_str(), port), Core::NodeId(), 0, Messaging::MessageUnit::Instance().DataSize())
             , _output(output)
         {
             Open(0);
@@ -26,14 +26,14 @@ private:
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             uint16_t length = 0;
-            Core::Messaging::Information information;
-            Core::ProxyType<Core::Messaging::IEvent> message;
+            Core::Messaging::MessageInfo information;
+            Core::ProxyType<Messaging::TextMessage> message;
 
             length = information.Deserialize(dataFrame, receivedSize);
 
             if (length != 0 && length <= receivedSize) {
-                if (information.MessageMetaData().Type() == Core::Messaging::MetaData::MessageType::TRACING || information.MessageMetaData().Type() == Core::Messaging::MetaData::MessageType::LOGGING) {
-                    message = _factory.Create();
+                if (information.Type() == Messaging::MessageType::TRACING || information.Type() == Messaging::MessageType::LOGGING) {
+                    message = Core::ProxyType<Messaging::TextMessage>::Create();
                     length += message->Deserialize(dataFrame + length, receivedSize - length);
 
                     _output.Output(information, message.Origin());
@@ -59,7 +59,6 @@ private:
         }
 
     private:
-        Messaging::TraceFactory _factory;
         UDPMessageOutput& _output;
     };
 
@@ -104,24 +103,30 @@ public:
     {
     }
 
-    void Output(const Core::Messaging::Information& info, const Core::Messaging::IEvent* message)
+    void Output(const Core::Messaging::MessageInfo& info, const Core::Messaging::IEvent* message) const
     {
-        string deserializedMessage;
         std::ostringstream output;
 
-        message->ToString(deserializedMessage);
-        Core::Time now(info.TimeStamp());
+        const Core::Time now(info.TimeStamp());
 
         if (_abbreviated == true) {
             string time(now.ToTimeOnly(true));
-            output << '[' << time.c_str() << ']' << '[' << info.MessageMetaData().Category() << "]: " << deserializedMessage << std::endl;
+            output << '[' << time << "]:[" << info.Module() << "]:[" << info.Category()
+                << "]: " << message->Data() << std::endl;
         } else {
             string time(now.ToRFC1123(true));
-            output << '[' << time.c_str() << "]:[" << Core::FileNameOnly(info.FileName().c_str()) << ':' << info.LineNumber() << "] "
-                   << info.MessageMetaData().Category() << ": " << deserializedMessage << std::endl;
+            output << '[' << time;
+
+            if (info.Type() == Messaging::MessageType::TRACING) {
+                const Core::Messaging::IStore::Tracing& trace = static_cast<const Core::Messaging::IStore::Tracing&>(info);
+                output << Core::FileNameOnly(trace.FileName().c_str()) << ':' << trace.LineNumber()
+                       << "]:[" << trace.ClassName() << "]:[" << trace.Category();
+            }
+
+            output << "]: " << message->Data() << std::endl;
         }
 
-        _newLineQueue.Post(output.str());
+        const_cast<UDPMessageOutput*>(this)->_newLineQueue.Post(output.str());
     }
 
 private:

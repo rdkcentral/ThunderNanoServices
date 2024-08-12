@@ -24,7 +24,7 @@
 #include "Controller.h"
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Network::key)
 
@@ -36,7 +36,7 @@ ENUM_CONVERSION_BEGIN(WPASupplicant::Network::key)
     { WPASupplicant::Network::KEY_WPS_PBC, _TXT("PBC") },
     { WPASupplicant::Network::KEY_WPS_PIN, _TXT("PIN") },
 
-    ENUM_CONVERSION_END(WPASupplicant::Network::key);
+ENUM_CONVERSION_END(WPASupplicant::Network::key)
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Network::pair)
 
@@ -47,14 +47,14 @@ ENUM_CONVERSION_BEGIN(WPASupplicant::Network::pair)
     { WPASupplicant::Network::PAIR_ESS, _TXT("ESS") },
     { WPASupplicant::Network::PAIR_WPS, _TXT("WPS") },
 
-    ENUM_CONVERSION_END(WPASupplicant::Network::pair);
+ENUM_CONVERSION_END(WPASupplicant::Network::pair)
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Network::mode)
 
     { WPASupplicant::Network::MODE_STATION, _TXT("station") },
     { WPASupplicant::Network::MODE_AP, _TXT("AP") },
 
-    ENUM_CONVERSION_END(WPASupplicant::Network::mode);
+ENUM_CONVERSION_END(WPASupplicant::Network::mode)
 
 namespace WPASupplicant {
 
@@ -260,4 +260,4 @@ namespace WPASupplicant {
         }
     }
 }
-} // WPEFramework::WPASupplicant
+} // Thunder::WPASupplicant

@@ -15,10 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(WPEFramework)
+find_package(Thunder)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_subdirectory(include)
@@ -44,7 +44,7 @@ target_link_libraries(${CECADAPTER_LIBRARY_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing)
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
 if(CEC_TESTS)
     add_subdirectory(test)

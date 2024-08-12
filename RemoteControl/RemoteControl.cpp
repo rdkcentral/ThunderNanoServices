@@ -22,7 +22,7 @@
 #include "RemoteAdministrator.h"
 #include "RemoteControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static const string DefaultMappingTable(_T("default"));
@@ -217,19 +217,21 @@ POP_WARNING()
                     loadName += _T(".json");
                 }
 
+                // Get a table for producer.
+                PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
+
                 // See if we need to load a table.
                 string specific(MappingFile(loadName, service->PersistentPath(), service->DataPath()));
-
                 if ((specific.empty() == false) && (specific != mappingFile)) {
 
                     TRACE(Trace::Information, (_T("Opening map file: %s"), specific.c_str()));
 
-                    // Get our selves a table..
-                    PluginHost::VirtualInput::KeyMap& map(_inputHandler->Table(producer.c_str()));
                     Load(map, specific);
                     if (configList.IsValid() == true) {
                         map.PassThrough(configList.Current().PassOn.Value());
                     }
+                } else {
+                    map.PassThrough(true);
                 }
             }
 
@@ -310,8 +312,6 @@ POP_WARNING()
 
         // CLear the virtual devices.
         _virtualDevices.clear();
-
-        Remotes::RemoteAdministrator::Instance().RevokeAll();
     }
 
     /* virtual */ string RemoteControl::Information() const
@@ -847,12 +847,12 @@ POP_WARNING()
         _eventLock.Lock();
 
         //Make sure a sink is not registered multiple times.
-        if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) != _notificationClients.end())
-            return;
+        if (std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end()) {
 
-        TRACE(Trace::Information, (_T("Registered a client with RemoteControl")));
-        _notificationClients.push_back(sink);
-        sink->AddRef();
+            TRACE(Trace::Information, (_T("Registered a client with RemoteControl")));
+            _notificationClients.push_back(sink);
+            sink->AddRef();
+        }
 
         _eventLock.Unlock();
     }
@@ -864,12 +864,12 @@ POP_WARNING()
         std::list<Exchange::IRemoteControl::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
 
         // Make sure you do not unregister something you did not register !!!
-        if (index == _notificationClients.end())
-            return;
-
         if (index != _notificationClients.end()) {
-            (*index)->Release();
-            _notificationClients.erase(index);
+
+            if (index != _notificationClients.end()) {
+                (*index)->Release();
+                _notificationClients.erase(index);
+            }
         }
 
         _eventLock.Unlock();

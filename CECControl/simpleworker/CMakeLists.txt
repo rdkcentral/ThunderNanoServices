@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
@@ -26,7 +26,7 @@ add_library(SimpleWorker STATIC
 
 target_include_directories(SimpleWorker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
-    $<INSTALL_INTERFACE:include/${NAMESPACE}>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE}>)
 
 target_link_libraries(SimpleWorker
     PUBLIC

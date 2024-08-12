@@ -17,9 +17,9 @@
 
 project(Svalbard)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -27,13 +27,18 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_SVALBARD_AUTOSTART "true" CACHE STRING "Automatically start Svalbard plugin")
+set(PLUGIN_SVALBARD_STARTMODE "Activated" CACHE STRING "Automatically start Svalbard plugin")
 set(PLUGIN_SVALBARD_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
+set(PLUGIN_SVALBARD_LOCATION "objects" CACHE STRING "Location within VaultProvisioning persistent path to look for provisioned objects")
 
 # deprecated/legacy flags support
 if(PLUGIN_SVALBARD_OUTOFPROCESS STREQUAL "true")
     set(PLUGIN_SVALBARD_MODE "Local" CACHE STRING "Process mode"  FORCE)
     unset(PLUGIN_SVALBARD_OUTOFPROCESS CACHE)
+endif()
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -62,6 +67,6 @@ target_link_libraries(${MODULE_NAME}
 )
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

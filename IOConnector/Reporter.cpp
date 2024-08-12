@@ -21,7 +21,7 @@
 #include "Handler.h"
 #include "TimedInput.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -70,4 +70,4 @@ namespace Plugin {
     static HandlerAdministrator::Entry<Reporter> handler;
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

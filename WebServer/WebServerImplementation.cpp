@@ -20,8 +20,11 @@
 #include "Module.h"
 #include <interfaces/IMemory.h>
 #include <interfaces/IWebServer.h>
+#ifdef ENABLE_SECURITY_AGENT
+#include <securityagent/securityagent.h>
+#endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static Core::ProxyPoolType<Web::TextBody> _textBodies(5);
@@ -134,6 +137,7 @@ namespace Plugin {
                 , Interface()
                 , Path()
                 , IdleTime(180)
+                , SecurityAgent(false)
             {
                 Add(_T("port"), &Port);
                 Add(_T("binding"), &Binding);
@@ -141,6 +145,7 @@ namespace Plugin {
                 Add(_T("path"), &Path);
                 Add(_T("idletime"), &IdleTime);
                 Add(_T("proxies"), &Proxies);
+                Add(_T("securityagent"), &SecurityAgent);
             }
             ~Config() override = default;
 
@@ -151,6 +156,7 @@ namespace Plugin {
             Core::JSON::String Path;
             Core::JSON::DecUInt16 IdleTime;
             Core::JSON::ArrayType<Proxy> Proxies;
+            Core::JSON::Boolean SecurityAgent;
         };
 
         class RequestFactory {
@@ -330,7 +336,7 @@ namespace Plugin {
                 _proxies.clear();
             }
 
-            bool Relay(Core::ProxyType<Web::Request>& request, uint32_t channelId)
+            bool Relay(Core::ProxyType<Web::Request>& request, uint32_t channelId, const string& webToken)
             {
 
                 bool found = false;
@@ -362,6 +368,9 @@ namespace Plugin {
                     }
 
                     request->Path = (proxyPath + request->Path.substr(proxyPath.length()));
+                    if (!webToken.empty()) {
+                        request->WebToken = Web::Authorization(Web::Authorization::BEARER, webToken);
+                    }
 
                     (*index)->ProxyRequest(request, channelId);
                 }
@@ -517,6 +526,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
                 : Core::SocketServerType<IncomingChannel>()
                 , _accessor()
                 , _prefixPath()
+                , _webToken()
                 , _connectionCheckTimer(0)
                 , _cleanupTimer(Core::Thread::DefaultStackSize(), _T("ConnectionChecker"))
                 , _proxyMap(*this)
@@ -551,6 +561,8 @@ POP_WARNING()
                 uint32_t result(Core::ERROR_INCOMPLETE_CONFIG);
                 Core::NodeId listenNode(configuration.Binding.Value().c_str());
                 Core::JSON::ArrayType<Config::Proxy>::ConstIterator index(configuration.Proxies.Elements());
+
+                SetWebToken(configuration);
 
                 if (configuration.Path.IsSet() == false) {
                     _prefixPath.clear();
@@ -622,7 +634,7 @@ POP_WARNING()
             }
             bool Relay(Core::ProxyType<Web::Request>& request, const uint32_t id)
             {
-                return (_proxyMap.Relay(request, id));
+                return (_proxyMap.Relay(request, id, _webToken));
             }
             bool RelayComplete(const uint32_t id)
             {
@@ -645,6 +657,31 @@ POP_WARNING()
                 return (_prefixPath.empty() == false);
             }
         private:
+            void SetWebToken(const Config& configuration)
+            {
+                if (configuration.SecurityAgent.IsSet() && configuration.SecurityAgent.Value() == true) {
+#ifdef ENABLE_SECURITY_AGENT
+                    // Need to grab the localhost security token so that we can proxy request to
+                    // other plugins and get them authorized.
+                    int length;
+                    unsigned char buffer[2 * 1024];
+                    string payload = "{\"url\": \"http://localhost\"}";
+
+                    ::snprintf(reinterpret_cast<char*>(buffer), sizeof(buffer), "%s", payload.c_str());
+                    length = GetToken(static_cast<unsigned short>(sizeof(buffer)),
+                                      static_cast<unsigned short>(::strlen(reinterpret_cast<const char*>(buffer))),
+                                      buffer);
+                    if (length > 0) {
+                        _webToken.assign(string(reinterpret_cast<const char*>(buffer), length));
+                    }
+
+                    TRACE(Trace::Information, (_T("SetWebToken: Got token with length %d"), _webToken.length()));
+#else
+                    TRACE(Trace::Error, (_T("SetWebToken: Configured for SecurityAgent but no support enabled")));
+#endif /* ENABLE_SECURITY_AGENT */
+                }
+            }
+
             uint64_t Timed(const uint64_t)
             {
                 Core::Time NextTick(Core::Time::Now());
@@ -674,6 +711,7 @@ POP_WARNING()
         private:
             string _accessor;
             string _prefixPath;
+            string _webToken;
             uint32_t _connectionCheckTimer;
             Core::TimerType<TimeHandler> _cleanupTimer;
             ProxyMap _proxyMap;
@@ -755,16 +793,22 @@ POP_WARNING()
 
         void Register(PluginHost::IStateControl::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
 
             // Only subscribe an interface once.
-            ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
+            std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
+            ASSERT(index == _observers.end());
 
-            // We will keep a reference to this observer, reference it..
-            notification->AddRef();
-            _observers.push_back(notification);
+            if (index == _observers.end()) {
+                // We will keep a reference to this observer, reference it..
+                notification->AddRef();
+                _observers.push_back(notification);
+            }
         }
         void Unregister(PluginHost::IStateControl::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
 
@@ -804,7 +848,7 @@ POP_WARNING()
 
     };
 
-    SERVICE_REGISTRATION(WebServerImplementation, 1, 0);
+    SERVICE_REGISTRATION(WebServerImplementation, 1, 0)
 
     /* virtual */ void WebServerImplementation::IncomingChannel::Received(Core::ProxyType<Web::Request>& request)
     {
@@ -941,7 +985,7 @@ namespace WebServer {
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         ASSERT(connection != nullptr);
-        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        Exchange::IMemory* result = Core::ServiceType<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
         return (result);
     }
 }

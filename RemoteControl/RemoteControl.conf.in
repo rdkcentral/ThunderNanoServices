@@ -1,0 +1,81 @@
+startmode = "@PLUGIN_REMOTECONTROL_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("repeatstart", "@PLUGIN_REMOTECONTROL_REPEAT_START@")
+configuration.add("repeatinterval", "@PLUGIN_REMOTECONTROL_REPEAT_INTERVAL@")
+configuration.add("releasetimeout", "@PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT@")
+configuration.add("passon", "@PLUGIN_REMOTECONTROL_PASSON@")
+if "@PLUGIN_REMOTECONTROL_POSTLOOKUP_FILE@":
+    configuration.add("postlookupfile", "@PLUGIN_REMOTECONTROL_POSTLOOKUP_FILE@")
+
+device_list = []
+
+if boolean("@PLUGIN_REMOTECONTROL_IR@"):
+    device_config = JSON()
+    device_config.add("name", "IR")
+    device_config.add("mapfile", "ir-remote.json")
+    device_config.add("passon", "false")
+    settings = JSON()
+    if "@PLUGIN_REMOTECONTROL_CODEMASK@":
+        settings.add("codemask", "@PLUGIN_REMOTECONTROL_CODEMASK@")
+    else:
+        settings.add("repeatstart", 500)
+        settings.add("repeatinterval", 100)
+        settings.add("releasetimeout", 30000)
+    device_config.add("settings", settings)
+    device_list.append(device_config)
+
+if boolean("@PLUGIN_REMOTECONTROL_DEVINPUT@"):
+    device_config = JSON()
+    device_config.add("name", "DevInput")
+    device_config.add("mapfile", "devinput-remote.json")
+    device_config.add("passon", "false")
+    device_list.append(device_config)
+
+virtual_list = []
+
+virtual_config = JSON()
+virtual_config.add("name", "Web")
+virtual_config.add("mapfile", "web-remote.json")
+virtual_list.append(virtual_config)
+
+if "@PLUGIN_REMOTECONTROL_CUSTOM_VIRTUAL_NAME@":
+    virtual_config = JSON()
+    virtual_config.add("name", "@PLUGIN_REMOTECONTROL_CUSTOM_VIRTUAL_NAME@")
+    virtual_config.add(
+        "mapfile", "@PLUGIN_REMOTECONTROL_CUSTOM_VIRTUAL_MAP_FILE@")
+    virtual_list.append(virtual_config)
+
+if boolean("@PLUGIN_REMOTECONTROL_CEC@"):
+    virtual_config = JSON()
+    virtual_config.add("name", "CEC")
+    virtual_config.add("mapfile", "cec-remote.json")
+    virtual_list.append(virtual_config)
+
+if boolean("@RF4CE_FOUND@"):
+    device_config = JSON()
+    device_config.add("name", "RF4CE")
+    device_config.add("mapfile", "rf4ce-remote.json")
+
+    settings = JSON()
+    settings.add("remoteid", "@PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID@")
+    settings.add("module", "@PLUGIN_REMOTECONTROL_RFCE_MODULE@")
+    settings.add("nodeid", "@PLUGIN_REMOTECONTROL_RFCE_NODE_ID@")
+    settings.add("autopairing", "@PLUGIN_REMOTECONTROL_RFCE_AUTOPAIRING@")
+    device_config.add("settings", settings)
+
+    device_list.append(device_config)
+
+configuration.add("devices", device_list)
+configuration.add("virtuals", virtual_list)
+
+if "@PLUGIN_REMOTECONTROL_POSTLOOKUP_CALLSIGN@":
+    link_list = []
+
+    link_config = JSON()
+    link_config.add("name", "@PLUGIN_REMOTECONTROL_POSTLOOKUP_CALLSIGN@")
+    link_config.add("mapfile", "@PLUGIN_REMOTECONTROL_POSTLOOKUP_MAPFILE@")
+    link_list.append(link_config)
+
+    configuration.add("links", link_list)

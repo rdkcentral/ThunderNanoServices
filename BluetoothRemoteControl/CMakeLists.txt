@@ -17,9 +17,11 @@
 
 project(BluetoothRemoteControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
+find_package(${NAMESPACE}Bluetooth REQUIRED)
+find_package(${NAMESPACE}BluetoothGATT REQUIRED)
 
 project_version(1.0.0)
 
@@ -27,12 +29,16 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Bluetooth REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set(PLUGIN_BLUETOOTHREMOTECONTROL_AUTOSTART true CACHE STRING true)
+set(PLUGIN_BLUETOOTHREMOTECONTROL_STARTMODE "Activated" CACHE STRING "Automatically start the plugin")
 
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp
@@ -47,21 +53,26 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+target_compile_options(${MODULE_NAME}
+    PRIVATE
+        -Wno-psabi
+        -fdiagnostics-color=always)
+
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth)
+        ${NAMESPACE}Bluetooth::${NAMESPACE}Bluetooth
+        ${NAMESPACE}BluetoothGATT::${NAMESPACE}BluetoothGATT)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 install(
 	DIRECTORY keymaps/
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/${PROJECT_NAME}
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/${PROJECT_NAME}
+    COMPONENT ${NAMESPACE}_Runtime
 	FILES_MATCHING PATTERN "*.json")
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
 
 write_config()

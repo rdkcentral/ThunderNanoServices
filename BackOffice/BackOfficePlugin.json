@@ -1,0 +1,69 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+        "title": "BackOffice Plugin",
+        "callsign": "BackOffice",
+        "locator": "libThunderBackOffice.so",
+        "status": "development",
+        "description": "The BackOffice plugin responsible for monitoring lifecycle of observables and passing this info to the server",
+        "version": "1.0"
+    },
+    "configuration": {
+        "type": "object",
+        "required": [
+            "configuration"
+        ],
+        "properties": {
+            "configuration": {
+                "type": "object",
+                "required": [
+                    "server_address",
+                    "server_port",
+                    "customer",
+                    "platform",
+                    "country",
+                    "callsign_mapping",
+                    "state_mapping"
+                ],
+                "properties": {
+                    "server_address": {
+                        "type": "string",
+                        "description": "Back office server address"
+                    },
+                    "server_port": {
+                        "type": "number",
+                        "description": "Back office server port"
+                    },
+                    "customer": {
+                        "type": "string",
+                        "description": "Customer name"
+                    },
+                    "platform": {
+                        "type": "string",
+                        "description": "Platform name"
+                    },
+                    "country": {
+                        "type": "string",
+                        "description": "Country code"
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Type"
+                    },
+                    "session": {
+                        "type": "number",
+                        "description": "session number"
+                    },
+                    "callsign_mapping": {
+                        "type": "string",
+                        "description": "Mapping on how to map callsigns to server accepted names"
+                    },
+                    "state_mapping": {
+                        "type": "string",
+                        "description": "Mapping on how to map state to server accepted states"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+startmode = "@PLUGIN_SVALBARD_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("location", "@PLUGIN_SVALBARD_LOCATION@")
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_SVALBARD_MODE@")
+rootobject.add("user", "@PLUGIN_SVALBARD_USER@")
+rootobject.add("group", "@PLUGIN_SVALBARD_GROUP@")
+
+configuration.add("root", rootobject)

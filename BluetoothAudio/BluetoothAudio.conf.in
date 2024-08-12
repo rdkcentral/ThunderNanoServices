@@ -1,0 +1,30 @@
+startmode = "@PLUGIN_BLUETOOTHAUDIO_STARTMODE@"
+
+server = JSON()
+server.add("interface", "@PLUGIN_BLUETOOTHAUDIO_INTERFACE@")
+server.add("inactivitytimeout", "@PLUGIN_BLUETOOTHAUDIO_INACTIVITYTIMEOUT@")
+
+sink = JSON()
+sink.add("latency", "@PLUGIN_BLUETOOTHAUDIO_SINK_LATENCY@")
+
+codecs = JSON()
+LC_SBC = JSON()
+LC_SBC.add("preset", "@PLUGIN_BLUETOOTHAUDIO_SINK_CODECSBC_PRESET@")
+codecs.add("LC-SBC", LC_SBC)
+sink.add("codecs", codecs)
+
+source = JSON()
+source.add("connector", "@PLUGIN_BLUETOOTHAUDIO_SOURCE_CONNECTOR@")
+
+source_codecs_LC_SBC = JSON()
+source_codecs_LC_SBC.add("maxbitpool", "@PLUGIN_BLUETOOTHAUDIO_SOURCE_CODECSBC_MAXBITPOOL@")
+
+source_codecs = JSON()
+source_codecs.add("LC-SBC", source_codecs_LC_SBC)
+source.add("codecs", source_codecs)
+
+configuration = JSON()
+configuration.add("controller", "@PLUGIN_BLUETOOTHAUDIO_CONTROLLER@")
+configuration.add("server", server)
+configuration.add("sink", sink)
+configuration.add("source", source)

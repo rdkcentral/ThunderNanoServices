@@ -19,17 +19,17 @@
  
 #include "WebProxy.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::WebProxy::Config::Link::enumType){ Plugin::WebProxy::Config::Link::UDP, _TXT("udp") },
     { Plugin::WebProxy::Config::Link::TCP, _TXT("tcp") },
     { Plugin::WebProxy::Config::Link::SERIAL, _TXT("serial") },
-    ENUM_CONVERSION_END(Plugin::WebProxy::Config::Link::enumType);
+ENUM_CONVERSION_END(Plugin::WebProxy::Config::Link::enumType);
 
 ENUM_CONVERSION_BEGIN(Core::SerialPort::Parity){ Core::SerialPort::EVEN, _TXT("even") },
     { Core::SerialPort::ODD, _TXT("odd") },
     { Core::SerialPort::NONE, _TXT("none") },
-    ENUM_CONVERSION_END(Core::SerialPort::Parity);
+ENUM_CONVERSION_END(Core::SerialPort::Parity);
 
 namespace Plugin {
 
@@ -48,12 +48,12 @@ namespace Plugin {
     }
 
     class StreamChannel : public Core::StreamType<Core::SocketStream> {
-    private:
+    public:
         StreamChannel() = delete;
+        StreamChannel(StreamChannel&&) = delete;
         StreamChannel(const StreamChannel&) = delete;
         StreamChannel& operator=(const StreamChannel&) = delete;
 
-    public:
         StreamChannel(WebProxy::Connector& parent, const uint32_t bufferSize, const Core::NodeId& remote)
             : Core::StreamType<Core::SocketStream>(false, remote.AnyInterface(), remote, bufferSize, bufferSize)
             , _parent(parent)
@@ -66,7 +66,6 @@ namespace Plugin {
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
-
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
@@ -79,16 +78,16 @@ namespace Plugin {
     private:
         WebProxy::Connector& _parent;
     };
-
     class DatagramChannel : public Core::StreamType<Core::SocketDatagram> {
     private:
-        DatagramChannel();
-        DatagramChannel(const DatagramChannel&);
-        DatagramChannel& operator=(const DatagramChannel&);
-
-        typedef Core::StreamType<Core::SocketDatagram> BaseClass;
+        using BaseClass = Core::StreamType<Core::SocketDatagram>;
 
     public:
+        DatagramChannel() = delete;
+        DatagramChannel(DatagramChannel&&) = delete;
+        DatagramChannel(const DatagramChannel&) = delete;
+        DatagramChannel& operator=(const DatagramChannel&) = delete;
+
         DatagramChannel(WebProxy::Connector& parent, const uint32_t bufferSize, const Core::NodeId& remote)
             : Core::StreamType<Core::SocketDatagram>(false, remote.AnyInterface(), remote, bufferSize, bufferSize)
             , _parent(parent)
@@ -119,7 +118,6 @@ namespace Plugin {
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
-
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
@@ -132,14 +130,13 @@ namespace Plugin {
     private:
         WebProxy::Connector& _parent;
     };
-
     class DeviceChannel : public Core::StreamType<Core::SerialPort> {
-    private:
-        DeviceChannel();
-        DeviceChannel(const DeviceChannel&);
-        DeviceChannel& operator=(const DeviceChannel&);
-
     public:
+        DeviceChannel() = delete;
+        DeviceChannel(DeviceChannel&&) = delete;
+        DeviceChannel(const DeviceChannel&) = delete;
+        DeviceChannel& operator=(const DeviceChannel&) = delete;
+
         DeviceChannel(
             WebProxy::Connector& parent,
             const uint32_t bufferSize,
@@ -160,7 +157,6 @@ namespace Plugin {
         {
             return (_parent.SendData(dataFrame, maxSendSize));
         }
-
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
         {
             return (_parent.ReceiveData(dataFrame, receivedSize));
@@ -174,52 +170,7 @@ namespace Plugin {
         WebProxy::Connector& _parent;
     };
 
-    template <typename STREAMTYPE>
-    class ConnectorWrapper : public WebProxy::Connector {
-    private:
-        ConnectorWrapper() = delete;
-        ConnectorWrapper(const ConnectorWrapper<STREAMTYPE>&) = delete;
-        ConnectorWrapper<STREAMTYPE>& operator=(const ConnectorWrapper<STREAMTYPE>&) = delete;
-
-    public:
-PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
-        inline ConnectorWrapper(PluginHost::Channel& channel, const uint32_t bufferSize)
-            : WebProxy::Connector(channel, &_streamType)
-            , _streamType(*this, bufferSize)
-        {
-        }
-        inline ConnectorWrapper(PluginHost::Channel& channel, const uint32_t bufferSize, const Core::NodeId& remoteId)
-            : WebProxy::Connector(channel, &_streamType)
-            , _streamType(*this, bufferSize, remoteId)
-        {
-        }
-        inline ConnectorWrapper(
-            PluginHost::Channel& channel,
-            const uint32_t bufferSize,
-            const string& deviceName,
-            const Core::SerialPort::BaudRate baudrate,
-            const Core::SerialPort::Parity parityE,
-            const Core::SerialPort::DataBits dataBits,
-            const Core::SerialPort::StopBits stopBits,
-            const Core::SerialPort::FlowControl flowControl)
-            : WebProxy::Connector(channel, &_streamType)
-            , _streamType(*this, bufferSize, deviceName, baudrate, parityE, dataBits, stopBits, flowControl)
-        {
-        }
-POP_WARNING()
-        ~ConnectorWrapper() override = default;
-
-    public:
-        inline STREAMTYPE& Stream()
-        {
-            return (_streamType);
-        }
-
-    private:
-        STREAMTYPE _streamType;
-    };
-
-    /* virtual */ const string WebProxy::Initialize(PluginHost::IShell* service)
+    const string WebProxy::Initialize(PluginHost::IShell* service) /* override */ 
     {
         WebProxy::Config config;
         config.FromString(service->ConfigLine());
@@ -233,7 +184,10 @@ POP_WARNING()
 
             while (index.Next() == true) {
                 if (index.Current().Name.IsSet() == true) {
-                    _linkInfo.insert(std::pair<const string, Config::Link>(index.Current().Name.Value(), index.Current()));
+                    _linkInfo.emplace(
+                        std::piecewise_construct,
+                            std::forward_as_tuple(index.Current().Name.Value()),
+                            std::forward_as_tuple(index.Current()));
                 }
             }
         }
@@ -244,11 +198,11 @@ POP_WARNING()
         return (_T(""));
     }
 
-    /* virtual */ void WebProxy::Deinitialize(PluginHost::IShell* service)
+    void WebProxy::Deinitialize(PluginHost::IShell* service) /* override */
     {
         service->DisableWebServer();
 
-        for (auto connection: _connectionMap) {
+        for (std::pair<const uint32_t, Connector*>& connection : _connectionMap) {
             connection.second->Detach();
             delete connection.second;
         }
@@ -257,13 +211,13 @@ POP_WARNING()
 
     // Whenever a Channel (WebSocket connection) is created to the plugin that will be reported via the Attach.
     // Whenever the channel is closed, it is reported via the detach method.
-    /* virtual */ bool WebProxy::Attach(PluginHost::Channel& channel)
+    bool WebProxy::Attach(PluginHost::Channel& channel) /* override */
     {
         bool added = false;
         Core::NodeId nodeId;
 
         // First do a cleanup of all "completely" closed channels.
-        std::map<const uint32_t, Connector*>::iterator connection(_connectionMap.begin());
+        Connectors::iterator connection(_connectionMap.begin());
 
         while (connection != _connectionMap.end()) {
             if (connection->second->IsClosed() == true) {
@@ -279,7 +233,11 @@ POP_WARNING()
             Connector* newLink = CreateConnector(channel);
 
             if (newLink != nullptr) {
-                _connectionMap.insert(std::pair<uint32_t, Connector*>(channel.Id(), newLink));
+                _connectionMap.emplace(
+                    std::piecewise_construct,
+                        std::forward_as_tuple(channel.Id()),
+                        std::forward_as_tuple(newLink));
+
                 TRACE(Trace::Information, (Core::Format(_T("Proxy connection channel ID [%d] to %s"), channel.Id(), newLink->RemoteId().c_str()).c_str()));
                 added = true;
 
@@ -290,17 +248,17 @@ POP_WARNING()
         return (added);
     }
 
-    /* virtual */ void WebProxy::Detach(PluginHost::Channel& channel)
+    void WebProxy::Detach(PluginHost::Channel& channel) /* override */
     {
         // See if we can forward this info..
-        std::map<const uint32_t, Connector*>::iterator connection = _connectionMap.find(channel.Id());
+        Connectors::iterator connection = _connectionMap.find(channel.Id());
 
         if (connection != _connectionMap.end()) {
             connection->second->Detach();
         }
     }
 
-    /* virtual */ string WebProxy::Information() const
+    string WebProxy::Information() const /* override */
     {
         // No additional info to report.
         return (string());
@@ -310,12 +268,12 @@ POP_WARNING()
     // -------------------------------------------------------------------------------------------------------
     // Whenever a WebSocket is opened with a locator (URL) pointing to this plugin, it is capable of receiving
     // raw data for the plugin. Raw data received on this link will be exposed to the plugin via this interface.
-    /* virtual */ uint32_t WebProxy::Inbound(const uint32_t ID, const uint8_t data[], const uint16_t length)
+    uint32_t WebProxy::Inbound(const uint32_t ID, const uint8_t data[], const uint16_t length) /* override */
     {
         uint32_t result = length;
 
         // See if we can forward this info..
-        std::map<const uint32_t, Connector*>::iterator connection = _connectionMap.find(ID);
+        Connectors::iterator connection = _connectionMap.find(ID);
 
         if (connection != _connectionMap.end()) {
             result = connection->second->ChannelReceive(data, length);
@@ -326,12 +284,12 @@ POP_WARNING()
 
     // Whenever a WebSocket is opened with a locator (URL) pointing to this plugin, it is capable of sending
     // raw data to the initiator of the websocket.
-    /* virtual */ uint32_t WebProxy::Outbound(const uint32_t ID, uint8_t data[], const uint16_t length) const
+    uint32_t WebProxy::Outbound(const uint32_t ID, uint8_t data[], const uint16_t length) const /* override */
     {
         uint32_t result = 0;
 
         // See if we can forward this info..
-        std::map<const uint32_t, Connector*>::const_iterator connection = _connectionMap.find(ID);
+        Connectors::const_iterator connection = _connectionMap.find(ID);
 
         if (connection != _connectionMap.end()) {
             result = connection->second->ChannelSend(data, length);
@@ -350,31 +308,25 @@ POP_WARNING()
         Core::SerialPort::DataBits dataBits(Core::SerialPort::DataBits::BITS_8);
         Core::SerialPort::StopBits stopBits(Core::SerialPort::StopBits::BITS_1);
         Core::SerialPort::FlowControl flowControl(Core::SerialPort::FlowControl::OFF);
-        const string& options(channel.Query());
         bool datagram(false);
         bool text(false);
+        const string& options(channel.Query());
 
         if (options.empty() == false) {
-            Core::TextSegmentIterator index(Core::TextFragment(options), true, '&');
+            Core::URL::KeyValue keys(options);
 
-            while (index.Next() == true) {
-                Core::TextSegmentIterator section(index.Current(), true, '=');
-
-                if (section.Next() == true) {
-                    if ((section.Current() == _T("host")) && (section.Next() == true)) {
-                        host = section.Current();
-                    } else if ((section.Current() == _T("datagram")) && (section.Next() == false)) {
-                        datagram = true;
-                    } else if ((section.Current() == _T("text")) && (section.Next() == false)) {
-                        text = true;
-                    } else if ((section.Current() == _T("device")) && (section.Next() == true)) {
-                        device = section.Current();
-                    }
-                }
+            text     = (keys.HasKey(_T("Text"), true) == Core::URL::KeyValue::status::KEY_ONLY);
+            datagram = (keys.HasKey(_T("datagram"), true) == Core::URL::KeyValue::status::KEY_ONLY);
+            if (keys.HasKey(_T("host"), true) == Core::URL::KeyValue::status::KEY_VALUE) {
+                host = keys.Value(_T("host"), true);
             }
-        } else if (channel.Name().empty() == false) {
+            if (keys.HasKey(_T("device"), true) == Core::URL::KeyValue::status::KEY_VALUE) {
+                device = keys.Value(_T("device"), true);
+            }
+        }
+        else if (channel.Path().empty() == false) {
             // See of this name is registered ?
-            std::map<const string, Config::Link>::const_iterator index(_linkInfo.find(channel.Name()));
+            Links::const_iterator index(_linkInfo.find(channel.Path()));
 
             if (index != _linkInfo.end()) {
                 const Config::Link& linkInfo(index->second);
@@ -414,12 +366,12 @@ POP_WARNING()
             Core::NodeId remote(host.Text().c_str());
 
             if (datagram == true) {
-                result = new ConnectorWrapper<DatagramChannel>(channel, 1024, remote);
+                result = new ConnectorType<DatagramChannel>(channel, 1024, remote);
             } else {
-                result = new ConnectorWrapper<StreamChannel>(channel, 1024, remote);
+                result = new ConnectorType<StreamChannel>(channel, 1024, remote);
             }
         } else if ((device.Length() > 0) && (host.Length() == 0)) {
-            result = new ConnectorWrapper<DeviceChannel>(channel, 1024, device.Text(), baudRate, parity, dataBits, stopBits, flowControl);
+            result = new ConnectorType<DeviceChannel>(channel, 1024, device.Text(), baudRate, parity, dataBits, stopBits, flowControl);
         }
 
         if ((result != nullptr) && (text == true)) {

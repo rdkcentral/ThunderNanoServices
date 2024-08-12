@@ -20,7 +20,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SimpleCOMRPCPluginServer : public PluginHost::IPlugin {
@@ -77,11 +77,11 @@ namespace Plugin {
             ComNotificationSink(const ComNotificationSink&) = delete;
             ComNotificationSink& operator=(const ComNotificationSink&) = delete;
 
-            BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(PluginHost::IShell::ICOMLink::INotification)
+            BEGIN_INTERFACE_MAP(ComNotificationSink)
+                INTERFACE_ENTRY(PluginHost::IShell::ICOMLink::INotification)
             END_INTERFACE_MAP
 
-            void CleanedUp(const Core::IUnknown* remote, const uint32_t interfaceId) override
+            void Dangling(const Core::IUnknown* remote, const uint32_t interfaceId) override
             {
                 //not interested in this notification
                 TRACE(Trace::Information, (_T("Cleanup an interface: %d [%X] on object: [%s]"), interfaceId, interfaceId, typeid(*remote).name()));
@@ -309,7 +309,7 @@ POP_WARNING()
     private:
         WallClockNotifier _notifier;
         WallClock* _wallclock;
-        Core::Sink<ComNotificationSink> _comNotificationSink;
+        Core::SinkType<ComNotificationSink> _comNotificationSink;
     };
 }
 }

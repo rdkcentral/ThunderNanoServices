@@ -21,7 +21,7 @@
 
 #include "Parameter.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 class Notifier {
@@ -107,4 +107,4 @@ private:
 };
 
 } // WebPA
-} // WPEFramework
+} // Thunder

@@ -20,7 +20,7 @@
 #include "DIALServer.h"
 #include "interfaces/IAmazonPrime.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace DIALHandlers {
 
     class AmazonPrime : public Plugin::DIALServer::Default {
@@ -162,7 +162,7 @@ POP_WARNING()
         Exchange::IAmazonPrime* _prime;
         PluginHost::IShell* _service;
         PluginHost::IStateControl* _stateControl;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
         string _callsign;
 
     }; // class AmazonPrime

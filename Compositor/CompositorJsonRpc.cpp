@@ -21,7 +21,7 @@
 #include "Module.h"
 #include <interfaces/json/JsonData_Compositor.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -108,34 +108,34 @@ namespace Plugin {
     uint32_t Compositor::get_resolution(Core::JSON::EnumType<ResolutionType>& response) const
     {
         switch (Resolution()) {
-        case Exchange::IComposition::ScreenResolution_480i:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_480i:
             response = ResolutionType::E480I;
             break;
-        case Exchange::IComposition::ScreenResolution_480p:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_480p:
             response = ResolutionType::E480P;
             break;
-        case Exchange::IComposition::ScreenResolution_720p:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_720p:
             response = ResolutionType::E720P60;
             break;
-        case Exchange::IComposition::ScreenResolution_720p50Hz:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz:
             response = ResolutionType::E720P50;
             break;
-        case Exchange::IComposition::ScreenResolution_1080p24Hz:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz:
             response = ResolutionType::E1080P24;
             break;
-        case Exchange::IComposition::ScreenResolution_1080i50Hz:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz:
             response = ResolutionType::E1080I50;
             break;
-        case Exchange::IComposition::ScreenResolution_1080p50Hz:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz:
             response = ResolutionType::E1080P50;
             break;
-        case Exchange::IComposition::ScreenResolution_1080p60Hz:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz:
             response = ResolutionType::E1080P60;
             break;
-        case Exchange::IComposition::ScreenResolution_2160p50Hz:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz:
             response = ResolutionType::E2160P50;
             break;
-        case Exchange::IComposition::ScreenResolution_2160p60Hz:
+        case Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz:
             response = ResolutionType::E2160P60;
             break;
         default:
@@ -154,42 +154,42 @@ namespace Plugin {
     uint32_t Compositor::set_resolution(const Core::JSON::EnumType<ResolutionType>& param)
     {
         uint32_t result = Core::ERROR_UNKNOWN_KEY;
-        Exchange::IComposition::ScreenResolution resolution = Exchange::IComposition::ScreenResolution_Unknown;
+        Exchange::IComposition::ScreenResolution resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
 
         if (param != ResolutionType::UNKNOWN) {
             switch (param) {
             case ResolutionType::E480I:
-                resolution = Exchange::IComposition::ScreenResolution_480i;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_480i;
                 break;
             case ResolutionType::E480P:
-                resolution = Exchange::IComposition::ScreenResolution_480p;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_480p;
                 break;
             case ResolutionType::E720P60:
-                resolution = Exchange::IComposition::ScreenResolution_720p;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_720p;
                 break;
             case ResolutionType::E720P50:
-                resolution = Exchange::IComposition::ScreenResolution_720p50Hz;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_720p50Hz;
                 break;
             case ResolutionType::E1080P24:
-                resolution = Exchange::IComposition::ScreenResolution_1080p24Hz;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_1080p24Hz;
                 break;
             case ResolutionType::E1080I50:
-                resolution = Exchange::IComposition::ScreenResolution_1080i50Hz;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_1080i50Hz;
                 break;
             case ResolutionType::E1080P50:
-                resolution = Exchange::IComposition::ScreenResolution_1080p50Hz;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_1080p50Hz;
                 break;
             case ResolutionType::E1080P60:
-                resolution = Exchange::IComposition::ScreenResolution_1080p60Hz;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_1080p60Hz;
                 break;
             case ResolutionType::E2160P50:
-                resolution = Exchange::IComposition::ScreenResolution_2160p50Hz;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_2160p50Hz;
                 break;
             case ResolutionType::E2160P60:
-                resolution = Exchange::IComposition::ScreenResolution_2160p60Hz;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_2160p60Hz;
                 break;
             default:
-                resolution = Exchange::IComposition::ScreenResolution_Unknown;
+                resolution = Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
             }
 
             result = Resolution(resolution);

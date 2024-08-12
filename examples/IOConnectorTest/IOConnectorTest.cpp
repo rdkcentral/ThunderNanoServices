@@ -31,7 +31,7 @@
 #define INPUT_PIN_ID    16
 #define OUTPUT_PIN_ID   20
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Sink : public Exchange::IExternal::ICatalog::INotification {
@@ -43,11 +43,11 @@ namespace Plugin {
         ~Sink() override = default;
 
     public:
-        void Activated(Exchange::IExternal* source) override
+        void Activated(Exchange::IExternal* /* source */) override
         {
             printf("Sink::Activated called\n");
         }
-        void Deactivated(Exchange::IExternal* source) override
+        void Deactivated(Exchange::IExternal* /* source */) override
         {
             printf("Sink::Deactivated called\n");
         }
@@ -76,7 +76,7 @@ namespace Plugin {
 }
 }
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel)
 {
@@ -133,7 +133,6 @@ int main(int argc, char** argv)
             Core::ProxyType<RPC::CommunicatorClient>::Create(
                 comChannel,
                 Core::ProxyType<Core::IIPCServer>(engine)));
-        engine->Announcements(client->Announcement());
 
         ASSERT(client.IsValid() == true);
 
@@ -149,17 +148,17 @@ int main(int argc, char** argv)
         JSONRPC::LinkType<Core::JSON::IElement> jsonrpc(_T("IOConnector.1"), localCallsign, false, "");
         jsonrpc.Subscribe<JsonObject>(1000, _T("activity"), &Activity);
 
-        // Aquire interfaces over comrpc and register notification sinks
-        Exchange::IExternal::ICatalog* comrpc = client->Aquire<Exchange::IExternal::ICatalog>(2000, _T("IOConnector"), ~0);
+        // Acquire interfaces over comrpc and register notification sinks
+        Exchange::IExternal::ICatalog* comrpc = client->Acquire<Exchange::IExternal::ICatalog>(2000, _T("IOConnector"), ~0);
         ASSERT(comrpc != nullptr);
-        Core::Sink<Plugin::Sink> sink;
+        Core::SinkType<Plugin::Sink> sink;
         comrpc->Register(&sink);
 
-        Exchange::IInputPin::ICatalog* icomrpc = client->Aquire<Exchange::IInputPin::ICatalog>(2000, _T("IOConnector"), ~0);
+        Exchange::IInputPin::ICatalog* icomrpc = client->Acquire<Exchange::IInputPin::ICatalog>(2000, _T("IOConnector"), ~0);
         ASSERT(icomrpc != nullptr);
         Exchange::IInputPin* inputPin = icomrpc->IInputPinResource(INPUT_PIN_ID);
         ASSERT(inputPin != nullptr);
-        Core::Sink<Plugin::InputPinSink> isink;
+        Core::SinkType<Plugin::InputPinSink> isink;
         inputPin->Register(&isink);
 
         do {

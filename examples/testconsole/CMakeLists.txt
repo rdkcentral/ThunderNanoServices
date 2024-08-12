@@ -1,21 +1,33 @@
+project(testconsole)
+
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Cryptalgo REQUIRED)
 find_package(${NAMESPACE}WebSocket REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-set (WPEFRAMEWORK_TEST_TESTCONSOLE_SOURCES
+set (PLUGIN_TEST_TESTCONSOLE_SOURCES
         testconsole.cpp
         ../testserver/DataContainer.cpp
 )
 
-add_executable(testconsole ${WPEFRAMEWORK_TEST_TESTCONSOLE_SOURCES})
+add_executable(${MODULE_NAME} ${PLUGIN_TEST_TESTCONSOLE_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(testconsole
+target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
@@ -23,4 +35,4 @@ target_link_libraries(testconsole
         ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-install(TARGETS testconsole DESTINATION bin)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Test)

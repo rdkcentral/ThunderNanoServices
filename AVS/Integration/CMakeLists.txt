@@ -15,12 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_AVS_PERSISTENT_PATH "/root/AVS" CACHE STRING "AVS database directory location")
+set(PLUGIN_AVS_PERSISTENT_ROOT_PATH "/root" CACHE STRING "AVS database directory location")
+set(PLUGIN_AVS_PERSISTENT_PATH "${PLUGIN_AVS_PERSISTENT_ROOT_PATH}/${NAMESPACE}/AVS")
 
 # platform independent files
 install(DIRECTORY
     DESTINATION "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}"
-    COMPONENT ${MODULE_NAME})
+    COMPONENT ${NAMESPACE}_Runtime)
 
 # platform dependent files
 configure_file( "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json.in"
@@ -28,12 +29,12 @@ configure_file( "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/AlexaClientSDK
                 @ONLY)
 install(FILES "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/AlexaClientSDKConfig.json"
     DESTINATION "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}"
-    COMPONENT ${MODULE_NAME})
+    COMPONENT ${NAMESPACE}_Runtime)
 
 install(FILES "${CMAKE_CURRENT_LIST_DIR}/${PLUGIN_AVS_PLATFORM}/SmartScreenSDKConfig.json"
     DESTINATION "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}"
-    COMPONENT ${MODULE_NAME})
+    COMPONENT ${NAMESPACE}_Runtime)
 
 install(FILES "${PLUGIN_AVS_PLATFORM}/asound.conf"
     DESTINATION "/etc/"
-    COMPONENT ${MODULE_NAME})
+    COMPONENT ${NAMESPACE}_Runtime)

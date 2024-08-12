@@ -30,7 +30,7 @@
    https://www.kernel.org/doc/Documentation/power/interface.txt
    ============================================================================================ */
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 struct mode {
     Exchange::IPower::PCState id;
@@ -256,13 +256,13 @@ private:
 static PowerImplementation* implementation = nullptr;
 
 void power_initialize(power_state_change callback, void* userData, const char*,
-        const enum WPEFramework::Exchange::IPower::PCState state)
+        const enum Thunder::Exchange::IPower::PCState state)
 {
     ASSERT (implementation == nullptr);
     implementation = new PowerImplementation(callback, userData);
     if (implementation != nullptr) {
         if ((implementation->IsSupported(state)) &&
-                    (WPEFramework::Exchange::IPower::PCState::On != state)) {
+                    (Thunder::Exchange::IPower::PCState::On != state)) {
             implementation->SetState(state, 0);
         }
     }
@@ -276,7 +276,7 @@ void power_deinitialize() {
     }
 }
 
-uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState state, const uint32_t sleepTime) {
+uint32_t power_set_state(const enum Thunder::Exchange::IPower::PCState state, const uint32_t sleepTime) {
     uint32_t retStatus = Core::ERROR_GENERAL;
 
     ASSERT (implementation != nullptr);
@@ -295,10 +295,10 @@ uint32_t power_set_state(const enum WPEFramework::Exchange::IPower::PCState stat
     return retStatus;
 }
 
-WPEFramework::Exchange::IPower::PCState power_get_state() {
+Thunder::Exchange::IPower::PCState power_get_state() {
     ASSERT (implementation != nullptr);
 
-    WPEFramework::Exchange::IPower::PCState result = WPEFramework::Exchange::IPower::PCState::PowerOff;
+    Thunder::Exchange::IPower::PCState result = Thunder::Exchange::IPower::PCState::PowerOff;
 
     if (implementation != nullptr) {
         result = implementation->GetState();
@@ -306,7 +306,7 @@ WPEFramework::Exchange::IPower::PCState power_get_state() {
     return (result);
 }
 
-bool is_power_state_supported(const enum WPEFramework::Exchange::IPower::PCState state) {
+bool is_power_state_supported(const enum Thunder::Exchange::IPower::PCState state) {
     ASSERT (implementation != nullptr);
 
     if (implementation != nullptr) {

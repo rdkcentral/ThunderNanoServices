@@ -21,7 +21,7 @@
 
 // inspired by https://github.com/Pulse-Eight/libcec/blob/master/include/cectypes.h
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     typedef enum logical_address_type : uint8_t {
         CEC_LOGICAL_ADDRESS_TV = 0x00,
@@ -376,4 +376,4 @@ namespace CEC {
     } device_features_t;
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

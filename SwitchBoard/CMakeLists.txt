@@ -17,19 +17,23 @@
 
 project(SwitchBoard)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 set(PLUGIN_NAME SwitchBoard)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
-set(PLUGIN_SWITCHBOARD_AUTOSTART "true" CACHE BOOL "Automatically start SwitchBoard plugin")
+set(PLUGIN_SWITCHBOARD_STARTMODE "Activated" CACHE BOOL "Automatically start SwitchBoard plugin")
 set(PLUGIN_SWITCHBOARD_DEFAULT ""  CACHE STRING "Callsign of the plugin to be activated in case nothing is active.")
 set(PLUGIN_SWITCH_AMAZON false CACHE BOOL "Enable switch for Amazon plugin")
 set(PLUGIN_SWITCH_COBALT false CACHE BOOL "Enable switch for Cobalt plugin")
 set(PLUGIN_SWITCH_NETFLIX false CACHE BOOL "Enable switch for Netflix plugin")
 set(PLUGIN_SWITCH_WEBKITBROWSER false CACHE BOOL "Enable switch for WebKitBrowser plugin")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 # This is a plugin so we need the Plugin configuration section.
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -46,6 +50,6 @@ target_link_libraries(${MODULE_NAME}
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGENAME}/plugins)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGENAME}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

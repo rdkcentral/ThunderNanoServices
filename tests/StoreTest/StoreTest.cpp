@@ -30,7 +30,8 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
-namespace Thunder = WPEFramework;
+using namespace Thunder;
+
 static constexpr uint16_t MaxLoad = 50;
 typedef std::function<bool(const uint16_t)> PerformanceFunction;
 
@@ -38,13 +39,13 @@ static void Measure(const string& interface, const string& callSign, Performance
 {
     printf("Measurements [%s]:[%s]\n", interface.c_str(), callSign.c_str());
     uint64_t time;
-    Thunder::Core::SystemInfo& systemInfo(Thunder::Core::SystemInfo::Instance());
+    Core::SystemInfo& systemInfo(Core::SystemInfo::Instance());
     uint64_t loadBefore = systemInfo.GetCpuLoad();
     uint64_t freeRamBefore = systemInfo.GetFreeRam();
-    Thunder::Core::StopWatch measurement;
+    Core::StopWatch measurement;
 
-    printf("CPU Load: Before Test:  %llu\n", loadBefore);
-    printf("Free Memory: Before Test: %llu\n", freeRamBefore);
+    printf("CPU Load: Before Test:  %" PRIu64 "\n", loadBefore);
+    printf("Free Memory: Before Test: %" PRIu64 "\n", freeRamBefore);
     uint64_t loadInBetween, loadPeak = loadBefore;
     uint64_t freeRamBetween, freeRamPeak = freeRamBefore;
     for (uint32_t run = 0; run < MaxLoad; run++) {
@@ -68,31 +69,31 @@ static void Measure(const string& interface, const string& callSign, Performance
     if (loadPeak > loadBefore) {
         loadDiff = static_cast<uint64_t>(loadPeak - loadBefore);
     }
-    printf("Performance: Total: %llu. Average: %llu\n", time, time / MaxLoad);
-    printf("Free Memory: After = %llu, Diff = %llu\n", freeRamPeak, memDiff);
-    printf("CPU Load: After = %llu, Diff = %llu\n", loadPeak, loadDiff);
+    printf("Performance: Total: %" PRIu64 ". Average: %" PRIu64 "\n", time, time / MaxLoad);
+    printf("Free Memory: After = %" PRIu64 ", Diff = %" PRIu64 "\n", freeRamPeak, memDiff);
+    printf("CPU Load: After = %" PRIu64 ", Diff = %" PRIu64 "\n", loadPeak, loadDiff);
 }
 
-class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary > {
+class Dictionary : public RPC::SmartInterfaceType<Exchange::IDictionary > {
 private:
-    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary >;
+    using BaseClass = RPC::SmartInterfaceType<Exchange::IDictionary >;
 public:
-    Dictionary(const uint32_t waitTime, const Thunder::Core::NodeId& node, const string& callsign)
+    Dictionary(const uint32_t waitTime, const Core::NodeId& node, const string& callsign)
         : BaseClass()
     {
         BaseClass::Open(waitTime, node, callsign);
-        BaseClass::Aquire<Thunder::Exchange::IDictionary>(waitTime, node, callsign);
+        BaseClass::Acquire<Exchange::IDictionary>(waitTime, node, callsign);
     }
     ~Dictionary() override
     {
-        BaseClass::Close(Thunder::Core::infinite);
+        BaseClass::Close(Core::infinite);
     }
 
 public:
     bool Get(const string& nameSpace, const string& key, string& value) const
     {
         bool result = false;
-        const Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+        const Exchange::IDictionary* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
             string ns = "/" + nameSpace;
@@ -105,7 +106,7 @@ public:
     bool Set(const string& nameSpace, const string& key, const string& value)
     {
         bool result = false;
-        Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+        Exchange::IDictionary* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
             string ns = "/" + nameSpace;
@@ -123,44 +124,44 @@ private:
     }
 };
 
-class PersistentStore : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IStore > {
+class PersistentStore : public RPC::SmartInterfaceType<Exchange::IStore > {
 private:
-    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IStore >;
+    using BaseClass = RPC::SmartInterfaceType<Exchange::IStore >;
 public:
-    PersistentStore(const uint32_t waitTime, const Thunder::Core::NodeId& node, const string& callsign)
+    PersistentStore(const uint32_t waitTime, const Core::NodeId& node, const string& callsign)
         : BaseClass()
     {
         BaseClass::Open(waitTime, node, callsign);
     }
     ~PersistentStore()
     {
-        BaseClass::Close(Thunder::Core::infinite);
+        BaseClass::Close(Core::infinite);
     }
 
 public:
     bool Get(const string& nameSpace, const string& key, string& value ) const
     {
-        uint32_t result = Thunder::Core::ERROR_GENERAL;
-        const Thunder::Exchange::IStore* impl = BaseClass::Interface();
+        uint32_t result = Core::ERROR_GENERAL;
+        const Exchange::IStore* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
-            result = const_cast<Thunder::Exchange::IStore*>(impl)->GetValue(nameSpace, key, value);
+            result = const_cast<Exchange::IStore*>(impl)->GetValue(nameSpace, key, value);
             impl->Release();
         }
 
-        return (result == Thunder::Core::ERROR_NONE);
+        return (result == Core::ERROR_NONE);
     }
     bool Set(const string& nameSpace, const string& key, const string& value)
     {
-        uint32_t result = Thunder::Core::ERROR_GENERAL;
-        Thunder::Exchange::IStore* impl = BaseClass::Interface();
+        uint32_t result = Core::ERROR_GENERAL;
+        Exchange::IStore* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
             result = impl->SetValue(nameSpace, key, value);
             impl->Release();
         }
 
-        return (result == Thunder::Core::ERROR_NONE);
+        return (result == Core::ERROR_NONE);
     }
 
 private:
@@ -170,13 +171,15 @@ private:
     }
 };
 
-namespace JSONRPC {
-class PersistentStore : public Thunder::JSONRPC::SmartLinkType<Thunder::Core::JSON::IElement> {
+namespace Thunder {
+  namespace JSONRPC {
+
+class PersistentStore : public SmartLinkType<Core::JSON::IElement> {
 private:
-    class Parameters : public Thunder::Core::JSON::Container {
+    class Parameters : public Core::JSON::Container {
     public:
         Parameters()
-            : Thunder::Core::JSON::Container()
+            : Core::JSON::Container()
             , Key()
             , Value()
             , NameSpace()
@@ -186,7 +189,7 @@ private:
             Add(_T("namespace"), &NameSpace);
         }
         Parameters(const Parameters& copy)
-            : Thunder::Core::JSON::Container()
+            : Core::JSON::Container()
             , Key(copy.Key)
             , Value(copy.Value)
             , NameSpace(copy.NameSpace)
@@ -196,7 +199,7 @@ private:
             Add(_T("namespace"), &NameSpace);
         }
         Parameters(const string& key, const string& value, const string& nameSpace)
-            : Thunder::Core::JSON::Container()
+            : Core::JSON::Container()
             , Key()
             , Value()
             , NameSpace()
@@ -228,14 +231,14 @@ private:
         }
 
     public:
-        Thunder::Core::JSON::String Key;
-        Thunder::Core::JSON::String Value;
-        Thunder::Core::JSON::String NameSpace;
+        Core::JSON::String Key;
+        Core::JSON::String Value;
+        Core::JSON::String NameSpace;
     };
-    class Response : public Thunder::Core::JSON::Container {
+    class Response : public Core::JSON::Container {
     public:
         Response()
-            : Thunder::Core::JSON::Container()
+            : Core::JSON::Container()
             , Value()
             , Success()
         {
@@ -243,7 +246,7 @@ private:
             Add(_T("success"), &Success);
         }
         Response(const Response& copy)
-            : Thunder::Core::JSON::Container()
+            : Core::JSON::Container()
             , Value(copy.Value)
             , Success(copy.Success)
         {
@@ -251,7 +254,7 @@ private:
             Add(_T("success"), &Success);
         }
         Response(const string& value, const bool success)
-            : Thunder::Core::JSON::Container()
+            : Core::JSON::Container()
             , Value()
             , Success()
         {
@@ -273,14 +276,14 @@ private:
         }
 
     public:
-        Thunder::Core::JSON::String Value;
-        Thunder::Core::JSON::Boolean Success;
+        Core::JSON::String Value;
+        Core::JSON::Boolean Success;
     };
 
 
 public:
-    PersistentStore(const uint32_t waitTime VARIABLE_IS_NOT_USED, const Thunder::Core::NodeId& node VARIABLE_IS_NOT_USED, const string& callsign VARIABLE_IS_NOT_USED)
-        : Thunder::JSONRPC::SmartLinkType<Thunder::Core::JSON::IElement>("PersistentStore.1", "client.monitor.2")
+    PersistentStore(const uint32_t waitTime VARIABLE_IS_NOT_USED, const Core::NodeId& node VARIABLE_IS_NOT_USED, const string& callsign VARIABLE_IS_NOT_USED)
+        : SmartLinkType<Core::JSON::IElement>("PersistentStore.1", "client.monitor.2")
         , _isOperational(false)
     {
     }
@@ -330,7 +333,9 @@ private:
     bool _isOperational;
 };
 }
-namespace WPEFramework {
+}
+
+namespace Thunder {
 namespace ReST {
 static Core::ProxyPoolType<Web::TextBody> textBodyDataFactory(4);
 
@@ -341,10 +346,10 @@ private:
     static int8_t constexpr HostPort = 80;
     static int32_t constexpr WaitTime = 1000; // In milli seconds
 
-    typedef Thunder::Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Web::SingleElementFactoryType<Web::Response>> BaseClass;
+    typedef Web::WebLinkType<Core::SocketStream, Web::Response, Web::Request, Web::SingleElementFactoryType<Web::Response>> BaseClass;
 
 public:
-    Dictionary(const uint32_t waitTime VARIABLE_IS_NOT_USED, const Thunder::Core::NodeId& node VARIABLE_IS_NOT_USED, const string& callsign VARIABLE_IS_NOT_USED)
+    Dictionary(const uint32_t waitTime VARIABLE_IS_NOT_USED, const Core::NodeId& node VARIABLE_IS_NOT_USED, const string& callsign VARIABLE_IS_NOT_USED)
         : BaseClass(1, false, Core::NodeId("0.0.0.0"), Core::NodeId(HostIP, HostPort), 1024, 1024)
         , _signal(false, true)
         , _request(Core::ProxyType<Web::Request>::Create())
@@ -493,7 +498,7 @@ template <typename STORE>
 class StorePerformance {
 
 public:
-    StorePerformance(uint32_t waitTime, const Thunder::Core::NodeId& nodeId, const string& callSign)
+    StorePerformance(uint32_t waitTime, const Core::NodeId& nodeId, const string& callSign)
         : _store(waitTime, nodeId, callSign)
         , _callSign(callSign)
     {
@@ -507,8 +512,8 @@ public:
     }
     bool Set(uint16_t index)
     {
-        string key = "key" + Thunder::Core::NumberType<int32_t>(index).Text();
-        string value = "value" + Thunder::Core::NumberType<int32_t>(index).Text();
+        string key = "key" + Core::NumberType<int32_t>(index).Text();
+        string value = "value" + Core::NumberType<int32_t>(index).Text();
 
 #if DEBUG_FUNC
         bool status = false;
@@ -526,7 +531,7 @@ public:
     bool Get(uint16_t index) const
     {
         string value;
-        string key = "key" + Thunder::Core::NumberType<int32_t>(index).Text();
+        string key = "key" + Core::NumberType<int32_t>(index).Text();
 
 #if DEBUG_FUNC
         bool status = false;
@@ -544,8 +549,8 @@ public:
     {
         bool status = true;
         for (uint16_t i = 0; i < MaxLoad; ++i) {
-            string prefix = "-" + Thunder::Core::NumberType<int32_t>(index).Text();
-            prefix += ":" + Thunder::Core::NumberType<int32_t>(i).Text();
+            string prefix = "-" + Core::NumberType<int32_t>(index).Text();
+            prefix += ":" + Core::NumberType<int32_t>(i).Text();
             string write = "value" + prefix;
             string key = "key" + prefix;
             string read;
@@ -576,7 +581,7 @@ private:
 };
 
 template <typename STORE>
-void MeasureStore(const string& interface, const Thunder::Core::NodeId& nodeId, const string& callSign)
+void MeasureStore(const string& interface, const Core::NodeId& nodeId, const string& callSign)
 {
     int option = 0;
     StorePerformance<STORE> store(3000, nodeId, callSign);
@@ -622,11 +627,11 @@ int main(int argc VARIABLE_IS_NOT_USED, char* argv[] VARIABLE_IS_NOT_USED)
     // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address
     // Here we create a domain socket address
 #ifdef __WINDOWS__
-    Thunder::Core::NodeId nodeId("127.0.0.1:62000");
-    Thunder::Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:25555")));
+    Core::NodeId nodeId("127.0.0.1:62000");
+    Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:25555")));
 #else
-    Thunder::Core::NodeId nodeId("/tmp/communicator");
-    Thunder::Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
+    Core::NodeId nodeId("/tmp/communicator");
+    Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
 #endif
     {
         char keyPress;
@@ -641,7 +646,7 @@ int main(int argc VARIABLE_IS_NOT_USED, char* argv[] VARIABLE_IS_NOT_USED)
                 break;
             }
             case 'R': {
-                MeasureStore<Thunder::ReST::Dictionary>("RESTAPI", nodeId, "Dictionary");
+                MeasureStore<ReST::Dictionary>("RESTAPI", nodeId, "Dictionary");
                 break;
             }
             case 'P': {
@@ -658,7 +663,7 @@ int main(int argc VARIABLE_IS_NOT_USED, char* argv[] VARIABLE_IS_NOT_USED)
         } while (keyPress != 'Q');
     }
 
-    Thunder::Core::Singleton::Dispose();
+    Core::Singleton::Dispose();
 
     return 0;
 }

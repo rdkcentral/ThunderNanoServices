@@ -1,0 +1,7 @@
+startmode = "@PLUGIN_DICTIONARY_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("storage", "DataModel.json")
+configuration.add("lingertime", 10)
+

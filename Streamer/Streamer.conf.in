@@ -1,0 +1,50 @@
+startmode = "@PLUGIN_STREAMER_STARTMODE@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("threads", "2")
+root.add("mode", "@PLUGIN_STREAMER_MODE@")
+configuration.add("root", root)
+
+configuration.add("decoders", "@PLUGIN_STREAMER_DECODERS@")
+
+for IMPL in "@PLUGIN_STREAMER_IMPLEMENTATIONS@".split(';'):
+    if IMPL == "Aamp":
+        config = JSON()
+        config.add("frontends", "@PLUGIN_STREAMER_AAMP_FRONTENDS@")
+        if boolean("@PLUGIN_STREAMER_AAMP_WESTEROSSINK@"):
+            config.add("westerossink", "true")
+        configuration.add(IMPL, config)
+
+    if IMPL == "QAM":
+        config = JSON()
+        config.add("standard", "@PLUGIN_STREAMER_BROADCAST_STANDARD@")
+        if boolean("@PLUGIN_STREAMER_BROADCAST_CABLE@"):
+            if "@PLUGIN_STREAMER_BROADCAST_STANDARD@" == "DVB":
+                config.add("annex", "@PLUGIN_STREAMER_BROADCAST_CABLE_ANNEX@")
+            config.add("modus", "cable")
+            config.add("frontends", "@PLUGIN_STREAMER_BROADCAST_CABLE_FRONTENDS@")
+        elif boolean("@PLUGIN_STREAMER_BROADCAST_SATELLITE@"):
+            if "@PLUGIN_STREAMER_BROADCAST_STANDARD@" == "DVB":
+                config.add("annex", "@PLUGIN_STREAMER_BROADCAST_SATELLITE_ANNEX@")
+            config.add("modus", "satellite")
+            config.add("frontends", "@PLUGIN_STREAMER_BROADCAST_SATELLITE_FRONTENDS@")
+        elif boolean("@PLUGIN_STREAMER_BROADCAST_TERRESTRIAL@"):
+            if "@PLUGIN_STREAMER_BROADCAST_STANDARD@" == "DVB":
+                config.add("annex", "@PLUGIN_STREAMER_BROADCAST_TERRESTRIAL_ANNEX@")
+            config.add("modus", "terrestrial")
+            config.add("frontends", "@PLUGIN_STREAMER_BROADCAST_TERRESTRIAL_FRONTENDS@")
+        else:
+            print("No broadcast frontend selected")
+        if boolean("@PLUGIN_STREAMER_BROADCAST_TS_SCANNING@"):
+            config.add("scan", "true")
+            config.add("homets", "@PLUGIN_STREAMER_BROADCAST_HOME_TS@")
+        if boolean("@PLUGIN_STREAMER_BROADCAST_SI_PARSING@"):
+            config.add("siparse", "true")
+        configuration.add(IMPL, config)
+
+    if IMPL == "CENC":
+        config = JSON()
+        config.add("speeds", [0, 25, 50, 75, 100, 125, 150, 175, 200])
+        configuration.add(IMPL, config)

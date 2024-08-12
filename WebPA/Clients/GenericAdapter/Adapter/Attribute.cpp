@@ -19,7 +19,7 @@
  
 #include "Attribute.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 Attribute::Attribute(Notifier* notifier, Handler* handler)
@@ -60,7 +60,7 @@ WebPAStatus Attribute::Values(const std::map<std::string, Data>& attributes, std
     return ret;
 }
 
-const WebPAStatus Attribute::Values(const std::string& parameterName, Data& attribute) const
+WebPAStatus Attribute::Values(const std::string& parameterName, Data& attribute) const
 {
     WebPAStatus ret = WEBPA_FAILURE;
 
@@ -112,4 +112,4 @@ WebPAStatus Attribute::Values(const std::string& parameterName, const Data& attr
 }
 
 } // WebPA
-} // WPEFramework
+} // Thunder

@@ -20,7 +20,7 @@
 #include "Power.h"
 #include "Implementation.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -43,7 +43,7 @@ namespace Plugin {
 
     extern "C" {
 
-    static void PowerStateChange(void* userData, enum WPEFramework::Exchange::IPower::PCState newState, \
+    static void PowerStateChange(void* userData, enum Thunder::Exchange::IPower::PCState newState, \
                                  Exchange::IPower::PCPhase phase) {
         reinterpret_cast<Power*>(userData)->PowerChange(newState, phase);
     }
@@ -52,18 +52,15 @@ namespace Plugin {
 
     /* virtual */ const string Power::Initialize(PluginHost::IShell* service)
     {
+        ASSERT(service != nullptr);
         string message;
-        WPEFramework::Exchange::IPower::PCState persistedState = power_get_persisted_state();
+        Thunder::Exchange::IPower::PCState persistedState = power_get_persisted_state();
 
-        ASSERT(_service == nullptr);
-
-        // Setup skip URL for right offset.
-        _service = service;
-        _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
+        _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
         Config config;
 
-        config.FromString(_service->ConfigLine());
+        config.FromString(service->ConfigLine());
 
         _powerKey = config.PowerKey.Value();
         _powerOffMode = config.OffMode.Value();
@@ -78,34 +75,34 @@ namespace Plugin {
 
         // Receive all plugin information on state changes.
         if (_controlClients)
-            _service->Register(&_sink);
+            service->Register(&_sink);
 
-        power_initialize(PowerStateChange, this, _service->ConfigLine().c_str(), persistedState);
+        power_initialize(PowerStateChange, this, service->ConfigLine().c_str(), persistedState);
 
         return message;
     }
 
     /* virtual */ void Power::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (service != nullptr) {
 
-        // No need to monitor the Process::Notification anymore, we will kill it anyway.
-        if (_controlClients)
-            _service->Unregister(&_sink);
+            // No need to monitor the Process::Notification anymore, we will kill it anyway.
+            if (_controlClients)
+                service->Unregister(&_sink);
 
-        // Remove all registered clients
-        _clients.clear();
+            // Remove all registered clients
+            _clients.clear();
 
-        if (_powerKey != KEY_RESERVED) {
-            // Also we are nolonger interested in the powerkey events, we have been requested to shut down our services!
-            PluginHost::VirtualInput* keyHandler(PluginHost::InputHandler::Handler());
+            if (_powerKey != KEY_RESERVED) {
+                // Also we are nolonger interested in the powerkey events, we have been requested to shut down our services!
+                PluginHost::VirtualInput* keyHandler(PluginHost::InputHandler::Handler());
 
-            ASSERT(keyHandler != nullptr);
-            keyHandler->Unregister(&_sink, _powerKey);
+                ASSERT(keyHandler != nullptr);
+                keyHandler->Unregister(&_sink, _powerKey);
+            }
+
+            power_deinitialize();
         }
-
-        power_deinitialize();
-        _service = nullptr;
     }
 
     /* virtual */ string Power::Information() const
@@ -171,21 +168,27 @@ namespace Plugin {
 
     void Power::Register(Exchange::IPower::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
-        ASSERT(std::find(_notificationClients.begin(), _notificationClients.end(), sink) == _notificationClients.end());
+        std::list<Exchange::IPower::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
+        ASSERT(index == _notificationClients.end());
 
-        _notificationClients.push_back(sink);
-        sink->AddRef();
+        if (index == _notificationClients.end()) {
+            _notificationClients.push_back(sink);
+            sink->AddRef();
+            TRACE(Trace::Information, (_T("Registered a sink on the power")));
+        }
 
         _adminLock.Unlock();
-
-        TRACE(Trace::Information, (_T("Registered a sink on the power")));
     }
 
     void Power::Unregister(Exchange::IPower::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         std::list<Exchange::IPower::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), sink));
@@ -339,4 +342,4 @@ namespace Plugin {
     }
 
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

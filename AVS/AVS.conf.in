@@ -1,0 +1,15 @@
+startmode = "@PLUGIN_AVS_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("alexaclientconfig", "@PLUGIN_AVS_ALEXA_CLIENT_CONFIG@")
+configuration.add("smartscreenconfig", "@PLUGIN_AVS_SMART_SCREEN_CONFIG@")
+configuration.add("kwdmodelspath", "@PLUGIN_AVS_KWD_MODELS_PATH@")
+configuration.add("loglevel", "@PLUGIN_AVS_LOG_LEVEL@")
+configuration.add("audiosource", "@PLUGIN_AVS_AUDIOSOURCE@")
+configuration.add("enablesmartscreen", "@PLUGIN_AVS_ENABLE_SMART_SCREEN@")
+configuration.add("enablekwd", "@PLUGIN_AVS_ENABLE_KWD@")
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_AVS_MODE@")
+configuration.add("root", rootobject)

@@ -20,10 +20,10 @@
 #include "LanguageAdministratorImpl.h"
 #include <unicode/uloc.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(LanguageAdministratorImpl, 1, 0);
+    SERVICE_REGISTRATION(LanguageAdministratorImpl, 1, 0)
 
     LanguageAdministratorImpl::LanguageAdministratorImpl()
         : _adminLock()
@@ -36,20 +36,28 @@ namespace Plugin {
     void LanguageAdministratorImpl::Register(Exchange::ILanguageTag::INotification* notification)
     {
         ASSERT(notification);
+
         _adminLock.Lock();
-        notification->AddRef();
-        _notifications.push_back(notification);
+        auto item = find(_notifications.begin(), _notifications.end(), notification);
+        ASSERT(item == _notifications.end());
+        if (item == _notifications.end()) {
+            notification->AddRef();
+            _notifications.push_back(notification);
+        }
         _adminLock.Unlock();
     }
 
     void LanguageAdministratorImpl::Unregister(const Exchange::ILanguageTag::INotification* notification)
     {
         ASSERT(notification);
+
         _adminLock.Lock();
         auto item = find(_notifications.begin(), _notifications.end(), notification);
         ASSERT(item != _notifications.end());
-        _notifications.erase(item);
-        (*item)->Release();
+        if (item != _notifications.end()) {
+            _notifications.erase(item);
+            (*item)->Release();
+        }
         _adminLock.Unlock();
     }
 
@@ -92,4 +100,4 @@ namespace Plugin {
         _adminLock.Unlock();
     }
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

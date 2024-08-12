@@ -16,9 +16,9 @@
 # limitations under the License.
 project(Compositor)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -41,8 +41,15 @@ set(PLUGIN_COMPOSITOR_FAIL_SAFE_HDR OFF CACHE BOOL "Enable fail safe HDR values"
 option(PLUGIN_COMPOSITOR_TEST "Build a compositor test client" OFF)
 option(PLUGIN_COMPOSITOR_NXSERVER "Allow to use external nexus server" OFF)
 
-set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implentation." )
+set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implementation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
+
+set(PLUGIN_COMPOSITOR_OUTPUTS "HDMI-A-1;0;0;1080;1920"  CACHE STRING "Specify the outputs (name1;x;y;h;w|name2;x;y;h;w) that the compopsitor should use." )
+set(PLUGIN_COMPOSITOR_CANVAS_HEIGHT "720"  CACHE STRING "Specify the height of the canvas that the compositor uses for drawing." )
+set(PLUGIN_COMPOSITOR_CANVAS_WIDTH "1280"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
+set(PLUGIN_COMPOSITOR_BUFFER_CONNECTOR "buffer|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
+set(PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR "display|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
+
 set(PLUGIN_COMPOSITOR_WESTON_TTY_LIST "1;2;3;4" CACHE STRING "TTY ids for weston drm backend")
 set(PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS "HDMI-A-1,1280x720@60.0 16:9,normal" CACHE STRING "Output configs for weston drm backend")
 set(PLUGIN_COMPOSITOR_THREAD_COUNT "2"  CACHE STRING "Specify the minimum thread count required to run in outofprocess mode")
@@ -51,6 +58,10 @@ set(PLUGIN_COMPOSITOR_THREAD_COUNT "2"  CACHE STRING "Specify the minimum thread
 if(PLUGIN_COMPOSITOR_OUTOFPROCESS STREQUAL "false")
     set(PLUGIN_COMPOSITOR_MODE "Off" CACHE STRING "Process mode"  FORCE)
     unset(PLUGIN_COMPOSITOR_OUTOFPROCESS CACHE)
+endif()
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -73,12 +84,13 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
-if(PLUGIN_COMPOSITOR_SERVER)
-    add_subdirectory(server)
-endif()
 
 add_subdirectory(lib)
+
+add_library(platform::implementation ALIAS ${PLATFORM_COMPOSITOR})
+
+add_subdirectory(test)
 
 write_config()

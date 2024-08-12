@@ -6,7 +6,7 @@
 
 **Status: :black_circle::black_circle::black_circle:**
 
-A DHCPServer plugin for Thunder framework.
+DHCPServer plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -57,7 +57,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
 <a name="head.Configuration"></a>
 # Configuration
@@ -68,8 +68,8 @@ The table below lists configuration options of the plugin.
 | :-------- | :-------- | :-------- |
 | callsign | string | Plugin instance name (default: *DHCPServer*) |
 | classname | string | Class name: *DHCPServer* |
-| locator | string | Library name: *libWPEFrameworkDHCPServer.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| locator | string | Library name: *libThunderDHCPServer.so* |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | Server configuration |
 | configuration.name | string | Name of the server |
 | configuration.servers | array | List of configured DHCP servers |
@@ -84,7 +84,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [DHCPServer.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/DHCPServer.json)
+- [DHCPServer.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/DHCPServer.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -97,7 +97,6 @@ DHCPServer interface methods:
 | :-------- | :-------- |
 | [activate](#method.activate) | Activates a DHCP server |
 | [deactivate](#method.deactivate) | Deactivates a DHCP server |
-
 
 <a name="method.activate"></a>
 ## *activate [<sup>method</sup>](#head.Methods)*
@@ -131,12 +130,12 @@ Activates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "DHCPServer.1.activate",
-    "params": {
-        "interface": "eth0"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DHCPServer.1.activate",
+  "params": {
+    "interface": "eth0"
+  }
 }
 ```
 
@@ -144,9 +143,9 @@ Activates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -182,12 +181,12 @@ Deactivates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "DHCPServer.1.deactivate",
-    "params": {
-        "interface": "eth0"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DHCPServer.1.deactivate",
+  "params": {
+    "interface": "eth0"
+  }
 }
 ```
 
@@ -195,9 +194,9 @@ Deactivates a DHCP server.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -212,7 +211,6 @@ DHCPServer interface properties:
 | :-------- | :-------- |
 | [status](#property.status) <sup>RO</sup> | Server status |
 
-
 <a name="property.status"></a>
 ## *status [<sup>property</sup>](#head.Properties)*
 
@@ -222,22 +220,24 @@ Provides access to the server status.
 
 ### Value
 
+> The *server* argument shall be passed as the index to the property, e.g. *DHCPServer.1.status@eth0*. If omitted, status of all configured servers is returned.
+
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | array | List of configured servers |
-| (property)[#] | object |  |
-| (property)[#].interface | string | Network interface name |
-| (property)[#].active | boolean | Denotes if server is currently active |
-| (property)[#]?.begin | string | <sup>*(optional)*</sup> IP address pool start |
-| (property)[#]?.end | string | <sup>*(optional)*</sup> IP address pool end |
-| (property)[#]?.router | string | <sup>*(optional)*</sup> Router IP address |
-| (property)[#]?.leases | array | <sup>*(optional)*</sup> List of IP address leases |
-| (property)[#]?.leases[#] | object | <sup>*(optional)*</sup> Lease description |
-| (property)[#]?.leases[#].name | string | Client identifier (or client hardware address if identifier is absent) |
-| (property)[#]?.leases[#].ip | string | Client IP address |
-| (property)[#]?.leases[#]?.expires | string | <sup>*(optional)*</sup> Client IP expiration time (in ISO8601 format, empty: never expires) |
-
-> The *server* argument shall be passed as the index to the property, e.g. *DHCPServer.1.status@eth0*. If omitted, status of all configured servers is returned.
+| result | array | List of configured servers |
+| result[#] | object |  |
+| result[#].interface | string | Network interface name |
+| result[#].active | boolean | Denotes if server is currently active |
+| result[#]?.begin | string | <sup>*(optional)*</sup> IP address pool start |
+| result[#]?.end | string | <sup>*(optional)*</sup> IP address pool end |
+| result[#]?.router | string | <sup>*(optional)*</sup> Router IP address |
+| result[#]?.leases | array | <sup>*(optional)*</sup> List of IP address leases |
+| result[#]?.leases[#] | object | <sup>*(optional)*</sup> Lease description |
+| result[#]?.leases[#].name | string | Client identifier (or client hardware address if identifier is absent) |
+| result[#]?.leases[#].ip | string | Client IP address |
+| result[#]?.leases[#]?.expires | string | <sup>*(optional)*</sup> Client IP expiration time (in ISO8601 format, empty: never expires) |
 
 ### Errors
 
@@ -251,9 +251,9 @@ Provides access to the server status.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "DHCPServer.1.status@eth0"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DHCPServer.1.status@eth0"
 }
 ```
 
@@ -261,24 +261,24 @@ Provides access to the server status.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": [
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "interface": "eth0",
+      "active": true,
+      "begin": "192.168.0.10",
+      "end": "192.168.0.100",
+      "router": "192.168.0.1",
+      "leases": [
         {
-            "interface": "eth0",
-            "active": true,
-            "begin": "192.168.0.10",
-            "end": "192.168.0.100",
-            "router": "192.168.0.1",
-            "leases": [
-                {
-                    "name": "00e04c326c56",
-                    "ip": "192.168.0.10",
-                    "expires": "2019-05-07T07:20:26Z"
-                }
-            ]
+          "name": "00e04c326c56",
+          "ip": "192.168.0.10",
+          "expires": "2019-05-07T07:20:26Z"
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 

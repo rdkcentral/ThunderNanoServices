@@ -1,0 +1,43 @@
+startmode = "@PLUGIN_BLUETOOTH_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("controller", "@PLUGIN_BLUETOOTHSDPSERVER_CONTROLLER@")
+
+if "@PLUGIN_BLUETOOTHSDPSERVER_PROVIDER@":
+    configuration.add("provider", "@PLUGIN_BLUETOOTHSDPSERVER_PROVIDER@")
+
+def Services():
+    services = []
+
+    def Service(klass, callsign, name, description, parameters = None, public = True):
+        entry = JSON()
+        entry.add("name", name)
+        entry.add("callsign", callsign)
+        entry.add("description", description)
+        entry.add("public", public)
+        entry.add("class", klass)
+        entry.add("parameters", parameters)
+        return entry
+
+    if "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SOURCE@":
+        parameters = JSON()
+        parameters.add("features", ["player", "tuner"])
+        services.append(Service("a2dp-audio-source",
+                                "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SOURCE@",
+                                "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DPAUDIOSOURCE_NAME@",
+                                "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DPAUDIOSOURCE_DESCRIPTION@",
+                                parameters))
+
+    if "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SINK@":
+        parameters = JSON()
+        parameters.add("features", ["amplifier"])
+        services.append(Service("a2dp-audio-sink",
+                                "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DP_AUDIO_SINK@",
+                                "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DPAUDIOSINK_NAME@",
+                                "@PLUGIN_BLUETOOTHSDPSERVER_SERVICE_A2DPAUDIOSINK_DESCRIPTION@",
+                                parameters))
+
+    return services
+
+configuration.add("services", Services())

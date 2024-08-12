@@ -21,10 +21,10 @@ find_package(AlexaClientSDK REQUIRED)
 find_package(GStreamer REQUIRED)
 find_package(PortAudio)
 find_package(PryonLite)
-find_package(WPEFramework REQUIRED)
+find_package(Thunder REQUIRED)
 
-set(WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES)
-list(APPEND WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES
+set(PLUGIN_AVS_AVSDEVICE_SOURCES)
+list(APPEND PLUGIN_AVS_AVSDEVICE_SOURCES
     AVSDevice.cpp
     ThunderInputManager.cpp
     ../Module.cpp
@@ -32,11 +32,11 @@ list(APPEND WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES
 )
 set_source_files_properties(AVSDevice.cpp  PROPERTIES COMPILE_FLAGS "-fexceptions")
 if(PLUGIN_AVS_ENABLE_KWD_SUPPORT)
-    list(APPEND WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES ../PryonKeywordDetector.cpp)
+    list(APPEND PLUGIN_AVS_AVSDEVICE_SOURCES ../PryonKeywordDetector.cpp)
     add_definitions(-DKWD_PRYON)
 endif()
 
-add_library(${MODULE_NAME} ${WPEFRAMEWORK_PLUGIN_AVS_AVSDEVICE_SOURCES})
+add_library(${MODULE_NAME} ${PLUGIN_AVS_AVSDEVICE_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -80,4 +80,4 @@ if(PORTAUDIO_FOUND)
 endif()
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${NAMESPACE}_Runtime)

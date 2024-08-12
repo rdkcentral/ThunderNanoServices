@@ -23,7 +23,7 @@
 #include "interfaces/IRemoteHostExample.h"
 #include <interfaces/json/JsonData_RemoteHostExample.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class RemoteHostExample : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Exchange::IRemoteHostExample::ITimeListener {
@@ -99,4 +99,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Wayland.h"
 #ifdef ENABLE_NXSERVER
 #include "NexusServer/Settings.h"
@@ -24,7 +24,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     /* -------------------------------------------------------------------------------------------------------------
      * This is a singleton. Declare all C accessors to this object here
@@ -82,7 +82,7 @@ namespace Plugin {
             Entry(Wayland::Display::Surface* surface, Implementation::IServer* server)
                 : _surface(*surface)
                 , _server(server)
-                , _rectangle( {0, 0, surface->Width(), surface->Height() } )
+                , _rectangle({ 0, 0, surface->Width(), surface->Height() })
             {
                 ASSERT(surface != nullptr);
                 ASSERT(server != nullptr);
@@ -97,7 +97,7 @@ namespace Plugin {
                 server->Get(id, surface);
 
                 if (surface.IsValid() == true) {
-                    result = Core::Service<Entry>::Create<Entry>(&surface, server);
+                    result = Core::ServiceType<Entry>::Create<Entry>(&surface, server);
                 }
 
                 return (result);
@@ -105,6 +105,10 @@ namespace Plugin {
             ~Entry() override = default;
 
         public:
+            Core::instance_id Native() const override
+            {
+                return reinterpret_cast<Core::instance_id>(_surface.Native());
+            }
             inline uint32_t Id() const
             {
                 return _surface.Id();
@@ -125,14 +129,18 @@ namespace Plugin {
                     _surface.Opacity(value);
                 }
             }
-            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override 
+            uint32_t Opacity() const override
+            {
+                return 0;
+            }
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
             {
                 _rectangle = rectangle;
                 _surface.Resize(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 
                 return (Core::ERROR_NONE);
             }
-            Exchange::IComposition::Rectangle Geometry() const override 
+            Exchange::IComposition::Rectangle Geometry() const override
             {
                 return (_rectangle);
             }
@@ -148,7 +156,7 @@ namespace Plugin {
                 return (_layer);
             }
             BEGIN_INTERFACE_MAP(Entry)
-                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
 
         private:
@@ -166,6 +174,7 @@ namespace Plugin {
         public:
             Config()
                 : Core::JSON::Container()
+                , RefreshLock(false)
                 , Join(false)
                 , Display("wayland-0")
                 , Resolution(Exchange::IComposition::ScreenResolution::ScreenResolution_720p)
@@ -173,6 +182,7 @@ namespace Plugin {
                 Add(_T("join"), &Join);
                 Add(_T("display"), &Display);
                 Add(_T("resolution"), &Resolution);
+                Add(_T("refreshlock"), &RefreshLock);
 
             }
             ~Config()
@@ -180,6 +190,7 @@ namespace Plugin {
             }
 
         public:
+            Core::JSON::Boolean RefreshLock;
             Core::JSON::Boolean Join;
             Core::JSON::String Display;
             Core::JSON::EnumType<Exchange::IComposition::ScreenResolution> Resolution;
@@ -327,33 +338,45 @@ namespace Plugin {
             ASSERT(_nxserver != nullptr);
             return (((_nxserver != nullptr) || (_server != nullptr)) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #else
+            if (_config.RefreshLock.Value() == true) {
+                ::setenv("WESTEROS_GL_USE_REFRESH_LOCK", "1", 1);
+            }
             StartImplementation();
             return ((_server != nullptr) ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
 #endif
         }
         /* virtual */ void Register(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             // Do not double register a notification sink.
             g_implementationLock.Lock();
-            ASSERT(std::find(_compositionClients.begin(), _compositionClients.end(), notification) == _compositionClients.end());
 
-            notification->AddRef();
+            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
+            ASSERT(index == _compositionClients.end());
 
-            _compositionClients.push_back(notification);
+            if (index == _compositionClients.end()) {
+                notification->AddRef();
 
-            std::list<Entry*>::iterator index(_clients.begin());
+                _compositionClients.push_back(notification);
 
-            while (index != _clients.end()) {
+                std::list<Entry*>::iterator index(_clients.begin());
+                ASSERT(index != _clients.end());
 
-                if ((*index)->IsActive() == true) {
-                    notification->Attached((*index)->Name(), *index);
+                while (index != _clients.end()) {
+
+                    if ((*index)->IsActive() == true) {
+                        notification->Attached((*index)->Name(), *index);
+                    }
+                    index++;
                 }
-                index++;
             }
             g_implementationLock.Unlock();
         }
         /* virtual */ void Unregister(Exchange::IComposition::INotification* notification) override
         {
+            ASSERT(notification != nullptr);
+
             g_implementationLock.Lock();
             std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_compositionClients.begin(), _compositionClients.end(), notification));
 
@@ -379,9 +402,6 @@ namespace Plugin {
             return (Implementation::GetResolution());
         }
 
-
-
-
         // -------------------------------------------------------------------------------------------------------
         //   IProcess methods
         // -------------------------------------------------------------------------------------------------------
@@ -397,7 +417,7 @@ namespace Plugin {
                 container.push_back((*index)->Name());
                 index++;
             }
-            return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
+            return (Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(container));
         }
         bool Consumer(VARIABLE_IS_NOT_USED const string& name) const override
         {
@@ -497,10 +517,6 @@ namespace Plugin {
 
             ASSERT(subSystems != nullptr);
 
-            if (subSystems != nullptr) {
-                subSystems->Set(PluginHost::ISubSystem::PLATFORM, nullptr);
-            }
-
             // As there are currently two flavors of the potential Wayland Compositor Implementations, e.g.
             // Westeros and Weston, we do not want to decide here which one we instantiate. We have given both
             // implemntations a "generic" handle that starts the compositor. Here we just instantiate the
@@ -519,7 +535,7 @@ namespace Plugin {
                 // instantiated a few lines above.
 
                 if (_server->StartController(_config.Display.Value(), &_sink) == true) {
-                   // Firing up the compositor controller.
+                    // Firing up the compositor controller.
                     _job.Run();
 
                     TRACE(Trace::Information, (_T("Compositor initialized\n")));
@@ -551,8 +567,8 @@ namespace Plugin {
 #endif
     };
 
-    SERVICE_REGISTRATION(CompositorImplementation, 1, 0);
+    SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
 
 } // namespace Plugin
 
-} // namespace WPEFramework
+} // namespace Thunder

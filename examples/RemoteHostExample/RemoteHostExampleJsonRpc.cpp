@@ -21,7 +21,7 @@
 #include "RemoteHostExample.h"
 #include <interfaces/json/JsonData_RemoteHostExample.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

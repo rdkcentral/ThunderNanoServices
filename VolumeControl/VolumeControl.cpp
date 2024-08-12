@@ -19,7 +19,7 @@
  
 #include "VolumeControl.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -57,41 +57,40 @@ namespace Plugin {
           Exchange::JVolumeControl::Register(*this, _implementation);
         }
 
-        if(message.length() != 0) {
-            Deinitialize(service);
-        }
         return (message);
     }
 
     void VolumeControl::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service->Unregister(&_connectionNotification);
+            service->Unregister(&_connectionNotification);
 
-        if(_implementation != nullptr){
+            if (_implementation != nullptr) {
 
-            Exchange::JVolumeControl::Unregister(*this);
-            _implementation->Unregister(&_volumeNotification);
+                Exchange::JVolumeControl::Unregister(*this);
+                _implementation->Unregister(&_volumeNotification);
 
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED uint32_t result = _implementation->Release();
-            _implementation = nullptr;
-            // It should have been the last reference we are releasing,
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _implementation->Release();
+                _implementation = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                // The process can disappear in the meantime...
+                if (connection != nullptr) {
+                    // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
-        }
 
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
+        }
     }
 
     string VolumeControl::Information() const
@@ -110,4 +109,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

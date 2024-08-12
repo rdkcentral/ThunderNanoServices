@@ -22,7 +22,7 @@
 #include "Handler.h"
 #include "Notifier.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 class Attribute {
@@ -43,7 +43,7 @@ public:
     WebPAStatus Values(const std::map<std::string, Data>& attributes, std::vector<WebPAStatus>& status);
 
 private:
-    const WebPAStatus Values(const std::string& parameterName, Data& attributes) const;
+    WebPAStatus Values(const std::string& parameterName, Data& attributes) const;
     WebPAStatus Values(const std::string& parameterName, const Data& attribute);
 
 private:
@@ -54,4 +54,4 @@ private:
 };
 
 } // WebPA
-} // WPEFramework
+} // Thunder

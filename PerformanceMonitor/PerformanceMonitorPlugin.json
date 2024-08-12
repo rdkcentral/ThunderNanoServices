@@ -3,7 +3,7 @@
   "info": {
     "title": "Performance Monitor Plugin",
     "callsign": "PerformanceMonitor",
-    "locator": "libWPEFrameworkPerformanceMonitor.so",
+    "locator": "libThunderPerformanceMonitor.so",
     "status": "alpha",
     "description": "Retrieve the performance measurement against given package size.",
     "version": "1.0"

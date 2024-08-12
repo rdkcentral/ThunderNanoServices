@@ -26,7 +26,7 @@
 #include "Utils.h"
 #include "WebPADataTypes.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 template<class T>
 struct FuncPtr {
@@ -41,6 +41,8 @@ private:
     static constexpr const TCHAR* StateSleeping = _T("Sleeping");
     static constexpr const TCHAR* StateStopped = _T("Stopped");
     static constexpr const TCHAR* StateZombie = _T("Zombie");
+    static constexpr const uint32_t LinkWaitingTime = 2000;
+    static constexpr const uint32_t SleepingTimeSlot = 100;
 
     typedef std::map<std::string, std::pair<FuncPtr<DeviceInfo>::GetFunc, FuncPtr<DeviceInfo>::SetFunc>> FunctionMap;
 

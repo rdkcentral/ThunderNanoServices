@@ -47,15 +47,15 @@
 // plugins:       This module contains all the functionality required to build a plugin. It contains helper 
 //                classes and the base interfaces (IPlugin, IShell, ISubsystem) for plugin development and 
 //                a helper class to do "easy" development of JSONRPC interfaces.
-// WPEProcess:    The is an application (no need to include it anywhere) to host COMRPC objects out-of-process.
+// ThunderPlugin:    The is an application (no need to include it anywhere) to host COMRPC objects out-of-process.
 //                This is the application that is instantiated as a seperate process in case that a plugin is run
 //                out-of-process.
-// WPEFramework:  This is the Thunder application and Controller Plugin. This is the Application that needs
+// Thunder:  This is the Thunder application and Controller Plugin. This is the Application that needs
 //                to be started.
 //
 // To include any of the modules in your project, each module, offers a module header file. The module header 
 // file is consistently constructed by <module location name>/<module name>.h. Since the Module location name 
-// is equal to the module name, the inclusion of a module is done with WPEFramework/<Module Name>/<Module Name>.h
+// is equal to the module name, the inclusion of a module is done with Thunder/<Module Name>/<Module Name>.h
 // 
 // Logging versus Tracing (internal/module)
 // Thunder makes a distinction between the Logging concept and the Tracing concept. 
@@ -83,30 +83,59 @@
 
 #include <core/core.h>
 #include <com/com.h>
+#include <definitions/definitions.h>
 #include <plugins/Types.h>
 #include <interfaces/IDictionary.h>
 #include <iostream>
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE);
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace Thunder = WPEFramework;
+using namespace Thunder;
 
-class Dictionary : public Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary > {
-private:
-    using BaseClass = Thunder::RPC::SmartInterfaceType<Thunder::Exchange::IDictionary >;
+class Sink : public Exchange::IDictionary::INotification {
 public:
-    Dictionary(const uint32_t waitTime, const Thunder::Core::NodeId& node, const string& callsign)
+    Sink() = delete;
+    Sink(Sink&&) = delete;
+    Sink(const Sink&) = delete;
+    Sink& operator= (const Sink&) = delete;
+
+    Sink(Exchange::IDictionary* source)
+        : _source(source) {
+        _source->AddRef();
+    }
+    ~Sink() override {
+        _source->Release();
+    }
+
+public:
+    void Modified(const string& nameSpace, const string& key, const string& value) override {
+        printf("In namespace [%s], the key [%s] has a new value: [%s]\n", nameSpace.c_str(), key.c_str(), value.c_str());
+    }
+
+    BEGIN_INTERFACE_MAP(Sink)
+        INTERFACE_ENTRY(Exchange::IDictionary::INotification);
+    END_INTERFACE_MAP
+
+private:
+    Exchange::IDictionary* _source;
+};
+
+class Dictionary : public RPC::SmartInterfaceType<Exchange::IDictionary > {
+private:
+    using BaseClass = RPC::SmartInterfaceType<Exchange::IDictionary >;
+public:
+    Dictionary(const uint32_t waitTime, const Core::NodeId& node, const string& callsign)
         : BaseClass() {
         BaseClass::Open(waitTime, node, callsign);
     }
     ~Dictionary() {
-        BaseClass::Close(Thunder::Core::infinite);
+        BaseClass::Close(Core::infinite);
     }
 
 public:
     bool Get(const string& nameSpace, const string& key, string& value ) const {
         bool result = false;
-        const Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+        const Exchange::IDictionary* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
             result = impl->Get(nameSpace, key, value);
@@ -117,7 +146,7 @@ public:
     }
     bool Set(const string& nameSpace, const string& key, const string& value) {
         bool result = false;
-        Thunder::Exchange::IDictionary* impl = BaseClass::Interface();
+        Exchange::IDictionary* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
             result = impl->Set(nameSpace, key, value);
@@ -133,15 +162,56 @@ private:
     }
 };
 
-int main(int argc, char* argv[])
+class WorkerPoolImplementation 
+    : public Core::IIPCServer
+    , public Core::ThreadPool::IDispatcher
+    , public Core::WorkerPool {
+public:
+    WorkerPoolImplementation() = delete;
+    WorkerPoolImplementation(WorkerPoolImplementation&&) = delete;
+    WorkerPoolImplementation(const WorkerPoolImplementation&) = delete;
+    WorkerPoolImplementation& operator=(const WorkerPoolImplementation&) = delete;
+
+    PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+    WorkerPoolImplementation(const uint8_t threads, const uint32_t stackSize, const uint32_t queueSize)
+        : WorkerPool(threads, stackSize, queueSize, this, nullptr) {
+        //, _announceHandler(nullptr) {
+        Core::IWorkerPool::Assign(this);
+    }
+    POP_WARNING()
+
+    ~WorkerPoolImplementation() override {
+        Core::IWorkerPool::Assign(nullptr);
+    }
+
+private:
+    // ThreadPool::IDispatcher
+    // -------------------------------------------------------------
+    void Initialize() override {
+    }
+    void Deinitialize() override {
+    }
+    void Dispatch(Core::IDispatch* job) override {
+        job->Dispatch();
+    }
+
+    // IIPCServer
+    // -------------------------------------------------------------
+    void Procedure(Core::IPCChannel& channel, Core::ProxyType<Thunder::Core::IIPC>& data) override {
+        Core::ProxyType<Thunder::RPC::Job> job(RPC::Job::Instance());
+
+        job->Set(channel, data);
+
+        WorkerPool::Submit(Core::ProxyType<Core::IDispatch>(job));
+    }
+
+private:
+    Core::IIPCServer* _announceHandler;
+};
+
+int main(int /* argc */, char** /* argv */)
 {
-    // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address
-    // Here we create a domain socket address
-    #ifdef __WINDOWS__
-    Thunder::Core::NodeId nodeId("127.0.0.1:62000");
-    #else
-    Thunder::Core::NodeId nodeId("/tmp/communicator");
-    #endif
+    bool directLink = true;
 
     // Create an engine that can deserialize the invoke COMRPC messages that have been 
     // received. The parameters her <4,1> stand for the queue length, 4 which means that
@@ -184,7 +254,7 @@ int main(int argc, char* argv[])
     // and return it to the process that requested this interface for out-of-process.
     // The calls in the plugins (WebKitBrowser plugin):
     // service->Root<Exchange::IBrowser>(_connectionId, 2000, _T("WebKitImplementation"));
-    // will trigger the fork of a new process, that starts WPEProcess, WPEProcess, will 
+    // will trigger the fork of a new process, that starts ThunderPlugin, then it will
     // load a plugin (libWebKitBrowser.so), instantiate an object called 
     // "WebKitImplementation" and push the interface that resides on this object 
     // (Exchange::IBrowser) back over the opened COMRPC channel to the Thunder Framework.
@@ -215,16 +285,77 @@ int main(int argc, char* argv[])
     // Or 
     // 2)
     //    if (client->Open(3000) == Thunder::Core::ERROR_NONE) {
-    //        controller = client->Aquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
+    //        controller = client->Acquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
     //
     // Or
     // 3)
+    // WorkerPoolImplementation workerPool(2, Thunder::Core::Thread::DefaultStackSize(), 6);
+    
+    if (directLink == true)
     {
+        #ifdef __WINDOWS__
+        Core::NodeId nodeId("127.0.0.1:5522");
+        #else
+        Core::NodeId nodeId("/tmp/Dictionary/communicator");
+        #endif
+        Core::ProxyObject<RPC::CommunicatorClient> client(nodeId);
+        client.AddRef();
+
+        Exchange::IDictionary* pluginOnly = client.Open<Exchange::IDictionary>(_T(""));
+
+        if (pluginOnly != nullptr) {
+            Core::SinkType<Sink> sink(pluginOnly);
+
+            pluginOnly->Register(_T("/name"), &sink);
+
+            int32_t counter = 0;
+            char keyPress;
+
+            do {
+                keyPress = toupper(getchar());
+
+                switch (keyPress) {
+                case 'S': {
+
+                    string value = Core::NumberType<int32_t>(counter++).Text();
+                    if (pluginOnly->Set(_T("/name"), _T("key"), value) == Core::ERROR_NONE) {
+                        printf("Set value: %s\n", value.c_str());
+                    }
+                    break;
+                }
+                case 'G': {
+                    string value;
+                    if (pluginOnly->Get(_T("/name"), _T("key"), value) == Core::ERROR_NONE) {
+                        printf("Get value: %s\n", value.c_str());
+                    }
+                    break;
+
+                }
+                case 'Q': break;
+                default: break;
+                };
+            } while (keyPress != 'Q');
+
+            pluginOnly->Unregister(_T("/"), &sink);
+            pluginOnly->Release();
+            pluginOnly = nullptr;
+        }
+        client.CompositRelease();
+    }
+    else {
+        // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address
+        // Here we create a domain socket address
+        #ifdef __WINDOWS__
+                Core::NodeId nodeId("127.0.0.1:62000");
+        #else
+                Core::NodeId nodeId("/tmp/communicator");
+        #endif
+
+
         Dictionary  dictionary(3000, nodeId, _T("Dictionary"));
         char keyPress;
         uint32_t counter = 8;
 
-        // chip.PCD_Init();
         do {
             keyPress = toupper(getchar());
             
@@ -235,7 +366,7 @@ int main(int argc, char* argv[])
             }
             case 'S': {
 
-                string value = Thunder::Core::NumberType<int32_t>(counter++).Text();
+                string value = Core::NumberType<int32_t>(counter++).Text();
                 if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
                     printf("Set value: %s\n", value.c_str());
                 }
@@ -249,6 +380,19 @@ int main(int argc, char* argv[])
                 break;
 
             }
+            case 'X': {
+                uint32_t count = 0;
+                while (count++ != 500000) {
+                    string value = Core::NumberType<int32_t>(counter++).Text();
+                    if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
+                        if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
+                            printf("Iteration %6i: Set/Get value: %s\n", count, value.c_str());
+                        }
+                    }
+                }
+                break;
+
+            }
             case 'Q': break;
             default: break;
             };
@@ -256,7 +400,7 @@ int main(int argc, char* argv[])
     }
 
     printf("Prior to the call Dispose\n");
-    Thunder::Core::Singleton::Dispose();
+    Core::Singleton::Dispose();
     printf("Completed the call Dispose\n");
 
     return 0;

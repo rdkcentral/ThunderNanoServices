@@ -21,7 +21,7 @@
 
 #include <CECMessage.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         class OSDName : public ExchangeType<GIVE_OSD_NAME, SET_OSD_NAME, OSDName> {
@@ -47,4 +47,4 @@ namespace CEC {
     } // namespace Message
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

@@ -8,9 +8,9 @@ Remote host invocation can be used to access an out-of-process nanoservice from 
 First thing you need to do is to enable and start RemoteInvocation plugin on the device, on which the plugin will run. You should also specify address on which the plugin will be listening for proxy requests. You do that by configuring "address" in RemoteInvocation configuration. Eg. to listen for all incoming requests on port 5797 you could use following configuration:
 ```json
 {
- "locator":"libWPEFrameworkRemoteInvocation.so",
+ "locator":"libThunderRemoteInvocation.so",
  "classname":"RemoteInvocation",
- "autostart":true,
+ "startmode":"Activated",
  "configuration":{
   "address":"0.0.0.0:5797",
  }
@@ -41,9 +41,9 @@ _implementation = service->Root<Exchange::IRemoteHostExample>(connectionId, time
 with example config of
 ```json
 {
- "locator":"libWPEFrameworkRemoteHostExample.so",
+ "locator":"libThunderRemoteHostExample.so",
  "classname":"RemoteHostExample",
- "autostart":false,
+ "startmode":"Deactivated",
  "configuration":{
   "name":"Local",
   "root":{
@@ -61,9 +61,9 @@ _implementation = service->Root<Exchange::IRemoteHostExample>(connectionId, time
 the only difference is in config. It will look like this:
 ```json
 {
- "locator":"libWPEFrameworkRemoteHostExample.so",
+ "locator":"libThunderRemoteHostExample.so",
  "classname":"RemoteHostExample",
- "autostart":false,
+ "startmode":Deactivated,
  "configuration":{
   "name":"Remote",
   "root":{

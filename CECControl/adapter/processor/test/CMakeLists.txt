@@ -1,7 +1,7 @@
-find_package(WPEFramework)
+find_package(Thunder)
 
 find_package(${NAMESPACE}Core REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(${NAMESPACE}LocalTracer REQUIRED)
 
 add_executable(cec_processor_test
@@ -22,6 +22,6 @@ PRIVATE
     ${NAMESPACE}Core::${NAMESPACE}Core
     ${NAMESPACE}LocalTracer::${NAMESPACE}LocalTracer)
 
-install(TARGETS cec_processor_test DESTINATION bin)
+install(TARGETS cec_processor_test DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Test)
 
 #set(CMAKE_DEBUG_TARGET_PROPERTIES COMPILE_OPTIONS COMPILE_FEATURES)

@@ -19,10 +19,10 @@
  
 #include "StateController.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(StateController, 1, 0);
+    SERVICE_REGISTRATION(StateController, 1, 0)
 
     /* virtual */ const string StateController::Initialize(PluginHost::IShell* service)
     {
@@ -39,7 +39,7 @@ namespace Plugin {
         return message;
     }
 
-    /* virtual */ void StateController::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void StateController::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 
@@ -84,4 +84,4 @@ namespace Plugin {
     }
 
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

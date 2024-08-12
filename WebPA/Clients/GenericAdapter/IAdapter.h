@@ -20,7 +20,7 @@
 #pragma once
 #include "WebPADataTypes.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Implementation {
     struct ICallback {
@@ -63,7 +63,7 @@ public:
     };
 
 public:
-    static Administrator& Instance()
+    EXTERNAL static Administrator& Instance()
     {
         static Administrator _singleton;
         return (_singleton);
@@ -138,4 +138,4 @@ public:
     virtual void CheckForUpdates() = 0;
 };
 
-} // WPEFramework
+} // Thunder

@@ -1,0 +1,52 @@
+startmode = "@PLUGIN_DIALSERVER_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("name", "@PLUGIN_DIALSERVER_NAME@")
+configuration.add("model", "@PLUGIN_DIALSERVER_MODEL@")
+configuration.add("manufacturer", "@PLUGIN_DIALSERVER_MANUFACTURER@")
+configuration.add("description", "@PLUGIN_DIALSERVER_DESCRIPTION@")
+configuration.add("interface", "@PLUGIN_DIALSERVER_INTERFACE@")
+configuration.add("webserver", "@PLUGIN_DIALSERVER_WEBSERVER_CALLSIGN@")
+configuration.add("switchboard", "@PLUGIN_DIALSERVER_SWITCHBOARD_CALLSIGN@")
+
+app_list = []
+
+if boolean("@PLUGIN_DIALSERVER_ENABLE_YOUTUBE@"):
+    if "@PLUGIN_DIALSERVER_YOUTUBE_MODE@" in ["active", "passive"]:
+        app_config = JSON()
+        app_config.add("name", "YouTube")
+        if "@PLUGIN_DIALSERVER_YOUTUBE_MODE@" == "active":
+            app_config.add("callsign", "@PLUGIN_DIALSERVER_YOUTUBE_CALLSIGN@")
+        app_config.add("url", "https://www.youtube.com/tv")
+        if boolean("@PLUGIN_DIALSERVER_YOUTUBE_RUNTIMECHANGE@"):
+            app_config.add("runtimechange", "true")
+        app_list.append(app_config)
+    else:
+        print("Unknown YouTube mode: @PLUGIN_DIALSERVER_YOUTUBE_MODE@")
+
+if boolean("@PLUGIN_DIALSERVER_ENABLE_NETFLIX@"):
+    if "@PLUGIN_DIALSERVER_NETFLIX_MODE@" in ["active", "passive"]:
+        app_config = JSON()
+        app_config.add("name", "Netflix")
+        if "@PLUGIN_DIALSERVER_NETFLIX_MODE@" == "active":
+            app_config.add("callsign", "@PLUGIN_DIALSERVER_NETFLIX_CALLSIGN@")
+        app_config.add("url", "https://www.netflix.com")
+        if boolean("@PLUGIN_DIALSERVER_NETFLIX_HIDE@"):
+            app_config.add("hide", "true")
+        app_list.append(app_config)
+    else:
+        print("Unknown Netflix mode: @PLUGIN_DIALSERVER_NETFLIX_MODE@")
+
+if boolean("@PLUGIN_DIALSERVER_ENABLE_AMAZON_PRIME@"):
+    if "@PLUGIN_DIALSERVER_AMAZON_PRIME_MODE@" in ["active", "passive"]:
+        app_config = JSON()
+        app_config.add("name", "AmazonInstantVideo")
+        if "@PLUGIN_DIALSERVER_AMAZON_PRIME_MODE@" == "active":
+            app_config.add("callsign", "@PLUGIN_DIALSERVER_AMAZON_PRIME_CALLSIGN@")
+        app_config.add("url", "https://www.primevideo.com")
+        app_list.append(app_config)
+    else:
+        print("Unknown Amazon Prime mode: @PLUGIN_DIALSERVER_AMAZON_PRIME_MODE@")
+
+configuration.add("apps", app_list)

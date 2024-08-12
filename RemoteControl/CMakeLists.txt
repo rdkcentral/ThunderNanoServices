@@ -17,9 +17,9 @@
 
 project(RemoteControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_REMOTECONTROL_AUTOSTART true CACHE STRING "Automatically start RemoteControl plugin")
+set(PLUGIN_REMOTECONTROL_STARTMODE "Activated" CACHE STRING "Automatically start RemoteControl plugin")
 set(PLUGIN_REMOTECONTROL_RELEASE_TIMEOUT 30000 CACHE STRING "Remote control release timeout")
 set(PLUGIN_REMOTECONTROL_PASSON false CACHE STRING "Enable keys pass-through on default producer")
 set(PLUGIN_REMOTECONTROL_REPEAT_INTERVAL "100" CACHE STRING "Repeat interval for RemoteControl")
@@ -38,12 +38,16 @@ set(PLUGIN_REMOTECONTROL_REPEAT_START "500" CACHE STRING "Repeat start for Remot
 option(PLUGIN_REMOTECONTROL_RFCE "Enable RF4CE functionality." ON)
 
 set(PLUGIN_REMOTECONTROL_RFCE_REMOTE_ID "GPSTB" CACHE STRING "User string, used for greenpeak")
-set(PLUGIN_REMOTECONTROL_RFCE_MODULE "/lib/modules/misc/gpK5.ko" CACHE STRING "path to kernel module")
+set(PLUGIN_REMOTECONTROL_RFCE_MODULE "/${CMAKE_INSTALL_LIBDIR}/modules/misc/gpK5.ko" CACHE STRING "path to kernel module")
 set(PLUGIN_REMOTECONTROL_RFCE_NODE_ID 249 CACHE STRING "Node ID for the device to be created")
 set(PLUGIN_REMOTECONTROL_RFCE_AUTOPAIRING false CACHE BOOL "Enable AutoPairing feature for RF4CE producer")
 set(PLUGIN_REMOTECONTROL_RFCE_NVM_LUT "DEFAULT" CACHE STRING "The NVM LUT to be used (see GreenPeakNvmLut.h)")
 
 option(PLUGIN_REMOTECONTROL_CEC "Enable CEC User Control conversion support." OFF)
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -127,23 +131,23 @@ if (PLUGIN_REMOTECONTROL_DEVINPUT)
 endif()
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 install(
 	FILES linux-windows.json
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
-	COMPONENT ${MODULE_NAME})
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/RemoteControl
+	COMPONENT ${NAMESPACE}_Runtime)
 
 install(
 	FILES web-remote.json
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
-	COMPONENT ${MODULE_NAME})
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/RemoteControl
+	COMPONENT ${NAMESPACE}_Runtime)
 
 if(PLUGIN_REMOTECONTROL_CEC)
 install(
 	FILES cec-remote.json
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/RemoteControl
-	COMPONENT ${MODULE_NAME})
+	DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/RemoteControl
+	COMPONENT ${NAMESPACE}_Runtime)
 endif()
 
 write_config()

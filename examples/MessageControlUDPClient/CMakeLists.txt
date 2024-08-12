@@ -14,22 +14,35 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-cmake_minimum_required(VERSION 3.3)
-set(PLUGIN_NAME UDPMessageOutput)
 
+project(UDPMessageOutput)
+
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
+find_package(Thunder)
+find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
 
-add_executable(${PLUGIN_NAME}
+add_executable(${MODULE_NAME}
     UDPMessageOutput.cpp
     Module.cpp
 )
 
-set_target_properties(${PLUGIN_NAME} PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES)
 
-target_link_libraries(${PLUGIN_NAME}
+target_link_libraries(${MODULE_NAME}
     PRIVATE
+        ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 
-install(TARGETS ${PLUGIN_NAME} DESTINATION bin)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

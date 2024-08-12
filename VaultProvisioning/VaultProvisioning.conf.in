@@ -1,0 +1,43 @@
+startmode = "@PLUGIN_VAULTPROVISIONING_STARTMODE@"
+
+configuration = JSON()
+
+def Provision(objects, prov_list):
+
+    def ProvisionObject(objects, context):
+
+        def Object(label, vault, type, info):
+            entry = JSON()
+            entry.add("label", label)
+            entry.add("vault", vault)
+            entry.add("type", type)
+            entry.add("info", info)
+            return entry
+
+        def ProvisionRandomObj(tokens):
+            if len(tokens) == 3:
+                info = JSON()
+                info.add("size", tokens[2])
+                objects.append(Object(tokens[0], tokens[1], "random", info))
+
+        tokens = context.split(":")
+        if len(tokens) >= 1:
+            if tokens[0] == "random":
+                ProvisionRandomObj(tokens[1:])
+
+    definitions = prov_list.split(";")
+
+    for definition in definitions:
+        ProvisionObject(objects, definition)
+
+_objects = []
+
+Provision(_objects, "@PLUGIN_VAULTPROVISIONING_OBJECTS@")
+
+configuration.add("objects", _objects)
+configuration.add("location", "PLUGIN_VAULTPROVISIONING_LOCATION")
+
+root = JSON()
+root.add("mode", "@PLUGIN_VAULTPROVISIONING_MODE@")
+
+configuration.add("root", root)

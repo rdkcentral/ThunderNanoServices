@@ -25,7 +25,7 @@
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE);
 
-using namespace WPEFramework;
+using namespace Thunder;
 
 class COMServer : public RPC::Communicator {
 private:
@@ -233,8 +233,6 @@ public:
         // over socket, the announce message could be handled on the communication thread
         // or better, if possible, it can be run on the thread of the engine we have just 
         // created.
-        engine->Announcements(Announcement());
-
         Open(Core::infinite);
     }
     ~COMServer() override
@@ -243,7 +241,7 @@ public:
     }
 
 private:
-    void* Aquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+    void* Acquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
     {
         void* result = nullptr;
 
@@ -253,12 +251,12 @@ private:
             if (interfaceId == ::Exchange::IWallClock::ID) {
 
                 // Allright, request a new object that implements the requested interface.
-                result = Core::Service<Implementation>::Create<Exchange::IWallClock>();
+                result = Core::ServiceType<Implementation>::Create<Exchange::IWallClock>();
             }
             else if (interfaceId == Core::IUnknown::ID) {
 
                 // Allright, request a new object that implements the requested interface.
-                result = Core::Service<Implementation>::Create<Core::IUnknown>();
+                result = Core::ServiceType<Implementation>::Create<Core::IUnknown>();
             }
         }
         return (result);

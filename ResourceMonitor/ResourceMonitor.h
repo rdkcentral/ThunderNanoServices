@@ -22,7 +22,7 @@
 #include <interfaces/IMemory.h>
 #include <interfaces/IResourceMonitor.h>
 
-namespace WPEFramework
+namespace Thunder
 {
     namespace Plugin
     {
@@ -39,11 +39,13 @@ namespace WPEFramework
                 }
                 ~Notification() override = default;
 
-                public:
-                void Activated(RPC::IRemoteConnection*) override {
+            public:
+                void Activated(RPC::IRemoteConnection* /* connection */) override {
                 }
-                virtual void Deactivated(RPC::IRemoteConnection* connection) override {
+                void Deactivated(RPC::IRemoteConnection* connection) override {
                     _parent.Deactivated(connection);
+                }
+                void Terminated(RPC::IRemoteConnection* /* connection */) override {
                 }
 
                 BEGIN_INTERFACE_MAP(Notification)
@@ -70,7 +72,7 @@ namespace WPEFramework
 
             Core::ProxyType<Web::Response> Process(const Web::Request &request) override
             {
-                Core::ProxyType<Web::Response> result = PluginHost::Factories::Instance().Response();
+                Core::ProxyType<Web::Response> result = PluginHost::IFactories::Instance().Response();
                 result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
                 result->Message = string(_T("Unknown request path specified."));
 
@@ -120,7 +122,7 @@ namespace WPEFramework
             uint32_t _connectionId;
             static Core::ProxyPoolType<Web::TextBody> webBodyFactory;
             uint32_t _skipURL;
-            Core::Sink<Notification> _notification;
+            Core::SinkType<Notification> _notification;
         };
     } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

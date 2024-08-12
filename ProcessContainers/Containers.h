@@ -25,7 +25,7 @@
 #include "Module.h"
 #include "interfaces/json/JsonData_Containers.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Containers : public PluginHost::IPlugin, PluginHost::JSONRPC {
@@ -63,10 +63,10 @@ namespace Plugin {
         uint32_t endpoint_start(const JsonData::Containers::StartParamsData& params);
         uint32_t endpoint_stop(const JsonData::Containers::StopParamsData& params);
         uint32_t get_containers(Core::JSON::ArrayType<Core::JSON::String>& response) const;
-        uint32_t get_networks(const string& index, Core::JSON::ArrayType<JsonData::Containers::NetworksData>& response) const;
+        uint32_t get_networks(const string& index, Core::JSON::ArrayType<JsonData::Containers::NetworksResultDataElem>& response) const;
         uint32_t get_memory(const string& index, JsonData::Containers::MemoryData& response) const;
         uint32_t get_cpu(const string& index, JsonData::Containers::CpuData& response) const;
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

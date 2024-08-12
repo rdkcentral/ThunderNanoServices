@@ -1,0 +1,18 @@
+precondition = ["Internet"]
+startmode = "@PLUGIN_TIMESYNC_STARTMODE@"
+
+configuration = JSON()
+
+if boolean("@PLUGIN_TIMESYNC_DEFFERED@"):
+    configuration.add("deferred", "true")
+else:
+    configuration.add("deferred", "false")
+configuration.add("interval", 5)
+configuration.add("retries", 20)
+configuration.add("periodicity", 24)
+configuration.add("sources", [
+    "ntp://0.pool.ntp.org",
+    "ntp://1.pool.ntp.org",
+    "ntp://2.pool.ntp.org",
+    "ntp://3.pool.ntp.org"
+])

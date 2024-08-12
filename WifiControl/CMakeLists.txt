@@ -17,9 +17,9 @@
 
 project(WifiControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -27,20 +27,24 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_WIFICONTROL_AUTOSTART true CACHE STRING "Automatically start WifiControl plugin")
+set(PLUGIN_WIFICONTROL_STARTMODE "Activated" CACHE STRING "Automatically start WifiControl plugin")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT true CACHE STRING "Automatically start to connect with configured SSID")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT_RETRYINTERVAL 30 CACHE STRING "Autoconnect Retry interval in seconds")
 set(PLUGIN_WIFICONTROL_AUTOCONNECT_MAXRETRIES -1 CACHE STRING "Autoconnect max retries")
 set(PLUGIN_WIFICONTROL_WPS_WALKTIME 125 CACHE STRING "Maximum Walk Time for WPS")
 set(PLUGIN_WIFICONTROL_WPS_DISABLED false CACHE STRING "Disable the WPS Feature")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
-    WifiControl.cpp  
-    WifiControlJsonRpc.cpp
+    WifiControl.cpp
+    WifiControlImplementation.cpp
     Network.cpp      
     Module.cpp)
 
@@ -55,6 +59,8 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
 
+target_compile_options (${MODULE_NAME} PRIVATE -Wno-psabi)
+
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
@@ -62,6 +68,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

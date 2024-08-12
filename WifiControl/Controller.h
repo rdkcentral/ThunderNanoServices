@@ -26,7 +26,7 @@
 // Interface specification taken from:
 // https://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WPASupplicant {
 
     class Controller : public Core::StreamType<Core::SocketDatagram> {
@@ -850,7 +850,7 @@ namespace WPASupplicant {
              {
                  _adminLock.Lock();
                  
-                 uint8_t data[infoLine.Length()];
+                 uint8_t* data = static_cast<uint8_t*>(ALLOCA(infoLine.Length()));
                  uint16_t attrLen = Core::FromHexString(infoLine.Data(), data, infoLine.Length());
                  uint8_t pos = 0;
 
@@ -1414,7 +1414,6 @@ namespace WPASupplicant {
         }
         inline uint32_t Scan()
         {
-
             uint32_t result = Core::ERROR_INPROGRESS;
             _adminLock.Lock();
             const bool activated = _scanRequest.Activated();
@@ -1439,9 +1438,35 @@ namespace WPASupplicant {
 
             return (result);
         }
+        inline uint32_t AbortScan()
+        {
+            uint32_t result = Core::ERROR_INPROGRESS;
+            _adminLock.Lock();
+            const bool scanning = _scanRequest.IsScanning();
+            _adminLock.Unlock();
+
+            if (scanning == true) {
+                result = Core::ERROR_NONE;
+
+                CustomRequest exchange(string(_TXT("ABORT_SCAN")));
+
+                Submit(&exchange);
+
+                if ((exchange.Wait(MaxConnectionTime) == false) || (exchange.Response() != _T("OK"))) {
+                    result = Core::ERROR_UNAVAILABLE;
+                } else {
+                    _adminLock.Lock();
+                    _scanRequest.Aborted();
+                    _adminLock.Unlock();
+                }
+
+                Revoke(&exchange);
+            }
+
+            return (result);
+        }
         inline uint32_t Ping()
         {
-
             uint32_t result = Core::ERROR_NONE;
 
             CustomRequest exchange(string(_TXT("PING")));
@@ -1459,7 +1484,6 @@ namespace WPASupplicant {
         }
         inline uint32_t Debug(const uint32_t level)
         {
-
             uint32_t result = Core::ERROR_NONE;
 
             CustomRequest exchange(string(_TXT("LEVEL ")) + Core::NumberType<uint32_t>(level).Text());
@@ -1484,7 +1508,6 @@ namespace WPASupplicant {
         }
         inline Network Get(const uint64_t& id)
         {
-
             Network result;
 
             _adminLock.Lock();
@@ -1525,7 +1548,6 @@ namespace WPASupplicant {
 
             return (result);
         }
-
         inline Config::Iterator Configs()
         {
             Core::ProxyType<Controller> channel(Core::ProxyType<Controller>(*this));
@@ -1728,18 +1750,15 @@ namespace WPASupplicant {
 
             return (result);
         }
-
         inline uint32_t CancelWps()
         {
             return (_wpsRequest.Cancel());
         }
-
         inline uint32_t StartWpsPbc(const string& ssid)
         {
             uint64_t bssid = BSSIDFromSSID(ssid);
             return (_wpsRequest.InvokePbc(bssid));
         }
-
         inline uint32_t StartWpsPin(const string& ssid, const string& pin)
         {
             uint32_t result = Core::ERROR_INCOMPLETE_CONFIG;
@@ -1750,12 +1769,10 @@ namespace WPASupplicant {
             }
             return result;
         }
-
         inline uint32_t GenerateWpsPin(string& pin) const
         {
             return (_wpsRequest.GeneratePin(pin));
         }
-
         inline uint32_t GetWpsCredentials(string& SSID, string& NetworkKey, WPASupplicant::Network::wpsauthtypes& AuthType) const
         {
             uint32_t result = Core::ERROR_NOT_EXIST;
@@ -1772,7 +1789,6 @@ namespace WPASupplicant {
             _adminLock.Unlock();
             return result;
         }
-
         inline uint32_t Connect(const string& SSID)
         {
             uint32_t result = Core::ERROR_NOT_EXIST;
@@ -1813,7 +1829,6 @@ namespace WPASupplicant {
 
             return (result);
         }
-
         inline uint32_t Connect(const string& SSID, const uint64_t& bssid)
         {
             class ConnectSink : public IConnectCallback {
@@ -1821,7 +1836,7 @@ namespace WPASupplicant {
                 ConnectSink(const ConnectSink&) = delete;
                 ConnectSink& operator= (const ConnectSink&) = delete;
                 ConnectSink() : _signal(false, true), _result(Core::ERROR_TIMEDOUT) {}
-                ~ConnectSink() override = default;;
+                ~ConnectSink() override = default;
 
             public:
                 uint32_t Wait(const uint32_t waitTime) {
@@ -2323,6 +2338,6 @@ namespace WPASupplicant {
         WpsRequest _wpsRequest;
     };
 }
-} // namespace WPEFramework::WPASupplicant
+} // namespace Thunder::WPASupplicant
 
 #endif // WPASUPPLICANT_CONTROLLER_H

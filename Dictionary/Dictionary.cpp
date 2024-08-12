@@ -19,7 +19,7 @@
  
 #include "Dictionary.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::Dictionary::enumType)
 
@@ -227,9 +227,9 @@ namespace Plugin {
         return (result);
     }
 
-    /* virtual */ bool Dictionary::Get(const string& nameSpace, const string& key, string& value) const
+    /* virtual */ Core::hresult Dictionary::Get(const string& nameSpace, const string& key, string& value) const
     {
-        bool result = false;
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
         _adminLock.Lock();
 
@@ -244,7 +244,7 @@ namespace Plugin {
             }
 
             if (listIndex != container.end()) {
-                result = true;
+                result = Core::ERROR_NONE;
                 value = listIndex->Value();
             }
         }
@@ -281,10 +281,10 @@ namespace Plugin {
 
     // Direct method to Set a value for a key in a certain namespace from the dictionary.
     // NameSpace and key MUST be filled.
-    /* virtual */ bool Dictionary::Set(const string& nameSpace, const string& key, const string& value)
+    /* virtual */ Core::hresult Dictionary::Set(const string& nameSpace, const string& key, const string& value)
     {
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
-        bool result = false;
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
         _adminLock.Lock();
 
@@ -296,14 +296,14 @@ namespace Plugin {
         }
 
         if (listIndex == container.end()) {
-            result = true;
+            result = Core::ERROR_NONE;
             container.push_back(RuntimeEntry(key, value, VOLATILE));
         } else if (listIndex->Value() != value) {
-            result = true;
+            result = Core::ERROR_NONE;
             listIndex->Value(value);
         }
 
-        if (result == true) {
+        if (result == Core::ERROR_NONE) {
             ObserverMap::iterator index(_observers.begin());
 
             // Right, we updated send out the modification !!!
@@ -322,6 +322,8 @@ namespace Plugin {
 
     /* virtual */ void Dictionary::Register(const string& nameSpace, struct Exchange::IDictionary::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
 #ifdef __DEBUG__
@@ -335,6 +337,7 @@ namespace Plugin {
         }
 #endif
 
+        sink->AddRef();
         _observers.push_back(std::pair<string, struct Exchange::IDictionary::INotification*>(nameSpace, sink));
 
         _adminLock.Unlock();
@@ -342,6 +345,8 @@ namespace Plugin {
 
     /* virtual */ void Dictionary::Unregister(const string& nameSpace, struct Exchange::IDictionary::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         bool found = false;
 
         _adminLock.Lock();
@@ -356,6 +361,7 @@ namespace Plugin {
         }
 
         if (index != _observers.end()) {
+            index->second->Release();
             _observers.erase(index);
         }
 

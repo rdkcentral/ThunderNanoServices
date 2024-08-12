@@ -6,7 +6,7 @@
 
 **Status: :black_circle::white_circle::white_circle:**
 
-A FirmwareControl plugin for Thunder framework.
+FirmwareControl plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -24,7 +24,7 @@ A FirmwareControl plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the FirmwareControl plugin. It includes detailed specification about its configuration, methods and properties provided, as well as notifications sent.
+This document describes purpose and functionality of the FirmwareControl plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -57,7 +57,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.HTTP">[HTTP](http://www.w3.org/Protocols)</a> | HTTP specification |
 | <a name="ref.JSON-RPC">[JSON-RPC](https://www.jsonrpc.org/specification)</a> | JSON-RPC 2.0 specification |
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
-| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20WPEFramework.docx)</a> | Thunder API Reference |
+| <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
 <a name="head.Description"></a>
 # Description
@@ -75,8 +75,8 @@ The table below lists configuration options of the plugin.
 | :-------- | :-------- | :-------- |
 | callsign | string | Plugin instance name (default: *FirmwareControl*) |
 | classname | string | Class name: *FirmwareControl* |
-| locator | string | Library name: *libWPEFrameworkFirmwareControl.so* |
-| autostart | boolean | Determines if the plugin shall be started automatically along with the framework |
+| locator | string | Library name: *libThunderFirmwareControl.so* |
+| startmode | string | Determines if the plugin shall be started automatically along with the framework |
 | configuration | object | <sup>*(optional)*</sup>  |
 | configuration?.source | string | <sup>*(optional)*</sup> Source URL or location of the firmware |
 | configuration?.download | string | <sup>*(optional)*</sup> Location where the firmware to be downloaded |
@@ -87,7 +87,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [FirmwareControl.json](https://github.com/rdkcentral/ThunderInterfaces/tree/master/jsonrpc/FirmwareControl.json)
+- [FirmwareControl.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/FirmwareControl.json) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -100,7 +100,6 @@ FirmwareControl interface methods:
 | :-------- | :-------- |
 | [upgrade](#method.upgrade) | Upgrade the device to the given firmware |
 | [resume](#method.resume) | Resume download from the last paused position |
-
 
 <a name="method.upgrade"></a>
 ## *upgrade [<sup>method</sup>](#head.Methods)*
@@ -143,16 +142,16 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "FirmwareControl.1.upgrade",
-    "params": {
-        "name": "firmware_v.0",
-        "location": "http://my.site.com/images",
-        "type": "RCDL",
-        "progressinterval": 10,
-        "hmac": "2834e6d07fa4c7778ef7a4e394f38a5c321afbed51d54ad512bd3fffbc7aa5debc"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "FirmwareControl.1.upgrade",
+  "params": {
+    "name": "firmware_v.0",
+    "location": "http://my.site.com/images",
+    "type": "RCDL",
+    "progressinterval": 10,
+    "hmac": "2834e6d07fa4c7778ef7a4e394f38a5c321afbed51d54ad512bd3fffbc7aa5debc"
+  }
 }
 ```
 
@@ -160,9 +159,9 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -203,13 +202,13 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "FirmwareControl.1.resume",
-    "params": {
-        "name": "firmware_v.0",
-        "location": "http://my.site.com/images"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "FirmwareControl.1.resume",
+  "params": {
+    "name": "firmware_v.0",
+    "location": "http://my.site.com/images"
+  }
 }
 ```
 
@@ -217,9 +216,9 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
 
@@ -235,7 +234,6 @@ FirmwareControl interface properties:
 | [status](#property.status) <sup>RO</sup> | Current status of a upgrade |
 | [downloadsize](#property.downloadsize) <sup>RO</sup> | Max free space available to download image |
 
-
 <a name="property.status"></a>
 ## *status [<sup>property</sup>](#head.Properties)*
 
@@ -247,9 +245,11 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | string | Upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installinitiated*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
+| result | string | Upgrade status (must be one of the following: *none*, *upgradestarted*, *downloadstarted*, *downloadaborted*, *downloadcompleted*, *installinitiated*, *installnotstarted*, *installaborted*, *installstarted*, *upgradecompleted*, *upgradecancelled*) |
 
 ### Example
 
@@ -257,9 +257,9 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "FirmwareControl.1.status"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "FirmwareControl.1.status"
 }
 ```
 
@@ -267,9 +267,9 @@ Also see: [upgradeprogress](#event.upgradeprogress)
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "completed"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "completed"
 }
 ```
 
@@ -282,9 +282,11 @@ Provides access to the max free space available to download image.
 
 ### Value
 
+### Result
+
 | Name | Type | Description |
 | :-------- | :-------- | :-------- |
-| (property) | number | Available free space in bytes |
+| result | number | Available free space in bytes |
 
 ### Example
 
@@ -292,9 +294,9 @@ Provides access to the max free space available to download image.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "FirmwareControl.1.downloadsize"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "FirmwareControl.1.downloadsize"
 }
 ```
 
@@ -302,16 +304,16 @@ Provides access to the max free space available to download image.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 315576
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 315576
 }
 ```
 
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the FirmwareControl plugin:
 
@@ -320,7 +322,6 @@ FirmwareControl interface events:
 | Event | Description |
 | :-------- | :-------- |
 | [upgradeprogress](#event.upgradeprogress) | Notifies progress of upgrade |
-
 
 <a name="event.upgradeprogress"></a>
 ## *upgradeprogress [<sup>event</sup>](#head.Notifications)*
@@ -340,13 +341,13 @@ Notifies progress of upgrade.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.upgradeprogress",
-    "params": {
-        "status": "completed",
-        "error": "operationotsupported",
-        "progress": 89
-    }
+  "jsonrpc": "2.0",
+  "method": "client.events.1.upgradeprogress",
+  "params": {
+    "status": "completed",
+    "error": "operationotsupported",
+    "progress": 89
+  }
 }
 ```
 

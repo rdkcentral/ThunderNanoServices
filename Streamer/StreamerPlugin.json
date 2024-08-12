@@ -3,7 +3,7 @@
   "info": {
     "title": "Streamer Plugin",
     "callsign": "Streamer",
-    "locator": "libWPEFrameworkStreamer.so",
+    "locator": "libThunderStreamer.so",
     "status": "alpha",
     "description": [
       ""

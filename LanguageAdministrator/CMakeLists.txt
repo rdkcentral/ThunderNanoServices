@@ -18,12 +18,16 @@
 set(PLUGIN_NAME LanguageAdministrator)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(ICU COMPONENTS uc i18n REQUIRED)
 
-set(PLUGIN_LANGUAGEADMINISTRATOR_AUTOSTART true CACHE STRING "Automatically start LanguageAdministrator plugin")
+set(PLUGIN_LANGUAGEADMINISTRATOR_STARTMODE "Activated" CACHE STRING "Automatically start LanguageAdministrator plugin")
 
 add_library(${MODULE_NAME} SHARED
     LanguageAdministrator.cpp
@@ -54,6 +58,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config(${PLUGIN_NAME})

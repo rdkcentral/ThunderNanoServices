@@ -24,231 +24,10 @@
 #include <fstream>
 #include "../FileTransfer/Module.h"
 
-namespace WPEFramework {
-namespace Core {
-    class FileSystemMonitor : public Core::IResource {
-        public:
-            struct ICallback
-            {
-                virtual ~ICallback() = default;
-                virtual void Updated() = 0;
-            };
-
-        private:
-            class Observer {
-                public:
-                    Observer(ICallback *callback)
-                        : _callbacks()
-                    {
-                        _callbacks.emplace_back(callback);
-                    }
-                    ~Observer()
-                    {
-                    }
-               public:
-                    bool HasCallbacks() const
-                    {
-                        return (_callbacks.size() > 0);
-                    }
-                    void Register(ICallback *callback)
-                    {
-                        ASSERT(std::find(_callbacks.begin(),_callbacks.end(), callback) == _callbacks.end());
-                        _callbacks.emplace_back(callback);
-                    }
-                    void Unregister(ICallback *callback)
-                    {
-                        std::list<ICallback *>::iterator index = std::find(_callbacks.begin(), _callbacks.end(), callback);
-                        ASSERT(index != _callbacks.end());
-
-                        if (index != _callbacks.end()) {
-                            _callbacks.erase(index);
-                        }
-                    }
-                    void Notify()
-                    {
-                        std::list<ICallback *>::iterator index(_callbacks.begin());
-                        while (index != _callbacks.end()) {
-                            (*index)->Updated();
-                            index++;
-                        }
-                    }
-                private:
-                    std::list<ICallback *> _callbacks;
-            };
-
-            typedef std::unordered_map<int, Observer> Observers;
-            typedef std::unordered_map<string, int> Files;
-
-            FileSystemMonitor()
-                : _adminLock()
-                , _notifyFd(inotify_init1(IN_NONBLOCK))
-                , _files()
-                , _observers()
-            {
-            }
-
-        public:
-            FileSystemMonitor(const FileSystemMonitor &) = delete;
-            FileSystemMonitor &operator=(const FileSystemMonitor &) = delete;
-
-            static FileSystemMonitor &Instance()
-            {
-                static FileSystemMonitor _singleton;
-                return (_singleton);
-            }
-            ~FileSystemMonitor() override
-            {
-                if (_notifyFd != -1) {
-                    ::close(_notifyFd);
-                }
-            }
-
-        public:
-            bool IsValid() const
-            {
-                return (_notifyFd != -1);
-            }
-            bool Register(ICallback *callback, const string &filename)
-            {
-                ASSERT(_notifyFd != -1);
-                ASSERT(callback != nullptr);
-
-                _adminLock.Lock();
-
-                Files::iterator index = _files.find(filename);
-                if (index != _files.end()) {
-                    Observers::iterator loop = _observers.find(index->second);
-                    ASSERT(loop != _observers.end());
-
-                    loop->second.Register(callback);
-                }
-                else
-                {
-                    int fileFd = inotify_add_watch(_notifyFd, filename.c_str(), IN_CLOSE_WRITE);
-                    if (fileFd >= 0) {
-                        _files.emplace(std::piecewise_construct,
-                                       std::forward_as_tuple(filename),
-                                       std::forward_as_tuple(fileFd));
-                        _observers.emplace(std::piecewise_construct,
-                                          std::forward_as_tuple(fileFd),
-                                          std::forward_as_tuple(callback));
-
-                        if (_files.size() == 1) {
-                            // This is the first entry, lets start monitoring
-                            Core::ResourceMonitor::Instance().Register(*this);
-                        }
-                    }
-                }
-
-                _adminLock.Unlock();
-
-                return (IsValid());
-            }
-            void Unregister(ICallback *callback, const string &filename)
-            {
-                ASSERT(_notifyFd != -1);
-                ASSERT(callback != nullptr);
-
-                _adminLock.Lock();
-
-                Files::iterator index = _files.find(filename);
-                ASSERT(index != _files.end());
-
-                if (index != _files.end()) {
-                    Observers::iterator loop = _observers.find(index->second);
-                    ASSERT(loop != _observers.end());
-
-                    loop->second.Unregister(callback);
-                    if (loop->second.HasCallbacks() == false) {
-                        if (inotify_rm_watch(_notifyFd, index->second) < 0) {
-                            TRACE(Trace::Error, (_T("Invoke of inotify_rm_watch failed")));
-                        }
-                        // Clear this index, we are no longer observing
-                        _files.erase(index);
-                        _observers.erase(loop);
-                        if (_files.size() == 0) {
-                            // This is the first entry, lets start monitoring
-                            Core::ResourceMonitor::Instance().Unregister(*this);
-                        }
-                    }
-                }
-
-                _adminLock.Unlock();
-            }
-
-        private:
-            Core::IResource::handle Descriptor() const override
-            {
-                return (_notifyFd);
-            }
-            uint16_t Events() override
-            {
-                return (POLLIN);
-            }
-            void Handle(const uint16_t events) override
-            {
-                if ((events & POLLIN) != 0) {
-                    uint8_t eventBuffer[(sizeof(struct inotify_event) + NAME_MAX + 1)];
-                    int length;
-                    do
-                    {
-                        length = ::read(_notifyFd, eventBuffer, sizeof(eventBuffer));
-                        if (length > 0) {
-                            const struct inotify_event *event = reinterpret_cast<const struct inotify_event *>(eventBuffer);
-
-                            _adminLock.Lock();
-
-                            // Check if we have this entry..
-                            Observers::iterator loop = _observers.find(event->wd);
-                            if (loop != _observers.end()) {
-                                loop->second.Notify();
-                            }
-
-                            _adminLock.Unlock();
-                        }
-                    } while (length > 0);
-                }
-            }
-
-        private:
-            Core::CriticalSection _adminLock;
-            int _notifyFd;
-            Files _files;
-            Observers _observers;
-        };
-} // namespace Core
-
+namespace Thunder {
 namespace Plugin
 {
-    class FileObserver {
-        private:
-            class Sink : public Core::FileSystemMonitor::ICallback, public Core::IDispatch {
-                public:
-                    Sink() = delete;
-                    Sink(const Sink &) = delete;
-                    Sink &operator=(const Sink &) = delete;
-                    Sink(FileObserver *parent)
-                        : _parent(*parent)
-                    {
-                    }
-                    ~Sink() override
-                    {
-                    }
-
-                public:
-                    void Updated() override
-                    {
-                        _parent.Updated();
-                    }
-                    void Dispatch() override
-                    {
-                        _parent.Dispatch();
-                    }
-
-                private:
-                    FileObserver &_parent;
-            };
-
+    class FileObserver : public Core::FileSystemMonitor::ICallback {
         public:
             struct ICallback
             {
@@ -260,14 +39,16 @@ namespace Plugin
             FileObserver(const FileObserver &) = delete;
             FileObserver &operator=(const FileObserver &) = delete;
             FileObserver()
-                : _job(Core::ProxyType<Sink>::Create(this))
-                , _callback(nullptr)
+                : _callback(nullptr)
                 , _position(0)
                 , _path()
+                , _job(*this)
             {
             }
             ~FileObserver()
             {
+                _job.Revoke();
+
                 // Please Unregister before destructing!!!
                 ASSERT(_callback == nullptr);
                 if (_callback != nullptr)
@@ -289,17 +70,17 @@ namespace Plugin
 
                 _path = entry;
                 _callback = callback;
-                Core::FileSystemMonitor::Instance().Register(&(*_job), _path);
+                Core::FileSystemMonitor::Instance().Register(this, _path);
             }
             void Unregister()
             {
                 ASSERT(_callback != nullptr);
 
                 // First make sure the dispatcher Job will longer be fired
-                Core::FileSystemMonitor::Instance().Unregister(&(*_job), _path);
+                Core::FileSystemMonitor::Instance().Unregister(this, _path);
 
                 // Potentially the Job might still be waiting, let’s kill it
-                Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatchType<void> >(_job));
+                _job.Revoke();
 
                 _path = EMPTY_STRING;
                 _position = 0;
@@ -317,8 +98,11 @@ namespace Plugin
                 }
                 return pos;
             }
+
+            friend Core::ThreadPool::JobType<FileObserver&>;
             void Dispatch()
             {
+                TRACE(Trace::Information, (_T("FileObserver: job is dispatched")));
                 std::ifstream file(_path);
                 if (file) {
                     file.seekg(_position, file.beg);
@@ -332,14 +116,15 @@ namespace Plugin
             }
             void Updated()
             {
-                Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_job));
+                _job.Submit();
             }
 
         private:
-            const Core::ProxyType<Sink> _job;
             ICallback *_callback;
             long int _position;
             string _path;
+
+            Core::WorkerPool::JobType<FileObserver&> _job;
         };
 
     class FileTransfer : public PluginHost::IPlugin {
@@ -443,11 +228,13 @@ namespace Plugin
                     {
                     }
 
-                    uint16_t SendCharacters(uint8_t *dataFrame, const TCHAR stream[], const uint8_t delta, const uint16_t total)
+                    uint16_t SendCharacters(uint8_t *dataFrame, const TCHAR stream[], const uint8_t delta VARIABLE_IS_NOT_USED, const uint16_t total)
                     {
                         ASSERT(delta == 0);
+
                         // Copying from an aligned position..
                         ::memcpy(dataFrame, stream, total);
+
                         return (total);
                     }
 
@@ -547,9 +334,7 @@ namespace Plugin
                     , _fileUpdate(&_logOutput)
                 {
                 }
-                ~FileTransfer() override
-                {
-                }
+                ~FileTransfer() override = default;
 
                 BEGIN_INTERFACE_MAP(FileTransfer)
                 INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -566,4 +351,4 @@ namespace Plugin
                 OnChangeFile _fileUpdate;
     };
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

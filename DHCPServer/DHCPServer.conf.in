@@ -1,0 +1,25 @@
+startmode = "@PLUGIN_DHCPSERVER_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("name", "wpeserver")
+
+server_list = []
+
+server_config = JSON()
+server_config.add("interface", "eth0")
+server_config.add("poolstart", "100")
+server_config.add("poolsize", "50")
+server_list.append(server_config)
+
+server_config = JSON()
+server_config.add("interface", "wlan0")
+server_config.add("poolstart", "100")
+server_config.add("poolsize", "50")
+server_list.append(server_config)
+
+configuration.add("servers", server_list)
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_DHCPSERVER_MODE@")
+configuration.add("root", rootobject)

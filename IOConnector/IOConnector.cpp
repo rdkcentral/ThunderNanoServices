@@ -21,7 +21,7 @@
 
 #include <interfaces/IKeyHandler.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::IOConnector::Config::Pin::mode)
 
@@ -113,13 +113,15 @@ namespace Plugin
         config.FromString(service->ConfigLine());
 
         _service = service;
+        _service->AddRef();
+
         _skipURL = _service->WebPrefix().length();
 
         auto index(config.Pins.Elements());
 
         while (index.Next() == true) {
 
-            GPIO::Pin* pin = Core::Service<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value(), index.Current().ActiveLow.Value());
+            GPIO::Pin* pin = Core::ServiceType<GPIO::Pin>::Create<GPIO::Pin>(index.Current().Id.Value(), index.Current().ActiveLow.Value());
             uint8_t mode = 0;
 
             if (pin != nullptr) {
@@ -226,29 +228,36 @@ namespace Plugin
 
     /* virtual */ void IOConnector::Register(Exchange::IExternal::ICatalog::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         // Make sure a sink is not registered multiple times.
-        ASSERT(std::find(_notifications.begin(), _notifications.end(), sink) == _notifications.end());
+        NotificationList::iterator index = std::find(_notifications.begin(), _notifications.end(), sink);
+        ASSERT(index == _notifications.end());
 
-        _notifications.push_back(sink);
-        sink->AddRef();
+        if (index == _notifications.end()) {
+            _notifications.push_back(sink);
+            sink->AddRef();
 
-        // report all the IExternals we have
-        for (std::pair<const uint32_t, PinHandler>& product : _pins) {
-            sink->Activated(product.second.Pin());
+            // report all the IExternals we have
+            for (std::pair<const uint32_t, PinHandler>& product : _pins) {
+                sink->Activated(product.second.Pin());
+            }
         }
-
         _adminLock.Unlock();
     }
 
     /* virtual */ void IOConnector::Unregister(Exchange::IExternal::ICatalog::INotification* sink)
     {
+        ASSERT(sink != nullptr);
+
         _adminLock.Lock();
 
         // Make sure a sink is not unregistered multiple times.
         NotificationList::iterator index = std::find(_notifications.begin(), _notifications.end(), sink);
 
+        ASSERT(index != _notifications.end());
         if (index != _notifications.end()) {
             (*index)->Release();
             _notifications.erase(index);
@@ -286,25 +295,28 @@ namespace Plugin
         return (result);
     }
 
-    /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service)
+    /* virtual */ void IOConnector::Deinitialize(PluginHost::IShell * service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _adminLock.Lock();
+            _adminLock.Lock();
 
-        for (std::pair<const uint32_t, PinHandler>& product : _pins) {
-            product.second.Unsubscribe(&_sink);
+            for (std::pair<const uint32_t, PinHandler>& product : _pins) {
+                product.second.Unsubscribe(&_sink);
 
-            for (auto client : _notifications) {
-                client->Deactivated(product.second.Pin());
+                for (auto client : _notifications) {
+                    client->Deactivated(product.second.Pin());
+                }
             }
+
+            _adminLock.Unlock();
+
+            _pins.clear();
+
+            _service->Release();
+            _service = nullptr;
         }
-
-        _adminLock.Unlock();
-
-        _pins.clear();
-
-        _service = nullptr;
     }
 
     /* virtual */ string IOConnector::Information() const
@@ -416,4 +428,4 @@ namespace Plugin
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

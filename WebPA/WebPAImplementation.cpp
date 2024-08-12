@@ -31,11 +31,10 @@ int ParodusServiceMain(int argc, char** argv);
 }
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 
 class WebPAImplementation :
-    public Exchange::IWebPA, public WPEFramework::Core::Thread {
-
+    public Exchange::IWebPA, public Thunder::Core::Thread {
 private:
     class Config : public Core::JSON::Container {
     public:
@@ -123,7 +122,7 @@ public:
 
         Core::Process::Options webpaService(_T("WebPAService"));
 
-        // Get the point of entry on WPEFramework..
+        // Get the point of entry on Thunder..
         Core::AdapterIterator interface;
         if (config.Interface.Value().empty() == false) {
             Core::AdapterIterator index = Core::AdapterIterator(config.Interface.Value());
@@ -165,42 +164,47 @@ public:
         if (config.ForceIPV4.IsSet() == true) {
             _options.Add(_T("4"));
         }
-       const string locator(service->DataPath() + config.Location.Value());
-       Launch();
+        const string locator(service->DataPath() + config.Location.Value());
+        Launch();
 
-       // Before we start loading the mapping of the Keys to the factories, load the factories :-)
-       Core::Directory entry(locator.c_str(), _T("*.webpa"));
-       Core::ServiceAdministrator& admin(Core::ServiceAdministrator::Instance());
-       while (entry.Next() == true) {
-           const TCHAR* className(Core::File::FileName(entry.Current()).c_str());
-           uint32_t version(static_cast<uint32_t>(~0));
+        // Before we start loading the mapping of the Keys to the factories, load the factories :-)
+        Core::Directory entry(locator.c_str(), _T("*.webpa"));
+        Core::ServiceAdministrator& admin(Core::ServiceAdministrator::Instance());
+        while (entry.Next() == true) {
+            string className = Core::File::FileName(entry.Current());
+            uint32_t version(static_cast<uint32_t>(~0));
+            Core::Library library(entry.Current().c_str());
 
-           _adminLock.Lock();
-           Exchange::IWebPA::IWebPAClient* client = admin.Instantiate<Exchange::IWebPA::IWebPAClient>(entry.Current().c_str(), className, version);
-           if (client != nullptr) {
-               client->Configure(service);
-               if (client->Launch() == Core::ERROR_NONE) {
-                   _clients.insert(std::pair<const string, Exchange::IWebPA::IWebPAClient*>(className, client));
-               } else {
-                   client->Release();
-                   TRACE(Trace::Error, (_T("WebPA Error in launching client %s"), entry.Current().c_str()));
-               }
-           } else {
-               TRACE(Trace::Error, (_T("WebPA Error in the instantiation of client %s"), entry.Current().c_str()));
-           }
-           _adminLock.Unlock();
-       }
+            if (library.IsLoaded() == true) {
+                _adminLock.Lock();
 
-       _adminLock.Lock();
-       uint32_t clientSize = _clients.size();
-       _adminLock.Unlock();
+                Exchange::IWebPA::IWebPAClient* client = admin.Instantiate<Exchange::IWebPA::IWebPAClient>(entry.Current().c_str(), className.c_str(), version);
+                if (client != nullptr) {
+                    client->Configure(service);
+                    if (client->Launch() == Core::ERROR_NONE) {
+                        _clients.insert(std::pair<const string, Exchange::IWebPA::IWebPAClient*>(className, client));
+                    } else {
+                        client->Release();
+                        TRACE(Trace::Error, (_T("WebPA Error in launching client %s"), entry.Current().c_str()));
+                    }
+                } else {
+                    TRACE(Trace::Error, (_T("WebPA Error in the instantiation of client %s"), entry.Current().c_str()));
+                }
+                _adminLock.Unlock();
+            } else {
+                TRACE(Trace::Error, (_T("Failed to load Library %s "), entry.Current().c_str()));
+            }
+        }
 
-       if (clientSize == 0) {
-            SYSLOG(Logging::Startup, (_T("No WebPA Clients registered")));
-            result = Core::ERROR_UNAVAILABLE;
-       }
+        _adminLock.Lock();
+        uint32_t clientSize = _clients.size();
+        _adminLock.Unlock();
 
-       return result;
+        if (clientSize == 0) {
+            SYSLOG(Logging::Startup, (_T("No WebPA Clients registered, please wait for sometime to get client ready")));
+        }
+
+        return result;
     }
 
     void Launch()
@@ -215,7 +219,7 @@ public:
         }
     }
 
-    void Deinitialize(PluginHost::IShell* service) override
+    void Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED) override
     {
 
         _adminLock.Lock();
@@ -257,7 +261,7 @@ private:
     
         ::free(parameters);
         TRACE(Trace::Information, (_T("End of Worker\n")));
-        return WPEFramework::Core::infinite;
+        return Thunder::Core::infinite;
     }
 
     inline bool IsValidInterface(Core::AdapterIterator interface) {
@@ -272,6 +276,6 @@ private:
 // The essence of making the IWebPAService interface available. This instantiates
 // an object that can be created from the outside of the library by looking
 // for the WebPAImplementation class name, that realizes the IStateControl interface.
-SERVICE_REGISTRATION(WebPAImplementation, 1, 0);
+SERVICE_REGISTRATION(WebPAImplementation, 1, 0)
 
 }

@@ -21,7 +21,7 @@
 
 #include <CECIAccessor.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -54,7 +54,7 @@ namespace Plugin {
             ASSERT(iface.Name.Value().empty() == false);
             ASSERT(iface.Config.Value().empty() == false);
 
-            WPEFramework::CEC::IAccessor::Instance()->Announce(iface.Name.Value(), iface.Config.Value());
+            Thunder::CEC::IAccessor::Instance()->Announce(iface.Name.Value(), iface.Config.Value());
         }
 
         return string();
@@ -71,7 +71,7 @@ namespace Plugin {
             ASSERT(iface.Name.Value().empty() == false);
             ASSERT(iface.Config.Value().empty() == false);
 
-            WPEFramework::CEC::IAccessor::Instance()->Revoke(iface.Name.Value());
+            Thunder::CEC::IAccessor::Instance()->Revoke(iface.Name.Value());
         }
     }
 
@@ -81,4 +81,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

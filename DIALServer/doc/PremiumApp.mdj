@@ -3664,7 +3664,7 @@
 									"top": 168,
 									"width": 145,
 									"height": 130,
-									"text": "{\n    \"jsonrpc\": \"2.0\", \n    \"id\": 1234567890, \n    \"result\": [\n        {\n            ...\n            \"state\": \"Activated\", \n            \"autostart\": \"True\", \n            ...\n        }\n    ]\n}"
+									"text": "{\n    \"jsonrpc\": \"2.0\", \n    \"id\": 1234567890, \n    \"result\": [\n        {\n            ...\n            \"state\": \"Activated\", \n            \"start\": \"True\", \n            ...\n        }\n    ]\n}"
 								},
 								{
 									"_type": "UMLNoteLinkView",

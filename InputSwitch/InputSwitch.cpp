@@ -20,7 +20,7 @@
 #include "InputSwitch.h"
 #include <interfaces/json/JsonData_InputSwitch.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -58,7 +58,7 @@ namespace Plugin {
         return (EMPTY_STRING);
     }
 
-    /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         _handler = nullptr;
     }
@@ -187,7 +187,7 @@ namespace Plugin {
     }
 
     RPC::IStringIterator* InputSwitch::Consumers() const /* override */ {
-        return (Core::Service<RPC::StringIterator>::Create<RPC::IStringIterator>(_handler->Consumers().Container()));
+        return (Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(_handler->Consumers().Container()));
     }
 
     bool InputSwitch::Consumer(const string& name) const /* override */ {
@@ -239,4 +239,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

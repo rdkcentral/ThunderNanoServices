@@ -19,7 +19,7 @@
  
 #include "SecureShellServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -115,7 +115,7 @@ namespace Plugin {
 
                 if (index.Current().Text() == "CloseClientSession") {
                         // DELETE       <-CloseClientSession
-		        ISecureShellServer::IClient* client = Core::Service<ClientImpl>::Create<ISecureShellServer::IClient>(
+		        ISecureShellServer::IClient* client = Core::ServiceType<ClientImpl>::Create<ISecureShellServer::IClient>(
 							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->IpAddress.Value(),
 							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->TimeStamp.Value(),
 							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->Pid.Value());
@@ -150,24 +150,22 @@ namespace Plugin {
         int32_t count = get_active_sessions_count();
         TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
 
-	if (count>0)
-	{
+	if (count > 0) {
             struct client_info *info = static_cast<struct client_info*>(::malloc(sizeof(struct client_info) * count));
 
             get_active_sessions_info(info, count);
 
-            for(int32_t i=0; i<count; i++)
-            {
+            for (int32_t i = 0;  i< count; i++) {
                 TRACE(Trace::Information, (_T("Count: %d index: %d pid: %d IP: %s Timestamp: %s"),
                                             count, i, info[i].pid, info[i].ipaddress, info[i].timestamp));
 
-                local_clients.push_back(Core::Service<SecureShellServer::ClientImpl>::Create<ClientImpl>(info[i].ipaddress,
+                local_clients.push_back(Core::ServiceType<SecureShellServer::ClientImpl>::Create<ClientImpl>(info[i].ipaddress,
                                         info[i].timestamp, std::to_string(info[i].pid)));
             }
             ::free(info);
 
 	    if (local_clients.empty() == false) {
-                iter = Core::Service<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(local_clients);
+                iter = Core::ServiceType<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(local_clients);
                 TRACE(Trace::Information, (_T("Currently total %d sessions are active"), iter->Count()));
 	    }
             local_clients.clear(); // Clear all elements before we re-populate it with new elements
@@ -181,13 +179,11 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
 	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
 
-	if (iter != nullptr)
-	{
+	if (iter != nullptr) {
 	    uint32_t index = 0;
 
 	    iter->Reset();
-            while(iter->Next())
-            {
+            while(iter->Next()) {
                 TRACE(Trace::Information, (_T("Count: %d index:%d pid: %s IP: %s Timestamp: %s"),
                                          iter->Count(), index++, iter->Current()->RemoteId().c_str(), iter->Current()->IpAddress().c_str(),
 					 iter->Current()->TimeStamp().c_str()));
@@ -230,4 +226,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

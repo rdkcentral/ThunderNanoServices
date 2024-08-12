@@ -17,9 +17,9 @@
 
 project(Streamer)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_STREAMER_AUTOSTART "true" CACHE STRING "Automatically start Streamer plugin")
+set(PLUGIN_STREAMER_STARTMODE "Activated" CACHE STRING "Automatically start Streamer plugin")
 set(PLUGIN_STREAMER_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
 # deprecated/legacy flags support
@@ -37,6 +37,10 @@ if(PLUGIN_STREAMER_OUTOFPROCESS STREQUAL "false")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -83,6 +87,6 @@ target_link_libraries(${MODULE_NAME}
         -Wl,--whole-archive ${PLAYER_LIBS} -Wl,--no-whole-archive)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

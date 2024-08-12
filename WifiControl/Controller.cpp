@@ -20,7 +20,7 @@
 #include "Controller.h"
 #include <bitset>
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(WPASupplicant::Controller::events)
 
@@ -43,7 +43,7 @@ ENUM_CONVERSION_BEGIN(WPASupplicant::Controller::events)
     { WPASupplicant::Controller::WPS_EVENT_FAIL, _TXT("WPS-FAIL") },
     { WPASupplicant::Controller::AP_ENABLED, _TXT("AP-ENABLED") },
 
-    ENUM_CONVERSION_END(WPASupplicant::Controller::events);
+ENUM_CONVERSION_END(WPASupplicant::Controller::events)
 
 namespace WPASupplicant {
 
@@ -461,4 +461,4 @@ namespace WPASupplicant {
         }
     }
 }
-} // WPEFramework::WPASupplicant
+} // Thunder::WPASupplicant

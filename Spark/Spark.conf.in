@@ -1,0 +1,13 @@
+startmode = "@PLUGIN_SPARK_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("url", "@PLUGIN_SPARK_STARTURL@")
+configuration.add("height", "@PLUGIN_SPARK_HEIGHT@")
+configuration.add("width", "@PLUGIN_SPARK_WIDTH@")
+
+rootconfig = JSON()
+rootconfig.add("mode", "@PLUGIN_SPARK_MODE@")
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "RPI":
+    rootconfig.add("threads", "2")
+configuration.add("root", rootconfig)

@@ -22,7 +22,7 @@
 #include <processcontainers/ProcessContainer.h>
 #include <interfaces/json/JsonData_Containers.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -36,7 +36,7 @@ namespace Plugin {
         Register<StartParamsData,void>(_T("start"), &Containers::endpoint_start, this);
         Register<StopParamsData,void>(_T("stop"), &Containers::endpoint_stop, this);
         Property<Core::JSON::ArrayType<Core::JSON::String>>(_T("containers"), &Containers::get_containers, nullptr, this);
-        Property<Core::JSON::ArrayType<NetworksData>>(_T("networks"), &Containers::get_networks, nullptr, this);
+        Property<Core::JSON::ArrayType<NetworksResultDataElem>>(_T("networks"), &Containers::get_networks, nullptr, this);
         Property<MemoryData>(_T("memory"), &Containers::get_memory, nullptr, this);
         Property<CpuData>(_T("cpu"), &Containers::get_cpu, nullptr, this);
     }
@@ -137,7 +137,7 @@ namespace Plugin {
     // Return codes:
     //  - ERROR_NONE: Success
     //  - ERROR_UNAVAILABLE: Container not found
-    uint32_t Containers::get_networks(const string& index, Core::JSON::ArrayType<NetworksData>& response) const
+    uint32_t Containers::get_networks(const string& index, Core::JSON::ArrayType<NetworksResultDataElem>& response) const
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -149,7 +149,7 @@ namespace Plugin {
 
             if (iterator != nullptr) {
                 while(iterator->Next() == true) {
-                    NetworksData networkData;
+                    NetworksResultDataElem networkData;
 
                     networkData.Interface = iterator->Name();
 

@@ -24,7 +24,7 @@
 // VendorID' are IEEE Organizationally Unique Identifiers
 // IDs list http://standards-oui.ieee.org/oui/oui.txt
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -48,7 +48,7 @@ namespace CEC {
                 ~VendorID() override = default;
 
             private:
-                uint8_t Process(const uint8_t length, uint8_t buffer[])
+                uint8_t Process(const uint8_t length VARIABLE_IS_NOT_USED, uint8_t buffer[])
                 {
                     ASSERT(length >= sizeof(_vendorId));
 
@@ -66,4 +66,4 @@ namespace CEC {
 
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

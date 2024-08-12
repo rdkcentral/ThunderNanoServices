@@ -17,9 +17,9 @@
 
 project(AVS)
 
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework REQUIRED)
+find_package(Thunder REQUIRED)
 
 project_version(1.0.0)
 
@@ -29,16 +29,24 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(GStreamer REQUIRED)
 
+#remove the -as-needed flag to ensure linking with AVSDevice and SmartScreen libs
+string(REPLACE "-Wl,--as-needed" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-as-needed")
+
 set(PLUGIN_AVS_NAME "AVS" CACHE STRING "The plugin name")
-set(PLUGIN_AVS_AUTOSTART "false" CACHE STRING "Autostart plugin (true/false)")
+set(PLUGIN_AVS_STARTMODE "Deactivated" CACHE STRING "Automatically start plugin")
 set(PLUGIN_AVS_MODE "Off" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
 set(PLUGIN_AVS_PLATFORM "rpi3" CACHE STRING "Platform name (currently only rpi3)")
-set(PLUGIN_AVS_DATA_PATH "/usr/share/WPEFramework/" CACHE STRING "Path were AVS data will be stored")
+set(PLUGIN_AVS_DATA_PATH "/usr/share/Thunder/" CACHE STRING "Path were AVS data will be stored")
 set(PLUGIN_AVS_ALEXA_CLIENT_CONFIG "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}/AlexaClientSDKConfig.json" CACHE STRING "Path to AlexaClientSDKConfig")
 set(PLUGIN_AVS_SMART_SCREEN_CONFIG "${PLUGIN_AVS_DATA_PATH}/${PLUGIN_AVS_NAME}/SmartScreenSDKConfig.json" CACHE STRING "Path to SmartScreenSDKConfig")
 set(PLUGIN_AVS_LOG_LEVEL "DEBUG0" CACHE STRING "Default log level for the SDK")
@@ -61,6 +69,7 @@ add_library(${MODULE_NAME} SHARED
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
+        LINK_WHAT_YOU_USE TRUE
         CXX_STANDARD_REQUIRED YES)
 
 add_subdirectory("Impl/AVSDevice/")
@@ -81,7 +90,7 @@ target_link_libraries(${MODULE_NAME}
         AVSDevice)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 # TODO: remove me ;)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")

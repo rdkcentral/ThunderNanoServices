@@ -17,9 +17,9 @@
 
 project(Snapshot)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -27,12 +27,15 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_SNAPSHOT_AUTOSTART true CACHE STRING "Automatically start Snapshot plugin")
+set(PLUGIN_SNAPSHOT_STARTMODE "Activated" CACHE STRING "Automatically start Snapshot plugin")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(${NAMESPACE}Tracing REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(BCM_HOST QUIET)
@@ -47,7 +50,6 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE 
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Tracing::${NAMESPACE}Tracing
         PNG::PNG)
 
 set_target_properties(${MODULE_NAME}
@@ -89,6 +91,6 @@ else ()
 endif ()
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

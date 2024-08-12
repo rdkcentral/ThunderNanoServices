@@ -1,0 +1,7 @@
+startmode = "Activated"
+
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "@PLUGIN_TESTUTILITY_MODE@")
+configuration.add("root", rootobject)

@@ -1,0 +1,9 @@
+startmode = "@PLUGIN_WIFICONTROL_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("autoconnect", "@PLUGIN_WIFICONTROL_AUTOCONNECT@")
+configuration.add("retryinterval", "@PLUGIN_WIFICONTROL_AUTOCONNECT_RETRYINTERVAL@")
+configuration.add("maxretries", "@PLUGIN_WIFICONTROL_AUTOCONNECT_MAXRETRIES@")
+configuration.add("wpswalktime", "@PLUGIN_WIFICONTROL_WPS_WALKTIME@")
+configuration.add("wpsdisabled", "@PLUGIN_WIFICONTROL_WPS_DISABLED@")

@@ -1,0 +1,9 @@
+startmode = "@PLUGIN_POWER_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("powerkey", "@PLUGIN_POWER_POWER_KEY@")
+configuration.add("controlclients", "@PLUGIN_POWER_CONTROL_CLIENTS@")
+if "@PLUGIN_POWER_GPIOTYPE@" and "@PLUGIN_POWER_GPIOPIN@":
+   configuration.add("gpiopin", "@PLUGIN_POWER_GPIOPIN@")
+   configuration.add("gpiotype", "@PLUGIN_POWER_GPIOTYPE@")

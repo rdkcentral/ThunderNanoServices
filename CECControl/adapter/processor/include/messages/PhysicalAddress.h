@@ -21,7 +21,7 @@
 
 #include <CECMessage.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         class PhysicalAddress : public ExchangeType<GIVE_PHYSICAL_ADDR, REPORT_PHYSICAL_ADDR, PhysicalAddress> {
@@ -57,4 +57,4 @@ namespace CEC {
     } // namespace Message
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

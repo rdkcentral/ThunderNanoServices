@@ -19,7 +19,7 @@
  
 #include "Cobalt.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Cobalt {
 
 class MemoryObserverImpl: public Exchange::IMemory {
@@ -67,7 +67,7 @@ private:
     Exchange::IMemory* MemoryObserver(const RPC::IRemoteConnection* connection)
     {
         ASSERT(connection != nullptr);
-        Exchange::IMemory* result = Core::Service<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
+        Exchange::IMemory* result = Core::ServiceType<MemoryObserverImpl>::Create<Exchange::IMemory>(connection);
         return (result);
     }
 }
@@ -117,42 +117,48 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
     // change to "register" the sink for these events !!! So do it ahead of
     // instantiation.
     _service->Register(&_notification);
-    _cobalt = _service->Root < Exchange::IBrowser
-            > (_connectionId, 2000, _T("CobaltImplementation"));
 
-    if (_cobalt != nullptr) {
-        _cobalt->Register(&_notification);
-        PluginHost::IStateControl *stateControl(
-                _cobalt->QueryInterface<PluginHost::IStateControl>());
+    Plugin::Config::RootConfig rootConfig(service);
+    const uint32_t permission = (Core::File::USER_READ | Core::File::USER_WRITE |
+                                 Core::File::GROUP_READ | Core::File::GROUP_WRITE);
 
-        if (stateControl == nullptr) {
-            message = _T("Cobalt StateControl could not be Obtained.");
-        } else {
-            stateControl->Register(&_notification);
-            stateControl->Configure(_service);
-            stateControl->Release();
-            _application = _cobalt->QueryInterface<Exchange::IApplication>();
-            if (_application != nullptr) {
-
-                RegisterAll();
-                Exchange::JApplication::Register(*this, _application);
-
-                RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
-                if (remoteConnection != nullptr) {
-                    _memory = WPEFramework::Cobalt::MemoryObserver(remoteConnection);
-                    ASSERT(_memory != nullptr);
-                    remoteConnection->Release();
-                }
-            } else {
-                message = _T("Cobalt IApplication could not be Obtained.");
-            }
-        }
+    if (_service->EnablePersistentStorage(permission, rootConfig.User.Value(), rootConfig.Group.Value())
+        != Core::ERROR_NONE) {
+        message = _T("Could not setup persistent path: ") + service->PersistentPath();
     } else {
-        message = _T("Cobalt could not be instantiated.");
-    }
+        _cobalt = _service->Root < Exchange::IBrowser
+                > (_connectionId, 2000, _T("CobaltImplementation"));
 
-    if (message.length() != 0) {
-       Deinitialize(service);
+        if (_cobalt != nullptr) {
+            _cobalt->Register(&_notification);
+            PluginHost::IStateControl *stateControl(
+                    _cobalt->QueryInterface<PluginHost::IStateControl>());
+
+            if (stateControl == nullptr) {
+                message = _T("Cobalt StateControl could not be Obtained.");
+            } else {
+                stateControl->Register(&_notification);
+                stateControl->Configure(_service);
+                stateControl->Release();
+                _application = _cobalt->QueryInterface<Exchange::IApplication>();
+                if (_application != nullptr) {
+
+                    RegisterAll();
+                    Exchange::JApplication::Register(*this, _application);
+
+                    RPC::IRemoteConnection* remoteConnection = _service->RemoteConnection(_connectionId);
+                    if (remoteConnection != nullptr) {
+                        _memory = Thunder::Cobalt::MemoryObserver(remoteConnection);
+                        ASSERT(_memory != nullptr);
+                        remoteConnection->Release();
+                    }
+                } else {
+                    message = _T("Cobalt IApplication could not be Obtained.");
+                }
+            }
+        } else {
+            message = _T("Cobalt could not be instantiated.");
+        }
     }
 
     return message;
@@ -160,50 +166,51 @@ const string Cobalt::Initialize(PluginHost::IShell *service)
 
 void Cobalt::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
 {
-    ASSERT(_service == service);
+    if (_service != nullptr) {
+        ASSERT(_service == service);
+        _service->Unregister(&_notification);
 
-    _service->Unregister(&_notification);
+        if (_cobalt != nullptr) {
+            _cobalt->Unregister(&_notification);
+            PluginHost::IStateControl *stateControl(_cobalt->QueryInterface<PluginHost::IStateControl>());
+            // Make sure the Activated and Deactivated are no longer called before we
+            // start cleaning up..
+            // In case Cobalt crashed, there is no access to the statecontrol interface,
+            // check it !!
+            if (stateControl != nullptr) {
+                stateControl->Unregister(&_notification);
+                stateControl->Release();
+            } else {
+                // On behalf of the crashed process, we will release the notification sink.
+                _notification.Release();
+            }
+            if (_memory != nullptr) {
+                _memory->Release();
+                _memory = nullptr;
+            }
+            if (_application != nullptr) {
+                Exchange::JApplication::Unregister(*this);
+                UnregisterAll();
+                _application->Release();
+                _application = nullptr;
+            }
 
-    if (_cobalt != nullptr) {
-        _cobalt->Unregister(&_notification);
-        PluginHost::IStateControl *stateControl(_cobalt->QueryInterface<PluginHost::IStateControl>());
-        // Make sure the Activated and Deactivated are no longer called before we
-        // start cleaning up..
-        // In case Cobalt crashed, there is no access to the statecontrol interface,
-        // check it !!
-        if (stateControl != nullptr) {
-            stateControl->Unregister(&_notification);
-            stateControl->Release();
-        } else {
-            // On behalf of the crashed process, we will release the notification sink.
-            _notification.Release();
-        }
-        if (_memory != nullptr) {
-            _memory->Release();
-            _memory = nullptr;
-        }
-        if (_application != nullptr) {
-            Exchange::JApplication::Unregister(*this);
-            UnregisterAll();
-            _application->Release();
-            _application = nullptr;
-        }
+            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+            VARIABLE_IS_NOT_USED uint32_t result = _cobalt->Release();
+            _cobalt = nullptr;
+            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
 
-        RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-        VARIABLE_IS_NOT_USED uint32_t result = _cobalt->Release();
-        _cobalt = nullptr;
-        ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-        // The connection can disappear in the meantime...
-        if (connection != nullptr) {
-            // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-            connection->Terminate();
-            connection->Release();
+            // The connection can disappear in the meantime...
+            if (connection != nullptr) {
+                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
+                connection->Terminate();
+                connection->Release();
+            }
         }
+        _service->Release();
+        _service = nullptr;
+        _connectionId = 0;
     }
-    _service->Release();
-    _service = nullptr;
-    _connectionId = 0;
 }
 
 string Cobalt::Information() const

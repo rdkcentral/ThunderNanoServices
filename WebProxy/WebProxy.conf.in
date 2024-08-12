@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_WEBPROXY_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("baudrate", "115200")
+configuration.add("parity", "none")
+configuration.add("data", "8")
+configuration.add("stop", "1")

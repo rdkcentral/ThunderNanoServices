@@ -29,7 +29,7 @@
 #include <interfaces/json/JMath.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Data::Response::state)
 
@@ -40,28 +40,41 @@ ENUM_CONVERSION_BEGIN(Data::Response::state)
 
 ENUM_CONVERSION_END(Data::Response::state)
 
-namespace Plugin
-{
+namespace Plugin {
+
+    namespace {
+
+        static Metadata<JSONRPCPlugin> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
+
     PluginHost::JSONRPC::classification JSONRPCPlugin::Validation(const string& token VARIABLE_IS_NOT_USED, const string& method, const string& parameters VARIABLE_IS_NOT_USED) {
         return (method != _T("checkvalidation") ? PluginHost::JSONRPC::classification::VALID : PluginHost::JSONRPC::classification::INVALID);
     }
 
-    SERVICE_REGISTRATION(JSONRPCPlugin, 1, 0);
-
-PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+    PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     JSONRPCPlugin::JSONRPCPlugin()
         : PluginHost::JSONRPC({ 2, 3, 4 }, [&](const string& token, const string& method, const string& parameters) -> PluginHost::JSONRPC::classification { return (Validation(token, method, parameters)); }) // version 2, 3 and 4 of the interface, use this as the default :-)
-        , _job(Core::ProxyType<PeriodicSync>::Create(this))
         , _window()
         , _data()
         , _array(255)
         , _rpcServer(nullptr)
         , _jsonServer(nullptr)
         , _msgServer(nullptr)
+        , _callback(this)
+        , _job(*this)
     {
         RegisterAll();
     }
-POP_WARNING()
+    POP_WARNING()
     /* virtual */ JSONRPCPlugin::~JSONRPCPlugin()
     {
         UnregisterAll();
@@ -151,14 +164,13 @@ POP_WARNING()
         Config config;
         config.FromString(service->ConfigLine());
 
-	Core::NodeId source(config.Connector.Value().c_str());
-	    
+        Core::NodeId source(config.Connector.Value().c_str());
         Core::ProxyType<RPC::InvokeServer> engine (Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance()));
         _rpcServer = new COMServer(Core::NodeId(source, source.PortNumber()), this, service->ProxyStubPath(), engine);
         _jsonServer = new JSONRPCChannel<Core::JSON::IElement>(Core::NodeId(source, source.PortNumber() + 1), *this);
         _msgServer = new JSONRPCChannel<Core::JSON::IMessagePack>(Core::NodeId(source, source.PortNumber() + 2), *this);
-        _job->Period(5);
-        Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_job));
+        Period(5);
+        _job.Reschedule(Core::Time::Now().Add(5000));
 
         // On success return empty, to indicate there is no error text.
         return (string());
@@ -166,11 +178,11 @@ POP_WARNING()
 
     /* virtual */ void JSONRPCPlugin::Deinitialize(PluginHost::IShell * /* service */)
     {
-        _job->Period(0);
-        Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_job));
+        Period(0);
+        _job.Revoke();
         delete _rpcServer;
         delete _jsonServer;
-	delete _msgServer;
+        delete _msgServer;
     }
 
     /* virtual */ string JSONRPCPlugin::Information() const
@@ -203,13 +215,20 @@ POP_WARNING()
         // PluginHost::JSONRPC method to send out a JSONRPC message to all subscribers to the event "clock".
         Notify(_T("clock"), currentTime);
 
-		// We are currently supporting more release, the old interface is expecting a bit a different response:
-        GetHandler(1)->Notify(_T("clock"), Data::Time(now.Hours(), now.Minutes(), now.Seconds()));
+        // We are currently supporting more release, the old interface is expecting a bit a different response:
+        Notify(_T("clock"), Data::Time(now.Hours(), now.Minutes(), now.Seconds()));
     }
 
-    void JSONRPCPlugin::SendTime(Core::JSONRPC::Context& channel)
+    void JSONRPCPlugin::SendTime(const Core::JSONRPC::Context& channel)
     {
-        Response(channel, Data::Response(Core::Time::Now().Ticks(), Data::Response::FAILURE));
+        Core::ProxyType<Web::JSONRPC::Body> message = PluginHost::IFactories::Instance().JSONRPC();
+        Data::Response data (Core::Time::Now().Ticks(), Data::Response::FAILURE);
+        string dataJSON; data.ToString(dataJSON);
+
+        message->Result = dataJSON;
+        message->Id = channel.Sequence();
+
+        JSONRPC::Response(channel.ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
     }
 
     //   Exchange::IPerformance methods
@@ -264,4 +283,4 @@ POP_WARNING()
     }
 } // namespace Plugin
 
-} // namespace WPEFramework
+} // namespace Thunder

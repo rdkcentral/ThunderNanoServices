@@ -24,9 +24,9 @@
 
 #include <CECTypes.h>
 
-using namespace WPEFramework;
+using namespace Thunder;
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class Message : public Core::FrameType<0, false, uint8_t> {
     private:
@@ -155,4 +155,4 @@ namespace CEC {
     };
 
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

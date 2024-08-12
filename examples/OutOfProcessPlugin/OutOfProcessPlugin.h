@@ -24,10 +24,12 @@
 #include <interfaces/IBrowser.h>
 #include <interfaces/IMemory.h>
 
-namespace WPEFramework {
+#include <interfaces/json/JBrowserResources.h>
+
+namespace Thunder {
 namespace Plugin {
 
-    class OutOfProcessPlugin : public PluginHost::IPluginExtended, public PluginHost::IWeb {
+    class OutOfProcessPlugin : public PluginHost::IPluginExtended, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
 
         class Notification : public Exchange::IBrowser::INotification,
@@ -75,6 +77,9 @@ namespace Plugin {
             void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */) override
+            {
             }
             void Closure() override
             {
@@ -157,8 +162,9 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _webPath("")
             , _service(nullptr)
             , _browser(nullptr)
+            , _browserresources(nullptr)
             , _memory(nullptr)
-            , _notification(Core::Service<Notification>::Create<Notification>(this))
+            , _notification(Core::ServiceType<Notification>::Create<Notification>(this))
             , _state(nullptr)
             , _subscriber(nullptr)
             , _hidden(false)
@@ -176,8 +182,10 @@ POP_WARNING()
         INTERFACE_ENTRY(IPluginExtended)
         INTERFACE_ENTRY(IWeb)
         INTERFACE_AGGREGATE(Exchange::IBrowser, _browser)
+        INTERFACE_AGGREGATE(Exchange::IBrowserResources, _browserresources)
         INTERFACE_AGGREGATE(PluginHost::IStateControl, _browser)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -231,6 +239,7 @@ POP_WARNING()
         string _webPath;
         PluginHost::IShell* _service;
         Exchange::IBrowser* _browser;
+        Exchange::IBrowserResources* _browserresources;
         Exchange::IMemory* _memory;
         Notification* _notification;
         PluginHost::IStateControl* _state;

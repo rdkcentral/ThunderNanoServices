@@ -36,13 +36,13 @@ std::string ClientName()
 {
     std::string name;
 
-    name = (EXPAND_AND_QUOTE(MODULE_NAME) + (_T("_") + WPEFramework::Core::ToString(WPEFramework::Core::Time::Now().Ticks() / WPEFramework::Core::Time::TicksPerMillisecond)));
+    name = (EXPAND_AND_QUOTE(MODULE_NAME) + (_T("_") + Thunder::Core::ToString(Thunder::Core::Time::Now().Ticks() / Thunder::Core::Time::TicksPerMillisecond)));
 
     return (name);
 }
 }
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Adapter {
         struct conversion_entry {
@@ -75,7 +75,7 @@ namespace CEC {
 
         class CECAdapterImplementation : public Core::IReferenceCounted {
         private:
-            friend WPEFramework::Core::ProxyObject<CECAdapterImplementation>;
+            friend Thunder::Core::ProxyObject<CECAdapterImplementation>;
 
         public:
             CECAdapterImplementation(CECAdapterImplementation&) = delete;
@@ -84,7 +84,7 @@ namespace CEC {
 
             virtual ~CECAdapterImplementation()
             {
-                TRACE(WPEFramework::Trace::Information, (_T("CEC adapter detaching from Nexus...")));
+                TRACE(Thunder::Trace::Information, (_T("CEC adapter detaching from Nexus...")));
 
                 _txSignal.SetEvent();
 
@@ -377,41 +377,41 @@ namespace CEC {
         }; // class CECAdapterImplementation
     } // namespace Adapter
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder
 
 extern "C" {
 cec_adapter_handle_t cec_adapter_create(const char connector[])
 {
-    return WPEFramework::CEC::Adapter::CECAdapterImplementation::Instance(connector);
+    return Thunder::CEC::Adapter::CECAdapterImplementation::Instance(connector);
 }
 
 cec_adapter_error_t cec_adapter_destroy(cec_adapter_handle_t handle)
 {
     ASSERT(handle != nullptr);
-    return static_cast<cec_adapter_error_t>(reinterpret_cast<WPEFramework::CEC::Adapter::CECAdapterImplementation*>(handle)->Release());
+    return static_cast<cec_adapter_error_t>(reinterpret_cast<Thunder::CEC::Adapter::CECAdapterImplementation*>(handle)->Release());
 }
 
 cec_adapter_error_t cec_adapter_claim_role(cec_adapter_handle_t handle, cec_adapter_role_t role)
 {
     ASSERT(handle != nullptr);
-    return static_cast<cec_adapter_error_t>(reinterpret_cast<WPEFramework::CEC::Adapter::CECAdapterImplementation*>(handle)->ClaimRole(role));
+    return static_cast<cec_adapter_error_t>(reinterpret_cast<Thunder::CEC::Adapter::CECAdapterImplementation*>(handle)->ClaimRole(role));
 }
 
 cec_adapter_error_t cec_adapter_release_role(cec_adapter_handle_t handle, cec_adapter_role_t role)
 {
     ASSERT(handle != nullptr);
-    return static_cast<cec_adapter_error_t>(reinterpret_cast<WPEFramework::CEC::Adapter::CECAdapterImplementation*>(handle)->ReleaseRole(role));
+    return static_cast<cec_adapter_error_t>(reinterpret_cast<Thunder::CEC::Adapter::CECAdapterImplementation*>(handle)->ReleaseRole(role));
 }
 
 cec_adapter_error_t cec_adapter_receive(cec_adapter_handle_t handle, cec_adapter_callbacks_t* callbacks, void* cb_data)
 {
     ASSERT(handle != nullptr);
-    return static_cast<cec_adapter_error_t>(reinterpret_cast<WPEFramework::CEC::Adapter::CECAdapterImplementation*>(handle)->Receive(callbacks, cb_data));
+    return static_cast<cec_adapter_error_t>(reinterpret_cast<Thunder::CEC::Adapter::CECAdapterImplementation*>(handle)->Receive(callbacks, cb_data));
 }
 
 cec_adapter_error_t cec_adapter_transmit(cec_adapter_handle_t handle, const cec_adapter_role_t initiator, const uint8_t follower, const uint8_t length, const uint8_t data[])
 {
     ASSERT(handle != nullptr);
-    return static_cast<cec_adapter_error_t>(reinterpret_cast<WPEFramework::CEC::Adapter::CECAdapterImplementation*>(handle)->Transmit(initiator, follower, length, data));
+    return static_cast<cec_adapter_error_t>(reinterpret_cast<Thunder::CEC::Adapter::CECAdapterImplementation*>(handle)->Transmit(initiator, follower, length, data));
 }
 } // extern "C"

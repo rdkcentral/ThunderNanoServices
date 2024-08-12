@@ -21,7 +21,7 @@
 #include "DIALServer.h"
 #include <interfaces/json/JsonData_DIALServer.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

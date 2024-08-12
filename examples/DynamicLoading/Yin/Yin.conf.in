@@ -1,0 +1,14 @@
+startmode = "@PLUGIN_YIN_STARTMODE@"
+
+configuration = JSON()
+configuration.add("yangcallsign", "@PLUGIN_YIN_YANGCALLSIGN@")
+configuration.add("etymology", "@PLUGIN_YIN_ETYMOLOGY@")
+configuration.add("datafile", "@PLUGIN_YIN_DATAFILE@")
+
+root = JSON()
+root.add("mode", "@PLUGIN_YIN_MODE@")
+root.add("locator", "lib@PLUGIN_YIN_IMPLEMENTATION@.so")
+root.add("user", "@PLUGIN_YIN_USER@")
+root.add("group", "@PLUGIN_YIN_GROUP@")
+
+configuration.add("root", root)

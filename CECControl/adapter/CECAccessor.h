@@ -31,11 +31,11 @@
 #include <CECTypes.h>
 
 #include <cec_device_adapter.h>
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 
 #include <string>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     class CECAccessor : public IAccessor {
     private:
@@ -170,12 +170,17 @@ namespace CEC {
 
             uint32_t Register(INotification* notification) override
             {
+                ASSERT(notification != nullptr);
+
                 Core::SafeSyncType<Core::CriticalSection> scopedLock(_observersLock);
 
                 // Make sure a sink is not registered multiple times.
-                ASSERT(std::find(_observers.begin(), _observers.end(), notification) == _observers.end());
+                auto index(std::find(_observers.begin(), _observers.end(), notification));
+                ASSERT(index == _observers.end());
 
-                _observers.push_back(notification);
+                if (index == _observers.end()) {
+                    _observers.push_back(notification);
+                }
                 // notification->AddRef();
 
                 return Core::ERROR_NONE;
@@ -183,6 +188,8 @@ namespace CEC {
 
             uint32_t Unregister(INotification* notification) override
             {
+                ASSERT(notification != nullptr);
+
                 Core::SafeSyncType<Core::CriticalSection> scopedLock(_observersLock);
 
                 auto index(std::find(_observers.begin(), _observers.end(), notification));
@@ -257,7 +264,7 @@ namespace CEC {
                 if ((result < msg.Size()) && (msg.Size() >= 1)) {
                     bool broadcast(false);
 
-                    WPEFramework::CEC::Processor::Instance().Process(msg, broadcast);
+                    Thunder::CEC::Processor::Instance().Process(msg, broadcast);
 
                     uint32_t result = Transmit(follower, (!broadcast) ? initiator : CEC_LOGICAL_ADDRESS_BROADCAST, msg.Size(), msg.Data());
 
@@ -314,4 +321,4 @@ namespace CEC {
         AdapterMap _adapters;
     }; // class CECAccessor
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

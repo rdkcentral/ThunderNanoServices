@@ -1,0 +1,105 @@
+startmode = "@PLUGIN_COMPOSITOR_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
+if "@PLUGIN_COMPOSITOR_CONNECTOR@":
+    configuration.add("connector", "@PLUGIN_COMPOSITOR_CONNECTOR@")
+
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Nexus":
+    if boolean("@PLUGIN_COMPOSITOR_NXSERVER@"):
+        memory_settings = JSON()
+        memory_settings.add("gfx", "@PLUGIN_COMPOSITOR_MEMORY_GFX@")
+        memory_settings.add("gfx2", "@PLUGIN_COMPOSITOR_MEMORY_GFX2@")
+        memory_settings.add("restricted", "@PLUGIN_COMPOSITOR_MEMORY_RESTRICTED@")
+        memory_settings.add("main", "@PLUGIN_COMPOSITOR_MEMORY_MAIN@")
+        memory_settings.add("export", "@PLUGIN_COMPOSITOR_MEMORY_EXPORT@")
+        memory_settings.add("secureGFX", "@PLUGIN_COMPOSITOR_MEMORY_SECURE_GFX@")
+        memory_settings.add("client", "@PLUGIN_COMPOSITOR_MEMORY_CLIENT@")
+        configuration.add("memory", memory_settings)
+
+    if boolean("@PLUGIN_COMPOSITOR_ALLOW_UNAUTHENTICATED_CLIENTS@"):
+        configuration.add("authentication", "true")
+        configuration.add("irmode", "@PLUGIN_COMPOSITOR_IRMODE@")
+        configuration.add("boxmode", "@PLUGIN_COMPOSITOR_BOXMODE@")
+        configuration.add("authentication", "@PLUGIN_COMPOSITOR_AUTHENTICATION@")
+        configuration.add("svp", "@PLUGIN_COMPOSITOR_SVP@")
+        configuration.add("framebufferwidth", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_WIDTH@")
+        configuration.add("framebufferheight", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_HEIGHT@")
+        configuration.add("sagepath", "@PLUGIN_COMPOSITOR_SAGE_PATH@")
+        configuration.add("pakpath", "@PLUGIN_COMPOSITOR_PAK_PATH@")
+        configuration.add("drmpath", "@PLUGIN_COMPOSITOR_DRM_PATH@")
+        configuration.add("hdcplevel", "@PLUGIN_COMPOSITOR_HDCP_LEVEL@")
+        configuration.add("hdcpversion", "@PLUGIN_COMPOSITOR_HDCP_VERSION@")
+        configuration.add("hdcp1xbinfile", "@PLUGIN_COMPOSITOR_HDCP1XBIN_PATH@")
+        configuration.add("hdcp2xbinfile", "@PLUGIN_COMPOSITOR_HDCP2XBIN_PATH@")
+        configuration.add("loudnessmode", "@PLUGIN_COMPOSITOR_LOUDNESS_MODE@")
+
+    if "@PLUGIN_COMPOSITOR_HARDWAREREADY@" and int("@PLUGIN_COMPOSITOR_HARDWAREREADY@") > 0:
+        configuration.add("hardwareready", "@PLUGIN_COMPOSITOR_HARDWAREREADY@")
+
+    if boolean("@PLUGIN_COMPOSITOR_FAIL_SAFE_HDR@"):
+        configuration.add("failsafehdr", "true")
+
+    if "@PLUGIN_COMPOSITOR_ALLOWED_CLIENTS@":
+        configuration.add("allowedclients", "@PLUGIN_COMPOSITOR_ALLOWED_CLIENTS@".split(';'))
+
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
+
+    if "@PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION@" == "Westeros":
+        configuration.add("display", "wayland-0")
+        configuration.add("renderer", "/usr/lib/libwesteros_render_gl.so")
+        configuration.add("glname", "libwesteros_gl.so.0.0.0")
+        configuration.add("workdir", "/tmp/wayland")
+        configuration.add("cursor", "@PLUGIN_COMPOSITOR_CURSOR_FILE@")
+
+    elif "@PLUGIN_COMPOSITOR_SUB_IMPLEMENTATION@" == "Weston":
+        if "@PLUGIN_COMPOSITOR_WESTON_TTY_LIST@":
+            configuration.add("tty", "@PLUGIN_COMPOSITOR_WESTON_TTY_LIST@".split(';'))
+
+        if "@PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS@":
+            output_configs_list = []
+            for output_config in "@PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS@".split(';'):
+                output_config_items = output_config.split(',')
+                if len(output_config_items) == 3:
+                    output_config_dict = JSON()
+                    output_config_dict.add("name", output_config_items[0])
+                    output_config_dict.add("mode", output_config_items[1])
+                    output_config_dict.add("transform", output_config_items[2])
+                    output_configs_list.append(output_config_dict)
+            configuration.add("outputs", output_configs_list)
+
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
+    configuration.add("height", "@PLUGIN_COMPOSITOR_CANVAS_HEIGHT@")
+    configuration.add("width", "@PLUGIN_COMPOSITOR_CANVAS_WIDTH@")
+    configuration.add("bufferconnector", "@PLUGIN_COMPOSITOR_BUFFER_CONNECTOR@")
+    configuration.add("displayconnector", "@PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR@")
+    
+    if "@PLUGIN_COMPOSITOR_OUTPUTS@":
+        outputs = []
+        for output in "@PLUGIN_COMPOSITOR_OUTPUTS@".split('|'):
+            output_paramaters = output.split(';')
+            print(output_paramaters)
+            if len(output_paramaters) >= 1:
+                output_config = JSON()
+                output_config.add("connector", output_paramaters[0])
+
+                if len(output_paramaters) >= 3:
+                    output_config.add("x", output_paramaters[1])
+                    output_config.add("y", output_paramaters[2])
+
+                if len(output_paramaters) >= 5:
+                    output_config.add("width", output_paramaters[3])
+                    output_config.add("height", output_paramaters[4])
+                
+                outputs.append(output_config)
+
+        configuration.add("outputs", outputs)
+
+rootconfig = JSON()
+rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")
+rootconfig.add("locator", "@PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB@")
+if ("@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "RPI") or ("@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa"):
+    if "@PLUGIN_COMPOSITOR_MODE@" == "Local":
+        rootconfig.add("threads", "@PLUGIN_COMPOSITOR_THREAD_COUNT@")
+configuration.add("root", rootconfig)

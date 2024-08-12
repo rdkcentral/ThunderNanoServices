@@ -22,9 +22,7 @@
 #include "Module.h"
 #include <interfaces/ILanguageTag.h>
 
-using namespace std;
-
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class LanguageAdministratorImpl : public Exchange::ILanguageTag {
@@ -49,10 +47,10 @@ namespace Plugin {
     private:
         string _language;
         Core::CriticalSection _adminLock;
-        vector<Exchange::ILanguageTag::INotification*> _notifications;
+        std::vector<Exchange::ILanguageTag::INotification*> _notifications;
 
         void NotifyLanguageChanged(const string& language);
     };
 
 }  // namespace Plugin
-}  // namespace WPEFramework
+}  // namespace Thunder

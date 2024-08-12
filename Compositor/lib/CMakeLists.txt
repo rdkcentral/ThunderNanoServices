@@ -36,7 +36,3 @@ if("${PLUGIN_COMPOSITOR_IMPLEMENTATION}" STREQUAL "Nexus")
 else()
     add_subdirectory (${PLUGIN_COMPOSITOR_IMPLEMENTATION})
 endif()
-
-if(PLUGIN_COMPOSITOR_TEST)
-    add_subdirectory (Test)
-endif()

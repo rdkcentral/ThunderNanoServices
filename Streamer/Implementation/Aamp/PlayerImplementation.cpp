@@ -25,7 +25,7 @@
 
 #define AAMP_IDLE_LOOP_PROGRESS /* otherwise use AAMP supplied progress event */
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Player {
 namespace Implementation {
 
@@ -574,7 +574,7 @@ namespace Implementation {
                     g_main_loop_unref(_aampGstPlayerMainLoop);
                     _aampGstPlayerMainLoop = nullptr;
                 }
-                return WPEFramework::Core::infinite;
+                return Thunder::Core::infinite;
             }
 
             // Aamp methods

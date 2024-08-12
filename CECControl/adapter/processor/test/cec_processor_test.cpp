@@ -6,7 +6,7 @@
 #include <CECProcessor.h>
 
 #include <localtracer/localtracer.h>
-#include <tracing/tracing.h>
+#include <messaging/messaging.h>
 
 #include <chrono>
 #include <core/core.h>
@@ -14,7 +14,7 @@
 #include <thread>
 #include <time.h>
 
-using namespace WPEFramework::CEC;
+using namespace Thunder::CEC;
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -61,7 +61,7 @@ int main(int /*argc*/, const char* argv[])
 
         tracer.Close();
 
-        WPEFramework::Core::Singleton::Dispose();
+        Thunder::Core::Singleton::Dispose();
     }
 
     return 0;

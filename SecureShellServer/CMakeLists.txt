@@ -16,9 +16,9 @@
 # limitations under the License.
 project(SecureShellServer)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -28,6 +28,10 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(LibDropbear REQUIRED)
@@ -35,7 +39,6 @@ find_package(LibDropbear REQUIRED)
 if ( NOT LIBDROPBEAR_FOUND )
 	message(FATAL_ERROR "Package Dropbear required, but not found!")
 endif( NOT LIBDROPBEAR_FOUND) 
-
 
 add_library(${MODULE_NAME} SHARED
     SecureShellServer.cpp
@@ -58,6 +61,6 @@ target_link_libraries(${MODULE_NAME}
 	${LIBDROPBEAR_LIBRARIES} -lz -lutil -lpthread -lcrypt)
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins  COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

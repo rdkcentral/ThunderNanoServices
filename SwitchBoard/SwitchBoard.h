@@ -22,7 +22,7 @@
 #include "Module.h"
 #include <interfaces/ISwitchBoard.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SwitchBoard : public PluginHost::IPlugin, PluginHost::IWeb, Exchange::ISwitchBoard {
@@ -120,7 +120,7 @@ namespace Plugin {
             {
                 _parent.Deactivated(callsign, plugin);
             }
-            void Unavailable(const string& callsign, PluginHost::IShell* plugin) override
+            void Unavailable(const string& callsign VARIABLE_IS_NOT_USED, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
             {
             }
             void StateChange(const PluginHost::IStateControl::state newState) override
@@ -191,7 +191,7 @@ namespace Plugin {
                 TRACE(Switching, (_T("Activating plugin [%s] in plugin state [%d]"), _shell->Callsign().c_str(), _shell->State()));
 
                 if (_shell->State() != PluginHost::IShell::ACTIVATED) {
-                    if (_shell->AutoStart() == true) {
+                    if (_shell->StartMode() == PluginHost::IShell::startmode::ACTIVATED) {
                         TRACE(Trace::Error, (Trace::Format("Activation of %s required although it should be autostarted.", _shell->Callsign().c_str())));
                     }
 
@@ -236,11 +236,11 @@ namespace Plugin {
 
                         control->Release();
 
-                    } else if (_shell->AutoStart() == true) {
+                    } else if (_shell->StartMode() == PluginHost::IShell::startmode::ACTIVATED) {
                         TRACE(Trace::Error, (Trace::Format("Deactivation of %s required although it is autostarted, but has *NO* IStateControl.", _shell->Callsign().c_str())));
                     }
 
-                    if ((result != Core::ERROR_NONE) || (_shell->AutoStart() == false) || (control == nullptr)) {
+                    if ((result != Core::ERROR_NONE) || (_shell->StartMode() == PluginHost::IShell::startmode::DEACTIVATED) || (control == nullptr)) {
 
                         result = _shell->Deactivate(PluginHost::IShell::REQUESTED);
 
@@ -252,6 +252,8 @@ namespace Plugin {
             }
             void Register(PluginHost::IStateControl::INotification* sink) {
 
+                ASSERT(sink != nullptr);
+
                 PluginHost::IStateControl* control(_shell->QueryInterface<PluginHost::IStateControl>());
 
                 if (control != nullptr) {
@@ -261,6 +263,8 @@ namespace Plugin {
                 }
             }
             void Unregister(PluginHost::IStateControl::INotification* sink) {
+
+                ASSERT(sink != nullptr);
 
                 PluginHost::IStateControl* control(_shell->QueryInterface<PluginHost::IStateControl>());
 
@@ -273,31 +277,6 @@ namespace Plugin {
 
         private:
             PluginHost::IShell* _shell;
-        };
-        class Job : public Core::IDispatchType<void> {
-        private:
-            Job() = delete;
-            Job(const Job&) = delete;
-            Job& operator=(const Job&) = delete;
-
-        public:
-            Job(SwitchBoard* parent)
-                : _parent(*parent)
-            {
-                ASSERT(parent != nullptr);
-            }
-            ~Job() override
-            {
-            }
-
-        public:
-            void Dispatch() override
-            {
-                _parent.Evaluate();
-            }
-
-        private:
-            SwitchBoard& _parent;
         };
 
     public:
@@ -454,6 +433,13 @@ namespace Plugin {
         void Deactivated(const string& callsign, PluginHost::IShell* plugin);
         void StateChange(PluginHost::IStateControl::state newState);
 
+        friend Core::ThreadPool::JobType<SwitchBoard&>;
+        void Dispatch()
+        {
+            TRACE(Trace::Information, (_T("%s: Job is Dispatched"), _service->Callsign().c_str()));
+            Evaluate();
+        }
+
     private:
         Core::CriticalSection _adminLock;
         uint8_t _skipURL;
@@ -461,11 +447,12 @@ namespace Plugin {
         Entry* _activeCallsign;
         std::map<string, Entry> _switches;
         std::list<Exchange::ISwitchBoard::INotification*> _notificationClients;
-        Core::Sink<Notification> _sink;
+        Core::SinkType<Notification> _sink;
         PluginHost::IShell* _service;
-        Core::ProxyType< Core::IDispatchType<void> > _job;
         volatile state _state;
+
+        Core::WorkerPool::JobType<SwitchBoard&> _job;
     };
 
 }
-}  // namespace WPEFramework::Plugin
+}  // namespace Thunder::Plugin

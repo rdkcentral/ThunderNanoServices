@@ -23,7 +23,7 @@
 #include "Geometry.h"
 #include <interfaces/json/JsonData_Streamer.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Streamer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
@@ -136,7 +136,7 @@ namespace Plugin {
             Streamer& _parent;
             uint8_t _index;
             Exchange::IStream* _implementation;
-            Core::Sink<StreamSink> _streamSink;
+            Core::SinkType<StreamSink> _streamSink;
         };
 
         class ControlProxy {
@@ -206,7 +206,7 @@ namespace Plugin {
             Streamer& _parent;
             uint8_t _index;
             Exchange::IStream::IControl* _implementation;
-            Core::Sink<ControlSink> _controlSink;
+            Core::SinkType<ControlSink> _controlSink;
         };
 
         typedef std::map<uint8_t, StreamProxy> Streams;
@@ -320,7 +320,7 @@ POP_WARNING()
         // The lifetime of the Service object is guaranteed till the deinitialize method is called.
         const string Initialize(PluginHost::IShell* service) override;
 
-        // The plugin is unloaded from WPEFramework. This is call allows the module to notify clients
+        // The plugin is unloaded from Thunder. This is call allows the module to notify clients
         // or to persist information if needed. After this call the plugin will unlink from the service path
         // and be deactivated. The Service object is the same as passed in during the Initialize.
         // After theis call, the lifetime of the Service object ends.
@@ -425,11 +425,11 @@ POP_WARNING()
         PluginHost::IShell* _service;
 
         Exchange::IPlayer* _player;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
 
         // Stream and StreamControl holding areas for the RESTFull API.
         Streams _streams;
         Controls _controls;
     };
 } //namespace Plugin
-} //namespace WPEFramework
+} //namespace Thunder

@@ -23,7 +23,7 @@
 #include <cryptography/cryptography.h>
 #include <interfaces/IConfiguration.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class Svalbard : public PluginHost::IPlugin {
@@ -40,10 +40,12 @@ namespace Plugin {
             ~Notification() override = default;
 
         public:
-            void Activated(RPC::IRemoteConnection*) override {
+            void Activated(RPC::IRemoteConnection* /* connection */) override {
             }
             virtual void Deactivated(RPC::IRemoteConnection* connection) override {
                 _parent.Deactivated(connection);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */) override {
             }
 
             BEGIN_INTERFACE_MAP(Notification)
@@ -70,6 +72,7 @@ POP_WARNING()
 
         BEGIN_INTERFACE_MAP(Svalbard)
             INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_AGGREGATE(Exchange::IDeviceObjects, _svalbard)
         END_INTERFACE_MAP
 
     public:
@@ -86,7 +89,7 @@ POP_WARNING()
         uint32_t _connectionId;
         PluginHost::IShell* _service;
         Exchange::IConfiguration* _svalbard;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
     };
 
 } // Namespace Plugin.

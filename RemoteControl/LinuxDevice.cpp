@@ -23,7 +23,7 @@
 #include <libudev.h>
 #include <linux/uinput.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     static char Locator[] = _T("/dev/input");
@@ -37,13 +37,11 @@ namespace Plugin {
             TOUCH,
             JOYSTICK
         };
+
     private:
         static constexpr const TCHAR* InputDeviceSysFilePath = _T("/sys/class/input/");
         static constexpr const TCHAR* DeviceNamePath = _T("/device/name");
-
-    private:
-        LinuxDevice(const LinuxDevice&) = delete;
-        LinuxDevice& operator=(const LinuxDevice&) = delete;
+        using TypeToNameLookup = std::unordered_map<type, std::vector<string> >;
 
         struct IDevInputDevice {
             virtual ~IDevInputDevice() = default;
@@ -80,27 +78,27 @@ namespace Plugin {
             }
             bool Pair() override
             {
-                ProducerEvent(WPEFramework::Exchange::ProducerEvents::PairingStarted);
+                ProducerEvent(Thunder::Exchange::ProducerEvents::PairingStarted);
                 bool result = _parent->Pair();
                 if (result) {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::PairingSuccess);
+                            Thunder::Exchange::ProducerEvents::PairingSuccess);
                 } else {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::PairingFailed);
+                            Thunder::Exchange::ProducerEvents::PairingFailed);
                 }
                 return result;
             }
             bool Unpair(string bindingId) override
             {
-                ProducerEvent(WPEFramework::Exchange::ProducerEvents::UnpairingStarted);
+                ProducerEvent(Thunder::Exchange::ProducerEvents::UnpairingStarted);
                 bool result = _parent->Unpair(bindingId);
                 if (result) {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::UnpairingSuccess);
+                            Thunder::Exchange::ProducerEvents::UnpairingSuccess);
                 } else {
                     ProducerEvent(
-                            WPEFramework::Exchange::ProducerEvents::UnpairingFailed);
+                            Thunder::Exchange::ProducerEvents::UnpairingFailed);
                 }
                 return result;
             }
@@ -127,6 +125,7 @@ namespace Plugin {
                 if (type == EV_KEY) {
                     if ((code < BTN_MISC) || (code >= KEY_OK)) {
                         if (value != 2) {
+                            TRACE(Trace::Information, (_T("Key data: %d, [0x%X]"), value, code));
                             _callback->KeyEvent((value != 0), code, Name());
                         }
                         return true;
@@ -388,7 +387,7 @@ namespace Plugin {
             {
                 if (type == EV_KEY) {
                     if (code == BTN_TOUCH) {
-                       _abs_latch[_abs_slot].Touch(value >= 0);
+                        _abs_latch[_abs_slot].Touch(value > 0);
                         _have_abs = true;
                         if (value == 0) {
                             _abs_slot = 0;
@@ -438,6 +437,7 @@ namespace Plugin {
                         _have_abs = false;
                         for (size_t i = 1; i < _abs_latch.size(); i++) {
                             if (_abs_latch[i].Action() != AbsInfo::absaction::IDLE) {
+                                TRACE(Trace::Information, (_T("Touched: %d,%d"), _abs_latch[i].X(), _abs_latch[i].Y()));
                                 _callback->TouchEvent((i - 1), _abs_latch[i].State(), _abs_latch[i].X(), _abs_latch[i].Y());
                                 _abs_latch[i].Reset();
                             }
@@ -495,7 +495,7 @@ namespace Plugin {
                 }
                 void Touch(const bool touched)
                 {
-                    action = (touched? absaction::PRESSED : absaction::RELEASED);
+                    action = (touched ? absaction::PRESSED : absaction::RELEASED);
                 }
                 absaction Action()
                 {
@@ -528,6 +528,10 @@ namespace Plugin {
         };
 
     public:
+        LinuxDevice(LinuxDevice&&) = delete;
+        LinuxDevice(const LinuxDevice&) = delete;
+        LinuxDevice& operator=(const LinuxDevice&) = delete;
+
         LinuxDevice()
             : Core::Thread(Core::Thread::DefaultStackSize(), _T("LinuxInputSystem"))
             , _devices()
@@ -547,6 +551,19 @@ namespace Plugin {
                 _pipe[0] = -1;
                 _pipe[1] = -1;
             } else {
+                _typeToName.emplace(std::piecewise_construct,
+                    std::forward_as_tuple(type::KEYBOARD),
+                    std::forward_as_tuple(std::vector<string>({ _T("KEYBOARD"), _T("IR_KEYPAD") })));
+                _typeToName.emplace(std::piecewise_construct,
+                  std::forward_as_tuple(type::MOUSE),
+                  std::forward_as_tuple(std::vector<string>({ _T("MOUSE") })));
+                _typeToName.emplace(std::piecewise_construct,
+                  std::forward_as_tuple(type::JOYSTICK),
+                  std::forward_as_tuple(std::vector<string>({ _T("JOYSTICK") })));
+                _typeToName.emplace(std::piecewise_construct,
+                  std::forward_as_tuple(type::TOUCH),
+                  std::forward_as_tuple(std::vector<string>({ _T("TOUCH"), _T("RASPBERRYPI-TS") })));
+    
                 struct udev* udev = udev_new();
 
                 // Set up a monitor to monitor event devices
@@ -558,10 +575,10 @@ namespace Plugin {
 
                 udev_unref(udev);
 
-                _inputDevices.emplace_back(Core::Service<KeyDevice>::Create<KeyDevice>(this));
-                _inputDevices.emplace_back(Core::Service<WheelDevice>::Create<WheelDevice>(this));
-                _inputDevices.emplace_back(Core::Service<PointerDevice>::Create<PointerDevice>(this));
-                _inputDevices.emplace_back(Core::Service<TouchDevice>::Create<TouchDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<KeyDevice>::Create<KeyDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<WheelDevice>::Create<WheelDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<PointerDevice>::Create<PointerDevice>(this));
+                _inputDevices.emplace_back(Core::ServiceType<TouchDevice>::Create<TouchDevice>(this));
 
                 Pair();
             }
@@ -629,22 +646,33 @@ namespace Plugin {
                 Core::File entry(dir.Current());
                 if ((entry.IsDirectory() == false) && (entry.FileName().substr(0, 5) == _T("event"))) {
 
-                    TRACE(Trace::Information, (_T("Opening input device: %s"), entry.Name().c_str()));
-
-                    if (entry.Open(true) == true) {
+                    if (entry.Open(true) == false) {
+                        TRACE(Trace::Information, (_T("Failed to open input device: %s"), entry.Name().c_str()));
+                    }
+                    else {
                         int fd = entry.DuplicateHandle();
                         std::map<string, std::pair<int, IDevInputDevice*>>::iterator device(_devices.find(entry.Name()));
                         if (device == _devices.end()) {
+                            
                             string deviceName;
                             ReadDeviceName(entry.Name(), deviceName);
-                            std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), std::ptr_fun<int, int>(std::toupper));
+                            std::transform(deviceName.begin(), deviceName.end(), deviceName.begin(), [](TCHAR c){ return std::toupper(c); });
 
                             for (auto& device : _inputDevices) {
-                                std::size_t found = deviceName.find(Core::EnumerateType<LinuxDevice::type>(device->Type()).Data());
-                                if (found != std::string::npos) {
-                                    ASSERT(device != nullptr);
-                                    _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, device)));
-                                    break;
+                                TypeToNameLookup::const_iterator index = _typeToName.find(device->Type());
+
+                                if (index != _typeToName.end()) {
+                                    std::vector<string>::const_iterator entries = index->second.begin();
+                                    while ( (entries != index->second.end()) && (deviceName.find(*entries) == std::string::npos) ) {
+                                        entries++;
+                                    }
+
+                                    if (entries != index->second.end()) {
+                                        ASSERT(device != nullptr);
+                                        TRACE(Trace::Information, (_T("Opening input device: %s [%s]"), entry.Name().c_str(), deviceName.c_str()));
+                                        _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, device)));
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -653,7 +681,6 @@ namespace Plugin {
             }
 
             for (auto& device : _inputDevices) {
-                device->Teardown();
                 device->Setup();
             }
         }
@@ -713,7 +740,7 @@ namespace Plugin {
 
                     while (index != _devices.end()) {
                         if (FD_ISSET(index->second.first, &readset)) {
-
+                            TRACE(Trace::Information, (_T("Action on input device: %s"), index->first.c_str()));
                             if (HandleInput(index->second.first) == false) {
                                 // fd closed?
                                 close(index->second.first);
@@ -784,6 +811,7 @@ namespace Plugin {
         udev_monitor* _monitor;
         int _update;
         std::vector<IDevInputDevice*> _inputDevices;
+        TypeToNameLookup _typeToName;
         static LinuxDevice _singleton;
     };
 
@@ -796,5 +824,5 @@ ENUM_CONVERSION_BEGIN(Plugin::LinuxDevice::type)
     { Plugin::LinuxDevice::type::MOUSE, _TXT("MOUSE") },
     { Plugin::LinuxDevice::type::JOYSTICK, _TXT("JOYSTICK") },
     { Plugin::LinuxDevice::type::TOUCH, _TXT("TOUCH") },
-    ENUM_CONVERSION_END(Plugin::LinuxDevice::type);
+ENUM_CONVERSION_END(Plugin::LinuxDevice::type)
 }

@@ -23,7 +23,7 @@
 #include <interfaces/IVolumeControl.h>
 #include <interfaces/json/JVolumeControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class VolumeControl : public PluginHost::IPlugin, public PluginHost::JSONRPC {
@@ -124,10 +124,10 @@ namespace Plugin {
         Exchange::IVolumeControl* _implementation;
         uint32_t _connectionId;
         PluginHost::IShell* _service;
-        Core::Sink<ConnectionNotification> _connectionNotification;
-        Core::Sink<VolumeNotification> _volumeNotification;
+        Core::SinkType<ConnectionNotification> _connectionNotification;
+        Core::SinkType<VolumeNotification> _volumeNotification;
 
     };
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

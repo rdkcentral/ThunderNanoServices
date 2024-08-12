@@ -9,7 +9,7 @@
 
 */
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 

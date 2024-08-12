@@ -30,7 +30,7 @@
 #include <interfaces/json/JsonData_DIALServer.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class DIALServer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC, public Exchange::IDIALServer {
@@ -238,7 +238,7 @@ namespace Plugin {
                 if (_passiveMode == false) {
                     // We are in active mode, no need to do reporting from DIALSserver, move
                     // to the required plugin
-                    _service = _service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
+                    _service = service->QueryInterfaceByCallsign<PluginHost::IShell>(_callsign);
 
                     if (_service == nullptr) {
                         // Oops the service we want to use does not exist, move to Passive more..
@@ -259,6 +259,7 @@ namespace Plugin {
                 }
                 if (_service != nullptr) {
                     _service->Release();
+                    _service = nullptr;
                 }
             }
 
@@ -275,7 +276,7 @@ namespace Plugin {
                     } else {
                         running = (_service->State() == PluginHost::IShell::ACTIVATED);
                     }
-                    if ((running == true) && (_service->AutoStart() == true)) {
+                    if ((running == true) && (_service->StartMode() == PluginHost::IShell::startmode::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             running = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
@@ -297,7 +298,7 @@ namespace Plugin {
                         hidden = !hidden;
                         app->Release();
                     }
-                    if ((hidden == true) && (_service->AutoStart() == true)) {
+                    if ((hidden == true) && (_service->StartMode() == PluginHost::IShell::startmode::ACTIVATED)) {
                         const PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             hidden = (stateCtrl->State() == PluginHost::IStateControl::RESUMED);
@@ -332,14 +333,14 @@ namespace Plugin {
             uint32_t Start(const string& parameters, const string& payload) override
             {
                 // DIAL active mode operation logic:
-                // AutoStart: OFF
+                // StartMode: ACTIVATED
                 //  - Start activates the app, sets launch point, sets content link and sets visible state, resumes if needed
                 //  - Stop deactivates the app
                 //  - Hide sets app's invisible state
                 //  - 'Running' state is when service is activated and in visible state
                 //  - 'Hidden' state is when service is activated and in invisible state
                 //  - 'Stopped' state is when service is deactivated
-                // AutoStart: ON
+                // StartMode: DEACTIVATED
                 //  - Start activates the app if needed, sets launch point, sets content link and sets visible state and resumes
                 //  - Stop suspends the app
                 //  - Hide sets app's invisible state
@@ -401,7 +402,7 @@ namespace Plugin {
                     _service->Notify(message);
                     _parent->event_stop(_callsign, parameters);
                 } else {
-                    if (_service->AutoStart() == true) {
+                    if (_service->StartMode() == PluginHost::IShell::startmode::ACTIVATED) {
                         PluginHost::IStateControl* stateCtrl = QueryInterface<PluginHost::IStateControl>();
                         if (stateCtrl != nullptr) {
                             if (stateCtrl->State() != PluginHost::IStateControl::SUSPENDED) {
@@ -858,7 +859,7 @@ namespace Plugin {
 
                 if (_application == nullptr) {
                     // since we still have nothing, fall back to the default
-                    _application = Core::Service<Default>::Create<IApplication>(service, info, parent);
+                    _application = Core::ServiceType<Default>::Create<IApplication>(service, info, parent);
                 }
             }
             ~AppInformation()
@@ -1046,6 +1047,8 @@ namespace Plugin {
         public:
             void Register(PluginHost::IShell* service, const string& webServer, const string& switchBoard)
             {
+                ASSERT(service != nullptr);
+
                 // This method needs to be Unregistered, before you can Regsiter it..
                 ASSERT((_webServer.empty() == true) && (_switchBoard.empty() == true));
 
@@ -1059,6 +1062,8 @@ namespace Plugin {
 
             void Unregister(PluginHost::IShell* service)
             {
+                ASSERT(service != nullptr);
+
                 if ((_webServer.empty() == false) || (_switchBoard.empty() == false)) {
                     service->Unregister(this);
 
@@ -1147,7 +1152,7 @@ namespace Plugin {
             public:
                 IApplication* Create(PluginHost::IShell* shell, const Config::App& config, DIALServer* parent) override
                 {
-                    return (Core::Service<HANDLER>::template Create<IApplication>(shell, config, parent));
+                    return (Core::ServiceType<HANDLER>::template Create<IApplication>(shell, config, parent));
                 }
             };
 
@@ -1300,7 +1305,7 @@ POP_WARNING()
         string _dialPath;
         DIALServerImpl* _dialServiceImpl;
         Core::ProxyType<Web::TextBody> _deviceInfo;
-        Core::Sink<Notification> _sink;
+        Core::SinkType<Notification> _sink;
         std::map<const string, AppInformation> _appInfo;
         bool _deprecatedAPI;
     };

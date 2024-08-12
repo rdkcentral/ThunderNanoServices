@@ -21,7 +21,7 @@
 
 #include <CECMessage.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace CEC {
     namespace Message {
         namespace Service {
@@ -42,7 +42,7 @@ namespace CEC {
                 ~PhysicalAddress() override = default;
 
             private:
-                uint8_t Process(const uint8_t length, uint8_t buffer[])
+                uint8_t Process(const uint8_t length VARIABLE_IS_NOT_USED, uint8_t buffer[])
                 {
                     ASSERT(length >= sizeof(_physicalAddress));
 
@@ -59,4 +59,4 @@ namespace CEC {
         static Service::PhysicalAddress service_physical_address;
     } // namespace Message
 } // namespace CEC
-} // namespace WPEFramework
+} // namespace Thunder

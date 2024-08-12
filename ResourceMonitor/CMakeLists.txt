@@ -19,9 +19,9 @@ set(PLUGIN_NAME ResourceMonitor)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 project(ResourceMonitor)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -29,7 +29,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_RESOURCEMONITOR_AUTOSTART "false" CACHE STRING "Automatically start ResourceMonitor plugin")
+set(PLUGIN_RESOURCEMONITOR_STARTMODE "Deactivated" CACHE STRING "Automatically start ResourceMonitor plugin")
 set(PLUGIN_RESOURCEMONITOR_RESUMED "true" CACHE STRING "Set ResourceMonitor plugin resume state")
 set(PLUGIN_RESOURCEMONITOR_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
@@ -37,6 +37,10 @@ set(PLUGIN_RESOURCEMONITOR_MODE "Local" CACHE STRING "Controls if the plugin sho
 if(PLUGIN_RESOURCEMONITOR_OUTOFPROCESS STREQUAL "false")
     set(PLUGIN_RESOURCEMONITOR_MODE "Off" CACHE STRING "Process mode"  FORCE)
     unset(PLUGIN_RESOURCEMONITOR_OUTOFPROCESS CACHE)
+endif()
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
@@ -57,6 +61,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

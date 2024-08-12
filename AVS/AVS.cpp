@@ -19,7 +19,7 @@
 
 #include "AVS.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
      namespace {
@@ -84,52 +84,50 @@ namespace Plugin {
             }
         }
 
-        if (message.length() != 0) {
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     void AVS::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        _service->Unregister(&_audiosourceNotification);
-        _service->Unregister(&_connectionNotification);
+            _service->Unregister(&_audiosourceNotification);
+            _service->Unregister(&_connectionNotification);
 
-        if (_AVSClient != nullptr) {
-            TRACE_L1(_T("Deinitializing AVSClient..."));
+            if (_AVSClient != nullptr) {
+                TRACE_L1(_T("Deinitializing AVSClient..."));
 
-            if (_controller != nullptr) {
-                _controller->Unregister(&_dialogueNotification);
-                _controller->Release();
-                Exchange::JAVSController::Unregister(*this);
-                _controller = nullptr;
+                if (_controller != nullptr) {
+                    _controller->Unregister(&_dialogueNotification);
+                    _controller->Release();
+                    Exchange::JAVSController::Unregister(*this);
+                    _controller = nullptr;
+                }
+
+                if (_AVSClient->Deinitialize() == false) {
+                    TRACE_L1(_T("AVSClient deinitialize failed!"));
+                }
+
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+                VARIABLE_IS_NOT_USED uint32_t result = _AVSClient->Release();
+                _AVSClient = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // The process can disappear in the meantime...
+                if (connection != nullptr) {
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
 
-            if (_AVSClient->Deinitialize() == false) {
-                TRACE_L1(_T("AVSClient deinitialize failed!"));
-            }
-
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            VARIABLE_IS_NOT_USED uint32_t result = _AVSClient->Release();
-            _AVSClient = nullptr;
-            // It should have been the last reference we are releasing,
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                connection->Terminate();
-                connection->Release();
-            }
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
         }
-
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
     }
 
     string AVS::Information() const
@@ -146,7 +144,7 @@ namespace Plugin {
     {
         if (_connectionId == connection->Id()) {
             ASSERT(_service != nullptr);
-            PluginHost::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
+            Core::WorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
 
@@ -174,4 +172,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

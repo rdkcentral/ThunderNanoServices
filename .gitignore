@@ -13,6 +13,11 @@ build/
 /.vs
 /artifacts
 */*.so
+*/*/*.so
 */*/*/*.so
 */*/*/*.a
 */config
+*/*/config
+*/*/*/*.a
+*/*/*/*.webpa
+*/*/*/*/*/*.profile

@@ -17,9 +17,9 @@
 
 project(CECControl)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -29,19 +29,31 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_CECCONTROL_AUTOSTART true CACHE STRING "Automatically start CECControl plugin")
+set(PLUGIN_CECCONTROL_STARTMODE "Activated" CACHE STRING "Automatically start CECControl plugin")
 
 # TODO: CEC 2.0 specifies that multiple roles can be used by one device.
 set(PLUGIN_CECCONTROL_ROLES "playback" CACHE STRING "Device type")
-set(PLUGIN_CECCONTROL_NAME "WPEFramework" CACHE STRING "The name of this device")
+set(PLUGIN_CECCONTROL_NAME "Thunder" CACHE STRING "The name of this device")
 
 set(CECADAPTER_LIBRARY_NAME "_cecadapter" CACHE STRING "Defines the name of the library")
 set(CEC_DEVICE_ADAPTER_LIBRARY_NAME "_ceccontrol_device_adapter" CACHE INTERNAL "INTERNALLY USED")
+
+set (PLUGIN_CECCONTROL_INTERFACES "hdmi1:/dev/cec0:recorder" "hdmi2:/dev/cec1:playback")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+
+#[[ 
+    Enable PIC by default for this project to fix 
+    dangerous relocation of symbols.
+#]]
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(simpleworker)
 add_subdirectory(adapter)
@@ -66,6 +78,6 @@ target_include_directories(${MODULE_NAME}
         ${CEC_INCLUDE_DIR})
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

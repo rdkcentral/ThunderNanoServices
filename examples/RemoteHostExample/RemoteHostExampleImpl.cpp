@@ -21,48 +21,22 @@
 #include "interfaces/IRemoteHostExample.h"
 #include "RemoteHostExample.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Exchange {
 
     class RemoteHostExampleImpl : public RPC::RemoteLinker, IRemoteHostExample {
     public: 
-        class TimeWorker : public Core::IDispatch {
-        public:
-            TimeWorker(RemoteHostExampleImpl* parent) 
-                : _parent(parent)
-            {
-
-            }
-
-            void Dispatch() override 
-            {
-                _parent->_adminLock.Lock();
-                for (auto subscriber = _parent->_subscribers.begin();  subscriber != _parent->_subscribers.end(); subscriber++) {
-                    if ((*subscriber)->TimeUpdate(Core::Time::Now().ToISO8601()) != Core::ERROR_NONE) {
-                        (*subscriber)->Release();
-                        subscriber = _parent->_subscribers.erase(subscriber);
-                    }
-                }
-                _parent->_adminLock.Unlock();
-
-                Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(*this));
-            }
-
-        private:
-            RemoteHostExampleImpl* _parent;
-        };
-
         RemoteHostExampleImpl() 
             : _name()
             , _subscribers()
-            , _timeSubject(Core::ProxyType<TimeWorker>::Create(this))
+            , _job(*this)
         {
 
         }
 
         ~RemoteHostExampleImpl() override
         {
-            Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_timeSubject), Core::infinite);
+            _job.Revoke();
         }
 
         uint32_t Initialize(PluginHost::IShell* service) override;
@@ -77,10 +51,15 @@ namespace Exchange {
         END_INTERFACE_MAP
 
     private:
+        friend Core::ThreadPool::JobType<RemoteHostExampleImpl&>;
+        void Dispatch();
+
+    private:
         string _name;
         std::list<IRemoteHostExample::ITimeListener*> _subscribers;
-        Core::ProxyType<TimeWorker> _timeSubject;
         Core::CriticalSection _adminLock;
+
+        Core::WorkerPool::JobType<RemoteHostExampleImpl&> _job;
     };
 
     uint32_t RemoteHostExampleImpl::Initialize(PluginHost::IShell* service) 
@@ -90,7 +69,7 @@ namespace Exchange {
         
         _name = config.Name.Value();
 
-        Core::IWorkerPool::Instance().Schedule(Core::Time::Now().Add(5000), Core::ProxyType<Core::IDispatch>(_timeSubject));
+        _job.Reschedule(Core::Time::Now().Add(5000));
 
         return Core::ERROR_NONE;
     }
@@ -127,7 +106,22 @@ namespace Exchange {
         return Core::ERROR_NONE;
     }
 
-    SERVICE_REGISTRATION(RemoteHostExampleImpl, 1, 0);
+    void RemoteHostExampleImpl::Dispatch()
+    {
+        _adminLock.Lock();
+        for (auto subscriber = _parent->_subscribers.begin();  subscriber != _parent->_subscribers.end(); subscriber++) {
+            if ((*subscriber)->TimeUpdate(Core::Time::Now().ToISO8601()) != Core::ERROR_NONE) {
+                (*subscriber)->Release();
+                subscriber = _parent->_subscribers.erase(subscriber);
+            }
+        }
+        _parent->_adminLock.Unlock();
+
+        _job.Reschedule(Core::Time::Now().Add(5000));
+    }
+
+
+    SERVICE_REGISTRATION(RemoteHostExampleImpl, 1, 0)
 }
 }
 

@@ -20,7 +20,7 @@
 #include "Commander.h"
 #include "Commands.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 ENUM_CONVERSION_BEGIN(Plugin::Commander::state)
 
@@ -75,6 +75,7 @@ namespace Plugin {
     {
         ASSERT(_service == nullptr);
         _service = service;
+        _service->AddRef();
 
         // Setup skip URL for right offset.
         _skipURL = static_cast<uint8_t>(_service->WebPrefix().length());
@@ -98,28 +99,29 @@ namespace Plugin {
         return _T("");
     }
 
-    /* virtual */ void Commander::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void Commander::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == service);
+        if (_service != nullptr) {
+            ASSERT(_service == service);
 
-        // Stop all running sequencers..
-        std::map<const string, Core::ProxyType<Sequencer>>::iterator index(_sequencers.begin());
+            // Stop all running sequencers..
+            std::map<const string, Core::ProxyType<Sequencer>>::iterator index(_sequencers.begin());
 
-        while (index != _sequencers.end()) {
+            while (index != _sequencers.end()) {
 
-            Core::ProxyType<Core::IDispatch> job(index->second);
+                index->second->Abort();
+                index->second->Revoke();
 
-            index->second->Abort();
-            Core::IWorkerPool::Instance().Revoke(job);
+                index++;
+            }
 
-            index++;
+            // Kill all sequencer instances.
+            _sequencers.clear();
+
+            // Deinitialize what we initialized..
+            _service->Release();
+            _service = nullptr;
         }
-
-        // Kill all sequencer instances.
-        _sequencers.clear();
-
-        // Deinitialize what we initialized..
-        _service = nullptr;
     }
 
     /* virtual */ string Commander::Information() const
@@ -136,8 +138,8 @@ namespace Plugin {
         }
     }
 
-    // GET: ../Sequencer/[SequencerName]	; Return [ALL] available sequencers and their current state
-    // GET: ../Commands						; Return all possible commmands
+    // GET: ../Sequencer/[SequencerName]        ; Return [ALL] available sequencers and their current state
+    // GET: ../Commands                         ; Return all possible commmands
 
     /* virtual */ Core::ProxyType<Web::Response> Commander::Process(const Web::Request& request)
     {
@@ -217,17 +219,14 @@ namespace Plugin {
             } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatch> job(sequencer);
 
                 if (sequencer->Abort() != Core::ERROR_NONE) {
                     response->ErrorCode = Web::STATUS_NO_CONTENT;
                     response->Message = _T("Sequencer was not in a running state");
-                } else if (Core::IWorkerPool::Instance().Revoke(job, 2000) == Core::ERROR_NONE) {
+                } else {
+                    sequencer->Revoke();
                     response->ErrorCode = Web::STATUS_OK;
                     response->Message = _T("Sequencer available for next sequence");
-                } else {
-                    response->ErrorCode = Web::STATUS_REQUEST_TIME_OUT;
-                    response->Message = _T("Sequencer did not stop in time (2S)");
                 }
             }
         } else if (request.Verb == Web::Request::HTTP_PUT) {
@@ -239,7 +238,6 @@ namespace Plugin {
             } else {
                 // Current name, is the name of the sequencer
                 Core::ProxyType<Sequencer> sequencer(_sequencers[index.Current().Text()]);
-                Core::ProxyType<Core::IDispatch> job(sequencer);
 
                 if (sequencer->IsActive() == true) {
                     response->ErrorCode = Web::STATUS_TEMPORARY_REDIRECT;
@@ -248,7 +246,7 @@ namespace Plugin {
                     sequencer->Load(*(request.Body<Web::JSONBodyType<Core::JSON::ArrayType<Commander::Command>>>()));
                     sequencer->Execute();
 
-                    Core::IWorkerPool::Instance().Submit(job);
+                    sequencer->Submit();
 
                     // Attach to response.
                     response->Message = _T("Sequence List Imported");

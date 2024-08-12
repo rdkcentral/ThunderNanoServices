@@ -23,7 +23,7 @@
 #include <interfaces/json/JsonData_DeviceInfo.h>
 #include <core/JSONRPC.h>
 
-namespace WPEFramework {
+namespace Thunder {
 
 DeviceInfo::Process::ProcessList DeviceInfo::Process::_processList;
 
@@ -305,15 +305,32 @@ DeviceInfo* DeviceInfo::Instance()
 void DeviceInfo::Info()
 {
     Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), (_T("127.0.0.1:80")));
-    JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("DeviceInfo.1"), 1.0);
-    if (remoteObject.Get<JsonData::DeviceInfo::SysteminfoData>(1000, _T("systeminfo"), _systemInfoData) == Core::ERROR_NONE) {
-        TRACE(Trace::Information, (_T("DeviceInfo: SoftwareVerison = %s, Serialnumber = %s \n"), _systemInfoData.Version.Value().c_str(), _systemInfoData.Serialnumber.Value().c_str()));
+    JSONRPC::SmartLinkType<Core::JSON::IElement> remoteObject(_T("DeviceInfo.1"), _T("client.monitor.2"));
+
+    uint32_t waiting = LinkWaitingTime;
+
+    while ((waiting > 0) && (remoteObject.IsActivated() == false)) {
+
+        uint32_t sleepSlot = (waiting > SleepingTimeSlot ? SleepingTimeSlot : waiting);
+
+        SleepMs(sleepSlot);
+
+        waiting -= sleepSlot;
+    }
+
+    if (remoteObject.IsActivated() == true) {
+        uint32_t status = remoteObject.Get<JsonData::DeviceInfo::SysteminfoData>(1000, _T("systeminfo"), _systemInfoData);
+        if (status == Core::ERROR_NONE) {
+            TRACE(Trace::Information, (_T("DeviceInfo: SoftwareVerison = %s, Serialnumber = %s \n"), _systemInfoData.Version.Value().c_str(), _systemInfoData.Serialnumber.Value().c_str()));
+        } else {
+            TRACE(Trace::Information, (_T("Error in fetching device information through jsonrpc")));
+        }
     } else {
-        TRACE(Trace::Information, (_T("Error in fetching device information through jsonrpc")));
+        TRACE(Trace::Error, (_T("DeviceInfo Plugin is not Activated")));
     }
 }
 
-FaultCode DeviceInfo::MACAddress(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::MACAddress(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = InvalidParameterValue;
@@ -331,7 +348,7 @@ FaultCode DeviceInfo::MACAddress(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::SerialNumber(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::SerialNumber(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -344,7 +361,7 @@ FaultCode DeviceInfo::SerialNumber(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::Manufacturer(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::Manufacturer(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -353,7 +370,7 @@ FaultCode DeviceInfo::Manufacturer(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::ModelName(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::ModelName(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -363,7 +380,7 @@ FaultCode DeviceInfo::ModelName(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::Description(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::Description(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -382,7 +399,7 @@ FaultCode DeviceInfo::Description(const Data& parameter)
     return status;
 }
 
-FaultCode DeviceInfo::ProductClass(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::ProductClass(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -392,7 +409,7 @@ FaultCode DeviceInfo::ProductClass(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::HardwareVersion(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::HardwareVersion(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -402,7 +419,7 @@ FaultCode DeviceInfo::HardwareVersion(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::SoftwareVersion(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::SoftwareVersion(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -414,7 +431,7 @@ FaultCode DeviceInfo::SoftwareVersion(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::AdditionalHardwareVersion(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::AdditionalHardwareVersion(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -423,7 +440,7 @@ FaultCode DeviceInfo::AdditionalHardwareVersion(Data& parameter, bool& changed) 
     return status;
 }
 
-FaultCode DeviceInfo::AdditionalSoftwareVersion(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::AdditionalSoftwareVersion(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -433,7 +450,7 @@ FaultCode DeviceInfo::AdditionalSoftwareVersion(Data& parameter, bool& changed) 
     return status;
 }
 
-FaultCode DeviceInfo::UpTime(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::UpTime(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -446,7 +463,7 @@ FaultCode DeviceInfo::UpTime(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::ProcessorNumberOfEntries(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::ProcessorNumberOfEntries(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -455,7 +472,7 @@ FaultCode DeviceInfo::ProcessorNumberOfEntries(Data& parameter, bool& changed) c
     return status;
 }
 
-FaultCode DeviceInfo::TotalMemory(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::TotalMemory(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -468,7 +485,7 @@ FaultCode DeviceInfo::TotalMemory(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::FreeMemory(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::FreeMemory(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -481,7 +498,7 @@ FaultCode DeviceInfo::FreeMemory(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::CPUUsage(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::CPUUsage(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;
@@ -494,7 +511,7 @@ FaultCode DeviceInfo::CPUUsage(Data& parameter, bool& changed) const
     return status;
 }
 
-FaultCode DeviceInfo::ProcessNumberOfEntries(Data& parameter, bool& changed) const
+FaultCode DeviceInfo::ProcessNumberOfEntries(Data& parameter, bool& changed VARIABLE_IS_NOT_USED) const
 {
     TRACE(Trace::Information, (string(__FUNCTION__)));
     FaultCode status = NoFault;

@@ -21,7 +21,7 @@
 
 #include "Module.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace Plugin {
 
@@ -38,6 +38,7 @@ namespace Plugin {
             CLASSIFICATION_RELEASE = 7,
             CLASSIFICATION_INFORM = 8,
         };
+        using NameServers = std::vector<Core::NodeId>;
 
     private:
         using UDPv4Frame = Core::UDPv4FrameType<1024>;
@@ -110,6 +111,8 @@ namespace Plugin {
 
 
     public:
+        static constexpr uint8_t MACSize = UDPv4Frame::MACSize;
+
         // DHCP constants (see RFC 2131 section 4.1)
         static constexpr uint16_t DefaultDHCPServerPort = 67;
         static constexpr uint16_t DefaultDHCPClientPort = 68;
@@ -234,7 +237,7 @@ namespace Plugin {
             Core::OptionalType<uint8_t> messageType;
             Core::NodeId gateway; /* the IP address that was offered to us */
             Core::NodeId broadcast; /* the IP address that was offered to us */
-            std::list<Core::NodeId> dns; /* the IP address that was offered to us */
+            NameServers dns; /* the IP address that was offered to us */
             Core::OptionalType<uint8_t> netmask;
             Core::OptionalType<uint32_t> leaseTime; /* lease time in seconds */
             Core::OptionalType<uint32_t> renewalTime; /* renewal time in seconds */
@@ -277,7 +280,7 @@ namespace Plugin {
 
                 Update(options);
             }
-            Offer(const Core::NodeId& source, const Core::NodeId& offer, const uint8_t netmask, const Core::NodeId& gateway, const Core::NodeId& broadcast, const uint32_t xid, std::list<Core::NodeId>&& dns)
+            Offer(const Core::NodeId& source, const Core::NodeId& offer, const uint8_t netmask, const Core::NodeId& gateway, const Core::NodeId& broadcast, const uint32_t xid, NameServers&& dns)
                 : _source(source)
                 , _offer(offer)
                 , _gateway(gateway)
@@ -428,7 +431,7 @@ namespace Plugin {
             {
                 return (_gateway);
             }
-            const std::list<Core::NodeId>& DNS() const
+            const NameServers& DNS() const
             {
                 return (_dns);
             }
@@ -466,7 +469,7 @@ namespace Plugin {
             Core::NodeId _offer; /* the IP address that was offered to us */
             Core::NodeId _gateway; /* the IP address that was offered to us */
             Core::NodeId _broadcast; /* the IP address that was offered to us */
-            std::list<Core::NodeId> _dns; /* the IP address that was offered to us */
+            NameServers _dns; /* the IP address that was offered to us */
             uint8_t _netmask;
             uint32_t _xid;
             uint32_t _leaseTime; /* lease time in seconds */
@@ -506,8 +509,16 @@ namespace Plugin {
             return (_interfaceName);
         }
         void UpdateMAC(const uint8_t buffer[], const uint8_t size VARIABLE_IS_NOT_USED) {
-            ASSERT(size == _udpFrame.MACSize);
+            ASSERT(size == MACSize);
             _udpFrame.SourceMAC(buffer);
+        }
+        uint8_t MAC(uint8_t buffer[], const uint8_t size) const {
+            uint8_t loaded = 0;
+            if (_udpFrame.IsBroadcastMAC(_udpFrame.SourceMAC()) == false) {
+                loaded = std::min(size, MACSize);
+                memcpy(buffer, _udpFrame.SourceMAC(), loaded);
+            }
+            return (loaded);
         }
         /* Ask DHCP servers for offers. */
         inline uint32_t Discover()
@@ -817,4 +828,4 @@ namespace Plugin {
         Core::Time _expired;
     };
 }
-} // namespace WPEFramework::Plugin
+} // namespace Thunder::Plugin

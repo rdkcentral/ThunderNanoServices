@@ -17,15 +17,32 @@
 
 project(Tests)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
 option(STORE_TEST "Utility to verify PersistentStore and Dictionary Plugin behaviour." OFF)
+option(TEST_AUTOMATION_TOOLS "Utility to verify Thunder functions trigerred by Automation Test Tools." OFF)
+option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
+option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
 endif()
+
+if(TEST_AUTOMATION_TOOLS)
+    add_subdirectory(TestAutomationComRpc)
+    add_subdirectory(TestAutomationMemory)
+endif()
+
+if(PLUGIN_TESTCONTROLLER)
+    add_subdirectory(TestController)
+endif()
+
+if(PLUGIN_TESTUTILITY)
+    add_subdirectory(TestUtility)
+endif()
+

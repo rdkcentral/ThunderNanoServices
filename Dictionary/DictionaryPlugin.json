@@ -3,7 +3,7 @@
   "info": {
     "title": "Dictionary Plugin",
     "callsign": "Dictionary",
-    "locator": "libWPEFrameworkDictionary.so",
+    "locator": "libThunderDictionary.so",
     "status": "production",
     "description": [
       "The Dictionary plugin provides functionality for dictionary management."

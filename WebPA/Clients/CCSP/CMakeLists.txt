@@ -18,7 +18,7 @@
 set(TARGET CCSP)
 message("Setup ${TARGET} v${PROJECT_VERSION}...")
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -27,15 +27,20 @@ find_package(WDMP-C REQUIRED)
 find_package(LibParodus REQUIRED)
 find_package(Parodus2CCSP REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(SysCfg  REQUIRED)
 
-add_library(${TARGET} CCSP.cpp)
+add_library(${TARGET} SHARED
+    CCSP.cpp
+    Module.cpp
+)
 
 target_link_libraries(${TARGET}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        parodus2ccsp::parodus2ccsp
+        Parodus2CCSP::Parodus2CCSP
+        SysCfg::SysCfg
 )
 
 target_compile_definitions(${TARGET} PRIVATE ${PLUGIN_DEFINITIONS})
@@ -45,6 +50,5 @@ set_target_properties(${TARGET} PROPERTIES SUFFIX ".webpa")
 set_target_properties(${TARGET} PROPERTIES PREFIX "")
 install(
     TARGETS ${TARGET}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/WebPA
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/WebPA  COMPONENT ${NAMESPACE}_Runtime
 )
-

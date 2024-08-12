@@ -19,7 +19,7 @@
 
 #include "LanguageAdministrator.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     namespace {
@@ -68,47 +68,45 @@ namespace Plugin {
             _impl->Language((const string)(_language));
         }
 
-        if(message.length() != 0) {
-            Deinitialize(service);
-        }
-
         return message;
     }
 
     /* virtual */ void LanguageAdministrator::Deinitialize(PluginHost::IShell* service)
     {
-        ASSERT(_service == service);
-        service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(&_sink));
-        service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(&_sink));
+        if (_service != nullptr) {
+            ASSERT(_service == service);
+            service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(&_sink));
+            service->Unregister(static_cast<PluginHost::IPlugin::INotification*>(&_sink));
 
-        UpdateLanguageUsed(_language);
+            UpdateLanguageUsed(_language);
 
-        if(_impl != nullptr) {
+            if(_impl != nullptr) {
 
-            Exchange::JLanguageTag::Unregister(*this);
-            _impl->Unregister(&_LanguageTagNotification);
-            // Stop processing:
-            RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
+                Exchange::JLanguageTag::Unregister(*this);
+                _impl->Unregister(&_LanguageTagNotification);
+                // Stop processing:
+                RPC::IRemoteConnection* connection = service->RemoteConnection(_connectionId);
 
-            VARIABLE_IS_NOT_USED uint32_t result = _impl->Release();
-            _impl = nullptr;
-            // It should have been the last reference we are releasing,
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-            // If this was running in a (container) process...
-            if (connection != nullptr) {
-                // Lets trigger the cleanup sequence for
-                // out-of-process code. Which will guard
-                // that unwilling processes, get shot if
-                // not stopped friendly :-)
-                connection->Terminate();
-                connection->Release();
+                VARIABLE_IS_NOT_USED uint32_t result = _impl->Release();
+                _impl = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger the cleanup sequence for
+                    // out-of-process code. Which will guard
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :-)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
         }
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
     }
 
     /* virtual */ string LanguageAdministrator::Information() const
@@ -143,7 +141,7 @@ namespace Plugin {
 
     }
 
-    void LanguageAdministrator::Deactivated(const string& callsign, PluginHost::IShell* plugin)
+    void LanguageAdministrator::Deactivated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
     {
         _lock.Lock();
         TRACE(Trace::Information , (_T("LanguageAdministrator::Deactivated Called")));
@@ -208,4 +206,4 @@ namespace Plugin {
         }
     }
 } //namespace Plugin
-} // namespace WPEFramework
+} // namespace Thunder

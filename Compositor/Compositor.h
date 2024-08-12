@@ -26,7 +26,7 @@
 #include <interfaces/json/JsonData_Compositor.h>
 
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
     class Compositor : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
     private:
@@ -53,12 +53,14 @@ namespace Plugin {
             }
 
             //RPC::IRemoteConnection::INotification methods
-            void Activated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) override {
+            void Activated(RPC::IRemoteConnection* /* connection */ ) override {
             }
 
             void Deactivated(RPC::IRemoteConnection* connection) override
             {
                 _parent.Deactivated(connection);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */ ) override {
             }
 
             BEGIN_INTERFACE_MAP(PluginSink)
@@ -84,10 +86,16 @@ namespace Plugin {
                 , System(_T("Controller"))
                 , WorkDir()
                 , InputSwitch(_T("InputSwitch"))
+                , Connector("connector")
+                , BufferConnector(_T("bufferconnector"))
+                , DisplayConnector("displayconnector")
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
                 Add(_T("inputswitch"), &InputSwitch);
+                Add(_T("connector"), &Connector);
+                Add(_T("bufferconnector"), &BufferConnector);
+                Add(_T("displayconnector"), &DisplayConnector);
             }
             ~Config() = default;
 
@@ -95,6 +103,9 @@ namespace Plugin {
             Core::JSON::String System;
             Core::JSON::String WorkDir;
             Core::JSON::String InputSwitch;
+            Core::JSON::String Connector;
+            Core::JSON::String BufferConnector;
+            Core::JSON::String DisplayConnector;
         };
 
         class Data : public Core::JSON::Container {
@@ -206,7 +217,7 @@ namespace Plugin {
     private:
         mutable Core::CriticalSection _adminLock;
         uint8_t _skipURL;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
         Exchange::IComposition* _composition;
         Exchange::IBrightness* _brightness;
         PluginHost::IShell* _service;

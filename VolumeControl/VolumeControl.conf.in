@@ -1,0 +1,7 @@
+startmode = "@PLUGIN_VOLUMECONTROL_STARTMODE@"
+
+configuration = JSON()
+
+rootobject = JSON()
+rootobject.add("mode", "Off")
+configuration.add("root", rootobject)

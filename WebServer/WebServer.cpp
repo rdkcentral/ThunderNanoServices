@@ -19,7 +19,7 @@
  
 #include "WebServer.h"
 
-namespace WPEFramework {
+namespace Thunder {
 
 namespace WebServer {
 
@@ -35,11 +35,11 @@ namespace Plugin {
             // Version
             1, 0, 0,
             // Preconditions
-            {  subsystem::NETWORK },
+            { subsystem::NETWORK },
             // Terminations
             {},
             // Controls
-            {}
+            { subsystem::WEBSOURCE }
         );
     }
 
@@ -81,7 +81,7 @@ namespace Plugin {
                 else {
                     RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
                     if (connection != nullptr) {
-                        _memory = WPEFramework::WebServer::MemoryObserver(connection);
+                        _memory = Thunder::WebServer::MemoryObserver(connection);
                         ASSERT(_memory != nullptr);
                         connection->Release();
                     }
@@ -102,54 +102,36 @@ namespace Plugin {
             message = _T("WebServer could not be instantiated.");
         }
 
-        if(message.length() != 0) {
-            Deinitialize(service);
-        }
-
         return message;
     }
 
-    /* virtual */ void WebServer::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void WebServer::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        ASSERT(_service == _service);
+        if (_service != nullptr) {
+            ASSERT(_service == _service);
 
-        _service->Unregister(&_notification);
+            _service->Unregister(&_notification);
 
-        if(_server != nullptr){
+            if (_server != nullptr) {
 
-            PluginHost::ISubSystem* subSystem = service->SubSystems();
-            if (subSystem != nullptr) {
-                if(subSystem->IsActive(PluginHost::ISubSystem::WEBSOURCE) == true) {
-                    subSystem->Set(PluginHost::ISubSystem::NOT_WEBSOURCE, nullptr);
-                    subSystem->Release();
+                if (_memory != nullptr) {
+                    _memory->Release();
+                    _memory = nullptr;
                 }
+
+                // Stop processing of the browser:
+                VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
+                _server = nullptr;
+                // It should have been the last reference we are releasing,
+                // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
+                // are leaking...
+                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
             }
 
-
-            if (_memory != nullptr) {
-                _memory->Release();
-                _memory = nullptr;
-            }
-            RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
-            // Stop processing of the browser:
-            VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
-            _server = nullptr;
-            // It should have been the last reference we are releasing,
-            // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
-            // are leaking...
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-            // The process can disappear in the meantime...
-            if (connection != nullptr) {
-                // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)
-                connection->Terminate();
-                connection->Release();
-            }
-
+            _service->Release();
+            _service = nullptr;
+            _connectionId = 0;
         }
-
-        _service->Release();
-        _service = nullptr;
-        _connectionId = 0;
     }
 
     /* virtual */ string WebServer::Information() const

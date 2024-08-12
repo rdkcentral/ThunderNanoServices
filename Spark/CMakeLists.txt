@@ -17,9 +17,9 @@
 
 project(Spark)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -28,6 +28,10 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -53,10 +57,10 @@ if (PLATFORM_LINUX)
             RT_PLATFORM_LINUX=ON)
 endif()
 
-if (PLATFORM_WPEFRAMEWORK)
+if (PLATFORM_THUNDER)
     target_compile_definitions(${MODULE_NAME}
         PRIVATE
-            PX_PLATFORM_WPEFRAMEWORK=ON)
+            PX_PLATFORM_THUNDER=ON)
 endif()
 
 if (PLATFORM_WAYLAND_EGL)
@@ -94,9 +98,9 @@ target_link_libraries(${MODULE_NAME}
 # Library installation section
 install(
     TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
-set(PLUGIN_SPARK_AUTOSTART "false" CACHE STRING "Automatically start Spark plugin")
+set(PLUGIN_SPARK_STARTMODE "Deactivated" CACHE STRING "Automatically start Spark plugin")
 set(PLUGIN_SPARK_STARTURL "browser.js" CACHE STRING "Initial URL for Spark plugin")
 set(PLUGIN_SPARK_RESOLUTION "720p" CACHE STRING "Browser resolution")
 set(PLUGIN_SPARK_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")

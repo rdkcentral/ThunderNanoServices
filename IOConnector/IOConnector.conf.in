@@ -1,0 +1,67 @@
+startmode = "@PLUGIN_IOCONNECTOR_STARTMODE@"
+
+configuration = JSON()
+
+pin_list = []
+
+if "@PLUGIN_IOCONNECTOR_REPORTING_PIN@":
+    pin_config = JSON()
+    pin_config.add("id", int("@PLUGIN_IOCONNECTOR_REPORTING_PIN@"))
+    pin_config.add("mode", "Both")
+    pin_config.add("activelow", "true")
+    pin_config.add("handlers", [
+        {
+            "name": "Reporter",
+            "config": {
+                "marker": 1
+            },
+            "start": 0,
+            "end": 5
+        },
+        {
+            "name": "Reporter",
+            "config": {
+                "marker": 2
+            },
+            "start": 5,
+            "end": 10
+        },
+        {
+            "name": "Reporter",
+            "config": {
+                "marker": 3
+            },
+            "start": 10
+        }
+    ])
+    pin_list.append(pin_config)
+
+if "@PLUGIN_IOCONNECTOR_PAIRING_PIN@":
+    pin_config = JSON()
+    pin_config.add("id", int("@PLUGIN_IOCONNECTOR_PAIRING_PIN@"))
+    pin_config.add("mode", "Both")
+    pin_config.add("handlers", [
+        {
+            "name": "RemotePairing",
+            "config": {
+                "callsign": "@PLUGIN_IOCONNECTOR_PAIRING_CALLSIGN@",
+                "producer": "@PLUGIN_IOCONNECTOR_PAIRING_PRODUCER@"
+            }
+        }
+    ])
+    pin_list.append(pin_config)
+
+if "@PLUGIN_IOCONNECTOR_PINS@":
+    for pin in "@PLUGIN_IOCONNECTOR_PINS@".split(';'):
+        pin_attr = pin.split(':')
+        if len(pin_attr) == 3 and pin_attr[0] and pin_attr[1] and pin_attr[2]:
+            pin_config = JSON()
+            pin_config.add("id", int(pin_attr[0]))
+            pin_config.add("mode", pin_attr[1])
+            if boolean(pin_attr[2]):
+                pin_config.add("activelow", "true")
+            else:
+                pin_config.add("activelow", "false")
+            pin_list.append(pin_config)
+
+configuration.add("pins", pin_list)

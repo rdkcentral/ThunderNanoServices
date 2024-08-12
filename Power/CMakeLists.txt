@@ -17,9 +17,9 @@
 
 project(Power)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -29,7 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
-set(PLUGIN_POWER_AUTOSTART true CACHE STRING true)
+set(PLUGIN_POWER_STARTMODE "Activated" CACHE STRING true)
 set(PLUGIN_POWER_GPIOPIN "" CACHE STRING "GPIO pin number")
 set(PLUGIN_POWER_GPIOTYPE "" CACHE STRING "GPIO type")
 # PLUGIN_POWER_POWER_KEY is for setting the keycode of the key that needs to be configured as power button.
@@ -41,6 +41,10 @@ set(PLUGIN_POWER_CONTROL_CLIENTS true CACHE STRING "Control plugins with IStateC
 set(PLUGIN_POWER_IMPLEMENTATION "Linux" CACHE STRING "Implementation to be selected for the PowerPlugin, if it could not be autodetected.")
 
 option(PLUGIN_POWER_MFRPERSIST_STATE "Enable device to boot to last power state on power loss reboot. [ON, OFF]." OFF)
+
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -120,6 +124,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

@@ -19,7 +19,7 @@
  
 #include "Parameter.h"
 
-namespace WPEFramework {
+namespace Thunder {
 namespace WebPA {
 
 Parameter::Parameter(Handler* handler, DataModel* dataModel)
@@ -32,7 +32,7 @@ Parameter::Parameter(Handler* handler, DataModel* dataModel)
 Parameter::~Parameter()
 {
 }
-const void Parameter::Values(const std::vector<std::string>& parameterNames, std::map<std::vector<Data>, WebPAStatus>& parametersList) const
+void Parameter::Values(const std::vector<std::string>& parameterNames, std::map<std::vector<Data>, WebPAStatus>& parametersList) const
 {
     for (auto& name: parameterNames) {
         std::vector<Data> parameters;
@@ -59,7 +59,7 @@ WebPAStatus Parameter::Values(const std::vector<Data>& parameters, std::vector<W
     return ret;
 }
 
-const WebPAStatus Parameter::Values(const std::string& parameterName, std::vector<Data>& parameters) const
+WebPAStatus Parameter::Values(const std::string& parameterName, std::vector<Data>& parameters) const
 {
     WebPAStatus status = WEBPA_FAILURE; // Overall get status
 
@@ -149,4 +149,4 @@ WebPAStatus Parameter::Values(const Data& parameter)
 }
 
 } // WebPA
-} // WPEFramework
+} // Thunder

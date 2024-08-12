@@ -33,7 +33,7 @@ extern "C"
 }
 #endif
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Implementation {
 
 class GenericAdapter : public Exchange::IWebPA::IWebPAClient, public Core::Thread {
@@ -219,7 +219,7 @@ private:
 // The essence of making the IWebPAClient interface available. This instantiates
 // an object that can be created from the outside of the library by looking
 // for the GenericAdapter class name, that realizes the IStateControl interface.
-SERVICE_REGISTRATION(GenericAdapter, 1, 0);
+SERVICE_REGISTRATION(GenericAdapter, 1, 0)
 
 uint32_t GenericAdapter::ConnectToParodus()
 {
@@ -234,11 +234,13 @@ uint32_t GenericAdapter::ConnectToParodus()
     uint16_t maxRetrySleep = (uint16_t) pow(2, backoffMaxTime) - 1;
     TRACE(Trace::Information, (_T("maxRetrySleep = %d"), maxRetrySleep));
 
+PUSH_WARNING(DISABLE_WARNING_MISSING_FIELD_INITIALIZERS)
     libpd_cfg_t clientCFG = {.service_name = "config",
                              .receive = true, .keepalive_timeout_secs = 64,
                              .parodus_url = _parodusURL.c_str(),
                              .client_url = _clientURL.c_str()
                             };
+POP_WARNING()
 
     TRACE(Trace::Information, (_T("parodusUrl = %s clientUrl = %s"), _parodusURL.c_str(), _clientURL.c_str()));
 
@@ -379,4 +381,4 @@ long GenericAdapter::TimeValDiff(struct timespec *starttime, struct timespec *fi
     return msec;
 }
 } // Implementation
-} //WPEFramework
+} //Thunder

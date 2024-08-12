@@ -1,0 +1,4 @@
+startmode = "@PLUGIN_LANGUAGEADMINISTRATOR_STARTMODE@"
+
+configuration = JSON()
+configuration.add("languagetag", "en_US")

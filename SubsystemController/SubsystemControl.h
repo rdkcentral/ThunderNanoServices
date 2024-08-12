@@ -23,7 +23,7 @@
 
 #include <interfaces/json/JsonData_SubsystemControl.h>
 
-namespace WPEFramework {
+namespace Thunder {
 namespace Plugin {
 
     class SubsystemControl : public PluginHost::IPlugin, public PluginHost::JSONRPC {
@@ -62,7 +62,7 @@ namespace Plugin {
             template <typename METADATA>
             class FactoryType : public IFactory {
             private:
-                using Service = Core::Service<METADATA>;
+                using Service = Core::ServiceType<METADATA>;
 
             public:
                 FactoryType(const FactoryType<METADATA>&) = delete;
@@ -158,7 +158,7 @@ namespace Plugin {
     private:
         Administrator _subsystemFactory;
         PluginHost::ISubSystem* _service;
-        Core::Sink<Notification> _notification;
+        Core::SinkType<Notification> _notification;
     };
 
 } // Namespace Plugin.
