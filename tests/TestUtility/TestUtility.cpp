@@ -63,7 +63,20 @@ namespace TestUtility {
 } // namespace TestUtility
 
 namespace Plugin {
-    SERVICE_REGISTRATION(TestUtility, 1, 0)
+
+    namespace {
+
+        static Metadata<TestUtility> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     static Core::ProxyPoolType<Web::JSONBodyType<Core::JSON::ArrayType<Core::JSON::String>>> jsonStringListFactory(1);
 

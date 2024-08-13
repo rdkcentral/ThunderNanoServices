@@ -60,7 +60,20 @@ namespace TestController {
 } // namespace TestController
 
 namespace Plugin {
-    SERVICE_REGISTRATION(TestController, 1, 0)
+
+    namespace {
+
+        static Metadata<TestController> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     /* virtual */ const string TestController::Initialize(PluginHost::IShell* service)
     {
