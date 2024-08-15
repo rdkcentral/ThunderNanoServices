@@ -19,7 +19,7 @@
 
 #include "Module.h"
 #include "Containers.h"
-#include <processcontainers/ProcessContainer.h>
+#include <processcontainers/processcontainers.h>
 #include <interfaces/json/JsonData_Containers.h>
 
 namespace Thunder {
@@ -64,12 +64,12 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
         const string& name = params.Name.Value();
         const string& command = params.Command.Value();
-        
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Get(name); 
 
-        if (container != nullptr) {
-            
+        auto& administrator = ProcessContainers::ContainerAdministrator::Instance();
+        auto container = administrator.Get(name);
+
+        if (container.IsValid() == true) {
+
             std::vector<string> parameters;
             parameters.reserve(params.Parameters.Elements().Count());
             auto iterator = params.Parameters.Elements();
@@ -84,7 +84,7 @@ namespace Plugin {
                 result = Core::ERROR_GENERAL;
             }
 
-            container->Release();
+            container.Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -101,12 +101,12 @@ namespace Plugin {
         uint32_t result = Core::ERROR_NONE;
         const string& name = params.Name.Value();
 
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Get(name); 
+        auto& administrator = ProcessContainers::ContainerAdministrator::Instance();
+        auto container = administrator.Get(name);
 
-        if (container != nullptr) {
+        if (container.IsValid() == true) {
             container->Stop(0);
-            container->Release();
+            container.Release();
         } else {
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -119,7 +119,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     uint32_t Containers::get_containers(Core::JSON::ArrayType<Core::JSON::String>& response) const
     {
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
+        auto& administrator = ProcessContainers::ContainerAdministrator::Instance();
         auto containers = administrator.Containers();
 
         while(containers->Next()) {
@@ -127,7 +127,7 @@ namespace Plugin {
             containerName = containers->Id();
             response.Add(containerName);
         }
-        
+
         containers->Release();
 
         return Core::ERROR_NONE;
@@ -141,10 +141,10 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Get(index); 
+        auto& administrator = ProcessContainers::ContainerAdministrator::Instance();
+        auto container = administrator.Get(index);
 
-        if (container != nullptr) {
+        if (container.IsValid() == true) {
             auto iterator = container->NetworkInterfaces();
 
             if (iterator != nullptr) {
@@ -163,12 +163,12 @@ namespace Plugin {
                 }
                 iterator->Release();
             }
-            container->Release();
+            container.Release();
         }
         else {
             result = Core::ERROR_UNAVAILABLE;
         }
-        
+
         return result;
     }
 
@@ -180,23 +180,23 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto found = administrator.Get(index); 
+        auto& administrator = ProcessContainers::ContainerAdministrator::Instance();
+        auto container = administrator.Get(index);
 
-        if (found != nullptr) {
-            auto memoryInfo = found->Memory();
+        if (container.IsValid() == true) {
+            auto memoryInfo = container->Memory();
             if (memoryInfo != nullptr) {
                 response.Allocated = memoryInfo->Allocated();
                 response.Resident = memoryInfo->Resident();
                 response.Shared = memoryInfo->Shared();
                 memoryInfo->Release();
             }
-            found->Release();
+            container.Release();
         }
         else {
             result = Core::ERROR_UNAVAILABLE;
         }
-        
+
         return result;
     }
 
@@ -208,12 +208,12 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_NONE;
 
-        auto& administrator = ProcessContainers::IContainerAdministrator::Instance();
-        auto container = administrator.Get(index); 
+        auto& administrator = ProcessContainers::ContainerAdministrator::Instance();
+        auto container = administrator.Get(index);
 
-        if (container != nullptr) {
+        if (container.IsValid() == true) {
             auto processorInfo = container->ProcessorInfo();
-            
+
             if (processorInfo != nullptr) {
                 response.Total = processorInfo->TotalUsage();
 
@@ -227,12 +227,12 @@ namespace Plugin {
                 processorInfo->Release();
             }
 
-            container->Release();
+            container.Release();
         }
         else {
             result = Core::ERROR_UNAVAILABLE;
         }
-        
+
         return result;
     }
 } // namespace Plugin
