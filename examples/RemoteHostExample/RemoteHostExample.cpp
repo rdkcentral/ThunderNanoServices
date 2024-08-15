@@ -23,7 +23,19 @@
 namespace Thunder {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(RemoteHostExample, 1, 0)
+    namespace {
+
+        static Metadata<RemoteHostExample> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     const string RemoteHostExample::Initialize(PluginHost::IShell* service) 
     {

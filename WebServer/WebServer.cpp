@@ -119,6 +119,8 @@ namespace Plugin {
                     _memory = nullptr;
                 }
 
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
+
                 // Stop processing of the browser:
                 VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
                 _server = nullptr;
@@ -126,6 +128,16 @@ namespace Plugin {
                 // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
                 // are leaking...
                 ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger a cleanup sequence for
+                    // out-of-process code. Which will guard
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :~)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
 
             _service->Release();

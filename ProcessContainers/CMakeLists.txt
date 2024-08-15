@@ -34,6 +34,7 @@ if(BUILD_REFERENCE)
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}ProcessContainers REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
