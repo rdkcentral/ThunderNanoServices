@@ -24,7 +24,7 @@
 #include <plugins/plugins.h>
 #include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE);
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 using namespace Thunder;
 
