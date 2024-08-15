@@ -1,0 +1,29 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Castor Plugin",
+    "callsign": "Castor",
+    "locator": "libThunderCastor.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "required": [ "configuration" ],
+    "description": "Castor service configuration",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "properties": {
+          "polluxcallsign": {
+            "type": "string",
+            "description": "Callsign of the Pollux service (typically *Pollux*)"
+          }
+        }
+      }
+    }
+  },
+  "interface": {
+    "$ref": "{cppinterfacedir}/IMath.h"
+  }
+}

@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 Metrological
+# Copyright 2022 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(ConfigUpdateExample)
+project(Castor)
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -27,12 +27,19 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
+find_package(CompileSettingsDebug REQUIRED)
+
+set(PLUGIN_CASTOR_STARTMODE "Activated" CACHE STRING "Controls automatic start of the Castor plugin")
+set(PLUGIN_CASTOR_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote")
+set(PLUGIN_CASTOR_POLLUXCALLSIGN "Pollux" CACHE STRING "Callsign of the Pollux plugin")
 
 add_library(${MODULE_NAME} SHARED
-    ConfigUpdateExample.cpp
+    Castor.cpp
+    CastorImplementation.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
@@ -41,19 +48,14 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
-
-target_include_directories( ${MODULE_NAME}
-        PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>)
-
-target_link_libraries(${MODULE_NAME}
-    PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
+        CompileSettingsDebug::CompileSettingsDebug
+        ${PLUGIN_YIN_DEFINITIONS})
 
-install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
-
-write_config(PLUGINS ${PLUGIN_NAME} CLASSNAME ${PLUGIN_NAME})
+install(TARGETS ${MODULE_NAME} 
+DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
+    
+write_config()
