@@ -36,6 +36,7 @@ namespace Plugin {
             RUNNING
         };
         class ChannelMap;
+#if 0
         class StateRequestHandler : public Core::IDispatch {
             public:
                 StateRequestHandler() = delete;
@@ -51,6 +52,7 @@ namespace Plugin {
                 WebServerImplementation& _parent;
 
         };
+#endif
         class WebFlow {
         public:
             WebFlow(const WebFlow& a_Copy) = delete;
@@ -726,6 +728,8 @@ POP_WARNING()
             , _adminLock()
             , _observers()
             , _state(PluginHost::IStateControl::UNINITIALIZED)
+            , _requestedCommand(PluginHost::IStateControl::SUSPEND)
+            , _job(*this)
         {
         }
 
@@ -734,6 +738,8 @@ POP_WARNING()
                 Unregister(observer);
             }
         }
+
+        friend Core::ThreadPool::JobType<WebServerImplementation&>;
 
         uint32_t Configure(PluginHost::IShell* service) override
         {
@@ -753,11 +759,12 @@ POP_WARNING()
         }
 
 
-        void RequestForStateChange(const PluginHost::IStateControl::command command) {
+        //void RequestForStateChange(const PluginHost::IStateControl::command command) {
+        void Dispatch() {
             bool stateChanged = false;
             uint32_t result = Core::ERROR_NONE;
             _adminLock.Lock();
-            if(command == PluginHost::IStateControl::RESUME ) {
+            if(_requestedCommand == PluginHost::IStateControl::RESUME ) {
                 if ((_state == PluginHost::IStateControl::UNINITIALIZED || _state == PluginHost::IStateControl::SUSPENDED)) {
                     result = _channelServer.Open(2000);
                     if ( result == Core::ERROR_NONE) {
@@ -782,12 +789,17 @@ POP_WARNING()
 
         uint32_t Request(const PluginHost::IStateControl::command command) override
         {
-            if (_state == PluginHost::IStateControl::UNINITIALIZED || 
+            _adminLock.Lock();
+            _requestedCommand = command;
+            _job.Submit();
+            _adminLock.Unlock();
+            /*if (_state == PluginHost::IStateControl::UNINITIALIZED || 
                 (_state == PluginHost::IStateControl::RESUMED && command == PluginHost::IStateControl::SUSPEND) ||
                 (_state == PluginHost::IStateControl::SUSPENDED && command == PluginHost::IStateControl::RESUME)){
                 Core::ProxyType<Core::IDispatch> job = Core::ProxyType<Core::IDispatch>(Core::ProxyType<StateRequestHandler>::Create(*this, command));
                 Core::WorkerPool::Instance().Submit(job);
             }
+            */
             return (Core::ERROR_NONE);
         }
 
@@ -845,6 +857,8 @@ POP_WARNING()
         mutable Core::CriticalSection _adminLock;
         std::list<PluginHost::IStateControl::INotification*> _observers;
         PluginHost::IStateControl::state _state;
+        PluginHost::IStateControl::command _requestedCommand;
+        Core::WorkerPool::JobType<WebServerImplementation&> _job;
 
     };
 
