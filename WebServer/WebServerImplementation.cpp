@@ -36,23 +36,6 @@ namespace Plugin {
             RUNNING
         };
         class ChannelMap;
-#if 0
-        class StateRequestHandler : public Core::IDispatch {
-            public:
-                StateRequestHandler() = delete;
-                StateRequestHandler(const StateRequestHandler& ) = delete;
-                StateRequestHandler& operator=(const StateRequestHandler&) = delete;
-                StateRequestHandler(WebServerImplementation& parent, PluginHost::IStateControl::command cmd): _cmd(cmd), _parent(parent) {
-                }
-                void Dispatch () override {
-                    _parent.RequestForStateChange(_cmd);
-                }
-            private:
-                PluginHost::IStateControl::command _cmd;
-                WebServerImplementation& _parent;
-
-        };
-#endif
         class WebFlow {
         public:
             WebFlow(const WebFlow& a_Copy) = delete;
@@ -537,7 +520,8 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
 POP_WARNING()
             ~ChannelMap()
             {
-                CloseAndCleanupConnections();
+                BaseClass::Iterator index(BaseClass::Clients());
+                ASSERT(index.Count() == 0);
             }
 
         public:
