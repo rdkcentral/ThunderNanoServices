@@ -22,7 +22,19 @@
 namespace Thunder {
 namespace Plugin {
 
-    SERVICE_REGISTRATION(Doggo, 1, 0)
+    namespace {
+
+        static Metadata<Doggo> metadata(
+            // Version
+            1, 0, 0,
+            // Preconditions
+            {},
+            // Terminations
+            {},
+            // Controls
+            {}
+        );
+    }
 
     const string Doggo::Initialize(PluginHost::IShell* service)
     {
