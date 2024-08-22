@@ -743,7 +743,6 @@ POP_WARNING()
         }
 
 
-        //void RequestForStateChange(const PluginHost::IStateControl::command command) {
         void Dispatch() {
             bool stateChanged = false;
             uint32_t result = Core::ERROR_NONE;
@@ -777,13 +776,6 @@ POP_WARNING()
             _requestedCommand = command;
             _job.Submit();
             _adminLock.Unlock();
-            /*if (_state == PluginHost::IStateControl::UNINITIALIZED || 
-                (_state == PluginHost::IStateControl::RESUMED && command == PluginHost::IStateControl::SUSPEND) ||
-                (_state == PluginHost::IStateControl::SUSPENDED && command == PluginHost::IStateControl::RESUME)){
-                Core::ProxyType<Core::IDispatch> job = Core::ProxyType<Core::IDispatch>(Core::ProxyType<StateRequestHandler>::Create(*this, command));
-                Core::WorkerPool::Instance().Submit(job);
-            }
-            */
             return (Core::ERROR_NONE);
         }
 

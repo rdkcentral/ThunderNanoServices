@@ -115,9 +115,6 @@ POP_WARNING()
         string Information() const override;
 
         void StateChange(PluginHost::IStateControl::state);
-
-
-
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
 
