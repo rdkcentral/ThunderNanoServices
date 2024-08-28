@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_TESTAUTOMATIONJSONRPC_STARTMODE@"
+resumed = "@PLUGIN_TESTAUTOMATIONJSONRPC_RESUMED@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTAUTOMATIONJSONRPC_MODE@")
+configuration.add("root", root)

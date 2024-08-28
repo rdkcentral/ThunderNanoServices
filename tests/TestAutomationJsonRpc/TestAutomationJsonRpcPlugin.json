@@ -1,0 +1,16 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "TestAutomationJsonRpc Plugin",
+      "callsign": "TestAutomationJsonRpc",
+      "locator": "libThunderTestAutomationJsonRpc.so",
+      "status": "production",
+      "description": "TestAutomationJsonRpc helps you to validate json message for Automated Tests.",
+      "version": "1.0"
+    },
+
+    "interface": {
+      "$cppref": "{cppinterfacedir}/ITestAutomation.h"
+    }
+  }
+  
