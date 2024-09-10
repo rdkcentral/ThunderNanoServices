@@ -13,7 +13,8 @@ env:
   DHCPServer: ThunderNanoServices\DHCPServer\DHCPServer.vcxproj
   DIALServer: ThunderNanoServices\DIALServer\DIALServer.vcxproj
   dictionary: ThunderNanoServices\Dictionary\Dictionary.vcxproj
-  JSONRPCPlugin: ThunderNanoServices\examples\JSONRPCPlugin\JSONRPCPlugin.vcxproj
+  JSONRPCClient: ThunderNanoServices\examples\JSONRPC\Client\JSONRPCClient.vcxproj
+  JSONRPCPlugin: ThunderNanoServices\examples\JSONRPC\Plugin\JSONRPCPlugin.vcxproj
   networkControl: ThunderNanoServices\NetworkControl\NetworkControl.vcxproj
   outOfProcessPlugin: ThunderNanoServices\examples\OutOfProcessPlugin\OutOfProcessPlugin.vcxproj
   remoteControl: ThunderNanoServices\RemoteControl\RemoteControl.vcxproj
@@ -147,6 +148,7 @@ jobs:
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DHCPServer%"  "%solution%"
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%DIALServer%"  "%solution%"
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%dictionary%"  "%solution%"
+        && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%JSONRPCClient%"  "%solution%"
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%JSONRPCPlugin%"  "%solution%"
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%networkControl%"  "%solution%"
         && "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%outOfProcessPlugin%"  "%solution%"
