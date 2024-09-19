@@ -27,10 +27,10 @@
 namespace Thunder {
 namespace Plugin {
 
-    class WebServer : public PluginHost::IPlugin {
+    class WebServer : public PluginHost::IPlugin{
     private:
 
-        class Notification : public RPC::IRemoteConnection::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification, public PluginHost::IStateControl::INotification {
         public:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -56,8 +56,14 @@ namespace Plugin {
             {
             }
 
+
+            void StateChange(const PluginHost::IStateControl::state state) override {
+                _parent.StateChange(state);
+            }
+
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            INTERFACE_ENTRY (PluginHost::IStateControl::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -108,6 +114,7 @@ POP_WARNING()
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
         string Information() const override;
 
+        void StateChange(PluginHost::IStateControl::state);
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
 
