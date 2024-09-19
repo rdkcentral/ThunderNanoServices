@@ -36,7 +36,6 @@ namespace Plugin {
             RUNNING
         };
         class ChannelMap;
-
         class WebFlow {
         public:
             WebFlow(const WebFlow& a_Copy) = delete;
@@ -521,6 +520,12 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
 POP_WARNING()
             ~ChannelMap()
             {
+                BaseClass::Iterator index(BaseClass::Clients());
+                ASSERT(index.Count() == 0);
+            }
+
+        public:
+            void CloseAndCleanupConnections() {
                 // Start by closing the server thread..
                 Core::SocketServerType<IncomingChannel>::Close(1000);
 
@@ -536,8 +541,6 @@ POP_WARNING()
                 // Cleanup the closed sockets we created..
                 Cleanup();
             }
-
-        public:
             uint32_t Configure(const string& prefixPath, const Config& configuration)
             {
                 Core::NodeId accessor;
@@ -551,7 +554,7 @@ POP_WARNING()
                     _prefixPath.clear();
                 }
                 else if (configuration.Path.Value()[0] == '/') {
-                        _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
+                    _prefixPath = Core::Directory::Normalize(configuration.Path.Value());
                 }
                 else {
                     _prefixPath = prefixPath + Core::Directory::Normalize(configuration.Path.Value());
@@ -706,35 +709,73 @@ POP_WARNING()
 
         WebServerImplementation()
             : _channelServer()
+            , _adminLock()
             , _observers()
+            , _state(PluginHost::IStateControl::UNINITIALIZED)
+            , _requestedCommand(PluginHost::IStateControl::SUSPEND)
+            , _job(*this)
         {
         }
 
-        ~WebServerImplementation() override = default;
+        ~WebServerImplementation() override {
+            for (auto & observer: _observers){
+                Unregister(observer);
+            }
+        }
+
+        friend Core::ThreadPool::JobType<WebServerImplementation&>;
 
         uint32_t Configure(PluginHost::IShell* service) override
         {
             ASSERT(service != nullptr);
-
             Config config;
             config.FromString(service->ConfigLine());
-
-            uint32_t result(_channelServer.Configure(service->DataPath(), config));
-
-            if (result == Core::ERROR_NONE) {
-
-                result = _channelServer.Open(2000);
-            }
-
+            uint32_t result = _channelServer.Configure(service->DataPath(), config);
             return (result);
         }
         PluginHost::IStateControl::state State() const override
         {
-            return (PluginHost::IStateControl::RESUMED);
+            PluginHost::IStateControl::state state;
+            _adminLock.Lock();
+            state = _state;
+            _adminLock.Unlock();
+            return state;
         }
-        uint32_t Request(const PluginHost::IStateControl::command) override
+
+
+        void Dispatch() {
+            bool stateChanged = false;
+            uint32_t result = Core::ERROR_NONE;
+            _adminLock.Lock();
+            if(_requestedCommand == PluginHost::IStateControl::RESUME ) {
+                if ((_state == PluginHost::IStateControl::UNINITIALIZED || _state == PluginHost::IStateControl::SUSPENDED)) {
+                    result = _channelServer.Open(2000);
+                    if ( result == Core::ERROR_NONE) {
+                        stateChanged = true;
+                        _state = PluginHost::IStateControl::RESUMED;
+                    }
+                }
+            } else {
+                if(_state == PluginHost::IStateControl::RESUMED || _state == PluginHost::IStateControl::UNINITIALIZED ) {
+                    _channelServer.CloseAndCleanupConnections();
+                    stateChanged = true;
+                    _state = PluginHost::IStateControl::SUSPENDED;
+                }
+            }
+            if(stateChanged) {
+                for(auto& observer: _observers) {
+                    observer->StateChange(_state);
+                }
+            }
+            _adminLock.Unlock();
+        }
+
+        uint32_t Request(const PluginHost::IStateControl::command command) override
         {
-            // No state can be set, we can only move from ININITIALIZED to RUN...
+            _adminLock.Lock();
+            _requestedCommand = command;
+            _job.Submit();
+            _adminLock.Unlock();
             return (Core::ERROR_NONE);
         }
 
@@ -789,7 +830,12 @@ POP_WARNING()
 
     private:
         ChannelMap _channelServer;
+        mutable Core::CriticalSection _adminLock;
         std::list<PluginHost::IStateControl::INotification*> _observers;
+        PluginHost::IStateControl::state _state;
+        PluginHost::IStateControl::command _requestedCommand;
+        Core::WorkerPool::JobType<WebServerImplementation&> _job;
+
     };
 
     SERVICE_REGISTRATION(WebServerImplementation, 1, 0)

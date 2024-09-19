@@ -73,6 +73,7 @@ namespace Plugin {
                 message = _T("WebServer Couldnt get StateControl.");
 
             } else {
+                stateControl->Register(&_notification);
                 uint32_t result = stateControl->Configure(_service);
                 stateControl->Release();
                 if (result != Core::ERROR_NONE) {
@@ -163,5 +164,34 @@ namespace Plugin {
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
+    void WebServer::StateChange(const PluginHost::IStateControl::state state)
+    {
+        switch (state) {
+        case PluginHost::IStateControl::RESUMED:
+            TRACE(Trace::Information,
+                    (string(_T("StateChange: { \"suspend\":false }"))));
+            _service->Notify("{ \"suspended\":false }");
+            break;
+        case PluginHost::IStateControl::SUSPENDED:
+            TRACE(Trace::Information,
+                    (string(_T("StateChange: { \"suspend\":true }"))));
+            _service->Notify("{ \"suspended\":true }");
+            break;
+        case PluginHost::IStateControl::EXITED:
+            Core::IWorkerPool::Instance().Submit(
+                    PluginHost::IShell::Job::Create(_service,
+                            PluginHost::IShell::DEACTIVATED,
+                            PluginHost::IShell::REQUESTED));
+            break;
+        case PluginHost::IStateControl::UNINITIALIZED:
+            break;
+        default:
+            ASSERT(false);
+            break;
+        }
+    }
+
+
+
 }
 }
