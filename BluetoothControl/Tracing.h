@@ -221,7 +221,7 @@ namespace Plugin {
                 FORMAT_EVENT(MGMT_EV_NEW_LONG_TERM_KEY, info.key.addr.bdaddr, info.key.addr.type);
                 string key;
                 Core::ToHexString(info.key.val, sizeof(info.key.val), key);
-#ifdef NO_INCLUSIVE_LANGUAGE
+#ifdef BLUEZ_HAS_NO_INCLUSIVE_LANGUAGE
                 Format(_T("store_hint=%d, key.type=%d, key.central=%d"), info.store_hint, info.key.type, info.key.central);
 #else
                 Format(_T("store_hint=%d, key.type=%d, key.master=%d"), info.store_hint, info.key.type, info.key.master);
