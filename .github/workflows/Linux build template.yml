@@ -67,6 +67,10 @@ jobs:
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
         -DEXAMPLE_COMRPCCLIENT=ON \
+        -DPLUGIN_BLUETOOTH=ON \
+        -DPLUGIN_BLUETOOTHREMOTECONTROL=ON \
+        -DPLUGIN_BLUETOOTHAUDIO=ON \
+        -DPLUGIN_BLUETOOTHSDPSERVER=ON \
         -DPLUGIN_CECCONTROL=ON \
         -DPLUGIN_COMMANDER=ON \
         -DPLUGIN_CONFIGUPDATEEXAMPLE=ON \
