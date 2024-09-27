@@ -1315,66 +1315,40 @@ namespace Plugin
             if (file.IsValid() == false) {
                 SYSLOG(Logging::Notification, (_T("DNS functionality could NOT be updated [%s]"), _dnsFile.c_str()));
             } else {
-                string data((_T("#++SECTION: ")) + _service->Callsign() + '\n');
+                uint32_t offset = file.Size();
+		string startMarker((_T("#++SECTION: ")) + _service->Callsign() + '\n');
                 string endMarker((_T("#--SECTION: ")) + _service->Callsign() + '\n');
-                uint16_t start = 0;
-                uint16_t end = 0;
-                uint16_t offset = 1;
-                uint8_t index = 0;
 
-                do {
-                    index += offset - 1;
-                    offset = 0;
+                if (offset > 0) {
+                    uint32_t start = static_cast<uint32_t>(file.Search(0, reinterpret_cast<const uint8_t*>(startMarker.c_str()), startMarker.length()));
 
-                    // Find the first comparible character && check the remainder in the next step...
-                    while ((index < file.Size()) && (file[index] != data[offset])) {
-                        index++;
+                    if (start < file.Size()) {
+                        // We found a start marker, see if we have an end marker.
+                        uint32_t end = static_cast<uint32_t>(file.Search(start + startMarker.length(), reinterpret_cast<const uint8_t*>(endMarker.c_str()), endMarker.length()));
+
+                        if (end < file.Size()) {
+                            end += endMarker.length();
+                            offset -= (end - start);
+
+                            if (offset > start) {
+                                // We found the beginning and the end of the section in this file, Wipe it.
+                                // move everything after de marker, over the marker sections.
+                                ::memcpy(&(file[start]), &file[end], static_cast<uint32_t>(file.Size()) - end);
+                            }
+                        }
                     }
-                    while ((index < file.Size()) && (offset < data.length()) && (file[index] == data[offset])) {
-                        index++;
-                        offset++;
-                    }
-
-                } while ((index < file.Size()) && (offset != data.length()));
-
-                start = index - offset;
-                offset = 1;
-
-                do {
-                    index += offset - 1;
-                    offset = 0;
-
-                    // Find the first comparible character && check the remainder in the next step...
-                    while ((index < file.Size()) && (file[index] != endMarker[offset])) {
-                        index++;
-                    }
-                    while ((index < file.Size()) && (offset < endMarker.length()) && (file[index] == endMarker[offset])) {
-                        index++;
-                        offset++;
-                    }
-
-                } while ((index < file.Size()) && (offset != endMarker.length()));
-
-                end = ((index != 0) && (index == file.Size())) ? index - 1 : index;
-                uint16_t reduction = end - start;
-
-                if ((reduction != 0) && ((file.Size() - end) != 0)) {
-                    // move everything after de marker, over the marker sections.
-                    ::memcpy(&(file[start]), &file[end], static_cast<uint16_t>(file.Size()) - end);
                 }
-
-                offset = (static_cast<uint16_t>(file.Size()) - reduction);
 
                 NameServers servers;
                 DNS(servers);
 
                 for (const Core::NodeId& entry : servers) {
-                    data += string("nameserver ") + entry.HostAddress() + '\n';
+                    startMarker += string("nameserver ") + entry.HostAddress() + '\n';
                 }
 
-                data += endMarker;
-                file.Size(offset + data.length());
-                ::memcpy(&(file[offset]), data.c_str(), data.length());
+                startMarker += endMarker;
+                file.Size(offset + startMarker.length());
+                ::memcpy(&(file[offset]), startMarker.c_str(), startMarker.length());
                 file.Sync();
 
                 SYSLOG(Logging::Startup, (_T("DNS functionality updated [%s]"), _dnsFile.c_str()));
