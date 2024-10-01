@@ -717,9 +717,10 @@ POP_WARNING()
         {
         }
 
-        ~WebServerImplementation() override {
-            for (auto & observer: _observers){
-                Unregister(observer);
+        ~WebServerImplementation() override
+        {
+            while (!_observers.empty()) {
+                Unregister(_observers.front());
             }
         }
 
