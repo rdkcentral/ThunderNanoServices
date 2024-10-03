@@ -844,16 +844,14 @@ POP_WARNING()
     {
         TRACE(WebFlow, (request));
 
-        bool safePath = true;
-
-        string realPath = Core::File::Normalize(request->Path, safePath);
-        if (safePath == true) {
+        const string realPath = Core::File::Normalize(request->Path, true /* safe path */);
+        if (realPath.empty() == false) {
             // Use Normalized Path
             request->Path = realPath;
         }
 
         // Check if the channel server will relay this message.
-        if (safePath == false) {
+        if (realPath.empty() == true) {
             Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
             response->ErrorCode = Web::STATUS_BAD_REQUEST;
             response->Message = "Invalid Request";
