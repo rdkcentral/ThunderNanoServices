@@ -719,9 +719,13 @@ POP_WARNING()
 
         ~WebServerImplementation() override
         {
-            while (!_observers.empty()) {
+            ASSERT(_observers.empty() == true);
+
+            _adminLock.Lock();
+            while (_observers.empty() == false) {
                 Unregister(_observers.front());
             }
+            _adminLock.Unlock();
         }
 
         friend Core::ThreadPool::JobType<WebServerImplementation&>;
@@ -784,6 +788,7 @@ POP_WARNING()
         {
             ASSERT(notification != nullptr);
 
+            _adminLock.Lock();
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
             ASSERT(index == _observers.end());
@@ -793,6 +798,7 @@ POP_WARNING()
                 notification->AddRef();
                 _observers.push_back(notification);
             }
+            _adminLock.Unlock();
         }
         void Unregister(PluginHost::IStateControl::INotification* notification) override
         {
@@ -801,6 +807,7 @@ POP_WARNING()
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
 
+            _adminLock.Lock();
             // Unregister only once :-)
             ASSERT(index != _observers.end());
 
@@ -810,6 +817,7 @@ POP_WARNING()
                 (*index)->Release();
                 _observers.erase(index);
             }
+            _adminLock.Unlock();
         }
         void AddProxy(const string& path, const string& subst, const string& address) override
         {
