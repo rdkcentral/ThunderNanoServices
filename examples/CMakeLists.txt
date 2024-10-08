@@ -24,7 +24,7 @@ find_package(Thunder)
 project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
-option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)
+option(EXAMPLE_COMRPCCLIENT "Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
