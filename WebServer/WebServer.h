@@ -80,6 +80,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _service(nullptr)
             , _server(nullptr)
             , _memory(nullptr)
+            , _statecontrol(nullptr)
             , _notification(this)
         {
         }
@@ -90,7 +91,7 @@ POP_WARNING()
         INTERFACE_ENTRY(IPlugin)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(Exchange::IWebServer, _server)
-        INTERFACE_AGGREGATE(PluginHost::IStateControl, _server)
+        INTERFACE_AGGREGATE(PluginHost::IStateControl, _statecontrol)
         END_INTERFACE_MAP
 
     public:
@@ -124,6 +125,7 @@ POP_WARNING()
         PluginHost::IShell* _service;
         Exchange::IWebServer* _server;
         Exchange::IMemory* _memory;
+        PluginHost::IStateControl* _statecontrol;
         Core::SinkType<Notification> _notification;
     };
 }
