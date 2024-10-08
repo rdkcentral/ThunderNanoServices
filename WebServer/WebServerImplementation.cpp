@@ -717,12 +717,8 @@ POP_WARNING()
         {
         }
 
-        ~WebServerImplementation() override {
-            for (auto & observer: _observers){
-                Unregister(observer);
-            }
-        }
-
+        ~WebServerImplementation() override = default;
+        
         friend Core::ThreadPool::JobType<WebServerImplementation&>;
 
         uint32_t Configure(PluginHost::IShell* service) override
