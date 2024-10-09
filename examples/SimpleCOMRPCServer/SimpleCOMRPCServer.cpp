@@ -209,6 +209,56 @@ POP_WARNING()
         WallClockNotifier _notifier;
     };
 
+private:
+    class RTTPerformance : public Exchange::IRTTPerformance {
+    public:
+        RTTPerformance(const RTTPerformance&) = delete;
+        RTTPerformance& operator= (const RTTPerformance&) = delete;
+
+
+        RTTPerformance()
+        {
+
+        }
+        ~RTTPerformance() override = default;
+
+
+    public:
+	uint32_t SendAndReceive (uint8_t data_in[], uint32_t in_size, uint8_t data_out[] , uint32_t& out_size) const override
+        {
+	   uint32_t result = Core::ERROR_GENERAL;
+           if (out_size >= in_size)
+	   {
+//              auto start = std::chrono::high_resolution_clock::now();
+              memcpy(data_out, data_in, in_size);
+              out_size = in_size;
+              result = Core::ERROR_NONE;
+//              auto end = std::chrono::high_resolution_clock::now();
+//	      auto opTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+//              std::cout << "Operational time for `SendAndReceive`: " << opTime << " microseconds" << std::endl;
+
+           }
+
+            return result;
+        }
+
+	uint32_t SendAndReceive (uint8_t data[], uint32_t& size) const override
+        {
+            uint32_t result = Core::ERROR_GENERAL;
+	    if(data != NULL && size > 0)
+	    {
+	       data[size - 1] = 0xFF; //Modify the data;
+	       result = Core::ERROR_NONE;
+	    }
+	    return result;
+        }
+
+        BEGIN_INTERFACE_MAP(RTTPerformance)
+            INTERFACE_ENTRY(Exchange::IRTTPerformance)
+        END_INTERFACE_MAP
+
+    };
+
 public:
     COMServer() = delete;
     COMServer(const COMServer&) = delete;
@@ -252,6 +302,10 @@ private:
 
                 // Allright, request a new object that implements the requested interface.
                 result = Core::ServiceType<Implementation>::Create<Exchange::IWallClock>();
+            }
+	    else if (interfaceId == ::Exchange::IRTTPerformance::ID) {
+
+                result = Core::ServiceType<RTTPerformance>::Create<Exchange::IRTTPerformance>();
             }
             else if (interfaceId == Core::IUnknown::ID) {
 

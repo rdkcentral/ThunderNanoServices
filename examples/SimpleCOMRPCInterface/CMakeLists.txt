@@ -59,6 +59,10 @@ target_link_libraries(${MODULE_NAME}
           CompileSettingsDebug::CompileSettingsDebug
         )
 
+target_include_directories(${MODULE_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_LIST_DIR})
+
 set_target_properties(${TargetMarshalling} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
@@ -68,7 +72,7 @@ set_target_properties(${TargetMarshalling} PROPERTIES
         )
 
 install(
-        MODULE_NAMES ${MODULE_NAME}  EXPORT ${MODULE_NAME}Targets
+	TARGETS ${MODULE_NAME}  EXPORT ${MODULE_NAME}Targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${NAMESPACE_LIB}/proxystubs COMPONENT ${NAMESPACE}_Development
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${NAMESPACE_LIB}/proxystubs COMPONENT ${NAMESPACE}_Runtime
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime
@@ -77,4 +81,4 @@ install(
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE}/proxystubs  
 )
 
-InstallCMakeConfig(MODULE_NAMES ${MODULE_NAME})
+InstallCMakeConfig(TARGETS ${MODULE_NAME})

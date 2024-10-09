@@ -22,7 +22,12 @@
 #include <core/core.h>
 #include <com/com.h>
 #include <plugins/plugins.h>
-#include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+#include "../../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+#include <chrono>
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <numeric>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -124,6 +129,64 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, ServerType& t
     return (showHelp);
 }
 
+double calculateAverage(const std::vector<int64_t>& times) 
+{
+    return std::accumulate(times.begin(), times.end(), 0LL) / static_cast<double>(times.size());
+}
+double calculateStdDev(const std::vector<int64_t>& times, double avg) {
+    double variance = 0.0;
+    for (const auto& time : times) {
+        variance += (time - avg) * (time - avg);
+    }
+    variance /= times.size();
+    return std::sqrt(variance);
+}
+
+void runTest(Thunder::Exchange::IRTTPerformance* performanceTestService, uint32_t dataSize, uint32_t iterations, bool inMemory)
+{
+    std::vector<int64_t> times;
+    uint8_t* data = new uint8_t[dataSize];  // Input buffer
+    uint8_t* response = new uint8_t[dataSize];  // Response buffer (assuming same size for simplicity)
+    int32_t status = -1;
+    if(inMemory)
+    {
+        for (int i = 0; i < iterations; ++i) {
+            auto start = std::chrono::high_resolution_clock::now();
+
+            status = performanceTestService->SendAndReceive(data, dataSize);
+
+            auto end = std::chrono::high_resolution_clock::now();
+            auto roundTripTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            times.push_back(roundTripTime);
+        }	
+    }
+    else
+    { 
+        uint32_t response_size = dataSize;
+
+        for (int i = 0; i < iterations; ++i) {
+            auto start = std::chrono::high_resolution_clock::now();
+
+            status = performanceTestService->SendAndReceive(data, dataSize, response, response_size);
+
+            auto end = std::chrono::high_resolution_clock::now();
+            auto roundTripTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            times.push_back(roundTripTime);
+        }
+    }
+
+    int64_t bestTime = *std::min_element(times.begin(), times.end());
+    double averageTime = calculateAverage(times);
+    double stdDevTime = calculateStdDev(times, averageTime);
+    std::cout << "Data size: " << dataSize << " bytes" << std::endl;
+    std::cout << "Best time: " << bestTime << " microseconds" << std::endl;
+    std::cout << "Average time: " << averageTime << " microseconds" << std::endl;
+    std::cout << "Standard deviation: " << stdDevTime << " microseconds" << std::endl;
+    std::cout << "----------------------------" << std::endl;
+
+    delete[] data;
+    delete[] response;
+}
 
 int main(int argc, char* argv[])
 {
@@ -145,6 +208,7 @@ int main(int argc, char* argv[])
     {
         int element;
         Exchange::IWallClock* clock(nullptr);
+	Exchange::IRTTPerformance* perf(nullptr);
         Sink* sink = nullptr; 
         Core::ProxyType<RPC::CommunicatorClient> client(Core::ProxyType<RPC::CommunicatorClient>::Create(comChannel));
         Math* outbound = Core::ServiceType<Math>::Create<Math>();
@@ -277,7 +341,81 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
-            case 'E': exit(0); break;
+	    case 'P':
+		 if (perf != nullptr) {
+                    printf("There is no need to create a Performance Object, we already have one!\n");
+                } else {
+                    if (client->IsOpen() == false) {
+                        client->Open(2000);
+                    }
+
+                    if (client->IsOpen() == false) {
+                        printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
+                        break;
+                    } else {
+                        if (type == ServerType::STANDALONE_SERVER) {
+                            perf = client->Acquire<Exchange::IRTTPerformance>(3000, _T("RTTPerformance"), ~0);
+                        }
+                        else {
+                            Thunder::PluginHost::IShell* controller = client->Acquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            if (controller == nullptr) {
+                                printf("Could not get the IShell* interface from the controller to execute the QueryInterfaceByCallsign!\n");
+                            }
+                            else {
+                                perf = controller->QueryInterfaceByCallsign<Exchange::IRTTPerformance>(callsign);
+                                controller->Release();
+                            }
+                        }
+                    }
+
+                    if (perf == nullptr) {
+                        client->Close(Core::infinite);
+                        if (type == ServerType::STANDALONE_SERVER) {
+                            printf("Tried aquiring the IRTTPerformance, but it is not available\n");
+                        }
+                        else {
+                            printf("Tried aquiring the IRTTPerformance, but the plugin (%s) is not available\n", callsign.c_str());
+
+                        }
+                    } else {
+                        printf("Acquired the IRTTPerformance, ready for use\n");
+                    }
+#if 0
+		    // Client-side code to measure round-trip time and get status for binary data
+		    uint8_t data[] = {0x00, 0x01, 0x02, 0x03};  // Input binary data
+		    uint8_t response[4] = {0};  // Output binary data
+		    uint32_t status = -1;  // Initialize status to an error code
+		    uint32_t response_len = sizeof(response);
+
+		    auto start = std::chrono::high_resolution_clock::now();
+		    status = perf->SendAndReceive(data, sizeof(data), response, response_len);
+                    auto end = std::chrono::high_resolution_clock::now();
+
+                    auto roundTripTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+                    std::cout << "Round-trip time: " << roundTripTime << " microseconds" << std::endl;
+                    std::cout << "Status: " << status << std::endl;
+#endif
+    		    std::vector<size_t> dataSizes = {32, 128, 512, 1024, 4096, 8192, 16384, 32768, 65536};
+
+                    int iterations = 100;
+
+		    printf("****Running Tests for Separate Inpout and Output buffers****\n");
+                    for (size_t dataSize : dataSizes) 
+		    {
+                       runTest(perf, dataSize, iterations, false);
+                    }
+
+		    printf("Running Tests for in memory modification of buffer\n");
+                    for (size_t dataSize : dataSizes)
+                    {
+                       runTest(perf, dataSize, iterations, true);
+                    }
+		    perf->Release();
+                    perf = nullptr;
+		}
+                break;
+	    case 'E': exit(0); break;
             case 'Q': break;
             case'?':
                 printf("Options available:\n");
@@ -286,6 +424,7 @@ int main(int argc, char* argv[])
                 printf("<C> Create the clock interface, usefull for telling the time.\n");
                 printf("<D> Destroy the clock interface, we are nolonger interested in the time.\n");
                 printf("<I> Information required, tell  me the current time.\n");
+		printf("<P> Measure Round Trip Performance of COMRPC. \n");
                 printf("<T> Toggle subscription for continous updates.\n");
                 printf("<Q> We are done playing around, eave the application properly.\n");
                 printf("<E> Eject, this is an emergency, bail out, just kill the app.\n");

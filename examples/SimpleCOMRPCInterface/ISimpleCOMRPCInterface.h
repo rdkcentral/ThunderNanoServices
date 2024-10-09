@@ -32,7 +32,8 @@ namespace Exchange {
     enum example_ids {
         ID_WALLCLOCK = 0x80001000,
         ID_WALLCLOCK_CALLBACK = 0x80001001,
-        ID_MATH = 0x80001002
+        ID_MATH = 0x80001002,
+	ID_RTT_PERFORMANCE = 0x80001003
     };
 
     struct IWallClock : virtual public Core::IUnknown {
@@ -64,5 +65,22 @@ namespace Exchange {
         virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;
         virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;
     };
+
+    // This is a simple interface to test ther RTT performance of COMRPC/JSONRPC
+    struct IRTTPerformance : virtual public Core::IUnknown {
+
+
+        enum { ID = ID_RTT_PERFORMANCE };
+
+
+        ~IRTTPerformance() override = default;
+
+
+	//Method with separate in and out arrays
+        virtual uint32_t SendAndReceive(uint8_t data_in[] /* @in @length:in_size */, uint32_t in_size, uint8_t data_out[] /* @out @length:out_size @maxlength:out_size*/, uint32_t& out_size /* @inout */)  const = 0;
+
+	//Method with inout array
+	virtual uint32_t SendAndReceive(uint8_t data[] /* @inout @length:data_size @maxlength:data_size*/,  uint32_t& data_size /* @inout */) const = 0;
+    };    
 }
 }
