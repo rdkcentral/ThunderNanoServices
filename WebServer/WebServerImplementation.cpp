@@ -795,10 +795,10 @@ POP_WARNING()
         {
             ASSERT(notification != nullptr);
 
+            _adminLock.Lock();
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
 
-            _adminLock.Lock();
             // Unregister only once :-)
             ASSERT(index != _observers.end());
 
