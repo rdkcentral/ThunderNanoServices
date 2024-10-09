@@ -717,8 +717,7 @@ POP_WARNING()
         {
         }
 
-        ~WebServerImplementation() override
-        {
+        ~WebServerImplementation() override {
             for (auto & observer: _observers){
                 Unregister(observer);
             }
