@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_TESTAUTOMATIONMEMORY_STARTMODE "activated" CACHE STRING "Automatically start TestAutomationMemory plugin")
+set(PLUGIN_TESTAUTOMATIONMEMORY_STARTMODE "Activated" CACHE STRING "Automatically start TestAutomationMemory plugin")
 set(PLUGIN_TESTAUTOMATIONMEMORY_RESUMED "true" CACHE STRING "Set TestAutomationMemory resume state")
 set(PLUGIN_TESTAUTOMATIONMEMORY_MODE "Local" CACHE STRING "Controls if the TestAutomationMemory should run in its own process, in process or remote.")
 
