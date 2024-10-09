@@ -122,13 +122,6 @@ namespace Plugin {
 
                 RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-                PluginHost::IStateControl* stateControl(_server->QueryInterface<PluginHost::IStateControl>());
-
-                if (stateControl != nullptr) {
-                    stateControl->Unregister(&_notification);
-                    stateControl->Release();
-                }
-
                 // Stop processing of the browser:
                 VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
                 _server = nullptr;

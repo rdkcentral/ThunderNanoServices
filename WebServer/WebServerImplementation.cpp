@@ -719,13 +719,9 @@ POP_WARNING()
 
         ~WebServerImplementation() override
         {
-            ASSERT(_observers.empty() == true);
-
-            _adminLock.Lock();
-            while (_observers.empty() == false) {
-                Unregister(_observers.front());
+            for (auto & observer: _observers){
+                Unregister(observer);
             }
-            _adminLock.Unlock();
         }
 
         friend Core::ThreadPool::JobType<WebServerImplementation&>;
