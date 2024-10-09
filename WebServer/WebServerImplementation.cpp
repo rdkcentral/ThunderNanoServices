@@ -779,6 +779,7 @@ POP_WARNING()
         {
             ASSERT(notification != nullptr);
 
+            _adminLock.Lock();
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
             ASSERT(index == _observers.end());
@@ -788,11 +789,13 @@ POP_WARNING()
                 notification->AddRef();
                 _observers.push_back(notification);
             }
+            _adminLock.Unlock();
         }
         void Unregister(PluginHost::IStateControl::INotification* notification) override
         {
             ASSERT(notification != nullptr);
 
+            _adminLock.Lock();
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
 
@@ -805,6 +808,7 @@ POP_WARNING()
                 (*index)->Release();
                 _observers.erase(index);
             }
+            _adminLock.Unlock();
         }
         void AddProxy(const string& path, const string& subst, const string& address) override
         {
