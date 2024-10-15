@@ -1604,8 +1604,9 @@ class BluetoothControl : public PluginHost::IPlugin
             }
             bool IsServiceSupported(const string& serviceUUID) const override
             {
+PUSH_WARNING(DISABLE_WARNING_MAYBE_UNINITIALIZED)
                 Bluetooth::UUID uuid(serviceUUID);
-
+POP_WARNING()
                 _state.Lock();
 
                 const bool result =  (uuid.IsValid() == true? (std::find(_uuids.cbegin(), _uuids.cend(), uuid) != _uuids.cend()) : false);
