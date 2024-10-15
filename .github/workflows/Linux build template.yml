@@ -6,7 +6,7 @@ on:
 jobs:
   ThunderNanoServices:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
@@ -28,8 +28,10 @@ jobs:
           echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
           sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt install python3-pip build-essential cmake ninja-build libusb-1.0-0-dev zlib1g-dev zlib1g-dev:i386 libssl-dev gcc-11-multilib g++-11-multilib
-          sudo pip install jsonref
+          sudo apt install python3-pip build-essential cmake ninja-build libusb-1.0-0-dev ${{matrix.architecture == '32' && 'zlib1g-dev:i386 libssl-dev:i386 gcc-13-multilib g++-13-multilib' || 'zlib1g-dev libssl-dev'}}
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install jsonref
 
     - name: Download artifacts
       uses: actions/download-artifact@v4
@@ -61,6 +63,7 @@ jobs:
 # ----- Building & uploading -----
     - name: Build ThunderNanoServices
       run: |
+        source venv/bin/activate
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
         -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
         -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
