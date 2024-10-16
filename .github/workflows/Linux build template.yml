@@ -50,6 +50,7 @@ jobs:
       with:
         path: ThunderNanoServices
         repository: ${{github.repository_owner}}/ThunderNanoServices
+        ref: development/actions-runners-update
 
     - name: Regex ThunderNanoServices
       if: contains(github.event.pull_request.body, '[Options:')
