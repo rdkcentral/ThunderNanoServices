@@ -169,7 +169,9 @@ namespace Plugin {
                     _id._allocation = new uint8_t[_length];
                     ::memcpy(_id._allocation, id, _length);
                 } else {
+PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, id, _length);
+POP_WARNING()
                 }
             }
             Identifier(const Identifier& copy)
@@ -179,7 +181,9 @@ namespace Plugin {
                     _id._allocation = new uint8_t[_length];
                     ::memcpy(_id._allocation, copy._id._allocation, _length);
                 } else {
+PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, copy._id._buffer, _length);
+POP_WARNING()
                 }
             }
             Identifier(const Identifier&& copy)
@@ -189,7 +193,9 @@ namespace Plugin {
                 if (_length > maxLength) {
                     _id._allocation = copy._id._allocation;
                 } else {
+PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, copy._id._buffer, _length);
+POP_WARNING()
                 }
             }
             ~Identifier()
@@ -214,7 +220,9 @@ namespace Plugin {
                         // Buffer is nolonger needed.
                         delete[] _id._allocation;
                         _length = rhs._length;
+PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                         ::memcpy(_id._buffer, rhs._id._buffer, _length);
+POP_WARNING()
                     }
                 } else if (rhs._length > maxLength) {
                     _length = rhs._length;
@@ -222,7 +230,9 @@ namespace Plugin {
                     ::memcpy(_id._allocation, rhs._id._allocation, _length);
                 } else {
                     _length = rhs._length;
+PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, rhs._id._buffer, _length);
+POP_WARNING()
                 }
 
                 return (*this);
