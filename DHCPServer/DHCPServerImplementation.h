@@ -167,9 +167,9 @@ namespace Plugin {
 
                 if (_length > maxLength) {
                     _id._allocation = new uint8_t[_length];
-                    ::memcpy(_id._allocation, id, _length);
+                    ::copy(id, id + _length, _id._allocation);
                 } else {
-                    ::memcpy(_id._buffer, id, _length);
+                    ::copy(id, id + _length, _id._buffer);
                 }
             }
             Identifier(const Identifier& copy)
@@ -177,9 +177,9 @@ namespace Plugin {
             {
                 if (_length > maxLength) {
                     _id._allocation = new uint8_t[_length];
-                    ::memcpy(_id._allocation, copy._id._allocation, _length);
+                    ::copy(copy._id._allocation, copy._id._allocation + _length, _id._allocation);
                 } else {
-                    ::memcpy(_id._buffer, copy._id._buffer, _length);
+                    ::copy(copy._id._buffer, copy._id._buffer + _length, _id._buffer);
                 }
             }
             Identifier(const Identifier&& copy)
@@ -189,7 +189,7 @@ namespace Plugin {
                 if (_length > maxLength) {
                     _id._allocation = copy._id._allocation;
                 } else {
-                    ::memcpy(_id._buffer, copy._id._buffer, _length);
+                    ::copy(copy._id._buffer, copy._id._buffer + _length, _id._buffer);
                 }
             }
             ~Identifier()
