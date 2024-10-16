@@ -167,9 +167,9 @@ namespace Plugin {
 
                 if (_length > maxLength) {
                     _id._allocation = new uint8_t[_length];
-                    std::copy(id, id + _length, _id._allocation);
+                    ::memcpy(_id._allocation, id, _length);
                 } else {
-                    std::copy(id, id + _length, _id._buffer);
+                    ::memcpy(_id._buffer, id, _length);
                 }
             }
             Identifier(const Identifier& copy)
@@ -177,9 +177,9 @@ namespace Plugin {
             {
                 if (_length > maxLength) {
                     _id._allocation = new uint8_t[_length];
-                    std::copy(copy._id._allocation, copy._id._allocation + _length, _id._allocation);
+                    ::memcpy(_id._allocation, copy._id._allocation, _length);
                 } else {
-                    std::copy(copy._id._buffer, copy._id._buffer + _length, _id._buffer);
+                    ::memcpy(_id._buffer, copy._id._buffer, _length);
                 }
             }
             Identifier(const Identifier&& copy)
@@ -189,7 +189,7 @@ namespace Plugin {
                 if (_length > maxLength) {
                     _id._allocation = copy._id._allocation;
                 } else {
-                    std::copy(copy._id._buffer, copy._id._buffer + _length, _id._buffer);
+                    ::memcpy(_id._buffer, copy._id._buffer, _length);
                 }
             }
             ~Identifier()
