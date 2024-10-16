@@ -161,6 +161,7 @@ namespace Plugin {
             {
                 _id._allocation = nullptr;
             }
+PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
             Identifier(const uint8_t id[], const uint8_t length)
                 : _length(length)
             {
@@ -169,11 +170,10 @@ namespace Plugin {
                     _id._allocation = new uint8_t[_length];
                     ::memcpy(_id._allocation, id, _length);
                 } else {
-PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, id, _length);
-POP_WARNING()
                 }
             }
+POP_WARNING()
             Identifier(const Identifier& copy)
                 : _length(copy._length)
             {
@@ -181,9 +181,7 @@ POP_WARNING()
                     _id._allocation = new uint8_t[_length];
                     ::memcpy(_id._allocation, copy._id._allocation, _length);
                 } else {
-PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, copy._id._buffer, _length);
-POP_WARNING()
                 }
             }
             Identifier(const Identifier&& copy)
@@ -193,9 +191,7 @@ POP_WARNING()
                 if (_length > maxLength) {
                     _id._allocation = copy._id._allocation;
                 } else {
-PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, copy._id._buffer, _length);
-POP_WARNING()
                 }
             }
             ~Identifier()
@@ -220,9 +216,7 @@ POP_WARNING()
                         // Buffer is nolonger needed.
                         delete[] _id._allocation;
                         _length = rhs._length;
-PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                         ::memcpy(_id._buffer, rhs._id._buffer, _length);
-POP_WARNING()
                     }
                 } else if (rhs._length > maxLength) {
                     _length = rhs._length;
@@ -230,9 +224,7 @@ POP_WARNING()
                     ::memcpy(_id._allocation, rhs._id._allocation, _length);
                 } else {
                     _length = rhs._length;
-PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
                     ::memcpy(_id._buffer, rhs._id._buffer, _length);
-POP_WARNING()
                 }
 
                 return (*this);
