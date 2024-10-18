@@ -16,7 +16,7 @@
 # limitations under the License.
 project(Compositor)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 find_package(Thunder)
 
@@ -32,6 +32,8 @@ set(PLATFORM_COMPOSITOR "compositorplugin")
 
 option(PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines which implementation is used." "None")
 option(PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to initialisize all hardware (s) [0 - UINT16_MAX]." 0)
+
+set(PLUGIN_COMPOSITOR_STARTMODE "Activated" CACHE STRING "Automatically start Compositor plugin")
 set(PLUGIN_COMPOSITOR_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
@@ -84,7 +86,7 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 
 add_subdirectory(lib)

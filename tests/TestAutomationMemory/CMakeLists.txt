@@ -17,9 +17,9 @@
 
 project(TestAutomationMemory)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
-find_package(WPEFramework)
+find_package(Thunder)
 
 project_version(1.0.0)
 
@@ -27,7 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_TESTAUTOMATIONMEMORY_STARTMODE "activated" CACHE STRING "Automatically start TestAutomationMemory plugin")
+set(PLUGIN_TESTAUTOMATIONMEMORY_STARTMODE "Activated" CACHE STRING "Automatically start TestAutomationMemory plugin")
 set(PLUGIN_TESTAUTOMATIONMEMORY_RESUMED "true" CACHE STRING "Set TestAutomationMemory resume state")
 set(PLUGIN_TESTAUTOMATIONMEMORY_MODE "Local" CACHE STRING "Controls if the TestAutomationMemory should run in its own process, in process or remote.")
 
@@ -58,6 +58,6 @@ set_target_properties(${MODULE_NAME}
         CXX_STANDARD_REQUIRED YES)
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Test)
     
 write_config()

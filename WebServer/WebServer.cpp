@@ -49,6 +49,7 @@ namespace Plugin {
 
         ASSERT(_server == nullptr);
         ASSERT(_memory == nullptr);
+        ASSERT(_statecontrol == nullptr);
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
         ASSERT(_connectionId == 0);
@@ -65,16 +66,16 @@ namespace Plugin {
         _server = _service->Root<Exchange::IWebServer>(_connectionId, 2000, _T("WebServerImplementation"));
 
         if (_server != nullptr) {
-            PluginHost::IStateControl* stateControl(_server->QueryInterface<PluginHost::IStateControl>());
+            _statecontrol = _server->QueryInterface<PluginHost::IStateControl>();
 
             // We see that sometimes the implementation crashes before it reaches this point, than there is
             // no StateControl. Cope with this situation.
-            if (stateControl == nullptr) {
-                message = _T("WebServer Couldnt get StateControl.");
+            if (_statecontrol == nullptr) {
+                message = _T("WebServer Couldn't get StateControl.");
 
             } else {
-                uint32_t result = stateControl->Configure(_service);
-                stateControl->Release();
+                _statecontrol->Register(&_notification);
+                uint32_t result = _statecontrol->Configure(_service);
                 if (result != Core::ERROR_NONE) {
                     message = _T("WebServer could not be configured.");
                 }
@@ -114,10 +115,18 @@ namespace Plugin {
 
             if (_server != nullptr) {
 
+                if (_statecontrol != nullptr) {
+                    _statecontrol->Unregister(&_notification);
+                    _statecontrol->Release();
+                    _statecontrol = nullptr;
+                }
+
                 if (_memory != nullptr) {
                     _memory->Release();
                     _memory = nullptr;
                 }
+
+                RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
                 // Stop processing of the browser:
                 VARIABLE_IS_NOT_USED uint32_t result = _server->Release();
@@ -126,6 +135,16 @@ namespace Plugin {
                 // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
                 // are leaking...
                 ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+
+                // If this was running in a (container) process...
+                if (connection != nullptr) {
+                    // Lets trigger a cleanup sequence for
+                    // out-of-process code. Which will guard
+                    // that unwilling processes, get shot if
+                    // not stopped friendly :~)
+                    connection->Terminate();
+                    connection->Release();
+                }
             }
 
             _service->Release();
@@ -151,5 +170,34 @@ namespace Plugin {
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
+    void WebServer::StateChange(const PluginHost::IStateControl::state state)
+    {
+        switch (state) {
+        case PluginHost::IStateControl::RESUMED:
+            TRACE(Trace::Information,
+                    (string(_T("StateChange: { \"suspend\":false }"))));
+            _service->Notify("{ \"suspended\":false }");
+            break;
+        case PluginHost::IStateControl::SUSPENDED:
+            TRACE(Trace::Information,
+                    (string(_T("StateChange: { \"suspend\":true }"))));
+            _service->Notify("{ \"suspended\":true }");
+            break;
+        case PluginHost::IStateControl::EXITED:
+            Core::IWorkerPool::Instance().Submit(
+                    PluginHost::IShell::Job::Create(_service,
+                            PluginHost::IShell::DEACTIVATED,
+                            PluginHost::IShell::REQUESTED));
+            break;
+        case PluginHost::IStateControl::UNINITIALIZED:
+            break;
+        default:
+            ASSERT(false);
+            break;
+        }
+    }
+
+
+
 }
 }

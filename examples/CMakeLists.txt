@@ -17,14 +17,14 @@
 
 project(Examples)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 find_package(Thunder)
 
 project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
-option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)
+option(EXAMPLE_COMRPCCLIENT "Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
@@ -35,14 +35,15 @@ option(EXAMPLE_IOCONNECTOR_TEST "Include IOConnector test suite" OFF)
 option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message control" OFF)
 option(EXAMPLE_DYNAMICLOADING "Include dynamic loading examples" OFF)
 option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
+option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
 endif()
 
 if(PLUGIN_JSONRPC)
-    add_subdirectory(JSONRPCPlugin)
-    add_subdirectory(JSONRPCClient)
+    add_subdirectory(JSONRPC/Plugin)
+    add_subdirectory(JSONRPC/Client)
 endif()
 
 if(PLUGIN_FILETRANSFER)
@@ -78,7 +79,11 @@ if (EXAMPLE_DYNAMICLOADING)
     add_subdirectory(DynamicLoading)
 endif()
 
+if (EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE)
+    add_subdirectory(PluginSmartInterfaceType)
+endif()
+
 if (EXAMPLE_SIMPLECOMRPC_TEST)
-    add_subdirectory(SimpleCOMRPCPluginServer)
-    add_subdirectory(SimpleCOMRPCClient)
+    add_subdirectory(SimpleCOMRPC/PluginServer)
+    add_subdirectory(SimpleCOMRPC/Client)
 endif()

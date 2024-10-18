@@ -15,23 +15,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+project(COMRPCClient)
+
+cmake_minimum_required(VERSION 3.15)
+
 find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(COMRPCClient COMRPCClient.cpp)
+add_executable(${MODULE_NAME} COMRPCClient.cpp)
 
-set_target_properties(COMRPCClient PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         )     
 
-target_link_libraries(COMRPCClient 
+target_link_libraries(${MODULE_NAME}
         PRIVATE
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}Core::${NAMESPACE}Core
         CompileSettingsDebug::CompileSettingsDebug
     )
 
-install(TARGETS COMRPCClient DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

@@ -15,8 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME RemoteHostExample)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(RemoteHostExample)
+
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_REMOTEHOSTEXAMPLE_MODE "Distributed" CACHE STRING "Set process running mode")
 
@@ -40,12 +49,11 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-
 target_include_directories(${MODULE_NAME} 
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR})
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config(PLUGINS ${PLUGIN_NAME})

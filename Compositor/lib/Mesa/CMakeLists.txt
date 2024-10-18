@@ -23,7 +23,7 @@ find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(${NAMESPACE}CompositorBufferType REQUIRED)
+find_package(ClientCompositorBufferType REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
@@ -31,7 +31,7 @@ find_package(libdrm REQUIRED)
 find_package(EGL REQUIRED)
 find_package(GLESv2 REQUIRED)
 
-set(COMPOSITOR_DISPLAY_IMPLEMENTATION  "DRM" CACHE STRING "Defines which display implementation is used")
+set(COMPOSITOR_BUFFER_IMPLEMENTATION  "GBM" CACHE STRING "Defines which buffer implementation is used")
 set(COMPOSITOR_RENDERER_IMPLEMENTATION "GL" CACHE STRING "Defines which renderer implementation is used")
 set(COMPOSITOR_BACKEND_IMPLEMENTATION  "DRM" CACHE STRING "Defines which backend implementation is used")
 
@@ -48,8 +48,8 @@ target_link_libraries(${PLATFORM_COMPOSITOR}
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}COM::${NAMESPACE}COM
-        ${NAMESPACE}CompositorBufferType::${NAMESPACE}CompositorBufferType
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        ClientCompositorBufferType::ClientCompositorBufferType
         CompileSettingsDebug::CompileSettingsDebug
         common::include
         common::buffer
@@ -67,7 +67,7 @@ set_target_properties(${PLATFORM_COMPOSITOR} PROPERTIES
 )
 
 install(TARGETS ${PLATFORM_COMPOSITOR}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/Compositor
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${NAMESPACE}/Compositor COMPONENT ${NAMESPACE}_Runtime
 )
 
 add_library(compositor::platform ALIAS ${PLATFORM_COMPOSITOR})

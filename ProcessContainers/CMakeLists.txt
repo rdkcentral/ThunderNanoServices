@@ -17,7 +17,7 @@
 
 project(Containers)
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.15)
 
 find_package(Thunder)
 
@@ -34,6 +34,7 @@ if(BUILD_REFERENCE)
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}ProcessContainers REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
@@ -51,12 +52,11 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}ProcessContainers::${NAMESPACE}ProcessContainers
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
-
 target_include_directories(${MODULE_NAME} 
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR})
 
 install(TARGETS ${MODULE_NAME} 
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins  COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

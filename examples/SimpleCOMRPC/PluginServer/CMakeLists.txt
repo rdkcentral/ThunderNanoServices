@@ -15,10 +15,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME SimpleCOMRPCPluginServer)
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
+project(SimpleCOMRPCPluginServer)
 
-message("Setting up ${PLUGIN_NAME}")
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
@@ -28,9 +35,6 @@ add_library(${MODULE_NAME} SHARED
     Module.cpp
     SimpleCOMRPCPluginServer.cpp
 )
-
-#set_source_files_properties( SimpleCOMRPCPluginServer.cpp PROPERTIES COMPILE_FLAGS "-fexceptions" )
-#set_source_files_properties( OutOfProcessImplementation.cpp PROPERTIES COMPILE_FLAGS "-fexceptions" )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_STANDARD 11
@@ -43,6 +47,6 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
-write_config(PLUGINS ${PLUGIN_NAME} CLASSNAME ${PLUGIN_NAME})
+write_config()

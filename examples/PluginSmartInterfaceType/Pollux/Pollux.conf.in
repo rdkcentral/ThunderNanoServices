@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_POLLUX_STARTMODE@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_POLLUX_MODE@")
+
+configuration.add("root", root)

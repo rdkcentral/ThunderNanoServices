@@ -6,13 +6,14 @@ on:
 jobs:
   ThunderNanoServices:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
         build_type: [Debug, Release, MinSizeRel]
+        architecture: [32, 64]
 
-    name: Build type - ${{matrix.build_type}}
+    name: Build type - ${{matrix.build_type}}${{matrix.architecture == '32' && ' x86' || ''}}
     steps:
 # --------- Packages & artifacts ---------
     - name: Install necessary packages
@@ -23,21 +24,25 @@ jobs:
         command: |
           sudo gem install apt-spy2
           sudo apt-spy2 fix --commit --launchpad --country=US
+          echo "deb http://archive.ubuntu.com/ubuntu/ jammy main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
+          sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt install python3-pip
+          sudo apt install python3-pip build-essential cmake ninja-build libusb-1.0-0-dev ${{matrix.architecture == '32' && 'zlib1g-dev:i386 libssl-dev:i386 gcc-13-multilib g++-13-multilib' || 'zlib1g-dev libssl-dev'}}
+          python3 -m venv venv
+          source venv/bin/activate
           pip install jsonref
-          sudo apt install build-essential cmake ninja-build libusb-1.0-0-dev zlib1g-dev libssl-dev
 
     - name: Download artifacts
       uses: actions/download-artifact@v4
       with:
-        name: ThunderInterfaces-${{matrix.build_type}}-artifact
+        name: ThunderInterfaces-${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}-artifact
         path: ${{matrix.build_type}}
 
     - name: Unpack files
       run: |
-        tar -xvzf ${{matrix.build_type}}/${{matrix.build_type}}.tar.gz
-        rm ${{matrix.build_type}}/${{matrix.build_type}}.tar.gz
+        tar -xvzf ${{matrix.build_type}}/${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz
+        rm ${{matrix.build_type}}/${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz
 
 # ----- Regex & checkout -----
     - name: Checkout ThunderNanoServices
@@ -58,11 +63,17 @@ jobs:
 # ----- Building & uploading -----
     - name: Build ThunderNanoServices
       run: |
+        source venv/bin/activate
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
-        -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
+        -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
+        -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
         -DEXAMPLE_COMRPCCLIENT=ON \
+        -DPLUGIN_BLUETOOTH=ON \
+        -DPLUGIN_BLUETOOTHREMOTECONTROL=ON \
+        -DPLUGIN_BLUETOOTHAUDIO=ON \
+        -DPLUGIN_BLUETOOTHSDPSERVER=ON \
         -DPLUGIN_CECCONTROL=ON \
         -DPLUGIN_COMMANDER=ON \
         -DPLUGIN_CONFIGUPDATEEXAMPLE=ON \
@@ -92,10 +103,10 @@ jobs:
         cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
 
     - name: Tar files
-      run: tar -czvf ${{matrix.build_type}}.tar.gz ${{matrix.build_type}}
+      run: tar -czvf ${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz ${{matrix.build_type}}
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: ThunderNanoServices-${{matrix.build_type}}-artifact
-        path: ${{matrix.build_type}}.tar.gz
+        name: ThunderNanoServices-${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}-artifact
+        path: ${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz

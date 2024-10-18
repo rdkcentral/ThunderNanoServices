@@ -324,9 +324,9 @@ namespace Plugin {
                 device = keys.Value(_T("device"), true);
             }
         }
-        else if (channel.Name().empty() == false) {
+        else if (channel.Path().empty() == false) {
             // See of this name is registered ?
-            Links::const_iterator index(_linkInfo.find(channel.Name()));
+            Links::const_iterator index(_linkInfo.find(channel.Path()));
 
             if (index != _linkInfo.end()) {
                 const Config::Link& linkInfo(index->second);

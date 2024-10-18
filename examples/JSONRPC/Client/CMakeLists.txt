@@ -15,6 +15,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+project(JSONRPCClient)
+
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 find_package(Thunder)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}WebSocket REQUIRED)
@@ -23,14 +35,14 @@ find_package(${NAMESPACE}Core REQUIRED)
 find_package(securityagent QUIET)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(JSONRPCClient Module.cpp JSONRPCClient.cpp)
+add_executable(${MODULE_NAME} Module.cpp JSONRPCClient.cpp)
 
-set_target_properties(JSONRPCClient PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         )     
 
-target_link_libraries(JSONRPCClient 
+target_link_libraries(${MODULE_NAME}
         PRIVATE
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
@@ -40,18 +52,18 @@ target_link_libraries(JSONRPCClient
     )
 
 if (securityagent_FOUND)
-    target_link_libraries(JSONRPCClient
+    target_link_libraries(${MODULE_NAME}
         PRIVATE
         securityagent::securityagent
     )
-    target_compile_definitions(JSONRPCClient
+    target_compile_definitions(${MODULE_NAME}
         PRIVATE
             ENABLE_SECURITY_AGENT=1)
 endif()
 
-target_include_directories(JSONRPCClient 
+target_include_directories(${MODULE_NAME}
     PRIVATE
          "${PROJECT_SOURCE_DIR}/tests"
 )
 
-install(TARGETS JSONRPCClient DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

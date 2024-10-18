@@ -15,20 +15,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.3)
-
 project(Yin)
 
+cmake_minimum_required(VERSION 3.15)
+
 find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
+
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug REQUIRED)
 
-set(PLUGIN_NAME Yin)
-
-set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 set(PLUGIN_YIN_IMPLEMENTATION "${MODULE_NAME}Impl" CACHE STRING "Library with the implementation of yin")
 
 set(PLUGIN_YIN_STARTMODE "Deactivated" CACHE STRING "Controls automatic start of the Yin plugin")
@@ -82,8 +86,8 @@ target_link_libraries(${PLUGIN_YIN_IMPLEMENTATION}
         CompileSettingsDebug::CompileSettingsDebug
         ${PLUGIN_YIN_DEFINITIONS})
 
-install(TARGETS ${MODULE_NAME} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
-install(TARGETS ${PLUGIN_YIN_IMPLEMENTATION} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins)
-install(FILES ${DATA_FILES} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/root/${PLUGIN_NAME})
+install(TARGETS ${MODULE_NAME} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
+install(TARGETS ${PLUGIN_YIN_IMPLEMENTATION} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/usr/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
+install(FILES ${DATA_FILES} DESTINATION ../${EXAMPLE_DYNAMICLOADING_TARGET}/root/${PLUGIN_NAME}  COMPONENT ${NAMESPACE}_Runtime)
 
 write_config(INSTALL_PATH ../${EXAMPLE_DYNAMICLOADING_TARGET}/configs)

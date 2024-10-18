@@ -15,23 +15,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(PLUGIN_NAME FileTransferClient)
+project(FileTransferClient)
+
+cmake_minimum_required(VERSION 3.15)
+
+find_package(Thunder)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${PROJECT_NAME})
+
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Core REQUIRED)
 
-add_executable(${PLUGIN_NAME} FileTransferClient.cpp)
+add_executable(${MODULE_NAME} FileTransferClient.cpp)
 
-set_target_properties(${PLUGIN_NAME} PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         )     
 
-target_link_libraries(${PLUGIN_NAME}
+target_link_libraries(${MODULE_NAME}
     PRIVATE 
         ${NAMESPACE}Core::${NAMESPACE}Core)
 
-target_include_directories(${PLUGIN_NAME} 
+target_include_directories(${MODULE_NAME}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core)
 
-install(TARGETS ${PLUGIN_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)
