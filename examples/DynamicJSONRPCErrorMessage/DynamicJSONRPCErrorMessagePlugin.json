@@ -1,0 +1,13 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "DynamicJSONRPCErrorMessage Plugin",
+    "callsign": "DynamicJSONRPCErrorMessage",
+    "locator": "libThunderDynamicJSONRPCErrorMessage.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{cppinterfacedir}/IMath.h"
+  }
+}

@@ -36,6 +36,7 @@ option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message 
 option(EXAMPLE_DYNAMICLOADING "Include dynamic loading examples" OFF)
 option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
+option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -87,3 +88,8 @@ if (EXAMPLE_SIMPLECOMRPC_TEST)
     add_subdirectory(SimpleCOMRPC/PluginServer)
     add_subdirectory(SimpleCOMRPC/Client)
 endif()
+
+if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)
+    add_subdirectory(DynamicJSONRPCErrorMessage)
+endif()
+
