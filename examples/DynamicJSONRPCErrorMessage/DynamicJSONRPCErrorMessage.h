@@ -27,12 +27,31 @@ namespace Thunder {
 
 namespace Plugin {
 
+
+// some examples:
+// use 2nd line to call a simple (static) funtion
+// use 3rd line to call a more complex function (lamda, bind())
+// use 4th line to have the normal errorhandling
+// of course enable the correct accompanying line/part in the c'tor
+
     class DynamicJSONRPCErrorMessage : public PluginHost::IPlugin
-                                     , public PluginHost::JSONRPCErrorAssessor
-                                     , Exchange::IMath {
+                                     , public PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::FunctionCallbackType>
+//                                     , public PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::StdFunctionCallbackType>
+//                                     , public PluginHost::JSONRPC
+                                     , public Exchange::IMath {
 
     public:
-        DynamicJSONRPCErrorMessage() = default;
+        DynamicJSONRPCErrorMessage() 
+            : PluginHost::IPlugin()
+            , PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::FunctionCallbackType>(DynamicJSONRPCErrorMessage::OnJSONRPCError)
+/*            , PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::StdFunctionCallbackType>([this](const Core::JSONRPC::Context& context, const string& method, const string& params, string& result) -> uint32_t
+            {
+                return OnJSONRPCErrorMethod(context, method, params, result);
+            })*/
+//            , PluginHost::JSONRPC()
+            , Exchange::IMath() 
+        {
+        }
         ~DynamicJSONRPCErrorMessage() override = default;
 
         DynamicJSONRPCErrorMessage(const DynamicJSONRPCErrorMessage&) = delete;
@@ -48,15 +67,16 @@ namespace Plugin {
 
         // IMath overrides
         uint32_t Add(const uint16_t, const uint16_t, uint16_t&) const override {
-            return Core::ERROR_USER_DEFINED_JSONRPC;
+            return Core::ERROR_NOT_SUPPORTED;
         };
 
-        uint32_t Sub(const uint16_t, const uint16_t, uint16_t&) const override {
-            return Core::ERROR_USER_DEFINED_JSONRPC;
+        uint32_t Sub(const uint16_t a, const uint16_t b, uint16_t& result) const override {
+            result = a - b;
+            return Core::ERROR_NONE;
         }
 
-        // JSONRPCErrorAssessor overrides
-        uint32_t OnJSONRPCError(const Core::JSONRPC::Context& context, const string& designator, const string& parameters, string& errormessage) override;
+        uint32_t OnJSONRPCErrorMethod(const Core::JSONRPC::Context& context, const string& method, const string& parameters, string& errormessage);
+        static uint32_t OnJSONRPCError(const Core::JSONRPC::Context& context, const string& method, const string& parameters, string& errormessage);
 
     public:
         BEGIN_INTERFACE_MAP(DynamicJSONRPCErrorMessage)
