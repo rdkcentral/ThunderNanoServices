@@ -44,10 +44,10 @@ namespace Plugin {
         DynamicJSONRPCErrorMessage() 
             : PluginHost::IPlugin()
             , PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::FunctionCallbackType>(DynamicJSONRPCErrorMessage::OnJSONRPCError)
-/*            , PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::StdFunctionCallbackType>([this](const Core::JSONRPC::Context& context, const string& method, const string& params, string& result) -> uint32_t
+/*            , PluginHost::JSONRPCErrorAssessor<PluginHost::JSONRPCErrorAssessorTypes::StdFunctionCallbackType>([this](const Core::JSONRPC::Context& context, const string& method, const string& params, const uint32_t errorcode, string& result) -> uint32_t
             {
-                return OnJSONRPCErrorMethod(context, method, params, result);
-            })*/
+                return OnJSONRPCErrorMethod(context, method, params, errorcode, result);
+            }) */
 //            , PluginHost::JSONRPC()
             , Exchange::IMath() 
         {
@@ -66,8 +66,12 @@ namespace Plugin {
         string Information() const override;
 
         // IMath overrides
-        uint32_t Add(const uint16_t, const uint16_t, uint16_t&) const override {
-            return Core::ERROR_NOT_SUPPORTED;
+        uint32_t Add(const uint16_t a, const uint16_t b , uint16_t&) const override {
+            uint32_t result = Core::ERROR_NOT_SUPPORTED;
+            if( a + b == 4 ) {
+                result = Core::ERROR_GENERAL;
+            }
+            return result;
         };
 
         uint32_t Sub(const uint16_t a, const uint16_t b, uint16_t& result) const override {
@@ -75,8 +79,8 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        uint32_t OnJSONRPCErrorMethod(const Core::JSONRPC::Context& context, const string& method, const string& parameters, string& errormessage);
-        static uint32_t OnJSONRPCError(const Core::JSONRPC::Context& context, const string& method, const string& parameters, string& errormessage);
+        uint32_t OnJSONRPCErrorMethod(const Core::JSONRPC::Context& context, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage);
+        static uint32_t OnJSONRPCError(const Core::JSONRPC::Context& context, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage);
 
     public:
         BEGIN_INTERFACE_MAP(DynamicJSONRPCErrorMessage)

@@ -60,32 +60,26 @@ namespace Plugin {
         return {};
     }
 
-    uint32_t DynamicJSONRPCErrorMessage::OnJSONRPCError(const Core::JSONRPC::Context&, const string& method, const string& parameters, string& errormessage) {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        if(method == _T("add")) {
+    uint32_t DynamicJSONRPCErrorMessage::OnJSONRPCError(const Core::JSONRPC::Context&, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage) {
+        if((method == _T("add")) && (errorcode == Core::ERROR_GENERAL) ) {
             JsonData::Math::AddParamsInfo addparams;
             addparams.FromString(parameters);
             std::stringstream message;
-            message <<_T("Error handling add method failed for some peculiar reason, values: ") << addparams.A << _T(" and ") << addparams.B;
+            message <<_T("Error handling add method failed for general reason, values: ") << addparams.A << _T(" and ") << addparams.B;
             errormessage = message.str();
-            result = Core::ERROR_INVALID_PARAMETER;
         } 
-        return result;
+        return errorcode; // one could change/override the errorcode returned by COMRPC but that would not be advised as might be obvious
     }
 
-    uint32_t DynamicJSONRPCErrorMessage::OnJSONRPCErrorMethod(const Core::JSONRPC::Context&, const string& method, const string& parameters, string& errormessage) {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        if(method == _T("add")) {
+    uint32_t DynamicJSONRPCErrorMessage::OnJSONRPCErrorMethod(const Core::JSONRPC::Context&, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage) {
+        if((method == _T("add")) && (errorcode == Core::ERROR_GENERAL) ) {
             JsonData::Math::AddParamsInfo addparams;
             addparams.FromString(parameters);
             std::stringstream message;
-            message <<_T("Error handling (method version) add method failed for some peculiar reason, values: ") << addparams.A << _T(" and ") << addparams.B;
+            message <<_T("Error handling (method version) add method failed for general reason, values: ") << addparams.A << _T(" and ") << addparams.B;
             errormessage = message.str();
-            result = Core::ERROR_INVALID_PARAMETER;
         } 
-        return result;
+        return errorcode; // one could change/override the errorcode returned by COMRPC but that would not be advised as might be obvious
     }
 
 } // namespace Plugin
