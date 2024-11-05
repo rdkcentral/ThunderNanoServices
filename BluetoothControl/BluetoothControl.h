@@ -3172,11 +3172,13 @@ class BluetoothControl : public PluginHost::IPlugin
             Core::hresult GetDeviceInfo(string& address,
                         devicetype& type,
                         Core::OptionalType<string>& name,
+                        Core::OptionalType<uint8_t>& version,
+                        Core::OptionalType<uint16_t>& manufacturer,
                         Core::OptionalType<uint32_t>& cod,
                         Core::OptionalType<uint16_t>& appearance /* LE only */,
                         Core::OptionalType<IUUIDIterator*>& services,
-                        bool& connected,
-                        bool& paired) const override
+                        bool& paired,
+                        bool& connected) const override
             {
                 return (DeviceOp(address, type, [&](const IDevice* device) -> Core::hresult {
 
@@ -3191,6 +3193,10 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (device->Class() != 0) {
                         cod = device->Class();
                     }
+
+                    // TODO
+                    (void) version;
+                    (void) manufacturer;
 
                     auto& uuids = (static_cast<const DeviceImpl*>(device))->UUIDs();
                     if (uuids.empty() == false) {
