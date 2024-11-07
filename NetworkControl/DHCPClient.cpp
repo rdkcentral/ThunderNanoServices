@@ -35,6 +35,9 @@ namespace Plugin {
 #ifdef __WINDOWS__
             BroadcastClientNode,
             BroadcastServerNode,
+#elif defined(__APPLE__)
+            Core::NodeId(interfaceName.c_str(), 0x0800, 0x400, 0, sizeof(BroadcastMAC), BroadcastMAC),
+            Core::NodeId(interfaceName.c_str(), 0x0800, 0x400, 0, sizeof(BroadcastMAC), BroadcastMAC),
 #else
             Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC),
             Core::NodeId(interfaceName.c_str(), ETH_P_IP, PACKET_BROADCAST, 0, sizeof(BroadcastMAC), BroadcastMAC),
