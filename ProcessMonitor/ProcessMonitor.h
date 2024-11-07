@@ -101,12 +101,11 @@ public:
         };
 
     public:
-        Notification(ProcessMonitor* parent)
+        Notification()
             : _adminLock()
             , _processMap()
             , _job(*this)
             , _service(nullptr)
-            , _parent(*parent)
             ,_exittimeout(10000000)
         {
             ASSERT(parent != nullptr);
@@ -255,13 +254,12 @@ public:
         std::unordered_map<string, ProcessObject> _processMap;
         Job  _job;
         PluginHost::IShell* _service;
-        ProcessMonitor& _parent;
         uint32_t _exittimeout;
     };
 
 public:
     ProcessMonitor()
-        : _notification(this)
+        : _notification()
     {
     }
     ~ProcessMonitor() override
