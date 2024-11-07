@@ -58,7 +58,6 @@ public:
             public RPC::IRemoteConnection::INotification
     {
     public:
-        Notification() = delete;
         Notification(const Notification&) = delete;
         Notification& operator=(const Notification&) = delete;
 
@@ -68,8 +67,8 @@ public:
         {
         public:
             ProcessObject() = delete;
-            ProcessObject(const ProcessObject&) = delete;
-            ProcessObject& operator=(const ProcessObject&) = delete;
+            ProcessObject(const ProcessObject&) = default;
+            ProcessObject& operator=(const ProcessObject&) = default;
 
         public:
             ProcessObject(
@@ -96,7 +95,7 @@ public:
             }
 
         private:
-            const uint32_t _processId;
+            uint32_t _processId;
             uint64_t _exitTime;
         };
 
@@ -108,7 +107,6 @@ public:
             , _service(nullptr)
             ,_exittimeout(10000000)
         {
-            ASSERT(parent != nullptr);
         }
         ~Notification() override
         {
