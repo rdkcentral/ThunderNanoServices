@@ -839,7 +839,7 @@ namespace Plugin
             return result;
         }
 
-        uint32_t Status(const string& interface, StatusType& status) const
+        uint32_t Status(const string& interface, StatusType& status) const override
         {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
