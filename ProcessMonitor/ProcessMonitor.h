@@ -68,8 +68,8 @@ public:
         {
         public:
             ProcessObject() = delete;
-            ProcessObject(const ProcessObject&) = default;
-            ProcessObject& operator=(const ProcessObject&) = default;
+            ProcessObject(const ProcessObject&) = delete;
+            ProcessObject& operator=(const ProcessObject&) = delete;
 
         public:
             ProcessObject(
