@@ -60,6 +60,8 @@ jobs:
         -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
+        -DCMAKE_CXX_STANDARD=11 \
+        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -DEXAMPLE_COMRPCCLIENT=ON \
         -DPLUGIN_CECCONTROL=ON \
         -DPLUGIN_COMMANDER=ON \
