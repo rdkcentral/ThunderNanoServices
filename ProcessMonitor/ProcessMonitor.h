@@ -82,7 +82,7 @@ public:
             ~ProcessObject()
             {
             }
-            uint32_t ProcessId()
+            uint32_t ProcessId() const
             {
                 return _processId;
             }
@@ -90,7 +90,7 @@ public:
             {
                 _exitTime = exitTime;
             }
-            uint64_t ExitTime()
+            uint64_t ExitTime() const
             {
                 return _exitTime;
             }
