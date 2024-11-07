@@ -34,8 +34,8 @@ namespace GPIO {
                 public Exchange::IInputPin,
                 public Core::IResource {
     public:
-        using Thunder::Exchange::ExternalBase::Register;
-        using Thunder::Exchange::ExternalBase::Unregister;
+        using Exchange::ExternalBase::Register;
+        using Exchange::ExternalBase::Unregister;
 
     private:
         using BaseClass = Exchange::ExternalBase;
