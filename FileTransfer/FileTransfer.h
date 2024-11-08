@@ -18,11 +18,14 @@
  */
  
 #pragma once
-#include <sys/inotify.h>
 #include <unordered_map>
 #include <iostream>
 #include <fstream>
 #include "../FileTransfer/Module.h"
+
+#ifndef __APPLE__
+#include <sys/inotify.h>
+#endif
 
 namespace Thunder {
 namespace Plugin
