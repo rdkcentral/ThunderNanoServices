@@ -26,7 +26,6 @@ project_version(1.0.0)
 set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
-message(STATUS "@@ 1. @@ C++ standard: ${CMAKE_CXX_STANDARD}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -66,8 +65,6 @@ add_library(${MODULE_NAME} SHARED
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES)
-
-message(STATUS "@@ 2. @@ C++ standard: ${CMAKE_CXX_STANDARD}")
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
