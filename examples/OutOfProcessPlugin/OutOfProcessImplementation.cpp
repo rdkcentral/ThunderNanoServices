@@ -104,12 +104,9 @@ namespace Plugin {
             PluginMonitor(const PluginMonitor&) = delete;
             PluginMonitor& operator=(const PluginMonitor&) = delete;
 
-PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
-            PluginMonitor(OutOfProcessImplementation& parent)
-                : _parent(parent)
+            PluginMonitor()
             {
             }
-POP_WARNING()
             ~PluginMonitor() override
             {
             }
@@ -132,9 +129,6 @@ POP_WARNING()
             BEGIN_INTERFACE_MAP(PluginMonitor)
                 INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
             END_INTERFACE_MAP
-
-        private:
-            OutOfProcessImplementation& _parent;
         };
 
     public:
@@ -483,7 +477,7 @@ POP_WARNING()
             _adminLock.Unlock();
         }
 
-        virtual void Unregister(Exchange::IBrowser::INotification* sink)
+        virtual void Unregister(Exchange::IBrowser::INotification* sink) override
         {
             ASSERT(sink != nullptr);
 
@@ -710,7 +704,7 @@ POP_WARNING()
         }
 
     private:
-        virtual uint32_t Worker()
+        virtual uint32_t Worker() override
         {
             if (_config.Sleep.Value() > 0) {
                 TRACE(Trace::Information, (_T("Main task of execution reached. Starting with a Sleep of [%d] S"), _config.Sleep.Value()));
@@ -811,23 +805,23 @@ namespace OutOfProcessPlugin {
         }
 
     public:
-        virtual uint64_t Resident() const
+        virtual uint64_t Resident() const override
         {
             return _main.Resident();
         }
-        virtual uint64_t Allocated() const
+        virtual uint64_t Allocated() const override
         {
             return _main.Allocated();
         }
-        virtual uint64_t Shared() const
+        virtual uint64_t Shared() const override
         {
             return _main.Shared();
         }
-        virtual uint8_t Processes() const
+        virtual uint8_t Processes() const override
         {
             return (IsOperational() ? 1 : 0);
         }
-        virtual bool IsOperational() const
+        virtual bool IsOperational() const override
         {
             return (_main.IsActive());
         }
