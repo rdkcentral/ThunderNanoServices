@@ -144,7 +144,7 @@ namespace Plugin {
                 const std::string& proxyStubPath,
                 Exchange::IComposition::IDisplay* parentInterface,
                 const Core::ProxyType<RPC::InvokeServer>& engine)
-                : RPC::Communicator("Compositor", source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
+                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
                 , _parentInterface(parentInterface)
             {
                 if (_parentInterface != nullptr) {
