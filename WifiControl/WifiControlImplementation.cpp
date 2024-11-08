@@ -680,7 +680,14 @@ namespace Plugin
             }
             ConfigData& operator=(const ConfigInfo& rhs)
             {
-                *this = rhs;
+                if (this != &rhs) {
+                    Hidden = rhs.Hidden;
+                    Accesspoint = rhs.Accesspoint;
+                    Ssid = rhs.Ssid;
+                    Secret = rhs.Secret;
+                    Identity = rhs.Identity;
+                    Method = rhs.Method;
+                }
                 return (*this);
             }
         };
