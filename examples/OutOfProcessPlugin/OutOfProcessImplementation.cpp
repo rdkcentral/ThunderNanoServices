@@ -104,9 +104,12 @@ namespace Plugin {
             PluginMonitor(const PluginMonitor&) = delete;
             PluginMonitor& operator=(const PluginMonitor&) = delete;
 
-            PluginMonitor()
+PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+            PluginMonitor(OutOfProcessImplementation& parent)
+                : _parent(parent)
             {
             }
+POP_WARNING()
             ~PluginMonitor() override
             {
             }
@@ -129,6 +132,9 @@ namespace Plugin {
             BEGIN_INTERFACE_MAP(PluginMonitor)
                 INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
             END_INTERFACE_MAP
+
+        private:
+            VARIABLE_IS_NOT_USED OutOfProcessImplementation& _parent;
         };
 
     public:
