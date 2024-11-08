@@ -717,12 +717,8 @@ POP_WARNING()
         {
         }
 
-        ~WebServerImplementation() override {
-            for (auto & observer: _observers){
-                Unregister(observer);
-            }
-        }
-
+        ~WebServerImplementation() override = default;
+        
         friend Core::ThreadPool::JobType<WebServerImplementation&>;
 
         uint32_t Configure(PluginHost::IShell* service) override
@@ -783,6 +779,7 @@ POP_WARNING()
         {
             ASSERT(notification != nullptr);
 
+            _adminLock.Lock();
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
             ASSERT(index == _observers.end());
@@ -792,11 +789,13 @@ POP_WARNING()
                 notification->AddRef();
                 _observers.push_back(notification);
             }
+            _adminLock.Unlock();
         }
         void Unregister(PluginHost::IStateControl::INotification* notification) override
         {
             ASSERT(notification != nullptr);
 
+            _adminLock.Lock();
             // Only subscribe an interface once.
             std::list<PluginHost::IStateControl::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
 
@@ -809,6 +808,7 @@ POP_WARNING()
                 (*index)->Release();
                 _observers.erase(index);
             }
+            _adminLock.Unlock();
         }
         void AddProxy(const string& path, const string& subst, const string& address) override
         {
@@ -844,16 +844,14 @@ POP_WARNING()
     {
         TRACE(WebFlow, (request));
 
-        bool safePath = true;
-
-        string realPath = Core::File::Normalize(request->Path, safePath);
-        if (safePath == true) {
+        const string realPath = Core::File::Normalize(request->Path, true /* safe path */);
+        if (realPath.empty() == false) {
             // Use Normalized Path
             request->Path = realPath;
         }
 
         // Check if the channel server will relay this message.
-        if (safePath == false) {
+        if (realPath.empty() == true) {
             Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
             response->ErrorCode = Web::STATUS_BAD_REQUEST;
             response->Message = "Invalid Request";

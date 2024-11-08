@@ -21,7 +21,7 @@ namespace Compositor {
 
             Exchange::ICompositionBuffer::buffer_id Accessor() const override
             {
-                return reinterpret_cast<Exchange::ICompositionBuffer::buffer_id>(_source.Identifier());
+                return static_cast<Exchange::ICompositionBuffer::buffer_id>(_source.Identifier());
             }
 
             uint32_t Stride() const override

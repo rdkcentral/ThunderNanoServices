@@ -32,6 +32,8 @@ set(PLATFORM_COMPOSITOR "compositorplugin")
 
 option(PLUGIN_COMPOSITOR_IMPLEMENTATION "Defines which implementation is used." "None")
 option(PLUGIN_COMPOSITOR_HARDWAREREADY "Manual overrule of the time it takes to initialisize all hardware (s) [0 - UINT16_MAX]." 0)
+
+set(PLUGIN_COMPOSITOR_STARTMODE "Activated" CACHE STRING "Automatically start Compositor plugin")
 set(PLUGIN_COMPOSITOR_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process or remote.")
 
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
