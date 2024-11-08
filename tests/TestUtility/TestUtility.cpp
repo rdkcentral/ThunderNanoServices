@@ -37,15 +37,15 @@ namespace TestUtility {
             }
             ~MemoryObserverImpl() = default;
         public:
-            virtual uint64_t Resident() const { return _main.Resident(); }
+            virtual uint64_t Resident() const override { return _main.Resident(); }
 
-            virtual uint64_t Allocated() const { return _main.Allocated(); }
+            virtual uint64_t Allocated() const override { return _main.Allocated(); }
 
-            virtual uint64_t Shared() const { return _main.Shared(); }
+            virtual uint64_t Shared() const override { return _main.Shared(); }
 
-            virtual uint8_t Processes() const { return (IsOperational() ? 1 : 0); }
+            virtual uint8_t Processes() const override { return (IsOperational() ? 1 : 0); }
 
-            virtual bool IsOperational() const { return _main.IsActive(); }
+            virtual bool IsOperational() const override { return _main.IsActive(); }
 
             BEGIN_INTERFACE_MAP(MemoryObserverImpl)
             INTERFACE_ENTRY(Exchange::IMemory)
