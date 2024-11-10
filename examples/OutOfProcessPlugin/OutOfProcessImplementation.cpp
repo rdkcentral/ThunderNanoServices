@@ -190,7 +190,7 @@ POP_WARNING()
                 Exchange::IBrowser* parentInterface,
                 const string& proxyStubPath,
                 const Core::ProxyType<RPC::InvokeServer> & engine)
-                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
+                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine), _T("@OutOfProcessPlugin"))
                 , _parentInterface(parentInterface)
             {
                 Open(Core::infinite);
