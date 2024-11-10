@@ -1315,19 +1315,19 @@ namespace Plugin
             if (file.IsValid() == false) {
                 SYSLOG(Logging::Notification, (_T("DNS functionality could NOT be updated [%s]"), _dnsFile.c_str()));
             } else {
-                uint32_t offset = file.Size();
+                uint32_t offset = static_cast<uint32_t>(file.Size());
 		string startMarker((_T("#++SECTION: ")) + _service->Callsign() + '\n');
                 string endMarker((_T("#--SECTION: ")) + _service->Callsign() + '\n');
 
                 if (offset > 0) {
-                    uint32_t start = static_cast<uint32_t>(file.Search(0, reinterpret_cast<const uint8_t*>(startMarker.c_str()), startMarker.length()));
+                    uint32_t start = static_cast<uint32_t>(file.Search(0, reinterpret_cast<const uint8_t*>(startMarker.c_str()), static_cast<uint32_t>(startMarker.length())));
 
                     if (start < file.Size()) {
                         // We found a start marker, see if we have an end marker.
-                        uint32_t end = static_cast<uint32_t>(file.Search(start + startMarker.length(), reinterpret_cast<const uint8_t*>(endMarker.c_str()), endMarker.length()));
+                        uint32_t end = static_cast<uint32_t>(file.Search(start + startMarker.length(), reinterpret_cast<const uint8_t*>(endMarker.c_str()), static_cast<uint32_t>(endMarker.length())));
 
                         if (end < file.Size()) {
-                            end += endMarker.length();
+                            end += static_cast<uint32_t>(endMarker.length());
                             offset -= (end - start);
 
                             if (offset > start) {
