@@ -27,10 +27,10 @@
 namespace Thunder {
 namespace Plugin {
 
-    class WebServer : public PluginHost::IPlugin {
+    class WebServer : public PluginHost::IPlugin{
     private:
 
-        class Notification : public RPC::IRemoteConnection::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification, public PluginHost::IStateControl::INotification {
         public:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -56,8 +56,14 @@ namespace Plugin {
             {
             }
 
+
+            void StateChange(const PluginHost::IStateControl::state state) override {
+                _parent.StateChange(state);
+            }
+
             BEGIN_INTERFACE_MAP(Notification)
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            INTERFACE_ENTRY (PluginHost::IStateControl::INotification)
             END_INTERFACE_MAP
 
         private:
@@ -74,6 +80,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _service(nullptr)
             , _server(nullptr)
             , _memory(nullptr)
+            , _statecontrol(nullptr)
             , _notification(this)
         {
         }
@@ -84,7 +91,7 @@ POP_WARNING()
         INTERFACE_ENTRY(IPlugin)
         INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         INTERFACE_AGGREGATE(Exchange::IWebServer, _server)
-        INTERFACE_AGGREGATE(PluginHost::IStateControl, _server)
+        INTERFACE_AGGREGATE(PluginHost::IStateControl, _statecontrol)
         END_INTERFACE_MAP
 
     public:
@@ -108,6 +115,7 @@ POP_WARNING()
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
         string Information() const override;
 
+        void StateChange(PluginHost::IStateControl::state);
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
 
@@ -117,6 +125,7 @@ POP_WARNING()
         PluginHost::IShell* _service;
         Exchange::IWebServer* _server;
         Exchange::IMemory* _memory;
+        PluginHost::IStateControl* _statecontrol;
         Core::SinkType<Notification> _notification;
     };
 }

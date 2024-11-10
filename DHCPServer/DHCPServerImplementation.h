@@ -161,6 +161,7 @@ namespace Plugin {
             {
                 _id._allocation = nullptr;
             }
+PUSH_WARNING(DISABLE_WARNING_ARRAY_BOUNDS)
             Identifier(const uint8_t id[], const uint8_t length)
                 : _length(length)
             {
@@ -172,6 +173,7 @@ namespace Plugin {
                     ::memcpy(_id._buffer, id, _length);
                 }
             }
+POP_WARNING()
             Identifier(const Identifier& copy)
                 : _length(copy._length)
             {

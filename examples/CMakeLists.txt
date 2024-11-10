@@ -24,7 +24,7 @@ find_package(Thunder)
 project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
-option(EXAMPLE_COMRPCCLIENT"Include COMRPCClient example" OFF)
+option(EXAMPLE_COMRPCCLIENT "Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
@@ -36,14 +36,15 @@ option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message 
 option(EXAMPLE_DYNAMICLOADING "Include dynamic loading examples" OFF)
 option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
+option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
 endif()
 
 if(PLUGIN_JSONRPC)
-    add_subdirectory(JSONRPCPlugin)
-    add_subdirectory(JSONRPCClient)
+    add_subdirectory(JSONRPC/Plugin)
+    add_subdirectory(JSONRPC/Client)
 endif()
 
 if(PLUGIN_FILETRANSFER)
@@ -84,6 +85,11 @@ if (EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE)
 endif()
 
 if (EXAMPLE_SIMPLECOMRPC_TEST)
-    add_subdirectory(SimpleCOMRPCPluginServer)
-    add_subdirectory(SimpleCOMRPCClient)
+    add_subdirectory(SimpleCOMRPC/PluginServer)
+    add_subdirectory(SimpleCOMRPC/Client)
 endif()
+
+if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)
+    add_subdirectory(DynamicJSONRPCErrorMessage)
+endif()
+

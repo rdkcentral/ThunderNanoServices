@@ -380,7 +380,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     if (info.store_hint != 0) {
                         if (_parent.SecurityKey(info.key.addr.bdaddr, static_cast<Bluetooth::Address::type>(info.key.addr.type),
                                                 Bluetooth::LongTermKey(info.key.addr.bdaddr, info.key.addr.type, info.key.type,
-#ifdef NO_INCLUSIVE_LANGUAGE
+#ifdef BLUEZ_HAS_NO_INCLUSIVE_LANGUAGE
                                                                        info.key.central,
 #else
                                                                        info.key.master,
