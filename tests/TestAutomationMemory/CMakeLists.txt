@@ -38,6 +38,10 @@ find_package(${NAMESPACE}Tracing REQUIRED)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
+if(BUILD_REFERENCE)
+    add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
 add_library(${MODULE_NAME} SHARED
         Module.cpp
         TestAutomationMemory.cpp
