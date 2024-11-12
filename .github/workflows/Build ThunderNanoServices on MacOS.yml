@@ -3,7 +3,7 @@ name: Build ThunderNanoServices on MacOS
 on:
   workflow_dispatch:
   push:
-    branches: ["development/Actions-macOS"] # change to master
+    branches: ["master"]
   pull_request:
     branches: ["master"]
 
@@ -17,4 +17,4 @@ jobs:
 
   ThunderNanoServices:
     needs: ThunderInterfaces
-    uses: rdkcentral/ThunderNanoServices/.github/workflows/MacOS build template.yml@development/Actions-macOS
+    uses: rdkcentral/ThunderNanoServices/.github/workflows/MacOS build template.yml@master
