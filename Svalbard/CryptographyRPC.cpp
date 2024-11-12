@@ -38,7 +38,7 @@ namespace Plugin {
                 CryptographyImplementation* parent,
                 const string& proxyStubPath,
                 const Core::ProxyType<RPC::InvokeServer>& engine)
-                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine))
+                : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine), _T("@Svalbard"))
                 , _parent(*parent)
             {
                 Open(Core::infinite);
