@@ -9,11 +9,11 @@ on:
 
 jobs:
   Thunder:
-    uses: rdkcentral/Thunder/.github/workflows/MacOS build template.yml@development/Actions-macOS
+    uses: rdkcentral/Thunder/.github/workflows/MacOS build template.yml@master
 
   ThunderInterfaces:
     needs: Thunder
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/MacOS build template.yml@development/Actions-macOS
+    uses: rdkcentral/ThunderInterfaces/.github/workflows/MacOS build template.yml@master
 
   ThunderNanoServices:
     needs: ThunderInterfaces
