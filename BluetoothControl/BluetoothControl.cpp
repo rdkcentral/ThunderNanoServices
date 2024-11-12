@@ -21,12 +21,6 @@
 
 namespace Thunder {
 
-ENUM_CONVERSION_BEGIN(Plugin::BluetoothControl::Config::adaptertype)
-    { Plugin::BluetoothControl::Config::CLASSIC, _TXT("classic") },
-    { Plugin::BluetoothControl::Config::LOW_ENERGY, _TXT("lowenergy") },
-    { Plugin::BluetoothControl::Config::DUAL, _TXT("dual") },
-ENUM_CONVERSION_END(Plugin::BluetoothControl::Config::adaptertype)
-
 namespace Plugin {
 
     namespace {
@@ -66,8 +60,9 @@ namespace Plugin {
             result = Core::ToString(driverMessage);
         }
         else {
-            const bool supportsClassic((_config.Type.IsSet() == false) || (_config.Type == Config::CLASSIC) || (_config.Type == Config::DUAL));
-            const bool supportsLowEnergy((_config.Type.IsSet() == false) || (_config.Type == Config::LOW_ENERGY) || (_config.Type == Config::DUAL));
+            const bool isDual = ((_config.Type.IsSet() == false) || (_config.Type == JBluetoothControl::adaptertype::DUAL));
+            const bool supportsClassic(isDual || (_config.Type == JBluetoothControl::adaptertype::CLASSIC));
+            const bool supportsLowEnergy(isDual || (_config.Type == JBluetoothControl::adaptertype::LOW_ENERGY));
             uint32_t deviceClass(_config.Class.Value());
 
             ASSERT(supportsClassic || supportsLowEnergy);
@@ -213,7 +208,7 @@ namespace Plugin {
 
                 service->Register(this);
 
-                Exchange::JBluetoothControl::Register<JSONRPCImplementation>(*this, _jsonrpcImplementation);
+                Exchange::JSONRPC::JBluetoothControl::Register(*this, &_jsonrpcImplementation, &_jsonrpcImplementation);
 
                 // Bluetooth is ready!
                 PluginHost::ISubSystem* subSystems(service->SubSystems());
@@ -235,7 +230,7 @@ namespace Plugin {
 
         if (Connector().IsOpen() == true) {
 
-            Exchange::JBluetoothControl::Unregister(*this);
+            Exchange::JSONRPC::JBluetoothControl::Unregister(*this);
 
             service->Unregister(this);
 
