@@ -27,6 +27,9 @@
 // #define __GBM__
 
 #include <DRM.h>
+#include <DRMTypes.h>
+#include <PropertyAdministrator.h>
+
 #include <drm.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
@@ -50,7 +53,7 @@ namespace Compositor {
 
         constexpr TCHAR drmDevicesRootPath[] = _T("/dev/dri/");
 
-        Identifier FindConnectorId(const int fd, const string& connectorName)
+        DRM::Identifier FindConnectorId(const int fd, const string& connectorName)
         {
             Identifier connectorId(InvalidIdentifier);
 
@@ -106,11 +109,44 @@ namespace Compositor {
 
             return file;
         }
+
         class DRM {
         public:
             struct FrameBuffer {
                 Core::ProxyType<Exchange::ICompositionBuffer> data;
-                Compositor::Identifier identifier;
+                Compositor::DRM::Identifier identifier;
+            };
+
+            template <Compositor::DRM::ObjectType OBJECT_TYPE>
+            class DRMObject : public Compositor::DRM::IDrmObject {
+            public:
+                DRMObject()
+                    : _id(InvalidIdentifier)
+                    , _properies()
+                {
+                }
+
+                virtual ~DRMObject() = default;
+
+                const Compositor::DRM::IProperty* Properties() const override
+                {
+                    return &_properies;
+                };
+
+                const Compositor::DRM::Identifier Id() const override
+                {
+                    return _id;
+                };
+
+                uint32_t Configure(const int drmfd, uint32_t drmId)
+                {
+                    _id = static_cast<Compositor::DRM::Identifier>(drmId);
+                    return _properies.Scan(drmfd, _id);
+                }
+
+            private:
+                Compositor::DRM::Identifier _id;
+                Compositor::DRM::PropertyAdministratorType<OBJECT_TYPE> _properies;
             };
 
             class ConnectorImplementation : public Exchange::ICompositionBuffer, public IOutput::IConnector {
@@ -123,29 +159,19 @@ namespace Compositor {
 
                 ConnectorImplementation(const string& connector, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::ICallback* callback)
                     : _backend(_backends.Instance<Backend::DRM>(GetGPUNode(connector), GetGPUNode(connector)))
-                    , _connectorId(FindConnectorId(_backend->Descriptor(), connector))
-                    , _ctrController(InvalidIdentifier)
-                    , _primaryPlane(InvalidIdentifier)
+                    , _connector()
+                    , _crtc()
+                    , _primaryPlane()
                     , _bufferId(InvalidIdentifier)
                     , _buffer()
-                    , _connectorProperties()
-                    , _crtcProperties()
-                    , _drmModeStatus()
-                    , _dpmsPropertyId(InvalidIdentifier)
                     , _callback(callback)
                     , _format(format)
                 {
-                    ASSERT(_connectorId != InvalidIdentifier);
-
-                    GetPropertyIds(_connectorId, DRM_MODE_OBJECT_CONNECTOR, _connectorProperties);
-
-                    _dpmsPropertyId = Compositor::DRM::GetPropertyId(_connectorProperties, "DPMS");
+                    _connector.Configure(_backend->Descriptor(), FindConnectorId(_backend->Descriptor(), connector));
 
                     if (Scan() == false) {
                         TRACE(Trace::Backend, ("Connector %s is not in a valid state", connector.c_str()));
                     } else {
-                        ASSERT(_ctrController != InvalidIdentifier);
-                        ASSERT(_primaryPlane != InvalidIdentifier);
                         ASSERT(_buffer.IsValid());
                         ASSERT(_bufferId != InvalidIdentifier);
 
@@ -158,7 +184,7 @@ namespace Compositor {
                             }
                         }
 
-                        TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connectorId, _ctrController, _primaryPlane));
+                        TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connector.Id(), _crtc.Id(), _primaryPlane.Id()));
                     }
                 }
 
@@ -223,34 +249,41 @@ namespace Compositor {
                  * IOutput::IConnector implementation
                  */
 
-                bool IsEnabled() const
+                bool IsEnabled() const override
                 {
                     // Todo: this will control switching on or of the display by controlling the Display Power Management Signaling (DPMS)
                     return true;
                 }
-                Compositor::Identifier ConnectorId() const override
-                {
-                    return _connectorId;
-                }
-                Compositor::Identifier CtrControllerId() const override
-                {
-                    return _ctrController;
-                }
-                Compositor::Identifier PrimaryPlaneId() const override
-                {
-                    return _primaryPlane;
-                }
-                Compositor::Identifier FrameBufferId() const override
-                {
-                    return _bufferId;
-                }
+
                 const drmModeModeInfo& ModeInfo() const override
                 {
                     return _drmModeStatus;
                 }
-                Compositor::Identifier DpmsPropertyId() const override
+
+                const Compositor::DRM::IDrmObject* Plane() const override
                 {
-                    return _dpmsPropertyId;
+                    return &_primaryPlane;
+                }
+
+                const Compositor::DRM::IDrmObject* CrtController() const override
+                {
+                    return &_crtc;
+                }
+
+                // IDrmObject implementaion
+                const Compositor::DRM::Identifier Id() const override
+                {
+                    return _connector.Id();
+                }
+
+                const Compositor::DRM::IProperty* Properties() const override
+                {
+                    return _connector.Properties();
+                }
+
+                Compositor::DRM::Identifier FrameBufferId() const override
+                {
+                    return _bufferId;
                 }
 
                 Compositor::ICallback* Callback() const
@@ -261,15 +294,12 @@ namespace Compositor {
             private:
                 bool IsConnected() const
                 {
-                    return (_ctrController != Compositor::InvalidIdentifier);
+                    return (_crtc.Id() != Compositor::InvalidIdentifier);
                 }
 
                 bool Scan()
                 {
                     bool result(false);
-
-                    _ctrController = Compositor::InvalidIdentifier;
-                    _primaryPlane = Compositor::InvalidIdentifier;
 
                     drmModeResPtr drmModeResources = drmModeGetResources(_backend->Descriptor());
                     drmModePlaneResPtr drmModePlaneResources = drmModeGetPlaneResources(_backend->Descriptor());
@@ -290,7 +320,7 @@ namespace Compositor {
                         ASSERT(drmModeConnector != nullptr);
 
                         /* Find our drmModeConnector if it's connected*/
-                        if ((drmModeConnector->connector_id != _connectorId) && (drmModeConnector->connection != DRM_MODE_CONNECTED)) {
+                        if ((drmModeConnector->connector_id != _connector.Id()) && (drmModeConnector->connection != DRM_MODE_CONNECTED)) {
                             continue;
                         }
 
@@ -300,6 +330,7 @@ namespace Compositor {
                         const char* name = drmModeGetConnectorTypeName(drmModeConnector->connector_type);
                         TRACE(Trace::Backend, ("Connector %s-%u connected", name, drmModeConnector->connector_type_id));
 
+                        /* Get a bitmask of CRTCs the connector is compatible with. */
                         uint32_t _possibleCrtcs = drmModeConnectorGetPossibleCrtcs(_backend->Descriptor(), drmModeConnector);
 
                         if (_possibleCrtcs == 0) {
@@ -364,16 +395,14 @@ namespace Compositor {
 
                             ASSERT(plane);
 
-                            _ctrController = crtc->crtc_id;
-                            _primaryPlane = plane->plane_id;
                             _drmModeStatus = crtc->mode;
 
                             uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
 
                             TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
 
-                            GetPropertyIds(_ctrController, DRM_MODE_OBJECT_CRTC, _crtcProperties);
-                            GetPropertyIds(_primaryPlane, DRM_MODE_OBJECT_PLANE, _planeProperties);
+                            _crtc.Configure(_backend->Descriptor(), crtc->crtc_id);
+                            _primaryPlane.Configure(_backend->Descriptor(), plane->plane_id);
 
                             if (_buffer.IsValid()) {
                                 _buffer.Release();
@@ -393,7 +422,7 @@ namespace Compositor {
                             _bufferId = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), _buffer.operator->());
                             // _refreshRate = crtc->mode.vrefresh;
 
-                            plane = drmModeGetPlane(_backend->Descriptor(), _primaryPlane);
+                            plane = drmModeGetPlane(_backend->Descriptor(), _primaryPlane.Id());
 
                             drmModeFreeCrtc(crtc);
                             drmModeFreePlane(plane);
@@ -403,8 +432,7 @@ namespace Compositor {
                             TRACE(Trace::Error, ("Failed to get encoder for id %u", drmModeConnector->connector_id));
                         }
 
-                        result = ((_ctrController != Compositor::InvalidIdentifier)
-                            && (_primaryPlane != Compositor::InvalidIdentifier));
+                        result = ((_crtc.Id() != Compositor::InvalidIdentifier) && (_primaryPlane.Id() != Compositor::InvalidIdentifier));
 
                         break;
                     }
@@ -432,52 +460,17 @@ namespace Compositor {
                 }
 #undef CASE_TO_STRING
 
-                bool GetPropertyIds(const Compositor::Identifier object, const uint32_t type, Compositor::DRM::PropertyRegister& registry)
-                {
-                    registry.clear();
-
-                    TRACE(Trace::Backend, ("Scanning %s Properties", ObjectSting(type)));
-
-                    drmModeObjectProperties* properties = drmModeObjectGetProperties(_backend->Descriptor(), object, type);
-
-                    if (properties != nullptr) {
-                        for (uint32_t i = 0; i < properties->count_props; ++i) {
-                            drmModePropertyRes* property = drmModeGetProperty(_backend->Descriptor(), properties->props[i]);
-
-                            TRACE(Trace::Backend, (" - %s [%" PRIu32 "]", property->name, property->prop_id));
-
-                            registry.emplace(std::piecewise_construct,
-                                std::forward_as_tuple(property->name),
-                                std::forward_as_tuple(property->prop_id));
-
-                            drmModeFreeProperty(property);
-                        }
-
-                        drmModeFreeObjectProperties(properties);
-                    } else {
-                        TRACE(Trace::Error, ("Failed to get DRM object properties"));
-                        return false;
-                    }
-
-                    return true;
-                }
-
             private:
                 Core::ProxyType<DRM> _backend;
 
-                const Compositor::Identifier _connectorId;
-                Compositor::Identifier _ctrController;
-                Compositor::Identifier _primaryPlane;
+                DRMObject<Compositor::DRM::ObjectType::Connenctor> _connector;
+                DRMObject<Compositor::DRM::ObjectType::Crtc> _crtc;
+                DRMObject<Compositor::DRM::ObjectType::Plane> _primaryPlane;
 
-                Compositor::Identifier _bufferId;
+                Compositor::DRM::Identifier _bufferId;
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
 
-                Compositor::DRM::PropertyRegister _connectorProperties;
-                Compositor::DRM::PropertyRegister _crtcProperties;
-                Compositor::DRM::PropertyRegister _planeProperties;
-
                 drmModeModeInfo _drmModeStatus;
-                Compositor::Identifier _dpmsPropertyId;
 
                 Compositor::ICallback* _callback;
 
@@ -544,6 +537,10 @@ namespace Compositor {
                     } else {
                         Core::ResourceMonitor::Instance().Register(_monitor);
                     }
+
+                    if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_ASPECT_RATIO, 1) != 0) {
+                        TRACE(Trace::Information, ("Picture aspect ratio not supported."));
+                    }
                 }
 
                 ASSERT(_cardFd != Compositor::InvalidFileDescriptor);
@@ -580,25 +577,25 @@ namespace Compositor {
 
                 uint32_t result(Core::ERROR_NONE);
 
-                if (connector.CtrControllerId() != Compositor::InvalidIdentifier) {
+                if (connector.CrtController()->Id() != Compositor::InvalidIdentifier) {
                     _adminLock.Lock();
 
-                    const auto index(_pendingCommits.find(connector.CtrControllerId()));
+                    const auto index(_pendingCommits.find(connector.CrtController()->Id()));
 
                     if (index == _pendingCommits.end()) {
                         connector.AddRef();
 
                         if ((result = _output.Commit(_cardFd, &connector, DRM_MODE_PAGE_FLIP_EVENT, this)) != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, ("DRM Commit failed for CRTC %u", connector.CtrControllerId()));
+                            TRACE(Trace::Error, ("DRM Commit failed for CRTC %u", connector.CrtController()->Id()));
                         } else {
                             _pendingCommits.emplace(std::piecewise_construct,
-                                std::forward_as_tuple(connector.CtrControllerId()),
+                                std::forward_as_tuple(connector.CrtController()->Id()),
                                 std::forward_as_tuple(&connector));
 
-                            TRACE(Trace::Backend, ("Commited pageflip for CRTC %u", connector.CtrControllerId()));
+                            TRACE(Trace::Backend, ("Commited pageflip for CRTC %u", connector.CrtController()->Id()));
                         }
                     } else {
-                        TRACE(Trace::Backend, ("Skipping commit, pageflip is still pending for CRTC %u", connector.CtrControllerId()));
+                        TRACE(Trace::Backend, ("Skipping commit, pageflip is still pending for CRTC %u", connector.CrtController()->Id()));
                         result = Core::ERROR_INPROGRESS;
                     }
 
@@ -608,7 +605,7 @@ namespace Compositor {
                 return result;
             }
 
-            void FinishPageFlip(const Compositor::Identifier crtc, const unsigned sec, const unsigned usec)
+            void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sec, const unsigned usec)
             {
                 _adminLock.Lock();
 
@@ -621,7 +618,7 @@ namespace Compositor {
                     connector = index->second;
                     _pendingCommits.erase(index);
 
-                    ASSERT(crtc == connector->CtrControllerId());
+                    ASSERT(crtc == connector->CrtController()->Id());
 
                     connector->Completed(false);
 

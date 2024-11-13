@@ -21,6 +21,7 @@
 
 #include "../Module.h"
 
+#include <DRMTypes.h>
 #include <xf86drmMode.h>
 
 namespace Thunder {
@@ -31,20 +32,22 @@ namespace Backend {
 
     struct EXTERNAL IOutput {
 
-        struct EXTERNAL IConnector {
+            struct EXTERNAL IConnector : public Compositor::DRM::IDrmObject {
             virtual ~IConnector() = default;
 
-
+                // @brief Whenever the output should be displayed
             virtual bool IsEnabled() const = 0; 
 
-            virtual Identifier ConnectorId() const = 0;
-            virtual Identifier CtrControllerId() const = 0;
-            virtual Identifier PrimaryPlaneId() const = 0;
             virtual Identifier FrameBufferId() const = 0;
 
-            virtual Identifier DpmsPropertyId() const = 0;
-
+                // @brief Current display mode for this output
             virtual const drmModeModeInfo& ModeInfo() const = 0;
+
+                // @brief Information from the attached CRTC;
+                virtual const Compositor::DRM::IDrmObject* CrtController() const = 0;
+
+                // @brief Information from the attached Plane/Buffer;
+                virtual const Compositor::DRM::IDrmObject* Plane() const = 0;
         };
 
         static IOutput& Instance();
