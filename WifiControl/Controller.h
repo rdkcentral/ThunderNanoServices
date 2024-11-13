@@ -2230,8 +2230,8 @@ namespace WPASupplicant {
         void Update(const uint64_t& bssid, const uint32_t id, const uint32_t throughput);
         void Update(const string& ssid, const uint32_t id, const bool succeeded);
         void Reevaluate();
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize);
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize);
+        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
+        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
 
         void Revoke(const Request* id) const
         {

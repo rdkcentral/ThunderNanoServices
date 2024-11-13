@@ -105,7 +105,6 @@ namespace Plugin {
         uint32_t _min;
         uint32_t _max;
         uint64_t _start;
-        uint64_t _stop;
         uint64_t _total;
     };
 }

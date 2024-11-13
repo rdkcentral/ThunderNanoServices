@@ -58,7 +58,6 @@ public:
             public RPC::IRemoteConnection::INotification
     {
     public:
-        Notification() = delete;
         Notification(const Notification&) = delete;
         Notification& operator=(const Notification&) = delete;
 
@@ -70,6 +69,8 @@ public:
             ProcessObject() = delete;
             ProcessObject(const ProcessObject&) = default;
             ProcessObject& operator=(const ProcessObject&) = default;
+            ProcessObject(ProcessObject&&) = default;
+            ProcessObject& operator=(ProcessObject&&) = default;
 
         public:
             ProcessObject(
@@ -82,7 +83,7 @@ public:
             ~ProcessObject()
             {
             }
-            uint32_t ProcessId()
+            uint32_t ProcessId() const
             {
                 return _processId;
             }
@@ -90,26 +91,24 @@ public:
             {
                 _exitTime = exitTime;
             }
-            uint64_t ExitTime()
+            uint64_t ExitTime() const
             {
                 return _exitTime;
             }
 
         private:
-            const uint32_t _processId;
+            uint32_t _processId;
             uint64_t _exitTime;
         };
 
     public:
-        Notification(ProcessMonitor* parent)
+        Notification()
             : _adminLock()
             , _processMap()
             , _job(*this)
             , _service(nullptr)
-            , _parent(*parent)
             ,_exittimeout(10000000)
         {
-            ASSERT(parent != nullptr);
         }
         ~Notification() override
         {
@@ -255,13 +254,12 @@ public:
         std::unordered_map<string, ProcessObject> _processMap;
         Job  _job;
         PluginHost::IShell* _service;
-        ProcessMonitor& _parent;
         uint32_t _exittimeout;
     };
 
 public:
     ProcessMonitor()
-        : _notification(this)
+        : _notification()
     {
     }
     ~ProcessMonitor() override

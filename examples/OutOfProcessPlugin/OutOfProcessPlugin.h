@@ -189,6 +189,9 @@ POP_WARNING()
         END_INTERFACE_MAP
 
     public:
+        using PluginHost::JSONRPC::Attach;
+        using PluginHost::JSONRPC::Detach;
+
         //  IPlugin methods
         // -------------------------------------------------------------------------------------------------------
 

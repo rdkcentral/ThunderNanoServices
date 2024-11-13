@@ -169,7 +169,7 @@ namespace Plugin {
             ~JSONRPCServer() override = default;
 
         public:
-            virtual void Received(Core::ProxyType<INTERFACE>& jsonObject)
+            virtual void Received(Core::ProxyType<INTERFACE>& jsonObject) override
             {
                 if (jsonObject.IsValid() == false) {
                     printf("Oops");
@@ -181,7 +181,7 @@ namespace Plugin {
                     this->Submit(jsonObject);
                 }
             }
-            virtual void Send(Core::ProxyType<INTERFACE>& jsonObject)
+            virtual void Send(Core::ProxyType<INTERFACE>& jsonObject) override
             {
                 if (jsonObject.IsValid() == false) {
                     printf("Oops");
@@ -189,7 +189,7 @@ namespace Plugin {
                     ToMessage(jsonObject);
                 }
             }
-            virtual void StateChange()
+            virtual void StateChange() override
             {
                 TRACE(Trace::Information, (_T("JSONRPCServer: State change: ")));
                 if (this->IsOpen()) {
@@ -199,7 +199,7 @@ namespace Plugin {
                     TRACE(Trace::Information, (_T("Closed - %s\n"), (this->IsSuspended() ? _T("SUSPENDED") : _T("OK"))));
                 }
             }
-            virtual bool IsIdle() const
+            virtual bool IsIdle() const override
             {
                 return (true);
             }
