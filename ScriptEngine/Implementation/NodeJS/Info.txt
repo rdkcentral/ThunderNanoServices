@@ -1,0 +1,60 @@
+// Set up the Node.js instance for execution, and run code inside of it.
+// There is also a variant that takes a callback and provides it with
+// the `require` and `process` objects, so that it can manually compile
+// and run scripts as needed.
+// The `require` function inside this script does *not* access the file
+// system, and can only load built-in Node.js modules.
+// `module.createRequire()` is being used to create one that is able to
+// load files from the disk, and uses the standard CommonJS file loader
+// instead of the internal-only `require` function.
+//v8::MaybeLocal<v8::Value> loadenv_ret = node::LoadEnvironment(
+//	env,
+//	"const publicRequire ="
+//	"  require('node:module').createRequire(process.cwd() + '/');"
+//	"globalThis.require = publicRequire;"
+//	"require('node:vm').runInThisContext(process.argv[1]);");
+//v8::MaybeLocal<v8::Value> loadenv_ret = node::LoadEnvironment(
+//	_environment->env(),
+//	"console.log(\"Poep Chinees\");");
+
+//v8::Local<v8::Value> result = _script->Run(context).ToLocalChecked();
+//v8::String::Utf8Value utf8(isolate, result);
+//std::cout << "result: " << *utf8 << std::endl;
+
+//if (loadenv_ret.IsEmpty() == true) {
+//	result = Core::ERROR_NONE;
+//}
+//else { // There has been a JS exception.
+//	int exit_code = node::SpinEventLoop(_environment->env()).FromMaybe(1);
+
+//	// node::Stop() can be used to explicitly stop the event loop and keep
+//	// further JavaScript from running. It can be called from any thread,
+//	// and will act like worker.terminate() if called from another thread.
+//	node::Stop(_environment->env());
+
+//	result = (exit_code == 0 ? Core::ERROR_NONE : Core::ERROR_ASYNC_FAILED);
+//}
+
+
+// obtain + lock isolate
+// v8::Isolate* isolate = _environment->isolate();
+// v8::Locker locker(isolate);
+// v8::Isolate::Scope isolateScope(isolate);
+// v8::HandleScope handle_scope(isolate);
+// v8::Context::Scope context_scope(_environment->context());
+
+// v8::Local<v8::Context> context = isolate->GetCurrentContext();
+// v8::Local<v8::Object> global_object = context->Global();
+
+// global_object->Set(context, v8::String::NewFromUtf8(isolate, "require").ToLocalChecked(), _require.Get(isolate)).ToChecked();
+// global_object->Set(context, v8::String::NewFromUtf8(isolate, "process").ToLocalChecked(), _process.Get(isolate)).ToChecked();
+
+// v8::Local<v8::String> source =
+//	v8::String::NewFromUtf8(isolate, script, v8::NewStringType::kNormal, length).ToLocalChecked();
+// _script =
+//	v8::Script::Compile(context, source).ToLocalChecked();
+
+// v8::Local<v8::Value> outcome = _script->Run(isolate->GetCurrentContext()).ToLocalChecked();
+// v8::String::Utf8Value utf8(isolate, outcome);
+// std::cout << "result: " << *utf8 << std::endl;
+// return v8::Null(isolate);
