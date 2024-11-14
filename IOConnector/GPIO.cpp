@@ -70,7 +70,7 @@ namespace GPIO
         if (_pin != 0xFFFF) {
             struct stat properties;
             char buffer[64];
-            sprintf(buffer, "/sys/class/gpio/gpio%d/value", _pin);
+            snprintf(buffer, sizeof(buffer), "/sys/class/gpio/gpio%d/value", _pin);
             // See if this pin already exists
             if (stat(buffer, &properties) < 0) {
                 int fd = open("/sys/class/gpio/export", O_WRONLY);
@@ -179,7 +179,7 @@ namespace GPIO
         if (_descriptor != -1) {
             // Oke looks like we have a valid pin.
             char buffer[64];
-            sprintf(buffer, "/sys/class/gpio/gpio%d/edge", _pin);
+            snprintf(buffer, sizeof(buffer), "/sys/class/gpio/gpio%d/edge", _pin);
 
             Core::EnumerateType<trigger_mode> textMode(mode);
 
@@ -239,7 +239,7 @@ namespace GPIO
         if (_descriptor != -1) {
             // Oke looks like we have a valid pin.
             char buffer[64];
-            sprintf(buffer, "/sys/class/gpio/gpio%d/direction", _pin);
+            snprintf(buffer, sizeof(buffer), "/sys/class/gpio/gpio%d/direction", _pin);
 
             if ((mode == GPIO::Pin::INPUT) || (mode == GPIO::Pin::OUTPUT)) {
                 Core::EnumerateType<pin_mode> textMode(mode);
@@ -262,7 +262,7 @@ namespace GPIO
         if (_descriptor != -1) {
             // Oke looks like we have a valid pin.
             char buffer[64];
-            sprintf(buffer, "/sys/class/gpio/gpio%d/active_low", _pin);
+            snprintf(buffer, sizeof(buffer), "/sys/class/gpio/gpio%d/active_low", _pin);
 
             if ((mode == GPIO::Pin::OFF) || (mode == GPIO::Pin::DOWN) || (mode == GPIO::Pin::DOWN)) {
 

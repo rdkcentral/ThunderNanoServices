@@ -174,8 +174,8 @@ public:
 
     PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     WorkerPoolImplementation(const uint8_t threads, const uint32_t stackSize, const uint32_t queueSize)
-        : WorkerPool(threads, stackSize, queueSize, this, nullptr) {
-        //, _announceHandler(nullptr) {
+        : WorkerPool(threads, stackSize, queueSize, this, nullptr)
+    {
         Core::IWorkerPool::Assign(this);
     }
     POP_WARNING()
@@ -204,9 +204,6 @@ private:
 
         WorkerPool::Submit(Core::ProxyType<Core::IDispatch>(job));
     }
-
-private:
-    Core::IIPCServer* _announceHandler;
 };
 
 int main(int /* argc */, char** /* argv */)

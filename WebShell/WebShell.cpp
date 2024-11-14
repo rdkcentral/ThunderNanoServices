@@ -294,7 +294,7 @@ namespace Plugin {
             return (err == 0 ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
         }
 
-        virtual uint32_t Worker()
+        virtual uint32_t Worker() override
         {
 
             uint32_t delay = 0;

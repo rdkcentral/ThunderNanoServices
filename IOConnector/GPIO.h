@@ -33,6 +33,10 @@ namespace GPIO {
     class Pin : public Exchange::ExternalBase, 
                 public Exchange::IInputPin,
                 public Core::IResource {
+    public:
+        using Exchange::ExternalBase::Register;
+        using Exchange::ExternalBase::Unregister;
+
     private:
         using BaseClass = Exchange::ExternalBase;
 

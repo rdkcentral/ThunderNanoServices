@@ -707,7 +707,7 @@ namespace Plugin {
         _dialServiceImpl->Locator(pluginInterface->Accessor());
 
         // Redirect all calls to the DIALServer, via a proxy.
-        const string remote = (_dialURL.Host().Value() + (_T(":") + _dialURL.Port().Value()));
+        const string remote = (_dialURL.Host().Value() + (_T(":") + std::to_string(_dialURL.Port().Value())));
         const string path = (_T("/") + _dialURL.Path().Value());
         pluginInterface->AddProxy(path, path, remote);
 
