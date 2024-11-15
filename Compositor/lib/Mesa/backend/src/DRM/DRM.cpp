@@ -545,6 +545,7 @@ namespace Compositor {
 
                 ASSERT(_cardFd != Compositor::InvalidFileDescriptor);
             }
+
             virtual ~DRM()
             {
                 if (_cardFd > 0) {
@@ -585,7 +586,7 @@ namespace Compositor {
                     if (index == _pendingCommits.end()) {
                         connector.AddRef();
 
-                        if ((result = _output.Commit(_cardFd, &connector, DRM_MODE_PAGE_FLIP_EVENT, this)) != Core::ERROR_NONE) {
+                        if ((result = _output.Commit(_cardFd, &connector, this)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, ("DRM Commit failed for CRTC %u", connector.CrtController()->Id()));
                         } else {
                             _pendingCommits.emplace(std::piecewise_construct,

@@ -25,52 +25,47 @@
 #include <xf86drmMode.h>
 
 namespace Thunder {
-
 namespace Compositor {
-
-namespace Backend {
-
-    struct EXTERNAL IOutput {
+    namespace Backend {
 
             struct EXTERNAL IConnector : public Compositor::DRM::IDrmObject {
-            virtual ~IConnector() = default;
+                virtual ~IConnector() = default;
 
                 // @brief Whenever the output should be displayed
-            virtual bool IsEnabled() const = 0; 
+                virtual bool IsEnabled() const = 0;
 
-            virtual Identifier FrameBufferId() const = 0;
+                virtual Identifier FrameBufferId() const = 0;
 
                 // @brief Current display mode for this output
-            virtual const drmModeModeInfo& ModeInfo() const = 0;
+                virtual const drmModeModeInfo& ModeInfo() const = 0;
 
                 // @brief Information from the attached CRTC;
                 virtual const Compositor::DRM::IDrmObject* CrtController() const = 0;
 
                 // @brief Information from the attached Plane/Buffer;
                 virtual const Compositor::DRM::IDrmObject* Plane() const = 0;
+            };
+
+            static IOutput& Instance();
+
+            virtual ~IOutput() = default;
+
+            /**
+             * @brief Commits all pending changes in the framebuffer to the screen.
+             *
+             * @param fd        The file descriptor of an opened drm node
+             * @param connector The interface of the connector to be scanned out.
+             * @param userData  This pointer is returned in the vblank
+             *
+             * @return uint32_t Core::ERROR_NONE at success, error code otherwise.
+             */
+            virtual uint32_t Commit(const int fd, const IConnector* connector, void* userData) = 0;
+
+            /**
+             * @brief This will be called when something is changed within the hardware.
+             */
+            virtual void Reevaluate() = 0;
         };
-
-        static IOutput& Instance();
-
-        virtual ~IOutput() = default;
-
-        /**
-         * @brief Commits all pending changes in the framebuffer to the screen.
-         *
-         * @param fd        The file descriptor of an opened drm node
-         * @param connector The interface of the connector to be scanned out.
-         * @param flags     DRM_MODE_PAGE_FLIP_FLAGS (see drm_mode.h)
-         * @param userData  This pointer is returned in the vblank 
-         * 
-         * @return uint32_t Core::ERROR_NONE at success, error code otherwise.
-         */
-        virtual uint32_t Commit(const int fd, const IConnector* connector, uint32_t flags, void* userData) = 0;
-
-        /**
-         * @brief This will be called when something is changed within the hardware.   
-        */
-        virtual void Reevaluate() = 0;
-    };
-} // namespace Backend
+    } // namespace Backend
 } // namespace Compositor
 } // namespace Thunder
