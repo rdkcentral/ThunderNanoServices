@@ -651,7 +651,7 @@ namespace Compositor {
                 TRACE(Trace::Frame, ("Pageflip took %" PRIu64 "us", (tpageflipend - _tpageflipstart)));
             }
 
-            static void PageFlipHandlerV2(int cardFd VARIABLE_IS_NOT_USED, unsigned seq VARIABLE_IS_NOT_USED, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
+            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq VARIABLE_IS_NOT_USED, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
             {
                 ASSERT(userData != nullptr);
 
@@ -663,12 +663,10 @@ namespace Compositor {
             int DrmEventHandler(int fd) const
             {
                 drmEventContext eventContext;
+                memset(&eventContext, 0, sizeof(eventContext));
 
                 eventContext.version = 3;
-                eventContext.vblank_handler = nullptr;
-                eventContext.page_flip_handler = nullptr;
-                eventContext.page_flip_handler2 = PageFlipHandlerV2;
-                eventContext.sequence_handler = nullptr;
+                eventContext.page_flip_handler2 = PageFlipHandler;
 
                 if (drmHandleEvent(fd, &eventContext) != 0) {
                     TRACE(Trace::Error, ("Failed to handle drm event"));
