@@ -286,6 +286,11 @@ namespace Compositor {
                     return _bufferId;
                 }
 
+                const Exchange::ICompositionBuffer* FrameBuffer() const override
+                {
+                    return this;
+                }
+
                 Compositor::ICallback* Callback() const
                 {
                     return _callback;
@@ -538,6 +543,12 @@ namespace Compositor {
                     if ((drmResult == 0) && ((drmResult = drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1)) != 0)) {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
                     }
+
+#ifdef USE_ATOMIC
+                    if ((drmResult == 0) && ((drmResult = drmSetClientCap(_cardFd, DRM_CLIENT_CAP_ATOMIC, 1)) != 0)) {
+                        TRACE(Trace::Error, ("Could not enable atomic API. Error: [%s]", strerror(errno)));
+                    }
+#endif
 
                     if ((drmResult == 0) && ((drmResult = drmGetCap(_cardFd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap))) {
                         TRACE(Trace::Error, ("Device does not support vblank per CRTC"));

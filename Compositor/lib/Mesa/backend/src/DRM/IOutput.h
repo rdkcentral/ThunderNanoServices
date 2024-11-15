@@ -27,6 +27,7 @@
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
+        struct EXTERNAL IOutput {
 
             struct EXTERNAL IConnector : public Compositor::DRM::IDrmObject {
                 virtual ~IConnector() = default;
