@@ -525,25 +525,37 @@ namespace Compositor {
                 , _output(IOutput::Instance())
                 , _pendingCommits()
             {
+                ASSERT(_cardFd != Compositor::InvalidFileDescriptor);
+
                 if (_cardFd != Compositor::InvalidFileDescriptor) {
-                    if (drmSetMaster(_cardFd) != 0) {
+                    int drmResult(0);
+                    uint64_t cap;
+
+                    if ((drmResult = drmSetMaster(_cardFd)) != 0) {
                         TRACE(Trace::Error, ("Could not become DRM master. Error: [%s]", strerror(errno)));
                     }
 
-                    if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0) {
+                    if ((drmResult == 0) && ((drmResult = drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1)) != 0)) {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
+                    }
+
+                    if ((drmResult == 0) && ((drmResult = drmGetCap(_cardFd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap))) {
+                        TRACE(Trace::Error, ("Device does not support vblank per CRTC"));
+                    }
+
+                    ASSERT(drmResult == 0);
+
+                    if (drmResult == 0) {
+                        if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_ASPECT_RATIO, 1) != 0) {
+                            TRACE(Trace::Information, ("Picture aspect ratio not supported."));
+                        }
+
+                        Core::ResourceMonitor::Instance().Register(_monitor);
+                    } else {
                         close(_cardFd);
                         _cardFd = Compositor::InvalidFileDescriptor;
-                    } else {
-                        Core::ResourceMonitor::Instance().Register(_monitor);
-                    }
-
-                    if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_ASPECT_RATIO, 1) != 0) {
-                        TRACE(Trace::Information, ("Picture aspect ratio not supported."));
                     }
                 }
-
-                ASSERT(_cardFd != Compositor::InvalidFileDescriptor);
             }
 
             virtual ~DRM()
