@@ -162,8 +162,8 @@ namespace Compositor {
                     , _connector()
                     , _crtc()
                     , _primaryPlane()
-                    , _bufferId(InvalidIdentifier)
-                    , _buffer()
+                    , _frontBuffer(0)
+                    , _frameBuffer()
                     , _callback(callback)
                     , _format(format)
                 {
@@ -172,8 +172,11 @@ namespace Compositor {
                     if (Scan() == false) {
                         TRACE(Trace::Backend, ("Connector %s is not in a valid state", connector.c_str()));
                     } else {
-                        ASSERT(_buffer.IsValid());
-                        ASSERT(_bufferId != InvalidIdentifier);
+                        ASSERT(_frameBuffer[BackBuffer()].data.IsValid());
+                        ASSERT(_frameBuffer[FrontBuffer()].data.IsValid());
+
+                        ASSERT(_frameBuffer[BackBuffer()].identifier != InvalidIdentifier);
+                        ASSERT(_frameBuffer[FrontBuffer()].identifier != InvalidIdentifier);
 
                         if (callback != nullptr) {
                             char* node = drmGetDeviceNameFromFd2(_backend->Descriptor());
@@ -192,57 +195,65 @@ namespace Compositor {
                 {
                     _backend.Release();
 
-                    //_buffer->CompositRelease();
-
                     TRACE(Trace::Backend, ("Connector %p Destroyed", this));
+                }
+
+            private:
+                constexpr const Compositor::DRM::Identifier BackBuffer() const
+                {
+                    return _frontBuffer ^ 1;
+                }
+
+                constexpr const Compositor::DRM::Identifier FrontBuffer() const
+                {
+                    return _frontBuffer;
                 }
 
             public:
                 /**
                  * Exchange::ICompositionBuffer implementation
+                 *
+                 * Returning the info of the back buffer because its used to
+                 * draw a new frame.
                  */
                 uint32_t Identifier() const override
                 {
-                    return _buffer->Identifier();
+                    return _frameBuffer[BackBuffer()].data->Identifier();
                 }
                 IIterator* Planes(const uint32_t timeoutMs) override
                 {
-                    return _buffer->Planes(timeoutMs);
+                    return _frameBuffer[BackBuffer()].data->Planes(timeoutMs);
                 }
                 uint32_t Completed(const bool dirty) override
                 {
-                    return _buffer->Completed(dirty);
+                    return _frameBuffer[BackBuffer()].data->Completed(dirty);
                 }
                 void Render() override
                 {
-                    // _bufferId = _buffer->Swap();
-
-                    // TRACE(Trace::Backend, ("Curent buffer: %u", _bufferId));
-
                     if (IsConnected() == true) {
-                        _backend->PageFlip(*this);
+                        _backend->SchedulePageFlip(*this);
                     }
                 }
                 uint32_t Width() const override
                 {
-                    return _buffer->Width();
+                    return _frameBuffer[BackBuffer()].data->Width();
                 }
                 uint32_t Height() const override
                 {
-                    return _buffer->Height();
+                    return _frameBuffer[BackBuffer()].data->Height();
                 }
                 uint32_t Format() const override
                 {
-                    return _buffer->Format();
+                    return _frameBuffer[BackBuffer()].data->Format();
                 }
                 uint64_t Modifier() const override
                 {
-                    return _buffer->Modifier();
+                    return _frameBuffer[BackBuffer()].data->Modifier();
                 }
 
                 Exchange::ICompositionBuffer::DataType Type() const
                 {
-                    return _buffer->Type();
+                    return _frameBuffer[BackBuffer()].data->Type();
                 }
 
                 /**
@@ -281,19 +292,25 @@ namespace Compositor {
                     return _connector.Properties();
                 }
 
+                // current framebuffer id to scan out
                 Compositor::DRM::Identifier FrameBufferId() const override
                 {
-                    return _bufferId;
+                    return _frameBuffer[FrontBuffer()].identifier;
                 }
 
-                const Exchange::ICompositionBuffer* FrameBuffer() const override
+                const Core::ProxyType<Thunder::Exchange::ICompositionBuffer> FrameBuffer() const override
                 {
-                    return this;
+                    return _frameBuffer[FrontBuffer()].data;
                 }
 
                 Compositor::ICallback* Callback() const
                 {
                     return _callback;
+                }
+
+                const void SwapBuffer()
+                {
+                    _frontBuffer ^= 1;
                 }
 
             private:
@@ -375,8 +392,8 @@ namespace Compositor {
                             ASSERT(crtc != nullptr);
                             ASSERT(crtc->crtc_id != 0);
                             /*
-                             * On the bananpi, the following ASSERT fired but, although the documentation
-                             * suggestst that buffer_id means disconnected, the screen was not disconnected
+                             * On the banana pi, the following ASSERT fired but, although the documentation
+                             * suggests that buffer_id means disconnected, the screen was not disconnected
                              * Hence wht the ASSERT is, until further investigation, commented out !!!
                              * ASSERT(crtc->buffer_id != 0);
                              */
@@ -409,22 +426,27 @@ namespace Compositor {
                             _crtc.Configure(_backend->Descriptor(), crtc->crtc_id);
                             _primaryPlane.Configure(_backend->Descriptor(), plane->plane_id);
 
-                            if (_buffer.IsValid()) {
-                                _buffer.Release();
+                            // allocate a double buffered framebuffer.
+                            for (auto& buffer : _frameBuffer) {
+
+                                if (buffer.data.IsValid()) {
+                                    buffer.data.Release();
+                                }
+
+                                if (buffer.identifier != Compositor::InvalidIdentifier) {
+                                    Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), buffer.identifier);
+                                    buffer.identifier = Compositor::InvalidIdentifier;
+                                }
+
+                                buffer.data = Compositor::CreateBuffer(
+                                    _backend->Descriptor(),
+                                    crtc->width,
+                                    crtc->height,
+                                    _format);
+
+                                buffer.identifier = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), buffer.data.operator->());
                             }
 
-                            if (_bufferId != Compositor::InvalidIdentifier) {
-                                Compositor::DRM::DestroyFrameBuffer(_backend->Descriptor(), _bufferId);
-                                _bufferId = Compositor::InvalidIdentifier;
-                            }
-
-                            _buffer = Compositor::CreateBuffer(
-                                _backend->Descriptor(),
-                                crtc->width,
-                                crtc->height,
-                                _format);
-
-                            _bufferId = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), _buffer.operator->());
                             // _refreshRate = crtc->mode.vrefresh;
 
                             plane = drmModeGetPlane(_backend->Descriptor(), _primaryPlane.Id());
@@ -472,8 +494,8 @@ namespace Compositor {
                 DRMObject<Compositor::DRM::ObjectType::Crtc> _crtc;
                 DRMObject<Compositor::DRM::ObjectType::Plane> _primaryPlane;
 
-                Compositor::DRM::Identifier _bufferId;
-                Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+                uint8_t _frontBuffer;
+                std::array<DRM::FrameBuffer, 2> _frameBuffer;
 
                 drmModeModeInfo _drmModeStatus;
 
@@ -595,7 +617,7 @@ namespace Compositor {
             }
 
         private:
-            uint32_t PageFlip(ConnectorImplementation& connector)
+            uint32_t SchedulePageFlip(ConnectorImplementation& connector)
             {
                 _tpageflipstart = Core::Time::Now().Ticks();
 
@@ -612,6 +634,8 @@ namespace Compositor {
                         if ((result = _output.Commit(_cardFd, &connector, this)) != Core::ERROR_NONE) {
                             TRACE(Trace::Error, ("DRM Commit failed for CRTC %u", connector.CrtController()->Id()));
                         } else {
+                            connector.SwapBuffer();
+
                             _pendingCommits.emplace(std::piecewise_construct,
                                 std::forward_as_tuple(connector.CrtController()->Id()),
                                 std::forward_as_tuple(&connector));
@@ -643,8 +667,6 @@ namespace Compositor {
                     _pendingCommits.erase(index);
 
                     ASSERT(crtc == connector->CrtController()->Id());
-
-                    connector->Completed(false);
 
                     if (connector->Callback() != nullptr) {
                         struct timespec presentationTimestamp;

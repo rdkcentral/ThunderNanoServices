@@ -37,7 +37,7 @@ namespace Compositor {
 
                 virtual Identifier FrameBufferId() const = 0;
 
-                virtual const Exchange::ICompositionBuffer* FrameBuffer() const = 0;
+                virtual const Core::ProxyType<Thunder::Exchange::ICompositionBuffer> FrameBuffer() const = 0;
 
                 // @brief Current display mode for this output
                 virtual const drmModeModeInfo& ModeInfo() const = 0;

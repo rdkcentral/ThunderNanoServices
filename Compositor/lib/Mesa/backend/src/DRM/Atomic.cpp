@@ -96,7 +96,7 @@ namespace Compositor {
                     if (propertyId != DRM::InvalidIdentifier) {
                         int presult(0);
 
-                        TRACE(Trace::Information, ("ObjectId[%u] Set propertyId %u to %" PRIu64 , objectId, propertyId, value));
+                        TRACE(Trace::Information, ("ObjectId[%u] Set propertyId %u to %" PRIu64, objectId, propertyId, value));
 
                         if ((_request != nullptr) && (presult = drmModeAtomicAddProperty(_request, objectId, propertyId, value) < 0)) {
                             TRACE(Trace::Error, ("Failed to add atomic DRM property %u: %s", propertyId, strerror(-result)));
@@ -104,7 +104,7 @@ namespace Compositor {
 
                         (result == 0) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
                     } else {
-                        TRACE(Trace::Error, ("ObjectId[%u] propertyId was invalid to %" PRIu64 , objectId, propertyId, value));
+                        TRACE(Trace::Error, ("ObjectId[%u] propertyId was invalid to %" PRIu64, objectId, propertyId, value));
                     }
 
                     return result;
@@ -206,10 +206,12 @@ namespace Compositor {
                 request->Property(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::Active), connector->IsEnabled() ? 1 : 0);
 
                 if (connector->IsEnabled() == true) {
+                    Core::ProxyType<Thunder::Exchange::ICompositionBuffer> frameBuffer = connector->FrameBuffer();
+
                     constexpr uint32_t x = 0;
                     constexpr uint32_t y = 0;
-                    const uint32_t width(connector->FrameBuffer()->Width());
-                    const uint32_t height(connector->FrameBuffer()->Height());
+                    const uint32_t width(frameBuffer->Width());
+                    const uint32_t height(frameBuffer->Height());
 
                     request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
                     request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
@@ -226,6 +228,8 @@ namespace Compositor {
                     request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcY), y);
                     request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcW), width);
                     request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcH), height);
+
+                    frameBuffer.Release();
                 } else {
                     request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), 0);
                     request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), 0);
