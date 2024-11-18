@@ -122,7 +122,7 @@ namespace Compositor {
             public:
                 DRMObject()
                     : _id(InvalidIdentifier)
-                    , _properies()
+                    , _properties()
                 {
                 }
 
@@ -130,7 +130,7 @@ namespace Compositor {
 
                 const Compositor::DRM::IProperty* Properties() const override
                 {
-                    return &_properies;
+                    return &_properties;
                 };
 
                 const Compositor::DRM::Identifier Id() const override
@@ -141,12 +141,12 @@ namespace Compositor {
                 uint32_t Configure(const int drmfd, uint32_t drmId)
                 {
                     _id = static_cast<Compositor::DRM::Identifier>(drmId);
-                    return _properies.Scan(drmfd, _id);
+                    return _properties.Scan(drmfd, _id);
                 }
 
             private:
                 Compositor::DRM::Identifier _id;
-                Compositor::DRM::PropertyAdministratorType<OBJECT_TYPE> _properies;
+                Compositor::DRM::PropertyAdministratorType<OBJECT_TYPE> _properties;
             };
 
             class ConnectorImplementation : public Exchange::ICompositionBuffer, public IOutput::IConnector {
@@ -270,7 +270,7 @@ namespace Compositor {
                     return &_crtc;
                 }
 
-                // IDrmObject implementaion
+                // IDrmObject implementation
                 const Compositor::DRM::Identifier Id() const override
                 {
                     return _connector.Id();
@@ -468,7 +468,7 @@ namespace Compositor {
             private:
                 Core::ProxyType<DRM> _backend;
 
-                DRMObject<Compositor::DRM::ObjectType::Connenctor> _connector;
+                DRMObject<Compositor::DRM::ObjectType::Connector> _connector;
                 DRMObject<Compositor::DRM::ObjectType::Crtc> _crtc;
                 DRMObject<Compositor::DRM::ObjectType::Plane> _primaryPlane;
 

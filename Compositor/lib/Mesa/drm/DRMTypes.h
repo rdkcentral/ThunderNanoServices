@@ -48,11 +48,11 @@ namespace Compositor {
 
         enum class ObjectType : uint32_t {
             Crtc = DRM_MODE_OBJECT_CRTC,
-            Connenctor = DRM_MODE_OBJECT_CONNECTOR,
+            Connector = DRM_MODE_OBJECT_CONNECTOR,
             Encoder = DRM_MODE_OBJECT_ENCODER, /* Deprecated */
             Mode = DRM_MODE_OBJECT_MODE,
             Property = DRM_MODE_OBJECT_PROPERTY,
-            Frambuffer = DRM_MODE_OBJECT_FB,
+            Framebuffer = DRM_MODE_OBJECT_FB,
             Blob = DRM_MODE_OBJECT_BLOB,
             Plane = DRM_MODE_OBJECT_PLANE,
             Any = DRM_MODE_OBJECT_ANY
@@ -103,7 +103,7 @@ namespace Compositor {
             CrtcY,
             CrtcH,
             CrtcW,
-            // CRTC Prperties
+            // CRTC Properties
             Active,
             Ctm,
             DegammaLut,
@@ -133,7 +133,7 @@ namespace Compositor {
             { "panel_orientation", Property::PanelOrientation },
             { "subconnector", Property::SubConnector },
             { "vrr_capable", Property::VrrCapable },
-            // Plane Properies
+            // Plane Properties
             { "type", Property::Type },
             { "alpha", Property::Alpha },
             { "SRC_X", Property::SrcX },
@@ -150,7 +150,7 @@ namespace Compositor {
             { "IN_FORMATS", Property::InFormats },
             { "rotation", Property::Rotation },
             { "zpos", Property::ZPosition },
-            // CRTC Prpoerties
+            // CRTC Properties
             { "ACTIVE", Property::Active },
             { "CTM", Property::Ctm },
             { "DEGAMMA_LUT", Property::DegammaLut },

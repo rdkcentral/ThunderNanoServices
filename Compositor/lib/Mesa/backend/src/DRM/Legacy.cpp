@@ -56,11 +56,11 @@ namespace Compositor {
                 ASSERT(connector->CrtController() != nullptr);
                 ASSERT(connector->Plane() != nullptr);
 
-                const uint32_t connenctorId(connector->Id());
+                const uint32_t ConnectorId(connector->Id());
                 const uint32_t crtcId(connector->CrtController()->Id());
                 const uint32_t planeId(connector->Plane()->Id());
 
-                TRACE(Trace::Information, ("Commit for conncetor: %d , CRTC: %d, Plane: %d", connenctorId, crtcId, planeId));
+                TRACE(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
 
                 uint32_t commitFlags(DRM_MODE_PAGE_FLIP_EVENT);
 
@@ -72,14 +72,14 @@ namespace Compositor {
                     const drmModeModeInfo* mode(nullptr);
 
                     if (connector->IsEnabled() == true) {
-                        connectorIds.emplace_back(connenctorId);
+                        connectorIds.emplace_back(ConnectorId);
                         mode = &(connector->ModeInfo());
                     }
 
                     uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
 
-                    if ((drmResult = drmModeConnectorSetProperty(fd, connenctorId, connector->Properties()->Id(DRM::Property::Dpms), dpms)) != 0) {
-                        TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", connenctorId, drmResult, strerror(errno)));
+                    if ((drmResult = drmModeConnectorSetProperty(fd, ConnectorId, connector->Properties()->Id(DRM::Property::Dpms), dpms)) != 0) {
+                        TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", ConnectorId, drmResult, strerror(errno)));
                         return Core::ERROR_GENERAL;
                     }
 

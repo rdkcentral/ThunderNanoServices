@@ -184,14 +184,14 @@ namespace Compositor {
                 ASSERT(connector->CrtController() != nullptr);
                 ASSERT(connector->Plane() != nullptr);
 
-                const uint32_t connenctorId(connector->Id());
+                const uint32_t ConnectorId(connector->Id());
                 const uint32_t crtcId(connector->CrtController()->Id());
                 const uint32_t planeId(connector->Plane()->Id());
 
-                TRACE(Trace::Information, ("Commit for conncetor: %d , CRTC: %d, Plane: %d", connenctorId, crtcId, planeId));
+                TRACE(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
 
                 Core::ProxyType<Request> request = Core::ProxyType<Request>::Create(fd);
-                request->Property(connenctorId, connector->Properties()->Id(DRM::Property::CrtcId), connector->IsEnabled() ? crtcId : 0);
+                request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::CrtcId), connector->IsEnabled() ? crtcId : 0);
 
                 uint32_t commitFlags(DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK);
 
@@ -211,8 +211,8 @@ namespace Compositor {
                     const uint32_t width(connector->FrameBuffer()->Width());
                     const uint32_t height(connector->FrameBuffer()->Height());
 
-                    request->Property(connenctorId, connector->Properties()->Id(DRM::Property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
-                    request->Property(connenctorId, connector->Properties()->Id(DRM::Property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
+                    request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
+                    request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
 
                     request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), connector->FrameBufferId());
                     request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), crtcId);
