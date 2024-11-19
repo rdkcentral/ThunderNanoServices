@@ -823,9 +823,9 @@ namespace Plugin {
 
                 const Compositor::Box clientArea = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
 
-                // FIXME!!!
-                // Opacity is not yet working....
-                _renderer->Render(client->Texture(), clientArea, clientProjection, float(client->Opacity() / Exchange::IComposition::maxOpacity));
+                const float alpha = float(client->Opacity()) / float(Exchange::IComposition::maxOpacity);
+
+                _renderer->Render(client->Texture(), clientArea, clientProjection, alpha);
             });
 
             _renderer->End(false);
