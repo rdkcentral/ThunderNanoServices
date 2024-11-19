@@ -46,8 +46,8 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 using namespace Thunder;
 
-namespace Thunder  {
-const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
+namespace Thunder {
+const Compositor::Color background = { 0.f, 0.f, 0.f, 1.0f };
 
 class RenderTest {
 public:
@@ -133,6 +133,10 @@ private:
 
         const auto start = std::chrono::high_resolution_clock::now();
 
+        const float runtime = std::chrono::duration<float>(start.time_since_epoch()).count();
+
+        float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.06f * runtime));
+
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
         const uint16_t width(_connector->Width());
@@ -149,7 +153,11 @@ private:
             for (int x = -squareSize; x < width; x += squareSize) {
                 const Compositor::Box box = { x, y, squareSize, squareSize };
 
-                const Compositor::Color color = { 255.f / x, 255.f / y, 255.f / (x + y), 1.f };
+                float R = (float(width) - float(x)) / (float(width) - float(-squareSize));
+                float G = (float(x) - float(-squareSize)) / (float(width) - float(-squareSize));
+                float B = (float(y) - float(-squareSize)) / (float(height) - float(-squareSize));
+
+                const Compositor::Color color = { R, G, B, alpha };
 
                 Compositor::Matrix matrix;
                 Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());

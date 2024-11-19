@@ -746,17 +746,24 @@ namespace Compositor {
                 bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
                     bool result(false);
+                    bool hasAlpha(DRM::HasAlpha(_buffer->Format()));
 
                     if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
                         ExternalProgram* program = _parent.Programs().QueryType<ExternalProgram>();
                         ASSERT(program != nullptr);
-                        result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
+                        result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
                     }
 
                     if ((_target == GL_TEXTURE_2D)) {
-                        RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
-                        ASSERT(program != nullptr);
-                        result = program->Draw(_textureId, _target, DRM::HasAlpha(_buffer->Format()), alpha, matrix, coordinates);
+                        if(hasAlpha==true){
+                            RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
+                            ASSERT(program != nullptr);
+                            result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
+                        } else {
+                            RGBXProgram* program = _parent.Programs().QueryType<RGBXProgram>();
+                            ASSERT(program != nullptr);
+                            result = program->Draw(_textureId, _target, false, alpha, matrix, coordinates);
+                        }
                     }
 
                     return result;
