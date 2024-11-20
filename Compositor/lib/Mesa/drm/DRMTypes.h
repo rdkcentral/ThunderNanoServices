@@ -213,7 +213,7 @@ namespace Compositor {
             virtual ~IDrmObject() = default;
 
             virtual const IProperty* Properties() const = 0;
-            virtual const Identifier Id() const = 0;
+            virtual Identifier Id() const = 0;
         };
     } // namespace DRM
 } // namespace Compositor

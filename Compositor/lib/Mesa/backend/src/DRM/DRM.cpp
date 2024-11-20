@@ -133,7 +133,7 @@ namespace Compositor {
                     return &_properties;
                 };
 
-                const Compositor::DRM::Identifier Id() const override
+                Compositor::DRM::Identifier Id() const override
                 {
                     return _id;
                 };
@@ -199,12 +199,12 @@ namespace Compositor {
                 }
 
             private:
-                constexpr const Compositor::DRM::Identifier BackBuffer() const
+                Compositor::DRM::Identifier BackBuffer() const
                 {
                     return _frontBuffer ^ 1;
                 }
 
-                constexpr const Compositor::DRM::Identifier FrontBuffer() const
+                Compositor::DRM::Identifier FrontBuffer() const
                 {
                     return _frontBuffer;
                 }
@@ -282,7 +282,7 @@ namespace Compositor {
                 }
 
                 // IDrmObject implementation
-                const Compositor::DRM::Identifier Id() const override
+                Compositor::DRM::Identifier Id() const override
                 {
                     return _connector.Id();
                 }
@@ -308,7 +308,7 @@ namespace Compositor {
                     return _callback;
                 }
 
-                const void SwapBuffer()
+                void SwapBuffer()
                 {
                     _frontBuffer ^= 1;
                 }
