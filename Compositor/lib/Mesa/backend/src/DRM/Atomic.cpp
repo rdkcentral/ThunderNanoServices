@@ -102,7 +102,7 @@ namespace Compositor {
                             TRACE(Trace::Error, ("Failed to add atomic DRM property %u: %s", propertyId, strerror(-result)));
                         }
 
-                        (result == 0) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+                        result = (presult == 0) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
                     } else {
                         TRACE(Trace::Error, ("ObjectId[%u] propertyId was invalid to %" PRIu64, objectId, propertyId, value));
                     }
