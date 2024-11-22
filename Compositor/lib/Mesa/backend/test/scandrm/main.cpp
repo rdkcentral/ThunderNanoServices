@@ -147,7 +147,7 @@ void ScanResources(const int cardFd)
 
         drmModeCrtc* drmCrtc = drmModeGetCrtc(cardFd, id);
 
-        TRACE_GLOBAL(Thunder::Trace::Information, ("\nCRTC[%u]\nid=%u\nproperties[%d]=%s", i, id, registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
+        // TRACE_GLOBAL(Thunder::Trace::Information, ("\nCRTC[%u]\nid=%u\nproperties[%d]=%s", i, id, registry.size(), Compositor::DRM::PropertyString(registry, true).c_str()));
 
         drmModeFreeCrtc(drmCrtc);
     }

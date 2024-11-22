@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-option(INSTALL_COMPOSITOR_CLIENT_TEST "Build compositor client test app" ON)
+option(INSTALL_COMPOSITOR_CLIENT_TEST "Build compositor client test app" OFF)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
@@ -24,8 +24,7 @@ find_package(GLESv2 REQUIRED)
 find_package(EGL REQUIRED)
 find_package(PNG REQUIRED)
 
-find_package(CompileSettingsDebug CONFIG REQUIRED)
-find_package(compositorclient CONFIG REQUIRED)
+find_package(ClientCompositor CONFIG REQUIRED)
 
 add_executable(CompositorTest Test.cpp)
 
@@ -38,7 +37,7 @@ target_link_libraries(CompositorTest
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         CompileSettingsDebug::CompileSettingsDebug
-        compositorclient::compositorclient
+        ClientCompositor::ClientCompositor
         PNG::PNG       
          ${EGL_LIBRARIES}
          ${GLESV2_LIBRARIES}

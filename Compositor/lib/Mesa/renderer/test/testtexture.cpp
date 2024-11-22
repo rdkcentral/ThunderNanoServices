@@ -144,6 +144,10 @@ private:
 
         const auto start = std::chrono::high_resolution_clock::now();
 
+        const float runtime = std::chrono::duration<float>(start.time_since_epoch()).count();
+
+        float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
+
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
         const uint16_t width(_connector->Width());
@@ -163,7 +167,7 @@ private:
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
         const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
-        _renderer->Render(_texture, textureBox, matrix, 1.0f);
+        _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
 

@@ -30,6 +30,7 @@ message(STATUS "   Atomic: ${ENABLE_ATOMIC}")
 
 if(ENABLE_ATOMIC)
     target_sources(CommonBackendDRM PRIVATE Atomic.cpp)
+    target_compile_definitions(CommonBackendDRM PRIVATE USE_ATOMIC)
 else()
     target_sources(CommonBackendDRM PRIVATE Legacy.cpp)
 endif()
