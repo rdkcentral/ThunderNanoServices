@@ -166,7 +166,7 @@ namespace Plugin
                 }
 
                 if (_pins.find(pin->Identifier()) != _pins.end()) {
-                    SYSLOG(Logging::Startup, (_T("Pin [%d] defined multiple times, only the first definitions is used !!"), pin->Identifier() & 0xFFFF));
+                    SYSLOG(Logging::Activate, (_T("Pin [%d] defined multiple times, only the first definitions is used !!"), pin->Identifier() & 0xFFFF));
                 }
                 else {
                     auto newEntry = _pins.emplace(std::piecewise_construct,
@@ -179,10 +179,10 @@ namespace Plugin
                         Core::JSON::ArrayType<Config::Pin::Handler>::Iterator handler(index.Current().Handlers.Elements());
 
                         if (mode == 0) {
-                            SYSLOG(Logging::Startup, (_T("Pin [%d] defined as output but handlers associated with it!"), pin->Identifier() & 0xFFFF));
+                            SYSLOG(Logging::Activate, (_T("Pin [%d] defined as output but handlers associated with it!"), pin->Identifier() & 0xFFFF));
                         }
                         else if (mode == 1) {
-                            SYSLOG(Logging::Startup, (_T("Handlers requires input pins where BOTH states are reported. Error on pin [%d]."), pin->Identifier() & 0xFFFF));
+                            SYSLOG(Logging::Activate, (_T("Handlers requires input pins where BOTH states are reported. Error on pin [%d]."), pin->Identifier() & 0xFFFF));
                         }
 
                         while (handler.Next() == true) {
@@ -193,7 +193,7 @@ namespace Plugin
                             uint32_t end   = info.End.Value();
 
                             if (start > end) {
-                                SYSLOG(Logging::Startup, (_T("Handler [%s] on pin [%d] has an incorrect interval [%d-%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF, start, end));
+                                SYSLOG(Logging::Activate, (_T("Handler [%s] on pin [%d] has an incorrect interval [%d-%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF, start, end));
                             }
                             else {
                                 std::list< std::pair<uint32_t, uint32_t> >::iterator loop(intervals.begin());
@@ -205,10 +205,10 @@ namespace Plugin
                                 }
 
                                 if (loop != intervals.end()) {
-                                    SYSLOG(Logging::Startup, (_T("Interval conflict on pin [%d], at handler [%s]."), pin->Identifier() & 0xFFFF, info.Name.Value().c_str()));
+                                    SYSLOG(Logging::Activate, (_T("Interval conflict on pin [%d], at handler [%s]."), pin->Identifier() & 0xFFFF, info.Name.Value().c_str()));
                                 }
                                 else if (newEntry.first->second.Add(_service, info.Name.Value(), info.Config.Value(), start, end) == false) {
-                                    SYSLOG(Logging::Startup, (_T("Could not instantiate handler [%s] on pin [%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF));
+                                    SYSLOG(Logging::Activate, (_T("Could not instantiate handler [%s] on pin [%d]."), info.Name.Value().c_str(), pin->Identifier() & 0xFFFF));
                                 }
                                 else {
                                     intervals.push_back(std::pair<uint32_t,uint32_t>(start,end));
