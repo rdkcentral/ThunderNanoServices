@@ -8,13 +8,13 @@ on:
     branches: ["master"]
 
 jobs:
-  Thunder:
+  Thunder_MacOS:
     uses: rdkcentral/Thunder/.github/workflows/MacOS build template.yml@master
 
-  ThunderInterfaces:
-    needs: Thunder
+  ThunderInterfaces_MacOS:
+    needs: Thunder_MacOS
     uses: rdkcentral/ThunderInterfaces/.github/workflows/MacOS build template.yml@master
 
-  ThunderNanoServices:
-    needs: ThunderInterfaces
+  ThunderNanoServices_MacOS:
+    needs: ThunderInterfaces_MacOS
     uses: rdkcentral/ThunderNanoServices/.github/workflows/MacOS build template.yml@master
