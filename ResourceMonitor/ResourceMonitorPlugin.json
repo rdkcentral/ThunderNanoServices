@@ -1,11 +1,11 @@
 {
   "$schema": "plugin.schema.json",
   "info": {
-    "title": "ResourceMonitor Plugin",
-    "callsign": "ResourceMonitor",
-    "locator": "libThunderResourceMonitor.so",
+    "title": "ResourceMonitor2 Plugin",
+    "callsign": "ResourceMonitor2",
+    "locator": "libThunderResourceMonitor2.so",
     "status": "alpha",
-    "description": "The ResourceMonitor plugin provides web browsing functionality based on the ResourceMonitor engine.",
+    "description": "The ResourceMonitor2 plugin provides web browsing functionality based on the ResourceMonitor2 engine.",
     "version": "1.0"
   },
   "configuration": {

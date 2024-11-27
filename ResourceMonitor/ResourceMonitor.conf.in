@@ -1,8 +1,5 @@
-startmode = "@PLUGIN_RESOURCEMONITOR_STARTMODE@"
-resumed = "@PLUGIN_RESOURCEMONITOR_RESUMED@"
+precondition = ["Platform"]
+callsign = "org.rdk.ResourceMonitor"
 
-configuration = JSON()
-
-rootobject = JSON()
-rootobject.add("mode", "@PLUGIN_RESOURCEMONITOR_MODE@")
-configuration.add("root", rootobject)
+autostart = "true"
+startuporder = "@PLUGIN_RESOURCEMONITOR_STARTUPORDER@"

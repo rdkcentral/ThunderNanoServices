@@ -18,7 +18,7 @@
  */
 #include "ResourceMonitor.h"
 
-namespace Thunder
+namespace WPEFramework
 {
 
     namespace Plugin
@@ -48,21 +48,17 @@ namespace Thunder
 
             _service = service;
             _service->AddRef();
-            _service->Register(&_notification);
-
-            _skipURL = static_cast<uint32_t>(_service->WebPrefix().length());
-
             _monitor = _service->Root<Exchange::IResourceMonitor>(_connectionId, 2000, _T("ResourceMonitorImplementation"));
 
-            if (_monitor == nullptr)
-            {
+            if (_monitor == nullptr) {
                 message = _T("ResourceMonitor could not be instantiated.");
             }
-            else
-            {
+            else {
                 if(_monitor->Configure(service) == Core::ERROR_INCOMPLETE_CONFIG){
                     message = _T("ResourceMonitor could not be Configured.");
                 }
+                _monitor->Register(&_notification);
+                Exchange::JResourceMonitor::Register(*this, _monitor);
             }
 
             return message;
@@ -73,10 +69,9 @@ namespace Thunder
             if (_service != nullptr) {
                 ASSERT(_service == _service);
 
-                _service->Unregister(&_notification);
-
                 if (_monitor != nullptr) {
-
+                    Exchange::JResourceMonitor::Unregister(*this);
+                    _monitor->Unregister(&_notification);
                     RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
                     VARIABLE_IS_NOT_USED uint32_t result = _monitor->Release();
                     _monitor = nullptr;
@@ -100,19 +95,5 @@ namespace Thunder
         {
             return "";
         }
-
-        void ResourceMonitor::Deactivated(RPC::IRemoteConnection* connection)
-        {
-            if (connection->Id() == _connectionId) {
-
-                ASSERT(_service != nullptr);
-
-                Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
-                    PluginHost::IShell::DEACTIVATED,
-                    PluginHost::IShell::FAILURE));
-            }
-        }
-
-        /* static */ Core::ProxyPoolType<Web::TextBody> ResourceMonitor::webBodyFactory(4);
     } // namespace Plugin
 } // namespace Thunder

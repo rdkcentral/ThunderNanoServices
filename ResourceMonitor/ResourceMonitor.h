@@ -19,110 +19,63 @@
 #pragma once
 
 #include "Module.h"
+#include <interfaces/json/JResourceMonitor.h>
 #include <interfaces/IMemory.h>
 #include <interfaces/IResourceMonitor.h>
 
-namespace Thunder
-{
-    namespace Plugin
-    {
-        class ResourceMonitor : public PluginHost::IPlugin, public PluginHost::IWeb {
-        private:
-            class Notification : public RPC::IRemoteConnection::INotification {
+namespace WPEFramework {
+    namespace Plugin {
+        class ResourceMonitor : public PluginHost::IPlugin, public PluginHost::JSONRPC {
             public:
-                Notification() = delete;
-                Notification(const Notification&) = delete;
-                Notification& operator=(const Notification&) = delete;
-
-                explicit Notification(ResourceMonitor& parent)
-                    : _parent(parent) {
-                }
-                ~Notification() override = default;
-
-            public:
-                void Activated(RPC::IRemoteConnection* /* connection */) override {
-                }
-                void Deactivated(RPC::IRemoteConnection* connection) override {
-                    _parent.Deactivated(connection);
-                }
-                void Terminated(RPC::IRemoteConnection* /* connection */) override {
+                ResourceMonitor(const ResourceMonitor &) = delete;
+                ResourceMonitor &operator=(const ResourceMonitor &) = delete;
+                ResourceMonitor()
+                    : _service(nullptr), _monitor(nullptr), _connectionId(0), _notification(*this)
+                {
                 }
 
-                BEGIN_INTERFACE_MAP(Notification)
-                    INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+                ~ResourceMonitor() override = default;
+
+                const string Initialize(PluginHost::IShell *service) override;
+                void Deinitialize(PluginHost::IShell *service) override;
+                string Information() const override;
+
+                BEGIN_INTERFACE_MAP(ResourceMonitor)
+                    INTERFACE_ENTRY(PluginHost::IPlugin)
+                    INTERFACE_ENTRY(PluginHost::IDispatcher)
+                    INTERFACE_AGGREGATE(Exchange::IResourceMonitor, _monitor)
                 END_INTERFACE_MAP
 
             private:
-                ResourceMonitor& _parent;
-            };
+                PluginHost::IShell *_service;
+                Exchange::IResourceMonitor *_monitor;
+                uint32_t _connectionId;
 
-        public:
-            ResourceMonitor(const ResourceMonitor &) = delete;
-            ResourceMonitor &operator=(const ResourceMonitor &) = delete;
-            ResourceMonitor()
-                : _service(nullptr), _monitor(nullptr), _connectionId(0), _notification(*this)
-            {
-            }
-
-            ~ResourceMonitor() override = default;
-
-            void Inbound(Web::Request&) override
-            {
-            }
-
-            Core::ProxyType<Web::Response> Process(const Web::Request &request) override
-            {
-                Core::ProxyType<Web::Response> result = PluginHost::IFactories::Instance().Response();
-                result->ErrorCode = Web::STATUS_NOT_IMPLEMENTED;
-                result->Message = string(_T("Unknown request path specified."));
-
-                if (request.Verb == Web::Request::HTTP_GET)
-                {
-                    Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
-
-                    // Move to request name (shoudl be "history")
-                    index.Next();
-
-                    if (index.IsValid() == true && index.Next() == true)
-                    {
-                        const string requestStr = index.Current().Text();
-                        if (requestStr == "history")
-                        {
-                            // Asked for history csv
-                            result->ErrorCode = Web::STATUS_OK;
-                            result->ContentType = Web::MIMETypes::MIME_TEXT;
-                            result->Message = _T("OK");
-                            Core::ProxyType<Web::TextBody> body(webBodyFactory.Element());
-                            *body = _monitor->CompileMemoryCsv();
-                            result->Body(body);
+                class Notification : public Exchange::IResourceMonitor::INotification {
+                    public:
+                        explicit Notification(ResourceMonitor& parent)
+                            : _parent(parent) {
                         }
-                    }
-                }
 
-                return result;
-            }
+                        Notification() = delete;
+                        Notification(const Notification&) = delete;
+                        Notification& operator=(const Notification&) = delete;
 
-            BEGIN_INTERFACE_MAP(ResourceMonitor)
-            INTERFACE_ENTRY(IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
-            INTERFACE_AGGREGATE(Exchange::IResourceMonitor, _monitor)
-            END_INTERFACE_MAP
+                        ~Notification() override = default;
 
-        public:
-            const string Initialize(PluginHost::IShell *service) override;
-            void Deinitialize(PluginHost::IShell *service) override;
-            string Information() const override;
+                        void OnResourceMonitorData(const Exchange::IResourceMonitor::EventData& data) override {
+                            Exchange::JResourceMonitor::Event::OnResourceMonitorData(_parent, data);
+                        }
 
-        private:
-            void Deactivated(RPC::IRemoteConnection* connection);
+                        BEGIN_INTERFACE_MAP(Notification)
+                            INTERFACE_ENTRY(Exchange::IResourceMonitor::INotification)
+                        END_INTERFACE_MAP
 
-        private:
-            PluginHost::IShell *_service;
-            Exchange::IResourceMonitor *_monitor;
-            uint32_t _connectionId;
-            static Core::ProxyPoolType<Web::TextBody> webBodyFactory;
-            uint32_t _skipURL;
-            Core::SinkType<Notification> _notification;
+                    private:
+                        ResourceMonitor& _parent;
+                };
+
+                Core::Sink<Notification> _notification;
         };
     } // namespace Plugin
-} // namespace Thunder
+} // namespace WPEFramework
