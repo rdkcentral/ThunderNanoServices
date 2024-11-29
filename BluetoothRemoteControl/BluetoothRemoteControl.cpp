@@ -204,8 +204,14 @@ namespace Plugin {
                 _voiceHandler = nullptr;
             }
 
+            if (_buffer != nullptr) {
+                delete _buffer;
+                _buffer = nullptr;
+            }
+
             _service->Release();
             _service = nullptr;
+
         }
     }
 
@@ -437,6 +443,56 @@ namespace Plugin {
 
         _gattRemote->Decoder(_configLine);
 
+        if (_buffer != nullptr) {
+            delete _buffer;
+            _buffer = nullptr;
+        }
+
+        Config config;
+        config.FromString(_configLine);
+
+        Exchange::IVoiceProducer::IProfile* profile = _gattRemote->SelectedProfile();
+        ASSERT(profile != nullptr);
+
+        const uint16_t maxChunkDuration = std::max(config.AudioChunkSize.Value(), config.FirstAudioChunkSize.Value());
+
+        if (maxChunkDuration != 0) {
+            // If buffer size is not specified, then set it based on the configured chunk sizes
+            const uint32_t maxDuration = std::max(config.AudioBufferSize.Value(), (maxChunkDuration + config.AudioChunkSize.Value()));
+            const uint32_t bufferSize = TimeToBytes(maxDuration, profile);
+            _firstAudioChunkSize = TimeToBytes(config.FirstAudioChunkSize.Value(), profile);
+            _audioChunkSize = TimeToBytes(config.AudioChunkSize.Value(), profile);
+
+            // Some sanity...
+            ASSERT(bufferSize <= (512 * 1024));
+            ASSERT(_firstAudioChunkSize <= (512 * 1024));
+            ASSERT(_audioChunkSize <= (512 * 1024));
+
+            _buffer = new RingBufferType<uint32_t>(bufferSize);
+            ASSERT(_buffer != nullptr);
+
+            TRACE(Trace::Information, (_T("Audio buffer size is %d bytes (%d ms)"), bufferSize, maxDuration));
+
+            if (_firstAudioChunkSize != 0) {
+                TRACE(Trace::Information, (_T("First audio chunk size is %d bytes (%d ms)"), _firstAudioChunkSize, config.FirstAudioChunkSize.Value()));
+            }
+            else {
+                TRACE(Trace::Information, (_T("Audio will not be pre-buffered")));
+            }
+
+            if (_audioChunkSize != 0) {
+                TRACE(Trace::Information, (_T("Audio chunk size is %d bytes (%d ms)"), _audioChunkSize, config.AudioChunkSize.Value()));
+            }
+            else {
+                TRACE(Trace::Information, (_T("Audio chunks will not be buffered")));
+            }
+        }
+        else {
+            TRACE(Trace::Information, (_T("Audio buffering is disabled")));
+        }
+
+        profile->Release();
+
         // Store the settings, if not already done..
         Core::File settingsFile(_service->PersistentPath() + _gattRemote->Address() + _T(".json"));
         if ( (settingsFile.Exists() == false) && (settingsFile.Create() == true) ) {
@@ -457,6 +513,12 @@ namespace Plugin {
             }
 
             _adminLock.Lock();
+
+            _sequence = 0;
+
+            if (_buffer != nullptr) {
+                _buffer->Reset();
+            }
 
             if (_voiceHandler != nullptr) {
                 _voiceHandler->Start(profile);
@@ -494,6 +556,11 @@ namespace Plugin {
 
             _adminLock.Lock();
 
+            if ((_buffer != nullptr) && (_sequence != 0)) {
+                // Push out whatever is left (but only if a complete first chunk went out)
+                SendOut(_buffer->Used());
+            }
+
             if (_voiceHandler != nullptr) {
                 _voiceHandler->Stop();
             }
@@ -507,7 +574,6 @@ namespace Plugin {
                 _recorder.Close();
             }
 
-
             TRACE(Trace::Information, (_T("Audio transmission: end")));
         }
     }
@@ -516,19 +582,64 @@ namespace Plugin {
     {
         _adminLock.Lock();
 
+        const uint32_t chunkSize = ((_firstAudioChunkSize != 0) && (_sequence == 0)? _firstAudioChunkSize : _audioChunkSize);
+
+        if (chunkSize != 0) {
+            ASSERT(_buffer != nullptr);
+
+            if (_buffer->Free() < length) {
+                const uint32_t newSize = std::max((_buffer->Capacity() * 2), (_buffer->Capacity() + length));
+                TRACE(Trace::Warning, (_T("Ring buffer size is too small, resizing from %d to %d bytes!"), _buffer->Capacity(), newSize));
+                _buffer->Resize(newSize);
+            }
+
+            const uint32_t written = _buffer->Push(length, dataBuffer);
+            DEBUG_VARIABLE(written);
+            ASSERT(written == length);
+
+            while (_buffer->Used() >= chunkSize) {
+                SendOut(chunkSize);
+            }
+        }
+        else if (length > 0) {
+            SendOut(seq, length, dataBuffer);
+        }
+
+        if (_recorder.IsOpen() == true) {
+            _recorder.Write(length, dataBuffer);
+        }
+
+        _adminLock.Unlock();
+    }
+
+    void BluetoothRemoteControl::SendOut(const uint32_t seq, const uint32_t length, const uint8_t dataBuffer[])
+    {
+        ASSERT(length != 0);
+        ASSERT(dataBuffer != nullptr);
+
         if (_voiceHandler != nullptr) {
             _voiceHandler->Data(seq, dataBuffer, length);
         }
         else {
             string frame;
             Core::ToString(dataBuffer, length, true, frame);
-            event_audioframe(seq, frame);
+            event_audioframe(seq, length, frame);
         }
+    }
 
-        _adminLock.Unlock();
+    void BluetoothRemoteControl::SendOut(const uint32_t length)
+    {
+        if (length != 0) {
+            uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+            const uint32_t read = _buffer->Pop(length, buffer);
 
-        if (_recorder.IsOpen() == true) {
-            _recorder.Write(length, dataBuffer);
+            if (read > 0) {
+                SendOut(_sequence, read, buffer);
+                _sequence++;
+            }
+            else if (read < length) {
+                ASSERT(!"not enouqh data");
+            }
         }
     }
 
