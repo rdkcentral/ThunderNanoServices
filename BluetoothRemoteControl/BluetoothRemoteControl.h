@@ -34,6 +34,151 @@ namespace Thunder {
 
 namespace Plugin {
 
+    template<typename SIZE>
+    class RingBufferType {
+    public:
+        using size = SIZE;
+
+    public:
+        RingBufferType(const SIZE capacity)
+            : _buffer(nullptr)
+            , _bufferEnd(nullptr)
+            , _head(nullptr)
+            , _tail(nullptr)
+            , _capacity(capacity)
+            , _used(0)
+        {
+            _buffer = static_cast<uint8_t*>(::malloc(capacity));
+            _bufferEnd = (_buffer + capacity);
+            ASSERT(_buffer != nullptr);
+
+            Reset();
+        }
+        ~RingBufferType()
+        {
+            ::free(_buffer);
+        }
+
+        RingBufferType(const RingBufferType&) = delete;
+        RingBufferType(RingBufferType&&) = delete;
+        RingBufferType& operator=(const RingBufferType&) = delete;
+        RingBufferType& operator=(RingBufferType&&) = delete;
+
+    public:
+        SIZE Used() const {
+            return (_used);
+        }
+        SIZE Free() const {
+            return (_capacity - _used);
+        }
+        SIZE Capacity() const {
+            return (_capacity);
+        }
+
+    public:
+        SIZE Reset()
+        {
+            _head = _buffer;
+            _tail = _head;
+            _used = 0;
+            return (_capacity);
+        }
+        void Resize(const SIZE newCapacity)
+        {
+            if (newCapacity != _capacity) {
+                uint8_t* newBuffer = static_cast<uint8_t*>(::malloc(newCapacity));
+                ASSERT(newBuffer != nullptr);
+
+                SIZE used = std::min(Used(), newCapacity);
+                used = Pop(used, newBuffer);
+
+                ::free(_buffer);
+
+                _buffer = newBuffer;
+                _bufferEnd = (_buffer + newCapacity);
+                _head = (_buffer + used);
+                _tail = _buffer;
+                _used = used;
+                _capacity = newCapacity;
+            }
+        }
+
+    public:
+        SIZE Push(const SIZE length, const uint8_t data[])
+        {
+            ASSERT((data != nullptr) || (length == 0));
+
+            const uint8_t* const end = ((_tail <= _head) ? _bufferEnd : _tail);
+            SIZE count = (_capacity == _used? 0 : std::min(length, static_cast<SIZE>(end - _head)));
+
+            if (count != 0) {
+                ::memcpy(_head, data, count);
+                _head += count;
+
+                if (end == _bufferEnd) {
+                    const SIZE wrap = (length - count);
+                    if (wrap != 0) {
+                        const SIZE count2 = std::min(wrap, static_cast<SIZE>(_tail - _buffer));
+                        if (count2 != 0) {
+                            ::memcpy(_buffer, (data + count), count2);
+                            _head = (_buffer + count2);
+                            count += count2;
+                        }
+                    }
+                }
+
+                if (_head == _bufferEnd) {
+                    _head = _buffer;
+                }
+
+                _used += count;
+            }
+
+            return (count);
+        }
+        SIZE Pop(const SIZE length, uint8_t data[])
+        {
+            ASSERT((data != nullptr) || (length == 0));
+
+            const uint8_t* const end = (_head <= _tail ? _bufferEnd : _head);
+            SIZE count = (_used == 0? 0 : std::min(length, static_cast<SIZE>(end - _tail)));
+
+            if (count != 0) {
+                ::memcpy(data, _tail, count);
+                _tail += count;
+
+                if (end == _bufferEnd) {
+                    const SIZE wrap = (length - count);
+                    if (wrap != 0) {
+                        const SIZE count2 = std::min(wrap, static_cast<SIZE>(_head - _buffer));
+                        if (count2 != 0) {
+                            ::memcpy(data + count, _buffer, count2);
+                            _tail = (_buffer + count2);
+                            count += count2;
+                        }
+                    }
+                }
+
+                if (_tail == _bufferEnd) {
+                    _tail = _buffer;
+                }
+
+                _used -= count;
+            }
+
+            return (count);
+        }
+
+    private:
+        uint8_t* _buffer;
+        uint8_t* _bufferEnd;
+        uint8_t* _head;
+        uint8_t* _tail;
+        SIZE _capacity;
+        SIZE _used;
+    };
+
+
     class BluetoothRemoteControl : public PluginHost::IPlugin
                                  , public PluginHost::IWeb
                                  , public PluginHost::JSONRPC
@@ -63,6 +208,9 @@ namespace Plugin {
                 Add(_T("keymap"), &KeyMap);
                 Add(_T("keyingest"), &KeyIngest);
                 Add(_T("recorder"), &Recorder);
+                Add(_T("audiobuffersize"), &AudioBufferSize);
+                Add(_T("firstaudiochunksize"), &FirstAudioChunkSize);
+                Add(_T("audiochunksize"), &AudioChunkSize);
             }
             ~Config()
             {
@@ -73,6 +221,9 @@ namespace Plugin {
             Core::JSON::String KeyMap;
             Core::JSON::Boolean KeyIngest;
             Core::JSON::EnumType<recorder> Recorder;
+            Core::JSON::DecUInt32 AudioBufferSize;
+            Core::JSON::DecUInt32 FirstAudioChunkSize;
+            Core::JSON::DecUInt32 AudioChunkSize;
         };
 
         class GATTRemote : public Bluetooth::GATTSocket {
@@ -109,7 +260,7 @@ namespace Plugin {
                         textData += hexArray[ (buffer[index] & 0x0F) ];
                     }
                     _text += textData + ']';
-                   
+
                 }
                 ~Flow() = default;
 
@@ -279,7 +430,7 @@ namespace Plugin {
                     Profile()
                         : Core::JSON::Container()
                         , Codec(Exchange::IVoiceProducer::IProfile::codec::PCM)
-                        , SampleRate(8000)
+                        , SampleRate(16000)
                         , Channels(1)
                         , Resolution(16)
                     {
@@ -1275,6 +1426,10 @@ namespace Plugin {
             , _inputHandler(nullptr)
             , _record(recorder::OFF)
             , _recorder()
+            , _buffer(nullptr)
+            , _sequence(0)
+            , _firstAudioChunkSize(0)
+            , _audioChunkSize(0)
         {
             RegisterAll();
         }
@@ -1368,6 +1523,8 @@ namespace Plugin {
         uint32_t Revoke();
         void Connected(const string& name);
         void Operational(const GATTRemote::Data& settings);
+        void SendOut(const uint32_t length);
+        void SendOut(const uint32_t seq, const uint32_t length, const uint8_t dataBuffer[]);
         void VoiceData(Exchange::IVoiceProducer::IProfile* profile);
         void VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[]);
         void KeyEvent(const bool pressed, const uint32_t keyCode);
@@ -1392,8 +1549,17 @@ namespace Plugin {
         uint32_t get_voicecontrol(Core::JSON::Boolean& response) const;
         uint32_t set_voicecontrol(const Core::JSON::Boolean& response);
         void event_audiotransmission(const string& profile = "");
-        void event_audioframe(const uint32_t& seq, const string& data);
+        void event_audioframe(const uint32_t& seq, const uint32_t size, const string& data);
         void event_batterylevelchange(const uint8_t& level);
+
+    private:
+        static uint32_t TimeToBytes(const uint32_t time, const uint32_t rate, const uint8_t channels, const uint8_t res) {
+            return ((time * (rate / 10) * channels * (res / 8)) / 100);
+        }
+        static uint32_t TimeToBytes(const uint32_t time, Exchange::IVoiceProducer::IProfile* profile) {
+            ASSERT(profile != nullptr);
+            return (TimeToBytes(time, profile->SampleRate(), profile->Channels(), profile->Resolution()));
+        }
 
     private:
         uint8_t _skipURL;
@@ -1410,6 +1576,10 @@ namespace Plugin {
         PluginHost::VirtualInput* _inputHandler;
         recorder _record;
         WAV::Recorder _recorder;
+        RingBufferType<uint32_t>* _buffer;
+        uint16_t _sequence;
+        uint32_t _firstAudioChunkSize;
+        uint32_t _audioChunkSize;
 
     }; // class BluetoothRemoteControl
 

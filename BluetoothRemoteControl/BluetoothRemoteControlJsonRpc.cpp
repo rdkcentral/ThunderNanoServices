@@ -240,11 +240,18 @@ namespace Plugin {
     }
 
     // Event: audioframe - Notifies about new audio data available
-    void BluetoothRemoteControl::event_audioframe(const uint32_t& seq, const string& data)
+    void BluetoothRemoteControl::event_audioframe(const uint32_t& seq, const uint32_t size, const string& data)
     {
         AudioframeParamsData params;
         params.Seq = seq;
         params.Data = data;
+
+        // Supplement with size..
+        Core::JSON::DecUInt32 Size;
+        Size = size;
+        params.Remove(_T("data"));
+        params.Add(_T("size"), &Size);
+        params.Add(_T("data"), &params.Data);
 
         Notify(_T("audioframe"), params);
     }
