@@ -48,3 +48,10 @@ def UUIDs():
 
 configuration.add("uuids", UUIDs())
 
+le = JSON()
+le.add("mininterval", "@PLUGIN_BLUETOOTH_LE_CONNECTION_INTERVAL_MIN@")
+le.add("maxinterval", "@PLUGIN_BLUETOOTH_LE_CONNECTION_INTERVAL_MAX@")
+le.add("timeout", "@PLUGIN_BLUETOOTH_LE_CONNECTION_TIMEOUT@")
+le.add("latency", "@PLUGIN_BLUETOOTH_LE_CONNECTION_LATENCY@")
+
+configuration.add("lowenergy", le)
