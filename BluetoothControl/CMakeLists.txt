@@ -32,6 +32,7 @@ option(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL "Enable kernel connection contr
 set(PLUGIN_BLUETOOTH_STARTMODE "Activated" CACHE STRING "Automatically start the plugin")
 set(PLUGIN_BLUETOOTH_PORT "/dev/ttyAMA0" CACHE STRING "Device port")
 set(PLUGIN_BLUETOOTH_BAUDRATE 115200 CACHE STRING "Serial transmission speed in baud")
+set(PLUGIN_BLUETOOTH_FIRMWARE_DIRECTORY "/etc/firmware" CACHE STRING "Chip firmware folder")
 set(PLUGIN_BLUETOOTH_NAME "Thunder" CACHE STRING "Name of the local Bluetooth device")
 set(PLUGIN_BLUETOOTH_SHORT_NAME "Thunder" CACHE STRING "Short name of the local Bluetooth device")
 set(PLUGIN_BLUETOOTH_CLASS "0x000424" CACHE STRING "Class of the local Bluetooth device")
