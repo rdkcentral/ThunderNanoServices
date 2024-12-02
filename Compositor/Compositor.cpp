@@ -454,7 +454,43 @@ namespace Plugin {
 
             GetZOrderList(_clients, list);
 
-            list.push_front(entry);
+            // If this is a sub screen (determined by a colon) make sure it is pushed in the right order, if not just push it to the front..
+            size_t pos;
+            if ((pos = name.find_first_of(':')) == string::npos) {
+                list.push_front(entry);
+            }
+            else {
+                int value = 1;
+                // Make sure the entry we add is in the right order. Video below Graphics...
+                std::list<client_info>::iterator index = list.begin();
+                string comparison = name.substr(0, pos+1);
+
+                while ((index != list.end()) && (value != 0)) {
+                    string rhs = (*index).name.substr(0, pos+1);
+                    value = comparison.compare(rhs);
+                    TRACE(Trace::Information, (_T("Comparison: [%s] == [%s] => [%d]"), comparison.c_str(), rhs.c_str(), value));
+                    if (value != 0) {
+                        index++;
+                    }
+                }
+
+                if (index == list.end()) {
+                    TRACE(Trace::Information, (_T("Sub Client %s was not found yet"), name.substr(0, pos).c_str()));
+                    // No entry found yet, pushto front than
+                    list.push_front(entry);
+                }
+                else {
+                    // We got an entry, where do we ant to put ours ?
+                    if (name[pos+1] == 'g') {
+                        TRACE(Trace::Information, (_T("Sub Client [%s]:[graphics] was found it is inserted before video: %s"), name.substr(0, pos).c_str(), (*index).name.c_str()));
+                    }
+                    else {
+                        TRACE(Trace::Information, (_T("Sub Client [%s]:[video] was found it is inserted after graphics video: %s"), name.substr(0, pos).c_str(), (*index).name.c_str()));
+                        index++;
+                    }
+                    list.insert(index, entry);
+                }
+            }
 
             SetZOrderList(list, 0);
 
@@ -644,8 +680,6 @@ namespace Plugin {
 
     uint32_t Compositor::PutBefore(const string& relative, const string& callsign)
     {
-        uint32_t result = Core::ERROR_NONE;
-
         std::list<client_info> list;
 
         uint16_t relativeIndex(relative.empty() ? 0 : ~0);
@@ -690,14 +724,15 @@ namespace Plugin {
                 Rearrange(list, startIndex, relativeIndex - startIndex, 0, callsignEndIndex - callsignStartIndex + 1);
             }
             TRACE(Trace::Information, (_T("Client surface %s is put below surface %s"), callsign.c_str(), relative.c_str()));
-
-        } else {
-            result = Core::ERROR_UNAVAILABLE;
+        }
+        else {
+            // It might be an error if a surface was requested that did not exist, or it was a service that is already on top
+            // not a real issue but a bit strage to ask. Maybe for the first one we could define an error..
         }
 
         _adminLock.Unlock();
 
-        return (result);
+        return (Core::ERROR_NONE);
     }
 
     uint32_t Compositor::GetBrightness(Exchange::IBrightness::Brightness& brightness) const
