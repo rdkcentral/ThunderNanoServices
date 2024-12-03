@@ -18,7 +18,7 @@
  */
 
 #include "../Module.h"
-#include "IOutput.h"
+#include "IGpu.h"
 
 #include <drm_fourcc.h>
 #include <gbm.h>
@@ -29,7 +29,7 @@ namespace Thunder {
 namespace Compositor {
     namespace Backend {
 
-        class AtomicCrtc : public IOutput {
+        class Atomic : public IGpu {
         private:
             static uint64_t MaxBpc(uint32_t format)
             {
@@ -149,7 +149,7 @@ namespace Compositor {
                         TRACE(Trace::Error, ("Atomic commit failed: [%d] %s", drmResult, strerror(errno)));
                     }
 
-                    return (drmResult == 0) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+                    return (drmResult == 0) ? Core::ERROR_NONE : Core::ERROR_BAD_REQUEST;
                 }
 
             private:
@@ -159,94 +159,97 @@ namespace Compositor {
             };
 
         public:
-            AtomicCrtc(AtomicCrtc&&) = delete;
-            AtomicCrtc(const AtomicCrtc&) = delete;
-            AtomicCrtc& operator=(const AtomicCrtc&) = delete;
+            Atomic(Atomic&&) = delete;
+            Atomic(const Atomic&) = delete;
+            Atomic& operator=(const Atomic&) = delete;
 
-            AtomicCrtc()
-                : _adminLock()
-                , _doModeset(true)
+            Atomic()
+                : _doModeset(true)
             {
             }
 
-            ~AtomicCrtc() override = default;
+            ~Atomic() override = default;
 
         public:
-            void Reevaluate() override
+            uint32_t Commit(const int fd, const std::vector<IConnector*> connectors, void* userData) override
             {
-                Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-                _doModeset = true;
-            }
-
-            uint32_t Commit(const int fd, const IConnector* connector, void* userData) override
-            {
-                ASSERT(connector != nullptr);
-                ASSERT(connector->CrtController() != nullptr);
-                ASSERT(connector->Plane() != nullptr);
-
-                const uint32_t ConnectorId(connector->Id());
-                const uint32_t crtcId(connector->CrtController()->Id());
-                const uint32_t planeId(connector->Plane()->Id());
-
-                TRACE(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
+                ASSERT(fd > 0);
 
                 Core::ProxyType<Request> request = Core::ProxyType<Request>::Create(fd);
-                request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::CrtcId), connector->IsEnabled() ? crtcId : 0);
 
                 uint32_t commitFlags(DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK);
+                
+                for (auto& connector : connectors) {
+                    ASSERT(connector != nullptr);
+                    ASSERT(connector->CrtController() != nullptr);
+                    ASSERT(connector->Plane() != nullptr);
 
-                _adminLock.Lock();
-                if ((connector->IsEnabled()) && (_doModeset == true)) {
-                    request->Blob(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::ModeId), reinterpret_cast<const void*>(&connector->ModeInfo()), sizeof(drmModeModeInfo));
-                    commitFlags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
-                    _doModeset = false;
+                    const uint32_t ConnectorId(connector->Id());
+                    const uint32_t crtcId(connector->CrtController()->Id());
+                    const uint32_t planeId(connector->Plane()->Id());
+
+                    TRACE(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
+
+                    request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::CrtcId), connector->IsEnabled() ? crtcId : 0);
+
+                    if ((connector->IsEnabled()) && (_doModeset == true)) {
+                        request->Blob(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::ModeId), reinterpret_cast<const void*>(&connector->ModeInfo()), sizeof(drmModeModeInfo));
+                        commitFlags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
+                        _doModeset = false;
+                    }
+                    
+                    request->Property(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::Active), connector->IsEnabled() ? 1 : 0);
+
+                    if (connector->IsEnabled() == true) {
+                        Core::ProxyType<Thunder::Exchange::ICompositionBuffer> frameBuffer = connector->FrameBuffer();
+
+                        constexpr uint32_t x = 0;
+                        constexpr uint32_t y = 0;
+                        const uint32_t width(frameBuffer->Width());
+                        const uint32_t height(frameBuffer->Height());
+
+                        request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
+                        request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
+
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), connector->FrameBufferId());
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), crtcId);
+
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcX), 0);
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcY), 0);
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcW), uint64_t(width << 16));
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcH), uint64_t(height << 16));
+
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcX), x);
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcY), y);
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcW), width);
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcH), height);
+
+                        frameBuffer.Release();
+                    } else {
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), 0);
+                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), 0);
+                    }
                 }
-                _adminLock.Unlock();
 
-                request->Property(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::Active), connector->IsEnabled() ? 1 : 0);
+                uint32_t result = request->Commit(commitFlags, userData);
 
-                if (connector->IsEnabled() == true) {
-                    Core::ProxyType<Thunder::Exchange::ICompositionBuffer> frameBuffer = connector->FrameBuffer();
-
-                    constexpr uint32_t x = 0;
-                    constexpr uint32_t y = 0;
-                    const uint32_t width(frameBuffer->Width());
-                    const uint32_t height(frameBuffer->Height());
-
-                    request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
-                    request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
-
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), connector->FrameBufferId());
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), crtcId);
-
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcX), 0);
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcY), 0);
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcW), uint64_t(width << 16));
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcH), uint64_t(height << 16));
-
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcX), x);
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcY), y);
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcW), width);
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcH), height);
-
-                    frameBuffer.Release();
-                } else {
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), 0);
-                    request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), 0);
+                if(result != Core::ERROR_NONE){
+                    for(auto connector: connectors){
+                        connector->Presented(0); // notify connector implementation the buffer failed to display. 
+                    }
                 }
 
-                return request->Commit(commitFlags, userData);
+                return result;
             }
 
         private:
-            mutable Core::CriticalSection _adminLock;
             bool _doModeset;
 
-        }; // class AtomicCrtc
+        }; // class Atomic
 
-        /* static */ IOutput& IOutput::Instance()
+        /* static */ IGpu& IGpu::Instance()
         {
-            static AtomicCrtc& output = Core::SingletonType<AtomicCrtc>::Instance();
+            static Atomic& output = Core::SingletonType<Atomic>::Instance();
             return output;
         }
     } // namespace Backend

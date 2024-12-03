@@ -18,7 +18,7 @@
  */
 
 #include "../Module.h"
-#include "IOutput.h"
+#include "IGpu.h"
 
 #include <IBackend.h>
 #include <IBuffer.h>
@@ -36,6 +36,8 @@
 // #include <libudev.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+
+#include <mutex>
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
@@ -149,7 +151,7 @@ namespace Compositor {
                 Compositor::DRM::PropertyAdministratorType<OBJECT_TYPE> _properties;
             };
 
-            class ConnectorImplementation : public Exchange::ICompositionBuffer, public IOutput::IConnector {
+            class ConnectorImplementation : public Exchange::ICompositionBuffer, public IGpu::IConnector {
             public:
                 ConnectorImplementation() = delete;
                 ConnectorImplementation(ConnectorImplementation&&) = delete;
@@ -157,14 +159,14 @@ namespace Compositor {
                 ConnectorImplementation& operator=(ConnectorImplementation&&) = delete;
                 ConnectorImplementation& operator=(const ConnectorImplementation&) = delete;
 
-                ConnectorImplementation(const string& connector, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::ICallback* callback)
+                ConnectorImplementation(const string& connector, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format)
                     : _backend(_backends.Instance<Backend::DRM>(GetGPUNode(connector), GetGPUNode(connector)))
                     , _connector()
                     , _crtc()
                     , _primaryPlane()
                     , _frontBuffer(0)
                     , _frameBuffer()
-                    , _callback(callback)
+                    , _drmModeStatus()
                     , _format(format)
                 {
                     _connector.Configure(_backend->Descriptor(), FindConnectorId(_backend->Descriptor(), connector));
@@ -177,15 +179,6 @@ namespace Compositor {
 
                         ASSERT(_frameBuffer[BackBuffer()].identifier != InvalidIdentifier);
                         ASSERT(_frameBuffer[FrontBuffer()].identifier != InvalidIdentifier);
-
-                        if (callback != nullptr) {
-                            char* node = drmGetDeviceNameFromFd2(_backend->Descriptor());
-
-                            if (node) {
-                                callback->Display(Identifier(), node);
-                                free(node);
-                            }
-                        }
 
                         TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, PrimaryPlane=%u", this, _connector.Id(), _crtc.Id(), _primaryPlane.Id()));
                     }
@@ -257,7 +250,7 @@ namespace Compositor {
                 }
 
                 /**
-                 * IOutput::IConnector implementation
+                 * IGpu::IConnector implementation
                  */
 
                 bool IsEnabled() const override
@@ -303,14 +296,13 @@ namespace Compositor {
                     return _frameBuffer[FrontBuffer()].data;
                 }
 
-                Compositor::ICallback* Callback() const
-                {
-                    return _callback;
-                }
-
                 void SwapBuffer()
                 {
                     _frontBuffer ^= 1;
+                }
+
+                void Presented(const uint64_t pts VARIABLE_IS_NOT_USED) override
+                {
                 }
 
             private:
@@ -335,6 +327,8 @@ namespace Compositor {
                     TRACE(Trace::Backend, ("Found %d encoders", drmModeResources->count_encoders));
                     TRACE(Trace::Backend, ("Found %d CRTCs", drmModeResources->count_crtcs));
                     TRACE(Trace::Backend, ("Found %d planes", drmModePlaneResources->count_planes));
+
+                    memset(&_drmModeStatus, 0, sizeof(drmModeModeInfo));
 
                     for (int c = 0; c < drmModeResources->count_connectors; c++) {
                         drmModeConnectorPtr drmModeConnector = drmModeGetConnector(_backend->Descriptor(), drmModeResources->connectors[c]);
@@ -499,11 +493,9 @@ namespace Compositor {
 
                 drmModeModeInfo _drmModeStatus;
 
-                Compositor::ICallback* _callback;
+                const Compositor::PixelFormat _format;
 
                 static Core::ProxyMapType<string, Backend::DRM> _backends;
-
-                const Compositor::PixelFormat _format;
             };
 
         private:
@@ -546,151 +538,140 @@ namespace Compositor {
             DRM() = delete;
 
             explicit DRM(const string& gpuNode)
-                : _adminLock()
-                , _cardFd(Compositor::DRM::OpenGPU(gpuNode))
+                : _render()
+                , _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
                 , _monitor(*this)
-                , _output(IOutput::Instance())
-                , _pendingCommits()
+                , _gpu(IGpu::Instance())
+                , _pending()
             {
-                ASSERT(_cardFd != Compositor::InvalidFileDescriptor);
+                ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
 
-                if (_cardFd != Compositor::InvalidFileDescriptor) {
+                if (_gpuFd != Compositor::InvalidFileDescriptor) {
                     int drmResult(0);
                     uint64_t cap;
 
-                    if ((drmResult = drmSetMaster(_cardFd)) != 0) {
+                    if ((drmResult = drmSetMaster(_gpuFd)) != 0) {
                         TRACE(Trace::Error, ("Could not become DRM master. Error: [%s]", strerror(errno)));
                     }
 
-                    if ((drmResult == 0) && ((drmResult = drmSetClientCap(_cardFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1)) != 0)) {
+                    if ((drmResult == 0) && ((drmResult = drmSetClientCap(_gpuFd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1)) != 0)) {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
                     }
 
 #ifdef USE_ATOMIC
-                    if ((drmResult == 0) && ((drmResult = drmSetClientCap(_cardFd, DRM_CLIENT_CAP_ATOMIC, 1)) != 0)) {
+                    if ((drmResult == 0) && ((drmResult = drmSetClientCap(_gpuFd, DRM_CLIENT_CAP_ATOMIC, 1)) != 0)) {
                         TRACE(Trace::Error, ("Could not enable atomic API. Error: [%s]", strerror(errno)));
                     }
 #endif
 
-                    if ((drmResult == 0) && ((drmResult = drmGetCap(_cardFd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap))) {
+                    if ((drmResult == 0) && ((drmResult = drmGetCap(_gpuFd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap))) {
                         TRACE(Trace::Error, ("Device does not support vblank per CRTC"));
                     }
 
                     ASSERT(drmResult == 0);
 
                     if (drmResult == 0) {
-                        if (drmSetClientCap(_cardFd, DRM_CLIENT_CAP_ASPECT_RATIO, 1) != 0) {
+                        if (drmSetClientCap(_gpuFd, DRM_CLIENT_CAP_ASPECT_RATIO, 1) != 0) {
                             TRACE(Trace::Information, ("Picture aspect ratio not supported."));
                         }
 
                         Core::ResourceMonitor::Instance().Register(_monitor);
                     } else {
-                        close(_cardFd);
-                        _cardFd = Compositor::InvalidFileDescriptor;
+                        close(_gpuFd);
+                        _gpuFd = Compositor::InvalidFileDescriptor;
                     }
                 }
             }
 
             virtual ~DRM()
             {
-                if (_cardFd > 0) {
+                if (_gpuFd > 0) {
                     Core::ResourceMonitor::Instance().Unregister(_monitor);
 
-                    if ((drmIsMaster(_cardFd) != 0) && (drmDropMaster(_cardFd) != 0)) {
+                    if ((drmIsMaster(_gpuFd) != 0) && (drmDropMaster(_gpuFd) != 0)) {
                         TRACE(Trace::Error, ("Could not drop DRM master. Error: [%s]", strerror(errno)));
                     }
 
                     if (TRACE_ENABLED(Trace::Information)) {
-                        drmVersion* version = drmGetVersion(_cardFd);
-                        TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_cardFd), version->name));
+                        drmVersion* version = drmGetVersion(_gpuFd);
+                        TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_gpuFd), version->name));
                         drmFreeVersion(version);
                     }
 
-                    close(_cardFd);
+                    close(_gpuFd);
                 }
             }
 
         public:
             bool IsValid() const
             {
-                return (_cardFd > 0);
+                return (_gpuFd > 0);
             }
 
         private:
             uint32_t SchedulePageFlip(ConnectorImplementation& connector)
             {
-                _tpageflipstart = Core::Time::Now().Ticks();
-
-                uint32_t result(Core::ERROR_NONE);
+                uint32_t result(Core::ERROR_UNAVAILABLE);
 
                 if (connector.CrtController()->Id() != Compositor::InvalidIdentifier) {
-                    _adminLock.Lock();
+                    _render.lock();
 
-                    const auto index(_pendingCommits.find(connector.CrtController()->Id()));
+                    const auto index(_pending.find(connector.CrtController()->Id()));
 
-                    if (index == _pendingCommits.end()) {
+                    if (index == _pending.end()) {
                         connector.AddRef();
 
-                        if ((result = _output.Commit(_cardFd, &connector, this)) != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, ("DRM Commit failed for CRTC %u", connector.CrtController()->Id()));
-                        } else {
-                            connector.SwapBuffer();
-
-                            _pendingCommits.emplace(std::piecewise_construct,
+                        _pending.emplace(std::piecewise_construct,
                                 std::forward_as_tuple(connector.CrtController()->Id()),
                                 std::forward_as_tuple(&connector));
 
-                            TRACE(Trace::Backend, ("Commited pageflip for CRTC %u", connector.CrtController()->Id()));
-                        }
+                        TRACE(Trace::Backend, ("Scheduled pageflip for CRTC %u", connector.CrtController()->Id()));
+                        _render.unlock();
+                        result = ScanOut();
                     } else {
-                        TRACE(Trace::Backend, ("Skipping commit, pageflip is still pending for CRTC %u", connector.CrtController()->Id()));
                         result = Core::ERROR_INPROGRESS;
                     }
 
-                    _adminLock.Unlock();
+                    _render.unlock();
                 }
 
                 return result;
             }
 
-            void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sec, const unsigned usec)
+            void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned sec, const unsigned usec)
             {
-                _adminLock.Lock();
-
-                CommitRegister::iterator index(_pendingCommits.find(crtc));
+                CommitRegister::iterator index(_pending.find(crtc));
 
                 ConnectorImplementation* connector(nullptr);
 
-                if (index != _pendingCommits.end()) {
-
+                if (index != _pending.end()) {
                     connector = index->second;
-                    _pendingCommits.erase(index);
+                    _pending.erase(index);
 
                     ASSERT(crtc == connector->CrtController()->Id());
 
-                    if (connector->Callback() != nullptr) {
                         struct timespec presentationTimestamp;
 
                         presentationTimestamp.tv_sec = sec;
                         presentationTimestamp.tv_nsec = usec * 1000;
 
-                        connector->Callback()->LastFrameTimestamp(connector->Identifier(), Core::Time(presentationTimestamp).Ticks());
-                    }
-
+                    connector->Presented(Core::Time(presentationTimestamp).Ticks());
                     connector->Release();
                 }
-                _adminLock.Unlock();
-                const uint64_t tpageflipend(Core::Time::Now().Ticks());
-                TRACE(Trace::Frame, ("Pageflip took %" PRIu64 "us", (tpageflipend - _tpageflipstart)));
+
+                if (_pending.empty() == true) {
+                    // all connectors are flipped... ready for the next round
+                    _render.unlock();
+                }
             }
 
-            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq VARIABLE_IS_NOT_USED, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
+            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
             {
                 ASSERT(userData != nullptr);
 
                 DRM* backend = reinterpret_cast<DRM*>(userData);
 
-                backend->FinishPageFlip(crtc_id, sec, usec);
+                backend->FinishPageFlip(crtc_id, seq, sec, usec);
             }
 
             int DrmEventHandler(int fd) const
@@ -710,22 +691,45 @@ namespace Compositor {
 
             int Descriptor() const
             {
-                return _cardFd;
+                return _gpuFd;
+            }
+
+            uint32_t ScanOut()
+            {
+                uint32_t result(Core::ERROR_ILLEGAL_STATE);
+
+                _render.lock();
+
+                if (_pending.empty() == false) {
+                    std::vector<IGpu::IConnector*> pending;
+
+                    for (auto& connector : _pending) {
+                        pending.push_back(connector.second);
+                        connector.second->SwapBuffer();
+                    }
+
+                    result = _gpu.Commit(_gpuFd, pending, this);
+                }
+
+                if (result != Core::ERROR_NONE) {
+                    _render.unlock();
+                }
+
+                return result;
             }
 
         private:
-            mutable Core::CriticalSection _adminLock;
-            int _cardFd;
+            std::mutex _render;
+            int _gpuFd; // GPU opened as master or lease...
+            IGpu& _gpu; // The buffer commit interface
             Monitor _monitor;
-            IOutput& _output;
-            CommitRegister _pendingCommits;
-            uint64_t _tpageflipstart;
+            CommitRegister _pending;
         }; // class DRM
 
         /* static */ Core::ProxyMapType<string, DRM> DRM::ConnectorImplementation::_backends;
     } // namespace Backend
 
-    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
+    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::ICallback* callback VARIABLE_IS_NOT_USED)
     {
         ASSERT(drmAvailable() == 1);
         ASSERT(connectorName.empty() == false);
@@ -734,7 +738,9 @@ namespace Compositor {
 
         static Core::ProxyMapType<string, Exchange::ICompositionBuffer> gbmConnectors;
 
-        return gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connectorName, connectorName, rectangle, format, callback);
+        Core::ProxyType<Exchange::ICompositionBuffer> connector = gbmConnectors.Instance<Backend::DRM::ConnectorImplementation>(connectorName, connectorName, rectangle, format);
+
+        return connector;
     }
 } // namespace Compositor
 } // Thunder
