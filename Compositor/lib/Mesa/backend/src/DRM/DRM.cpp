@@ -212,7 +212,8 @@ namespace Compositor {
                  */
                 uint32_t Identifier() const override
                 {
-                    return _frameBuffer[BackBuffer()].data->Identifier();
+                    ASSERT(false);
+                    return InvalidIdentifier;
                 }
                 IIterator* Planes(const uint32_t timeoutMs) override
                 {
