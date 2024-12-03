@@ -181,7 +181,6 @@ namespace Plugin {
 
 
     class BluetoothRemoteControl : public PluginHost::IPlugin
-                                 , public PluginHost::IWeb
                                  , public PluginHost::JSONRPCSupportsEventStatus
                                  , public Exchange::IBluetoothRemoteControl
                                  , public Exchange::JSONRPC::IBluetoothRemoteControlLegacy
@@ -1366,8 +1365,7 @@ namespace Plugin {
         BluetoothRemoteControl(const BluetoothRemoteControl&) = delete;
         BluetoothRemoteControl& operator= (const BluetoothRemoteControl&) = delete;
         BluetoothRemoteControl()
-            : _skipURL()
-            , _adminLock()
+            : _adminLock()
             , _service()
             , _gattRemote(nullptr)
             , _name()
@@ -1551,8 +1549,7 @@ namespace Plugin {
                 auto const& profile = _gattRemote->SelectedProfile();
 
                 if (profile.IsSet() == true) {
-                    _gattRemote->VoiceOutput(value);
-                    result = Core::ERROR_NONE;
+                    result = _gattRemote->VoiceOutput(value);
                 }
                 else {
                     result = Core::ERROR_NOT_SUPPORTED;
@@ -1608,14 +1605,9 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-        //   IWeb methods
-        // -------------------------------------------------------------------------------------------------------
-        void Inbound(Web::Request& request) override;
-        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
             INTERFACE_ENTRY(Exchange::IBluetoothRemoteControl)
         END_INTERFACE_MAP
@@ -1673,11 +1665,6 @@ namespace Plugin {
         void KeyEvent(const bool pressed, const uint32_t keyCode);
         void UpdateBatteryLevel(const uint8_t level);
 
-        Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
-        Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
-        Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
-        Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
-
     private:
         static uint32_t TimeToBytes(const uint32_t time, const uint32_t rate, const uint8_t channels, const uint8_t res)
         {
@@ -1689,7 +1676,6 @@ namespace Plugin {
         }
 
     private:
-        uint8_t _skipURL;
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         GATTRemote* _gattRemote;
