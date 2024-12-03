@@ -164,6 +164,7 @@ namespace Compositor {
                     , _connector()
                     , _crtc()
                     , _primaryPlane()
+                    , _swap()
                     , _frontBuffer(0)
                     , _frameBuffer()
                     , _drmModeStatus()
@@ -215,10 +216,12 @@ namespace Compositor {
                 }
                 IIterator* Planes(const uint32_t timeoutMs) override
                 {
+                    _swap.Lock();
                     return _frameBuffer[BackBuffer()].data->Planes(timeoutMs);
                 }
                 uint32_t Completed(const bool dirty) override
                 {
+                    _swap.Unlock();
                     return _frameBuffer[BackBuffer()].data->Completed(dirty);
                 }
                 void Render() override
@@ -298,7 +301,9 @@ namespace Compositor {
 
                 void SwapBuffer()
                 {
+                    _swap.Lock();
                     _frontBuffer ^= 1;
+                    _swap.Unlock();
                 }
 
                 void Presented(const uint64_t pts VARIABLE_IS_NOT_USED) override
@@ -488,6 +493,7 @@ namespace Compositor {
                 DRMObject<Compositor::DRM::ObjectType::Crtc> _crtc;
                 DRMObject<Compositor::DRM::ObjectType::Plane> _primaryPlane;
 
+                Core::CriticalSection _swap;
                 uint8_t _frontBuffer;
                 std::array<DRM::FrameBuffer, 2> _frameBuffer;
 
