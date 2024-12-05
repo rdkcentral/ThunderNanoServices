@@ -56,6 +56,7 @@ using Color = std::array<float, 4>;
 constexpr int InvalidFileDescriptor = -1;
 constexpr Identifier InvalidIdentifier = static_cast<Identifier>(~0);
 
+const uint64_t DefaultTimeoutMs = 80;
 /**
  * @brief  A single DRM format, with a set of modifiers attached.
  *
