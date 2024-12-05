@@ -87,7 +87,7 @@ public:
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
 
-        NewFrame();
+        // NewFrame();
     }
 
     ~RenderTest()
@@ -104,6 +104,8 @@ public:
     void Start()
     {
         TRACE(Trace::Information, ("Starting RenderTest"));
+
+        _renderStart = std::chrono::high_resolution_clock::now();
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
         _render = std::thread(&RenderTest::Render, this);
@@ -143,7 +145,9 @@ private:
 
         const auto start = std::chrono::high_resolution_clock::now();
 
-        const float runtime = std::chrono::duration<float>(start.time_since_epoch()).count();
+        //std::chrono::duration_cast<std::chrono::microseconds>
+
+        const float runtime = std::chrono::duration<float>(start - _renderStart).count();
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
@@ -194,6 +198,7 @@ private:
     bool _running;
     std::thread _render;
     int _renderFd;
+    std::chrono::time_point<std::chrono::high_resolution_clock> _renderStart;
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {
