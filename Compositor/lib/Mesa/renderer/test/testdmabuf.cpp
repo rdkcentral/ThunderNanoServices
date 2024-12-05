@@ -66,6 +66,7 @@ public:
         , _running(false)
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
+        , _renderStart(std::chrono::high_resolution_clock::now())
     {
         _connector = Compositor::IOutput::Instance(
             connectorId,
@@ -87,7 +88,7 @@ public:
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
 
-        // NewFrame();
+        NewFrame();
     }
 
     ~RenderTest()
