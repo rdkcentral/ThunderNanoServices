@@ -35,7 +35,7 @@
 
 #include <inttypes.h>
 
-#include <IBackend.h>
+#include <IOutput.h>
 #include <IBuffer.h>
 #include <IRenderer.h>
 #include <Transformation.h>
@@ -69,7 +69,7 @@ public:
         , _renderFd(::open(renderId.c_str(), O_RDWR))
 
     {
-        _connector = Compositor::Connector(
+        _connector = Compositor::IOutput::Instance(
             connectorId,
             { 0, 0, 1080, 1920 },
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }));
