@@ -30,6 +30,8 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
+#include <CompositorTypes.h>
+
 MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace Thunder {
@@ -247,7 +249,7 @@ namespace Compositor {
 
             modifiers.fill(buffer->Modifier());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             while ((planes->Next() == true) && (planes->IsValid() == true)) {

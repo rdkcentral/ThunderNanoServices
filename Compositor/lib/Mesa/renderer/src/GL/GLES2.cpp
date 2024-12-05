@@ -675,7 +675,7 @@ namespace Compositor {
 
                     ASSERT(_textureId != 0);
 
-                    //Snapshot();
+                    // Snapshot();
                 }
 
                 virtual ~GLESTexture()
@@ -741,7 +741,6 @@ namespace Compositor {
                 uint32_t Height() const override { return _buffer->Height(); }
                 GLenum Target() const { return _target; }
                 GLuint Id() const { return _textureId; }
-                // const std::vector<GLuint>& Identifiers() const { return _textureIds; }
 
                 bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
@@ -755,7 +754,7 @@ namespace Compositor {
                     }
 
                     if ((_target == GL_TEXTURE_2D)) {
-                        if(hasAlpha==true){
+                        if (hasAlpha == true) {
                             RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
                             ASSERT(program != nullptr);
                             result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
@@ -804,8 +803,8 @@ namespace Compositor {
                     glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-                    //glTexParameteri(_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                    //glTexParameteri(_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    // glTexParameteri(_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                    // glTexParameteri(_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
                     _parent.Gles().glEGLImageTargetTexture2DOES(_target, _image);
 
@@ -816,7 +815,7 @@ namespace Compositor {
 
                 void ImportPixelBuffer()
                 {
-                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Planes(10);
+                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Planes(Compositor::DefaultTimeoutMs);
 
                     // uint8_t index(0);
 
@@ -1175,7 +1174,7 @@ namespace Compositor {
             uint32_t _viewportHeight;
             Matrix _projection;
             ProgramRegistry _programs;
-            bool _rendering;
+            mutable bool _rendering;
             TextureRegister _textures;
         }; // class GLES
 
@@ -1187,7 +1186,7 @@ namespace Compositor {
 
     Core::ProxyType<IRenderer> IRenderer::Instance(Core::instance_id identifier)
     {
-        ASSERT(int(identifier) >= 0);  // this should be a valid file descriptor.
+        ASSERT(int(identifier) >= 0); // this should be a valid file descriptor.
 
         static Core::ProxyMapType<Core::instance_id, IRenderer> glRenderers;
 

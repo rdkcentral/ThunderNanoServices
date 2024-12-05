@@ -251,7 +251,7 @@ namespace Plugin {
                 , _parent(parent)
             {
 
-                Exchange::ICompositionBuffer::IIterator* planes = _parent->Planes(10);
+                Exchange::ICompositionBuffer::IIterator* planes = _parent->Planes(Compositor::DefaultTimeoutMs);
                 ASSERT(planes != nullptr);
 
                 while ((planes->Next() == true) && (planes->IsValid() == true)) {
