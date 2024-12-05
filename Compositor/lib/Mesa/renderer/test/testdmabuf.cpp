@@ -54,15 +54,15 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t FPS, const uint16_t RPM)
         : _adminLock()
         , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
         , _textureBuffer()
         , _texture(nullptr)
-        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
-        , _rotations(rotationsPerSecond)
+        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / FPS))
+        , _radPerFrame(((RPM / 60.0f) * (2.0f * M_PI)) / float(FPS))
         , _running(false)
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
@@ -143,7 +143,7 @@ private:
 
         const auto start = std::chrono::high_resolution_clock::now();
 
-        const float runtime =  std::chrono::duration<float>(start.time_since_epoch()).count();
+        const float runtime = std::chrono::duration<float>(start.time_since_epoch()).count();
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
@@ -155,12 +155,16 @@ private:
         const uint16_t renderWidth(720);
         const uint16_t renderHeight(720);
 
+        int x = (renderWidth / 2) * cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        int y = (renderHeight / 2) * sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+
         _renderer->Bind(_connector);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
+        //const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
+        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)) + x, ((height / 2) - (renderHeight / 2)) + y, renderWidth, renderHeight };
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
@@ -173,7 +177,7 @@ private:
 
         _renderer->Unbind();
 
-        rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
+        rotation += _radPerFrame;
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
@@ -186,7 +190,7 @@ private:
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
     Compositor::IRenderer::ITexture* _texture;
     const std::chrono::microseconds _period;
-    const float _rotations;
+    const float _radPerFrame;
     bool _running;
     std::thread _render;
     int _renderFd;
@@ -195,9 +199,11 @@ private:
 class ConsoleOptions : public Core::Options {
 public:
     ConsoleOptions(int argumentCount, TCHAR* arguments[])
-        : Core::Options(argumentCount, arguments, _T("o:r:h"))
+        : Core::Options(argumentCount, arguments, _T("o:r:f:s:h"))
         , RenderNode("/dev/dri/card0")
         , Output(RenderNode)
+        , FPS(60)
+        , RPM(1)
     {
         Parse();
     }
@@ -208,6 +214,8 @@ public:
 public:
     const TCHAR* RenderNode;
     const TCHAR* Output;
+    uint16_t FPS;
+    uint16_t RPM;
 
 private:
     virtual void Option(const TCHAR option, const TCHAR* argument)
@@ -218,6 +226,12 @@ private:
             break;
         case 'r':
             RenderNode = argument;
+            break;
+        case 'f':
+            FPS = std::stoi(argument);
+            break;
+        case 's':
+            RPM = std::stoi(argument);
             break;
         case 'h':
         default:
@@ -256,7 +270,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Thunder::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        Thunder::RenderTest test(options.Output, options.RenderNode, 120, 10);
+        Thunder::RenderTest test(options.Output, options.RenderNode, options.FPS, options.RPM);
 
         test.Start();
 
