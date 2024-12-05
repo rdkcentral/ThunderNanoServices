@@ -98,6 +98,9 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
 
         configuration.add("outputs", outputs)
 
+    if "@PLUGIN_COMPOSITOR_RENDER_NODE@":
+        configuration.add("render", "@PLUGIN_COMPOSITOR_RENDER_NODE@")
+
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")
 rootconfig.add("locator", "@PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB@")
