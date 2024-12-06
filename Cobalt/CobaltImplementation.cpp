@@ -41,9 +41,44 @@ public:
     };
 
 private:
-    class Config: public Core::JSON::Container {
+    class Config : public Core::JSON::Container {
     public:
+        class Window : public Core::JSON::Container {
+        public:
+            Window& operator=(Window&&) = delete;
+            Window& operator=(const Window&) = delete;
+
+            Window()
+                : Core::JSON::Container()
+                , Width(1280)
+                , Height(720) {
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
+            }
+            Window(Window&& move) 
+                : Core::JSON::Container()
+                , Width(std::move(move.Width))
+                , Height(std::move(move.Height)) {
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
+            }
+            Window(const Window& copy) 
+                : Core::JSON::Container()
+                , Width(copy.Width)
+                , Height(copy.Height) {
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
+            }
+            ~Window() override = default;
+
+        public:
+            Core::JSON::DecUInt16 Width;
+            Core::JSON::DecUInt16 Height;
+        };
+
+        Config(Config&&) = delete;
         Config(const Config&) = delete;
+        Config& operator=(Config&&) = delete;
         Config& operator=(const Config&) = delete;
 
         Config()
@@ -51,8 +86,8 @@ private:
             , Url()
             , LogLevel()
             , Inspector()
-            , Width(1280)
-            , Height(720)
+            , Graphics()
+            , Video()
             , RepeatStart()
             , RepeatInterval()
             , ClientIdentifier()
@@ -66,8 +101,8 @@ private:
             Add(_T("url"), &Url);
             Add(_T("loglevel"), &LogLevel);
             Add(_T("inspector"), &Inspector);
-            Add(_T("width"), &Width);
-            Add(_T("height"), &Height);
+            Add(_T("graphics"), &Graphics);
+            Add(_T("video"), &Video);
             Add(_T("repeatstart"), &RepeatStart);
             Add(_T("repeatinterval"), &RepeatInterval);
             Add(_T("clientidentifier"), &ClientIdentifier);
@@ -84,8 +119,8 @@ private:
         Core::JSON::String Url;
         Core::JSON::String LogLevel;
         Core::JSON::String Inspector;
-        Core::JSON::DecUInt16 Width;
-        Core::JSON::DecUInt16 Height;
+        Window Graphics;
+        Window Video;
         Core::JSON::DecUInt32 RepeatStart;
         Core::JSON::DecUInt32 RepeatInterval;
         Core::JSON::String ClientIdentifier;
@@ -181,17 +216,20 @@ private:
                 Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), service->Callsign());
             }
 
-            string width(Core::NumberType<uint16_t>(config.Width.Value()).Text());
-            string height(Core::NumberType<uint16_t>(config.Height.Value()).Text());
+            string width(Core::NumberType<uint16_t>(config.Graphics.Width.Value()).Text());
+            string height(Core::NumberType<uint16_t>(config.Graphics.Height.Value()).Text());
             Core::SystemInfo::SetEnvironment(_T("COBALT_RESOLUTION_WIDTH"), width);
             Core::SystemInfo::SetEnvironment(_T("COBALT_RESOLUTION_HEIGHT"), height);
 
-            if (width.empty() == false) {
+            if (config.Video.IsSet() == false) {
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_WIDTH"), width);
-            }
-
-            if (height.empty() == false) {
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height);
+            }
+            else {
+                string videoWidth(Core::NumberType<uint16_t>(config.Video.Width.Value()).Text());
+                string videoHeight(Core::NumberType<uint16_t>(config.Video.Height.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_WIDTH"), videoWidth);
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), videoHeight);
             }
 
             if (config.RepeatStart.IsSet() == true) {
