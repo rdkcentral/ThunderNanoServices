@@ -30,6 +30,8 @@
 #include <string>
 #include <vector>
 #include <inttypes.h>
+#include <mutex>
+#include <condition_variable>
 
 #include <IOutput.h>
 #include <IBuffer.h>
@@ -42,12 +44,41 @@
 
 #include <DmaBuffer.h>
 
+
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace Thunder {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
+private:
+    class Sink : public Compositor::IOutput::IFeedback {
+    public:
+        Sink(const Sink&) = delete;
+        Sink& operator=(const Sink&) = delete;
+        Sink() = delete;
+
+        Sink(RenderTest& parent)
+            : _parent(parent)
+        {
+        }
+
+        virtual ~Sink() = default;
+
+        virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint64_t time) override
+        {
+            _parent.HandleVSync(id, time);
+        }
+
+        virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
+        {
+            TRACE(Trace::Information, (_T("Connector id %d opened on %s"), id, node.c_str()));
+            // _parent.HandleGPUNode(node);
+        }
+
+    private:
+        RenderTest& _parent;
+    };
 
 public:
     RenderTest() = delete;
@@ -67,11 +98,16 @@ public:
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
         , _renderStart(std::chrono::high_resolution_clock::now())
+        , _sink(*this)
+        , _rendering()
+        , _vsync()
+        , _ppts(Core::Time::Now().Ticks())
+        , _fps()
     {
         _connector = Compositor::IOutput::Instance(
             connectorId,
             { 0, 0, 1080, 1920 },
-            _format);
+            _format, &_sink);
 
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
@@ -146,8 +182,6 @@ private:
 
         const auto start = std::chrono::high_resolution_clock::now();
 
-        //std::chrono::duration_cast<std::chrono::microseconds>
-
         const float runtime = std::chrono::duration<float>(start - _renderStart).count();
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
@@ -180,11 +214,32 @@ private:
 
         _connector->Render();
 
+        WaitForVSync(Core::infinite);
+
         _renderer->Unbind();
 
         rotation += _radPerFrame;
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+    }
+
+    void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint64_t pts /*usec from epoch*/)
+    {
+        _fps  =  1 / ((pts - _ppts) / 1000000.0f);
+        _ppts = pts;
+        _vsync.notify_all();
+    }
+
+    void WaitForVSync(uint32_t timeoutMs)
+    {
+        std::unique_lock<std::mutex> lock(_rendering);
+
+        if (timeoutMs == Core::infinite) {
+            _vsync.wait(lock);
+        } else {
+            _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
+        }
+        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
     }
 
 private:
@@ -200,6 +255,11 @@ private:
     std::thread _render;
     int _renderFd;
     std::chrono::time_point<std::chrono::high_resolution_clock> _renderStart;
+    Sink _sink;
+    std::mutex _rendering;
+    std::condition_variable _vsync;
+    uint64_t _ppts;
+    float _fps;
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {
