@@ -3,6 +3,8 @@ startmode = "@PLUGIN_COMPOSITOR_STARTMODE@"
 configuration = JSON()
 
 configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
+configuration.add("newontop", "false")
+
 if "@PLUGIN_COMPOSITOR_CONNECTOR@":
     configuration.add("connector", "@PLUGIN_COMPOSITOR_CONNECTOR@")
 
