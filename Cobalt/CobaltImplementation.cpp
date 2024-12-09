@@ -97,6 +97,10 @@ private:
             , Language()
             , Connection(CABLE)
             , PlaybackRates(true)
+            , AudioBufferBudget(5)
+            , VideoBufferBudget(300)
+            , ProgressiveBufferBudget(12)
+            , MediaGarbageCollect(170)
         {
             Add(_T("url"), &Url);
             Add(_T("loglevel"), &LogLevel);
@@ -112,6 +116,10 @@ private:
             Add(_T("language"), &Language);
             Add(_T("connection"), &Connection);
             Add(_T("playbackrates"), &PlaybackRates);
+            Add(_T("audiobufferbudget"), &AudioBufferBudget);
+            Add(_T("videobufferbudget"), &VideoBufferBudget);
+            Add(_T("progressivebufferbudget"), &ProgressiveBufferBudget);
+            Add(_T("mediagarbagecollect"), &MediaGarbageCollect);
         }
         ~Config() override = default;
 
@@ -130,6 +138,10 @@ private:
         Core::JSON::String Language;
         Core::JSON::EnumType<connection> Connection;
         Core::JSON::Boolean PlaybackRates;
+        Core::JSON::DecUInt16 AudioBufferBudget;
+        Core::JSON::DecUInt16 VideoBufferBudget;
+        Core::JSON::DecUInt16 ProgressiveBufferBudget;
+        Core::JSON::DecUInt16 MediaGarbageCollect;
     };
 
     class NotificationSink: public Core::Thread {
@@ -203,6 +215,7 @@ private:
 
         uint32_t Configure(PluginHost::IShell* service)
         {
+            bool bufferSet = false;
             uint32_t result = Core::ERROR_NONE;
 
             Config config;
@@ -252,6 +265,30 @@ private:
 
             if (config.CertificationSecret.IsSet() == true) {
                 Core::SystemInfo::SetEnvironment(_T("COBALT_CERTIFICATION_SECRET"), config.CertificationSecret.Value());
+            }
+
+            if (config.AudioBufferBudget.IsSet() == true) {
+                bufferSet = true;
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_AUDIO_BUFFER_BUDGET"), Core::NumberType<uint16_t>(config.AudioBufferBudget.Value()).Text());
+            }
+
+            if (config.VideoBufferBudget.IsSet() == true) {
+                bufferSet = true;
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_VIDEO_BUFFER_BUDGET"), Core::NumberType<uint16_t>(config.VideoBufferBudget.Value()).Text());
+            }
+
+            if (config.MediaGarbageCollect.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_GARBAGE_COLLECT"), Core::NumberType<uint16_t>(config.MediaGarbageCollect.Value()).Text());
+            }
+
+            if (config.ProgressiveBufferBudget.IsSet() == true) {
+                bufferSet = true;
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_PROGRESSIVE_BUFFER_BUDGET"), Core::NumberType<uint16_t>(config.ProgressiveBufferBudget.Value()).Text());
+            }
+
+            if (bufferSet == true) {
+                uint32_t value = config.ProgressiveBufferBudget.Value() + config.VideoBufferBudget.Value() + config.AudioBufferBudget.Value();
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_MAX_BUFFER_BUDGET"), Core::NumberType<uint16_t>(value));
             }
 
             if (config.Language.IsSet() == true) {

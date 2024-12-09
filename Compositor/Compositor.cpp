@@ -160,6 +160,7 @@ namespace Plugin {
         , _brightness(nullptr)
         , _service(nullptr)
         , _connectionId()
+        , _newOnTop(true)
         , _inputSwitch(nullptr)
         , _inputSwitchCallsign()
 
@@ -215,6 +216,7 @@ namespace Plugin {
 
             _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
             _inputSwitchCallsign = config.InputSwitch.Value();
+            _newOnTop = config.NewOnTop.Value();
 
             _brightness = _composition->QueryInterface<Exchange::IBrightness>();
         }
@@ -457,7 +459,13 @@ namespace Plugin {
             // If this is a sub screen (determined by a colon) make sure it is pushed in the right order, if not just push it to the front..
             size_t pos;
             if ((pos = name.find_first_of(':')) == string::npos) {
-                list.push_front(entry);
+                if (_newOnTop == true) {
+                    list.push_front(entry);
+                }
+                else {
+                    list.push_back(entry);
+                }
+                
             }
             else {
                 int value = 1;
@@ -477,11 +485,16 @@ namespace Plugin {
                 if (index == list.end()) {
                     TRACE(Trace::Information, (_T("Sub Client %s was not found yet"), name.substr(0, pos).c_str()));
                     // No entry found yet, pushto front than
-                    list.push_front(entry);
+                    if (_newOnTop == true) {
+                        list.push_front(entry);
+                    }
+                    else {
+                        list.push_back(entry);
+                    }
                 }
                 else {
-                    // We got an entry, where do we ant to put ours ?
-                    if (name[pos+1] == 'g') {
+                    // We got an entry, where do we want to put ours ?
+                    if  ( (name[pos+1] == 'g') || (name[pos+1] == '0') ) {
                         TRACE(Trace::Information, (_T("Sub Client [%s]:[graphics] was found it is inserted before video: %s"), name.substr(0, pos).c_str(), (*index).name.c_str()));
                     }
                     else {

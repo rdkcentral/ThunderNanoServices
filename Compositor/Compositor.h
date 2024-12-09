@@ -77,10 +77,11 @@ namespace Plugin {
 
         class Config : public Core::JSON::Container {
         public:
+            Config(Config&&);
             Config(const Config&);
+            Config& operator=(Config&&);
             Config& operator=(const Config&);
 
-        public:
             Config()
                 : Core::JSON::Container()
                 , System(_T("Controller"))
@@ -89,6 +90,7 @@ namespace Plugin {
                 , Connector("connector")
                 , BufferConnector(_T("bufferconnector"))
                 , DisplayConnector("displayconnector")
+                , NewOnTop(true)
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
@@ -96,8 +98,9 @@ namespace Plugin {
                 Add(_T("connector"), &Connector);
                 Add(_T("bufferconnector"), &BufferConnector);
                 Add(_T("displayconnector"), &DisplayConnector);
+                Add(_T("newontop"), &NewOnTop);
             }
-            ~Config() = default;
+            ~Config() override = default;
 
         public:
             Core::JSON::String System;
@@ -106,11 +109,14 @@ namespace Plugin {
             Core::JSON::String Connector;
             Core::JSON::String BufferConnector;
             Core::JSON::String DisplayConnector;
+            Core::JSON::Boolean NewOnTop;
         };
 
         class Data : public Core::JSON::Container {
         public:
+            Data(Data&&) = delete;
             Data(const Data&) = delete;
+            Data& operator=(Data&&) = delete;
             Data& operator=(const Data&) = delete;
 
             Data()
@@ -137,7 +143,9 @@ namespace Plugin {
         };
 
     public:
+        Compositor(Compositor&&) = delete;
         Compositor(const Compositor&) = delete;
+        Compositor& operator=(Compositor&&) = delete;
         Compositor& operator=(const Compositor&) = delete;
         
         Compositor();
@@ -222,6 +230,7 @@ namespace Plugin {
         Exchange::IBrightness* _brightness;
         PluginHost::IShell* _service;
         uint32_t _connectionId;
+        bool _newOnTop;
         Clients _clients;
         Exchange::IInputSwitch* _inputSwitch;
         string _inputSwitchCallsign;
