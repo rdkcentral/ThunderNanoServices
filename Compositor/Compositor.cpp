@@ -465,7 +465,6 @@ namespace Plugin {
                 else {
                     list.push_back(entry);
                 }
-                
             }
             else {
                 int value = 1;
