@@ -493,7 +493,7 @@ namespace Plugin {
                 }
                 else {
                     // We got an entry, where do we want to put ours ?
-                    if  ( (name[pos+1] == 'g') || (name[pos+1] == '0') ) {
+                    if  ( (name[pos+1] == 'g') || (name[pos+1] == '1') ) {
                         TRACE(Trace::Information, (_T("Sub Client [%s]:[graphics] was found it is inserted before video: %s"), name.substr(0, pos).c_str(), (*index).name.c_str()));
                     }
                     else {
