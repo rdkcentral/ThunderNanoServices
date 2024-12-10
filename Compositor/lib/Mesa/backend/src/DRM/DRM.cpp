@@ -425,11 +425,10 @@ namespace Compositor {
                     _swap.Unlock();
                 }
 
-                void Presented(const uint64_t pts) override
+                void Presented(const uint32_t sequence, const uint64_t pts) override
                 {                  
-                    if (_feedback != nullptr)
-                    {
-                        _feedback->Presented(Id(), pts);
+                    if (_feedback != nullptr) {
+                        _feedback->Presented(Id(), sequence, pts);
                     }
                 }
 

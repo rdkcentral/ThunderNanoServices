@@ -50,7 +50,7 @@ namespace Compositor {
 
                 // @brief Callback if the output was presented to a screen.
                 // @param pts: Presentation time stamp of the connector, 0 if was not presented.
-                virtual void Presented(const uint64_t pts) = 0;
+                virtual void Presented(const uint32_t sequence, const uint64_t pts) = 0;
             };
 
             static IGpu& Instance();

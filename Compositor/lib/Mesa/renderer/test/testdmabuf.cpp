@@ -25,16 +25,16 @@
 #include <localtracer/localtracer.h>
 #include <messaging/messaging.h>
 
+#include <condition_variable>
+#include <inttypes.h>
 #include <iterator>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <inttypes.h>
-#include <mutex>
-#include <condition_variable>
 
-#include <IOutput.h>
 #include <IBuffer.h>
+#include <IOutput.h>
 #include <IRenderer.h>
 #include <Transformation.h>
 
@@ -43,7 +43,6 @@
 #include <drm_fourcc.h>
 
 #include <DmaBuffer.h>
-
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -65,9 +64,9 @@ private:
 
         virtual ~Sink() = default;
 
-        virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint64_t time) override
+        virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint32_t sequence, const uint64_t time) override
         {
-            _parent.HandleVSync(id, time);
+            _parent.HandleVSync(id, sequence, time);
         }
 
         virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
@@ -103,6 +102,7 @@ public:
         , _vsync()
         , _ppts(Core::Time::Now().Ticks())
         , _fps()
+        , _sequence(0)
     {
         _connector = Compositor::IOutput::Instance(
             connectorId,
@@ -202,7 +202,7 @@ private:
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        //const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
+        // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)) + x, ((height / 2) - (renderHeight / 2)) + y, renderWidth, renderHeight };
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
@@ -223,9 +223,10 @@ private:
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
-    void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint64_t pts /*usec from epoch*/)
+    void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
     {
-        _fps  =  1 / ((pts - _ppts) / 1000000.0f);
+        _fps = 1 / ((pts - _ppts) / 1000000.0f);
+        _sequence = sequence;
         _ppts = pts;
         _vsync.notify_all();
     }
@@ -260,6 +261,7 @@ private:
     std::condition_variable _vsync;
     uint64_t _ppts;
     float _fps;
+    uint32_t _sequence;
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {
