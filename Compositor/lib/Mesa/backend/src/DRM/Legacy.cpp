@@ -18,7 +18,7 @@
  */
 
 #include "../Module.h"
-#include "IOutput.h"
+#include "IGpu.h"
 
 #include <DRM.h>
 #include <drm_fourcc.h>
@@ -29,81 +29,88 @@
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
-        class LegacyCrtc : public IOutput {
+        class Legacy : public IGpu {
         public:
-            LegacyCrtc(LegacyCrtc&&) = delete;
-            LegacyCrtc(const LegacyCrtc&) = delete;
-            LegacyCrtc& operator=(const LegacyCrtc&) = delete;
+            Legacy(Legacy&&) = delete;
+            Legacy(const Legacy&) = delete;
+            Legacy& operator=(const Legacy&) = delete;
 
-            LegacyCrtc()
+            Legacy()
                 : _gammaSize(0)
                 , _doModeSet(true)
             {
             }
 
-            ~LegacyCrtc() = default;
+            ~Legacy() = default;
 
-            void Reevaluate() override
-            {
-                _doModeSet = true;
-            }
-
-            uint32_t Commit(const int fd, const IConnector* connector, const uint32_t flags, void* userData) override
+            uint32_t Commit(const int fd, const std::vector<IConnector*> connectors, void* userData) override
             {
                 uint32_t result(Core::ERROR_NONE);
 
-                ASSERT(connector != nullptr);
+                for (auto& connector : connectors) {
 
-                ASSERT((flags & ~DRM_MODE_PAGE_FLIP_FLAGS) == 0); // only allow page flip flags
+                    ASSERT(connector != nullptr);
+                    ASSERT(connector->CrtController() != nullptr);
+                    ASSERT(connector->Plane() != nullptr);
 
-                int drmResult(0);
+                    const uint32_t ConnectorId(connector->Id());
+                    const uint32_t crtcId(connector->CrtController()->Id());
+                    const uint32_t planeId(connector->Plane()->Id());
 
-                if (_doModeSet == true) {
-                    std::vector<uint32_t> connectorIds;
+                    TRACE(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
 
-                    const drmModeModeInfo* mode(nullptr);
+                    uint32_t commitFlags(DRM_MODE_PAGE_FLIP_EVENT);
 
-                    if (connector->IsEnabled() == true) {
-                        connectorIds.emplace_back(connector->ConnectorId());
-                        mode = &(connector->ModeInfo());
+                    int drmResult(0);
+
+                    if (_doModeSet == true) {
+                        std::vector<uint32_t> connectorIds;
+
+                        const drmModeModeInfo* mode(nullptr);
+
+                        if (connector->IsEnabled() == true) {
+                            connectorIds.emplace_back(ConnectorId);
+                            mode = &(connector->ModeInfo());
+                        }
+
+                        uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
+
+                        if ((drmResult = drmModeConnectorSetProperty(fd, ConnectorId, connector->Properties()->Id(DRM::Property::Dpms), dpms)) != 0) {
+                            TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", ConnectorId, drmResult, strerror(errno)));
+                            return Core::ERROR_GENERAL;
+                        }
+
+                        constexpr uint32_t X = 0;
+                        constexpr uint32_t Y = 0;
+
+                        /*
+                         * Use the same mode as the previous operation on the CRTC and specified connector(s)
+                         * New framebuffer Id, x, and y properties will set at vblank.
+                         */
+                        if ((drmResult = drmModeSetCrtc(fd, crtcId, connector->FrameBufferId(), X, Y, connectorIds.empty() ? nullptr : connectorIds.data(), connectorIds.size(), const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
+                            TRACE(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", crtcId, drmResult, strerror(errno)));
+                            return Core::ERROR_INCOMPLETE_CONFIG;
+                        }
+
+                        _doModeSet = false;
                     }
 
-                    uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
-
-                    if ((drmResult = drmModeConnectorSetProperty(fd, connector->ConnectorId(), connector->DpmsPropertyId(), dpms)) != 0) {
-                        TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", connector->ConnectorId(), drmResult, strerror(errno)));
-                        return Core::ERROR_GENERAL;
-                    }
-
-                    constexpr uint32_t X = 0;
-                    constexpr uint32_t Y = 0;
-
-                    /*
-                     * Use the same mode as the previous operation on the CRTC and specified connector(s)
-                     * New framebuffer Id, x, and y properties will set at vblank.
-                     */
-                    if ((drmResult = drmModeSetCrtc(fd, connector->CtrControllerId(), connector->FrameBufferId(), X, Y, connectorIds.empty() ? nullptr : connectorIds.data(), connectorIds.size(), const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
-                        TRACE(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", connector->CtrControllerId(), drmResult, strerror(errno)));
-                        return Core::ERROR_INCOMPLETE_CONFIG;
-                    }
-                    
                     /*
                      * clear cursor image
                      */
-                    if ((drmResult = drmModeSetCursor(fd, connector->CtrControllerId(), 0, 0, 0)) != 0) {
+                    if ((drmResult = drmModeSetCursor(fd, crtcId, 0, 0, 0)) != 0) {
                         TRACE(Trace::Error, ("Failed to clear cursor: [%d] %s", drmResult, strerror(errno)));
                     }
 
-                    _doModeSet = false;
-                }
-                /*
-                 * Request the kernel to do a page flip. The "DRM_MODE_PAGE_FLIP_EVENT" flags will notify us when the next vblank is active
-                 */
-                if ((drmResult == 0) && ((flags & DRM_MODE_PAGE_FLIP_EVENT) > 0)) {
-
-                    if ((drmResult = drmModePageFlip(fd, connector->CtrControllerId(), connector->FrameBufferId(), flags, userData)) != 0) {
+                    if ((drmResult == 0) && ((drmResult = drmModePageFlip(fd, crtcId, connector->FrameBufferId(), commitFlags, userData)) != 0)) {
                         TRACE(Trace::Error, ("Page flip failed: [%d] %s", drmResult, strerror(errno)));
                         result = Core::ERROR_GENERAL;
+                    }
+                }
+
+                if (result != Core::ERROR_NONE) {
+                    for (auto connector : connectors) {
+                        connector->Presented(0); // notify connector implementation the buffer failed to display.
                     }
                 }
 
@@ -111,13 +118,16 @@ namespace Compositor {
             }
 
         private:
+            uint32_t Check()
+
+        private:
             signed int _gammaSize;
             bool _doModeSet;
-        }; // class LegacyCrtc
+        }; // class Legacy
 
-        /* static */ IOutput& IOutput::Instance()
+        /* static */ IGpu& IGpu::Instance()
         {
-            static LegacyCrtc& output = Core::SingletonType<LegacyCrtc>::Instance();
+            static Legacy& output = Core::SingletonType<Legacy>::Instance();
             return output;
         }
     } // namespace Backend

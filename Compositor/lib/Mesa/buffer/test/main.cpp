@@ -167,7 +167,7 @@ int main(int /*argc*/, const char* argv[])
         assert(buffer->Height() == 1080);
         assert(buffer->Format() == format.Type());
 
-        Exchange::ICompositionBuffer::IIterator* index = buffer->Planes(10);
+        Exchange::ICompositionBuffer::IIterator* index = buffer->Planes(Compositor::DefaultTimeoutMs);
         assert(index != nullptr);
 
         Exchange::ICompositionBuffer::IPlane* first_plane = nullptr;

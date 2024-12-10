@@ -38,23 +38,35 @@ set(PLUGIN_COMPOSITOR_MODE "Local" CACHE STRING "Controls if the plugin should r
 
 option(PLUGIN_COMPOSITOR_BOXMODE "Allows for selecting a boxmode (Nexus only).")
 option(PLUGIN_COMPOSITOR_GRAPHICS_HEAP_SIZE "Change graphic heap of driver (Nexus only).")
-set(PLUGIN_COMPOSITOR_FAIL_SAFE_HDR OFF CACHE BOOL "Enable fail safe HDR values")
+option(PLUGIN_COMPOSITOR_ALLOW_UNAUTHENTICATED_CLIENTS "Disable nxserver client authentication." OFF)
+
+set(PLUGIN_COMPOSITOR_SAGE_PATH "/usr/bin" CACHE STRING "Specifies the location of the SAGE binaries")
+set(PLUGIN_COMPOSITOR_PAK_PATH "/usr/bin" CACHE STRING "Specifies the location of the PAK binaries")
+set(PLUGIN_COMPOSITOR_DRM_PATH "/usr/bin" CACHE STRING "Specifies the location of the DRM binaries")
+set(PLUGIN_COMPOSITOR_HDCP1XBIN_PATH "/usr/bin" CACHE STRING "Specifies the location of the HDCP 1 binaries")
+set(PLUGIN_COMPOSITOR_HDCP2XBIN_PATH "/usr/bin" CACHE STRING "Specifies the location of the HDCP 2 binaries")
+set(PLUGIN_COMPOSITOR_SVP "None" CACHE STRING "SVP pipeline type")
+
+option(PLUGIN_COMPOSITOR_FAIL_SAFE_HDR "Enable fail safe HDR values" OFF)
 
 option(PLUGIN_COMPOSITOR_TEST "Build a compositor test client" OFF)
-option(PLUGIN_COMPOSITOR_NXSERVER "Allow to use external nexus server" OFF)
+option(PLUGIN_COMPOSITOR_NXSERVER "Include a nexus server (Used in Wayland)" OFF)
 
 set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implementation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
 
-set(PLUGIN_COMPOSITOR_OUTPUTS "HDMI-A-1;0;0;1080;1920"  CACHE STRING "Specify the outputs (name1;x;y;h;w|name2;x;y;h;w) that the compopsitor should use." )
+set(PLUGIN_COMPOSITOR_OUTPUTS "HDMI-A-1;0;0;1080;1920"  CACHE STRING "Specify the outputs (name1;x;y;h;w|name2;x;y;h;w) that the compositor should use." )
 set(PLUGIN_COMPOSITOR_CANVAS_HEIGHT "720"  CACHE STRING "Specify the height of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_CANVAS_WIDTH "1280"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_BUFFER_CONNECTOR "buffer|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR "display|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
+set(PLUGIN_COMPOSITOR_RENDER_NODE ""  CACHE STRING "Manually specify the render node to use (e.g. /dev/dri/renderDxxx or /dev/dri/cardx)." )
 
 set(PLUGIN_COMPOSITOR_WESTON_TTY_LIST "1;2;3;4" CACHE STRING "TTY ids for weston drm backend")
 set(PLUGIN_COMPOSITOR_WESTON_OUTPUT_CONFIGS "HDMI-A-1,1280x720@60.0 16:9,normal" CACHE STRING "Output configs for weston drm backend")
 set(PLUGIN_COMPOSITOR_THREAD_COUNT "2"  CACHE STRING "Specify the minimum thread count required to run in outofprocess mode")
+
+set(PLUGIN_COMPOSITOR_STARTMODE "Activated" CACHE STRING "The startup state of the plugin")
 
 # deprecated/legacy flags support
 if(PLUGIN_COMPOSITOR_OUTOFPROCESS STREQUAL "false")
@@ -84,6 +96,12 @@ target_link_libraries(${MODULE_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+
+if(PLUGIN_COMPOSITOR_NXSERVER)
+    target_compile_definitions(${MODULE_NAME} 
+        PRIVATE
+            PROVIDES_PLATORM)
+endif()
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)

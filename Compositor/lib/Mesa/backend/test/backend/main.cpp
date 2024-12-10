@@ -30,7 +30,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include <IBackend.h>
+#include <IOutput.h>
 
 using namespace Thunder;
 
@@ -42,7 +42,7 @@ int main(int argc, const char* argv[])
     std::string ConnectorId;
 
     if (argc == 1) {
-        ConnectorId = "card1-HDMI-A-2";
+        ConnectorId = "card1-HDMI-A-1";
     } else {
         ConnectorId = argv[1];
     }
@@ -92,7 +92,7 @@ int main(int argc, const char* argv[])
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::Connector(ConnectorId, rectangle, format);
+                    framebuffer = Compositor::IOutput::Instance(ConnectorId, rectangle, format);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
                 }
                 break;

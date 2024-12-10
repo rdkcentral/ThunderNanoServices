@@ -29,6 +29,7 @@ target_link_libraries(CommonDRM
     PUBLIC
         libdrm::libdrm
     PRIVATE
+        common::include
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging

@@ -19,13 +19,10 @@
 
 #pragma once
 
-#include <cstdint>
-#include <map>
-#include <vector>
-#include <string>
-#include <xf86drm.h>
-#include <xf86drmMode.h>
 #include <drm_fourcc.h>
+#include <xf86drm.h>
+#include <string>
+#include <vector>
 
 namespace Thunder {
 
@@ -33,28 +30,8 @@ namespace Exchange {
     struct ICompositionBuffer;
 }
 
-namespace Compositor {
-
+namespace Compositor {  
     namespace DRM {
-        using Identifier = uintptr_t;
-        using Value = uint64_t;
-        using PropertyRegister = std::map<std::string, Identifier>;
-        using IdentifierRegister = std::vector<Identifier>;
-
-        constexpr Identifier InvalidIdentifier = static_cast<Identifier>(~0);
-
-        enum class PlaneType : uint8_t {
-            Cursor = DRM_PLANE_TYPE_CURSOR,
-            Primary = DRM_PLANE_TYPE_PRIMARY,
-            Overlay = DRM_PLANE_TYPE_OVERLAY,
-        };
-
-        extern std::string PropertyString(const PropertyRegister& properties, const bool pretty = false);
-        extern std::string IdentifierString(const std::vector<Identifier>& ids, const bool pretty = false);
-        extern uint32_t GetPropertyId(PropertyRegister& registry, const std::string& name);
-        extern uint32_t GetProperty(const int cardFd, const Identifier object, const Identifier property, Value& value);
-        extern uint16_t GetBlobProperty(const int cardFd, const Identifier object, const Identifier property, const uint16_t blobSize, uint8_t blob[]);
-
         extern void GetNodes(const uint32_t type, std::vector<std::string>& list);
         extern bool HasCapability(const int cardFd, const uint64_t option);
         /*
@@ -220,7 +197,7 @@ namespace Compositor {
         static inline bool HasAlpha(uint32_t drmFormat)
         {
             return (
-                   (drmFormat == DRM_FORMAT_ARGB4444)
+                (drmFormat == DRM_FORMAT_ARGB4444)
                 || (drmFormat == DRM_FORMAT_ABGR4444)
                 || (drmFormat == DRM_FORMAT_RGBA4444)
                 || (drmFormat == DRM_FORMAT_BGRA4444)

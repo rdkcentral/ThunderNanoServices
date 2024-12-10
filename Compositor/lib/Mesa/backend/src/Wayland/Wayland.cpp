@@ -25,7 +25,7 @@
 #include <interfaces/IComposition.h>
 #include <interfaces/ICompositionBuffer.h>
 
-#include "IBackend.h"
+#include "IOutput.h"
 #include "Input.h"
 #include "Output.h"
 
@@ -851,9 +851,8 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
+        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
         {
-
             return _windows.Instance<Backend::WaylandOutput>(name, *this, name, rectangle, format);
         }
 
@@ -887,7 +886,7 @@ namespace Compositor {
 
             struct zwp_linux_buffer_params_v1* params = zwp_linux_dmabuf_v1_create_params(api);
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(DefaulTimeout);
             ASSERT(planes != nullptr);
 
             uint8_t i(0);
@@ -939,7 +938,7 @@ namespace Compositor {
 
             enum wl_shm_format wl_shm_format = ConvertDrmFormat(buffer->Format());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(Compositor::DefaultTimeout);
             ASSERT(planes != nullptr);
 
             uint32_t size(0);
@@ -1005,11 +1004,11 @@ namespace Compositor {
      *
      * @return A `Core::ProxyType` object that wraps an instance of `Exchange::ICompositionBuffer`.
      */
-    Core::ProxyType<Exchange::ICompositionBuffer> Connector(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::ICallback* callback)
+    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> IOutput::Instance(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance("");
 
-        return backend.Output(name, rectangle, format, callback);
+        return backend.Output(name, rectangle, format, feedback);
     }
 } // namespace Compositor
 } // namespace Thunder

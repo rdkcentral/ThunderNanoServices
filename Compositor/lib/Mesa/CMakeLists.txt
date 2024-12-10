@@ -15,9 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(TARGET ${PLATFORM_COMPOSITOR})
-
-message(STATUS "Setting up ${TARGET} for Mesa platfrom")
+message(STATUS "Setting up ${PLATFORM_COMPOSITOR} for Mesa platfrom")
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)

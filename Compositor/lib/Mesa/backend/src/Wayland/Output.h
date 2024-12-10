@@ -25,7 +25,7 @@
 #include <interfaces/ICompositionBuffer.h>
 #include <DRM.h>
 
-#include "IBackend.h"
+#include "IOutput.h"
 
 #include <wayland-client.h>
 #include "generated/presentation-time-client-protocol.h"
