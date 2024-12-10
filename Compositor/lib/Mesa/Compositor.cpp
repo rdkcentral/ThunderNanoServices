@@ -232,6 +232,10 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        class Client : public Exchange::IComposition::IClient, public Exchange::ICompositionBuffer {
+        public:
+            using Container = Core::ProxyMapType<string, Client>;
+
         class SharedBuffer : public Compositor::CompositorBufferType<4> {
         private:
             using BaseClass = Thunder::Compositor::CompositorBufferType<4>;
@@ -283,10 +287,6 @@ namespace Plugin {
         private:
             Exchange::ICompositionBuffer* _parent;
         }; // class SharedBuffer
-
-        class Client : public Exchange::IComposition::IClient, public Exchange::ICompositionBuffer {
-        public:
-            using Container = Core::ProxyMapType<string, Client>;
 
             class Bridge : public Core::PrivilegedRequest {
                 static constexpr uint32_t DisplayId = 0;
