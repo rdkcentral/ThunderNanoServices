@@ -201,6 +201,7 @@ namespace Plugin {
             , _gpuIdentifier(0)
             , _gpuNode()
             , _renderNode()
+            , _present(*this)
         {
         }
 
@@ -874,6 +875,56 @@ namespace Plugin {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
         }
 
+        class Presenter : public Core::Thread {
+        public:
+            Presenter(Presenter&&) = delete;
+            Presenter(const Presenter&) = delete;
+            Presenter& operator=(Presenter&&) = delete;
+            Presenter& operator=(const Presenter&) = delete;
+
+            Presenter(CompositorImplementation& parent)
+                : Core::Thread(Thread::DefaultStackSize(), "CompositorPresenter")
+                , _parent(parent)
+            {
+            }
+
+            ~Presenter() = default;
+
+            uint32_t Trigger()
+            {
+                uint32_t result(Core::ERROR_NONE);
+
+                if (Thread::IsRunning() == true) {
+                    _continue = true;
+                    result = Core::ERROR_INPROGRESS;
+                } else {
+                    Thread::Run();
+                }
+
+                return result;
+            }
+
+        private:
+            uint32_t Worker() override
+            {
+                uint32_t delay(Core::infinite);
+
+                _continue = false;
+
+                _parent.RenderCanvas();
+
+                if (_continue == false) {
+                    Core::Thread::Block();
+                }
+
+                return delay;
+            }
+
+        private:
+            CompositorImplementation& _parent;
+            std::atomic<bool> _continue;
+        };
+
     private:
         mutable Core::CriticalSection _adminLock;
         uint32_t _format;
@@ -893,6 +944,7 @@ namespace Plugin {
         uint32_t _gpuIdentifier;
         std::string _gpuNode;
         std::string _renderNode;
+        Presenter _present;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
