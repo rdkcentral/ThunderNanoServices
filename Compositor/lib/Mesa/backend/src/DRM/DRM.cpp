@@ -632,21 +632,10 @@ namespace Compositor {
 
             uint32_t SchedulePageFlip(ConnectorImplementation& connector VARIABLE_IS_NOT_USED)
             {
-                uint32_t result(Core::ERROR_UNAVAILABLE);
-
-                _flip.lock();
-                result = PageFlip();
-                TRACE(Trace::Backend, ("Scheduled pageflip"));
-
-                if (result != Core::ERROR_NONE) {
-                    _pendingFlips = 0;
-                    _flip.unlock();
-                }
-
-                return result;
+                return PageFlip();
             }
 
-            void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence VARIABLE_IS_NOT_USED, unsigned seconds, const unsigned useconds)
+            void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
             {
                 _connectors.Visit([&](const string& name, const Core::ProxyType<ConnectorImplementation> connector) {
                     if (connector->CrtController()->Id() == crtc) {
@@ -655,17 +644,18 @@ namespace Compositor {
                         presentationTimestamp.tv_sec = seconds;
                         presentationTimestamp.tv_nsec = useconds * 1000;
 
-                        connector->Presented(Core::Time(presentationTimestamp).Ticks());
+                        connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
                         connector->Release();
 
                         --_pendingFlips;
 
-                        TRACE(Trace::Backend, ("Pageflip finished for %s", name.c_str()));
+                        TRACE(Trace::Backend, ("Pageflip finished for %s, pending flips: %u", name.c_str(), _pendingFlips));
                     }
                 });
 
                 if (_pendingFlips == 0) {
                     // all connectors are flipped... ready for the next round.
+                    TRACE(Trace::Backend, ("all connectors are flipped... ready for the next round."));
                     _flip.unlock();
                 }
             }
@@ -696,8 +686,9 @@ namespace Compositor {
 
             uint32_t PageFlip()
             {
-                uint32_t result(Core::ERROR_ILLEGAL_STATE);
+                uint32_t result(Core::ERROR_GENERAL);
 
+                if (_flip.try_lock()) {
                 std::vector<IGpu::IConnector*> GpuConnectors;
 
                 _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<ConnectorImplementation> connector) {
@@ -711,6 +702,13 @@ namespace Compositor {
                 if (GpuConnectors.empty() == false) {
                     _pendingFlips = GpuConnectors.size();
                     result = _gpu.Commit(_gpuFd, GpuConnectors, this);
+                        TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
+                    } else {
+                        TRACE_GLOBAL(Trace::Information, ("Nothing to commit..."));
+                    }
+                } else {
+                    TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
+                    result = Core::ERROR_INPROGRESS;
                 }
 
                 return result;
