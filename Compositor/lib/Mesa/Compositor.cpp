@@ -198,7 +198,6 @@ namespace Plugin {
             , _dispatcher(nullptr)
             , _canvasBuffer()
             , _canvasTexture(nullptr)
-            , _canvasShare(nullptr)
             , _gpuIdentifier(0)
             , _gpuNode()
             , _renderNode()
@@ -212,9 +211,6 @@ namespace Plugin {
             if (_engine.IsValid()) {
                 _engine.Release();
             }
-
-            _clientBridge.Revoke(_canvasShare.get());
-            _canvasShare.reset(nullptr);
 
             _clientBridge.Close();
             _clients.Clear();
@@ -619,9 +615,6 @@ namespace Plugin {
             _canvasTexture = _renderer->Texture(_canvasBuffer.operator->());
             ASSERT(_canvasTexture != nullptr);
 
-            _canvasShare.reset(new SharedBuffer(_canvasBuffer.operator->()));
-            _clientBridge.Announce(_canvasShare.get());
-
             RenderCanvas();
 
             std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
@@ -897,7 +890,6 @@ namespace Plugin {
         std::unique_ptr<DisplayDispatcher> _dispatcher;
         Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
         Compositor::IRenderer::ITexture* _canvasTexture;
-        std::unique_ptr<SharedBuffer> _canvasShare;
         uint32_t _gpuIdentifier;
         std::string _gpuNode;
         std::string _renderNode;
