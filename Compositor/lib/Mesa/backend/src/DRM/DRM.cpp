@@ -20,8 +20,8 @@
 #include "../Module.h"
 #include "IGpu.h"
 
-#include <IOutput.h>
 #include <IBuffer.h>
+#include <IOutput.h>
 #include <interfaces/IComposition.h>
 
 // #define __GBM__
@@ -111,6 +111,8 @@ namespace Compositor {
 
             return file;
         }
+
+        static Core::ResourceMonitorType<Core::IResource, Core::Void, 0, 1> _resourceMonitor;
 
         class DRM {
         public:
@@ -229,7 +231,7 @@ namespace Compositor {
                             TRACE(Trace::Information, ("Picture aspect ratio not supported."));
                         }
 
-                        Core::ResourceMonitor::Instance().Register(_monitor);
+                        _resourceMonitor.Register(_monitor);
                     } else {
                         close(_gpuFd);
                         _gpuFd = Compositor::InvalidFileDescriptor;
@@ -240,7 +242,7 @@ namespace Compositor {
             virtual ~DRM()
             {
                 if (_gpuFd > 0) {
-                    Core::ResourceMonitor::Instance().Unregister(_monitor);
+                    _resourceMonitor.Unregister(_monitor);
 
                     if ((drmIsMaster(_gpuFd) != 0) && (drmDropMaster(_gpuFd) != 0)) {
                         TRACE(Trace::Error, ("Could not drop DRM master. Error: [%s]", strerror(errno)));
