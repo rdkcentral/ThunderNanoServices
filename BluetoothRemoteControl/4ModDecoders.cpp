@@ -33,8 +33,8 @@ private:
     };
 
 public:
-    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
-    static const TCHAR*                                    Name;
+    static constexpr Exchange::IBluetoothRemoteControl::codectype DecoderType = Exchange::IBluetoothRemoteControl::codectype::IMA_ADPCM;
+    static const TCHAR* Name;
 
 public:
     ADPCM() = delete;
@@ -118,7 +118,7 @@ protected:
 
                 ::memcpy(_package, &(dataIn[3]), _offset);
             }
-            else if ((lengthIn + _offset) < sizeof(_package)) { 
+            else if ((lengthIn + _offset) < sizeof(_package)) {
                 ::memcpy(&(_package[_offset]), dataIn, lengthIn);
                 _offset += lengthIn;
             }
@@ -146,7 +146,7 @@ protected:
             _frame = 0;
             _offset = 0;
         }
- 
+
         return ( sendFrame );
     }
 
@@ -166,7 +166,7 @@ static Decoders::DecoderFactory<ADPCM> _adpcmFactory;
 
 class PCM : public ADPCM {
 public:
-    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::PCM;
+    static constexpr Exchange::IBluetoothRemoteControl::codectype DecoderType = Exchange::IBluetoothRemoteControl::codectype::PCM;
 
 public:
     PCM() = delete;
@@ -290,4 +290,4 @@ private:
 
 static Decoders::DecoderFactory<PCM> _pcmFactory;
 
-} // namespace 
+} // namespace
