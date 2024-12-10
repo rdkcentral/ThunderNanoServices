@@ -65,7 +65,7 @@ namespace Compositor {
                     char* node = drmGetDeviceNameFromFd2(_fd);
                     ASSERT(node != nullptr);
 
-                    TRACE(Trace::Information, ("New request for %s", node));
+                    TRACE(Trace::Backend, ("New request for %s", node));
                 }
                 ~Request()
                 {
@@ -96,7 +96,7 @@ namespace Compositor {
                     if (propertyId != DRM::InvalidIdentifier) {
                         int presult(0);
 
-                        TRACE(Trace::Information, ("ObjectId[%u] Set propertyId %u to %" PRIu64, objectId, propertyId, value));
+                        TRACE(Trace::Backend, ("ObjectId[%u] Set propertyId %u to %" PRIu64, objectId, propertyId, value));
 
                         if ((_request != nullptr) && (presult = drmModeAtomicAddProperty(_request, objectId, propertyId, value) < 0)) {
                             TRACE(Trace::Error, ("Failed to add atomic DRM property %u: %s", propertyId, strerror(-result)));
@@ -104,7 +104,7 @@ namespace Compositor {
 
                         result = (presult == 0) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
                     } else {
-                        TRACE(Trace::Error, ("ObjectId[%u] propertyId was invalid to %" PRIu64, objectId, propertyId, value));
+                        TRACE(Trace::Error, ("ObjectId[%u] property not found.", objectId));
                     }
 
                     return result;
@@ -178,7 +178,7 @@ namespace Compositor {
                 Core::ProxyType<Request> request = Core::ProxyType<Request>::Create(fd);
 
                 uint32_t commitFlags(DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK);
-                
+
                 for (auto& connector : connectors) {
                     ASSERT(connector != nullptr);
                     ASSERT(connector->CrtController() != nullptr);
@@ -188,7 +188,7 @@ namespace Compositor {
                     const uint32_t crtcId(connector->CrtController()->Id());
                     const uint32_t planeId(connector->Plane()->Id());
 
-                    TRACE(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
+                    TRACE(Trace::Backend, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
 
                     request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::CrtcId), connector->IsEnabled() ? crtcId : 0);
 
@@ -197,7 +197,7 @@ namespace Compositor {
                         commitFlags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
                         _doModeset = false;
                     }
-                    
+
                     request->Property(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::Active), connector->IsEnabled() ? 1 : 0);
 
                     if (connector->IsEnabled() == true) {
@@ -232,12 +232,6 @@ namespace Compositor {
                 }
 
                 uint32_t result = request->Commit(commitFlags, userData);
-
-                if(result != Core::ERROR_NONE){
-                    for(auto connector: connectors){
-                        connector->Presented(0); // notify connector implementation the buffer failed to display. 
-                    }
-                }
 
                 return result;
             }
