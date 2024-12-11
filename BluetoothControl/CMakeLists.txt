@@ -32,6 +32,7 @@ option(PLUGIN_BLUETOOTH_KERNEL_CONNECION_CONTROL "Enable kernel connection contr
 set(PLUGIN_BLUETOOTH_STARTMODE "Activated" CACHE STRING "Automatically start the plugin")
 set(PLUGIN_BLUETOOTH_PORT "/dev/ttyAMA0" CACHE STRING "Device port")
 set(PLUGIN_BLUETOOTH_BAUDRATE 115200 CACHE STRING "Serial transmission speed in baud")
+set(PLUGIN_BLUETOOTH_FIRMWARE_DIRECTORY "/etc/firmware" CACHE STRING "Chip firmware folder")
 set(PLUGIN_BLUETOOTH_NAME "Thunder" CACHE STRING "Name of the local Bluetooth device")
 set(PLUGIN_BLUETOOTH_SHORT_NAME "Thunder" CACHE STRING "Short name of the local Bluetooth device")
 set(PLUGIN_BLUETOOTH_CLASS "0x000424" CACHE STRING "Class of the local Bluetooth device")
@@ -40,6 +41,11 @@ set(PLUGIN_BLUETOOTH_CONTINUOUS_BACKGROUND_SCAN false CACHE STRING "Denotes if b
 set(PLUGIN_BLUETOOTH_PERSISTMAC false CACHE STRING "Denotes Bluetooth address shall be made persistent")
 set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SOURCE "" CACHE STRING "Callsign of the A2DP Audio Source service (if any)")
 set(PLUGIN_BLUETOOTH_SERVICE_A2DP_AUDIO_SINK "" CACHE STRING "Callsign of the A2DP Audio Sink service (if any)")
+set(PLUGIN_BLUETOOTH_LE_CONNECTION_INTERVAL_MIN 8 CACHE STRING "LE min connection interval")
+set(PLUGIN_BLUETOOTH_LE_CONNECTION_INTERVAL_MAX 8 CACHE STRING "LE max connection interval")
+set(PLUGIN_BLUETOOTH_LE_CONNECTION_TIMEOUT 300 CACHE STRING "LE connection timeout")
+set(PLUGIN_BLUETOOTH_LE_CONNECTION_LATENCY 0 CACHE STRING "LE connection latency")
+
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})

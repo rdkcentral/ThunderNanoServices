@@ -83,6 +83,8 @@ public:
             Store<uint32_t>(_fileSize);
             _file.Close();
         }
+
+        printf ("Closed file (%d bytes wriiten)\n", _fileSize + 44);
     }
     void Write (const uint16_t length, const uint8_t data[]) {
 

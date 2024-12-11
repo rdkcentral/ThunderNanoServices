@@ -6,6 +6,9 @@ configuration.add("interface", "0")
 configuration.add("port", "@PLUGIN_BLUETOOTH_PORT@")
 configuration.add("baudrate", "@PLUGIN_BLUETOOTH_BAUDRATE@")
 
+if "@PLUGIN_BLUETOOTH_FIRMWARE_DIRECTORY@":
+    configuration.add("firmware", "@PLUGIN_BLUETOOTH_FIRMWARE_DIRECTORY@")
+
 if "@PLUGIN_BLUETOOTH_NAME@":
     configuration.add("name", "@PLUGIN_BLUETOOTH_NAME@")
 
@@ -48,3 +51,10 @@ def UUIDs():
 
 configuration.add("uuids", UUIDs())
 
+le = JSON()
+le.add("mininterval", "@PLUGIN_BLUETOOTH_LE_CONNECTION_INTERVAL_MIN@")
+le.add("maxinterval", "@PLUGIN_BLUETOOTH_LE_CONNECTION_INTERVAL_MAX@")
+le.add("timeout", "@PLUGIN_BLUETOOTH_LE_CONNECTION_TIMEOUT@")
+le.add("latency", "@PLUGIN_BLUETOOTH_LE_CONNECTION_LATENCY@")
+
+configuration.add("lowenergy", le)
