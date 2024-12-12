@@ -910,8 +910,10 @@ namespace Plugin
             auto item = std::find(_notifications.begin(), _notifications.end(), notification);
             ASSERT(item != _notifications.end());
             if (item != _notifications.end()) {
+                Exchange::IWifiControl::INotification* entry = *item;
+                ASSERT(entry != nullptr);
                 _notifications.erase(item);
-                (*item)->Release();
+                entry->Release();
             }
             _adminLock.Unlock();
 
@@ -941,11 +943,14 @@ namespace Plugin
 
                 ASSERT(_controller.IsValid() == true);
 
+                #ifndef __STUBBED__
                 if (_controller->IsOperational() == false) {
                     SYSLOG(Logging::Error, (_T("Could not establish a link with WPA_SUPPLICANT")));
                     _controller.Release();
                 } 
-                else {
+                else 
+                #endif
+                {
                     // The initialize prepared our path...
                     _configurationStore = service->PersistentPath() + "wpa_supplicant.conf";
 
@@ -975,7 +980,9 @@ namespace Plugin
                     _wpsDisabled = config.WpsDisabled.Value();
 
                     if (config.AutoConnect.Value() == false) {
+                        #ifndef __STUBBED__
                         _controller->Scan();
+                        #endif
                     }
                     else {
                         _autoConnectEnabled = true;
@@ -983,7 +990,9 @@ namespace Plugin
                         _maxRetries = config.MaxRetries.Value() == -1 ? 
                                         Core::NumberType<uint32_t>::Max() : 
                                         config.MaxRetries.Value();
+                        #ifndef __STUBBED__
                         _autoConnect.Connect(_preferredSsid, _retryInterval, _maxRetries);
+                        #endif  
                     }
                     result = Core::ERROR_NONE;
                 }
@@ -1208,7 +1217,7 @@ namespace Plugin
         {
              TCHAR converted[256];
 
-             return (string(converted, Core::URL::Decode(item.c_str(), item.length(), converted, (sizeof(converted) / sizeof(TCHAR)))));
+             return (string(converted, Core::URL::Decode(item.c_str(), static_cast<uint32_t>(item.length()), converted, (sizeof(converted) / sizeof(TCHAR)))));
         }
 
         uint8_t GetWPAProtocolFlags(const ConfigInfo& settings, const bool safeFallback) {

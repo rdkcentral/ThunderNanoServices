@@ -2,8 +2,6 @@ startmode = "@PLUGIN_COBALT_STARTMODE@"
 resumed =  "@PLUGIN_COBALT_RESUMED@"
 
 configuration = JSON()
-
-configuration.add("url", "@PLUGIN_COBALT_URL@")
 configuration.add("loglevel", "info")
 configuration.add("inspector", "@PLUGIN_COBALT_WEBINSPECTOR_ADDRESS@")
 configuration.add("height", "@PLUGIN_COBALT_HEIGHT@")
@@ -15,10 +13,20 @@ configuration.add("operatorname", "@PLUGIN_COBALT_OPERATOR_NAME@")
 configuration.add("scope", "@PLUGIN_COBALT_SCOPE@")
 configuration.add("secret", "@PLUGIN_COBALT_SECRET@")
 configuration.add("playbackrates", "@PLUGIN_COBALT_PLAYBACKRATES@")
-configuration.add("audiobufferbudget", "5")
-configuration.add("videobufferbudget", "300")
-configuration.add("progressivebufferbudget", "12")
-configuration.add("mediagarbagecollect", "170")
+
+if "@PLUGIN_COBALT_URL@":
+	configuration.add("url", "@PLUGIN_COBALT_URL@")
+if "@PLUGIN_COBALT_AUDIO_BUFFER_BUDGET@":
+	configuration.add("audiobufferbudget", "@PLUGIN_COBALT_AUDIO_BUFFER_BUDGET@")
+
+if "@PLUGIN_COBALT_VIDEO_BUFFER_BUDGET@":
+	configuration.add("videobufferbudget", "@PLUGIN_COBALT_VIDEO_BUFFER_BUDGET@")
+
+if "@PLUGIN_COBALT_PROGRESSIVE_BUFFER_BUDGET@":
+	configuration.add("progressivebufferbudget", "@PLUGIN_COBALT_PROGRESSIVE_BUFFER_BUDGET@")
+
+if "@PLUGIN_COBALT_MEDIA_GARBAGE_COLLECT@":
+	configuration.add("mediagarbagecollect", "@PLUGIN_COBALT_MEDIA_GARBAGE_COLLECT@")
 
 graphics = JSON()
 graphics.add("height", "@PLUGIN_COBALT_HEIGHT@")

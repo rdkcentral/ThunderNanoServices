@@ -167,7 +167,7 @@ namespace Plugin
         ASSERT(_skipURL <= request.Path.length());
 
         Core::ProxyType<Web::Response> result;
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
+        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, static_cast<uint32_t>(request.Path.length()) - _skipURL), false, '/');
         // By default, we are in front of any element, jump onto the first element, which is if, there is something an empty slot.
         index.Next();
         if (request.Verb == Web::Request::HTTP_GET) {

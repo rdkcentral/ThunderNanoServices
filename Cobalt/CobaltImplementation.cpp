@@ -97,6 +97,7 @@ private:
             , Language()
             , Connection(CABLE)
             , PlaybackRates(true)
+            , FrameRate(30)
             , AudioBufferBudget(5)
             , VideoBufferBudget(300)
             , ProgressiveBufferBudget(12)
@@ -116,6 +117,7 @@ private:
             Add(_T("language"), &Language);
             Add(_T("connection"), &Connection);
             Add(_T("playbackrates"), &PlaybackRates);
+            Add(_T("framerate"), &FrameRate);
             Add(_T("audiobufferbudget"), &AudioBufferBudget);
             Add(_T("videobufferbudget"), &VideoBufferBudget);
             Add(_T("progressivebufferbudget"), &ProgressiveBufferBudget);
@@ -138,6 +140,7 @@ private:
         Core::JSON::String Language;
         Core::JSON::EnumType<connection> Connection;
         Core::JSON::Boolean PlaybackRates;
+        Core::JSON::DecUInt8 FrameRate;
         Core::JSON::DecUInt16 AudioBufferBudget;
         Core::JSON::DecUInt16 VideoBufferBudget;
         Core::JSON::DecUInt16 ProgressiveBufferBudget;
@@ -243,6 +246,11 @@ private:
                 string videoHeight(Core::NumberType<uint16_t>(config.Video.Height.Value()).Text());
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_WIDTH"), videoWidth);
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), videoHeight);
+            }
+
+            if (config.FrameRate.IsSet() == true) {
+                string rate (Core::NumberType<uint16_t>(config.FrameRate.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_MAX_FRAMERATE"), rate);
             }
 
             if (config.RepeatStart.IsSet() == true) {
