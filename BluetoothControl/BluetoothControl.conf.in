@@ -1,4 +1,5 @@
 startmode = "@PLUGIN_BLUETOOTH_STARTMODE@"
+startuporder = "999"
 
 configuration = JSON()
 
