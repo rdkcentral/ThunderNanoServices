@@ -37,7 +37,6 @@ option(EXAMPLE_IOCONNECTOR_TEST "Include IOConnector test suite" OFF)
 option(EXAMPLE_MESSAGECONTROL_UDP_CLIENT "Include UDP output client for message control" OFF)
 option(EXAMPLE_DYNAMICLOADING "Include dynamic loading examples" OFF)
 option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
-
 option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)

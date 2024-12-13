@@ -3,7 +3,7 @@
   "info": {
     "title": "DynamicJSONRPCErrorMessage Plugin",
     "callsign": "DynamicJSONRPCErrorMessage",
-    "locator": "libThunderDynamicJSONRPCErrorMessage.so",
+    "locator": "libWPEFrameworkDynamicJSONRPCErrorMessage.so",
     "status": "alpha",
     "version": "1.0"
   },

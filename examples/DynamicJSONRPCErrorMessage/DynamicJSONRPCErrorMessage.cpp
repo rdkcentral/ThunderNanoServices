@@ -24,7 +24,7 @@
 
 #include <sstream>
 
-namespace Thunder {
+namespace WPEFramework {
 
 namespace Plugin {
 
@@ -61,14 +61,16 @@ namespace Plugin {
     }
 
     uint32_t DynamicJSONRPCErrorMessage::OnJSONRPCError(const Core::JSONRPC::Context&, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage) {
+        uint32_t result = errorcode;
         if((method == _T("add")) && (errorcode == Core::ERROR_GENERAL) ) {
             JsonData::Math::AddParamsInfo addparams;
             addparams.FromString(parameters);
             std::stringstream message;
             message <<_T("Error handling add method failed for general reason, values: ") << addparams.A << _T(" and ") << addparams.B;
             errormessage = message.str();
+            //result = 1000; // will result in a json rpc error code of -32000
         } 
-        return errorcode; // one could change/override the errorcode returned by COMRPC but that would not be advised as might be obvious
+        return result; // one could change/override the errorcode returned by COMRPC but that would not be advised as might be obvious
     }
 
     uint32_t DynamicJSONRPCErrorMessage::OnJSONRPCErrorMethod(const Core::JSONRPC::Context&, const string& method, const string& parameters, const uint32_t errorcode, string& errormessage) {
