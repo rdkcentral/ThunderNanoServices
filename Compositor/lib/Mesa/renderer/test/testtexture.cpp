@@ -49,13 +49,13 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 namespace Thunder {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
-static Compositor::PixelBuffer textureRed(Texture::Red);
-static Compositor::PixelBuffer textureGreen(Texture::Green);
-static Compositor::PixelBuffer textureBlue(Texture::Blue);
+static Core::ProxyType<Compositor::PixelBuffer> textureRed(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Red));
+static Core::ProxyType<Compositor::PixelBuffer> textureGreen(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Green));
+static Core::ProxyType<Compositor::PixelBuffer> textureBlue(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Blue));
 
-static Compositor::PixelBuffer textureSimple(Texture::Simple);
+static Core::ProxyType<Compositor::PixelBuffer> textureSimple(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Simple));
 
-static Compositor::PixelBuffer textureTv(Texture::TvTexture);
+static Core::ProxyType<Compositor::PixelBuffer> textureTv(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::TvTexture));
 
 class RenderTest {
 public:
@@ -84,7 +84,7 @@ public:
 
         _renderer = Compositor::IRenderer::Instance(_renderFd);
 
-        _texture = _renderer->Texture(&textureTv);
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::ISimpleBuffer>(textureTv));
 
         ASSERT(_renderer.IsValid());
 
@@ -171,7 +171,8 @@ private:
 
         _renderer->End(false);
 
-        _connector->Render();
+        // TODO: Check with Bram what the intention is here:
+        // _connector->Render();
 
         _renderer->Unbind();
 

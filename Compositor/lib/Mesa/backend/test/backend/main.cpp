@@ -84,7 +84,8 @@ int main(int argc, const char* argv[])
 
             case 'S': {
                 if (framebuffer.IsValid() == true) {
-                    framebuffer->Render();
+                    // TODO: Discuss with Bram what the intention here is??
+                    // framebuffer->Render();
                     TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer: %u", framebuffer->Identifier()));
                 }
                 break;

@@ -144,7 +144,7 @@ int main(int /*argc*/, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> buffer = Compositor::CreateBuffer(fdRender, 1920, 1080, format);
+        Core::ProxyType<Compositor::CompositorBuffer> buffer = Compositor::CreateBuffer(0, fdRender, 1920, 1080, format, nullptr);
 
         assert(buffer.operator->());
         assert(buffer->Width() == 1920);
@@ -159,7 +159,7 @@ int main(int /*argc*/, const char* argv[])
 
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> buffer = Compositor::CreateBuffer(fdCard, 1920, 1080, format);
+        Core::ProxyType<Compositor::CompositorBuffer> buffer = Compositor::CreateBuffer(0, fdCard, 1920, 1080, format, nullptr);
 
         assert(buffer.operator->());
 
@@ -167,21 +167,13 @@ int main(int /*argc*/, const char* argv[])
         assert(buffer->Height() == 1080);
         assert(buffer->Format() == format.Type());
 
-        Exchange::ICompositionBuffer::IIterator* index = buffer->Planes(Compositor::DefaultTimeoutMs);
+        Exchange::ICompositionBuffer::IIterator* index = buffer->Acquire(Compositor::DefaultTimeoutMs);
         assert(index != nullptr);
 
-        Exchange::ICompositionBuffer::IPlane* first_plane = nullptr;
+        while (index->Next() == true) {
 
-        while ((index->Next() == true) && (index->IsValid() == true)) {
-            Exchange::ICompositionBuffer::IPlane* plane = index->Plane();
-            assert(plane != nullptr);
-
-            if (first_plane == nullptr) {
-                first_plane = plane;
-            }
-
-            VARIABLE_IS_NOT_USED const uint32_t offset(plane->Offset());
-            VARIABLE_IS_NOT_USED const uint32_t stride(plane->Stride());
+            VARIABLE_IS_NOT_USED const uint32_t offset(index->Offset());
+            VARIABLE_IS_NOT_USED const uint32_t stride(index->Stride());
 
             // assert(plane->Accessor() >= 0);
             assert(offset == 0);
@@ -190,8 +182,6 @@ int main(int /*argc*/, const char* argv[])
 
         index->Reset();
         index->Next();
-
-        assert(first_plane == index->Plane());
 
         buffer.Release();
     }

@@ -133,7 +133,7 @@ namespace Thunder {
                                 // TODO: use Core stuff and error handling here...
                                 MapDumbBuffer(_fd, _handle, offset);
 
-                                Compositor::CompositorBufferType<1>::Add(_fd, 0, offset);
+                                Compositor::Add(_fd, 0, offset);
 
                                 Core::ResourceMonitor::Instance().Register(*this);
                             }
@@ -161,7 +161,7 @@ namespace Thunder {
                 return (_fd != -1);
             }
             void Action() override {
-                _callback->Render(Id());
+                _callback->Render(Identifier());
             }
 
         private:

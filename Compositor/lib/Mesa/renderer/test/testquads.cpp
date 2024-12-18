@@ -168,7 +168,8 @@ private:
 
         _renderer->End();
 
-        _connector->Render();
+        // TODO: Check with Bram what the intention was/is
+        // _connector->Render();
 
         _renderer->Unbind();
 

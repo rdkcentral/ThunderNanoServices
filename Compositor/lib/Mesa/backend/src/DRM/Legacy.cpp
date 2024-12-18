@@ -110,7 +110,7 @@ namespace Compositor {
 
                 if (result != Core::ERROR_NONE) {
                     for (auto connector : connectors) {
-                        connector->Presented(0); // notify connector implementation the buffer failed to display.
+                        connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
                     }
                 }
 
@@ -118,7 +118,9 @@ namespace Compositor {
             }
 
         private:
-            uint32_t Check()
+            uint32_t Check() {
+                return (0);
+            }
 
         private:
             signed int _gammaSize;

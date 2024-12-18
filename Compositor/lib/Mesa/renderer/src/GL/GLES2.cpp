@@ -652,7 +652,7 @@ namespace Compositor {
                 GLESTexture(const GLESTexture&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
-                GLESTexture(GLES& parent, Exchange::ICompositionBuffer* buffer)
+                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ISimpleBuffer>& buffer)
                     : _refCount(1)
                     , _parent(parent)
                     , _target(GL_TEXTURE_2D)
@@ -663,13 +663,12 @@ namespace Compositor {
                     ASSERT(_buffer != nullptr);
 
                     _parent.Add(this);
-                    _buffer->AddRef();
 
-                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+                    if (buffer->Type() == Exchange::ISimpleBuffer::TYPE_DMA) {
                         ImportDMABuffer();
                     }
 
-                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+                    if (buffer->Type() == Exchange::ISimpleBuffer::TYPE_RAW) {
                         ImportPixelBuffer();
                     }
 
@@ -690,8 +689,6 @@ namespace Compositor {
                     if (_image != EGL_NO_IMAGE) {
                         _parent.Egl().DestroyImage(_image);
                     }
-
-                    _buffer->Release();
                 }
 
                 /**
@@ -792,7 +789,7 @@ namespace Compositor {
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetError() == EGL_SUCCESS);
 
-                    _image = _parent.Egl().CreateImage(_buffer, external);
+                    _image = _parent.Egl().CreateImage(&(*_buffer), external);
                     ASSERT(_image != EGL_NO_IMAGE);
 
                     _target = (external == true) ? GL_TEXTURE_EXTERNAL_OES : GL_TEXTURE_2D;
@@ -815,17 +812,15 @@ namespace Compositor {
 
                 void ImportPixelBuffer()
                 {
-                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Planes(Compositor::DefaultTimeoutMs);
+                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
 
                     // uint8_t index(0);
 
                     planes->Next(); // select first plane.
 
-                    Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
+                    int data(planes->Descriptor());
 
-                    const uint8_t* data(reinterpret_cast<uint8_t*>(plane->Accessor()));
-
-                    ASSERT(data != nullptr);
+                    ASSERT(data != -1);
 
                     GLPixelFormat glFormat = ConvertFormat(_buffer->Format());
 
@@ -839,15 +834,15 @@ namespace Compositor {
                     glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, plane->Stride() / (glFormat.BitPerPixel / 8));
+                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, planes->Stride() / (glFormat.BitPerPixel / 8));
 
-                    glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(), 0, glFormat.Format, glFormat.Type, data);
+                    glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(), 0, glFormat.Format, glFormat.Type, reinterpret_cast<uint8_t*>(data));
 
                     glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
 
                     glBindTexture(_target, 0);
 
-                    _buffer->Completed(false);
+                    _buffer->Relinquish();
 
                     TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
@@ -858,7 +853,7 @@ namespace Compositor {
                 GLenum _target;
                 GLuint _textureId;
                 EGLImageKHR _image;
-                Exchange::ICompositionBuffer* _buffer;
+                Core::ProxyType<Exchange::ISimpleBuffer> _buffer;
             }; //  class GLESTexture
 
         public:
@@ -1030,7 +1025,7 @@ namespace Compositor {
                 PopDebug();
             }
 
-            ITexture* Texture(Exchange::ICompositionBuffer* buffer) override
+            ITexture* Texture(const Core::ProxyType<Exchange::ISimpleBuffer>& buffer) override
             {
                 return new GLESTexture(*this, buffer);
             };
@@ -1094,9 +1089,9 @@ namespace Compositor {
             {
                 return _egl.Formats();
             }
-            Core::ProxyType<Exchange::ICompositionBuffer> Bound() const override
+            Core::ProxyType<Exchange::ISimpleBuffer> Bound() const override
             {
-                return (Core::ProxyType<Exchange::ICompositionBuffer>());
+                return (Core::ProxyType<Exchange::ISimpleBuffer>());
             }
 
             const Matrix& Projection() const

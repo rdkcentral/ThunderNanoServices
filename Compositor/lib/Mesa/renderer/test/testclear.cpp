@@ -171,7 +171,8 @@ private:
         _renderer->Clear(_color);
         _renderer->End();
 
-        _connector->Render();
+        // TODO: Test with Bram what the intiention was/is
+        // _connector->Render();
 
         _renderer->Unbind();
 

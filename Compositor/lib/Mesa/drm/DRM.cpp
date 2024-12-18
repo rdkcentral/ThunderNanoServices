@@ -249,28 +249,25 @@ namespace Compositor {
 
             modifiers.fill(buffer->Modifier());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(Compositor::DefaultTimeoutMs);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
-            while ((planes->Next() == true) && (planes->IsValid() == true)) {
+            while (planes->Next() == true) {
                 ASSERT(planes->IsValid() == true);
 
-                Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
-                ASSERT(plane != nullptr);
-
-                if (drmPrimeFDToHandle(cardFd, plane->Accessor(), &handles[nPlanes]) != 0) {
+                if (drmPrimeFDToHandle(cardFd, planes->Descriptor(), &handles[nPlanes]) != 0) {
                     TRACE_GLOBAL(Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
                     CloseDrmHandles(cardFd, handles);
                     break;
                 }
 
-                pitches[nPlanes] = plane->Stride();
-                offsets[nPlanes] = plane->Offset();
+                pitches[nPlanes] = planes->Stride();
+                offsets[nPlanes] = planes->Offset();
 
                 ++nPlanes;
             }
 
-            buffer->Completed(false);
+            buffer->Relinquish();
 
             if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
 
@@ -301,9 +298,6 @@ namespace Compositor {
             }
 
             CloseDrmHandles(cardFd, handles);
-
-            // just unlock and go, we still need to draw something,.
-            buffer->Completed(false);
 
             TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
 

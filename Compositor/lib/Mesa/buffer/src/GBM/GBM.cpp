@@ -114,7 +114,7 @@ namespace {
 
             gbm_bo_unmap(_bo, map_data);
         } else {
-            TRACE(Trace::Buffer, (_T("Dump: failed to map gbm bo")));
+            TRACE(Thunder::Trace::Buffer, (_T("Dump: failed to map gbm bo")));
         }
 
         return 0;
@@ -132,7 +132,7 @@ namespace {
             char* formatName = drmGetFormatName(format);
             char* modifierName = drmGetFormatModifierName(modifier);
 
-            TRACE_GLOBAL(Trace::Buffer, (_T("GBM buffer %dx%d, format %s (0x%08" PRIX32 "), modifier %s (0x%016" PRIX64 ")"), width, height, formatName ? formatName : "<Unknown>", format, modifierName ? modifierName : "<Unknown>", modifier));
+            TRACE_GLOBAL(Thunder::Trace::Buffer, (_T("GBM buffer %dx%d, format %s (0x%08" PRIX32 "), modifier %s (0x%016" PRIX64 ")"), width, height, formatName ? formatName : "<Unknown>", format, modifierName ? modifierName : "<Unknown>", modifier));
 
             if (formatName) {
                 free(formatName);
@@ -200,7 +200,7 @@ namespace Thunder {
                                 uint32_t offset = gbm_bo_get_offset(_bo, index);
                                 uint32_t stride = gbm_bo_get_stride_for_plane(_bo, index);
 
-                                BaseClass::Add(fd, stride, offset);
+                                CompositorBuffer::Add(fd, stride, offset);
 
                                 ::close(fd);
                             }
@@ -241,7 +241,7 @@ namespace Thunder {
                 return (_bo != nullptr);
             }
             void Action() override {
-                _callback->Render(Id());
+                _callback->Render(Identifier());
             }
 
         private:
@@ -252,7 +252,7 @@ namespace Thunder {
 
         /* extern */ Core::ProxyType<CompositorBuffer> CreateBuffer(
             const uint32_t logical_id, 
-            DRM::Identifier identifier, 
+            Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
             const PixelFormat& format,

@@ -82,7 +82,7 @@ namespace Compositor {
 
             const std::vector<PixelFormat>& Formats() const;
 
-            EGLImage CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool&) const;
+            EGLImage CreateImage(/*const*/ Exchange::ISimpleBuffer* buffer, bool&) const;
 
             bool DestroyImage(EGLImage image) const;
 

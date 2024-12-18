@@ -323,6 +323,12 @@ namespace Compositor {
                 {
                     return _frontBuffer;
                 }
+                void Render()
+                {
+                    if (IsConnected() == true) {
+                        _backend->SchedulePageFlip(*this);
+                    }
+                }
 
             public:
                 /**
@@ -335,21 +341,15 @@ namespace Compositor {
                 {
                     return reinterpret_cast<uint32_t>(Id());
                 }
-                IIterator* Planes(const uint32_t timeoutMs) override
+                IIterator* Acquire(const uint32_t timeoutMs) override
                 {
                     _swap.Lock();
-                    return _frameBuffer[BackBuffer()].data->Planes(timeoutMs);
+                    return _frameBuffer[BackBuffer()].data->Acquire(timeoutMs);
                 }
-                uint32_t Completed(const bool dirty) override
+                void Relinquish() override
                 {
                     _swap.Unlock();
-                    return _frameBuffer[BackBuffer()].data->Completed(dirty);
-                }
-                void Render() override
-                {
-                    if (IsConnected() == true) {
-                        _backend->SchedulePageFlip(*this);
-                    }
+                    _frameBuffer[BackBuffer()].data->Relinquish();
                 }
                 uint32_t Width() const override
                 {
@@ -367,10 +367,16 @@ namespace Compositor {
                 {
                     return _frameBuffer[BackBuffer()].data->Modifier();
                 }
-
                 Exchange::ICompositionBuffer::DataType Type() const
                 {
                     return _frameBuffer[BackBuffer()].data->Type();
+                }
+
+                // TODO Do we need the notification methds on this as a buffer ?
+                uint32_t Published() override {
+                    return (Core::ERROR_NONE);
+                }
+                void Action() override {
                 }
 
                 /**
@@ -561,11 +567,13 @@ namespace Compositor {
                                     buffer.identifier = Compositor::InvalidIdentifier;
                                 }
 
-                                buffer.data = Compositor::(
+                                buffer.data = Compositor::CreateBuffer(
+                                    0,
                                     _backend->Descriptor(),
                                     crtc->width,
                                     crtc->height,
-                                    _format);
+                                    _format,
+                                    nullptr);
 
                                 buffer.identifier = Compositor::DRM::CreateFrameBuffer(_backend->Descriptor(), buffer.data.operator->());
                             }
@@ -645,7 +653,8 @@ namespace Compositor {
                         presentationTimestamp.tv_nsec = useconds * 1000;
 
                         connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
-                        connector->Release();
+                        // TODO: Check with Bram the intention of the Release()
+                        // connector->Release();
 
                         --_pendingFlips;
 

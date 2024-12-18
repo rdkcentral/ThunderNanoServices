@@ -64,14 +64,14 @@ private:
 
         virtual ~Sink() = default;
 
-        virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint32_t sequence, const uint64_t time) override
+        virtual void Presented(const int fd, const uint32_t sequence, const uint64_t time) override
         {
-            _parent.HandleVSync(id, sequence, time);
+            _parent.HandleVSync(fd, sequence, time);
         }
 
-        virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
+        virtual void Display(const int fd, const std::string& node) override
         {
-            TRACE(Trace::Information, (_T("Connector id %d opened on %s"), id, node.c_str()));
+            TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
             // _parent.HandleGPUNode(node);
         }
 
@@ -119,7 +119,7 @@ public:
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
-        _texture = _renderer->Texture(_textureBuffer.operator->());
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::ISimpleBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
@@ -212,7 +212,8 @@ private:
 
         _renderer->End(false);
 
-        _connector->Render();
+        // TODO: Check with Bram what the intention was/is
+        // _connector->Render();
 
         WaitForVSync(Core::infinite);
 
@@ -223,7 +224,7 @@ private:
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
-    void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    void HandleVSync(const int id VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
     {
         _fps = 1 / ((pts - _ppts) / 1000000.0f);
         _sequence = sequence;

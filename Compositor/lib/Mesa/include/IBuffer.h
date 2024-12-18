@@ -27,7 +27,7 @@ namespace Compositor {
 
     struct IRenderCallback {
         virtual ~IRenderCallback() = default;
-        virtual void Render(const uint32_t locgical_id) = 0;
+        virtual void Render(const uint32_t logical_id) = 0;
     };
 
     /**
@@ -45,7 +45,7 @@ namespace Compositor {
         const Identifier identifier,
         const uint32_t width,
         const uint32_t height,
-        const PixelFormat& format
+        const PixelFormat& format,
         IRenderCallback* callback);
 
 

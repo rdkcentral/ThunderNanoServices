@@ -4,142 +4,122 @@
 
 #include "../../src/GL/RenderAPI.h"
 #include "../../src/GL/EGL.h"
+#include "../../src/GL/Format.h"
 
 #include "Textures.h"
+#include <drm_fourcc.h>
 
 namespace Thunder {
-namespace Compositor {
-    class DmaBuffer : public Exchange::ICompositionBuffer {
-        class Plane : public Exchange::ICompositionBuffer::IPlane {
+    namespace Compositor {
+        class DmaBuffer : public SimpleBuffer {
         public:
-            Plane(DmaBuffer& source)
-                : _source(source)
-            {
-            }
+            DmaBuffer() = delete;
+            DmaBuffer(DmaBuffer&&) = delete;
+            DmaBuffer(const DmaBuffer&) = delete;
+            DmaBuffer& operator=(DmaBuffer&&) = delete;
+            DmaBuffer& operator=(const DmaBuffer&) = delete;
 
-            virtual ~Plane() = default;
+            DmaBuffer(int gpuFd, const Texture::PixelData& source)
+                : SimpleBuffer(source.width, source.height, DRM_FORMAT_ABGR8888, DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_RAW)
+                , _api()
+                , _egl(gpuFd)
+                , _context(EGL_NO_CONTEXT)
+                , _target(GL_TEXTURE_2D)
+                , _textureId(EGL_NO_TEXTURE)
+                , _image(EGL_NO_IMAGE) 
+                , _fd(-1) {
 
-            Exchange::ICompositionBuffer::buffer_id Accessor() const override
-            {
-                return static_cast<Exchange::ICompositionBuffer::buffer_id>(_source.Identifier());
-            }
+                ASSERT(source.data.data() != nullptr);
+                ASSERT(_api.eglCreateImage != nullptr);
+                ASSERT(_api.eglExportDmaBufImageQueryMesa != nullptr);
+                ASSERT(_api.eglExportDmaBufImageMesa != nullptr);
 
-            uint32_t Stride() const override
-            {
-                return _source.Stride();
-            }
+                Renderer::GLPixelFormat glFormat = Renderer::ConvertFormat(DRM_FORMAT_ABGR8888);
 
-            uint32_t Offset() const override
-            {
-                return _source.Offset();
-            }
+                Renderer::EGL::ContextBackup backup;
 
-            uint32_t Width() const
-            {
-                return _source.Width();
-            }
+                _egl.SetCurrent();
 
-            uint32_t Height() const
-            {
-                return _source.Height();
-            }
+                glGenTextures(1, &_textureId);
+                glBindTexture(_target, _textureId);
 
-        private:
-            DmaBuffer& _source;
-        };
+                glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                
+                glTexParameteri(_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        class Iterator : public Exchange::ICompositionBuffer::IIterator {
-        public:
-            Iterator(DmaBuffer& parent)
-                : _parent(parent)
-                , _index(0)
-            {
-            }
+                glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, (source.width * source.bytes_per_pixel) / (glFormat.BitPerPixel / 8));
 
-            virtual ~Iterator() = default;
+                glTexImage2D(_target, 0, glFormat.Format, source.width, source.height, 0, glFormat.Format, glFormat.Type, source.data.data());
 
-            bool IsValid() const override
-            {
-                return ((_index > 0) && (_index <= 1));
-            }
-            void Reset() override
-            {
-                _index = 0;
-            }
+                glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
 
-            bool Next() override
-            {
-                if (_index <= 1) {
-                    _index++;
+                // EGL: Create EGL image from the GL texture
+                _image = _api.eglCreateImage(_egl.Display(),
+                    _egl.Context(),
+                    EGL_GL_TEXTURE_2D,
+                    (EGLClientBuffer)(uint64_t)_textureId,
+                    NULL);
+
+                ASSERT(_image != EGL_NO_IMAGE);
+
+                // glFlush();
+
+                int planes = 0;
+                int fourcc = 0;
+                EGLint stride;
+                EGLint offset;
+                EGLuint64KHR modifiers = DRM_FORMAT_MOD_LINEAR;
+
+                EGLBoolean queried = _api.eglExportDmaBufImageQueryMesa(_egl.Display(),
+                    _image,
+                    &fourcc,
+                    &planes,
+                    &modifiers);
+
+                if(!queried){
+                    printf("Failed to query EGL Image.\n");
                 }
-                return (IsValid());
-            }
 
-            Exchange::ICompositionBuffer::IPlane* Plane() override
-            {
-                return &_parent.GetPlanes();
+                ASSERT(queried);
+                ASSERT(planes == 1);
+
+                if (_api.eglExportDmaBufImageMesa(_egl.Display(), _image, &_fd, &stride, &offset) ) {
+                    printf("DMA buffer available on descriptor %d.\n", _fd);
+
+                    glBindTexture(_target, 0);
+
+                    SimpleBuffer::Add(_fd, stride, offset);
+                }
+                else {
+                    ASSERT(false);
+                }
+            }
+            ~DmaBuffer() override {
+                Renderer::EGL::ContextBackup backup;
+
+                _egl.SetCurrent();
+
+                glDeleteTextures(1, &_textureId);
+
+                if (_image != EGL_NO_IMAGE) {
+                    _api.eglDestroyImage(_egl.Display(), _image);
+                }
+
+                if (_fd > 0) {
+                    close(_fd);
+                }
             }
 
         private:
-            DmaBuffer& _parent;
-            uint8_t _index;
-        };
-
-    public:
-        DmaBuffer() = delete;
-
-        DmaBuffer(int fd, const Texture::PixelData& source);
-
-        DmaBuffer(const DmaBuffer&) = delete;
-        DmaBuffer& operator=(const DmaBuffer&) = delete;
-
-        virtual ~DmaBuffer();
-
-        uint32_t AddRef() const override;
-        uint32_t Release() const override;
-
-        uint32_t Identifier() const override;
-
-        Exchange::ICompositionBuffer::IIterator* Planes(const uint32_t /*timeoutMs*/) override;
-
-        uint32_t Completed(const bool /*dirty*/) override;
-
-        void Render() override;
-
-        uint32_t Width() const override;
-        uint32_t Height() const override;
-        uint32_t Format() const override;
-        uint64_t Modifier() const override;
-        uint32_t Stride() const;
-        uint64_t Offset() const;
-        Exchange::ICompositionBuffer::DataType Type() const override;
-
-    protected:
-        Plane& GetPlanes();
-
-    private:
-        int _id;
-        API::EGL _api;
-        Renderer::EGL _egl;
-
-        Plane _plane;
-        Iterator _iterator;
-
-        EGLContext _context;
-        GLenum _target;
-
-        const uint32_t _width;
-        const uint32_t _height;
-        const uint32_t _format;
-        int _planes;
-
-        GLuint _textureId;
-        EGLImage _image;
-        int _fourcc;
-        EGLuint64KHR _modifiers;
-        EGLint _stride;
-        EGLint _offset;
-
-    }; // class DmaBuffer
-}
+            API::EGL _api;
+            Renderer::EGL _egl;
+            EGLContext _context;
+            GLenum _target;
+            GLuint _textureId;
+            EGLImage _image;
+            int _fd;
+        }; // class DmaBuffer
+    }
 }
