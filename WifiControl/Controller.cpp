@@ -189,7 +189,7 @@ namespace WPASupplicant {
         if ((_requests.size() > 0) && (_requests.front()->Message().empty() == false)) {
             string& data = _requests.front()->Message();
             TRACE(Communication, (_T("Send: [%s]"), data.c_str()));
-            result = (data.length() > maxSendSize ? maxSendSize : data.length());
+            result = (static_cast<uint16_t>(data.length()) > maxSendSize ? maxSendSize : static_cast<uint16_t>(data.length()));
             memcpy(dataFrame, data.c_str(), result);
             data = data.substr(result);
         }
@@ -209,7 +209,7 @@ namespace WPASupplicant {
             uint16_t index = 1;
 
             // See if there are only digit between this and the closing bracket.
-            while ((index < response.length()) && (isdigit(response[index]) == true)) {
+            while ((index < response.length()) && (isdigit(response[index]) != 0)) {
                 number += (number * 10) + (response[index] - '0');
                 ++index;
             }
@@ -233,7 +233,7 @@ namespace WPASupplicant {
 
                     ASSERT(position != string::npos);
 
-                    Core::TextFragment infoLine(message, position, message.length() - position);
+                    Core::TextFragment infoLine(message, static_cast<uint32_t>(position), static_cast<uint32_t>(message.length() - position));
 
                     // Skip white space
                     uint16_t begin = infoLine.ForwardSkip(_T(" \t"), 0);
@@ -287,7 +287,7 @@ namespace WPASupplicant {
                 } else if(event == WPS_EVENT_CRED_RECEIVED) {
 
                     ASSERT(position != string::npos);
-                    Core::TextFragment infoLine(message, position, message.length() - position);
+                    Core::TextFragment infoLine(message, static_cast<uint32_t>(position), static_cast<uint32_t>(message.length() - position));
 
                     // Skip white space
                     infoLine.TrimBegin(_T(" "));
@@ -297,7 +297,7 @@ namespace WPASupplicant {
 
                     ASSERT(position != string::npos);
 
-                    Core::TextFragment infoLine(message, position, message.length() - position);
+                    Core::TextFragment infoLine(message, static_cast<uint32_t>(position), static_cast<uint32_t>(message.length() - position));
 
                     // extract the Network ID from the list
                     uint16_t index = infoLine.ForwardSkip(_T(" \t"), 0);

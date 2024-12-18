@@ -28,6 +28,28 @@ video = JSON()
 video.add("height", "@PLUGIN_COBALT_HEIGHT@")
 video.add("width", "@PLUGIN_COBALT_WIDTH@")
 
+if "@PLUGIN_COBALT_URL@":
+	configuration.add("url", "@PLUGIN_COBALT_URL@")
+if "@PLUGIN_COBALT_AUDIO_BUFFER_BUDGET@":
+	configuration.add("audiobufferbudget", "@PLUGIN_COBALT_AUDIO_BUFFER_BUDGET@")
+
+if "@PLUGIN_COBALT_VIDEO_BUFFER_BUDGET@":
+	configuration.add("videobufferbudget", "@PLUGIN_COBALT_VIDEO_BUFFER_BUDGET@")
+
+if "@PLUGIN_COBALT_PROGRESSIVE_BUFFER_BUDGET@":
+	configuration.add("progressivebufferbudget", "@PLUGIN_COBALT_PROGRESSIVE_BUFFER_BUDGET@")
+
+if "@PLUGIN_COBALT_MEDIA_GARBAGE_COLLECT@":
+	configuration.add("mediagarbagecollect", "@PLUGIN_COBALT_MEDIA_GARBAGE_COLLECT@")
+
+graphics = JSON()
+graphics.add("height", "@PLUGIN_COBALT_HEIGHT@")
+graphics.add("width", "@PLUGIN_COBALT_WIDTH@")
+
+video = JSON()
+video.add("height", "@PLUGIN_COBALT_HEIGHT@")
+video.add("width", "@PLUGIN_COBALT_WIDTH@")
+
 graphics = JSON()
 graphics.add("height", "@PLUGIN_COBALT_HEIGHT@")
 graphics.add("width", "@PLUGIN_COBALT_WIDTH@")

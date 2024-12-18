@@ -421,7 +421,7 @@ namespace WPASupplicant {
         inline uint8_t Mode() const
         {
             string result;
-            return (GetKey(MODE, result) ? Core::NumberType<uint8_t>(result.c_str(), result.length()).Value() : 0);
+            return (GetKey(MODE, result) ? Core::NumberType<uint8_t>(result.c_str(), static_cast<uint32_t>(result.length())).Value() : 0);
         }
 
     protected:
