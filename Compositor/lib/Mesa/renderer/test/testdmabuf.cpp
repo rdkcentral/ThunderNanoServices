@@ -25,14 +25,16 @@
 #include <localtracer/localtracer.h>
 #include <messaging/messaging.h>
 
+#include <condition_variable>
+#include <inttypes.h>
 #include <iterator>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <inttypes.h>
 
-#include <IBackend.h>
 #include <IBuffer.h>
+#include <IOutput.h>
 #include <IRenderer.h>
 #include <Transformation.h>
 
@@ -48,29 +50,64 @@ namespace Thunder {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
+private:
+    class Sink : public Compositor::IOutput::IFeedback {
+    public:
+        Sink(const Sink&) = delete;
+        Sink& operator=(const Sink&) = delete;
+        Sink() = delete;
+
+        Sink(RenderTest& parent)
+            : _parent(parent)
+        {
+        }
+
+        virtual ~Sink() = default;
+
+        virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint32_t sequence, const uint64_t time) override
+        {
+            _parent.HandleVSync(id, sequence, time);
+        }
+
+        virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
+        {
+            TRACE(Trace::Information, (_T("Connector id %d opened on %s"), id, node.c_str()));
+            // _parent.HandleGPUNode(node);
+        }
+
+    private:
+        RenderTest& _parent;
+    };
 
 public:
     RenderTest() = delete;
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t FPS, const uint16_t RPM)
         : _adminLock()
         , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
         , _textureBuffer()
         , _texture(nullptr)
-        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
-        , _rotations(rotationsPerSecond)
+        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / FPS))
+        , _radPerFrame(((RPM / 60.0f) * (2.0f * M_PI)) / float(FPS))
         , _running(false)
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
+        , _renderStart(std::chrono::high_resolution_clock::now())
+        , _sink(*this)
+        , _rendering()
+        , _vsync()
+        , _ppts(Core::Time::Now().Ticks())
+        , _fps()
+        , _sequence(0)
     {
-        _connector = Compositor::Connector(
+        _connector = Compositor::IOutput::Instance(
             connectorId,
             { 0, 0, 1080, 1920 },
-            _format);
+            _format, &_sink);
 
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
@@ -104,6 +141,8 @@ public:
     void Start()
     {
         TRACE(Trace::Information, ("Starting RenderTest"));
+
+        _renderStart = std::chrono::high_resolution_clock::now();
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
         _render = std::thread(&RenderTest::Render, this);
@@ -143,6 +182,10 @@ private:
 
         const auto start = std::chrono::high_resolution_clock::now();
 
+        const float runtime = std::chrono::duration<float>(start - _renderStart).count();
+
+        float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
+
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
         const uint16_t width(_connector->Width());
@@ -151,27 +194,53 @@ private:
         const uint16_t renderWidth(720);
         const uint16_t renderHeight(720);
 
+        int x = (renderWidth / 2) * cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        int y = (renderHeight / 2) * sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+
         _renderer->Bind(_connector);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
+        // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
+        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)) + x, ((height / 2) - (renderHeight / 2)) + y, renderWidth, renderHeight };
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
         const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
-        _renderer->Render(_texture, textureBox, matrix, 1.0f);
+        _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
 
         _connector->Render();
 
+        WaitForVSync(Core::infinite);
+
         _renderer->Unbind();
 
-        rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
+        rotation += _radPerFrame;
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+    }
+
+    void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    {
+        _fps = 1 / ((pts - _ppts) / 1000000.0f);
+        _sequence = sequence;
+        _ppts = pts;
+        _vsync.notify_all();
+    }
+
+    void WaitForVSync(uint32_t timeoutMs)
+    {
+        std::unique_lock<std::mutex> lock(_rendering);
+
+        if (timeoutMs == Core::infinite) {
+            _vsync.wait(lock);
+        } else {
+            _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
+        }
+        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
     }
 
 private:
@@ -182,18 +251,27 @@ private:
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
     Compositor::IRenderer::ITexture* _texture;
     const std::chrono::microseconds _period;
-    const float _rotations;
+    const float _radPerFrame;
     bool _running;
     std::thread _render;
     int _renderFd;
+    std::chrono::time_point<std::chrono::high_resolution_clock> _renderStart;
+    Sink _sink;
+    std::mutex _rendering;
+    std::condition_variable _vsync;
+    uint64_t _ppts;
+    float _fps;
+    uint32_t _sequence;
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {
 public:
     ConsoleOptions(int argumentCount, TCHAR* arguments[])
-        : Core::Options(argumentCount, arguments, _T("o:r:h"))
+        : Core::Options(argumentCount, arguments, _T("o:r:f:s:h"))
         , RenderNode("/dev/dri/card0")
         , Output(RenderNode)
+        , FPS(60)
+        , RPM(1)
     {
         Parse();
     }
@@ -204,6 +282,8 @@ public:
 public:
     const TCHAR* RenderNode;
     const TCHAR* Output;
+    uint16_t FPS;
+    uint16_t RPM;
 
 private:
     virtual void Option(const TCHAR option, const TCHAR* argument)
@@ -214,6 +294,12 @@ private:
             break;
         case 'r':
             RenderNode = argument;
+            break;
+        case 'f':
+            FPS = std::stoi(argument);
+            break;
+        case 's':
+            RPM = std::stoi(argument);
             break;
         case 'h':
         default:
@@ -241,8 +327,8 @@ int main(int argc, char* argv[])
         const std::vector<string> modules = {
             "CompositorRenderTest",
             "CompositorBuffer",
-            "CompositorBackend",
-            "CompositorRenderer",
+            "CompositorBackendOFF",
+            "CompositorRendererOFF",
             "DRMCommon"
         };
 
@@ -252,7 +338,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Thunder::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        Thunder::RenderTest test(options.Output, options.RenderNode, 120, 10);
+        Thunder::RenderTest test(options.Output, options.RenderNode, options.FPS, options.RPM);
 
         test.Start();
 
