@@ -561,7 +561,7 @@ namespace Compositor {
                                     buffer.identifier = Compositor::InvalidIdentifier;
                                 }
 
-                                buffer.data = Compositor::CreateBuffer(
+                                buffer.data = Compositor::(
                                     _backend->Descriptor(),
                                     crtc->width,
                                     crtc->height,

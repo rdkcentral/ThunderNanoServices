@@ -24,6 +24,12 @@
 namespace Thunder {
 
 namespace Compositor {
+
+    struct IRenderCallback {
+        virtual ~IRenderCallback() = default;
+        virtual void Render(const uint32_t locgical_id) = 0;
+    };
+
     /**
      * @brief  Allocate a new buffer.
      *         When the caller is done with the buffer, they must release it.
@@ -32,13 +38,16 @@ namespace Compositor {
      * @param height Height in pixels
      * @param format Pixel layout for this buffer
      *
-     * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
+     * @return Core::ProxyType<CompositorBuffer> The allocated buffer
      */
-    EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+    EXTERNAL Core::ProxyType<CompositorBuffer> CreateBuffer(
+        const uint32_t logical_id,
         const Identifier identifier,
         const uint32_t width,
         const uint32_t height,
-        const PixelFormat& format);
+        const PixelFormat& format
+        IRenderCallback* callback);
+
 
 } // namespace Compositor
 } // namespace Thunder
