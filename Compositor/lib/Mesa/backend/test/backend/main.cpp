@@ -86,7 +86,7 @@ int main(int argc, const char* argv[])
                 if (framebuffer.IsValid() == true) {
                     // TODO: Discuss with Bram what the intention here is??
                     // framebuffer->Render();
-                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer: %u", framebuffer->Identifier()));
+                    TRACE_GLOBAL(Trace::Information, ("Back buffer swapped of framebuffer!"));
                 }
                 break;
             }
@@ -94,16 +94,15 @@ int main(int argc, const char* argv[])
             case 'A': {
                 if (framebuffer.IsValid() == false) {
                     framebuffer = Compositor::IOutput::Instance(ConnectorId, rectangle, format);
-                    TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %u %ux%u", framebuffer->Identifier(), framebuffer->Height(), framebuffer->Width()));
+                    TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %ux%u", framebuffer->Height(), framebuffer->Width()));
                 }
                 break;
             }
 
             case 'R': {
                 if (framebuffer.IsValid() == true) {
-                    uint32_t id = framebuffer->Identifier();
                     uint32_t res = framebuffer.Release();
-                    TRACE_GLOBAL(Trace::Information, ("Released framebuffer %u(%d)", id, res));
+                    TRACE_GLOBAL(Trace::Information, ("Released framebuffer (%d)", res));
                 }
                 break;
             }

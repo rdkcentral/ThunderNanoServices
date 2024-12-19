@@ -337,10 +337,6 @@ namespace Compositor {
                  * Returning the info of the back buffer because its used to
                  * draw a new frame.
                  */
-                uint32_t Identifier() const override
-                {
-                    return reinterpret_cast<uint32_t>(Id());
-                }
                 IIterator* Acquire(const uint32_t timeoutMs) override
                 {
                     _swap.Lock();
@@ -370,13 +366,6 @@ namespace Compositor {
                 Exchange::ICompositionBuffer::DataType Type() const
                 {
                     return _frameBuffer[BackBuffer()].data->Type();
-                }
-
-                // TODO Do we need the notification methds on this as a buffer ?
-                uint32_t Published() override {
-                    return (Core::ERROR_NONE);
-                }
-                void Action() override {
                 }
 
                 /**
@@ -568,7 +557,6 @@ namespace Compositor {
                                 }
 
                                 buffer.data = Compositor::CreateBuffer(
-                                    0,
                                     _backend->Descriptor(),
                                     crtc->width,
                                     crtc->height,

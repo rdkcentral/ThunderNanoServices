@@ -108,7 +108,7 @@ namespace Compositor {
          *
          * @return ITexture upon success, nullptr on error.
          */
-        virtual ITexture* Texture(const Core::ProxyType<Exchange::ISimpleBuffer>& buffer) = 0;
+        virtual ITexture* Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
 
         /**
          * @brief   Renders a texture on the bound buffer at the given region with
@@ -144,7 +144,7 @@ namespace Compositor {
          * @return ICompositionBuffer* or nullptr if no buffer is bound.
          *
          */
-        virtual Core::ProxyType<Exchange::ISimpleBuffer> Bound() const = 0;
+        virtual Core::ProxyType<Exchange::ICompositionBuffer> Bound() const = 0;
 
         /**
          * TODO: We probably want this so we can do screen dumps

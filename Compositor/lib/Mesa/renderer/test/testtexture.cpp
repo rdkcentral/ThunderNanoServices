@@ -84,7 +84,7 @@ public:
 
         _renderer = Compositor::IRenderer::Instance(_renderFd);
 
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::ISimpleBuffer>(textureTv));
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
 
         ASSERT(_renderer.IsValid());
 

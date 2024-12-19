@@ -27,7 +27,7 @@ namespace Compositor {
 
     struct IRenderCallback {
         virtual ~IRenderCallback() = default;
-        virtual void Render(const uint32_t logical_id) = 0;
+        virtual void Render(Exchange::ICompositionBuffer*) = 0;
     };
 
     /**
@@ -41,7 +41,6 @@ namespace Compositor {
      * @return Core::ProxyType<CompositorBuffer> The allocated buffer
      */
     EXTERNAL Core::ProxyType<CompositorBuffer> CreateBuffer(
-        const uint32_t logical_id,
         const Identifier identifier,
         const uint32_t width,
         const uint32_t height,

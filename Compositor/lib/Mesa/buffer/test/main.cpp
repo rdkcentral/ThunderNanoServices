@@ -144,7 +144,7 @@ int main(int /*argc*/, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Compositor::CompositorBuffer> buffer = Compositor::CreateBuffer(0, fdRender, 1920, 1080, format, nullptr);
+        Core::ProxyType<Compositor::CompositorBuffer> buffer = Compositor::CreateBuffer(fdRender, 1920, 1080, format, nullptr);
 
         assert(buffer.operator->());
         assert(buffer->Width() == 1920);
@@ -159,7 +159,7 @@ int main(int /*argc*/, const char* argv[])
 
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888);
 
-        Core::ProxyType<Compositor::CompositorBuffer> buffer = Compositor::CreateBuffer(0, fdCard, 1920, 1080, format, nullptr);
+        Core::ProxyType<Compositor::CompositorBuffer> buffer = Compositor::CreateBuffer(fdCard, 1920, 1080, format, nullptr);
 
         assert(buffer.operator->());
 

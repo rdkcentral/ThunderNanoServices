@@ -467,7 +467,7 @@ namespace Compositor {
             return result;
         }
 
-        EGLImage EGL::CreateImage(/*const*/ Exchange::ISimpleBuffer* buffer, bool& external) const
+        EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external) const
         {
             ASSERT(buffer != nullptr);
             Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);

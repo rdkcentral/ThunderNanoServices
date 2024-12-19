@@ -652,7 +652,7 @@ namespace Compositor {
                 GLESTexture(const GLESTexture&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
-                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ISimpleBuffer>& buffer)
+                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
                     : _refCount(1)
                     , _parent(parent)
                     , _target(GL_TEXTURE_2D)
@@ -664,11 +664,11 @@ namespace Compositor {
 
                     _parent.Add(this);
 
-                    if (buffer->Type() == Exchange::ISimpleBuffer::TYPE_DMA) {
+                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
                         ImportDMABuffer();
                     }
 
-                    if (buffer->Type() == Exchange::ISimpleBuffer::TYPE_RAW) {
+                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
                         ImportPixelBuffer();
                     }
 
@@ -853,7 +853,7 @@ namespace Compositor {
                 GLenum _target;
                 GLuint _textureId;
                 EGLImageKHR _image;
-                Core::ProxyType<Exchange::ISimpleBuffer> _buffer;
+                Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
             }; //  class GLESTexture
 
         public:
@@ -1025,7 +1025,7 @@ namespace Compositor {
                 PopDebug();
             }
 
-            ITexture* Texture(const Core::ProxyType<Exchange::ISimpleBuffer>& buffer) override
+            ITexture* Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
             {
                 return new GLESTexture(*this, buffer);
             };
@@ -1089,9 +1089,9 @@ namespace Compositor {
             {
                 return _egl.Formats();
             }
-            Core::ProxyType<Exchange::ISimpleBuffer> Bound() const override
+            Core::ProxyType<Exchange::ICompositionBuffer> Bound() const override
             {
-                return (Core::ProxyType<Exchange::ISimpleBuffer>());
+                return (Core::ProxyType<Exchange::ICompositionBuffer>());
             }
 
             const Matrix& Projection() const

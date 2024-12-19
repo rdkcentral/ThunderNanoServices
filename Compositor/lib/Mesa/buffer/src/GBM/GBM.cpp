@@ -157,8 +157,8 @@ namespace Thunder {
             GBM& operator=(GBM&&) = delete;
             GBM& operator=(const GBM&) = delete;
 
-            GBM(const int drmFd, const uint32_t id, const uint32_t width, const uint32_t height, const PixelFormat& format, IRenderCallback* callback)
-                : CompositorBuffer(id, width, height, format.Type(), 0, Exchange::ICompositionBuffer::TYPE_DMA)
+            GBM(const int drmFd, const uint32_t width, const uint32_t height, const PixelFormat& format, IRenderCallback* callback)
+                : CompositorBuffer(width, height, format.Type(), 0, Exchange::ICompositionBuffer::TYPE_DMA)
                 , _device(nullptr)
                 , _bo(nullptr)
                 , _callback(callback) {
@@ -240,8 +240,8 @@ namespace Thunder {
             bool IsValid() const {
                 return (_bo != nullptr);
             }
-            void Action() override {
-                _callback->Render(Identifier());
+            void Request() override {
+                _callback->Render(this);
             }
 
         private:
@@ -251,7 +251,6 @@ namespace Thunder {
         }; // class GBM
 
         /* extern */ Core::ProxyType<CompositorBuffer> CreateBuffer(
-            const uint32_t logical_id, 
             Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
@@ -267,7 +266,7 @@ namespace Thunder {
             ASSERT(drmFd >= 0);
 
             if (drmFd >= 0) {
-                Core::ProxyType<GBM> entry = Core::ProxyType<GBM>::Create(drmFd, logical_id, width, height, format, callback);
+                Core::ProxyType<GBM> entry = Core::ProxyType<GBM>::Create(drmFd, width, height, format, callback);
 
                 if (entry->IsValid() == true) {
                     result = Core::ProxyType<CompositorBuffer>(entry);

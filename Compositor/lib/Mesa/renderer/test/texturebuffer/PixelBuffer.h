@@ -8,7 +8,7 @@
 
 namespace Thunder {
 namespace Compositor {
-    class PixelBuffer : public SimpleBuffer {
+    class PixelBuffer : public LocalBuffer {
     public:
         PixelBuffer() = delete;
         PixelBuffer(PixelBuffer&&) = delete;
@@ -17,8 +17,8 @@ namespace Compositor {
         PixelBuffer& operator=(const PixelBuffer&) = delete;
 
         PixelBuffer (const Texture::PixelData& source)
-            : SimpleBuffer(source.width, source.height, DRM_FORMAT_ABGR8888, DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_RAW) {
-            SimpleBuffer::Add(reinterpret_cast<int>(source.data.data()), source.width * source.bytes_per_pixel, 0);
+            : LocalBuffer(source.width, source.height, DRM_FORMAT_ABGR8888, DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_RAW) {
+            LocalBuffer::Add(reinterpret_cast<int>(source.data.data()), source.width * source.bytes_per_pixel, 0);
         }
         ~PixelBuffer() override = default;
     }; // class PixelBuffer

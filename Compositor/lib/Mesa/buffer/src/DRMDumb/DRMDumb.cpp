@@ -103,8 +103,8 @@ namespace Thunder {
             DRMDumb& operator=(DRMDumb&&) = delete;
             DRMDumb& operator=(const DRMDumb&) = delete;
 
-            DRMDumb(const int drmFd, conts uint32_t id, uint32_t width, uint32_t height, const PixelFormat& format, IRenderCallback* callback)
-                : CompositorBuffer(id, width, height, format.Type(), DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_DMA)
+            DRMDumb(const int drmFd, uint32_t width, uint32_t height, const PixelFormat& format, IRenderCallback* callback)
+                : CompositorBuffer(width, height, format.Type(), DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_DMA)
                 , _callback(callback)
             {
                 ASSERT(drmFd != -1);
@@ -160,8 +160,10 @@ namespace Thunder {
             bool IsValid() const {
                 return (_fd != -1);
             }
-            void Action() override {
-                _callback->Render(Identifier());
+            void Request() override {
+                ASSERT (_callback != nullptr);
+
+                _callback->Render(this);
             }
 
         private:
@@ -172,7 +174,6 @@ namespace Thunder {
         }; // class DRMDumb
 
         Core::ProxyType<CompositorBuffer> CreateBuffer (
-            const uint32_t logical_id, 
             DRM::Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
@@ -187,7 +188,7 @@ namespace Thunder {
             ASSERT(fd >= 0);
 
             if (fd >= 0) {
-                Core::ProxyType<DRMDumb> entry = Core::ProxyType<DRMDumb>::Create(fd, logical_id, width, height, format, callback);
+                Core::ProxyType<DRMDumb> entry = Core::ProxyType<DRMDumb>::Create(fd, width, height, format, callback);
                 if (entry->IsValid() == false) {
                     result = Core::ProxyType<CompositorBuffer>(entry);
                 }

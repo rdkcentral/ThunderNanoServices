@@ -205,11 +205,12 @@ namespace Plugin {
 
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
                 : _parent(parent)
+                , _id(Core::InterlockedIncrement(_sequence))
                 , _callsign(callsign)
                 , _opacity(255)
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
-                , _buffer(Compositor::CreateBuffer(parent.NewBufferId(), parent.Native(), width, height, Compositor::PixelFormat(parent.Format(), { parent.Modifier() }), this))
+                , _buffer(Compositor::CreateBuffer(parent.Native(), width, height, Compositor::PixelFormat(parent.Format(), { parent.Modifier() }), this))
                 , _texture(nullptr)
             {
                 ASSERT(_buffer.IsValid());
@@ -239,14 +240,14 @@ namespace Plugin {
                 ASSERT((_texture != nullptr) ^ (texture != nullptr));
                 _texture = texture;
             }
-            Core::ProxyType<Exchange::ISimpleBuffer> SimpleBuffer() {
-                return (Core::ProxyType<Exchange::ISimpleBuffer>(_buffer));
+            Core::ProxyType<Exchange::ICompositionBuffer> CompositionBuffer() {
+                return (Core::ProxyType<Exchange::ICompositionBuffer>(_buffer));
             }
 
             /**
              * Compositor::IRenderCallback methods
              */
-            void Render(const uint32_t /* logical_id */) override {
+            void Render(Exchange::ICompositionBuffer* /* surface */) override {
             }
 
             /**
@@ -254,7 +255,7 @@ namespace Plugin {
              */
             Thunder::Core::instance_id Native() const override
             {
-                return _buffer->Identifier();
+                return (_id);
             }
 
             string Name() const override
@@ -294,12 +295,14 @@ namespace Plugin {
 
         private:
             CompositorImplementation& _parent;
+            uint32_t _id;
             const string _callsign; // the callsign of the surface
             uint32_t _opacity; // the opacity of the surface on the composition
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::CompositorBuffer> _buffer; // the actual GMB/DRMDumb buffer for the client to draw on.
             Compositor::IRenderer::ITexture* _texture; // the texture handle that is known in the GPU/Renderer.
+            static uint32_t _sequence;
         }; // class Client
 
         class Bridge : public Core::PrivilegedRequest {
@@ -410,7 +413,7 @@ namespace Plugin {
 
                 _vsync.notify_all();
 
-                TRACE(Trace::Information, ("Connector %u running at %.2f fps", Identifier(), fps));
+                TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
             }
 
             void HandleGPUNode(const std::string node)
@@ -452,11 +455,6 @@ namespace Plugin {
             {
                 return (std::min((_rectangle.x + _rectangle.width), (rectangle.x + rectangle.width)) > std::max(_rectangle.x, rectangle.x) && // width > 0
                     std::min((_rectangle.y + _rectangle.height), (rectangle.y + rectangle.height)) > std::max(_rectangle.y, rectangle.y)); // height > 0
-            }
-
-            uint32_t Identifier() const
-            {
-                return (_buffer->Identifier());
             }
 
             bool IsValid()
@@ -507,8 +505,7 @@ namespace Plugin {
             , _gpuIdentifier(0)
             , _gpuNode()
             , _renderNode()
-            , _present(*this) 
-            , _sequence(1) {
+            , _present(*this) {
         }
 
         ~CompositorImplementation() override
@@ -585,10 +582,10 @@ namespace Plugin {
             _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
             ASSERT(_renderer.IsValid());
 
-            _canvasBuffer = Compositor::CreateBuffer(0, _gpuIdentifier, config.Width.Value(), config.Height.Value(), _format, this);
+            _canvasBuffer = Compositor::CreateBuffer(_gpuIdentifier, config.Width.Value(), config.Height.Value(), _format, this);
             ASSERT(_canvasBuffer.IsValid());
 
-            _canvasTexture = _renderer->Texture(Core::ProxyType<Exchange::ISimpleBuffer>(_canvasBuffer));
+            _canvasTexture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_canvasBuffer));
             ASSERT(_canvasTexture != nullptr);
 
             RenderCanvas();
@@ -681,12 +678,12 @@ namespace Plugin {
         /**
          * Compositor::IRenderCallback methods
          */
-        void Render(const uint32_t /* logical_id */) override {
+        void Render(Exchange::ICompositionBuffer* /* surface */) override {
         }
 
         void Announce(Client& client)
         {
-            client.Texture(_renderer->Texture(client.SimpleBuffer()));
+            client.Texture(_renderer->Texture(client.CompositionBuffer()));
 
             _adminLock.Lock();
 
@@ -722,16 +719,14 @@ namespace Plugin {
             return _modifier;
         }
 
-        uint32_t RequestRender(Client* client)
+        void RequestRender(Client* client)
         {
-            uint32_t outputId(InvalidId);
-
             if (client == nullptr) {
                 _present.Trigger();
             } else {
+                uint8_t index = 1;
                 for (auto& output : _outputs) {
                     if (output.IsIntersecting(client->Geometry())) {
-                        outputId = output.Identifier();
 
                         _present.Trigger();
 
@@ -741,16 +736,11 @@ namespace Plugin {
 
                         break;
                     } else {
-                        TRACE(Trace::Information, (_T("%s no intersection with output %d"), client->Name().c_str(), output.Identifier()));
+                        TRACE(Trace::Information, (_T("%s no intersection with output %d"), client->Name().c_str(), index));
                     }
+                    index++;
                 }
             }
-
-            return outputId;
-        }
-
-        uint32_t NewBufferId() const {
-            return(Core::InterlockedIncrement(_sequence));
         }
 
     public:
@@ -800,7 +790,7 @@ namespace Plugin {
             _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
                 ASSERT(client.IsValid() == true);
 
-                client->SimpleBuffer()->Acquire(Compositor::DefaultTimeoutMs);
+                client->CompositionBuffer()->Acquire(Compositor::DefaultTimeoutMs);
 
                 if (client->Texture() != nullptr) {
                     Exchange::IComposition::Rectangle rectangle = client->Geometry();
@@ -819,7 +809,7 @@ namespace Plugin {
                     TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), name.c_str()));
                 }
 
-                client->SimpleBuffer()->Relinquish();
+                client->CompositionBuffer()->Relinquish();
             });
 
             _renderer->End(false);
@@ -929,17 +919,6 @@ namespace Plugin {
             std::atomic<bool> _continue;
         };
 
-        void WaitForVSync(const uint32_t outputId)
-        {
-            if (outputId != InvalidId) {
-                for (auto& output : _outputs) {
-                    if (output.Identifier() == outputId) {
-                        output.WaitForVSync(Compositor::DefaultTimeoutMs);
-                    }
-                }
-            }
-        }
-
     private:
         Core::ProxyType<Client> ClientById(const uint32_t id) {
             Core::ProxyType<Client> result;
@@ -973,10 +952,11 @@ namespace Plugin {
         std::string _gpuNode;
         std::string _renderNode;
         Presenter _present;
-        mutable uint32_t _sequence;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
+
+    /* static */ uint32_t CompositorImplementation::Client::_sequence = 1;
 
 } // namespace Plugin
 } // namespace Thunder

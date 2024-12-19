@@ -11,7 +11,7 @@
 
 namespace Thunder {
     namespace Compositor {
-        class DmaBuffer : public SimpleBuffer {
+        class DmaBuffer : public LocalBuffer {
         public:
             DmaBuffer() = delete;
             DmaBuffer(DmaBuffer&&) = delete;
@@ -20,7 +20,7 @@ namespace Thunder {
             DmaBuffer& operator=(const DmaBuffer&) = delete;
 
             DmaBuffer(int gpuFd, const Texture::PixelData& source)
-                : SimpleBuffer(source.width, source.height, DRM_FORMAT_ABGR8888, DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_RAW)
+                : LocalBuffer(source.width, source.height, DRM_FORMAT_ABGR8888, DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_RAW)
                 , _api()
                 , _egl(gpuFd)
                 , _context(EGL_NO_CONTEXT)
@@ -90,7 +90,7 @@ namespace Thunder {
 
                     glBindTexture(_target, 0);
 
-                    SimpleBuffer::Add(_fd, stride, offset);
+                    LocalBuffer::Add(_fd, stride, offset);
                 }
                 else {
                     ASSERT(false);
