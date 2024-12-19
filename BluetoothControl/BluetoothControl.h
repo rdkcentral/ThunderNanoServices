@@ -3211,7 +3211,7 @@ class BluetoothControl : public PluginHost::IPlugin
                 std::vector<device> localDevices;
 
                 _parent.IterateDevices([&localDevices](DeviceImpl& device) -> bool {
-                    localDevices.push_back({device.RemoteId(), DeviceType(device.Type())});
+                    localDevices.push_back({device.RemoteId(), DeviceType(device.Type()), device.Name() });
                     return (false);
                 });
 
