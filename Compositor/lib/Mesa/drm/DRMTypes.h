@@ -20,7 +20,6 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
 #include <string>
 #include <unordered_map>
 #include <xf86drm.h>
@@ -30,43 +29,7 @@ namespace Thunder {
 namespace Compositor {
     namespace DRM {
 
-        using Identifier = uint32_t;
-        using Value = uint64_t;
-
-        constexpr Identifier InvalidIdentifier = static_cast<Identifier>(~0);
-        constexpr int InvalidFileDescriptor = -1;
-
-        enum class PropertyType : uint32_t {
-            Range = DRM_MODE_PROP_RANGE,
-            SignedRange = DRM_MODE_PROP_SIGNED_RANGE,
-            Enumerate = DRM_MODE_PROP_ENUM, /* Enumerated type with text strings */
-            Bitmask = DRM_MODE_PROP_BITMASK, /* Bitmask of enumerated types */
-            Object = DRM_MODE_PROP_OBJECT, /* DRM object id */
-            Blob = DRM_MODE_PROP_BLOB,
-            Invalid = 0
-        };
-
-        enum class ObjectType : uint32_t {
-            Crtc = DRM_MODE_OBJECT_CRTC,
-            Connector = DRM_MODE_OBJECT_CONNECTOR,
-            Encoder = DRM_MODE_OBJECT_ENCODER, /* Deprecated */
-            Mode = DRM_MODE_OBJECT_MODE,
-            Property = DRM_MODE_OBJECT_PROPERTY,
-            Framebuffer = DRM_MODE_OBJECT_FB,
-            Blob = DRM_MODE_OBJECT_BLOB,
-            Plane = DRM_MODE_OBJECT_PLANE,
-            Any = DRM_MODE_OBJECT_ANY
-        };
-
-        enum class PlaneType : uint8_t {
-            Cursor = DRM_PLANE_TYPE_CURSOR,
-            Primary = DRM_PLANE_TYPE_PRIMARY,
-            Overlay = DRM_PLANE_TYPE_OVERLAY,
-        };
-
-        constexpr Identifier InvalidProperty = uint16_t(~0);
-
-        enum class Property : uint16_t {
+        enum class property : uint16_t {
             // Connector properties
             BroadcastRgb = 0x0000,
             Colorspace,
@@ -112,108 +75,144 @@ namespace Compositor {
             GammaLutSize,
             ModeId,
             ScalingFilter,
-            VrrEnabled
+            VrrEnabled,
+            InvalidProperty = static_cast<uint16_t>(~0)
         };
 
-        static const std::unordered_map<std::string, Property> stringToProperty = {
-            { "Broadcast_RGB", Property::BroadcastRgb },
-            { "Colorspace", Property::Colorspace },
-            { "Content Protection", Property::ContentProtection },
-            { "content type", Property::ContentType },
-            { "CRTC_ID", Property::CrtcId }, /* atomic */
-            { "DPMS", Property::Dpms },
-            { "EDID", Property::Edid },
-            { "Output_format", Property::OutputFormat },
-            { "HDR_OUTPUT_METADATA", Property::HdrOutputMetadata },
-            { "TILE", Property::Tile },
-            { "link-status", Property::LinkStatus },
-            { "max bpc", Property::MaxBpc },
-            { "non-desktop", Property::NonDesktop },
-            { "PATH", Property::Path },
-            { "panel_orientation", Property::PanelOrientation },
-            { "subconnector", Property::SubConnector },
-            { "vrr_capable", Property::VrrCapable },
-            // Plane Properties
-            { "type", Property::Type },
-            { "alpha", Property::Alpha },
-            { "SRC_X", Property::SrcX },
-            { "SRC_Y", Property::SrcY },
-            { "SRC_W", Property::SrcW },
-            { "SRC_H", Property::SrcH },
-            { "CRTC_X", Property::CrtcX },
-            { "CRTC_Y", Property::CrtcY },
-            { "CRTC_W", Property::CrtcW },
-            { "CRTC_H", Property::CrtcH },
-            { "FB_DAMAGE_CLIPS", Property::FbDamageClips },
-            { "FB_ID", Property::FbId },
-            { "IN_FENCE_FD", Property::InFenceFd },
-            { "IN_FORMATS", Property::InFormats },
-            { "rotation", Property::Rotation },
-            { "zpos", Property::ZPosition },
-            // CRTC Properties
-            { "ACTIVE", Property::Active },
-            { "CTM", Property::Ctm },
-            { "DEGAMMA_LUT", Property::DegammaLut },
-            { "DEGAMMA_LUT_SIZE", Property::DegammaLutSize },
-            { "GAMMA_LUT", Property::GammaLut },
-            { "GAMMA_LUT_SIZE", Property::GammaLutSize },
-            { "MODE_ID", Property::ModeId },
-            { "VRR_ENABLED", Property::VrrEnabled },
+        enum class property_type : uint32_t {
+            Range = DRM_MODE_PROP_RANGE,
+            SignedRange = DRM_MODE_PROP_SIGNED_RANGE,
+            Enumerate = DRM_MODE_PROP_ENUM, /* Enumerated type with text strings */
+            Bitmask = DRM_MODE_PROP_BITMASK, /* Bitmask of enumerated types */
+            Object = DRM_MODE_PROP_OBJECT, /* DRM object id */
+            Blob = DRM_MODE_PROP_BLOB,
+            Invalid = 0
         };
 
-        struct IProperty {
-            class Entry {
-            public:
-                Entry() = delete;
-                // Entry(const Entry&) = delete;
-                // Entry& operator=(const Entry&) = delete;
-
-                Entry(const DRM::Identifier id, const uint32_t flags)
-                    : _id(id)
-                    , _flags(flags)
-                {
-                }
-
-                bool IsReadOnly() const
-                {
-                    return ((_flags & DRM_MODE_PROP_IMMUTABLE) != 0);
-                }
-
-                bool IsAtomic() const
-                {
-                    return ((_flags & DRM_MODE_PROP_ATOMIC) != 0);
-                }
-
-                PropertyType Type() const
-                {
-                    return static_cast<PropertyType>(_flags & (DRM_MODE_PROP_LEGACY_TYPE | DRM_MODE_PROP_EXTENDED_TYPE));
-                }
-
-                Identifier Id() const
-                {
-                    return _id;
-                }
-
-                bool IsValid() const
-                {
-                    return (_id != InvalidIdentifier);
-                }
-
-            private:
-                const Identifier _id;
-                const uint32_t _flags;
-            };
-
-            virtual ~IProperty() = default;
-            virtual IProperty::Entry Get(const DRM::Property property) const = 0;
-            virtual DRM::Identifier Id(const DRM::Property property) const = 0;
+        enum class object_type : uint32_t {
+            Crtc = DRM_MODE_OBJECT_CRTC,
+            Connector = DRM_MODE_OBJECT_CONNECTOR,
+            Encoder = DRM_MODE_OBJECT_ENCODER, /* Deprecated */
+            Mode = DRM_MODE_OBJECT_MODE,
+            Property = DRM_MODE_OBJECT_PROPERTY,
+            Framebuffer = DRM_MODE_OBJECT_FB,
+            Blob = DRM_MODE_OBJECT_BLOB,
+            Plane = DRM_MODE_OBJECT_PLANE,
+            Any = DRM_MODE_OBJECT_ANY
         };
 
-        struct EXTERNAL IDrmObject {
-            virtual ~IDrmObject() = default;
+        enum class plane_type : uint8_t {
+            Cursor = DRM_PLANE_TYPE_CURSOR,
+            Primary = DRM_PLANE_TYPE_PRIMARY,
+            Overlay = DRM_PLANE_TYPE_OVERLAY,
+        };
 
-            virtual const IProperty* Properties() const = 0;
-            virtual Identifier Id() const = 0;
+        using Identifier = uint32_t;
+        static constexpr uint32_t InvalidIdentifier = ~0;
+
+        class Property {
+        public:
+            Property()
+                : _property(property::InvalidProperty)
+                , _id(InvalidIdentifier)
+                , _flags(0) {
+            }
+            Property(const property which, const Identifier id, const uint32_t flags)
+                : _property(which)
+                , _id(id)
+                , _flags(flags) {
+            }
+            Property(Property&& move)
+                : _property(std::move(move._property))
+                , _id(std::move(move._id))
+                , _flags(std::move(move._flags)) {
+            }
+            Property(const Property& copy)
+                : _property(copy._property)
+                , _id(copy._id)
+                , _flags(copy._flags) {
+            }
+            ~Property() = default;
+
+            Property& operator= (Property&& rhs) {
+                _property = std::move(rhs._property);
+                _id = std::move(rhs._id);
+                _flags = std::move(rhs._flags);
+                return (*this);
+            }
+            Property& operator= (const Property& rhs) {
+                _property = rhs._property;
+                _id = rhs._id;
+                _flags = rhs._flags;
+                return (*this);
+            }
+
+        public:
+            bool IsValid() const {
+                return (_property != property::InvalidProperty);
+            }
+            Identifier Id() const {
+                return _id;
+            }
+            bool IsReadOnly() const {
+                return ((_flags & DRM_MODE_PROP_IMMUTABLE) != 0);
+            }
+            bool IsAtomic() const {
+                return ((_flags & DRM_MODE_PROP_ATOMIC) != 0);
+            }
+            property_type Type() const {
+                return static_cast<property_type>(_flags & (DRM_MODE_PROP_LEGACY_TYPE | DRM_MODE_PROP_EXTENDED_TYPE));
+            }
+            operator enum property() const {
+                return (_property);
+            }
+            const char* PropertyToString() const;
+
+        private:
+            property _property;
+            Identifier _id;
+            uint32_t _flags;
+        };
+
+        class Properties {
+        private:
+            using Element = std::pair<Identifier, uint32_t>;
+            using Elements = std::unordered_map<property, Element >;
+
+        public:
+            Properties(Properties&&) = delete;
+            Properties(const Properties&) = delete;
+            Properties& operator=(Properties&&) = delete;
+            Properties& operator=(const Properties&) = delete;
+
+            Properties() : _objectId(InvalidIdentifier) {}
+            Properties(const int fd, object_type type, const Identifier objectId) {
+                Load(fd, type, objectId);
+            }
+            ~Properties() = default;
+
+        public:
+            Identifier Id(const property which) const
+            {
+                const auto& entry = _properties.find(which);
+                return (entry != _properties.end() ? entry->second.first : InvalidIdentifier);
+            }
+            Property Get(const property which) const
+            {
+                const auto& entry = _properties.find(which);
+                return (entry != _properties.end()
+                    ? Property(which, entry->second.first, entry->second.second) 
+                    : Property(which, InvalidIdentifier, 0));
+            }
+            Identifier Id () const {
+                return (_objectId);
+            }
+
+            void Load(const int fd, object_type type, const Identifier objectId);
+
+        private:
+            Identifier _objectId;
+            Elements _properties;
         };
     } // namespace DRM
 } // namespace Compositor

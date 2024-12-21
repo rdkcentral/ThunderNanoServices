@@ -29,8 +29,10 @@ namespace Compositor {
     namespace Backend {
         struct EXTERNAL IGpu {
 
-            struct EXTERNAL IConnector : public Compositor::DRM::IDrmObject {
+            struct EXTERNAL IConnector {
                 virtual ~IConnector() = default;
+
+                virtual Compositor::DRM::Identifier Id() const = 0;
 
                 // @brief Whenever the output should be displayed
                 virtual bool IsEnabled() const = 0;
@@ -42,11 +44,15 @@ namespace Compositor {
                 // @brief Current display mode for this connector
                 virtual const drmModeModeInfo& ModeInfo() const = 0;
 
+                // @brief Information from the attached Connector 
+                // TODO: @bram sounds like properties also exposed by the ModeInfo above?
+                virtual const Compositor::DRM::Properties& Properties() const = 0;
+
                 // @brief Information from the attached CRTC;
-                virtual const Compositor::DRM::IDrmObject* CrtController() const = 0;
+                virtual const Compositor::DRM::Properties& CrtController() const = 0;
 
                 // @brief Information from the attached Plane/Buffer;
-                virtual const Compositor::DRM::IDrmObject* Plane() const = 0;
+                virtual const Compositor::DRM::Properties& Plane() const = 0;
 
                 // @brief Callback if the output was presented to a screen.
                 // @param pts: Presentation time stamp of the connector, 0 if was not presented.

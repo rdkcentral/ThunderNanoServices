@@ -121,38 +121,6 @@ namespace Compositor {
                 Compositor::DRM::Identifier identifier;
             };
 
-            template <Compositor::DRM::ObjectType OBJECT_TYPE>
-            class DRMObject : public Compositor::DRM::IDrmObject {
-            public:
-                DRMObject()
-                    : _id(InvalidIdentifier)
-                    , _properties()
-                {
-                }
-
-                virtual ~DRMObject() = default;
-
-                const Compositor::DRM::IProperty* Properties() const override
-                {
-                    return &_properties;
-                };
-
-                Compositor::DRM::Identifier Id() const override
-                {
-                    return _id;
-                };
-
-                uint32_t Configure(const int drmfd, uint32_t drmId)
-                {
-                    _id = static_cast<Compositor::DRM::Identifier>(drmId);
-                    return _properties.Scan(drmfd, _id);
-                }
-
-            private:
-                Compositor::DRM::Identifier _id;
-                Compositor::DRM::PropertyAdministratorType<OBJECT_TYPE> _properties;
-            };
-
         private:
             class Monitor : public Core::IResource {
             public:
@@ -279,7 +247,7 @@ namespace Compositor {
 
                 ConnectorImplementation(Core::ProxyType<DRM> backend, const string& connector, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutput::IFeedback* feedback)
                     : _backend(backend)
-                    , _connector()
+                    , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, FindConnectorId(_backend->Descriptor(), connector))
                     , _crtc()
                     , _primaryPlane()
                     , _swap()
@@ -290,9 +258,6 @@ namespace Compositor {
                     , _feedback(feedback)
                 {
                     // ASSERT(_feedback != nullptr);
-
-                    _connector.Configure(_backend->Descriptor(), FindConnectorId(_backend->Descriptor(), connector));
-
                     if (Scan() == false) {
                         TRACE(Trace::Backend, ("Connector %s is not in a valid state", connector.c_str()));
                     } else {
@@ -372,6 +337,11 @@ namespace Compositor {
                  * IGpu::IConnector implementation
                  */
 
+                Compositor::DRM::Identifier Id() const override
+                {
+                    return _connector.Id();
+                }
+
                 bool IsEnabled() const override
                 {
                     // Todo: this will control switching on or of the display by controlling the Display Power Management Signaling (DPMS)
@@ -383,25 +353,16 @@ namespace Compositor {
                     return _drmModeStatus;
                 }
 
-                const Compositor::DRM::IDrmObject* Plane() const override
-                {
-                    return &_primaryPlane;
+                const Compositor::DRM::Properties& Properties() const override {
+                    return _connector;
                 }
 
-                const Compositor::DRM::IDrmObject* CrtController() const override
-                {
-                    return &_crtc;
+                const Compositor::DRM::Properties& Plane() const override {
+                    return _primaryPlane;
                 }
 
-                // IDrmObject implementation
-                Compositor::DRM::Identifier Id() const override
-                {
-                    return _connector.Id();
-                }
-
-                const Compositor::DRM::IProperty* Properties() const override
-                {
-                    return _connector.Properties();
+                const Compositor::DRM::Properties& CrtController() const override {
+                    return _crtc;
                 }
 
                 // current framebuffer id to scan out
@@ -541,8 +502,8 @@ namespace Compositor {
 
                             TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
 
-                            _crtc.Configure(_backend->Descriptor(), crtc->crtc_id);
-                            _primaryPlane.Configure(_backend->Descriptor(), plane->plane_id);
+                            _crtc.Load(_backend->Descriptor(), Compositor::DRM::object_type::Crtc, crtc->crtc_id);
+                            _primaryPlane.Load(_backend->Descriptor(), Compositor::DRM::object_type::Plane, plane->plane_id);
 
                             // allocate a double buffered framebuffer.
                             for (auto& buffer : _frameBuffer) {
@@ -609,9 +570,9 @@ namespace Compositor {
             private:
                 Core::ProxyType<DRM> _backend;
 
-                DRMObject<Compositor::DRM::ObjectType::Connector> _connector;
-                DRMObject<Compositor::DRM::ObjectType::Crtc> _crtc;
-                DRMObject<Compositor::DRM::ObjectType::Plane> _primaryPlane;
+                Compositor::DRM::Properties _connector; 
+                Compositor::DRM::Properties _crtc; 
+                Compositor::DRM::Properties _primaryPlane;
 
                 Core::CriticalSection _swap;
                 uint8_t _frontBuffer;
@@ -634,7 +595,7 @@ namespace Compositor {
             void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
             {
                 _connectors.Visit([&](const string& name, const Core::ProxyType<ConnectorImplementation> connector) {
-                    if (connector->CrtController()->Id() == crtc) {
+                    if (connector->CrtController().Id() == crtc) {
                         struct timespec presentationTimestamp;
 
                         presentationTimestamp.tv_sec = seconds;
