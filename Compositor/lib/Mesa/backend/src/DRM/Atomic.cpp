@@ -184,21 +184,22 @@ namespace Compositor {
                     ASSERT(connector->CrtController() != nullptr);
                     ASSERT(connector->Plane() != nullptr);
 
-                    const uint32_t ConnectorId(connector->Id());
-                    const uint32_t crtcId(connector->CrtController()->Id());
-                    const uint32_t planeId(connector->Plane()->Id());
+                    const uint32_t ConnectorId(connector->Properties().Id());
+                    const uint32_t crtcId(connector->CrtController().Id());
+                    const uint32_t planeId(connector->Plane().Id());
 
                     TRACE(Trace::Backend, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
 
-                    request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::CrtcId), connector->IsEnabled() ? crtcId : 0);
+                    request->Property(ConnectorId, connector->Properties().Id(DRM::property::CrtcId), connector->IsEnabled() ? crtcId : 0);
 
                     if ((connector->IsEnabled()) && (_doModeset == true)) {
-                        request->Blob(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::ModeId), reinterpret_cast<const void*>(&connector->ModeInfo()), sizeof(drmModeModeInfo));
+                        const drmModeModeInfo* mode = connector->CrtController();
+                        request->Blob(crtcId, connector->CrtController().Id(DRM::property::ModeId), reinterpret_cast<const void*>(mode), sizeof(drmModeModeInfo));
                         commitFlags |= DRM_MODE_ATOMIC_ALLOW_MODESET;
                         _doModeset = false;
                     }
 
-                    request->Property(crtcId, connector->CrtController()->Properties()->Id(DRM::Property::Active), connector->IsEnabled() ? 1 : 0);
+                    request->Property(crtcId, connector->CrtController().Id(DRM::property::Active), connector->IsEnabled() ? 1 : 0);
 
                     if (connector->IsEnabled() == true) {
                         Core::ProxyType<Thunder::Exchange::ICompositionBuffer> frameBuffer = connector->FrameBuffer();
@@ -208,26 +209,26 @@ namespace Compositor {
                         const uint32_t width(frameBuffer->Width());
                         const uint32_t height(frameBuffer->Height());
 
-                        request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
-                        request->Property(ConnectorId, connector->Properties()->Id(DRM::Property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
+                        request->Property(ConnectorId, connector->Properties().Id(DRM::property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
+                        request->Property(ConnectorId, connector->Properties().Id(DRM::property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
 
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), connector->FrameBufferId());
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), crtcId);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::FbId), connector->FrameBufferId());
+                        request->Property(planeId, connector->Plane().Id(DRM::property::CrtcId), crtcId);
 
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcX), 0);
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcY), 0);
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcW), uint64_t(width << 16));
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::SrcH), uint64_t(height << 16));
+                        request->Property(planeId, connector->Plane().Id(DRM::property::SrcX), 0);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::SrcY), 0);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::SrcW), uint64_t(width << 16));
+                        request->Property(planeId, connector->Plane().Id(DRM::property::SrcH), uint64_t(height << 16));
 
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcX), x);
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcY), y);
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcW), width);
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcH), height);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::CrtcX), x);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::CrtcY), y);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::CrtcW), width);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::CrtcH), height);
 
                         frameBuffer.Release();
                     } else {
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::FbId), 0);
-                        request->Property(planeId, connector->Plane()->Properties()->Id(DRM::Property::CrtcId), 0);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::FbId), 0);
+                        request->Property(planeId, connector->Plane().Id(DRM::property::CrtcId), 0);
                     }
                 }
 

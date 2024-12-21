@@ -53,7 +53,7 @@ namespace Compositor {
                     ASSERT(connector->CrtController() != nullptr);
                     ASSERT(connector->Plane() != nullptr);
 
-                    const uint32_t ConnectorId(connector->Id());
+                    const uint32_t ConnectorId(connector->Properties().Id());
                     const uint32_t crtcId(connector->CrtController().Id());
                     const uint32_t planeId(connector->Plane().Id());
 
@@ -70,7 +70,7 @@ namespace Compositor {
 
                         if (connector->IsEnabled() == true) {
                             connectorIds.emplace_back(ConnectorId);
-                            mode = &(connector->ModeInfo());
+                            mode = connector->CrtController();
                         }
 
                         uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;

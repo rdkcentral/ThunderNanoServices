@@ -253,7 +253,6 @@ namespace Compositor {
                     , _swap()
                     , _frontBuffer(0)
                     , _frameBuffer()
-                    , _drmModeStatus()
                     , _format(format)
                     , _feedback(feedback)
                 {
@@ -336,21 +335,10 @@ namespace Compositor {
                 /**
                  * IGpu::IConnector implementation
                  */
-
-                Compositor::DRM::Identifier Id() const override
-                {
-                    return _connector.Id();
-                }
-
                 bool IsEnabled() const override
                 {
                     // Todo: this will control switching on or of the display by controlling the Display Power Management Signaling (DPMS)
                     return true;
-                }
-
-                const drmModeModeInfo& ModeInfo() const override
-                {
-                    return _drmModeStatus;
                 }
 
                 const Compositor::DRM::Properties& Properties() const override {
@@ -361,7 +349,7 @@ namespace Compositor {
                     return _primaryPlane;
                 }
 
-                const Compositor::DRM::Properties& CrtController() const override {
+                const Compositor::DRM::CRTCProperties& CrtController() const override {
                     return _crtc;
                 }
 
@@ -386,7 +374,7 @@ namespace Compositor {
                 void Presented(const uint32_t sequence, const uint64_t pts) override
                 {                  
                     if (_feedback != nullptr) {
-                        _feedback->Presented(Id(), sequence, pts);
+                        _feedback->Presented(_connector.Id(), sequence, pts);
                     }
                 }
 
@@ -412,8 +400,6 @@ namespace Compositor {
                     TRACE(Trace::Backend, ("Found %d encoders", drmModeResources->count_encoders));
                     TRACE(Trace::Backend, ("Found %d CRTCs", drmModeResources->count_crtcs));
                     TRACE(Trace::Backend, ("Found %d planes", drmModePlaneResources->count_planes));
-
-                    memset(&_drmModeStatus, 0, sizeof(drmModeModeInfo));
 
                     for (int c = 0; c < drmModeResources->count_connectors; c++) {
                         drmModeConnectorPtr drmModeConnector = drmModeGetConnector(_backend->Descriptor(), drmModeResources->connectors[c]);
@@ -496,13 +482,11 @@ namespace Compositor {
 
                             ASSERT(plane);
 
-                            _drmModeStatus = crtc->mode;
-
                             uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
 
                             TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
 
-                            _crtc.Load(_backend->Descriptor(), Compositor::DRM::object_type::Crtc, crtc->crtc_id);
+                            _crtc.Load(_backend->Descriptor(), crtc);
                             _primaryPlane.Load(_backend->Descriptor(), Compositor::DRM::object_type::Plane, plane->plane_id);
 
                             // allocate a double buffered framebuffer.
@@ -570,15 +554,13 @@ namespace Compositor {
             private:
                 Core::ProxyType<DRM> _backend;
 
-                Compositor::DRM::Properties _connector; 
-                Compositor::DRM::Properties _crtc; 
-                Compositor::DRM::Properties _primaryPlane;
+                Compositor::DRM::Properties     _connector; 
+                Compositor::DRM::CRTCProperties _crtc; 
+                Compositor::DRM::Properties     _primaryPlane;
 
                 Core::CriticalSection _swap;
                 uint8_t _frontBuffer;
                 std::array<DRM::FrameBuffer, 2> _frameBuffer;
-
-                drmModeModeInfo _drmModeStatus;
 
                 const Compositor::PixelFormat _format;
 

@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <string>
+#include <cstring>
 #include <unordered_map>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -214,6 +215,36 @@ namespace Compositor {
             Identifier _objectId;
             Elements _properties;
         };
+
+        class CRTCProperties : public Properties {
+        public:
+            CRTCProperties(CRTCProperties&&) = delete;
+            CRTCProperties(const CRTCProperties&) = delete;
+            CRTCProperties& operator=(CRTCProperties&&) = delete;
+            CRTCProperties& operator=(const CRTCProperties&) = delete;
+
+            CRTCProperties() = default;
+            CRTCProperties(const int fd, const drmModeCrtc* crtc) {
+                Load(fd, crtc);
+            }
+            ~CRTCProperties() = default;
+
+        public:
+            void Load(const int fd, const drmModeCrtc* crtc) {
+                memset(&_drmModeStatus, 0, sizeof(drmModeModeInfo));
+
+                _drmModeStatus = crtc->mode;
+
+                Properties::Load(fd, Compositor::DRM::object_type::Crtc, crtc->crtc_id);
+            }
+            operator const drmModeModeInfo* () const {
+                return (&_drmModeStatus);
+            }
+
+        private:
+            drmModeModeInfo _drmModeStatus;
+        };
+
     } // namespace DRM
 } // namespace Compositor
 } // namespace Thunder
