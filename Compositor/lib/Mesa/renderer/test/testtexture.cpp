@@ -68,7 +68,7 @@ public:
         , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
-        , _texture(nullptr)
+        , _texture()
         , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
         , _rotations(rotationsPerSecond)
         , _running(false)
@@ -161,12 +161,12 @@ private:
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
+        const Exchange::IComposition::Rectangle renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
         Compositor::Matrix matrix;
 
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
+        const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
@@ -186,7 +186,7 @@ private:
     const Compositor::PixelFormat _format;
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
-    Compositor::IRenderer::ITexture* _texture;
+    Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
     const std::chrono::microseconds _period;
     const uint8_t _rotations;
     bool _running;

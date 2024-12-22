@@ -90,7 +90,7 @@ public:
         , _connector()
         , _renderer()
         , _textureBuffer()
-        , _texture(nullptr)
+        , _texture()
         , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / FPS))
         , _radPerFrame(((RPM / 60.0f) * (2.0f * M_PI)) / float(FPS))
         , _running(false)
@@ -194,8 +194,8 @@ private:
         const uint16_t renderWidth(720);
         const uint16_t renderHeight(720);
 
-        int x = (renderWidth / 2) * cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
-        int y = (renderHeight / 2) * sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        uint32_t x = (renderWidth / 2) * cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        uint32_t y = (renderHeight / 2) * sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
 
         _renderer->Bind(_connector);
 
@@ -203,11 +203,11 @@ private:
         _renderer->Clear(background);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
-        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)) + x, ((height / 2) - (renderHeight / 2)) + y, renderWidth, renderHeight };
+        const Exchange::IComposition::Rectangle renderBox = { static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), renderWidth, renderHeight };
         Compositor::Matrix matrix;
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
+        const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
@@ -250,7 +250,7 @@ private:
     Core::ProxyType<Exchange::ICompositionBuffer> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
-    Compositor::IRenderer::ITexture* _texture;
+    Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
     const std::chrono::microseconds _period;
     const float _radPerFrame;
     bool _running;

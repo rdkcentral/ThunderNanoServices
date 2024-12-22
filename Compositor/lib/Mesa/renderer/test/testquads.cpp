@@ -151,7 +151,7 @@ private:
 
         for (int y = -squareSize; y < height; y += squareSize) {
             for (int x = -squareSize; x < width; x += squareSize) {
-                const Compositor::Box box = { x, y, squareSize, squareSize };
+                const Exchange::IComposition::Rectangle box = { x, y, squareSize, squareSize };
 
                 float R = (float(width) - float(x)) / (float(width) - float(-squareSize));
                 float G = (float(x) - float(-squareSize)) / (float(width) - float(-squareSize));

@@ -292,7 +292,7 @@ namespace Compositor {
          * @param projection The projection to apply
          *
          */
-        static inline void ProjectBox(Matrix& result, const Box& box, const TransformType transform, const float radians, const Matrix& projection)
+        static inline void ProjectBox(Matrix& result, const Exchange::IComposition::Rectangle& box, const TransformType transform, const float radians, const Matrix& projection)
         {
             float x = box.x;
             float y = box.y;

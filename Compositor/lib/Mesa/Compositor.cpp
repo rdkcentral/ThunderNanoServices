@@ -211,7 +211,7 @@ namespace Plugin {
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
                 , _buffer(Compositor::CreateBuffer(parent.Native(), width, height, Compositor::PixelFormat(parent.Format(), { parent.Modifier() }), this))
-                , _texture(nullptr)
+                , _texture()
             {
                 ASSERT(_buffer.IsValid());
 
@@ -219,11 +219,6 @@ namespace Plugin {
             }
             ~Client() override
             {
-                if (_texture != nullptr) {
-                    _texture->Release();
-                    _texture = nullptr;
-                }
-
                 TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
             }
 
@@ -231,13 +226,13 @@ namespace Plugin {
             uint8_t Descriptors(const uint8_t maxSize, int container[]) {
                 return (_buffer->Descriptors(maxSize, container));
             }
-            Compositor::IRenderer::ITexture* Texture()
+            Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
             {
                 return _texture;
             }
-            void Texture(Compositor::IRenderer::ITexture* texture)
+            void Texture(Core::ProxyType<Compositor::IRenderer::ITexture> texture)
             {
-                ASSERT((_texture != nullptr) ^ (texture != nullptr));
+                ASSERT(_texture.IsValid() ^ texture.IsValid());
                 _texture = texture;
             }
             Core::ProxyType<Exchange::ICompositionBuffer> CompositionBuffer() {
@@ -301,7 +296,7 @@ namespace Plugin {
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::CompositorBuffer> _buffer; // the actual GMB/DRMDumb buffer for the client to draw on.
-            Compositor::IRenderer::ITexture* _texture; // the texture handle that is known in the GPU/Renderer.
+            Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             static uint32_t _sequence;
         }; // class Client
 
@@ -378,16 +373,16 @@ namespace Plugin {
         private:
             class Sink : public Compositor::IOutput::IFeedback {
             public:
+                Sink(Sink&&) = delete;
                 Sink(const Sink&) = delete;
+                Sink& operator=(Sink&&) = delete;
                 Sink& operator=(const Sink&) = delete;
                 Sink() = delete;
 
                 Sink(Output& parent)
-                    : _parent(parent)
-                {
+                    : _parent(parent) {
                 }
-
-                virtual ~Sink() = default;
+                ~Sink() override = default;
 
                 virtual void Presented(const int fd, const uint32_t sequence, const uint64_t time) override
                 {
@@ -453,8 +448,9 @@ namespace Plugin {
 
             bool IsIntersecting(const Exchange::IComposition::Rectangle& rectangle)
             {
-                return (std::min((_rectangle.x + _rectangle.width), (rectangle.x + rectangle.width)) > std::max(_rectangle.x, rectangle.x) && // width > 0
-                    std::min((_rectangle.y + _rectangle.height), (rectangle.y + rectangle.height)) > std::max(_rectangle.y, rectangle.y)); // height > 0
+                return (
+                    std::min(_rectangle.x + static_cast<int32_t>(_rectangle.width), rectangle.x + static_cast<int32_t>(rectangle.width)) > std::max(_rectangle.x, rectangle.x) && // width > 0
+                    std::min(_rectangle.y + static_cast<int32_t>(_rectangle.height), rectangle.y + static_cast<int32_t>(rectangle.height)) > std::max(_rectangle.y, rectangle.y)); // height > 0
             }
 
             bool IsValid()
@@ -501,7 +497,7 @@ namespace Plugin {
             , _engine()
             , _dispatcher(nullptr)
             , _canvasBuffer()
-            , _canvasTexture(nullptr)
+            , _canvasTexture()
             , _gpuIdentifier(0)
             , _gpuNode()
             , _renderNode()
@@ -586,7 +582,7 @@ namespace Plugin {
             ASSERT(_canvasBuffer.IsValid());
 
             _canvasTexture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_canvasBuffer));
-            ASSERT(_canvasTexture != nullptr);
+            ASSERT(_canvasTexture.IsValid());
 
             RenderCanvas();
 
@@ -618,7 +614,7 @@ namespace Plugin {
                     _engine.Release();
                     _clientBridge.Close();
 
-                    _canvasTexture->Release();
+                    _canvasTexture.Release();
                     _canvasBuffer.Release();
 
                     result = Core::ERROR_UNAVAILABLE;
@@ -703,9 +699,8 @@ namespace Plugin {
 
             _adminLock.Unlock();
 
-            if (client.Texture() != nullptr) {
-                client.Texture()->Release();
-                client.Texture(nullptr);
+            if (client.Texture().IsValid()) {
+                client.Texture(Core::ProxyType<Compositor::IRenderer::ITexture>());
             }
         }
 
@@ -795,12 +790,12 @@ namespace Plugin {
                 if (client->Texture() != nullptr) {
                     Exchange::IComposition::Rectangle rectangle = client->Geometry();
 
-                    const Compositor::Box renderBox = { int(rectangle.x), int(rectangle.y), int(rectangle.width), int(rectangle.height) };
+                    const Exchange::IComposition::Rectangle renderBox = { rectangle.x, rectangle.y, rectangle.width, rectangle.height };
 
                     Compositor::Matrix clientProjection;
                     Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
 
-                    const Compositor::Box clientArea = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
+                    const Exchange::IComposition::Rectangle clientArea = { 0, 0, client->Texture()->Width(), client->Texture()->Height() };
 
                     const float alpha = float(client->Opacity()) / float(Exchange::IComposition::maxOpacity);
 
@@ -832,17 +827,17 @@ namespace Plugin {
                 _renderer->Bind(buffer);
                 _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
 
-                const Compositor::Box renderBox = { 0, 0, int(buffer->Width()), int(buffer->Height()) };
+                const Exchange::IComposition::Rectangle renderBox = { 0, 0, buffer->Width(), buffer->Height() };
 
                 Compositor::Matrix canvasProjection;
                 Compositor::Transformation::ProjectBox(canvasProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
                 // what part of the canvas do we want to render on this output
-                const Compositor::Box canvasArea = {
+                const Exchange::IComposition::Rectangle canvasArea = {
                     0, // X
                     0, // Y
-                    int(_canvasTexture->Width()),
-                    int(_canvasTexture->Height())
+                    _canvasTexture->Width(),
+                    _canvasTexture->Height()
                 };
 
                 _renderer->Render(_canvasTexture, canvasArea, canvasProjection, 1.0);
@@ -947,7 +942,7 @@ namespace Plugin {
         Core::ProxyType<RPC::InvokeServer> _engine;
         std::unique_ptr<DisplayDispatcher> _dispatcher;
         Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
-        Compositor::IRenderer::ITexture* _canvasTexture;
+        Core::ProxyType<Compositor::IRenderer::ITexture> _canvasTexture;
         uint32_t _gpuIdentifier;
         std::string _gpuNode;
         std::string _renderNode;

@@ -29,9 +29,6 @@ namespace Compositor {
         struct ITexture {
             virtual ~ITexture() = default;
 
-            virtual uint32_t AddRef() const = 0;
-            virtual uint32_t Release() const = 0;
-
             virtual bool IsValid() const = 0;
 
             virtual uint32_t Width() const = 0;
@@ -99,7 +96,7 @@ namespace Compositor {
          *
          * @param box a box describing the region to write or nullptr to disable
          */
-        virtual void Scissor(const Box* box) = 0;
+        virtual void Scissor(const Exchange::IComposition::Rectangle* box) = 0;
 
         /**
          * @brief   Creates a texture in the gpu bound to this renderer
@@ -108,7 +105,7 @@ namespace Compositor {
          *
          * @return ITexture upon success, nullptr on error.
          */
-        virtual ITexture* Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
+        virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
 
         /**
          * @brief   Renders a texture on the bound buffer at the given region with
@@ -122,7 +119,7 @@ namespace Compositor {
          *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
          */
-        virtual uint32_t Render(const ITexture* texture, const Box region, const Matrix transform, float alpha) = 0;
+        virtual uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transform, float alpha) = 0;
 
         /**
          * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.
@@ -175,17 +172,6 @@ namespace Compositor {
          */
         virtual const Matrix& Projection() const = 0;
 
-        /**
-         * @brief Creates a pixel data snapshot of the current render.
-         *
-         * @param format            Pixel format to be returned.
-         * @param area              Area of interest.
-         * @param size              Size of the buffer, 0 returns the size only.
-         * @param buffer            Receive buffer for the pixel data, nullptr returns the size only.
-         *
-         * @return uint64_t  The amount of data in the requested area.
-         */
-        // virtual uint64_t Snapshot(const PixelFormat format, const Box& area, const uint64_t size, uint8_t* buffer) = 0;
     }; // struct EXTERNAL IRenderer
 
 } // namespace Compositor

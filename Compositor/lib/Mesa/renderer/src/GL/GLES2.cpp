@@ -600,7 +600,7 @@ namespace Compositor {
                 return result;
             }
 
-            static bool DumpTex(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels, GLuint textureId)
+            static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels, GLuint textureId)
             {
                 const Renderer::GLPixelFormat formatGL(Renderer::ConvertFormat(format));
 
@@ -649,12 +649,13 @@ namespace Compositor {
             class GLESTexture : public IRenderer::ITexture {
             public:
                 GLESTexture() = delete;
+                GLESTexture(GLESTexture&&) = delete;
                 GLESTexture(const GLESTexture&) = delete;
+                GLESTexture& operator=(GLESTexture&&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
                 GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
-                    : _refCount(1)
-                    , _parent(parent)
+                    : _parent(parent)
                     , _target(GL_TEXTURE_2D)
                     , _textureId(0)
                     , _image(EGL_NO_IMAGE)
@@ -677,7 +678,7 @@ namespace Compositor {
                     // Snapshot();
                 }
 
-                virtual ~GLESTexture()
+                ~GLESTexture() override
                 {
                     _parent.Remove(this);
 
@@ -694,23 +695,6 @@ namespace Compositor {
                 /**
                  *  IRenderer::ITexture
                  */
-                virtual uint32_t AddRef() const
-                {
-                    Core::InterlockedIncrement(_refCount);
-                    return Core::ERROR_NONE;
-                };
-                virtual uint32_t Release() const
-                {
-                    uint32_t result = Core::ERROR_NONE;
-
-                    if (Core::InterlockedDecrement(_refCount) == 0) {
-                        delete this;
-                        result = Core::ERROR_DESTRUCTION_SUCCEEDED;
-                    }
-
-                    return (result);
-                }
-
                 virtual bool IsValid() const
                 {
                     return (_textureId != 0);
@@ -769,7 +753,7 @@ namespace Compositor {
                 void Snapshot() const
                 {
                     std::vector<uint8_t> pixels;
-                    Box box = { 0, 0, static_cast<int>(_buffer->Width()), static_cast<int>(_buffer->Height()) };
+                    Exchange::IComposition::Rectangle box = { 0, 0, _buffer->Width(), _buffer->Height() };
 
                     if (DumpTex(box, _buffer->Format(), pixels, _textureId) == true) {
                         std::stringstream ss;
@@ -848,7 +832,6 @@ namespace Compositor {
                 }
 
             private:
-                mutable uint32_t _refCount;
                 GLES& _parent;
                 GLenum _target;
                 GLuint _textureId;
@@ -986,7 +969,7 @@ namespace Compositor {
 
                 if (dump == true) {
                     std::vector<uint8_t> pixels;
-                    Box box = { 0, 0, static_cast<int>(_viewportWidth), static_cast<int>(_viewportHeight) };
+                    Exchange::IComposition::Rectangle box = { 0, 0, _viewportWidth, _viewportHeight };
                     if (Snapshot(box, DRM_FORMAT_ARGB8888, pixels) == true) {
                         std::stringstream ss;
                         ss << "renderer-end-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
@@ -1011,7 +994,7 @@ namespace Compositor {
                 PopDebug();
             }
 
-            void Scissor(const Box* box) override
+            void Scissor(const Exchange::IComposition::Rectangle* box) override
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
@@ -1025,16 +1008,16 @@ namespace Compositor {
                 PopDebug();
             }
 
-            ITexture* Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
+            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
             {
-                return new GLESTexture(*this, buffer);
+                return (Core::ProxyType<ITexture>(Core::ProxyType<GLESTexture>::Create(*this, buffer)));
             };
 
-            uint32_t Render(const ITexture* texture, const Box region, const Matrix transformation, const float alpha) override
+            uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true) && (texture != nullptr));
 
-                const auto index = std::find(_textures.begin(), _textures.end(), texture);
+                const auto index = std::find(_textures.begin(), _textures.end(), &(*texture));
 
                 uint32_t result(Core::ERROR_BAD_REQUEST);
 
@@ -1115,7 +1098,7 @@ namespace Compositor {
                 return ((_egl.IsCurrent() == true) && (_frameBuffer != nullptr));
             }
 
-            bool Snapshot(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels)
+            bool Snapshot(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels)
             {
                 PushDebug();
 
