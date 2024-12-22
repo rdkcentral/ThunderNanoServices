@@ -64,14 +64,18 @@ namespace Compositor {
 
                 FrameBufferImplementation() 
                     : _swap()
+                    , _fd(-1)
                     , _activePlane(~0) {
                     _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
                     _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
                 }
                 ~FrameBufferImplementation() {
                     if (IsValid() == true) {
+                        Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[0]);
+                        Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
                         _buffer[0].Release();
                         _buffer[1].Release();
+                        ::close(_fd);
                     }
                 } 
 
@@ -98,6 +102,7 @@ namespace Compositor {
                             _frameId[0] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[0].operator->());
                             _frameId[1] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[1].operator->());
                             _activePlane = 0;
+                            _fd = ::dup(fd);
                         }
                     }
                 }
@@ -138,6 +143,7 @@ namespace Compositor {
 
             private:
                 Core::CriticalSection _swap;
+                int _fd;
                 uint8_t _activePlane;
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
                 Compositor::DRM::Identifier _frameId[2];
