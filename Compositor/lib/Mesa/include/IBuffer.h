@@ -25,7 +25,10 @@ namespace Thunder {
 
 namespace Compositor {
 
-    struct IRenderCallback {
+    // This is the ICompositionBufer Factory from where the compositor is requesting
+    // buffers for its clients. This is an shared buffer between the Client AND the
+    // Compositor!
+    struct EXTERNAL IRenderCallback {
         virtual ~IRenderCallback() = default;
         virtual void Render(Exchange::ICompositionBuffer*) = 0;
     };
@@ -46,7 +49,6 @@ namespace Compositor {
         const uint32_t height,
         const PixelFormat& format,
         IRenderCallback* callback);
-
 
 } // namespace Compositor
 } // namespace Thunder

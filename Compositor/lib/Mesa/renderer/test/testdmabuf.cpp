@@ -51,7 +51,7 @@ const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
 private:
-    class Sink : public Compositor::IOutput::IFeedback {
+    class Sink : public Compositor::IOutputCallback {
     public:
         Sink(const Sink&) = delete;
         Sink& operator=(const Sink&) = delete;
@@ -104,7 +104,7 @@ public:
         , _fps()
         , _sequence(0)
     {
-        _connector = Compositor::IOutput::Instance(
+        _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
             _format, &_sink);

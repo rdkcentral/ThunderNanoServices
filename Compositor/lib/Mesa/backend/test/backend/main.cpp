@@ -93,7 +93,7 @@ int main(int argc, const char* argv[])
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::IOutput::Instance(ConnectorId, rectangle, format);
+                    framebuffer = Compositor::CreateBuffer(ConnectorId, rectangle, format, nullptr);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %ux%u", framebuffer->Height(), framebuffer->Width()));
                 }
                 break;

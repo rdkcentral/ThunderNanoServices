@@ -75,10 +75,11 @@ public:
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
     {
-        _connector = Compositor::IOutput::Instance(
+        _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
-            _format);
+            _format,
+            nullptr);
 
         ASSERT(_connector.IsValid());
 

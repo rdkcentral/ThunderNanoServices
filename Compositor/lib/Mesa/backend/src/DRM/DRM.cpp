@@ -245,7 +245,7 @@ namespace Compositor {
                 ConnectorImplementation& operator=(ConnectorImplementation&&) = delete;
                 ConnectorImplementation& operator=(const ConnectorImplementation&) = delete;
 
-                ConnectorImplementation(Core::ProxyType<DRM> backend, const string& connector, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutput::IFeedback* feedback)
+                ConnectorImplementation(Core::ProxyType<DRM> backend, const string& connector, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutputCallback* feedback)
                     : _backend(backend)
                     , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, FindConnectorId(_backend->Descriptor(), connector))
                     , _crtc()
@@ -564,7 +564,7 @@ namespace Compositor {
 
                 const Compositor::PixelFormat _format;
 
-                Compositor::IOutput::IFeedback* _feedback;
+                Compositor::IOutputCallback* _feedback;
             };
 
             using Connectors = Core::ProxyMapType<string, ConnectorImplementation>;
@@ -655,7 +655,7 @@ namespace Compositor {
             }
 
         public:
-            Core::ProxyType<ConnectorImplementation> Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
+            Core::ProxyType<ConnectorImplementation> Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutputCallback* feedback)
             {
                 return _connectors.Instance<ConnectorImplementation>(connectorName, Core::ProxyType<DRM>(*this), connectorName, rectangle, format, feedback);
             }
@@ -672,7 +672,7 @@ namespace Compositor {
 
     static Core::ProxyMapType<string, Backend::DRM> backends;
 
-    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> IOutput::Instance(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback VARIABLE_IS_NOT_USED)
+    Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutputCallback* feedback)
     {
         ASSERT(drmAvailable() == 1);
         ASSERT(connectorName.empty() == false);

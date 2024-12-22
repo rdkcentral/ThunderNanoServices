@@ -361,7 +361,7 @@ namespace Plugin {
                 , _vsync()
                 , _pts(Core::Time::Now().Ticks())
             {
-                _buffer = Compositor::IOutput::Instance(name, _rectangle, format, &_sink);
+                _buffer = Compositor::CreateBuffer(name, _rectangle, format, &_sink);
                 TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
             }
 
@@ -371,7 +371,7 @@ namespace Plugin {
             }
 
         private:
-            class Sink : public Compositor::IOutput::IFeedback {
+            class Sink : public Compositor::IOutputCallback {
             public:
                 Sink(Sink&&) = delete;
                 Sink(const Sink&) = delete;

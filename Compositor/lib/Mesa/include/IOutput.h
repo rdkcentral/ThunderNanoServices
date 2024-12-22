@@ -25,29 +25,30 @@ namespace Thunder {
 
 namespace Compositor {
 
-    struct EXTERNAL IOutput {
-        struct IFeedback {
-            virtual ~IFeedback() = default;
-            virtual void Presented(const int fd, const uint32_t sequence, const uint64_t time) = 0;
-            virtual void Display(const int fd, const std::string& node) = 0;
-        }; // struct IFeedback
+    // This is the ICompositionBufer Factory from where the compositor is going
+    // to render its output. This is an output!
+    struct EXTERNAL IOutputCallback {
+        virtual ~IOutputCallback() = default;
+        virtual void Presented(const int fd, const uint32_t sequence, const uint64_t time) = 0;
+        virtual void Display(const int fd, const std::string& node) = 0;
+    }; // struct IOutputCallback
 
-        /**
-         * @brief  Allocate a new output.
-         *         When the callee is done with the output, they must release it.
-         *
-         *
-         * @param connector  Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
-         * @param rectangle  the area that this connector covers in the composition
-         * @param format Pixel layout for this buffer
-         *
-         * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
-         */
-        static Core::ProxyType<Exchange::ICompositionBuffer> Instance(
-            const string& connector,
-            const Exchange::IComposition::Rectangle& rectangle,
-            const Compositor::PixelFormat& format,
-            IFeedback* callback = nullptr);
-    };
+    /**
+     * @brief  Allocate a new output.
+     *         When the callee is done with the output, they must release it.
+     *
+     *
+     * @param connector  Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
+     * @param rectangle  the area that this connector covers in the composition
+     * @param format Pixel layout for this buffer
+     *
+     * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
+     */
+    EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+        const string& connector,
+        const Exchange::IComposition::Rectangle& rectangle,
+        const Compositor::PixelFormat& format,
+        IOutputCallback* callback);
+
 } // namespace Compositor
 } // namespace Thunder
