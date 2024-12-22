@@ -22,7 +22,7 @@ find_package(${NAMESPACE}Definitions CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
 
-set(ENABLE_ATOMIC ON CACHE BOOL "Enable the atomic API for KMS/DRM Backend")
+set(ENABLE_ATOMIC OFF CACHE BOOL "Enable the atomic API for KMS/DRM Backend")
 
 add_library(CommonBackendDRM STATIC DRM.cpp)
 
