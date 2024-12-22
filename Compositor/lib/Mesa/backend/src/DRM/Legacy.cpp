@@ -29,109 +29,82 @@
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
-        class Legacy : public IGpu {
-        public:
-            Legacy(Legacy&&) = delete;
-            Legacy(const Legacy&) = delete;
-            Legacy& operator=(const Legacy&) = delete;
 
-            Legacy()
-                : _gammaSize(0)
-                , _doModeSet(true)
-            {
-            }
+        uint32_t Commit(const int fd, const std::vector<IConnector*> connectors, void* userData) 
+        {
+            static bool doModeSet(true);
+            uint32_t result(Core::ERROR_NONE);
 
-            ~Legacy() = default;
+            for (auto& connector : connectors) {
 
-            uint32_t Commit(const int fd, const std::vector<IConnector*> connectors, void* userData) override
-            {
-                uint32_t result(Core::ERROR_NONE);
+                ASSERT(connector != nullptr);
+                ASSERT(connector->CrtController() != nullptr);
+                ASSERT(connector->Plane() != nullptr);
 
-                for (auto& connector : connectors) {
+                const uint32_t ConnectorId(connector->Properties().Id());
+                const uint32_t crtcId(connector->CrtController().Id());
+                const uint32_t planeId(connector->Plane().Id());
 
-                    ASSERT(connector != nullptr);
-                    ASSERT(connector->CrtController() != nullptr);
-                    ASSERT(connector->Plane() != nullptr);
+                TRACE_GLOBAL(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
 
-                    const uint32_t ConnectorId(connector->Properties().Id());
-                    const uint32_t crtcId(connector->CrtController().Id());
-                    const uint32_t planeId(connector->Plane().Id());
+                uint32_t commitFlags(DRM_MODE_PAGE_FLIP_EVENT);
 
-                    TRACE(Trace::Information, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
+                int drmResult(0);
 
-                    uint32_t commitFlags(DRM_MODE_PAGE_FLIP_EVENT);
+                if (doModeSet == true) {
+                    std::vector<uint32_t> connectorIds;
 
-                    int drmResult(0);
+                    const drmModeModeInfo* mode(nullptr);
 
-                    if (_doModeSet == true) {
-                        std::vector<uint32_t> connectorIds;
-
-                        const drmModeModeInfo* mode(nullptr);
-
-                        if (connector->IsEnabled() == true) {
-                            connectorIds.emplace_back(ConnectorId);
-                            mode = connector->CrtController();
-                        }
-
-                        uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
-
-                        if ((drmResult = drmModeConnectorSetProperty(fd, ConnectorId, connector->Properties().Id(DRM::property::Dpms), dpms)) != 0) {
-                            TRACE(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", ConnectorId, drmResult, strerror(errno)));
-                            return Core::ERROR_GENERAL;
-                        }
-
-                        constexpr uint32_t X = 0;
-                        constexpr uint32_t Y = 0;
-
-                        /*
-                         * Use the same mode as the previous operation on the CRTC and specified connector(s)
-                         * New framebuffer Id, x, and y properties will set at vblank.
-                         */
-                        if ((drmResult = drmModeSetCrtc(fd, crtcId, connector->FrameBufferId(), X, Y, connectorIds.empty() ? nullptr : connectorIds.data(), connectorIds.size(), const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
-                            TRACE(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", crtcId, drmResult, strerror(errno)));
-                            return Core::ERROR_INCOMPLETE_CONFIG;
-                        }
-
-                        _doModeSet = false;
+                    if (connector->IsEnabled() == true) {
+                        connectorIds.emplace_back(ConnectorId);
+                        mode = connector->CrtController();
                     }
+
+                    uint32_t dpms = connector->IsEnabled() ? DRM_MODE_DPMS_ON : DRM_MODE_DPMS_OFF;
+
+                    if ((drmResult = drmModeConnectorSetProperty(fd, ConnectorId, connector->Properties().Id(DRM::property::Dpms), dpms)) != 0) {
+                        TRACE_GLOBAL(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector->IsEnabled() ? "on" : "off", ConnectorId, drmResult, strerror(errno)));
+                        return Core::ERROR_GENERAL;
+                    }
+
+                    constexpr uint32_t X = 0;
+                    constexpr uint32_t Y = 0;
 
                     /*
-                     * clear cursor image
-                     */
-                    if ((drmResult = drmModeSetCursor(fd, crtcId, 0, 0, 0)) != 0) {
-                        TRACE(Trace::Error, ("Failed to clear cursor: [%d] %s", drmResult, strerror(errno)));
+                        * Use the same mode as the previous operation on the CRTC and specified connector(s)
+                        * New framebuffer Id, x, and y properties will set at vblank.
+                        */
+                    if ((drmResult = drmModeSetCrtc(fd, crtcId, connector->FrameBufferId(), X, Y, connectorIds.empty() ? nullptr : connectorIds.data(), connectorIds.size(), const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
+                        TRACE_GLOBAL(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", crtcId, drmResult, strerror(errno)));
+                        return Core::ERROR_INCOMPLETE_CONFIG;
                     }
 
-                    if ((drmResult == 0) && ((drmResult = drmModePageFlip(fd, crtcId, connector->FrameBufferId(), commitFlags, userData)) != 0)) {
-                        TRACE(Trace::Error, ("Page flip failed: [%d] %s", drmResult, strerror(errno)));
-                        result = Core::ERROR_GENERAL;
-                    }
+                    doModeSet = false;
                 }
 
-                if (result != Core::ERROR_NONE) {
-                    for (auto connector : connectors) {
-                        connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
-                    }
+                /*
+                    * clear cursor image
+                    */
+                if ((drmResult = drmModeSetCursor(fd, crtcId, 0, 0, 0)) != 0) {
+                    TRACE_GLOBAL(Trace::Error, ("Failed to clear cursor: [%d] %s", drmResult, strerror(errno)));
                 }
 
-                return result;
+                if ((drmResult == 0) && ((drmResult = drmModePageFlip(fd, crtcId, connector->FrameBufferId(), commitFlags, userData)) != 0)) {
+                    TRACE_GLOBAL(Trace::Error, ("Page flip failed: [%d] %s", drmResult, strerror(errno)));
+                    result = Core::ERROR_GENERAL;
+                }
             }
 
-        private:
-            uint32_t Check() {
-                return (0);
+            if (result != Core::ERROR_NONE) {
+                for (auto connector : connectors) {
+                    connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
+                }
             }
 
-        private:
-            signed int _gammaSize;
-            bool _doModeSet;
-        }; // class Legacy
-
-        /* static */ IGpu& IGpu::Instance()
-        {
-            static Legacy& output = Core::SingletonType<Legacy>::Instance();
-            return output;
+            return result;
         }
+
     } // namespace Backend
 } // namespace Compositor
 } // namespace Thunder
