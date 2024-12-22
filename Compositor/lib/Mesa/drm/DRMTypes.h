@@ -108,6 +108,11 @@ namespace Compositor {
             Overlay = DRM_PLANE_TYPE_OVERLAY,
         };
 
+        extern const char* PropertyToString(const property value);
+        extern const char* PropertyTypeToString(const property_type value);
+        extern const char* ObjectTypeToString(const object_type value);
+        extern const char* PlaneTypeToString(const plane_type value);
+
         using Identifier = uint32_t;
         static constexpr uint32_t InvalidIdentifier = ~0;
 

@@ -46,9 +46,10 @@ namespace Compositor {
         extern bool HasNode(const drmDevice* device, const char* deviceName);
         extern int OpenGPU(const std::string& gpuNode);
         extern std::string GetNode(const uint32_t type, drmDevice* device);
-        extern const char* FormatToString(const uint32_t format);
         extern const char* ModifierVendorString(const uint64_t modifier);
         extern bool HasAlpha(const uint32_t drmFormat);
+
+        extern const char* FormatToString(const uint32_t format);
 
     } // namespace DRM
 } // namespace Compositor

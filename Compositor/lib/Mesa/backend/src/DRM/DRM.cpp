@@ -534,23 +534,6 @@ namespace Compositor {
                     return result;
                 }
 
-                /* simple stringification operator to make defines and errorcodes human readable */
-#define CASE_TO_STRING(value) \
-    case value:               \
-        return #value;
-
-                static const char* ObjectSting(const uint32_t object)
-                {
-                    switch (object) {
-                        CASE_TO_STRING(DRM_MODE_OBJECT_CRTC)
-                        CASE_TO_STRING(DRM_MODE_OBJECT_CONNECTOR)
-                        CASE_TO_STRING(DRM_MODE_OBJECT_PLANE)
-                    default:
-                        return "Invalid";
-                    }
-                }
-#undef CASE_TO_STRING
-
             private:
                 Core::ProxyType<DRM> _backend;
 

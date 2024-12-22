@@ -52,12 +52,59 @@ namespace Thunder {
                 { _T("VRR_ENABLED"), property::VrrEnabled },
             };
 
-            const TCHAR* Property::PropertyToString() const {
+            static const std::unordered_map<property_type, const TCHAR*> TablePropertyType = {
+                { property_type::Range, _T("Range") },
+                { property_type::SignedRange, _T("SignedRange") },
+                { property_type::Enumerate, _T("Enumerate") },
+                { property_type::Bitmask, _T("Bitmask") },
+                { property_type::Object, _T("Object") },
+                { property_type::Blob, _T("Blob") },
+                { property_type::Invalid, _T("Invalid") }
+            };
+
+            static const std::unordered_map<object_type, const TCHAR*> TableObjectType = {
+                { object_type::Crtc, _T("Crtc") },
+                { object_type::Connector, _T("Connector") },
+                { object_type::Encoder, _T("Encoder") },
+                { object_type::Mode, _T("Mode") },
+                { object_type::Property, _T("Property") },
+                { object_type::Framebuffer, _T("Framebuffer") },
+                { object_type::Blob, _T("Blob") },
+                { object_type::Plane, _T("Plane") },
+                { object_type::Any, _T("Any") }
+            };
+
+            static const std::unordered_map<plane_type, const TCHAR*> TablePlaneType = {
+                { plane_type::Cursor, _T("Cursor") },
+                { plane_type::Primary, _T("Primary") },
+                { plane_type::Overlay, _T("Overlay") }
+            };
+
+            const TCHAR* PropertyToString(const property value) {
                 std::unordered_map<std::string,property>::const_iterator index = stringToProperty.begin();
-                while ((index != stringToProperty.end()) && (_property != index->second)) {
+                while ((index != stringToProperty.end()) && (value != index->second)) {
                     index++;                    
                 }
                 return (index != stringToProperty.end() ? index->first.c_str() : _T("UnknownProperty"));
+            }
+
+            const TCHAR* PropertyTypeToString(const property_type value) {
+                std::unordered_map<property_type, const TCHAR*>::const_iterator index = TablePropertyType.find(value);
+                return (index != TablePropertyType.end() ? index->second : _T("UnknownPropertyType"));
+            }
+
+            const TCHAR* ObjectTypeToString(const object_type value) {
+                std::unordered_map<object_type, const TCHAR*>::const_iterator index = TableObjectType.find(value);
+                return (index != TableObjectType.end() ? index->second : _T("UnknownObjectType"));
+            }
+
+            const TCHAR* PlaneTypeToString(const plane_type value) {
+                std::unordered_map<plane_type, const TCHAR*>::const_iterator index = TablePlaneType.find(value);
+                return (index != TablePlaneType.end() ? index->second : _T("UnknownPlaneType"));
+            }
+
+            const TCHAR* Property::PropertyToString() const {
+                return (Compositor::DRM::PropertyToString(_property));
             }
 
             void Properties::Load(const int descriptor, object_type type, const Identifier objectId)
