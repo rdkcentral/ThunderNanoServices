@@ -87,12 +87,12 @@ namespace Compositor {
                     // Configure should only be called once..
                     ASSERT ( IsValid() == false );
 
-                    _buffer[0]  = Compositor::CreateBuffer(fd, width, height, format, nullptr);
+                    _buffer[0]  = Compositor::CreateBuffer(fd, width, height, format);
                     if (_buffer[0].IsValid() == false) {
                             TRACE(Trace::Error, ("Failed to create first DRM Buffer"));
                     }
                     else {
-                        _buffer[1] = Compositor::CreateBuffer(fd, width, height, format, nullptr);
+                        _buffer[1] = Compositor::CreateBuffer(fd, width, height, format);
 
                         if (_buffer[1].IsValid() == false) {
                             TRACE(Trace::Error, ("Failed to create second DRM Buffer"));

@@ -45,8 +45,7 @@ namespace Plugin {
 
     class CompositorImplementation 
         : public Exchange::IComposition
-        , public Exchange::IComposition::IDisplay
-        , public Compositor::IRenderCallback {
+        , public Exchange::IComposition::IDisplay {
     private:
         static constexpr uint32_t DisplayId = 0;
 
@@ -195,7 +194,7 @@ namespace Plugin {
 
         class Client 
             : public Exchange::IComposition::IClient
-            , public Compositor::IRenderCallback {
+            , public Compositor::CompositorBuffer {
         public:
             Client() = delete;
             Client(Client&&) = delete;
@@ -204,17 +203,15 @@ namespace Plugin {
             Client& operator=(const Client&) = delete;
 
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
-                : _parent(parent)
+                : Compositor::CompositorBuffer(Compositor::CreateBuffer(parent.Native(), width, height, Compositor::PixelFormat(parent.Format(), { parent.Modifier() })))
+                , _parent(parent)
                 , _id(Core::InterlockedIncrement(_sequence))
                 , _callsign(callsign)
                 , _opacity(255)
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
-                , _buffer(Compositor::CreateBuffer(parent.Native(), width, height, Compositor::PixelFormat(parent.Format(), { parent.Modifier() }), this))
                 , _texture()
             {
-                ASSERT(_buffer.IsValid());
-
                 TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
             }
             ~Client() override
@@ -224,7 +221,7 @@ namespace Plugin {
 
         public:
             uint8_t Descriptors(const uint8_t maxSize, int container[]) {
-                return (_buffer->Descriptors(maxSize, container));
+                return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
             }
             Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
             {
@@ -235,14 +232,12 @@ namespace Plugin {
                 ASSERT(_texture.IsValid() ^ texture.IsValid());
                 _texture = texture;
             }
-            Core::ProxyType<Exchange::ICompositionBuffer> CompositionBuffer() {
-                return (Core::ProxyType<Exchange::ICompositionBuffer>(_buffer));
-            }
 
             /**
-             * Compositor::IRenderCallback methods
+             * Compositor::CompositorBuffer methods
              */
-            void Render(Exchange::ICompositionBuffer* /* surface */) override {
+            void Request() override {
+                _parent.Render(*this);
             }
 
             /**
@@ -285,7 +280,7 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(RemoteAccess)
-            INTERFACE_ENTRY(Exchange::IComposition::IClient)
+                INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
 
         private:
@@ -295,7 +290,6 @@ namespace Plugin {
             uint32_t _opacity; // the opacity of the surface on the composition
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
-            Core::ProxyType<Compositor::CompositorBuffer> _buffer; // the actual GMB/DRMDumb buffer for the client to draw on.
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             static uint32_t _sequence;
         }; // class Client
@@ -503,7 +497,6 @@ namespace Plugin {
             , _renderNode()
             , _present(*this) {
         }
-
         ~CompositorImplementation() override
         {
             _dispatcher.reset(nullptr);
@@ -521,13 +514,6 @@ namespace Plugin {
                 _gpuIdentifier = -1;
             }
         }
-
-        BEGIN_INTERFACE_MAP(CompositorImplementation)
-        INTERFACE_ENTRY(Exchange::IComposition)
-        INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
-        END_INTERFACE_MAP
-
-        static constexpr uint32_t InvalidId = uint32_t(~0);
 
     public:
         /**
@@ -578,10 +564,10 @@ namespace Plugin {
             _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
             ASSERT(_renderer.IsValid());
 
-            _canvasBuffer = Compositor::CreateBuffer(_gpuIdentifier, config.Width.Value(), config.Height.Value(), _format, this);
+            _canvasBuffer = Compositor::CreateBuffer(_gpuIdentifier, config.Width.Value(), config.Height.Value(), _format);
             ASSERT(_canvasBuffer.IsValid());
 
-            _canvasTexture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_canvasBuffer));
+            _canvasTexture = _renderer->Texture(_canvasBuffer);
             ASSERT(_canvasTexture.IsValid());
 
             RenderCanvas();
@@ -670,16 +656,15 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-    private:
-        /**
-         * Compositor::IRenderCallback methods
-         */
-        void Render(Exchange::ICompositionBuffer* /* surface */) override {
-        }
-
         void Announce(Client& client)
         {
-            client.Texture(_renderer->Texture(client.CompositionBuffer()));
+            Core::ProxyType<Exchange::ICompositionBuffer> buffer(
+                static_cast<Core::IReferenceCounted&>(client),
+                static_cast<Exchange::ICompositionBuffer&>(client));
+
+            ASSERT(buffer.IsValid());
+                
+            client.Texture(_renderer->Texture(buffer));
 
             _adminLock.Lock();
 
@@ -714,44 +699,47 @@ namespace Plugin {
             return _modifier;
         }
 
-        void RequestRender(Client* client)
-        {
-            if (client == nullptr) {
-                _present.Trigger();
-            } else {
-                uint8_t index = 1;
-                for (auto& output : _outputs) {
-                    if (output.IsIntersecting(client->Geometry())) {
-
-                        _present.Trigger();
-
-                        if (output.WaitForVSync(Compositor::DefaultTimeoutMs) == Core::ERROR_TIMEDOUT) {
-                            TRACE(Trace::Error, (_T("%s vsync timeout... "), client->Name().c_str()));
-                        }
-
-                        break;
-                    } else {
-                        TRACE(Trace::Information, (_T("%s no intersection with output %d"), client->Name().c_str(), index));
-                    }
-                    index++;
-                }
-            }
-        }
-
-    public:
         /**
          * Exchange::IComposition::IDisplay methods
          */
-
-        Thunder::Core::instance_id Native() const override
-        {
+        Thunder::Core::instance_id Native() const override {
             return _gpuIdentifier;
         }
-
-        string Port() const override
-        {
+        string Port() const override {
             return string("Mesa3d");
         }
+        // Useless Resolution functions, this should be controlled by DisplayControl
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override {
+            return (Core::ERROR_UNAVAILABLE);
+        }
+        Exchange::IComposition::ScreenResolution Resolution() const override {
+            return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
+        }
+
+        BEGIN_INTERFACE_MAP(CompositorImplementation)
+            INTERFACE_ENTRY(Exchange::IComposition)
+            INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
+        END_INTERFACE_MAP
+
+    private:
+        void Render(Client& client) {
+            uint8_t index = 1;
+            for (auto& output : _outputs) {
+                if (output.IsIntersecting(client.Geometry())) {
+
+                    _present.Trigger();
+
+                    if (output.WaitForVSync(Compositor::DefaultTimeoutMs) == Core::ERROR_TIMEDOUT) {
+                        TRACE(Trace::Error, (_T("%s vsync timeout... "), client.Name().c_str()));
+                    }
+
+                    break;
+                } else {
+                    TRACE(Trace::Information, (_T("%s no intersection with output %d"), client.Name().c_str(), index));
+                }
+                index++;
+            }
+       }
 
         IComposition::IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override
         {
@@ -785,7 +773,7 @@ namespace Plugin {
             _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
                 ASSERT(client.IsValid() == true);
 
-                client->CompositionBuffer()->Acquire(Compositor::DefaultTimeoutMs);
+                client->Acquire(Compositor::DefaultTimeoutMs);
 
                 if (client->Texture() != nullptr) {
                     Exchange::IComposition::Rectangle rectangle = client->Geometry();
@@ -804,7 +792,7 @@ namespace Plugin {
                     TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), name.c_str()));
                 }
 
-                client->CompositionBuffer()->Relinquish();
+                client->Relinquish();
             });
 
             _renderer->End(false);
@@ -852,16 +840,6 @@ namespace Plugin {
             }
 
             return Core::Time::Now().Ticks();
-        }
-
-        // Useless Resolution functions, this should be controlled by DisplayControl
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
-        {
-            return (Core::ERROR_UNAVAILABLE);
-        }
-        Exchange::IComposition::ScreenResolution Resolution() const override
-        {
-            return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
         }
 
         class Presenter : public Core::Thread {

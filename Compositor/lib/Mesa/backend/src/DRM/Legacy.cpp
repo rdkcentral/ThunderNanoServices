@@ -84,8 +84,8 @@ namespace Compositor {
                 }
 
                 /*
-                    * clear cursor image
-                    */
+                 * clear cursor image
+                 */
                 if ((drmResult = drmModeSetCursor(fd, crtcId, 0, 0, 0)) != 0) {
                     TRACE_GLOBAL(Trace::Error, ("Failed to clear cursor: [%d] %s", drmResult, strerror(errno)));
                 }

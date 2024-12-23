@@ -149,7 +149,7 @@ namespace Thunder {
 
     namespace Compositor {
 
-        class GBM : public CompositorBuffer {
+        class GBM : public LocalBuffer {
         public:
             GBM() = delete;
             GBM(GBM&&) = delete;
@@ -157,11 +157,10 @@ namespace Thunder {
             GBM& operator=(GBM&&) = delete;
             GBM& operator=(const GBM&) = delete;
 
-            GBM(const int drmFd, const uint32_t width, const uint32_t height, const PixelFormat& format, IRenderCallback* callback)
-                : CompositorBuffer(width, height, format.Type(), 0, Exchange::ICompositionBuffer::TYPE_DMA)
+            GBM(const int drmFd, const uint32_t width, const uint32_t height, const PixelFormat& format)
+                : LocalBuffer(width, height, format.Type(), 0, Exchange::ICompositionBuffer::TYPE_DMA)
                 , _device(nullptr)
-                , _bo(nullptr)
-                , _callback(callback) {
+                , _bo(nullptr) {
                 ASSERT(drmFd != InvalidFileDescriptor);
 
                 if (drmFd != -1) {
@@ -200,7 +199,7 @@ namespace Thunder {
                                 uint32_t offset = gbm_bo_get_offset(_bo, index);
                                 uint32_t stride = gbm_bo_get_stride_for_plane(_bo, index);
 
-                                CompositorBuffer::Add(fd, stride, offset);
+                                LocalBuffer::Add(fd, stride, offset);
 
                                 ::close(fd);
                             }
@@ -208,7 +207,6 @@ namespace Thunder {
                             if (maxPlanes > 0) {
                                 // Set Modifier..
                                 gbm_bo_get_modifier(_bo);
-                                Core::ResourceMonitor::Instance().Register(*this);
                                 PrintBufferInfo(_bo);
                             }
                             else {
@@ -222,8 +220,6 @@ namespace Thunder {
             }
             ~GBM() override {
                 if (_bo != nullptr) {
-                    Core::ResourceMonitor::Instance().Unregister(*this);
-
                     gbm_bo_destroy(_bo);
                     _bo = nullptr;
                 }
@@ -240,36 +236,31 @@ namespace Thunder {
             bool IsValid() const {
                 return (_bo != nullptr);
             }
-            void Request() override {
-                _callback->Render(this);
-            }
 
         private:
             gbm_device* _device;
             gbm_bo* _bo;
-            IRenderCallback* _callback;
         }; // class GBM
 
-        /* extern */ Core::ProxyType<CompositorBuffer> CreateBuffer(
+        /* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
             Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
-            const PixelFormat& format,
-            IRenderCallback* callback)
+            const PixelFormat& format)
         {
             // ASSERT(drmAvailable() == 1);
 
-            Core::ProxyType<CompositorBuffer> result;
+            Core::ProxyType<Exchange::ICompositionBuffer> result;
 
             int drmFd = DRM::ReopenNode(identifier, true);
 
             ASSERT(drmFd >= 0);
 
             if (drmFd >= 0) {
-                Core::ProxyType<GBM> entry = Core::ProxyType<GBM>::Create(drmFd, width, height, format, callback);
+                Core::ProxyType<GBM> entry = Core::ProxyType<GBM>::Create(drmFd, width, height, format);
 
                 if (entry->IsValid() == true) {
-                    result = Core::ProxyType<CompositorBuffer>(entry);
+                    result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
                 }
             }
 

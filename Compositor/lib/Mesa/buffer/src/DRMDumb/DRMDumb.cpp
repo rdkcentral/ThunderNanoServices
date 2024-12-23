@@ -95,7 +95,7 @@ namespace {
 
 namespace Thunder {
     namespace Compositor {
-        class DRMDumb : public CompositorBuffer {
+        class DRMDumb : public LocalBuffer {
         public:
             DRMDumb() = delete;
             DRMDumb(DRMDumb&&) = delete;
@@ -103,9 +103,8 @@ namespace Thunder {
             DRMDumb& operator=(DRMDumb&&) = delete;
             DRMDumb& operator=(const DRMDumb&) = delete;
 
-            DRMDumb(const int drmFd, uint32_t width, uint32_t height, const PixelFormat& format, IRenderCallback* callback)
-                : CompositorBuffer(width, height, format.Type(), DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_DMA)
-                , _callback(callback)
+            DRMDumb(const int drmFd, uint32_t width, uint32_t height, const PixelFormat& format)
+                : LocalBuffer(width, height, format.Type(), DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_DMA)
             {
                 ASSERT(drmFd != -1);
                 ASSERT(drmGetNodeTypeFromFd(drmFd) == DRM_NODE_PRIMARY);
@@ -119,9 +118,10 @@ namespace Thunder {
 
                     if (dumbAvailable != 0) {
                         uint32_t pitch;
+                        uint64_t size;
                         const unsigned int bpp(32); // TODO: derive from _format...
 
-                        if (CreateDumbBuffer(drmFd, width, height, bpp, pitch, _handle, _size) == 0) {
+                        if (CreateDumbBuffer(drmFd, width, height, bpp, pitch, _handle, size) == 0) {
 
                             uint32_t offset;
 
@@ -134,20 +134,16 @@ namespace Thunder {
                                 MapDumbBuffer(_fd, _handle, offset);
 
                                 Compositor::Add(_fd, 0, offset);
-
-                                Core::ResourceMonitor::Instance().Register(*this);
                             }
+                            TRACE(Trace::Buffer, ("DRMDumb buffer %p constructed fd=%d [%dbytes]", this, _fd, size));
                         }
                     }
                 }
 
-                TRACE(Trace::Buffer, ("DRMDumb buffer %p constructed fd=%d data=%p [%dbytes]", this, _fd, _ptr, _size));
             }
             ~DRMDumb() override
             {
                 if (_fd != -1) {
-                    Core::ResourceMonitor::Instance().Unregister(*this);
-
                     DestroyDumbBuffer(_fd, _handle);
                     _fd = -1;
                     _handle = 0;
@@ -160,29 +156,21 @@ namespace Thunder {
             bool IsValid() const {
                 return (_fd != -1);
             }
-            void Request() override {
-                ASSERT (_callback != nullptr);
-
-                _callback->Render(this);
-            }
 
         private:
             uint32_t _handle;
             int _fd;
-            uint64_t _size;
-            IRenderCallback* _callback;
         }; // class DRMDumb
 
         Core::ProxyType<CompositorBuffer> CreateBuffer (
             DRM::Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
-            const PixelFormat& format,
-            IRenderCallback* callback)
+            const PixelFormat& format)
         {
             ASSERT(drmAvailable() > 0);
 
-            Core::ProxyType<CompositorBuffer> result;
+            Core::ProxyType<Exchange::ICompositionBuffer> result;
             int fd = DRM::ReopenNode(static_cast<int>(identifier), false);
 
             ASSERT(fd >= 0);
@@ -190,7 +178,7 @@ namespace Thunder {
             if (fd >= 0) {
                 Core::ProxyType<DRMDumb> entry = Core::ProxyType<DRMDumb>::Create(fd, width, height, format, callback);
                 if (entry->IsValid() == false) {
-                    result = Core::ProxyType<CompositorBuffer>(entry);
+                    result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
                 }
                 ::close(fd);
             }

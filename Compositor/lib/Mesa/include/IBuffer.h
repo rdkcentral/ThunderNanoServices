@@ -25,14 +25,6 @@ namespace Thunder {
 
 namespace Compositor {
 
-    // This is the ICompositionBufer Factory from where the compositor is requesting
-    // buffers for its clients. This is an shared buffer between the Client AND the
-    // Compositor!
-    struct EXTERNAL IRenderCallback {
-        virtual ~IRenderCallback() = default;
-        virtual void Render(Exchange::ICompositionBuffer*) = 0;
-    };
-
     /**
      * @brief  Allocate a new buffer.
      *         When the caller is done with the buffer, they must release it.
@@ -41,14 +33,13 @@ namespace Compositor {
      * @param height Height in pixels
      * @param format Pixel layout for this buffer
      *
-     * @return Core::ProxyType<CompositorBuffer> The allocated buffer
+     * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
      */
-    EXTERNAL Core::ProxyType<CompositorBuffer> CreateBuffer(
+    EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
         const Identifier identifier,
         const uint32_t width,
         const uint32_t height,
-        const PixelFormat& format,
-        IRenderCallback* callback);
+        const PixelFormat& format);
 
 } // namespace Compositor
 } // namespace Thunder
