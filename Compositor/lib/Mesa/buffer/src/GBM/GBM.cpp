@@ -187,7 +187,7 @@ namespace Thunder {
                         if (_bo != nullptr) {
                             uint8_t maxPlanes = gbm_bo_get_plane_count(_bo);
 
-                            ASSERT (maxPlanes < PLANE_COUNT)
+                            ASSERT (maxPlanes < /*PLANE_COUNT*/ 4);
 
                             for (uint8_t index = 0; (index < gbm_bo_get_plane_count(_bo)); index++) {
                                 #if HAS_GBM_BO_GET_FD_FOR_PLANE
