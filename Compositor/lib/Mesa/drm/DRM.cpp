@@ -259,7 +259,7 @@ namespace Compositor {
          * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
          *
          */
-        int ReopenNode(int fd, bool openRenderNode)
+        int ReopenNode(const int fd, const bool openRenderNode)
         {
             if (drmGetDeviceNameFromFd2(fd) == nullptr) {
                 TRACE_GLOBAL(Trace::Error, ("%d is not a descriptor to a DRM Node... =^..^= ", fd));
@@ -562,7 +562,7 @@ namespace Compositor {
          * @return an integer value, which is the file descriptor of the opened GPU node. If the GPU node
          * cannot be found, it returns the value of Compositor::DRM::InvalidFileDescriptor.
          */
-        int OpenGPU(const string& gpuNode)
+        int OpenGPU(const std::string& gpuNode)
         {
             int fd(Compositor::DRM::InvalidFileDescriptor);
 
@@ -579,6 +579,63 @@ namespace Compositor {
             }
 
             return fd;
+        }
+
+        Identifier FindConnectorId(const int fd, const std::string& connectorName)
+        {
+            Identifier connectorId(InvalidIdentifier);
+
+            if (fd > 0) {
+                drmModeResPtr resources = drmModeGetResources(fd);
+
+                if (resources != nullptr) {
+                    for (uint8_t i = 0; i < resources->count_connectors; i++) {
+                        drmModeConnectorPtr connector = drmModeGetConnector(fd, resources->connectors[i]);
+
+                        if (nullptr != connector) {
+                            char name[59];
+                            int nameLength;
+                            nameLength = snprintf(name, sizeof(name), "%s-%u", drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id);
+                            name[nameLength] = '\0';
+
+                            if (connectorName.compare(name) == 0) {
+                                connectorId = connector->connector_id;
+                                break;
+                            }
+
+                            drmModeFreeConnector(connector);
+                        }
+                    }
+
+                    drmModeFreeResources(resources);
+                }
+            }
+
+            return connectorId;
+        }
+
+        std::string GetGPUNode(const std::string& connectorName)
+        {
+            std::string file;
+            std::vector<std::string> nodes;
+
+            GetNodes(DRM_NODE_PRIMARY, nodes);
+
+            for (const auto& node : nodes) {
+                int fd = ::open(node.c_str(), O_RDWR);
+
+                if (FindConnectorId(fd, connectorName) != InvalidIdentifier) {
+                    file = node;
+                }
+
+                ::close(fd);
+
+                if (file.empty() == false) {
+                    break;
+                }
+            }
+
+            return file;
         }
     } // namespace DRM
 } // namespace Compositor

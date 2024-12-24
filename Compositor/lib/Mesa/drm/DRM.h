@@ -32,7 +32,12 @@ namespace Exchange {
 
 namespace Compositor {  
     namespace DRM {
+
+        using Identifier = uint32_t;
+        static constexpr uint32_t InvalidIdentifier = ~0;
+
         extern void GetNodes(const uint32_t type, std::vector<std::string>& list);
+        extern Identifier FindConnectorId(const int fd, const std::string& connectorName);
         extern bool HasCapability(const int cardFd, const uint64_t option);
 
         /*
@@ -40,15 +45,15 @@ namespace Compositor {
          * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
          *
          */
-        extern int ReopenNode(int fd, bool openRenderNode);
+        extern int ReopenNode(const int fd, const bool openRenderNode);
         extern uint32_t CreateFrameBuffer(const int cardFd, Exchange::ICompositionBuffer* buffer);
         extern void DestroyFrameBuffer(const int cardFd, const uint32_t frameBufferId);
         extern bool HasNode(const drmDevice* device, const char* deviceName);
         extern int OpenGPU(const std::string& gpuNode);
         extern std::string GetNode(const uint32_t type, drmDevice* device);
-        extern const char* ModifierVendorString(const uint64_t modifier);
+        extern std::string GetGPUNode(const std::string& connectorName);
         extern bool HasAlpha(const uint32_t drmFormat);
-
+        extern const char* ModifierVendorString(const uint64_t modifier);
         extern const char* FormatToString(const uint32_t format);
 
     } // namespace DRM

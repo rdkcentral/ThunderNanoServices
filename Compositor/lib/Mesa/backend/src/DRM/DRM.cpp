@@ -558,76 +558,18 @@ namespace Compositor {
         static Core::ProxyMapType<string, Backend::DRM> _backends;
 
     } // namespace Backend
-
-    static DRM::Identifier FindConnectorId(const int fd, const string& connectorName)
-    {
-        Identifier connectorId(InvalidIdentifier);
-
-        if (fd > 0) {
-            drmModeResPtr resources = drmModeGetResources(fd);
-
-            if (resources != nullptr) {
-                for (uint8_t i = 0; i < resources->count_connectors; i++) {
-                    drmModeConnectorPtr connector = drmModeGetConnector(fd, resources->connectors[i]);
-
-                    if (nullptr != connector) {
-                        char name[59];
-                        int nameLength;
-                        nameLength = snprintf(name, sizeof(name), "%s-%u", drmModeGetConnectorTypeName(connector->connector_type), connector->connector_type_id);
-                        name[nameLength] = '\0';
-
-                        if (connectorName.compare(name) == 0) {
-                            connectorId = connector->connector_id;
-                            break;
-                        }
-
-                        drmModeFreeConnector(connector);
-                    }
-                }
-
-                drmModeFreeResources(resources);
-            }
-        }
-
-        return connectorId;
-    }
-
-    static std::string GetGPUNode(const string& connectorName)
-    {
-        std::string file;
-        std::vector<std::string> nodes;
-
-        Compositor::DRM::GetNodes(DRM_NODE_PRIMARY, nodes);
-
-        for (const auto& node : nodes) {
-            int fd = ::open(node.c_str(), O_RDWR);
-
-            if (FindConnectorId(fd, connectorName) != InvalidIdentifier) {
-                file = node;
-            }
-
-            ::close(fd);
-
-            if (file.empty() == false) {
-                break;
-            }
-        }
-
-        return file;
-    }
-
     Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutputCallback* feedback) {
         ASSERT(drmAvailable() == 1);
         ASSERT(connectorName.empty() == false);
 
         TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
-        std::string gpuNodeName (GetGPUNode(connectorName));
+        std::string gpuNodeName (DRM::GetGPUNode(connectorName));
         Core::ProxyType<Backend::DRM> backend = Backend::_backends.Instance<Backend::DRM>(gpuNodeName, gpuNodeName);
 
         Core::ProxyType<Exchange::ICompositionBuffer> connector;
 
         if (backend.IsValid()) {
-            connector = Backend::_connectors.Instance<Backend::Connector>(connectorName, backend->Descriptor(), FindConnectorId(backend->Descriptor(), connectorName), rectangle, format, feedback);
+            connector = Backend::_connectors.Instance<Backend::Connector>(connectorName, backend->Descriptor(), DRM::FindConnectorId(backend->Descriptor(), connectorName), rectangle, format, feedback);
         }
 
         return connector;

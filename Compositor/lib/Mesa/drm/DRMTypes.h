@@ -26,6 +26,8 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
+#include "DRM.h"
+
 namespace Thunder {
 namespace Compositor {
     namespace DRM {
@@ -112,9 +114,6 @@ namespace Compositor {
         extern const char* PropertyTypeToString(const property_type value);
         extern const char* ObjectTypeToString(const object_type value);
         extern const char* PlaneTypeToString(const plane_type value);
-
-        using Identifier = uint32_t;
-        static constexpr uint32_t InvalidIdentifier = ~0;
 
         class Property {
         public:
