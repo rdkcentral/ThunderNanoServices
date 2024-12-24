@@ -43,7 +43,7 @@ namespace Compositor {
             implementation->CreateBuffer();
             implementation->_signal.SetEvent();
 
-            implementation->Render();
+            implementation->Commit();
         }
 
         const struct xdg_surface_listener WaylandOutput::windowSurfaceListener = {
@@ -248,7 +248,31 @@ namespace Compositor {
             return (_buffer.IsValid() == true) ? _buffer->Completed(dirty) : false;
         }
 
-        void WaylandOutput::Render()
+        uint32_t WaylandOutput::Width() const
+        {
+            return (_buffer.IsValid() == true) ? _buffer->Width() : 0;
+        }
+
+        uint32_t WaylandOutput::Height() const
+        {
+            return (_buffer.IsValid() == true) ? _buffer->Height() : 0;
+        }
+
+        uint32_t WaylandOutput::Format() const
+        {
+            return (_buffer.IsValid() == true) ? _buffer->Format() : 0;
+        }
+
+        uint64_t WaylandOutput::Modifier() const
+        {
+            return (_buffer.IsValid() == true) ? _buffer->Modifier() : 0;
+        }
+
+        Exchange::ICompositionBuffer::DataType WaylandOutput::Type() const
+        {
+            return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::ICompositionBuffer::DataType::TYPE_INVALID;
+        }
+        void WaylandOutput::Commit()
         {
             if ((_surface != nullptr) && (_buffer.IsValid() == true)) {
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
@@ -274,29 +298,9 @@ namespace Compositor {
             _backend.Flush();
         }
 
-        uint32_t WaylandOutput::Width() const
+        const string& Node() const override
         {
-            return (_buffer.IsValid() == true) ? _buffer->Width() : 0;
-        }
-
-        uint32_t WaylandOutput::Height() const
-        {
-            return (_buffer.IsValid() == true) ? _buffer->Height() : 0;
-        }
-
-        uint32_t WaylandOutput::Format() const
-        {
-            return (_buffer.IsValid() == true) ? _buffer->Format() : 0;
-        }
-
-        uint64_t WaylandOutput::Modifier() const
-        {
-            return (_buffer.IsValid() == true) ? _buffer->Modifier() : 0;
-        }
-
-        Exchange::ICompositionBuffer::DataType WaylandOutput::Type() const
-        {
-            return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::ICompositionBuffer::DataType::TYPE_INVALID;
+            return "TODO";
         }
 
         void WaylandOutput::CreateBuffer()

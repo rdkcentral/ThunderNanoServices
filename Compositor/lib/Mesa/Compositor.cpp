@@ -62,7 +62,8 @@ namespace Plugin {
                     , X(0)
                     , Y(0)
                     , Height(0)
-                    , Width(0) {
+                    , Width(0)
+                {
                     Init();
                 }
                 OutputConfig(OutputConfig&& other)
@@ -71,7 +72,8 @@ namespace Plugin {
                     , X(std::move(other.X))
                     , Y(std::move(other.Y))
                     , Height(std::move(other.Height))
-                    , Width(std::move(other.Width)) {
+                    , Width(std::move(other.Width))
+                {
                     Init();
                 }
                 OutputConfig(const OutputConfig& other)
@@ -80,7 +82,8 @@ namespace Plugin {
                     , X(other.X)
                     , Y(other.Y)
                     , Height(other.Height)
-                    , Width(other.Width) {
+                    , Width(other.Width)
+                {
                     Init();
                 }
                 ~OutputConfig() override = default;
@@ -192,9 +195,9 @@ namespace Plugin {
             Exchange::IComposition::IDisplay* _parentInterface;
         };
 
-        class Client 
-            : public Exchange::IComposition::IClient
-            , public Compositor::CompositorBuffer {
+        class Client
+            : public Exchange::IComposition::IClient,
+              public Compositor::CompositorBuffer {
         public:
             Client() = delete;
             Client(Client&&) = delete;
@@ -220,7 +223,8 @@ namespace Plugin {
             }
 
         public:
-            uint8_t Descriptors(const uint8_t maxSize, int container[]) {
+            uint8_t Descriptors(const uint8_t maxSize, int container[])
+            {
                 return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
             }
             Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
@@ -236,7 +240,8 @@ namespace Plugin {
             /**
              * Compositor::CompositorBuffer methods
              */
-            void Request() override {
+            void Request() override
+            {
                 _parent.Render(*this);
             }
 
@@ -280,7 +285,7 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(RemoteAccess)
-                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
 
         private:
@@ -304,9 +309,11 @@ namespace Plugin {
 
             Bridge(CompositorImplementation& parent)
                 : Core::PrivilegedRequest()
-                , _parent(parent) {
+                , _parent(parent)
+            {
             }
-            ~Bridge() override {
+            ~Bridge() override
+            {
                 Close();
             }
 
@@ -325,8 +332,7 @@ namespace Plugin {
 
                     if (client.IsValid() == false) {
                         TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
-                    }
-                    else {
+                    } else {
                         result = client->Descriptors(maxSize, container);
                     }
                 }
@@ -365,7 +371,7 @@ namespace Plugin {
             }
 
         private:
-            class Sink : public Compositor::IOutputCallback {
+            class Sink : public Compositor::IOutput::ICallback {
             public:
                 Sink(Sink&&) = delete;
                 Sink(const Sink&) = delete;
@@ -374,26 +380,27 @@ namespace Plugin {
                 Sink() = delete;
 
                 Sink(Output& parent)
-                    : _parent(parent) {
+                    : _parent(parent)
+                {
                 }
                 ~Sink() override = default;
 
-                virtual void Presented(const int fd, const uint32_t sequence, const uint64_t time) override
+                virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
                 {
-                    _parent.HandleVSync(fd, sequence, time);
+                    _parent.HandleVSync(output, sequence, time);
                 }
 
-                virtual void Display(const int fd, const std::string& node) override
-                {
-                    TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
-                    _parent.HandleGPUNode(node);
-                }
+                // virtual void Display(const int fd, const std::string& node) override
+                // {
+                //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
+                //     _parent.HandleGPUNode(node);
+                // }
 
             private:
                 Output& _parent;
             };
 
-            void HandleVSync(const int fd VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
+            void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
             {
                 std::unique_lock<std::mutex> lock(_rendering);
 
@@ -495,7 +502,8 @@ namespace Plugin {
             , _gpuIdentifier(0)
             , _gpuNode()
             , _renderNode()
-            , _present(*this) {
+            , _present(*this)
+        {
         }
         ~CompositorImplementation() override
         {
@@ -663,7 +671,7 @@ namespace Plugin {
                 static_cast<Exchange::ICompositionBuffer&>(client));
 
             ASSERT(buffer.IsValid());
-                
+
             client.Texture(_renderer->Texture(buffer));
 
             _adminLock.Lock();
@@ -702,27 +710,32 @@ namespace Plugin {
         /**
          * Exchange::IComposition::IDisplay methods
          */
-        Thunder::Core::instance_id Native() const override {
+        Thunder::Core::instance_id Native() const override
+        {
             return _gpuIdentifier;
         }
-        string Port() const override {
+        string Port() const override
+        {
             return string("Mesa3d");
         }
         // Useless Resolution functions, this should be controlled by DisplayControl
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override {
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
+        {
             return (Core::ERROR_UNAVAILABLE);
         }
-        Exchange::IComposition::ScreenResolution Resolution() const override {
+        Exchange::IComposition::ScreenResolution Resolution() const override
+        {
             return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
         }
 
         BEGIN_INTERFACE_MAP(CompositorImplementation)
-            INTERFACE_ENTRY(Exchange::IComposition)
-            INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
+        INTERFACE_ENTRY(Exchange::IComposition)
+        INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
         END_INTERFACE_MAP
 
     private:
-        void Render(Client& client) {
+        void Render(Client& client)
+        {
             uint8_t index = 1;
             for (auto& output : _outputs) {
                 if (output.IsIntersecting(client.Geometry())) {
@@ -739,7 +752,7 @@ namespace Plugin {
                 }
                 index++;
             }
-       }
+        }
 
         IComposition::IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override
         {
@@ -893,12 +906,13 @@ namespace Plugin {
         };
 
     private:
-        Core::ProxyType<Client> ClientById(const uint32_t id) {
+        Core::ProxyType<Client> ClientById(const uint32_t id)
+        {
             Core::ProxyType<Client> result;
 
             _clients.Visit([&](const string& /* name */, const Core::ProxyType<Client>& element) {
                 if (id == element->Native()) {
-                    ASSERT (result.IsValid() == false);
+                    ASSERT(result.IsValid() == false);
                     result = element;
                 }
             });

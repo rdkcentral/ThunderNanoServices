@@ -129,7 +129,7 @@ namespace Compositor {
 
             int Dispatch(const uint32_t events) const;
 
-            Core::ProxyType<Exchange::ICompositionBuffer> Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, Compositor::ICallback* callback);
+            Core::ProxyType<IOutput> Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, Compositor::ICallback* callback);
 
         private:
             mutable uint32_t _refCount;
@@ -851,7 +851,7 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
+        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
         {
             return _windows.Instance<Backend::WaylandOutput>(name, *this, name, rectangle, format);
         }
@@ -1002,9 +1002,9 @@ namespace Compositor {
      * forced or not. If set to true, the output will be forced even if it is not available or already in
      * use. If set to false, the function will return an error if the output is not available or already
      *
-     * @return A `Core::ProxyType` object that wraps an instance of `Exchange::ICompositionBuffer`.
+     * @return A `Core::ProxyType` object that wraps an instance of `IOutput`.
      */
-    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> IOutput::Instance(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
+    /* static */ Core::ProxyType<IOutput> IOutput::Instance(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance("");
 

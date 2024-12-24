@@ -34,7 +34,7 @@
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
-        class WaylandOutput : public Exchange::ICompositionBuffer {
+        class WaylandOutput : public IOutput {
 
             struct PresentationFeedbackEvent {
                 PresentationFeedbackEvent() = delete;
@@ -84,12 +84,15 @@ namespace Compositor {
 
             Exchange::ICompositionBuffer::IIterator* Planes(const uint32_t timeoutMs) override;
             uint32_t Completed(const bool dirty) override;
-            void Render() override;
+
             uint32_t Width() const override;
             uint32_t Height() const override;
             uint32_t Format() const override;
             uint64_t Modifier() const override;
             Exchange::ICompositionBuffer::DataType Type() const override;
+
+            void Commit() override;
+            void const string& Node() const override;
 
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);

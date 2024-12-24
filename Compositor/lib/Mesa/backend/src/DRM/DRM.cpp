@@ -28,7 +28,6 @@
 
 #include <DRM.h>
 #include <DRMTypes.h>
-#include <PropertyAdministrator.h>
 
 #include <drm.h>
 #include <drm_fourcc.h>
@@ -53,7 +52,7 @@ namespace Compositor {
 
     namespace Backend {
 
-        class Connector : public IConnector {
+        class Connector : public IOutput, public IConnector {
         private:
             class FrameBufferImplementation {
             public:
@@ -62,14 +61,16 @@ namespace Compositor {
                 FrameBufferImplementation& operator=(FrameBufferImplementation&&) = delete;
                 FrameBufferImplementation& operator=(const FrameBufferImplementation&&) = delete;
 
-                FrameBufferImplementation() 
+                FrameBufferImplementation()
                     : _swap()
                     , _fd(-1)
-                    , _activePlane(~0) {
+                    , _activePlane(~0)
+                {
                     _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
                     _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
                 }
-                ~FrameBufferImplementation() {
+                ~FrameBufferImplementation()
+                {
                     if (IsValid() == true) {
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[0]);
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
@@ -77,28 +78,28 @@ namespace Compositor {
                         _buffer[1].Release();
                         ::close(_fd);
                     }
-                } 
+                }
 
             public:
-                bool IsValid() const {
+                bool IsValid() const
+                {
                     return (_activePlane != static_cast<uint8_t>(~0));
                 }
-                void Configure(const int fd, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format) {
+                void Configure(const int fd, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format)
+                {
                     // Configure should only be called once..
-                    ASSERT ( IsValid() == false );
+                    ASSERT(IsValid() == false);
 
-                    _buffer[0]  = Compositor::CreateBuffer(fd, width, height, format);
+                    _buffer[0] = Compositor::CreateBuffer(fd, width, height, format);
                     if (_buffer[0].IsValid() == false) {
-                            TRACE(Trace::Error, ("Failed to create first DRM Buffer"));
-                    }
-                    else {
+                        TRACE(Trace::Error, ("Failed to create first DRM Buffer"));
+                    } else {
                         _buffer[1] = Compositor::CreateBuffer(fd, width, height, format);
 
                         if (_buffer[1].IsValid() == false) {
                             TRACE(Trace::Error, ("Failed to create second DRM Buffer"));
                             _buffer[0].Release();
-                        }
-                        else {
+                        } else {
                             _frameId[0] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[0].operator->());
                             _frameId[1] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[1].operator->());
                             _activePlane = 0;
@@ -106,36 +107,46 @@ namespace Compositor {
                         }
                     }
                 }
-                IIterator* Acquire(const uint32_t timeoutMs) {
+                IIterator* Acquire(const uint32_t timeoutMs)
+                {
                     _swap.Lock();
                     return _buffer[_activePlane]->Acquire(timeoutMs);
                 }
-                void Relinquish() {
+                void Relinquish()
+                {
                     _swap.Unlock();
                     _buffer[_activePlane]->Relinquish();
                 }
-                uint32_t Width() const {
+                uint32_t Width() const
+                {
                     return (_buffer[0]->Width());
                 }
-                uint32_t Height() const {
+                uint32_t Height() const
+                {
                     return (_buffer[0]->Height());
                 }
-                uint32_t Format() const {
+                uint32_t Format() const
+                {
                     return (_buffer[0]->Format());
                 }
-                uint64_t Modifier() const {
+                uint64_t Modifier() const
+                {
                     return (_buffer[0]->Modifier());
                 }
-                Exchange::ICompositionBuffer::DataType Type() const {
+                Exchange::ICompositionBuffer::DataType Type() const
+                {
                     return (_buffer[0]->Type());
                 }
-                Compositor::DRM::Identifier Id() const {
+                Compositor::DRM::Identifier Id() const
+                {
                     return _frameId[_activePlane];
                 }
-                Core::ProxyType<Thunder::Exchange::ICompositionBuffer> Buffer() const {
+                Core::ProxyType<Thunder::Exchange::ICompositionBuffer> Buffer() const
+                {
                     return _buffer[_activePlane];
                 }
-                void Swap() {
+                void Swap()
+                {
                     _swap.Lock();
                     _activePlane ^= 1;
                     _swap.Unlock();
@@ -148,7 +159,7 @@ namespace Compositor {
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
                 Compositor::DRM::Identifier _frameId[2];
             };
-    
+
         public:
             Connector() = delete;
             Connector(Connector&&) = delete;
@@ -156,7 +167,7 @@ namespace Compositor {
             Connector& operator=(Connector&&) = delete;
             Connector& operator=(const Connector&) = delete;
 
-            Connector(int fd, DRM::Identifier connectorId, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutputCallback* feedback)
+            Connector(int fd, DRM::Identifier connectorId, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutput::ICallback* feedback)
                 : _backend(::dup(fd))
                 , _format(format)
                 , _connector(_backend, Compositor::DRM::object_type::Connector, connectorId)
@@ -175,14 +186,16 @@ namespace Compositor {
                 }
             }
 
-            ~Connector() override {
+            ~Connector() override
+            {
                 ::close(_backend);
 
                 TRACE(Trace::Backend, ("Connector %p Destroyed", this));
             }
 
         public:
-            bool IsValid() const {
+            bool IsValid() const
+            {
                 return (_frameBuffer.IsValid());
             }
 
@@ -192,55 +205,79 @@ namespace Compositor {
              * Returning the info of the back buffer because its used to
              * draw a new frame.
              */
-            IIterator* Acquire(const uint32_t timeoutMs) override {
+            IIterator* Acquire(const uint32_t timeoutMs) override
+            {
                 return (_frameBuffer.Acquire(timeoutMs));
             }
-            void Relinquish() override {
+            void Relinquish() override
+            {
                 _frameBuffer.Relinquish();
             }
-            uint32_t Width() const override {
+            uint32_t Width() const override
+            {
                 return (_frameBuffer.Width());
             }
-            uint32_t Height() const override {
+            uint32_t Height() const override
+            {
                 return (_frameBuffer.Height());
             }
-            uint32_t Format() const override {
+            uint32_t Format() const override
+            {
                 return (_frameBuffer.Format());
             }
-            uint64_t Modifier() const override {
+            uint64_t Modifier() const override
+            {
                 return (_frameBuffer.Modifier());
             }
-            Exchange::ICompositionBuffer::DataType Type() const {
+            Exchange::ICompositionBuffer::DataType Type() const
+            {
                 return (_frameBuffer.Type());
             }
 
             /**
              * IConnector implementation
              */
-            bool IsEnabled() const override {
+            bool IsEnabled() const override
+            {
                 // Todo: this will control switching on or of the display by controlling the Display Power Management Signaling (DPMS)
                 return true;
             }
-            const Compositor::DRM::Properties& Properties() const override {
+            const Compositor::DRM::Properties& Properties() const override
+            {
                 return _connector;
             }
-            const Compositor::DRM::Properties& Plane() const override {
+            const Compositor::DRM::Properties& Plane() const override
+            {
                 return _primaryPlane;
             }
-            const Compositor::DRM::CRTCProperties& CrtController() const override {
+            const Compositor::DRM::CRTCProperties& CrtController() const override
+            {
                 return _crtc;
             }
             // current framebuffer id to scan out
-            Compositor::DRM::Identifier FrameBufferId() const override {
+            Compositor::DRM::Identifier FrameBufferId() const override
+            {
                 return (_frameBuffer.Id());
             }
-            void Presented(const uint32_t sequence, const uint64_t pts) override {                  
+            void Presented(const uint32_t sequence, const uint64_t pts) override
+            {
                 if (_feedback != nullptr) {
-                    _feedback->Presented(_connector.Id(), sequence, pts);
+                    _feedback->Presented(this, sequence, pts);
                 }
             }
-            void Swap() {
+            void Swap()
+            {
                 _frameBuffer.Swap();
+            }
+
+            uint32_t Commit() override {
+                //if(IsEnabled() = true){
+                    // TODO: Request the backend to render this output.  
+                //}
+            }
+
+            const string& Node() const override {
+                return _gpuNode;
             }
 
         private:
@@ -294,10 +331,10 @@ namespace Compositor {
                     }
 
                     if (encoder != nullptr) { /*
-                                                * Find the CRTC currently used by this drmModeConnector. It is possible to
-                                                * use a different CRTC if desired, however unlike the pre-atomic API,
-                                                * we have to explicitly change every object in the routing path.
-                                                */
+                                               * Find the CRTC currently used by this drmModeConnector. It is possible to
+                                               * use a different CRTC if desired, however unlike the pre-atomic API,
+                                               * we have to explicitly change every object in the routing path.
+                                               */
 
                         drmModePlanePtr plane(nullptr);
                         drmModeCrtcPtr crtc(nullptr);
@@ -317,19 +354,19 @@ namespace Compositor {
                         ASSERT(crtc != nullptr);
                         ASSERT(crtc->crtc_id != 0);
                         /*
-                            * On the banana pi, the following ASSERT fired but, although the documentation
-                            * suggests that buffer_id means disconnected, the screen was not disconnected
-                            * Hence wht the ASSERT is, until further investigation, commented out !!!
-                            * ASSERT(crtc->buffer_id != 0);
-                            */
+                         * On the banana pi, the following ASSERT fired but, although the documentation
+                         * suggests that buffer_id means disconnected, the screen was not disconnected
+                         * Hence wht the ASSERT is, until further investigation, commented out !!!
+                         * ASSERT(crtc->buffer_id != 0);
+                         */
 
                         /*
-                            * The kernel doesn't directly tell us what it considers to be the
-                            * single primary plane for this CRTC (i.e. what would be updated
-                            * by drmModeSetCrtc), but if it's already active then we can cheat
-                            * by looking for something displaying the same framebuffer ID,
-                            * since that information is duplicated.
-                            */
+                         * The kernel doesn't directly tell us what it considers to be the
+                         * single primary plane for this CRTC (i.e. what would be updated
+                         * by drmModeSetCrtc), but if it's already active then we can cheat
+                         * by looking for something displaying the same framebuffer ID,
+                         * since that information is duplicated.
+                         */
                         for (uint8_t p = 0; p < drmModePlaneResources->count_planes; p++) {
                             plane = drmModeGetPlane(_backend, drmModePlaneResources->planes[p]);
 
@@ -368,6 +405,13 @@ namespace Compositor {
                     break;
                 }
 
+                char* node = drmGetDeviceNameFromFd2(_backend);
+
+                if (node) {
+                    _gpuNode = node; 
+                    free(node);
+                }
+
                 drmModeFreeResources(drmModeResources);
                 drmModeFreePlaneResources(drmModePlaneResources);
 
@@ -377,14 +421,16 @@ namespace Compositor {
         private:
             int _backend;
 
-            const Compositor::PixelFormat   _format;
-            Compositor::DRM::Properties     _connector; 
-            Compositor::DRM::CRTCProperties _crtc; 
-            Compositor::DRM::Properties     _primaryPlane;
+            const Compositor::PixelFormat _format;
+            Compositor::DRM::Properties _connector;
+            Compositor::DRM::CRTCProperties _crtc;
+            Compositor::DRM::Properties _primaryPlane;
+
+            string _gpuNode;
 
             FrameBufferImplementation _frameBuffer;
 
-            Compositor::IOutputCallback* _feedback;
+            Compositor::IOutput::ICallback* _feedback;
         };
 
         static Core::ResourceMonitorType<Core::IResource, Core::Void, 0, 1> _resourceMonitor;
@@ -417,11 +463,11 @@ namespace Compositor {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
                     }
 
-                    #ifdef USE_ATOMIC
+#ifdef USE_ATOMIC
                     if ((drmResult == 0) && ((drmResult = drmSetClientCap(_gpuFd, DRM_CLIENT_CAP_ATOMIC, 1)) != 0)) {
                         TRACE(Trace::Error, ("Could not enable atomic API. Error: [%s]", strerror(errno)));
                     }
-                    #endif
+#endif
 
                     if ((drmResult == 0) && ((drmResult = drmGetCap(_gpuFd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap))) {
                         TRACE(Trace::Error, ("Device does not support vblank per CRTC"));
@@ -441,7 +487,8 @@ namespace Compositor {
                     }
                 }
             }
-            ~DRM() override {
+            ~DRM() override
+            {
                 if (_gpuFd > 0) {
                     _resourceMonitor.Unregister(*this);
 
@@ -460,20 +507,24 @@ namespace Compositor {
             }
 
         public:
-            bool IsValid() const {
+            bool IsValid() const
+            {
                 return (_gpuFd > 0);
             }
 
             //
             // Core::IResource memebers
             // -----------------------------------------------------------------
-            handle Descriptor() const override {
+            handle Descriptor() const override
+            {
                 return (_gpuFd);
             }
-            uint16_t Events() override {
+            uint16_t Events() override
+            {
                 return (POLLIN | POLLPRI);
             }
-            void Handle(const uint16_t events) override {
+            void Handle(const uint16_t events) override
+            {
                 if (((events & POLLIN) != 0) || ((events & POLLPRI) != 0)) {
                     drmEventContext eventContext;
                     memset(&eventContext, 0, sizeof(eventContext));
@@ -488,19 +539,20 @@ namespace Compositor {
             }
 
         private:
-            uint32_t SchedulePageFlip(Connector& connector VARIABLE_IS_NOT_USED) {
+            uint32_t SchedulePageFlip(Connector& connector VARIABLE_IS_NOT_USED)
+            {
                 uint32_t result(Core::ERROR_GENERAL);
 
                 if (_flip.try_lock()) {
                     std::vector<IConnector*> GpuConnectors;
 
                     _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
-                            if (connector->IsEnabled() == true) {
-                                connector.AddRef();
-                                connector->Swap();
-                                GpuConnectors.push_back(connector.operator->());
-                            }
-                        });
+                        if (connector->IsEnabled() == true) {
+                            connector.AddRef();
+                            connector->Swap();
+                            GpuConnectors.push_back(connector.operator->());
+                        }
+                    });
 
                     if (GpuConnectors.empty() == false) {
                         _pendingFlips = GpuConnectors.size();
@@ -509,15 +561,15 @@ namespace Compositor {
                     } else {
                         TRACE_GLOBAL(Trace::Information, ("Nothing to commit..."));
                     }
-                } 
-                else {
+                } else {
                     TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
                     result = Core::ERROR_INPROGRESS;
                 }
 
                 return result;
             }
-            void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds) {
+            void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
+            {
                 _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
                     if (connector->CrtController().Id() == crtc) {
                         struct timespec presentationTimestamp;
@@ -541,7 +593,8 @@ namespace Compositor {
                     _flip.unlock();
                 }
             }
-            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData) {
+            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
+            {
                 ASSERT(userData != nullptr);
 
                 DRM* backend = reinterpret_cast<DRM*>(userData);
@@ -558,15 +611,16 @@ namespace Compositor {
         static Core::ProxyMapType<string, Backend::DRM> _backends;
 
     } // namespace Backend
-    Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutputCallback* feedback) {
+    Core::ProxyType<IOutput> CreateBuffer(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback)
+    {
         ASSERT(drmAvailable() == 1);
         ASSERT(connectorName.empty() == false);
 
         TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
-        std::string gpuNodeName (DRM::GetGPUNode(connectorName));
+        std::string gpuNodeName(DRM::GetGPUNode(connectorName));
         Core::ProxyType<Backend::DRM> backend = Backend::_backends.Instance<Backend::DRM>(gpuNodeName, gpuNodeName);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> connector;
+        Core::ProxyType<IOutput> connector;
 
         if (backend.IsValid()) {
             connector = Backend::_connectors.Instance<Backend::Connector>(connectorName, backend->Descriptor(), DRM::FindConnectorId(backend->Descriptor(), connectorName), rectangle, format, feedback);

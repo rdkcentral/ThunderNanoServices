@@ -51,7 +51,7 @@ const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
 private:
-    class Sink : public Compositor::IOutputCallback {
+    class Sink : public Compositor::IOutput::ICallback {
     public:
         Sink(const Sink&) = delete;
         Sink& operator=(const Sink&) = delete;
@@ -64,16 +64,16 @@ private:
 
         virtual ~Sink() = default;
 
-        virtual void Presented(const int fd, const uint32_t sequence, const uint64_t time) override
+        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
         {
-            _parent.HandleVSync(fd, sequence, time);
+            _parent.HandleVSync(output, sequence, time);
         }
 
-        virtual void Display(const int fd, const std::string& node) override
-        {
-            TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
-            // _parent.HandleGPUNode(node);
-        }
+        // virtual void Display(const int fd, const std::string& node) override
+        // {
+        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
+        //     // _parent.HandleGPUNode(node);
+        // }
 
     private:
         RenderTest& _parent;
@@ -224,7 +224,7 @@ private:
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
-    void HandleVSync(const int id VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
     {
         _fps = 1 / ((pts - _ppts) / 1000000.0f);
         _sequence = sequence;

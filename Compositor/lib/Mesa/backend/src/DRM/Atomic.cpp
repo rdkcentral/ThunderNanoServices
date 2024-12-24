@@ -150,7 +150,6 @@ namespace Compositor {
             for (auto& connector : connectors) {
                 ASSERT(connector != nullptr);
                 ASSERT(connector->CrtController() != nullptr);
-                ASSERT(connector->Plane() != nullptr);
 
                 const uint32_t ConnectorId(connector->Properties().Id());
                 const uint32_t crtcId(connector->CrtController().Id());

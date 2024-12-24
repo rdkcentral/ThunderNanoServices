@@ -24,14 +24,33 @@
 namespace Thunder {
 
 namespace Compositor {
+    struct IOutput : Exchange::ICompositionBuffer {
+        struct EXTERNAL ICallback {
+            virtual ~ICallback() = default;
+            /**
+             * @brief Callback when buffer content is presented on the output.
+             *
+             * @param output Pointer to the output that triggered the callback.
+             * @param sequence Commit sequence number that was presented.
+             * @param time Presentation time stamp, 0 means never presented/timeout.
+             */
+            virtual void Presented(const IOutput* output, const uint32_t sequence, const uint64_t time) = 0;
+        }; // struct ICallback
 
-    // This is the ICompositionBufer Factory from where the compositor is going
-    // to render its output. This is an output!
-    struct EXTERNAL IOutputCallback {
-        virtual ~IOutputCallback() = default;
-        virtual void Presented(const int fd, const uint32_t sequence, const uint64_t time) = 0;
-        virtual void Display(const int fd, const std::string& node) = 0;
-    }; // struct IOutputCallback
+        /**
+         * @brief  Trigger to start bringing the buffer contents to the output.
+         *
+         * @return uint32_t Sequence number of the commit.
+         */
+        virtual uint32_t Commit() = 0;
+
+        /**
+         * @brief  Get the node where this output is bound to.
+         *
+         * @return string  e.g. Wayland display name or DRM node.
+         */
+        virtual const string& Node() const = 0;
+    };
 
     /**
      * @brief  Allocate a new output.
@@ -42,13 +61,14 @@ namespace Compositor {
      * @param rectangle  the area that this connector covers in the composition
      * @param format Pixel layout for this buffer
      *
-     * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
+     * @return Core::ProxyType<IOutput> The allocated buffer
      */
-    EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+
+    EXTERNAL Core::ProxyType<IOutput> CreateBuffer(
         const string& connector,
         const Exchange::IComposition::Rectangle& rectangle,
         const Compositor::PixelFormat& format,
-        IOutputCallback* callback);
+        IOutput::ICallback* callback);
 
 } // namespace Compositor
 } // namespace Thunder
