@@ -26,6 +26,7 @@
 #include <core/core.h>
 #include <plugins/plugins.h>
 #include <messaging/messaging.h>
+#include <definitions/definitions.h>
 
 #undef EXTERNAL
 #define EXTERNAL
