@@ -30,6 +30,9 @@
 #include <string>
 #include <vector>
 
+#include <condition_variable>
+#include <mutex>
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
@@ -50,6 +53,35 @@ namespace {
 const Compositor::Color red = { 1.f, 0.f, 0.f, 1.f };
 
 class ClearTest {
+
+    class Sink : public Compositor::IOutput::ICallback {
+    public:
+        Sink(const Sink&) = delete;
+        Sink& operator=(const Sink&) = delete;
+        Sink() = delete;
+
+        Sink(ClearTest& parent)
+            : _parent(parent)
+        {
+        }
+
+        virtual ~Sink() = default;
+
+        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+        {
+            _parent.HandleVSync(output, sequence, time);
+        }
+
+        // virtual void Display(const int fd, const std::string& node) override
+        // {
+        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
+        //     // _parent.HandleGPUNode(node);
+        // }
+
+    private:
+        ClearTest& _parent;
+    };
+
 public:
     ClearTest() = delete;
     ClearTest(const ClearTest&) = delete;
@@ -67,12 +99,18 @@ public:
         , _running(false)
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
+        , _sink(*this)
+        , _rendering()
+        , _vsync()
+        , _ppts(Core::Time::Now().Ticks())
+        , _fps()
+        , _sequence(0)
 
     {
         _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
-            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }), nullptr);
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }), &_sink);
 
         ASSERT(_connector.IsValid());
 
@@ -165,14 +203,13 @@ private:
     {
         const auto start = std::chrono::high_resolution_clock::now();
 
-        _renderer->Bind(_connector);
+        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
 
         _renderer->Begin(_connector->Width(), _connector->Height());
         _renderer->Clear(_color);
         _renderer->End();
 
-        // TODO: Test with Bram what the intiention was/is
-        // _connector->Render();
+        _connector->Commit();
 
         _renderer->Unbind();
 
@@ -183,13 +220,35 @@ private:
 
         _color = hsv2rgb(_rotation, .9, .7);
 
+        WaitForVSync(100);
+
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
+    }
+
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    {
+        _fps = 1 / ((pts - _ppts) / 1000000.0f);
+        _sequence = sequence;
+        _ppts = pts;
+        _vsync.notify_all();
+    }
+
+    void WaitForVSync(uint32_t timeoutMs)
+    {
+        std::unique_lock<std::mutex> lock(_rendering);
+
+        if (timeoutMs == Core::infinite) {
+            _vsync.wait(lock);
+        } else {
+            _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
+        }
+        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
     }
 
 private:
     mutable Core::CriticalSection _adminLock;
     Core::ProxyType<Compositor::IRenderer> _renderer;
-    Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IOutput> _connector;
     Compositor::Color _color;
     uint8_t _previousIndex;
     const std::chrono::microseconds _period;
@@ -198,6 +257,12 @@ private:
     bool _running;
     std::thread _render;
     int _renderFd;
+    Sink _sink;
+    std::mutex _rendering;
+    std::condition_variable _vsync;
+    uint64_t _ppts;
+    float _fps;
+    uint32_t _sequence;
 
 }; // ClearTest
 class ConsoleOptions : public Core::Options {
@@ -253,8 +318,8 @@ int main(int argc, char* argv[])
         const std::vector<string> modules = {
             "CompositorClearTest",
             "CompositorBuffer",
-            "CompositorBackend",
-            "CompositorRenderer",
+            "CompositorBackendOff",
+            "CompositorRendererOff",
             "DRMCommon"
         };
 
@@ -264,7 +329,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        ClearTest test(options.Output, options.RenderNode, 1, 10);
+        ClearTest test(options.Output, options.RenderNode, 100, 10);
 
         test.Start();
 
@@ -284,6 +349,7 @@ int main(int argc, char* argv[])
 
         } while (keyPress != 'Q');
 
+        test.Stop();
         TRACE_GLOBAL(Trace::Information, ("Exiting %s.... ", executableName));
     }
 

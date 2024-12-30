@@ -194,28 +194,31 @@ private:
         const uint16_t renderWidth(720);
         const uint16_t renderHeight(720);
 
-        uint32_t x = (renderWidth / 2) * cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
-        uint32_t y = (renderHeight / 2) * sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        const float cosX = cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        const float sinY = sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
 
-        _renderer->Bind(_connector);
+        float x = float(renderWidth / 2.0f) * cosX;
+        float y = float(renderHeight / 2.0f) * sinY;
+
+        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         const Exchange::IComposition::Rectangle renderBox = { static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), renderWidth, renderHeight };
+
         Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
 
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
 
-        // TODO: Check with Bram what the intention was/is
-        // _connector->Render();
+        _connector->Commit();
 
-        WaitForVSync(Core::infinite);
+        WaitForVSync(100);
 
         _renderer->Unbind();
 
@@ -247,7 +250,7 @@ private:
 private:
     mutable Core::CriticalSection _adminLock;
     const Compositor::PixelFormat _format;
-    Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IOutput> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
     Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
