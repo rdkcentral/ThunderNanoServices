@@ -72,7 +72,7 @@ namespace Compositor {
 
         virtual ~PixelBuffer() = default;
 
-        Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override
+        Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t /* timeoutMs */) override
         {
             return &_planes;
         }

@@ -25,6 +25,9 @@ namespace Thunder {
 
 namespace Compositor {
     struct IOutput : Exchange::ICompositionBuffer {
+
+        ~IOutput() override = default;
+
         struct EXTERNAL ICallback {
             virtual ~ICallback() = default;
             /**
