@@ -237,7 +237,7 @@ namespace Thunder {
                 uint32_t result(Core::ERROR_NONE);
 
                 if (IsEnabled() == true) {
-                    _backend->Commit(this);
+                    _backend->Commit(_connector.Id());
                 } else {
                     result = Core::ERROR_ILLEGAL_STATE;
                 }

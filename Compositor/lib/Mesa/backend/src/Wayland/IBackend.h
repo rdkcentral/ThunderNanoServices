@@ -29,7 +29,7 @@ namespace Compositor {
     namespace Backend {
         namespace Wayland {
             struct IBackend : public Core::IReferenceCounted {
-                virtual ~IBackend() = default;
+                ~IBackend() override = default;
 
                 virtual int RoundTrip() const = 0;
                 virtual int Flush() const = 0;

@@ -238,14 +238,14 @@ namespace Compositor {
             return (_buffer.IsValid() == true) ? _buffer->Identifier() : 0;
         }
 
-        Exchange::ICompositionBuffer::IIterator* WaylandOutput::Planes(const uint32_t timeoutMs)
+        Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
         {
-            return (_buffer.IsValid() == true) ? _buffer->Planes(timeoutMs) : nullptr;
+            return (_buffer.IsValid() == true) ? _buffer->Acquire(timeoutMs) : nullptr;
         }
 
-        uint32_t WaylandOutput::Completed(const bool dirty)
+        uint32_t WaylandOutput::Relinquish()
         {
-            return (_buffer.IsValid() == true) ? _buffer->Completed(dirty) : false;
+            return (_buffer.IsValid() == true) ? _buffer->Relinquish() : false;
         }
 
         uint32_t WaylandOutput::Width() const

@@ -59,9 +59,7 @@ namespace Compositor {
     static Core::ResourceMonitorType<Core::IResource, Core::Void, 0, 1> _resourceMonitor;
 
     namespace Backend {
-        class DRM 
-            : public Core::IResource
-            , public Compositor::IBackend {
+        class DRM : public Compositor::IBackend {
         public:
             DRM() = delete;
             DRM(DRM&&) = delete;
@@ -88,11 +86,11 @@ namespace Compositor {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
                     }
 
-#ifdef USE_ATOMIC
+                    #ifdef USE_ATOMIC
                     if ((drmResult == 0) && ((drmResult = drmSetClientCap(_gpuFd, DRM_CLIENT_CAP_ATOMIC, 1)) != 0)) {
                         TRACE(Trace::Error, ("Could not enable atomic API. Error: [%s]", strerror(errno)));
                     }
-#endif
+                    #endif
 
                     if ((drmResult == 0) && ((drmResult = drmGetCap(_gpuFd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap))) {
                         TRACE(Trace::Error, ("Device does not support vblank per CRTC"));
@@ -136,6 +134,10 @@ namespace Compositor {
             {
                 return (_gpuFd > 0);
             }
+            Core::ProxyType<Connector> GetConnector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback)
+            {
+                return _connectors.Instance<Connector>(connectorName, this, Compositor::DRM::FindConnectorId(_gpuFd, connectorName), rectangle, format, feedback);
+            }
 
             //
             // Core::IResource members
@@ -162,14 +164,7 @@ namespace Compositor {
                     }
                 }
             }
-            void Commit(Connector* connector) override {
-                SchedulePageFlip(*connector);
-            }
-
-
-        private:
-            uint32_t SchedulePageFlip(Connector& connector VARIABLE_IS_NOT_USED)
-            {
+            uint32_t Commit(Compositor::DRM::Identifier connectorId VARIABLE_IS_NOT_USED) override {
                 uint32_t result(Core::ERROR_GENERAL);
 
                 if (_flip.try_lock()) {
@@ -187,6 +182,7 @@ namespace Compositor {
                                 result = outcome;
                             }
                             else {
+                                _pendingFlips++;
                                 added = true;
                             }
                         }
@@ -240,12 +236,6 @@ namespace Compositor {
                 DRM* backend = reinterpret_cast<DRM*>(userData);
 
                 backend->FinishPageFlip(crtc_id, seq, sec, usec);
-            }
-
-        public:
-            Core::ProxyType<Connector> GetConnector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback)
-            {
-                return _connectors.Instance<Connector>(connectorName, this, Compositor::DRM::FindConnectorId(_gpuFd, connectorName), rectangle, format, feedback);
             }
 
         private:

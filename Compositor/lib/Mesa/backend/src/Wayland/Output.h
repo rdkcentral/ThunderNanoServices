@@ -82,8 +82,8 @@ namespace Compositor {
 
             uint32_t Identifier() const override;
 
-            Exchange::ICompositionBuffer::IIterator* Planes(const uint32_t timeoutMs) override;
-            uint32_t Completed(const bool dirty) override;
+            Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
+            uint32_t Relinquish() override;
 
             uint32_t Width() const override;
             uint32_t Height() const override;

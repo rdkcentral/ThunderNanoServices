@@ -19,25 +19,18 @@
 #pragma once
 
 #include "../Module.h"
-#include <IOutput.h>
 #include <DRMTypes.h>
-#include <xf86drmMode.h>
 
 namespace Thunder {
 
     namespace Compositor {
 
-        namespace Backend {
+        struct IBackend 
+            : public Core::IResource
+            , public Core::IReferenceCounted {
+            ~IBackend() override = default;
 
-            class Connector;
-
-        } // namespace Backend
-
-        struct IBackend {
-            virtual ~IBackend() = default;
-
-            virtual int Descriptor() const = 0;
-            virtual void Commit(Backend::Connector*) = 0;
+            virtual uint32_t Commit(Compositor::DRM::Identifier connectorId) = 0;
         };
 
     } // namespace Compositor
