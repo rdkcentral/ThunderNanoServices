@@ -136,7 +136,7 @@ namespace Compositor {
             }
             Core::ProxyType<Connector> GetConnector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback)
             {
-                return _connectors.Instance<Connector>(connectorName, this, Compositor::DRM::FindConnectorId(_gpuFd, connectorName), rectangle, format, feedback);
+                return _connectors.Instance<Connector>(connectorName, Core::ProxyType<Compositor::IBackend>(*this, *this), Compositor::DRM::FindConnectorId(_gpuFd, connectorName), rectangle, format, feedback);
             }
 
             //
@@ -168,6 +168,7 @@ namespace Compositor {
                 uint32_t result(Core::ERROR_GENERAL);
 
                 if (_flip.try_lock()) {
+                    result = Core::ERROR_NONE;
 
                     static bool doModeSet(true);
                     bool added = false;

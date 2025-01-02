@@ -26,124 +26,124 @@
 #include <DRMTypes.h>
 
 namespace Thunder {
-    namespace Compositor {
-        namespace Backend {
-            class Connector : public IOutput {
-            private:
-                class FrameBufferImplementation {
-                public:
-                    FrameBufferImplementation(FrameBufferImplementation&&) = delete;
-                    FrameBufferImplementation(const FrameBufferImplementation&&) = delete;
-                    FrameBufferImplementation& operator=(FrameBufferImplementation&&) = delete;
-                    FrameBufferImplementation& operator=(const FrameBufferImplementation&&) = delete;
+namespace Compositor {
+    namespace Backend {
+        class Connector : public IOutput {
+        private:
+            class FrameBufferImplementation {
+            public:
+                FrameBufferImplementation(FrameBufferImplementation&&) = delete;
+                FrameBufferImplementation(const FrameBufferImplementation&&) = delete;
+                FrameBufferImplementation& operator=(FrameBufferImplementation&&) = delete;
+                FrameBufferImplementation& operator=(const FrameBufferImplementation&&) = delete;
 
-                    FrameBufferImplementation()
-                        : _swap()
-                        , _fd(-1)
-                        , _activePlane(~0)
-                    {
-                        _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
-                        _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
+                FrameBufferImplementation()
+                    : _swap()
+                    , _fd(-1)
+                    , _activePlane(~0)
+                {
+                    _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
+                    _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
+                }
+                ~FrameBufferImplementation()
+                {
+                    if (IsValid() == true) {
+                        Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[0]);
+                        Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
+                        _buffer[0].Release();
+                        _buffer[1].Release();
+                        ::close(_fd);
                     }
-                    ~FrameBufferImplementation()
-                    {
-                        if (IsValid() == true) {
-                            Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[0]);
-                            Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
-                            _buffer[0].Release();
-                            _buffer[1].Release();
-                            ::close(_fd);
-                        }
-                    }
-
-                public:
-                    bool IsValid() const
-                    {
-                        return (_activePlane != static_cast<uint8_t>(~0));
-                    }
-                    void Configure(const int fd, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format)
-                    {
-                        // Configure should only be called once..
-                        ASSERT(IsValid() == false);
-
-                        _buffer[0] = Compositor::CreateBuffer(fd, width, height, format);
-                        if (_buffer[0].IsValid() == false) {
-                            TRACE(Trace::Error, ("Failed to create first DRM Buffer"));
-                        } else {
-                            _buffer[1] = Compositor::CreateBuffer(fd, width, height, format);
-
-                            if (_buffer[1].IsValid() == false) {
-                                TRACE(Trace::Error, ("Failed to create second DRM Buffer"));
-                                _buffer[0].Release();
-                            } else {
-                                _frameId[0] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[0].operator->());
-                                _frameId[1] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[1].operator->());
-                                _activePlane = 0;
-                                _fd = ::dup(fd);
-                            }
-                        }
-                    }
-                    IIterator* Acquire(const uint32_t timeoutMs)
-                    {
-                        _swap.Lock();
-                        return _buffer[_activePlane]->Acquire(timeoutMs);
-                    }
-                    void Relinquish()
-                    {
-                        _swap.Unlock();
-                        _buffer[_activePlane]->Relinquish();
-                    }
-                    uint32_t Width() const
-                    {
-                        return (_buffer[0]->Width());
-                    }
-                    uint32_t Height() const
-                    {
-                        return (_buffer[0]->Height());
-                    }
-                    uint32_t Format() const
-                    {
-                        return (_buffer[0]->Format());
-                    }
-                    uint64_t Modifier() const
-                    {
-                        return (_buffer[0]->Modifier());
-                    }
-                    Exchange::ICompositionBuffer::DataType Type() const
-                    {
-                        return (_buffer[0]->Type());
-                    }
-                    Compositor::DRM::Identifier Id() const
-                    {
-                        return _frameId[_activePlane];
-                    }
-                    Core::ProxyType<Thunder::Exchange::ICompositionBuffer> Buffer() const
-                    {
-                        return _buffer[_activePlane];
-                    }
-                    void Swap()
-                    {
-                        _swap.Lock();
-                        _activePlane ^= 1;
-                        _swap.Unlock();
-                    }
-
-                private:
-                    Core::CriticalSection _swap;
-                    int _fd;
-                    uint8_t _activePlane;
-                    Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
-                    Compositor::DRM::Identifier _frameId[2];
-                };
+                }
 
             public:
-                Connector() = delete;
-                Connector(Connector&&) = delete;
-                Connector(const Connector&) = delete;
-                Connector& operator=(Connector&&) = delete;
-                Connector& operator=(const Connector&) = delete;
+                bool IsValid() const
+                {
+                    return (_activePlane != static_cast<uint8_t>(~0));
+                }
+                void Configure(const int fd, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format)
+                {
+                    // Configure should only be called once..
+                    ASSERT(IsValid() == false);
 
-            Connector(Compositor::IBackend* backend, Compositor::DRM::Identifier connectorId, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutput::ICallback* feedback)
+                    _buffer[0] = Compositor::CreateBuffer(fd, width, height, format);
+                    if (_buffer[0].IsValid() == false) {
+                        TRACE(Trace::Error, ("Failed to create first DRM Buffer"));
+                    } else {
+                        _buffer[1] = Compositor::CreateBuffer(fd, width, height, format);
+
+                        if (_buffer[1].IsValid() == false) {
+                            TRACE(Trace::Error, ("Failed to create second DRM Buffer"));
+                            _buffer[0].Release();
+                        } else {
+                            _frameId[0] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[0].operator->());
+                            _frameId[1] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[1].operator->());
+                            _activePlane = 0;
+                            _fd = ::dup(fd);
+                        }
+                    }
+                }
+                IIterator* Acquire(const uint32_t timeoutMs)
+                {
+                    _swap.Lock();
+                    return _buffer[_activePlane]->Acquire(timeoutMs);
+                }
+                void Relinquish()
+                {
+                    _swap.Unlock();
+                    _buffer[_activePlane]->Relinquish();
+                }
+                uint32_t Width() const
+                {
+                    return (_buffer[0]->Width());
+                }
+                uint32_t Height() const
+                {
+                    return (_buffer[0]->Height());
+                }
+                uint32_t Format() const
+                {
+                    return (_buffer[0]->Format());
+                }
+                uint64_t Modifier() const
+                {
+                    return (_buffer[0]->Modifier());
+                }
+                Exchange::ICompositionBuffer::DataType Type() const
+                {
+                    return (_buffer[0]->Type());
+                }
+                Compositor::DRM::Identifier Id() const
+                {
+                    return _frameId[_activePlane];
+                }
+                Core::ProxyType<Thunder::Exchange::ICompositionBuffer> Buffer() const
+                {
+                    return _buffer[_activePlane];
+                }
+                void Swap()
+                {
+                    _swap.Lock();
+                    _activePlane ^= 1;
+                    _swap.Unlock();
+                }
+
+            private:
+                Core::CriticalSection _swap;
+                int _fd;
+                uint8_t _activePlane;
+                Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
+                Compositor::DRM::Identifier _frameId[2];
+            };
+
+        public:
+            Connector() = delete;
+            Connector(Connector&&) = delete;
+            Connector(const Connector&) = delete;
+            Connector& operator=(Connector&&) = delete;
+            Connector& operator=(const Connector&) = delete;
+
+            Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutput::ICallback* feedback)
                 : _backend(backend)
                 , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, connectorId)
@@ -210,30 +210,41 @@ namespace Thunder {
             /**
              * Connector methods
              */
-            bool IsEnabled() const {
+            bool IsEnabled() const
+            {
                 // Todo: this will control switching on or of the display by controlling the Display Power Management Signaling (DPMS)
                 return true;
             }
-            const Compositor::DRM::Properties& Properties() const {
+            const Compositor::DRM::Properties& Properties() const
+            {
                 return _connector;
             }
-            const Compositor::DRM::CRTCProperties& CrtController() const {
+            const Compositor::DRM::Properties& Plane() const
+            {
+                return _primaryPlane;
+            }
+            const Compositor::DRM::CRTCProperties& CrtController() const
+            {
                 return _crtc;
             }
             // current framebuffer id to scan out
-            Compositor::DRM::Identifier FrameBufferId() const {
+            Compositor::DRM::Identifier FrameBufferId() const
+            {
                 return (_frameBuffer.Id());
             }
-            void Presented(const uint32_t sequence, const uint64_t pts) {
+            void Presented(const uint32_t sequence, const uint64_t pts)
+            {
                 if (_feedback != nullptr) {
                     _feedback->Presented(this, sequence, pts);
                 }
             }
-            void Swap() {
+            void Swap()
+            {
                 _frameBuffer.Swap();
             }
 
-            uint32_t Commit() {
+            uint32_t Commit()
+            {
                 uint32_t result(Core::ERROR_NONE);
 
                 if (IsEnabled() == true) {
@@ -245,12 +256,14 @@ namespace Thunder {
                 return result;
             }
 
-            const string& Node() const {
+            const string& Node() const
+            {
                 return _gpuNode;
             }
 
         private:
-            bool Scan() {
+            bool Scan()
+            {
                 bool result(false);
 
                 int backendFd = _backend->Descriptor();
@@ -354,7 +367,9 @@ namespace Thunder {
                         TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
 
                         _crtc.Load(backendFd, crtc);
-                        Compositor::DRM::Properties primaryPlane (backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
+                        _primaryPlane.Load(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
+
+                        Compositor::DRM::Properties primaryPlane(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
 
                         _frameBuffer.Configure(backendFd, crtc->width, crtc->height, _format);
 
@@ -390,18 +405,19 @@ namespace Thunder {
             }
 
         private:
-            Compositor::IBackend* _backend;
+            Core::ProxyType<Compositor::IBackend> _backend;
 
             const Compositor::PixelFormat _format;
             Compositor::DRM::Properties _connector;
             Compositor::DRM::CRTCProperties _crtc;
+            Compositor::DRM::Properties _primaryPlane;
 
             string _gpuNode;
 
             FrameBufferImplementation _frameBuffer;
 
             Compositor::IOutput::ICallback* _feedback;
-            };
-        }
+        };
     }
+}
 }

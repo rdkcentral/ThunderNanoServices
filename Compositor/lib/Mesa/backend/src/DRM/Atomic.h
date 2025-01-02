@@ -164,7 +164,7 @@ namespace Thunder {
                 ~Transaction() = default;
 
             public:
-                bool ModeSet() const {
+                bool ModeSet() {
                     bool lastValue = _modeSet;
                     _modeSet = false;
                     return (lastValue);
@@ -183,17 +183,17 @@ namespace Thunder {
                     const uint32_t crtcId(connector.CrtController().Id());
                     const uint32_t planeId(connector.Plane().Id());
 
-                    TRACE(Trace::Backend, ("Commit for connector: %d , CRTC: %d, Plane: %d", ConnectorId, crtcId, planeId));
+                    TRACE(Trace::Backend, ("Commit for connector: %d , CRTC: %d, Plane: %d", connectorId, crtcId, planeId));
 
                     _request.Property(connectorId, connector.Properties().Id(DRM::property::CrtcId), connector.IsEnabled() ? crtcId : 0);
 
                     if ((connector.IsEnabled()) && (ModeSet() == true)) {
                         const drmModeModeInfo* mode = connector.CrtController();
-                        request.Blob(crtcId, connector.CrtController().Id(DRM::property::ModeId), reinterpret_cast<const void*>(mode), sizeof(drmModeModeInfo));
-                        Flags(Frags() | DRM_MODE_ATOMIC_ALLOW_MODESET);
+                        _request.Blob(crtcId, connector.CrtController().Id(DRM::property::ModeId), reinterpret_cast<const void*>(mode), sizeof(drmModeModeInfo));
+                        Flags(Flags() | DRM_MODE_ATOMIC_ALLOW_MODESET);
                     }
 
-                    request.Property(crtcId, connector->CrtController().Id(DRM::property::Active), connector->IsEnabled() ? 1 : 0);
+                    _request.Property(crtcId, connector.CrtController().Id(DRM::property::Active), connector.IsEnabled() ? 1 : 0);
 
                     if (connector.IsEnabled() == true) {
 
@@ -202,38 +202,38 @@ namespace Thunder {
                         const uint32_t width(connector.Width());
                         const uint32_t height(connector.Height());
 
-                        request.Property(ConnectorId, connector.Properties().Id(DRM::property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
-                        request.Property(ConnectorId, connector.Properties().Id(DRM::property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
+                        _request.Property(connectorId, connector.Properties().Id(DRM::property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
+                        _request.Property(connectorId, connector.Properties().Id(DRM::property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
 
-                        request.Property(planeId, connector.Plane().Id(DRM::property::FbId), connector->FrameBufferId());
-                        request.Property(planeId, connector.Plane().Id(DRM::property::CrtcId), crtcId);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::FbId), connector.FrameBufferId());
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcId), crtcId);
 
-                        request.Property(planeId, connector.Plane().Id(DRM::property::SrcX), 0);
-                        request.Property(planeId, connector.Plane().Id(DRM::property::SrcY), 0);
-                        request.Property(planeId, connector.Plane().Id(DRM::property::SrcW), uint64_t(width << 16));
-                        request.Property(planeId, connector.Plane().Id(DRM::property::SrcH), uint64_t(height << 16));
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::SrcX), 0);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::SrcY), 0);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::SrcW), uint64_t(width << 16));
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::SrcH), uint64_t(height << 16));
 
-                        request.Property(planeId, connector.Plane().Id(DRM::property::CrtcX), x);
-                        request.Property(planeId, connector.Plane().Id(DRM::property::CrtcY), y);
-                        request.Property(planeId, connector.Plane().Id(DRM::property::CrtcW), width);
-                        request.Property(planeId, connector.Plane().Id(DRM::property::CrtcH), height);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcX), x);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcY), y);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcW), width);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcH), height);
 
                     } else {
-                        request.Property(planeId, connector.Plane().Id(DRM::property::FbId), 0);
-                        request.Property(planeId, connector.Plane().Id(DRM::property::CrtcId), 0);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::FbId), 0);
+                        _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcId), 0);
                     }
 
                     return (Core::ERROR_NONE);
                 }
                 uint32_t Commit() {
-                    return(request.Commit(Flags(), _userData));
+                    return(_request.Commit(Flags(), _userData));
                 }
 
             private:
                 uint32_t _flags;
                 bool _modeSet;
                 Request _request;
-                void* _userData
+                void* _userData;
             };
         } // namespace Backend
     } // namespace Compositor
