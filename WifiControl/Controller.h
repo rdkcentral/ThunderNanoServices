@@ -427,7 +427,7 @@ namespace WPASupplicant {
             void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
-                    Core::TextFragment data(response.c_str(), response.length());
+                    Core::TextFragment data(response.c_str(), static_cast<uint32_t>(response.length()));
                     uint32_t marker = data.ForwardFind('\n');
                     uint32_t markerEnd = data.ForwardFind('\n', marker + 1);
 
@@ -557,7 +557,7 @@ namespace WPASupplicant {
             void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
-                    Core::TextFragment data(response.c_str(), response.length());
+                    Core::TextFragment data(response.c_str(), static_cast<uint32_t>(response.length()));
 
                     uint32_t marker = 0;
                     uint32_t markerEnd = data.ForwardFind('\n', marker);
@@ -710,7 +710,7 @@ namespace WPASupplicant {
             void Completed(const string& response, const bool abort) override
             {
                 if (abort == false) {
-                    Core::TextFragment data(response.c_str(), response.length());
+                    Core::TextFragment data(response.c_str(), static_cast<uint32_t>(response.length()));
                     uint32_t marker = data.ForwardFind('\n');
                     uint32_t markerEnd = data.ForwardFind('\n', marker + 1);
 
@@ -1313,7 +1313,7 @@ namespace WPASupplicant {
             if (Core::File(remoteName).Exists() == true) {
 
                 string data(
-                    Core::Directory::Normalize(supplicantBase) + _T("wpa_ctrl_") + interfaceName + '_' + Core::NumberType<uint32_t>(::getpid()).Text());
+                    Core::Directory::Normalize(supplicantBase) + _T("wpa_ctrl_") + interfaceName + '_' + Core::NumberType<uint32_t>(Core::ProcessInfo().Id()).Text());
 
                 LocalNode(Core::NodeId(data.c_str()));
 
@@ -1690,7 +1690,7 @@ namespace WPASupplicant {
                 if ((exchange.Wait(MaxConnectionTime) == true) && (exchange.Response() != _T("FAIL"))) {
 
                     const string& idtext = exchange.Response();
-                    id = Core::NumberType<uint32_t>(idtext.c_str(), idtext.length());
+                    id = Core::NumberType<uint32_t>(idtext.c_str(), static_cast<uint32_t>(idtext.length()));
                 }
 
                 Revoke(&exchange);
@@ -1807,7 +1807,7 @@ namespace WPASupplicant {
                 _adminLock.Unlock();
 
                 if (GetKey(id, Config::MODE, value) == Core::ERROR_NONE) {
-                    uint32_t mode(Core::NumberType<uint32_t>(Core::TextFragment(value.c_str(), value.length())));
+                    uint32_t mode(Core::NumberType<uint32_t>(Core::TextFragment(value.c_str(), static_cast<uint32_t>(value.length()))));
 
                     // Its an access point, we are done. BSSID == 0
                     AP = (mode == 2);
@@ -2230,8 +2230,8 @@ namespace WPASupplicant {
         void Update(const uint64_t& bssid, const uint32_t id, const uint32_t throughput);
         void Update(const string& ssid, const uint32_t id, const bool succeeded);
         void Reevaluate();
-        virtual uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
-        virtual uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
 
         void Revoke(const Request* id) const
         {
