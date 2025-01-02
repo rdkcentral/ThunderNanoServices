@@ -39,7 +39,7 @@ namespace Compositor {
 
             int Descriptor() const override
             {
-                return reinterpret_cast<int>(_source.data.data());
+                return (-1);
             }
 
             uint32_t Stride() const override

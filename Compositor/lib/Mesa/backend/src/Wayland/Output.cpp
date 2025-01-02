@@ -85,7 +85,8 @@ namespace Compositor {
         {
             TRACE_GLOBAL(Trace::Backend, ("Bye bye, cruel world! <(x_X)>"));
             WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
-            implementation->Release();
+            // Maybe we want to delete ?
+            // implementation->Release();
         }
 
         const struct xdg_toplevel_listener WaylandOutput::toplevelListener = {
@@ -161,7 +162,7 @@ namespace Compositor {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
             _backend.Format(format, _format, _modifier);
-            TRACE(Trace::Backend, ("Picked DMA format: %s modifier: 0x%" PRIX64, DRM::FormatString(_format), _modifier));
+            TRACE(Trace::Backend, ("Picked DMA format: %s modifier: 0x%" PRIX64, DRM::FormatToString(_format), _modifier));
 
             ASSERT(_format != DRM_FORMAT_INVALID);
             ASSERT(_modifier != DRM_FORMAT_MOD_INVALID);
@@ -233,19 +234,16 @@ namespace Compositor {
             }
         }
 
-        uint32_t WaylandOutput::Identifier() const
-        {
-            return (_buffer.IsValid() == true) ? _buffer->Identifier() : 0;
-        }
-
         Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
         {
             return (_buffer.IsValid() == true) ? _buffer->Acquire(timeoutMs) : nullptr;
         }
 
-        uint32_t WaylandOutput::Relinquish()
+        void WaylandOutput::Relinquish()
         {
-            return (_buffer.IsValid() == true) ? _buffer->Relinquish() : false;
+            if (_buffer.IsValid() == true) {
+                _buffer->Relinquish();
+            }
         }
 
         uint32_t WaylandOutput::Width() const
@@ -272,8 +270,10 @@ namespace Compositor {
         {
             return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::ICompositionBuffer::DataType::TYPE_INVALID;
         }
-        void WaylandOutput::Commit()
+        uint32_t WaylandOutput::Commit()
         {
+            uint32_t result = Core::ERROR_UNAVAILABLE;
+
             if ((_surface != nullptr) && (_buffer.IsValid() == true)) {
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
 
@@ -293,14 +293,18 @@ namespace Compositor {
                 // } else {
                 //     PresentationFeedback(NextSequence());
                 // }
+                result = Core::ERROR_NONE;
             }
 
             _backend.Flush();
+
+            return (result);
         }
 
-        const string& Node() const override
+        const string& WaylandOutput::Node() const /* override */
         {
-            return "TODO";
+            static string result("TODO");
+            return result;
         }
 
         void WaylandOutput::CreateBuffer()

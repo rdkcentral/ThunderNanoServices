@@ -26,6 +26,7 @@
 #include <DRM.h>
 
 #include "IOutput.h"
+#include "IBackend.h"
 
 #include <wayland-client.h>
 #include "generated/presentation-time-client-protocol.h"
@@ -80,10 +81,8 @@ namespace Compositor {
 
             virtual ~WaylandOutput();
 
-            uint32_t Identifier() const override;
-
             Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
-            uint32_t Relinquish() override;
+            void Relinquish() override;
 
             uint32_t Width() const override;
             uint32_t Height() const override;
@@ -91,8 +90,8 @@ namespace Compositor {
             uint64_t Modifier() const override;
             Exchange::ICompositionBuffer::DataType Type() const override;
 
-            void Commit() override;
-            void const string& Node() const override;
+            uint32_t Commit() override;
+            const string& Node() const override;
 
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
