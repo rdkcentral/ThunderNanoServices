@@ -183,11 +183,11 @@ namespace Thunder {
                     const uint32_t crtcId(connector.CrtController().Id());
                     const uint32_t planeId(connector.Plane().Id());
 
-                    TRACE(Trace::Backend, ("Commit for connector: %d , CRTC: %d, Plane: %d", connectorId, crtcId, planeId));
+                    TRACE(Trace::Backend, ("Commit for connector: %d, CRTC: %d, Plane: %d, Framebuffer: %d", connectorId, crtcId, planeId, connector.FrameBufferId()));
 
                     _request.Property(connectorId, connector.Properties().Id(DRM::property::CrtcId), connector.IsEnabled() ? crtcId : 0);
 
-                    if ((connector.IsEnabled()) && (ModeSet() == true)) {
+                    if ((connector.IsEnabled()) && (_modeSet == true)) {
                         const drmModeModeInfo* mode = connector.CrtController();
                         _request.Blob(crtcId, connector.CrtController().Id(DRM::property::ModeId), reinterpret_cast<const void*>(mode), sizeof(drmModeModeInfo));
                         Flags(Flags() | DRM_MODE_ATOMIC_ALLOW_MODESET);
@@ -196,7 +196,6 @@ namespace Thunder {
                     _request.Property(crtcId, connector.CrtController().Id(DRM::property::Active), connector.IsEnabled() ? 1 : 0);
 
                     if (connector.IsEnabled() == true) {
-
                         constexpr uint32_t x = 0;
                         constexpr uint32_t y = 0;
                         const uint32_t width(connector.Width());
