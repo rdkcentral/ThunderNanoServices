@@ -32,192 +32,29 @@ namespace Exchange {
 
 namespace Compositor {  
     namespace DRM {
+
+        using Identifier = uint32_t;
+        static constexpr uint32_t InvalidIdentifier = ~0;
+
         extern void GetNodes(const uint32_t type, std::vector<std::string>& list);
+        extern Identifier FindConnectorId(const int fd, const std::string& connectorName);
         extern bool HasCapability(const int cardFd, const uint64_t option);
+
         /*
          * Re-open the DRM node to avoid GEM handle ref'counting issues.
          * See: https://gitlab.freedesktop.org/mesa/drm/-/merge_requests/110
          *
          */
-        extern int ReopenNode(int fd, bool openRenderNode);
+        extern int ReopenNode(const int fd, const bool openRenderNode);
         extern uint32_t CreateFrameBuffer(const int cardFd, Exchange::ICompositionBuffer* buffer);
         extern void DestroyFrameBuffer(const int cardFd, const uint32_t frameBufferId);
         extern bool HasNode(const drmDevice* device, const char* deviceName);
         extern int OpenGPU(const std::string& gpuNode);
         extern std::string GetNode(const uint32_t type, drmDevice* device);
-
-/* simple stringification operator to make errorcodes human readable */
-#define CASE_TO_STRING(value) \
-    case value:               \
-        return #value;
-
-        static inline const char* FormatString(uint32_t format)
-        {
-            switch (format) {
-                CASE_TO_STRING(DRM_FORMAT_INVALID)
-                CASE_TO_STRING(DRM_FORMAT_C8)
-                CASE_TO_STRING(DRM_FORMAT_R8)
-                CASE_TO_STRING(DRM_FORMAT_R16)
-                CASE_TO_STRING(DRM_FORMAT_RG88)
-                CASE_TO_STRING(DRM_FORMAT_GR88)
-                CASE_TO_STRING(DRM_FORMAT_RG1616)
-                CASE_TO_STRING(DRM_FORMAT_GR1616)
-                CASE_TO_STRING(DRM_FORMAT_RGB332)
-                CASE_TO_STRING(DRM_FORMAT_BGR233)
-                CASE_TO_STRING(DRM_FORMAT_XRGB4444)
-                CASE_TO_STRING(DRM_FORMAT_XBGR4444)
-                CASE_TO_STRING(DRM_FORMAT_RGBX4444)
-                CASE_TO_STRING(DRM_FORMAT_BGRX4444)
-                CASE_TO_STRING(DRM_FORMAT_ARGB4444)
-                CASE_TO_STRING(DRM_FORMAT_ABGR4444)
-                CASE_TO_STRING(DRM_FORMAT_RGBA4444)
-                CASE_TO_STRING(DRM_FORMAT_BGRA4444)
-                CASE_TO_STRING(DRM_FORMAT_XRGB1555)
-                CASE_TO_STRING(DRM_FORMAT_XBGR1555)
-                CASE_TO_STRING(DRM_FORMAT_RGBX5551)
-                CASE_TO_STRING(DRM_FORMAT_BGRX5551)
-                CASE_TO_STRING(DRM_FORMAT_ARGB1555)
-                CASE_TO_STRING(DRM_FORMAT_ABGR1555)
-                CASE_TO_STRING(DRM_FORMAT_RGBA5551)
-                CASE_TO_STRING(DRM_FORMAT_BGRA5551)
-                CASE_TO_STRING(DRM_FORMAT_RGB565)
-                CASE_TO_STRING(DRM_FORMAT_BGR565)
-                CASE_TO_STRING(DRM_FORMAT_RGB888)
-                CASE_TO_STRING(DRM_FORMAT_BGR888)
-                CASE_TO_STRING(DRM_FORMAT_XRGB8888)
-                CASE_TO_STRING(DRM_FORMAT_XBGR8888)
-                CASE_TO_STRING(DRM_FORMAT_RGBX8888)
-                CASE_TO_STRING(DRM_FORMAT_BGRX8888)
-                CASE_TO_STRING(DRM_FORMAT_ARGB8888)
-                CASE_TO_STRING(DRM_FORMAT_ABGR8888)
-                CASE_TO_STRING(DRM_FORMAT_RGBA8888)
-                CASE_TO_STRING(DRM_FORMAT_BGRA8888)
-                CASE_TO_STRING(DRM_FORMAT_XRGB2101010)
-                CASE_TO_STRING(DRM_FORMAT_XBGR2101010)
-                CASE_TO_STRING(DRM_FORMAT_RGBX1010102)
-                CASE_TO_STRING(DRM_FORMAT_BGRX1010102)
-                CASE_TO_STRING(DRM_FORMAT_ARGB2101010)
-                CASE_TO_STRING(DRM_FORMAT_ABGR2101010)
-                CASE_TO_STRING(DRM_FORMAT_RGBA1010102)
-                CASE_TO_STRING(DRM_FORMAT_BGRA1010102)
-                CASE_TO_STRING(DRM_FORMAT_XRGB16161616)
-                CASE_TO_STRING(DRM_FORMAT_XBGR16161616)
-                CASE_TO_STRING(DRM_FORMAT_ARGB16161616)
-                CASE_TO_STRING(DRM_FORMAT_ABGR16161616)
-                CASE_TO_STRING(DRM_FORMAT_XRGB16161616F)
-                CASE_TO_STRING(DRM_FORMAT_XBGR16161616F)
-                CASE_TO_STRING(DRM_FORMAT_ARGB16161616F)
-                CASE_TO_STRING(DRM_FORMAT_ABGR16161616F)
-                CASE_TO_STRING(DRM_FORMAT_AXBXGXRX106106106106)
-                CASE_TO_STRING(DRM_FORMAT_YUYV)
-                CASE_TO_STRING(DRM_FORMAT_YVYU)
-                CASE_TO_STRING(DRM_FORMAT_UYVY)
-                CASE_TO_STRING(DRM_FORMAT_VYUY)
-                CASE_TO_STRING(DRM_FORMAT_AYUV)
-                CASE_TO_STRING(DRM_FORMAT_XYUV8888)
-                CASE_TO_STRING(DRM_FORMAT_VUY888)
-                CASE_TO_STRING(DRM_FORMAT_VUY101010)
-                CASE_TO_STRING(DRM_FORMAT_Y210)
-                CASE_TO_STRING(DRM_FORMAT_Y212)
-                CASE_TO_STRING(DRM_FORMAT_Y216)
-                CASE_TO_STRING(DRM_FORMAT_Y410)
-                CASE_TO_STRING(DRM_FORMAT_Y412)
-                CASE_TO_STRING(DRM_FORMAT_Y416)
-                CASE_TO_STRING(DRM_FORMAT_XVYU2101010)
-                CASE_TO_STRING(DRM_FORMAT_XVYU12_16161616)
-                CASE_TO_STRING(DRM_FORMAT_XVYU16161616)
-                CASE_TO_STRING(DRM_FORMAT_Y0L0)
-                CASE_TO_STRING(DRM_FORMAT_X0L0)
-                CASE_TO_STRING(DRM_FORMAT_Y0L2)
-                CASE_TO_STRING(DRM_FORMAT_X0L2)
-                CASE_TO_STRING(DRM_FORMAT_YUV420_8BIT)
-                CASE_TO_STRING(DRM_FORMAT_YUV420_10BIT)
-                CASE_TO_STRING(DRM_FORMAT_XRGB8888_A8)
-                CASE_TO_STRING(DRM_FORMAT_XBGR8888_A8)
-                CASE_TO_STRING(DRM_FORMAT_RGBX8888_A8)
-                CASE_TO_STRING(DRM_FORMAT_BGRX8888_A8)
-                CASE_TO_STRING(DRM_FORMAT_RGB888_A8)
-                CASE_TO_STRING(DRM_FORMAT_BGR888_A8)
-                CASE_TO_STRING(DRM_FORMAT_RGB565_A8)
-                CASE_TO_STRING(DRM_FORMAT_BGR565_A8)
-                CASE_TO_STRING(DRM_FORMAT_NV12)
-                CASE_TO_STRING(DRM_FORMAT_NV21)
-                CASE_TO_STRING(DRM_FORMAT_NV16)
-                CASE_TO_STRING(DRM_FORMAT_NV61)
-                CASE_TO_STRING(DRM_FORMAT_NV24)
-                CASE_TO_STRING(DRM_FORMAT_NV42)
-                CASE_TO_STRING(DRM_FORMAT_NV15)
-                CASE_TO_STRING(DRM_FORMAT_P210)
-                CASE_TO_STRING(DRM_FORMAT_P010)
-                CASE_TO_STRING(DRM_FORMAT_P012)
-                CASE_TO_STRING(DRM_FORMAT_P016)
-#ifdef DRM_FORMAT_P030
-                CASE_TO_STRING(DRM_FORMAT_P030)
-#endif
-                CASE_TO_STRING(DRM_FORMAT_Q410)
-                CASE_TO_STRING(DRM_FORMAT_Q401)
-                CASE_TO_STRING(DRM_FORMAT_YUV410)
-                CASE_TO_STRING(DRM_FORMAT_YVU410)
-                CASE_TO_STRING(DRM_FORMAT_YUV411)
-                CASE_TO_STRING(DRM_FORMAT_YVU411)
-                CASE_TO_STRING(DRM_FORMAT_YUV420)
-                CASE_TO_STRING(DRM_FORMAT_YVU420)
-                CASE_TO_STRING(DRM_FORMAT_YUV422)
-                CASE_TO_STRING(DRM_FORMAT_YVU422)
-                CASE_TO_STRING(DRM_FORMAT_YUV444)
-                CASE_TO_STRING(DRM_FORMAT_YVU444)
-
-            default:
-                return "Unknown Format";
-            }
-        }
-
-        static inline const char* ModifierVendorString(uint64_t modifier)
-        {
-            uint32_t vendor = (modifier & 0xff00000000000000ULL) << 56;
-
-            switch (vendor) {
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_NONE)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_INTEL)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_AMD)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_NVIDIA)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_SAMSUNG)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_QCOM)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_VIVANTE)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_BROADCOM)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_ARM)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_ALLWINNER)
-                CASE_TO_STRING(DRM_FORMAT_MOD_VENDOR_AMLOGIC)
-            default:
-                return "Unknown Vendor";
-            }
-        }
-#undef CASE_TO_STRING
-
-        static inline bool HasAlpha(uint32_t drmFormat)
-        {
-            return (
-                (drmFormat == DRM_FORMAT_ARGB4444)
-                || (drmFormat == DRM_FORMAT_ABGR4444)
-                || (drmFormat == DRM_FORMAT_RGBA4444)
-                || (drmFormat == DRM_FORMAT_BGRA4444)
-                || (drmFormat == DRM_FORMAT_ARGB1555)
-                || (drmFormat == DRM_FORMAT_ABGR1555)
-                || (drmFormat == DRM_FORMAT_RGBA5551)
-                || (drmFormat == DRM_FORMAT_BGRA5551)
-                || (drmFormat == DRM_FORMAT_ARGB8888)
-                || (drmFormat == DRM_FORMAT_ABGR8888)
-                || (drmFormat == DRM_FORMAT_RGBA8888)
-                || (drmFormat == DRM_FORMAT_BGRA8888)
-                || (drmFormat == DRM_FORMAT_ARGB2101010)
-                || (drmFormat == DRM_FORMAT_ABGR2101010)
-                || (drmFormat == DRM_FORMAT_RGBA1010102)
-                || (drmFormat == DRM_FORMAT_BGRA1010102)
-                || (drmFormat == DRM_FORMAT_ARGB16161616)
-                || (drmFormat == DRM_FORMAT_ABGR16161616)
-                || (drmFormat == DRM_FORMAT_ARGB16161616F)
-                || (drmFormat == DRM_FORMAT_ABGR16161616F));
-        }
+        extern std::string GetGPUNode(const std::string& connectorName);
+        extern bool HasAlpha(const uint32_t drmFormat);
+        extern const char* ModifierVendorString(const uint64_t modifier);
+        extern const char* FormatToString(const uint32_t format);
 
     } // namespace DRM
 } // namespace Compositor

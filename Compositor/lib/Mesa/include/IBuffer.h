@@ -24,6 +24,7 @@
 namespace Thunder {
 
 namespace Compositor {
+
     /**
      * @brief  Allocate a new buffer.
      *         When the caller is done with the buffer, they must release it.

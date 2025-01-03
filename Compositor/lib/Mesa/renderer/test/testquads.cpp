@@ -30,6 +30,9 @@
 #include <string>
 #include <vector>
 
+#include <condition_variable>
+#include <mutex>
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
@@ -50,6 +53,34 @@ namespace Thunder {
 const Compositor::Color background = { 0.f, 0.f, 0.f, 1.0f };
 
 class RenderTest {
+    class Sink : public Compositor::IOutput::ICallback {
+    public:
+        Sink(const Sink&) = delete;
+        Sink& operator=(const Sink&) = delete;
+        Sink() = delete;
+
+        Sink(RenderTest& parent)
+            : _parent(parent)
+        {
+        }
+
+        virtual ~Sink() = default;
+
+        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+        {
+            _parent.HandleVSync(output, sequence, time);
+        }
+
+        // virtual void Display(const int fd, const std::string& node) override
+        // {
+        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
+        //     // _parent.HandleGPUNode(node);
+        // }
+
+    private:
+        RenderTest& _parent;
+    };
+
 public:
     RenderTest() = delete;
     RenderTest(const RenderTest&) = delete;
@@ -64,12 +95,18 @@ public:
         , _running(false)
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
+        , _sink(*this)
+        , _rendering()
+        , _vsync()
+        , _ppts(Core::Time::Now().Ticks())
+        , _fps()
+        , _sequence(0)
 
     {
-        _connector = Compositor::IOutput::Instance(
+        _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
-            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }));
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }), &_sink);
 
         ASSERT(_connector.IsValid());
 
@@ -104,9 +141,11 @@ public:
         TRACE(Trace::Information, ("Stopping RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
         if (_running) {
             _running = false;
+
+            _vsync.notify_all();
+
             _render.join();
         }
     }
@@ -142,7 +181,7 @@ private:
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        _renderer->Bind(_connector);
+        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
@@ -151,7 +190,7 @@ private:
 
         for (int y = -squareSize; y < height; y += squareSize) {
             for (int x = -squareSize; x < width; x += squareSize) {
-                const Compositor::Box box = { x, y, squareSize, squareSize };
+                const Exchange::IComposition::Rectangle box = { x, y, squareSize, squareSize };
 
                 float R = (float(width) - float(x)) / (float(width) - float(-squareSize));
                 float G = (float(x) - float(-squareSize)) / (float(width) - float(-squareSize));
@@ -168,25 +207,53 @@ private:
 
         _renderer->End();
 
-        _connector->Render();
+        _connector->Commit();
 
+        WaitForVSync(100);
+        
         _renderer->Unbind();
 
         rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
+private:
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    {
+        _fps = 1 / ((pts - _ppts) / 1000000.0f);
+        _sequence = sequence;
+        _ppts = pts;
+        _vsync.notify_all();
+    }
+
+    void WaitForVSync(uint32_t timeoutMs)
+    {
+        std::unique_lock<std::mutex> lock(_rendering);
+
+        if (timeoutMs == Core::infinite) {
+            _vsync.wait(lock);
+        } else {
+            _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
+        }
+        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
+    }
 
 private:
     mutable Core::CriticalSection _adminLock;
     Core::ProxyType<Compositor::IRenderer> _renderer;
-    Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IOutput> _connector;
     uint8_t _previousIndex;
     const std::chrono::microseconds _period;
     const float _rotations;
     bool _running;
     std::thread _render;
     int _renderFd;
+    Sink _sink;
+    std::mutex _rendering;
+    std::condition_variable _vsync;
+    uint64_t _ppts;
+    float _fps;
+    uint32_t _sequence;
 }; // RenderTest
 class ConsoleOptions : public Core::Options {
 public:

@@ -167,21 +167,13 @@ int main(int /*argc*/, const char* argv[])
         assert(buffer->Height() == 1080);
         assert(buffer->Format() == format.Type());
 
-        Exchange::ICompositionBuffer::IIterator* index = buffer->Planes(Compositor::DefaultTimeoutMs);
+        Exchange::ICompositionBuffer::IIterator* index = buffer->Acquire(Compositor::DefaultTimeoutMs);
         assert(index != nullptr);
 
-        Exchange::ICompositionBuffer::IPlane* first_plane = nullptr;
+        while (index->Next() == true) {
 
-        while ((index->Next() == true) && (index->IsValid() == true)) {
-            Exchange::ICompositionBuffer::IPlane* plane = index->Plane();
-            assert(plane != nullptr);
-
-            if (first_plane == nullptr) {
-                first_plane = plane;
-            }
-
-            VARIABLE_IS_NOT_USED const uint32_t offset(plane->Offset());
-            VARIABLE_IS_NOT_USED const uint32_t stride(plane->Stride());
+            VARIABLE_IS_NOT_USED const uint32_t offset(index->Offset());
+            VARIABLE_IS_NOT_USED const uint32_t stride(index->Stride());
 
             // assert(plane->Accessor() >= 0);
             assert(offset == 0);
@@ -190,8 +182,6 @@ int main(int /*argc*/, const char* argv[])
 
         index->Reset();
         index->Next();
-
-        assert(first_plane == index->Plane());
 
         buffer.Release();
     }

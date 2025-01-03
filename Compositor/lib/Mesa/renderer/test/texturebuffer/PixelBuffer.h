@@ -9,50 +9,12 @@ namespace Compositor {
     class PixelBuffer : public Exchange::ICompositionBuffer {
 
         using Pixel = std::array<uint8_t, 4>;
-
-        class Pixels : public Exchange::ICompositionBuffer::IPlane {
-        public:
-            Pixels(const Texture::PixelData& source)
-                : _source(source)
-            {
-            }
-
-            virtual ~Pixels() = default;
-
-            Exchange::ICompositionBuffer::buffer_id Accessor() const override
-            {
-                return reinterpret_cast<Exchange::ICompositionBuffer::buffer_id>(_source.data.data());
-            }
-
-            uint32_t Stride() const override
-            {
-                return _source.width * _source.bytes_per_pixel;
-            }
-
-            uint32_t Offset() const override
-            {
-                return 0;
-            }
-
-            uint32_t Width() const 
-            {
-                return _source.width;
-            }
-
-            uint32_t Height() const 
-            {
-                return _source.height;
-            }
-
-        private:
-            const Texture::PixelData& _source;
-        };
-        
         class Iterator : public Exchange::ICompositionBuffer::IIterator {
         public:
-            Iterator(PixelBuffer& parent)
+            Iterator(PixelBuffer& parent, const Texture::PixelData& source)
                 : _parent(parent)
                 , _index(0)
+                , _source(source)
             {
             }
 
@@ -75,22 +37,33 @@ namespace Compositor {
                 return (IsValid());
             }
 
-            Exchange::ICompositionBuffer::IPlane* Plane() override
+            int Descriptor() const override
             {
-                return &_parent.GetPixels();
+                return (-1);
+            }
+
+            uint32_t Stride() const override
+            {
+                return _source.width * _source.bytes_per_pixel;
+            }
+
+            uint32_t Offset() const override
+            {
+                return 0;
             }
 
         private:
             PixelBuffer& _parent;
             uint8_t _index;
+            const Texture::PixelData& _source;
         };
 
     public:
         PixelBuffer() = delete;
 
         PixelBuffer(const Texture::PixelData& source)
-            : _pixels(source)
-            , _planes(*this)
+            : _source(source)
+            , _planes(*this, source)
         {
         }
 
@@ -99,33 +72,42 @@ namespace Compositor {
 
         virtual ~PixelBuffer() = default;
 
-        uint32_t AddRef() const override;
+        Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t /* timeoutMs */) override
+        {
+            return &_planes;
+        }
 
-        uint32_t Release() const override;
+        void Relinquish() override
+        {
+        }
 
-        uint32_t Identifier() const override;
+        uint32_t Width() const override
+        {
+            return _source.width;
+        }
 
-        Exchange::ICompositionBuffer::IIterator* Planes(const uint32_t timeoutMs) override;
+        uint32_t Height() const override
+        {
+            return _source.height;
+        }
 
-        uint32_t Completed(const bool dirty) override;
+        uint32_t Format() const override
+        {
+            return DRM_FORMAT_ABGR8888;
+        }
 
-        void Render() override;
+        uint64_t Modifier() const override
+        {
+            return DRM_FORMAT_MOD_LINEAR;
+        }
 
-        uint32_t Width() const override;
-
-        uint32_t Height() const override;
-
-        uint32_t Format() const override;
-
-        uint64_t Modifier() const override;
-
-        Exchange::ICompositionBuffer::DataType Type() const override;
-
-    protected:
-        Pixels& GetPixels();
+        Exchange::ICompositionBuffer::DataType Type() const override
+        {
+            return Exchange::ICompositionBuffer::TYPE_RAW;
+        }
 
     private:
-        Pixels _pixels;
+        const Texture::PixelData& _source;
         Iterator _planes;
     }; // class PixelBuffer
 } // namespace Thunder

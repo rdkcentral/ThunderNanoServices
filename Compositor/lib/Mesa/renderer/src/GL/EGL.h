@@ -41,18 +41,13 @@ namespace Compositor {
         class EGL {
         public:
             EGL() = delete;
-            EGL(EGL const&) = delete;
-            EGL& operator=(EGL const&) = delete;
+            EGL(EGL&&) = delete;
+            EGL(const EGL&) = delete;
+            EGL& operator=(EGL&&) = delete;
+            EGL& operator=(const EGL&) = delete;
 
             EGL(const int drmFd);
             ~EGL();
-
-        private:
-            EGLDeviceEXT FindEGLDevice(const int drmFd);
-            uint32_t Initialize(EGLenum platform, void* remote_display, bool isMaster);
-            void GetPixelFormats(std::vector<PixelFormat>& formats) const;
-            void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals) const;
-            bool IsExternOnly(const uint32_t format, const uint64_t modifier) const;
 
         public:
             inline EGLDisplay Display() const
@@ -110,6 +105,13 @@ namespace Compositor {
                 EGLSurface _drawSurface;
                 EGLSurface _readSurface;
             };
+
+        private:
+            EGLDeviceEXT FindEGLDevice(const int drmFd);
+            uint32_t Initialize(EGLenum platform, void* remote_display, bool isMaster);
+            void GetPixelFormats(std::vector<PixelFormat>& formats) const;
+            void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals) const;
+            bool IsExternOnly(const uint32_t format, const uint64_t modifier) const;
 
         private:
             API::EGL _api;

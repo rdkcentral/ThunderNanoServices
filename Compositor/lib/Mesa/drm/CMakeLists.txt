@@ -21,7 +21,7 @@ find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 
 find_package(libdrm REQUIRED)
 
-add_library(CommonDRM STATIC DRM.cpp)
+add_library(CommonDRM STATIC DRM.cpp DRMTypes.cpp)
 
 target_compile_options(CommonDRM PUBLIC -Wno-psabi)
 

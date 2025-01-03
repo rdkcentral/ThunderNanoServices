@@ -30,6 +30,9 @@
 #include <string>
 #include <vector>
 
+#include <condition_variable>
+#include <mutex>
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
@@ -44,20 +47,46 @@
 
 #include <PixelBuffer.h>
 
+#include "../../src/GL/Format.h"
+
+#include <core/core.h>
+#include <localtracer/localtracer.h>
+#include <messaging/messaging.h>
+
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace Thunder {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
-static Compositor::PixelBuffer textureRed(Texture::Red);
-static Compositor::PixelBuffer textureGreen(Texture::Green);
-static Compositor::PixelBuffer textureBlue(Texture::Blue);
+static Core::ProxyType<Compositor::PixelBuffer> textureRed(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Red));
+static Core::ProxyType<Compositor::PixelBuffer> textureGreen(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Green));
+static Core::ProxyType<Compositor::PixelBuffer> textureBlue(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Blue));
 
-static Compositor::PixelBuffer textureSimple(Texture::Simple);
+static Core::ProxyType<Compositor::PixelBuffer> textureSimple(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Simple));
 
-static Compositor::PixelBuffer textureTv(Texture::TvTexture);
+static Core::ProxyType<Compositor::PixelBuffer> textureTv(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::TvTexture));
 
 class RenderTest {
+    class Sink : public Compositor::IOutput::ICallback {
+    public:
+        Sink(const Sink&) = delete;
+        Sink& operator=(const Sink&) = delete;
+        Sink() = delete;
+
+        Sink(RenderTest& parent)
+            : _parent(parent)
+        {
+        }
+
+        virtual ~Sink() = default;
+
+        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+        {
+            _parent.HandleVSync(output, sequence, time);
+        }
+    private:
+        RenderTest& _parent;
+    };
 public:
     RenderTest() = delete;
     RenderTest(const RenderTest&) = delete;
@@ -68,23 +97,31 @@ public:
         , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _connector()
         , _renderer()
-        , _texture(nullptr)
+        , _texture()
         , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
         , _rotations(rotationsPerSecond)
         , _running(false)
         , _render()
         , _renderFd(::open(renderId.c_str(), O_RDWR))
+        , _renderStart(std::chrono::high_resolution_clock::now())
+        , _sink(*this)
+        , _rendering()
+        , _vsync()
+        , _ppts(Core::Time::Now().Ticks())
+        , _fps()
+        , _sequence(0)
     {
-        _connector = Compositor::IOutput::Instance(
+        _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
-            _format);
+            _format,
+            &_sink);
 
         ASSERT(_connector.IsValid());
 
         _renderer = Compositor::IRenderer::Instance(_renderFd);
 
-        _texture = _renderer->Texture(&textureTv);
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
 
         ASSERT(_renderer.IsValid());
 
@@ -104,6 +141,8 @@ public:
     void Start()
     {
         TRACE(Trace::Information, ("Starting RenderTest"));
+
+        _renderStart = std::chrono::high_resolution_clock::now();
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
@@ -144,7 +183,8 @@ private:
 
         const auto start = std::chrono::high_resolution_clock::now();
 
-        const float runtime = std::chrono::duration<float>(start.time_since_epoch()).count();
+        //const float runtime = std::chrono::duration<float>(start.time_since_epoch()).count();
+        const float runtime = std::chrono::duration<float>(start - _renderStart).count();
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
@@ -156,22 +196,24 @@ private:
         const uint16_t renderWidth(512);
         const uint16_t renderHeight(512);
 
-        _renderer->Bind(_connector);
+        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
-        const Compositor::Box renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
+        const Exchange::IComposition::Rectangle renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
         Compositor::Matrix matrix;
 
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
-        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
+        const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
 
-        _connector->Render();
+        _connector->Commit();
+
+        WaitForVSync(100);
 
         _renderer->Unbind();
 
@@ -181,16 +223,44 @@ private:
     }
 
 private:
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    {
+        _fps = 1 / ((pts - _ppts) / 1000000.0f);
+        _sequence = sequence;
+        _ppts = pts;
+        _vsync.notify_all();
+    }
+
+    void WaitForVSync(uint32_t timeoutMs)
+    {
+        std::unique_lock<std::mutex> lock(_rendering);
+
+        if (timeoutMs == Core::infinite) {
+            _vsync.wait(lock);
+        } else {
+            _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
+        }
+        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
+    }
+
+private:
     mutable Core::CriticalSection _adminLock;
     const Compositor::PixelFormat _format;
-    Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IOutput> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
-    Compositor::IRenderer::ITexture* _texture;
+    Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
     const std::chrono::microseconds _period;
     const uint8_t _rotations;
     bool _running;
     std::thread _render;
     int _renderFd;
+    std::chrono::time_point<std::chrono::high_resolution_clock> _renderStart;
+    Sink _sink;
+    std::mutex _rendering;
+    std::condition_variable _vsync;
+    uint64_t _ppts;
+    float _fps;
+    uint32_t _sequence;
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {

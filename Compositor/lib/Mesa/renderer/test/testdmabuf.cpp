@@ -51,7 +51,7 @@ const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
 private:
-    class Sink : public Compositor::IOutput::IFeedback {
+    class Sink : public Compositor::IOutput::ICallback {
     public:
         Sink(const Sink&) = delete;
         Sink& operator=(const Sink&) = delete;
@@ -64,16 +64,16 @@ private:
 
         virtual ~Sink() = default;
 
-        virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint32_t sequence, const uint64_t time) override
+        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
         {
-            _parent.HandleVSync(id, sequence, time);
+            _parent.HandleVSync(output, sequence, time);
         }
 
-        virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
-        {
-            TRACE(Trace::Information, (_T("Connector id %d opened on %s"), id, node.c_str()));
-            // _parent.HandleGPUNode(node);
-        }
+        // virtual void Display(const int fd, const std::string& node) override
+        // {
+        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
+        //     // _parent.HandleGPUNode(node);
+        // }
 
     private:
         RenderTest& _parent;
@@ -90,7 +90,7 @@ public:
         , _connector()
         , _renderer()
         , _textureBuffer()
-        , _texture(nullptr)
+        , _texture()
         , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / FPS))
         , _radPerFrame(((RPM / 60.0f) * (2.0f * M_PI)) / float(FPS))
         , _running(false)
@@ -104,7 +104,7 @@ public:
         , _fps()
         , _sequence(0)
     {
-        _connector = Compositor::IOutput::Instance(
+        _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
             _format, &_sink);
@@ -119,7 +119,7 @@ public:
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
-        _texture = _renderer->Texture(_textureBuffer.operator->());
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
@@ -194,27 +194,31 @@ private:
         const uint16_t renderWidth(720);
         const uint16_t renderHeight(720);
 
-        int x = (renderWidth / 2) * cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
-        int y = (renderHeight / 2) * sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        const float cosX = cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        const float sinY = sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
 
-        _renderer->Bind(_connector);
+        float x = float(renderWidth / 2.0f) * cosX;
+        float y = float(renderHeight / 2.0f) * sinY;
+
+        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
-        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)) + x, ((height / 2) - (renderHeight / 2)) + y, renderWidth, renderHeight };
-        Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
+        const Exchange::IComposition::Rectangle renderBox = { static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), renderWidth, renderHeight };
 
-        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
+        Compositor::Matrix matrix;
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
+
+        const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
 
-        _connector->Render();
+        _connector->Commit();
 
-        WaitForVSync(Core::infinite);
+        WaitForVSync(100);
 
         _renderer->Unbind();
 
@@ -223,7 +227,7 @@ private:
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
-    void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
     {
         _fps = 1 / ((pts - _ppts) / 1000000.0f);
         _sequence = sequence;
@@ -246,10 +250,10 @@ private:
 private:
     mutable Core::CriticalSection _adminLock;
     const Compositor::PixelFormat _format;
-    Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IOutput> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
-    Compositor::IRenderer::ITexture* _texture;
+    Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
     const std::chrono::microseconds _period;
     const float _radPerFrame;
     bool _running;

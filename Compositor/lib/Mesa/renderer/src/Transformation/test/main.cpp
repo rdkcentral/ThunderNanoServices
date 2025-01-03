@@ -149,7 +149,7 @@ int main(int /*argc*/, const char* argv[])
     /* ############################################################## */
 
     Compositor::Matrix test5;
-    Compositor::Box box1 = { 20, 20, 100, 50 };
+    Exchange::IComposition::Rectangle box1 = { 20, 20, 100, 50 };
     Compositor::Transformation::ProjectBox(test5, box1, Compositor::Transformation::TRANSFORM_90, -0.383972, test4);
     printMatrix(test5);
 

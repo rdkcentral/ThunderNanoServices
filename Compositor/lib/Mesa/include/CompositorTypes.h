@@ -21,6 +21,7 @@
 
 #include <core/core.h>
 #include <messaging/messaging.h>
+#include <compositorbuffer/CompositorBufferType.h>
 #include <array>
 
 #include <interfaces/IComposition.h>
@@ -29,13 +30,6 @@
 namespace Thunder {
 
 namespace Compositor {
-
-struct Box {
-    int x;
-    int y;
-    int width;
-    int height;
-};
 
 namespace Rectangle {
     constexpr Exchange::IComposition::Rectangle Default()
@@ -67,7 +61,7 @@ constexpr uint32_t DefaultTimeoutMs = 100;
  *
  */
 
-using FormatRegister = std::map<uint32_t, std::vector<uint64_t>>;
+// using FormatRegister = std::map<uint32_t, std::vector<uint64_t>>;
 
 class PixelFormat {
 private:
@@ -83,37 +77,46 @@ public:
 
     PixelFormat() = delete;
 
-    PixelFormat(const PixelFormat& copy){
-        _fourcc = copy._fourcc;
-        _modifiers = copy._modifiers;
-    };
+    PixelFormat(const uint32_t fourcc, const uint16_t nModifiers, const uint64_t modifiers[])
+        : _fourcc(fourcc)
+        , _modifiers(modifiers, modifiers + nModifiers) {
+    }
+    PixelFormat(const uint32_t fourcc, std::vector<uint64_t>&& modifiers)
+        : _fourcc(fourcc)
+        , _modifiers(std::move(modifiers)) {
+    }
+    PixelFormat(const uint32_t fourcc, const std::vector<uint64_t>& modifiers)
+        : _fourcc(fourcc)
+        , _modifiers(modifiers) {
+    }
+    PixelFormat(const uint32_t fourcc)
+        : _fourcc(fourcc)
+        , _modifiers(1, DefaultModifier)
+    {
+    }
+    PixelFormat(PixelFormat&& move)
+        : _fourcc(std::move(move._fourcc))
+        , _modifiers(std::move(move._modifiers)) {
+    }
+    PixelFormat(const PixelFormat& copy)
+        : _fourcc(copy._fourcc)
+        , _modifiers(copy._modifiers) {
+    }
+    ~PixelFormat() = default;
 
+    PixelFormat& operator=(PixelFormat&& rhs) {
+        _fourcc = std::move(rhs._fourcc);
+        _modifiers = std::move(rhs._modifiers);
+        return *this;
+    }
     PixelFormat& operator=(const PixelFormat& rhs) {
         _fourcc = rhs._fourcc;
         _modifiers = rhs._modifiers;
         return *this;
     }
 
-    PixelFormat(const uint32_t fourcc, const uint16_t nModifiers, const uint64_t modifiers[])
-        : _fourcc(fourcc)
-        , _modifiers(modifiers, modifiers + nModifiers)
-    {
-    }
-
-    PixelFormat(const uint32_t fourcc, const std::vector<uint64_t>& modifiers)
-        : _fourcc(fourcc)
-        , _modifiers(modifiers)
-    {
-    }
-
-    PixelFormat(const uint32_t fourcc)
-        : _fourcc(fourcc)
-        , _modifiers(1, DefaultModifier)
-    {
-    }
-
-    const uint32_t& Type() const
-    {
+public:
+    uint32_t Type() const {
         return _fourcc;
     }
 
