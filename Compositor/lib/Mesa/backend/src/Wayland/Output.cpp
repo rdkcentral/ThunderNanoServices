@@ -151,8 +151,7 @@ namespace Compositor {
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
             , _topLevelSurface(nullptr)
-            , _height(0)
-            , _width(0)
+            , _rectangle(rectangle)
             , _format()
             , _modifier()
             , _buffer()
@@ -168,11 +167,8 @@ namespace Compositor {
             ASSERT(_modifier != DRM_FORMAT_MOD_INVALID);
 
             if (Compositor::Rectangle::IsDefault(rectangle)) {
-                _width = 1280;
-                _height = 720;
-            } else {
-                _width = rectangle.width;
-                _height = rectangle.height;
+                _rectangle.width = 1280;
+                _rectangle.height = 720;
             }
 
             _surface = _backend.Surface();
@@ -311,7 +307,7 @@ namespace Compositor {
         {
             if (_buffer.IsValid() == false) {
                 ASSERT(_backend.RenderNode() > 0);
-                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
+                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _rectangle.width, _rectangle.height, Compositor::PixelFormat(_format, { _modifier }));
             }
         }
 

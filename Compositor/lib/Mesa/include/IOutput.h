@@ -53,6 +53,20 @@ namespace Compositor {
          * @return string  e.g. Wayland display name or DRM node.
          */
         virtual const string& Node() const = 0;
+
+        /**
+         * @brief  Get the X position of this output in the complete composition.
+         *
+         * @return X position in pixels
+         */
+        virtual int32_t X() const = 0;
+
+        /**
+         * @brief  Get the Y position of this output in the complete composition.
+         *
+         * @return int Y position in pixels.
+         */
+        virtual int32_t Y() const = 0;
     };
 
     /**

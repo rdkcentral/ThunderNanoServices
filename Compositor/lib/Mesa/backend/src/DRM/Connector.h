@@ -145,6 +145,8 @@ namespace Compositor {
 
             Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutput::ICallback* feedback)
                 : _backend(backend)
+                , _x(rectangle.x)
+                , _y(rectangle.y)
                 , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, connectorId)
                 , _crtc()
@@ -205,6 +207,16 @@ namespace Compositor {
             Exchange::ICompositionBuffer::DataType Type() const
             {
                 return (_frameBuffer.Type());
+            }
+
+            int32_t X() const override
+            {
+                return _x;
+            }
+
+            int32_t Y() const override
+            {
+                return _y;
             }
 
             /**
@@ -406,7 +418,8 @@ namespace Compositor {
 
         private:
             Core::ProxyType<Compositor::IBackend> _backend;
-
+            int32_t _x;
+            int32_t _y;
             const Compositor::PixelFormat _format;
             Compositor::DRM::Properties _connector;
             Compositor::DRM::CRTCProperties _crtc;

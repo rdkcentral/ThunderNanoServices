@@ -93,6 +93,16 @@ namespace Compositor {
             uint32_t Commit() override;
             const string& Node() const override;
 
+            int32_t X() const override
+            {
+                return _rectangle.x;
+            }
+
+            int32_t Y() const override
+            {
+                return _rectangle.y;
+            }
+
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
             static const struct xdg_surface_listener windowSurfaceListener;
@@ -124,8 +134,7 @@ namespace Compositor {
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;
             xdg_toplevel* _topLevelSurface;
-            uint32_t _height;
-            uint32_t _width;
+            Exchange::IComposition::Rectangle _rectangle;
             uint32_t _format;
             uint64_t _modifier;
             Compositor::Matrix _matrix;
