@@ -86,12 +86,12 @@ namespace Compositor {
                 IIterator* Acquire(const uint32_t timeoutMs)
                 {
                     _swap.Lock();
-                    return _buffer[_activePlane]->Acquire(timeoutMs);
+                    return _buffer[_activePlane ^ 1]->Acquire(timeoutMs);
                 }
                 void Relinquish()
                 {
                     _swap.Unlock();
-                    _buffer[_activePlane]->Relinquish();
+                    _buffer[_activePlane ^ 1]->Relinquish();
                 }
                 uint32_t Width() const
                 {
@@ -117,7 +117,7 @@ namespace Compositor {
                 {
                     return _frameId[_activePlane];
                 }
-                Core::ProxyType<Thunder::Exchange::ICompositionBuffer> Buffer() const
+                Core::ProxyType<Exchange::ICompositionBuffer> Buffer() const
                 {
                     return _buffer[_activePlane];
                 }
