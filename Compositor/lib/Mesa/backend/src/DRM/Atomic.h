@@ -164,7 +164,7 @@ namespace Thunder {
                 ~Transaction() = default;
 
             public:
-                bool ModeSet() {
+                bool ModeSet() const {
                     bool lastValue = _modeSet;
                     _modeSet = false;
                     return (lastValue);
@@ -231,7 +231,7 @@ namespace Thunder {
 
             private:
                 uint32_t _flags;
-                bool _modeSet;
+                mutable bool _modeSet;
                 Request _request;
                 void* _userData;
             };
