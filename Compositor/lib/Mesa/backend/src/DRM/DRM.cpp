@@ -86,11 +86,11 @@ namespace Compositor {
                         TRACE(Trace::Error, ("Could not set basic information. Error: [%s]", strerror(errno)));
                     }
 
-                    #ifdef USE_ATOMIC
+#ifdef USE_ATOMIC
                     if ((drmResult == 0) && ((drmResult = drmSetClientCap(_gpuFd, DRM_CLIENT_CAP_ATOMIC, 1)) != 0)) {
                         TRACE(Trace::Error, ("Could not enable atomic API. Error: [%s]", strerror(errno)));
                     }
-                    #endif
+#endif
 
                     if ((drmResult == 0) && ((drmResult = drmGetCap(_gpuFd, DRM_CAP_CRTC_IN_VBLANK_EVENT, &cap) < 0 || !cap))) {
                         TRACE(Trace::Error, ("Device does not support vblank per CRTC"));
@@ -164,7 +164,8 @@ namespace Compositor {
                     }
                 }
             }
-            uint32_t Commit(Compositor::DRM::Identifier connectorId VARIABLE_IS_NOT_USED) override {
+            uint32_t Commit(Compositor::DRM::Identifier connectorId VARIABLE_IS_NOT_USED) override
+            {
                 uint32_t result(Core::ERROR_GENERAL);
 
                 if (_flip.try_lock()) {
@@ -181,21 +182,20 @@ namespace Compositor {
                             connector->Swap();
                             if ((outcome = transaction.Add(*(connector.operator->()))) != Core::ERROR_NONE) {
                                 result = outcome;
-                            }
-                            else {
+                            } else {
                                 _pendingFlips++;
                                 added = true;
                             }
                         }
                     });
 
-                    doModeSet = transaction.ModeSet();
-
-                    if ( (result != Core::ERROR_NONE) || ((added == true) && (transaction.Commit() != Core::ERROR_NONE)) ) {
+                    if ((result != Core::ERROR_NONE) || ((added == true) && (transaction.Commit() != Core::ERROR_NONE))) {
                         _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
-                                connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
+                            connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
                         });
                     }
+
+                    doModeSet = transaction.ModeSet();
 
                     TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
                 } else {
@@ -267,7 +267,5 @@ namespace Compositor {
 
         return connector;
     }
-
-
 } // namespace Compositor
 } // Thunder
