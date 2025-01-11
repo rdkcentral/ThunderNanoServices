@@ -43,9 +43,9 @@ namespace Plugin {
     const Compositor::Color pink = { 1.0f, 0.411f, 0.705f, 1.0f };
     const Compositor::Color black = { 0.f, 0.f, 0.f, 1.0f };
 
-    class CompositorImplementation 
-        : public Exchange::IComposition
-        , public Exchange::IComposition::IDisplay {
+    class CompositorImplementation
+        : public Exchange::IComposition,
+          public Exchange::IComposition::IDisplay {
     private:
         static constexpr uint32_t DisplayId = 0;
 
@@ -215,10 +215,22 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
             {
+                Core::ResourceMonitor::Instance().Register(*this);
+                _parent.Announce(*this);
                 TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
             }
             ~Client() override
             {
+                if (_texture.IsValid()) {
+                    _texture.Release(); // make sure to delete the texture so we are skipped by the renderer.
+                }
+
+                _parent.Revoke(*this);
+
+                Core::ResourceMonitor::Instance().Unregister(*this);
+
+                _parent.Render(*this); // request a render to remove this surface from the composition.
+
                 TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
             }
 
@@ -284,6 +296,32 @@ namespace Plugin {
                 return _zIndex;
             }
 
+        public:
+            // Core::IReferenceCounted
+            uint32_t AddRef() const override
+            {
+                return Core::ERROR_COMPOSIT_OBJECT;
+            }
+
+            uint32_t Release() const override
+            {
+                return Core::ERROR_COMPOSIT_OBJECT;
+            }
+
+            void Pending(uint8_t outputIndex)
+            {
+                _pendingOutputs |= (1 << outputIndex);
+            }
+
+            void Completed(uint8_t outputIndex)
+            {
+                _pendingOutputs &= ~(1 << outputIndex);
+
+                if (_pendingOutputs == 0) {
+                    Published();
+                }
+            }
+
             BEGIN_INTERFACE_MAP(RemoteAccess)
             INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
@@ -296,6 +334,8 @@ namespace Plugin {
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
+            uint32_t _pendingOutputs;
+
             static uint32_t _sequence;
         }; // class Client
 
@@ -353,21 +393,24 @@ namespace Plugin {
             Output& operator=(const Output&) = delete;
 
             Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
-                : _sink(*this)
-                , _rectangle(rectangle)
-                , _buffer()
+                : _index(Core::InterlockedIncrement(_indexes))
+                , _sink(*this)
+                , _connector()
                 , _gpuNode()
-                , _rendering()
-                , _vsync()
                 , _pts(Core::Time::Now().Ticks())
+                , _rendering()
+                , _commit()
+                , _pendingClients()
+                , _renderingClients()
+
             {
-                _buffer = Compositor::CreateBuffer(name, _rectangle, format, &_sink);
+                _connector = Compositor::CreateBuffer(name, rectangle, format, &_sink);
                 TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
             }
 
             virtual ~Output()
             {
-                _buffer.Release();
+                _connector.Release();
             }
 
         private:
@@ -402,12 +445,16 @@ namespace Plugin {
 
             void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
             {
-                std::unique_lock<std::mutex> lock(_rendering);
-
                 float fps = 1 / ((pts - _pts) / 1000000.0f);
                 _pts = pts;
 
-                _vsync.notify_all();
+                for (Core::ProxyType<Client> client : _renderingClients) {
+                    client->Completed(_index);
+                }
+
+                _renderingClients.clear();
+
+                _commit.unlock();
 
                 TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
             }
@@ -420,23 +467,6 @@ namespace Plugin {
             }
 
         public:
-            uint32_t WaitForVSync(uint32_t timeoutMs)
-            {
-                uint32_t result(Core::ERROR_NONE);
-
-                std::unique_lock<std::mutex> lock(_rendering);
-
-                if (timeoutMs == Core::infinite) {
-                    _vsync.wait(lock);
-                } else {
-                    if (_vsync.wait_for(lock, std::chrono::seconds(10)) == std::cv_status::timeout) {
-                        result = Core::ERROR_TIMEDOUT;
-                    }
-                };
-
-                return result;
-            }
-
             const std::string& GpuNode() const
             {
                 return _gpuNode;
@@ -444,34 +474,61 @@ namespace Plugin {
 
             Exchange::IComposition::Rectangle Geometry() const
             {
-                return _rectangle;
+                return { _connector->X(), _connector->Y(), _connector->Width(), _connector->Height() };
             }
 
             bool IsIntersecting(const Exchange::IComposition::Rectangle& rectangle)
             {
                 return (
-                    std::min(_rectangle.x + static_cast<int32_t>(_rectangle.width), rectangle.x + static_cast<int32_t>(rectangle.width)) > std::max(_rectangle.x, rectangle.x) && // width > 0
-                    std::min(_rectangle.y + static_cast<int32_t>(_rectangle.height), rectangle.y + static_cast<int32_t>(rectangle.height)) > std::max(_rectangle.y, rectangle.y)); // height > 0
+                    std::min(_connector->X() + static_cast<int32_t>(_connector->Width()), rectangle.x + static_cast<int32_t>(rectangle.width)) > std::max(_connector->X(), rectangle.x) && // width > 0
+                    std::min(_connector->Y() + static_cast<int32_t>(_connector->Height()), rectangle.y + static_cast<int32_t>(rectangle.height)) > std::max(_connector->Y(), rectangle.y)); // height > 0
             }
 
             bool IsValid()
             {
-                return _buffer.IsValid();
+                return _connector.IsValid();
             }
 
-            Core::ProxyType<Exchange::ICompositionBuffer> Buffer()
+            Core::ProxyType<Compositor::IOutput> Buffer()
             {
-                return _buffer;
+                return _connector;
+            }
+
+            void Pending(Core::ProxyType<Client> client)
+            {
+                _rendering.Lock();
+                _pendingClients.emplace_back(client);
+                _rendering.Unlock();
+            }
+
+            void Commit()
+            {
+                _commit.lock();
+
+                _rendering.Lock();
+                _renderingClients = std::move(_pendingClients);
+                _rendering.Unlock();
+
+                for (Core::ProxyType<Client> client : _renderingClients) {
+                    client->Pending(_index);
+                }
+
+                _connector->Commit();
             }
 
         private:
+            const uint8_t _index;
             Sink _sink;
-            Exchange::IComposition::Rectangle _rectangle;
-            Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+            Core::ProxyType<Compositor::IOutput> _connector;
             std::string _gpuNode;
-            std::mutex _rendering;
-            std::condition_variable _vsync;
             uint64_t _pts;
+
+            Core::CriticalSection _rendering;
+            std::mutex _commit;
+            std::vector<Core::ProxyType<Client>> _pendingClients;
+            std::vector<Core::ProxyType<Client>> _renderingClients;
+
+            static uint32_t _indexes;
         };
 
         using Clients = Core::ProxyMapType<string, Client>;
@@ -693,7 +750,7 @@ namespace Plugin {
             _adminLock.Unlock();
 
             if (client.Texture().IsValid()) {
-                client.Texture(Core::ProxyType<Compositor::IRenderer::ITexture>());
+                client.Texture().Release();
             }
         }
 
@@ -739,13 +796,7 @@ namespace Plugin {
             uint8_t index = 1;
             for (auto& output : _outputs) {
                 if (output.IsIntersecting(client.Geometry())) {
-
-                    _present.Trigger();
-
-                    if (output.WaitForVSync(Compositor::DefaultTimeoutMs) == Core::ERROR_TIMEDOUT) {
-                        TRACE(Trace::Error, (_T("%s vsync timeout... "), client.Name().c_str()));
-                    }
-
+                    _present.Trigger(); // Only trigger a render loop if the client is actual visible on one of the outputs
                     break;
                 } else {
                     TRACE(Trace::Information, (_T("%s no intersection with output %d"), client.Name().c_str(), index));
@@ -786,9 +837,9 @@ namespace Plugin {
             _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
                 ASSERT(client.IsValid() == true);
 
-                client->Acquire(Compositor::DefaultTimeoutMs);
-
                 if (client->Texture() != nullptr) {
+                    client->Acquire(Compositor::DefaultTimeoutMs);
+
                     Exchange::IComposition::Rectangle rectangle = client->Geometry();
 
                     const Exchange::IComposition::Rectangle renderBox = { rectangle.x, rectangle.y, rectangle.width, rectangle.height };
@@ -801,11 +852,13 @@ namespace Plugin {
                     const float alpha = float(client->Opacity()) / float(Exchange::IComposition::maxOpacity);
 
                     _renderer->Render(client->Texture(), clientArea, clientProjection, alpha);
+
+                    client->Relinquish();
+
+                    client->Rendered();
                 } else {
                     TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), name.c_str()));
                 }
-
-                client->Relinquish();
             });
 
             _renderer->End(false);
@@ -821,11 +874,11 @@ namespace Plugin {
             for (Output& output : _outputs) {
                 ASSERT(_renderer.IsValid() == true);
 
-                Core::ProxyType<Exchange::ICompositionBuffer> buffer = output.Buffer();
+                Core::ProxyType<Compositor::IOutput> buffer = output.Buffer();
 
                 ASSERT(buffer.IsValid() == true);
 
-                _renderer->Bind(buffer);
+                _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(buffer));
                 _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
 
                 const Exchange::IComposition::Rectangle renderBox = { 0, 0, buffer->Width(), buffer->Height() };
@@ -845,9 +898,15 @@ namespace Plugin {
 
                 _renderer->End(false);
 
-                // TODO: This is,I guess, the only really needed Render, but lets implement
-                // it as a method that takes the right buffers?
-                // buffer->Render(); // Blit to screen
+                _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
+                    ASSERT(client.IsValid() == true);
+
+                    if (output.IsIntersecting(client->Geometry())) {
+                        output.Pending(client);
+                    }
+                });
+
+                output.Commit(); // Blit to screen
 
                 _renderer->Unbind();
             }
@@ -943,7 +1002,8 @@ namespace Plugin {
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
 
-    /* static */ uint32_t CompositorImplementation::Client::_sequence = 1;
+    uint32_t CompositorImplementation::Output::_indexes = 0;
+    uint32_t CompositorImplementation::Client::_sequence = 1;
 
 } // namespace Plugin
 } // namespace Thunder
