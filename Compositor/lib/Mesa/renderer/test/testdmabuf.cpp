@@ -91,7 +91,6 @@ public:
         , _renderer()
         , _textureBuffer()
         , _texture()
-        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / FPS))
         , _radPerFrame(((RPM / 60.0f) * (2.0f * M_PI)) / float(FPS))
         , _running(false)
         , _render()
@@ -171,18 +170,15 @@ private:
         _running = true;
 
         while (_running) {
-            const auto next = _period - NewFrame();
-            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
+            NewFrame();
         }
     }
 
-    std::chrono::microseconds NewFrame()
+    void NewFrame()
     {
         static float rotation = 0.f;
 
-        const auto start = std::chrono::high_resolution_clock::now();
-
-        const float runtime = std::chrono::duration<float>(start - _renderStart).count();
+        const float runtime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - _renderStart).count();
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
@@ -216,15 +212,18 @@ private:
 
         _renderer->End(false);
 
-        _connector->Commit();
+        uint32_t commit;
 
-        WaitForVSync(100);
+        if (commit = _connector->Commit() == Core::ERROR_NONE) {
+            WaitForVSync(100);
+        } else {
+            TRACE(Trace::Error, ("Commit failed: %d", commit));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit. 
+        }
 
         _renderer->Unbind();
 
         rotation += _radPerFrame;
-
-        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
     void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
@@ -254,7 +253,6 @@ private:
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
     Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
-    const std::chrono::microseconds _period;
     const float _radPerFrame;
     bool _running;
     std::thread _render;
