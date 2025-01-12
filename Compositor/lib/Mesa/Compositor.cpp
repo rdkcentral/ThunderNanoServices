@@ -898,7 +898,7 @@ namespace Plugin {
 
                 _renderer->End(false);
 
-                _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
+                _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
                     ASSERT(client.IsValid() == true);
 
                     if (output.IsIntersecting(client->Geometry())) {
