@@ -51,7 +51,7 @@ const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 class RenderTest {
 private:
-    class Sink : public Compositor::IOutput::IFeedback {
+    class Sink : public Compositor::IOutput::ICallback {
     public:
         Sink(const Sink&) = delete;
         Sink& operator=(const Sink&) = delete;
@@ -64,16 +64,16 @@ private:
 
         virtual ~Sink() = default;
 
-        virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint32_t sequence, const uint64_t time) override
+        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
         {
-            _parent.HandleVSync(id, sequence, time);
+            _parent.HandleVSync(output, sequence, time);
         }
 
-        virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
-        {
-            TRACE(Trace::Information, (_T("Connector id %d opened on %s"), id, node.c_str()));
-            // _parent.HandleGPUNode(node);
-        }
+        // virtual void Display(const int fd, const std::string& node) override
+        // {
+        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
+        //     // _parent.HandleGPUNode(node);
+        // }
 
     private:
         RenderTest& _parent;
@@ -90,8 +90,7 @@ public:
         , _connector()
         , _renderer()
         , _textureBuffer()
-        , _texture(nullptr)
-        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / FPS))
+        , _texture()
         , _radPerFrame(((RPM / 60.0f) * (2.0f * M_PI)) / float(FPS))
         , _running(false)
         , _render()
@@ -104,7 +103,7 @@ public:
         , _fps()
         , _sequence(0)
     {
-        _connector = Compositor::IOutput::Instance(
+        _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
             _format, &_sink);
@@ -119,7 +118,7 @@ public:
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
-        _texture = _renderer->Texture(_textureBuffer.operator->());
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
@@ -171,18 +170,15 @@ private:
         _running = true;
 
         while (_running) {
-            const auto next = _period - NewFrame();
-            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
+            NewFrame();
         }
     }
 
-    std::chrono::microseconds NewFrame()
+    void NewFrame()
     {
         static float rotation = 0.f;
 
-        const auto start = std::chrono::high_resolution_clock::now();
-
-        const float runtime = std::chrono::duration<float>(start - _renderStart).count();
+        const float runtime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - _renderStart).count();
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
@@ -194,36 +190,43 @@ private:
         const uint16_t renderWidth(720);
         const uint16_t renderHeight(720);
 
-        int x = (renderWidth / 2) * cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
-        int y = (renderHeight / 2) * sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        const float cosX = cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        const float sinY = sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
 
-        _renderer->Bind(_connector);
+        float x = float(renderWidth / 2.0f) * cosX;
+        float y = float(renderHeight / 2.0f) * sinY;
+
+        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
-        const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)) + x, ((height / 2) - (renderHeight / 2)) + y, renderWidth, renderHeight };
-        Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
+        const Exchange::IComposition::Rectangle renderBox = { static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), renderWidth, renderHeight };
 
-        const Compositor::Box textureBox = { 0, 0, int(_texture->Width()), int(_texture->Height()) };
+        Compositor::Matrix matrix;
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
+
+        const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
 
         _renderer->End(false);
 
-        _connector->Render();
+        uint32_t commit;
 
-        WaitForVSync(Core::infinite);
+        if (commit = _connector->Commit() == Core::ERROR_NONE) {
+            WaitForVSync(100);
+        } else {
+            TRACE(Trace::Error, ("Commit failed: %d", commit));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit. 
+        }
 
         _renderer->Unbind();
 
         rotation += _radPerFrame;
-
-        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
-    void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
     {
         _fps = 1 / ((pts - _ppts) / 1000000.0f);
         _sequence = sequence;
@@ -246,11 +249,10 @@ private:
 private:
     mutable Core::CriticalSection _adminLock;
     const Compositor::PixelFormat _format;
-    Core::ProxyType<Exchange::ICompositionBuffer> _connector;
+    Core::ProxyType<Compositor::IOutput> _connector;
     Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
-    Compositor::IRenderer::ITexture* _texture;
-    const std::chrono::microseconds _period;
+    Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
     const float _radPerFrame;
     bool _running;
     std::thread _render;

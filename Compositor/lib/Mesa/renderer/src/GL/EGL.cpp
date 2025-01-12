@@ -470,14 +470,11 @@ namespace Compositor {
         EGLImage EGL::CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool& external) const
         {
             ASSERT(buffer != nullptr);
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(Compositor::DefaultTimeoutMs);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             planes->Next();
             ASSERT(planes->IsValid() == true);
-
-            Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
-            ASSERT(plane != nullptr); // we should atleast have 1 plane....
 
             EGLImage result(EGL_NO_IMAGE);
 
@@ -488,45 +485,34 @@ namespace Compositor {
                 imageAttributes.Append(EGL_HEIGHT, buffer->Height());
                 imageAttributes.Append(EGL_LINUX_DRM_FOURCC_EXT, buffer->Format());
 
-                TRACE(Trace::Information, ("plane 0 info fd=%" PRIuPTR " stride=%d offset=%d", plane->Accessor(), plane->Stride(), plane->Offset()));
+                TRACE(Trace::Information, ("plane 0 info fd=%" PRIuPTR " stride=%d offset=%d", planes->Descriptor(), planes->Stride(), planes->Offset()));
 
-                imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, plane->Accessor());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, plane->Offset());
-                imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, plane->Stride());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_FD_EXT, planes->Descriptor());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_OFFSET_EXT, planes->Offset());
+                imageAttributes.Append(EGL_DMA_BUF_PLANE0_PITCH_EXT, planes->Stride());
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
                 imageAttributes.Append(EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
 
                 if (planes->Next() == true) {
-                    plane = planes->Plane();
-                    ASSERT(plane != nullptr);
-
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, plane->Accessor());
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_OFFSET_EXT, plane->Offset());
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_PITCH_EXT, plane->Stride());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_FD_EXT, planes->Descriptor());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_OFFSET_EXT, planes->Offset());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE1_PITCH_EXT, planes->Stride());
                     imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
                     imageAttributes.Append(EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
                 }
 
                 if (planes->Next() == true) {
-                    plane = planes->Plane();
-
-                    ASSERT(plane != nullptr);
-
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_FD_EXT, plane->Accessor());
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_OFFSET_EXT, plane->Offset());
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_PITCH_EXT, plane->Stride());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_FD_EXT, planes->Descriptor());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_OFFSET_EXT, planes->Offset());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE2_PITCH_EXT, planes->Stride());
                     imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
                     imageAttributes.Append(EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
                 }
 
                 if (planes->Next() == true) {
-                    plane = planes->Plane();
-
-                    ASSERT(plane != nullptr);
-
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_FD_EXT, plane->Accessor());
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_OFFSET_EXT, plane->Offset());
-                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_PITCH_EXT, plane->Stride());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_FD_EXT, planes->Descriptor());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_OFFSET_EXT, planes->Offset());
+                    imageAttributes.Append(EGL_DMA_BUF_PLANE3_PITCH_EXT, planes->Stride());
                     imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT, (buffer->Modifier() & 0xFFFFFFFF));
                     imageAttributes.Append(EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT, (buffer->Modifier() >> 32));
                 }
@@ -562,7 +548,7 @@ namespace Compositor {
             external = IsExternOnly(buffer->Format(), buffer->Modifier());
 
             // just unlock and go, client still need to draw something,.
-            buffer->Completed(false);
+            buffer->Relinquish();
 
             return result;
         }
