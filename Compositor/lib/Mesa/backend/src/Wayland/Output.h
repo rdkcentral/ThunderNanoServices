@@ -119,10 +119,8 @@ namespace Compositor {
             static void onPresentationFeedbackDiscarded(void* data, struct wp_presentation_feedback* feedback);
             static const struct wp_presentation_feedback_listener presentationFeedbackListener;
 
-            void CreateBuffer();
-
+            void SurfaceConfigure();
             void PresentationFeedback(const PresentationFeedbackEvent& event);
-
             uint64_t NextSequence()
             {
                 return _commitSequence++;

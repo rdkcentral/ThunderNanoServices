@@ -38,12 +38,7 @@ namespace Compositor {
             xdg_surface_ack_configure(xdg_surface, serial);
             TRACE_GLOBAL(Trace::Backend, ("Acknowledged Surface Configure"));
 
-            WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
-
-            implementation->CreateBuffer();
-            implementation->_signal.SetEvent();
-
-            implementation->Commit();
+            static_cast<WaylandOutput*>(data)->SurfaceConfigure();
         }
 
         const struct xdg_surface_listener WaylandOutput::windowSurfaceListener = {
@@ -204,7 +199,7 @@ namespace Compositor {
 
             wl_surface_commit(_surface);
 
-            _backend.RoundTrip();
+            // _backend.RoundTrip();
 
             _signal.Lock(1000); // Wait for the surface and buffer to be configured
         }
@@ -266,49 +261,42 @@ namespace Compositor {
         {
             return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::ICompositionBuffer::DataType::TYPE_INVALID;
         }
-        uint32_t WaylandOutput::Commit()
-        {
-            uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            if ((_surface != nullptr) && (_buffer.IsValid() == true)) {
+        void WaylandOutput::SurfaceConfigure() {
+
+            ASSERT(_surface != nullptr);
+            ASSERT(_backend.RenderNode() > 0);
+
+            if (_buffer.IsValid() == false) {
+                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _rectangle.width, _rectangle.height, Compositor::PixelFormat(_format, { _modifier }));
+
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
 
                 wl_buffer_add_listener(buffer, &bufferListener, nullptr);
 
                 wl_surface_attach(_surface, buffer, 0, 0);
 
-                wl_surface_damage_buffer(_surface, 0, 0, INT32_MAX, INT32_MAX);
-
-                wl_surface_commit(_surface);
-
-                // TODO: Implement presentation feedback
-                // struct wp_presentation_feedback* feedback = _backend.GetFeedbackInterface(_surface);
-
-                // if (feedback != nullptr) {
-                //     wp_presentation_feedback_add_listener(feedback, &presentationFeedbackListener, this);
-                // } else {
-                //     PresentationFeedback(NextSequence());
-                // }
-                result = Core::ERROR_NONE;
+                _signal.SetEvent();
             }
+
+            Commit();
+
+        }
+        uint32_t WaylandOutput::Commit()
+        {
+            ASSERT ((_surface != nullptr) && (_buffer.IsValid() == true));
+
+            wl_surface_commit(_surface);
 
             _backend.Flush();
 
-            return (result);
+            return (Core::ERROR_NONE);
         }
 
         const string& WaylandOutput::Node() const /* override */
         {
             static string result("TODO");
             return result;
-        }
-
-        void WaylandOutput::CreateBuffer()
-        {
-            if (_buffer.IsValid() == false) {
-                ASSERT(_backend.RenderNode() > 0);
-                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _rectangle.width, _rectangle.height, Compositor::PixelFormat(_format, { _modifier }));
-            }
         }
 
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)
