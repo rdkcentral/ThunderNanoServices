@@ -3,6 +3,8 @@ startmode = "@PLUGIN_COMPOSITOR_STARTMODE@"
 configuration = JSON()
 
 configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
+configuration.add("newontop", "false")
+
 if "@PLUGIN_COMPOSITOR_CONNECTOR@":
     configuration.add("connector", "@PLUGIN_COMPOSITOR_CONNECTOR@")
 
@@ -18,11 +20,13 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Nexus":
         memory_settings.add("client", "@PLUGIN_COMPOSITOR_MEMORY_CLIENT@")
         configuration.add("memory", memory_settings)
 
-    if boolean("@PLUGIN_COMPOSITOR_ALLOW_UNAUTHENTICATED_CLIENTS@"):
-        configuration.add("authentication", "true")
+        if boolean("@PLUGIN_COMPOSITOR_ALLOW_UNAUTHENTICATED_CLIENTS@"):
+            configuration.add("authentication", "false")
+        else:
+            configuration.add("authentication", "true")
+
         configuration.add("irmode", "@PLUGIN_COMPOSITOR_IRMODE@")
         configuration.add("boxmode", "@PLUGIN_COMPOSITOR_BOXMODE@")
-        configuration.add("authentication", "@PLUGIN_COMPOSITOR_AUTHENTICATION@")
         configuration.add("svp", "@PLUGIN_COMPOSITOR_SVP@")
         configuration.add("framebufferwidth", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_WIDTH@")
         configuration.add("framebufferheight", "@PLUGIN_COMPOSITOR_FRAMEBUFFER_HEIGHT@")
@@ -95,6 +99,9 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
                 outputs.append(output_config)
 
         configuration.add("outputs", outputs)
+
+    if "@PLUGIN_COMPOSITOR_RENDER_NODE@":
+        configuration.add("render", "@PLUGIN_COMPOSITOR_RENDER_NODE@")
 
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")

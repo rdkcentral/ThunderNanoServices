@@ -41,9 +41,44 @@ public:
     };
 
 private:
-    class Config: public Core::JSON::Container {
+    class Config : public Core::JSON::Container {
     public:
+        class Window : public Core::JSON::Container {
+        public:
+            Window& operator=(Window&&) = delete;
+            Window& operator=(const Window&) = delete;
+
+            Window()
+                : Core::JSON::Container()
+                , Width(1280)
+                , Height(720) {
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
+            }
+            Window(Window&& move) 
+                : Core::JSON::Container()
+                , Width(std::move(move.Width))
+                , Height(std::move(move.Height)) {
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
+            }
+            Window(const Window& copy) 
+                : Core::JSON::Container()
+                , Width(copy.Width)
+                , Height(copy.Height) {
+                Add(_T("width"), &Width);
+                Add(_T("height"), &Height);
+            }
+            ~Window() override = default;
+
+        public:
+            Core::JSON::DecUInt16 Width;
+            Core::JSON::DecUInt16 Height;
+        };
+
+        Config(Config&&) = delete;
         Config(const Config&) = delete;
+        Config& operator=(Config&&) = delete;
         Config& operator=(const Config&) = delete;
 
         Config()
@@ -51,8 +86,8 @@ private:
             , Url()
             , LogLevel()
             , Inspector()
-            , Width(1280)
-            , Height(720)
+            , Graphics()
+            , Video()
             , RepeatStart()
             , RepeatInterval()
             , ClientIdentifier()
@@ -62,12 +97,17 @@ private:
             , Language()
             , Connection(CABLE)
             , PlaybackRates(true)
+            , FrameRate(30)
+            , AudioBufferBudget(5)
+            , VideoBufferBudget(300)
+            , ProgressiveBufferBudget(12)
+            , MediaGarbageCollect(170)
         {
             Add(_T("url"), &Url);
             Add(_T("loglevel"), &LogLevel);
             Add(_T("inspector"), &Inspector);
-            Add(_T("width"), &Width);
-            Add(_T("height"), &Height);
+            Add(_T("graphics"), &Graphics);
+            Add(_T("video"), &Video);
             Add(_T("repeatstart"), &RepeatStart);
             Add(_T("repeatinterval"), &RepeatInterval);
             Add(_T("clientidentifier"), &ClientIdentifier);
@@ -77,6 +117,11 @@ private:
             Add(_T("language"), &Language);
             Add(_T("connection"), &Connection);
             Add(_T("playbackrates"), &PlaybackRates);
+            Add(_T("framerate"), &FrameRate);
+            Add(_T("audiobufferbudget"), &AudioBufferBudget);
+            Add(_T("videobufferbudget"), &VideoBufferBudget);
+            Add(_T("progressivebufferbudget"), &ProgressiveBufferBudget);
+            Add(_T("mediagarbagecollect"), &MediaGarbageCollect);
         }
         ~Config() override = default;
 
@@ -84,8 +129,8 @@ private:
         Core::JSON::String Url;
         Core::JSON::String LogLevel;
         Core::JSON::String Inspector;
-        Core::JSON::DecUInt16 Width;
-        Core::JSON::DecUInt16 Height;
+        Window Graphics;
+        Window Video;
         Core::JSON::DecUInt32 RepeatStart;
         Core::JSON::DecUInt32 RepeatInterval;
         Core::JSON::String ClientIdentifier;
@@ -95,6 +140,11 @@ private:
         Core::JSON::String Language;
         Core::JSON::EnumType<connection> Connection;
         Core::JSON::Boolean PlaybackRates;
+        Core::JSON::DecUInt8 FrameRate;
+        Core::JSON::DecUInt16 AudioBufferBudget;
+        Core::JSON::DecUInt16 VideoBufferBudget;
+        Core::JSON::DecUInt16 ProgressiveBufferBudget;
+        Core::JSON::DecUInt16 MediaGarbageCollect;
     };
 
     class NotificationSink: public Core::Thread {
@@ -168,6 +218,7 @@ private:
 
         uint32_t Configure(PluginHost::IShell* service)
         {
+            bool bufferSet = false;
             uint32_t result = Core::ERROR_NONE;
 
             Config config;
@@ -181,17 +232,25 @@ private:
                 Core::SystemInfo::SetEnvironment(_T("CLIENT_IDENTIFIER"), service->Callsign());
             }
 
-            string width(Core::NumberType<uint16_t>(config.Width.Value()).Text());
-            string height(Core::NumberType<uint16_t>(config.Height.Value()).Text());
+            string width(Core::NumberType<uint16_t>(config.Graphics.Width.Value()).Text());
+            string height(Core::NumberType<uint16_t>(config.Graphics.Height.Value()).Text());
             Core::SystemInfo::SetEnvironment(_T("COBALT_RESOLUTION_WIDTH"), width);
             Core::SystemInfo::SetEnvironment(_T("COBALT_RESOLUTION_HEIGHT"), height);
 
-            if (width.empty() == false) {
+            if (config.Video.IsSet() == false) {
                 Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_WIDTH"), width);
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height);
+            }
+            else {
+                string videoWidth(Core::NumberType<uint16_t>(config.Video.Width.Value()).Text());
+                string videoHeight(Core::NumberType<uint16_t>(config.Video.Height.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_WIDTH"), videoWidth);
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), videoHeight);
             }
 
-            if (height.empty() == false) {
-                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_DISP_HEIGHT"), height);
+            if (config.FrameRate.IsSet() == true) {
+                string rate (Core::NumberType<uint16_t>(config.FrameRate.Value()).Text());
+                Core::SystemInfo::SetEnvironment(_T("GST_VIRTUAL_MAX_FRAMERATE"), rate);
             }
 
             if (config.RepeatStart.IsSet() == true) {
@@ -214,6 +273,30 @@ private:
 
             if (config.CertificationSecret.IsSet() == true) {
                 Core::SystemInfo::SetEnvironment(_T("COBALT_CERTIFICATION_SECRET"), config.CertificationSecret.Value());
+            }
+
+            if (config.AudioBufferBudget.IsSet() == true) {
+                bufferSet = true;
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_AUDIO_BUFFER_BUDGET"), Core::NumberType<uint16_t>(config.AudioBufferBudget.Value()).Text());
+            }
+
+            if (config.VideoBufferBudget.IsSet() == true) {
+                bufferSet = true;
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_VIDEO_BUFFER_BUDGET"), Core::NumberType<uint16_t>(config.VideoBufferBudget.Value()).Text());
+            }
+
+            if (config.MediaGarbageCollect.IsSet() == true) {
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_GARBAGE_COLLECT"), Core::NumberType<uint16_t>(config.MediaGarbageCollect.Value()).Text());
+            }
+
+            if (config.ProgressiveBufferBudget.IsSet() == true) {
+                bufferSet = true;
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_PROGRESSIVE_BUFFER_BUDGET"), Core::NumberType<uint16_t>(config.ProgressiveBufferBudget.Value()).Text());
+            }
+
+            if (bufferSet == true) {
+                uint32_t value = config.ProgressiveBufferBudget.Value() + config.VideoBufferBudget.Value() + config.AudioBufferBudget.Value();
+                Core::SystemInfo::SetEnvironment(_T("COBALT_MEDIA_MAX_BUFFER_BUDGET"), Core::NumberType<uint16_t>(value));
             }
 
             if (config.Language.IsSet() == true) {

@@ -30,6 +30,8 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
+#include <CompositorTypes.h>
+
 MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace Thunder {
@@ -39,121 +41,7 @@ namespace Compositor {
     using Identifier = uintptr_t;
 
     namespace DRM {
-
         constexpr int InvalidFileDescriptor = -1;
-
-        string PropertyString(const PropertyRegister& properties, const bool pretty)
-        {
-            std::stringstream s;
-            s << '{';
-
-            if (pretty == true) {
-                s << std::endl;
-            }
-
-            for (auto iter = properties.cbegin(); iter != properties.cend(); ++iter) {
-
-                if (pretty == true) {
-                    s << string(4, ' ');
-                }
-
-                s << iter->first << "[" << iter->second << "]";
-
-                if (std::next(iter) != properties.cend()) {
-                    s << ", ";
-                }
-
-                if (pretty == true) {
-                    s << std::endl;
-                }
-            }
-
-            s << '}';
-
-            return s.str();
-        }
-
-        string IdentifierString(const std::vector<Identifier>& ids, const bool pretty)
-        {
-            std::stringstream s;
-            s << '{';
-
-            if (pretty == true) {
-                s << std::endl;
-            }
-
-            for (auto iter = ids.cbegin(); iter != ids.cend(); ++iter) {
-                if (pretty == true) {
-                    s << string(4, ' ');
-                }
-
-                s << *iter;
-
-                if (std::next(iter) != ids.cend()) {
-                    s << ", ";
-                }
-
-                if (pretty == true) {
-                    s << std::endl;
-                }
-            }
-
-            s << '}';
-
-            return s.str();
-        }
-
-        uint32_t GetPropertyId(PropertyRegister& registry, const string& name)
-        {
-            auto typeId = registry.find(name);
-
-            Identifier id(0);
-
-            if (typeId != registry.end()) {
-                id = typeId->second;
-            }
-            return id;
-        }
-
-        uint32_t GetProperty(const int cardFd, const Identifier object, const Identifier property, Compositor::DRM::Value& value)
-        {
-            uint32_t result(Core::ERROR_NOT_SUPPORTED);
-
-            drmModeObjectProperties* properties = drmModeObjectGetProperties(cardFd, object, DRM_MODE_OBJECT_ANY);
-
-            if (properties != nullptr) {
-                for (uint32_t i = 0; i < properties->count_props; ++i) {
-                    if (properties->props[i] == property) {
-                        value = properties->prop_values[i];
-                        result = Core::ERROR_NONE;
-                        break;
-                    }
-                }
-
-                drmModeFreeObjectProperties(properties);
-            }
-
-            return result;
-        }
-
-        uint16_t GetBlobProperty(const int cardFd, const Identifier object, const Identifier property, const uint16_t /* blobSize */, uint8_t blob[])
-        {
-            uint16_t length(0);
-            uint64_t id;
-
-            if (GetProperty(cardFd, object, property, id) == true) {
-                drmModePropertyBlobRes* drmBlob = drmModeGetPropertyBlob(cardFd, id);
-                ASSERT(drmBlob != nullptr);
-                // ASSERT(blobSize >= drmBlob->length);
-
-                memcpy(blob, drmBlob->data, drmBlob->length);
-                length = drmBlob->length;
-
-                drmModeFreePropertyBlob(drmBlob);
-            }
-
-            return length;
-        }
 
         void GetNodes(const uint32_t type, std::vector<string>& list)
         {
@@ -361,7 +249,7 @@ namespace Compositor {
 
             modifiers.fill(buffer->Modifier());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(10);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             while ((planes->Next() == true) && (planes->IsValid() == true)) {

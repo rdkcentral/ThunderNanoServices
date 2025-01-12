@@ -101,7 +101,7 @@ namespace WPASupplicant {
     bool Config::Unsecure()
     {
         string hexSSID;
-        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), static_cast<uint32_t>(_ssid.length()), hexSSID);
 
         return ((SetKey(KEY, _T("NONE"))) && (SetKey(SSIDKEY, hexSSID)));
     }
@@ -109,7 +109,7 @@ namespace WPASupplicant {
     bool Config::Hash(const string& hash)
     {
         string hexSSID;
-        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), static_cast<uint32_t>(_ssid.length()), hexSSID);
 
         return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, hexSSID)) && (SetKey(PSK, hash)));
     }
@@ -117,7 +117,7 @@ namespace WPASupplicant {
     bool Config::PresharedKey(const string& presharedKey)
     {      
         string hexSSID;
-        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), static_cast<uint32_t>(_ssid.length()), hexSSID);
 
         return ((SetKey(KEY, _T("WPA-PSK"))) && (SetKey(PAIR, _T("CCMP TKIP"))) && (SetKey(AUTH, _T("OPEN"))) && (SetKey(SSIDKEY, hexSSID)) && (SetKey(PSK, ('\"' + presharedKey + '\"'))));
     }
@@ -125,7 +125,7 @@ namespace WPASupplicant {
     bool Config::Enterprise(const string& identity, const string& password)
     {
         string hexSSID;
-        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), _ssid.length(), hexSSID);
+        Core::ToHexString(reinterpret_cast<const uint8_t*>(_ssid.c_str()), static_cast<uint32_t>(_ssid.length()), hexSSID);
 
         return ((SetKey(KEY, _T("IEEE8021X"))) && (SetKey(SSIDKEY, hexSSID)) && (SetKey(IDENTITY, identity)) && (SetKey(PASSWORD, password)) && (SetKey(_T("eap"), _T("PEAP"))) && (SetKey(_T("phase2"), _T("auth=MSCHAPV2"))));
     }
