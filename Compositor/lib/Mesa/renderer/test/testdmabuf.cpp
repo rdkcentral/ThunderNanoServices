@@ -214,7 +214,7 @@ private:
 
         uint32_t commit;
 
-        if (commit = _connector->Commit() == Core::ERROR_NONE) {
+        if ((commit = _connector->Commit()) == Core::ERROR_NONE) {
             WaitForVSync(100);
         } else {
             TRACE(Trace::Error, ("Commit failed: %d", commit));
