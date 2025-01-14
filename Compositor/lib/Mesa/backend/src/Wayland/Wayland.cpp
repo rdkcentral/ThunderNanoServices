@@ -58,6 +58,8 @@ namespace Compositor {
                 uint64_t modifier;
             } WaylandFormat;
 
+            using FormatRegister = std::unordered_map<uint32_t, std::vector<uint64_t> >;
+
             class ServerMonitor : public Core::IResource {
             public:
                 ServerMonitor() = delete;
@@ -96,11 +98,10 @@ namespace Compositor {
 
             }; // ServerMonitor
 
-            WaylandImplementation() = delete;
             WaylandImplementation(WaylandImplementation&&) = delete;
             WaylandImplementation(const WaylandImplementation&) = delete;
             WaylandImplementation& operator=(const WaylandImplementation&) = delete;
-            WaylandImplementation(const string& name);
+            WaylandImplementation();
 
             virtual ~WaylandImplementation();
 
@@ -129,7 +130,7 @@ namespace Compositor {
 
             int Dispatch(const uint32_t events) const;
 
-            Core::ProxyType<Exchange::ICompositionBuffer> Output(const string& name, const Exchange::IComposition::ScreenResolution resolution, const Compositor::PixelFormat& format, Compositor::ICallback* callback);
+            Core::ProxyType<IOutput> Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback);
 
         private:
             mutable uint32_t _refCount;
@@ -265,7 +266,7 @@ namespace Compositor {
         static void onShmFormat(void* data, struct wl_shm* shm, uint32_t format)
         {
             if (format != DRM_FORMAT_INVALID) {
-                TRACE_GLOBAL(Trace::Backend, ("Found SHM format: %s", DRM::FormatString(format)));
+                TRACE_GLOBAL(Trace::Backend, ("Found SHM format: %s", DRM::FormatToString(format)));
             }
         }
 
@@ -454,11 +455,15 @@ namespace Compositor {
             .global_remove = onRegistryGlobalRemove
         };
 
-        WaylandImplementation::WaylandImplementation(const string& name)
+        static const TCHAR* DisplayName() {
+            return ("");
+        }
+
+        WaylandImplementation::WaylandImplementation()
             : _refCount(0)
             , _drmRenderFd(InvalidFileDescriptor)
             , _activationToken()
-            , _wlDisplay(wl_display_connect(name.empty() == false ? name.c_str() : nullptr))
+            , _wlDisplay(wl_display_connect(DisplayName()[0] != '\0' ? DisplayName() : nullptr))
             , _wlRegistry(wl_display_get_registry(_wlDisplay))
             , _wlCompositor(nullptr)
             , _wlDrm(nullptr)
@@ -675,7 +680,7 @@ namespace Compositor {
                     // but linear modifier is always valid, so we will just ignore the format
                     const uint64_t modifier((formats[i].modifier != DRM_FORMAT_MOD_INVALID) ? (formats[i].modifier) : DRM_FORMAT_MOD_LINEAR);
 
-                    TRACE(Trace::Backend, ("%d Found DMA format: %s modifier: 0x%" PRIX64, i, DRM::FormatString(format), modifier));
+                    TRACE(Trace::Backend, ("%d Found DMA format: %s modifier: 0x%" PRIX64, i, DRM::FormatToString(format), modifier));
 
                     FormatRegister::iterator index = _dmaFormats.find(format);
 
@@ -851,9 +856,9 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<Exchange::ICompositionBuffer> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
+        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback)
         {
-            return _windows.Instance<Backend::WaylandOutput>(name, *this, name, rectangle, format);
+            return (Core::ProxyType<IOutput> (_windows.Instance<Backend::WaylandOutput>(name, *this, name, rectangle, format)));
         }
 
         struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
@@ -886,19 +891,18 @@ namespace Compositor {
 
             struct zwp_linux_buffer_params_v1* params = zwp_linux_dmabuf_v1_create_params(api);
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(DefaulTimeout);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             uint8_t i(0);
 
             while (planes->Next() == true) {
-                Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
-                zwp_linux_buffer_params_v1_add(params, plane->Accessor(), i++, plane->Offset(), plane->Stride(), modifierHigh, modifierLow);
+                zwp_linux_buffer_params_v1_add(params, planes->Descriptor(), i++, planes->Offset(), planes->Stride(), modifierHigh, modifierLow);
             }
 
             wl_buffer* wlBuffer = zwp_linux_buffer_params_v1_create_immed(params, buffer->Width(), buffer->Height(), buffer->Format(), 0);
 
-            buffer->Completed(false);
+            buffer->Relinquish();
 
             return wlBuffer;
         }
@@ -938,7 +942,7 @@ namespace Compositor {
 
             enum wl_shm_format wl_shm_format = ConvertDrmFormat(buffer->Format());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Planes(Compositor::DefaultTimeout);
+            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             uint32_t size(0);
@@ -946,16 +950,14 @@ namespace Compositor {
             planes->Next();
             ASSERT(planes->IsValid());
 
-            Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
-
-            wl_shm_pool* pool = wl_shm_create_pool(api, plane->Accessor(), (plane->Stride() * buffer->Height()));
+            wl_shm_pool* pool = wl_shm_create_pool(api, planes->Descriptor(), (planes->Stride() * buffer->Height()));
 
             if (pool == NULL) {
                 return NULL;
             }
-            wl_buffer* wlBuffer = wl_shm_pool_create_buffer(pool, plane->Offset(), buffer->Width(), buffer->Height(), plane->Stride(), wl_shm_format);
+            wl_buffer* wlBuffer = wl_shm_pool_create_buffer(pool, planes->Offset(), buffer->Width(), buffer->Height(), planes->Stride(), wl_shm_format);
 
-            buffer->Completed(false);
+            buffer->Relinquish();
 
             wl_shm_pool_destroy(pool);
 
@@ -1002,11 +1004,12 @@ namespace Compositor {
      * forced or not. If set to true, the output will be forced even if it is not available or already in
      * use. If set to false, the function will return an error if the output is not available or already
      *
-     * @return A `Core::ProxyType` object that wraps an instance of `Exchange::ICompositionBuffer`.
+     * @return A `Core::ProxyType` object that wraps an instance of `IOutput`.
      */
-    /* static */ Core::ProxyType<Exchange::ICompositionBuffer> IOutput::Instance(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::IFeedback* feedback)
+
+    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, IOutput::ICallback* feedback)
     {
-        static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance("");
+        static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance();
 
         return backend.Output(name, rectangle, format, feedback);
     }

@@ -600,7 +600,7 @@ namespace Compositor {
                 return result;
             }
 
-            static bool DumpTex(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels, GLuint textureId)
+            static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels, GLuint textureId)
             {
                 const Renderer::GLPixelFormat formatGL(Renderer::ConvertFormat(format));
 
@@ -649,12 +649,13 @@ namespace Compositor {
             class GLESTexture : public IRenderer::ITexture {
             public:
                 GLESTexture() = delete;
+                GLESTexture(GLESTexture&&) = delete;
                 GLESTexture(const GLESTexture&) = delete;
+                GLESTexture& operator=(GLESTexture&&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
-                GLESTexture(GLES& parent, Exchange::ICompositionBuffer* buffer)
-                    : _refCount(1)
-                    , _parent(parent)
+                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                    : _parent(parent)
                     , _target(GL_TEXTURE_2D)
                     , _textureId(0)
                     , _image(EGL_NO_IMAGE)
@@ -663,7 +664,6 @@ namespace Compositor {
                     ASSERT(_buffer != nullptr);
 
                     _parent.Add(this);
-                    _buffer->AddRef();
 
                     if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
                         ImportDMABuffer();
@@ -678,7 +678,7 @@ namespace Compositor {
                     // Snapshot();
                 }
 
-                virtual ~GLESTexture()
+                ~GLESTexture() override
                 {
                     _parent.Remove(this);
 
@@ -690,30 +690,11 @@ namespace Compositor {
                     if (_image != EGL_NO_IMAGE) {
                         _parent.Egl().DestroyImage(_image);
                     }
-
-                    _buffer->Release();
                 }
 
                 /**
                  *  IRenderer::ITexture
                  */
-                virtual uint32_t AddRef() const
-                {
-                    Core::InterlockedIncrement(_refCount);
-                    return Core::ERROR_NONE;
-                };
-                virtual uint32_t Release() const
-                {
-                    uint32_t result = Core::ERROR_NONE;
-
-                    if (Core::InterlockedDecrement(_refCount) == 0) {
-                        delete this;
-                        result = Core::ERROR_DESTRUCTION_SUCCEEDED;
-                    }
-
-                    return (result);
-                }
-
                 virtual bool IsValid() const
                 {
                     return (_textureId != 0);
@@ -772,7 +753,7 @@ namespace Compositor {
                 void Snapshot() const
                 {
                     std::vector<uint8_t> pixels;
-                    Box box = { 0, 0, static_cast<int>(_buffer->Width()), static_cast<int>(_buffer->Height()) };
+                    Exchange::IComposition::Rectangle box = { 0, 0, _buffer->Width(), _buffer->Height() };
 
                     if (DumpTex(box, _buffer->Format(), pixels, _textureId) == true) {
                         std::stringstream ss;
@@ -792,7 +773,7 @@ namespace Compositor {
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetError() == EGL_SUCCESS);
 
-                    _image = _parent.Egl().CreateImage(_buffer, external);
+                    _image = _parent.Egl().CreateImage(&(*_buffer), external);
                     ASSERT(_image != EGL_NO_IMAGE);
 
                     _target = (external == true) ? GL_TEXTURE_EXTERNAL_OES : GL_TEXTURE_2D;
@@ -815,17 +796,15 @@ namespace Compositor {
 
                 void ImportPixelBuffer()
                 {
-                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Planes(Compositor::DefaultTimeoutMs);
+                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
 
                     // uint8_t index(0);
 
                     planes->Next(); // select first plane.
 
-                    Exchange::ICompositionBuffer::IPlane* plane = planes->Plane();
+                    int data(planes->Descriptor());
 
-                    const uint8_t* data(reinterpret_cast<uint8_t*>(plane->Accessor()));
-
-                    ASSERT(data != nullptr);
+                    ASSERT(data != -1);
 
                     GLPixelFormat glFormat = ConvertFormat(_buffer->Format());
 
@@ -839,26 +818,25 @@ namespace Compositor {
                     glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, plane->Stride() / (glFormat.BitPerPixel / 8));
+                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, planes->Stride() / (glFormat.BitPerPixel / 8));
 
-                    glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(), 0, glFormat.Format, glFormat.Type, data);
+                    glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(), 0, glFormat.Format, glFormat.Type, reinterpret_cast<uint8_t*>(data));
 
                     glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
 
                     glBindTexture(_target, 0);
 
-                    _buffer->Completed(false);
+                    _buffer->Relinquish();
 
                     TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
 
             private:
-                mutable uint32_t _refCount;
                 GLES& _parent;
                 GLenum _target;
                 GLuint _textureId;
                 EGLImageKHR _image;
-                Exchange::ICompositionBuffer* _buffer;
+                Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
             }; //  class GLESTexture
 
         public:
@@ -991,7 +969,7 @@ namespace Compositor {
 
                 if (dump == true) {
                     std::vector<uint8_t> pixels;
-                    Box box = { 0, 0, static_cast<int>(_viewportWidth), static_cast<int>(_viewportHeight) };
+                    Exchange::IComposition::Rectangle box = { 0, 0, _viewportWidth, _viewportHeight };
                     if (Snapshot(box, DRM_FORMAT_ARGB8888, pixels) == true) {
                         std::stringstream ss;
                         ss << "renderer-end-snapshot-" << Core::Time::Now().Ticks() << ".png" << std::ends;
@@ -1016,7 +994,7 @@ namespace Compositor {
                 PopDebug();
             }
 
-            void Scissor(const Box* box) override
+            void Scissor(const Exchange::IComposition::Rectangle* box) override
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
@@ -1030,16 +1008,16 @@ namespace Compositor {
                 PopDebug();
             }
 
-            ITexture* Texture(Exchange::ICompositionBuffer* buffer) override
+            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
             {
-                return new GLESTexture(*this, buffer);
+                return (Core::ProxyType<ITexture>(Core::ProxyType<GLESTexture>::Create(*this, buffer)));
             };
 
-            uint32_t Render(const ITexture* texture, const Box region, const Matrix transformation, const float alpha) override
+            uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true) && (texture != nullptr));
 
-                const auto index = std::find(_textures.begin(), _textures.end(), texture);
+                const auto index = std::find(_textures.begin(), _textures.end(), &(*texture));
 
                 uint32_t result(Core::ERROR_BAD_REQUEST);
 
@@ -1120,7 +1098,7 @@ namespace Compositor {
                 return ((_egl.IsCurrent() == true) && (_frameBuffer != nullptr));
             }
 
-            bool Snapshot(const Box& box, const uint32_t format, std::vector<uint8_t>& pixels)
+            bool Snapshot(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels)
             {
                 PushDebug();
 

@@ -38,12 +38,7 @@ namespace Compositor {
             xdg_surface_ack_configure(xdg_surface, serial);
             TRACE_GLOBAL(Trace::Backend, ("Acknowledged Surface Configure"));
 
-            WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
-
-            implementation->CreateBuffer();
-            implementation->_signal.SetEvent();
-
-            implementation->Render();
+            static_cast<WaylandOutput*>(data)->SurfaceConfigure();
         }
 
         const struct xdg_surface_listener WaylandOutput::windowSurfaceListener = {
@@ -85,7 +80,8 @@ namespace Compositor {
         {
             TRACE_GLOBAL(Trace::Backend, ("Bye bye, cruel world! <(x_X)>"));
             WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
-            implementation->Release();
+            // Maybe we want to delete ?
+            // implementation->Release();
         }
 
         const struct xdg_toplevel_listener WaylandOutput::toplevelListener = {
@@ -150,8 +146,7 @@ namespace Compositor {
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
             , _topLevelSurface(nullptr)
-            , _height(0)
-            , _width(0)
+            , _rectangle(rectangle)
             , _format()
             , _modifier()
             , _buffer()
@@ -161,17 +156,14 @@ namespace Compositor {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
             _backend.Format(format, _format, _modifier);
-            TRACE(Trace::Backend, ("Picked DMA format: %s modifier: 0x%" PRIX64, DRM::FormatString(_format), _modifier));
+            TRACE(Trace::Backend, ("Picked DMA format: %s modifier: 0x%" PRIX64, DRM::FormatToString(_format), _modifier));
 
             ASSERT(_format != DRM_FORMAT_INVALID);
             ASSERT(_modifier != DRM_FORMAT_MOD_INVALID);
 
             if (Compositor::Rectangle::IsDefault(rectangle)) {
-                _width = 1280;
-                _height = 720;
-            } else {
-                _width = rectangle.width;
-                _height = rectangle.height;
+                _rectangle.width = 1280;
+                _rectangle.height = 720;
             }
 
             _surface = _backend.Surface();
@@ -207,7 +199,7 @@ namespace Compositor {
 
             wl_surface_commit(_surface);
 
-            _backend.RoundTrip();
+            // _backend.RoundTrip();
 
             _signal.Lock(1000); // Wait for the surface and buffer to be configured
         }
@@ -233,45 +225,16 @@ namespace Compositor {
             }
         }
 
-        uint32_t WaylandOutput::Identifier() const
+        Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
         {
-            return (_buffer.IsValid() == true) ? _buffer->Identifier() : 0;
+            return (_buffer.IsValid() == true) ? _buffer->Acquire(timeoutMs) : nullptr;
         }
 
-        Exchange::ICompositionBuffer::IIterator* WaylandOutput::Planes(const uint32_t timeoutMs)
+        void WaylandOutput::Relinquish()
         {
-            return (_buffer.IsValid() == true) ? _buffer->Planes(timeoutMs) : nullptr;
-        }
-
-        uint32_t WaylandOutput::Completed(const bool dirty)
-        {
-            return (_buffer.IsValid() == true) ? _buffer->Completed(dirty) : false;
-        }
-
-        void WaylandOutput::Render()
-        {
-            if ((_surface != nullptr) && (_buffer.IsValid() == true)) {
-                wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
-
-                wl_buffer_add_listener(buffer, &bufferListener, nullptr);
-
-                wl_surface_attach(_surface, buffer, 0, 0);
-
-                wl_surface_damage_buffer(_surface, 0, 0, INT32_MAX, INT32_MAX);
-
-                wl_surface_commit(_surface);
-
-                // TODO: Implement presentation feedback
-                // struct wp_presentation_feedback* feedback = _backend.GetFeedbackInterface(_surface);
-
-                // if (feedback != nullptr) {
-                //     wp_presentation_feedback_add_listener(feedback, &presentationFeedbackListener, this);
-                // } else {
-                //     PresentationFeedback(NextSequence());
-                // }
+            if (_buffer.IsValid() == true) {
+                _buffer->Relinquish();
             }
-
-            _backend.Flush();
         }
 
         uint32_t WaylandOutput::Width() const
@@ -299,12 +262,41 @@ namespace Compositor {
             return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::ICompositionBuffer::DataType::TYPE_INVALID;
         }
 
-        void WaylandOutput::CreateBuffer()
-        {
+        void WaylandOutput::SurfaceConfigure() {
+
+            ASSERT(_surface != nullptr);
+            ASSERT(_backend.RenderNode() > 0);
+
             if (_buffer.IsValid() == false) {
-                ASSERT(_backend.RenderNode() > 0);
-                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
+                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _rectangle.width, _rectangle.height, Compositor::PixelFormat(_format, { _modifier }));
+
+                wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
+
+                wl_buffer_add_listener(buffer, &bufferListener, nullptr);
+
+                wl_surface_attach(_surface, buffer, 0, 0);
+
+                _signal.SetEvent();
             }
+
+            Commit();
+
+        }
+        uint32_t WaylandOutput::Commit()
+        {
+            ASSERT ((_surface != nullptr) && (_buffer.IsValid() == true));
+
+            wl_surface_commit(_surface);
+
+            _backend.Flush();
+
+            return (Core::ERROR_NONE);
+        }
+
+        const string& WaylandOutput::Node() const /* override */
+        {
+            static string result("TODO");
+            return result;
         }
 
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)
