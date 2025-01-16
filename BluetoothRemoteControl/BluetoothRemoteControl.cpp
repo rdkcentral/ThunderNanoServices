@@ -96,10 +96,10 @@ namespace Plugin {
         std::vector<Entry> _lut;
     };
 
-    static const LUT<Exchange::IVoiceProducer::IProfile::codec, WAV::Recorder::codec> CodecTable({
+    static const LUT<Exchange::IBluetoothRemoteControl::codectype, WAV::Recorder::codec> CodecTable({
 
-        { Exchange::IVoiceProducer::IProfile::codec::PCM,   WAV::Recorder::codec::PCM   },
-        { Exchange::IVoiceProducer::IProfile::codec::ADPCM, WAV::Recorder::codec::ADPCM }
+        { Exchange::IBluetoothRemoteControl::codectype::PCM,   WAV::Recorder::codec::PCM   },
+        { Exchange::IBluetoothRemoteControl::codectype::IMA_ADPCM, WAV::Recorder::codec::ADPCM }
 
     });
 
@@ -112,7 +112,6 @@ namespace Plugin {
 
         _service = service;
         _service->AddRef();
-        _skipURL = _service->WebPrefix().length();
         _configLine = _service->ConfigLine();
 
         Config config;
@@ -182,37 +181,41 @@ namespace Plugin {
             }
         }
 
+        Exchange::JBluetoothRemoteControl::Register(*this, this, this);
+        Exchange::JSONRPC::JBluetoothRemoteControlLegacy::Register(*this, this);
+
         return (string());
     }
 
     void BluetoothRemoteControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        if (_service != nullptr) {
-            ASSERT(_service == service);
+        ASSERT(service != nullptr);
+        ASSERT(_service = service);
 
-            if (_recorder.IsOpen() == true) {
-                _recorder.Close();
-            }
+        Exchange::JBluetoothRemoteControl::Unregister(*this);
+        Exchange::JSONRPC::JBluetoothRemoteControlLegacy::Unregister(*this);
 
-            if (_gattRemote != nullptr) {
-                delete _gattRemote;
-                _gattRemote = nullptr;
-            }
-
-            if (_voiceHandler != nullptr) {
-                _voiceHandler->Release();
-                _voiceHandler = nullptr;
-            }
-
-            if (_buffer != nullptr) {
-                delete _buffer;
-                _buffer = nullptr;
-            }
-
-            _service->Release();
-            _service = nullptr;
-
+        if (_recorder.IsOpen() == true) {
+            _recorder.Close();
         }
+
+        if (_gattRemote != nullptr) {
+            delete _gattRemote;
+            _gattRemote = nullptr;
+        }
+
+        if (_voiceHandler != nullptr) {
+            _voiceHandler->Release();
+            _voiceHandler = nullptr;
+        }
+
+        if (_buffer != nullptr) {
+            delete _buffer;
+            _buffer = nullptr;
+        }
+
+        _service->Release();
+        _service = nullptr;
     }
 
     string BluetoothRemoteControl::Information() const
@@ -220,139 +223,11 @@ namespace Plugin {
         return { };
     }
 
-    void BluetoothRemoteControl::Inbound(Thunder::Web::Request& /* request */)
-    {
-        // Not needed
-    }
-
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::Process(const Thunder::Web::Request& request)
-    {
-        ASSERT(_skipURL <= request.Path.length());
-        TRACE(Trace::Information, (_T("Received BluetoothRemoteControl request")));
-
-        Core::ProxyType<Web::Response> response;
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, (request.Path.length() - _skipURL)), false, '/');
-
-        index.Next();
-        index.Next();
-
-        if (request.Verb == Web::Request::HTTP_GET) {
-            response = GetMethod(index);
-        } else if (request.Verb == Web::Request::HTTP_PUT) {
-            response = PutMethod(index, request);
-        } else if (request.Verb == Web::Request::HTTP_POST) {
-            response = PostMethod(index, request);
-        } else if (request.Verb == Web::Request::HTTP_DELETE) {
-            response = DeleteMethod(index, request);
-        }
-
-        return (response);
-    }
-
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::GetMethod(Core::TextSegmentIterator& /* index */)
-    {
-        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
-        response->ErrorCode = Web::STATUS_BAD_REQUEST;
-        response->Message = _T("Unsupported GET request.");
-
-        return (response);
-    }
-
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::PutMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
-    {
-        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
-        response->ErrorCode = Web::STATUS_BAD_REQUEST;
-        response->Message = _T("Unsupported PUT request");
-
-        // Nothing here yet
-        if ((_gattRemote != nullptr) && (index.IsValid() == true)) {
-            if ((index.Current() == _T("Voice")) && (index.Next() != false)) {
-                if (index.Current() == _T("Off")) {
-                    uint32_t result = _gattRemote->VoiceOutput(false);
-                    if (result == Core::ERROR_NONE) {
-                        response->ErrorCode = Web::STATUS_OK;
-                        response->Message = _T("Voice disabled.");
-                    }
-                    else {
-                        response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                        response->Message = _T("Voice could not be disabled. Error: ") + Core::NumberType<uint32_t>(result).Text();
-                    }
-                } else if (index.Current() == _T("On")) {
-                    uint32_t result = _gattRemote->VoiceOutput(true);
-                    if (result == Core::ERROR_NONE) {
-                        response->ErrorCode = Web::STATUS_OK;
-                        response->Message = _T("Voice enabled.");
-                    }
-                    else {
-                        response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                        response->Message = _T("Voice could not be enabled. Error: ") + Core::NumberType<uint32_t>(result).Text();
-                    }
-                }
-            }
-        }
-
-        return (response);
-    }
-
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::PostMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
-    {
-        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
-        response->ErrorCode = Web::STATUS_BAD_REQUEST;
-        response->Message = _T("Unsupported POST request");
-
-        if (index.IsValid() == true) {
-            if ((index.Current() == "Assign") && (index.Next() != false)) {
-                uint32_t result = Assign(index.Current().Text());
-                if (result == Core::ERROR_NONE) {
-                    response->ErrorCode = Web::STATUS_OK;
-                    response->Message = _T("OK");
-                } else if (result == Core::ERROR_ALREADY_CONNECTED) {
-                    response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                    response->Message = _T("A remote is already assigned");
-                } else if (result == Core::ERROR_UNKNOWN_KEY) {
-                    response->ErrorCode = Web::STATUS_NOT_FOUND;
-                    response->Message = _T("The requested Bluetooth device is unknown");
-                } else if (result == Core::ERROR_UNAVAILABLE) {
-                    response->ErrorCode = Web::STATUS_SERVICE_UNAVAILABLE;
-                    response->Message = _T("Bluetooth is not available");
-                } else {
-                    response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                    response->Message = _T("Failed to assign the remote control");
-                }
-            }
-        }
-
-        return (response);
-    }
-
-    Core::ProxyType<Web::Response> BluetoothRemoteControl::DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& /* request */)
-    {
-        Core::ProxyType<Web::Response> response(PluginHost::IFactories::Instance().Response());
-        response->ErrorCode = Web::STATUS_BAD_REQUEST;
-        response->Message = _T("Unsupported DELETE request");
-
-        if (index.IsValid() == true) {
-            if ((index.Current() == "Assign") && (index.Next() == false)) {
-                uint32_t result = Revoke();
-                if (result == Core::ERROR_NONE) {
-                    response->ErrorCode = Web::STATUS_OK;
-                    response->Message = _T("OK");
-                } else if (result == Core::ERROR_ALREADY_RELEASED) {
-                    response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                    response->Message = _T("A remote is not assigned");
-                } else {
-                    response->ErrorCode = Web::STATUS_UNPROCESSABLE_ENTITY;
-                    response->Message = _T("Failed to revoke the remote control");
-                }
-            }
-        }
-
-        return (response);
-    }
-
     uint32_t BluetoothRemoteControl::Assign(const string& address)
     {
         uint32_t result = Core::ERROR_ALREADY_CONNECTED;
+
+        _adminLock.Lock();
 
         if (_gattRemote == nullptr) {
             ASSERT(_service != nullptr);
@@ -381,6 +256,8 @@ namespace Plugin {
             TRACE(Trace::Error, (_T("A remote is already assigned, revoke first")));
         }
 
+        _adminLock.Unlock();
+
         return (result);
     }
 
@@ -388,11 +265,14 @@ namespace Plugin {
     {
         uint32_t result = Core::ERROR_ALREADY_RELEASED;
 
+        _adminLock.Lock();
+
         if (_gattRemote != nullptr) {
             Core::File file(_service->PersistentPath() + _gattRemote->Address() + _T(".json"));
             if (file.Destroy() == true) {
                 TRACE(Trace::Information, (_T("BLE GATT remote control unit [%s] removed from persistent storage"), _gattRemote->Address().c_str()));
             }
+
             delete _gattRemote;
             _gattRemote = nullptr;
             result = Core::ERROR_NONE;
@@ -400,11 +280,15 @@ namespace Plugin {
             TRACE(Trace::Error, (_T("A remote has not been assigned")));
         }
 
+        _adminLock.Unlock();
+
         return (result);
     }
 
     void BluetoothRemoteControl::Connected(const string& name)
     {
+        _adminLock.Lock();
+
         _name = name;
 
         if (_inputHandler != nullptr) {
@@ -435,63 +319,88 @@ namespace Plugin {
                 TRACE(Trace::Information, (_T("Keymap file [%s] not available"), keyMapFile.c_str()));
             }
         }
+
+        _adminLock.Unlock();
+    }
+
+    void BluetoothRemoteControl::Inoperational()
+    {
+        _adminLock.Lock();
+
+        if (_transmission == true) {
+            VoiceData();
+        }
+
+        _batteryLevel = ~0;
+        _name.clear();
+
+        delete _buffer;
+        _buffer = nullptr;
+
+        _adminLock.Unlock();
     }
 
     void BluetoothRemoteControl::Operational(const GATTRemote::Data& settings)
     {
+        _adminLock.Lock();
+
         ASSERT (_gattRemote != nullptr);
 
-        _gattRemote->Decoder(_configLine);
+        if (settings.VoiceCommandHandle != 0) {
+            _gattRemote->Decoder(_configLine);
 
-        if (_buffer != nullptr) {
-            delete _buffer;
-            _buffer = nullptr;
+            if (_buffer != nullptr) {
+                delete _buffer;
+                _buffer = nullptr;
+            }
+
+            _transmission = false;
+
+            const auto profile = _gattRemote->SelectedProfile();
+
+            if (profile.IsSet() == true) {
+
+                Config config;
+                config.FromString(_configLine);
+                const uint16_t maxChunkDuration = std::max(config.AudioChunkSize.Value(), config.FirstAudioChunkSize.Value());
+
+                if (maxChunkDuration != 0) {
+
+                    // If buffer size is not specified, then set it based on the configured chunk sizes
+                    const uint32_t maxDuration = std::max(config.AudioBufferSize.Value(), (maxChunkDuration + config.AudioChunkSize.Value()));
+                    const uint32_t bufferSize = TimeToBytes(maxDuration, profile);
+                    _firstAudioChunkSize = TimeToBytes(config.FirstAudioChunkSize.Value(), profile);
+                    _audioChunkSize = TimeToBytes(config.AudioChunkSize.Value(), profile);
+
+                    // Some sanity...
+                    ASSERT(bufferSize <= (512 * 1024));
+                    ASSERT(_firstAudioChunkSize <= (512 * 1024));
+                    ASSERT(_audioChunkSize <= (512 * 1024));
+
+                    _buffer = new RingBufferType<uint32_t>(bufferSize);
+                    ASSERT(_buffer != nullptr);
+
+                    TRACE(Trace::Information, (_T("Audio buffer size is %d bytes (%d ms)"), bufferSize, maxDuration));
+
+                    if (_firstAudioChunkSize != 0) {
+                        TRACE(Trace::Information, (_T("First audio chunk size is %d bytes (%d ms)"), _firstAudioChunkSize, config.FirstAudioChunkSize.Value()));
+                    }
+                    else {
+                        TRACE(Trace::Information, (_T("Audio will not be pre-buffered")));
+                    }
+
+                    if (_audioChunkSize != 0) {
+                        TRACE(Trace::Information, (_T("Audio chunk size is %d bytes (%d ms)"), _audioChunkSize, config.AudioChunkSize.Value()));
+                    }
+                    else {
+                        TRACE(Trace::Information, (_T("Audio chunks will not be buffered")));
+                    }
+                }
+                else {
+                    TRACE(Trace::Information, (_T("Audio buffering is disabled")));
+                }
+            }
         }
-
-        Config config;
-        config.FromString(_configLine);
-
-        Exchange::IVoiceProducer::IProfile* profile = _gattRemote->SelectedProfile();
-        ASSERT(profile != nullptr);
-
-        const uint16_t maxChunkDuration = std::max(config.AudioChunkSize.Value(), config.FirstAudioChunkSize.Value());
-
-        if (maxChunkDuration != 0) {
-            // If buffer size is not specified, then set it based on the configured chunk sizes
-            const uint32_t maxDuration = std::max(config.AudioBufferSize.Value(), (maxChunkDuration + config.AudioChunkSize.Value()));
-            const uint32_t bufferSize = TimeToBytes(maxDuration, profile);
-            _firstAudioChunkSize = TimeToBytes(config.FirstAudioChunkSize.Value(), profile);
-            _audioChunkSize = TimeToBytes(config.AudioChunkSize.Value(), profile);
-
-            // Some sanity...
-            ASSERT(bufferSize <= (512 * 1024));
-            ASSERT(_firstAudioChunkSize <= (512 * 1024));
-            ASSERT(_audioChunkSize <= (512 * 1024));
-
-            _buffer = new RingBufferType<uint32_t>(bufferSize);
-            ASSERT(_buffer != nullptr);
-
-            TRACE(Trace::Information, (_T("Audio buffer size is %d bytes (%d ms)"), bufferSize, maxDuration));
-
-            if (_firstAudioChunkSize != 0) {
-                TRACE(Trace::Information, (_T("First audio chunk size is %d bytes (%d ms)"), _firstAudioChunkSize, config.FirstAudioChunkSize.Value()));
-            }
-            else {
-                TRACE(Trace::Information, (_T("Audio will not be pre-buffered")));
-            }
-
-            if (_audioChunkSize != 0) {
-                TRACE(Trace::Information, (_T("Audio chunk size is %d bytes (%d ms)"), _audioChunkSize, config.AudioChunkSize.Value()));
-            }
-            else {
-                TRACE(Trace::Information, (_T("Audio chunks will not be buffered")));
-            }
-        }
-        else {
-            TRACE(Trace::Information, (_T("Audio buffering is disabled")));
-        }
-
-        profile->Release();
 
         // Store the settings, if not already done..
         Core::File settingsFile(_service->PersistentPath() + _gattRemote->Address() + _T(".json"));
@@ -499,32 +408,79 @@ namespace Plugin {
             settings.IElement::ToFile(settingsFile);
             settingsFile.Close();
         }
+
+        _adminLock.Unlock();
     }
 
-    void BluetoothRemoteControl::VoiceData(Exchange::IVoiceProducer::IProfile* profile)
+    void BluetoothRemoteControl::VoiceData(const Exchange::IBluetoothRemoteControl::audioprofile& profile)
     {
-        if (profile != nullptr) {
+        _adminLock.Lock();
 
-            string codecText(_T("<<unknown>>"));
-            Core::EnumerateType<Exchange::IVoiceProducer::IProfile::codec> codec(profile->Codec());
+        if (_transmission == true) {
+            // This should not happen, but let's be prepared
+            TRACE(Trace::Error, (_T("Missing end of transmission event from the unit`")));
+            VoiceData();
+        }
 
-            if (codec.Data() != nullptr) {
-                codecText = string(codec.Data());
+        if (_voiceHandler != nullptr) {
+            _voiceHandler->StateChanged(Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STARTED);
+        }
+        else {
+            Exchange::JBluetoothRemoteControl::Event::StateChanged(*this, Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STARTED);
+        }
+
+        _sequence = 0;
+        _transmission = true;
+
+        _adminLock.Unlock();
+
+        if (_recorder.IsOpen() == true) {
+            _recorder.Close();
+        }
+
+        if (_record != recorder::OFF) {
+
+            WAV::Recorder::codec wavCodec;
+            TCHAR fileName[256];
+            Core::Time now (Core::Time::Now());
+            ::snprintf(fileName, sizeof(fileName), _recordFile.c_str(), now.Hours(), now.Minutes(), now.Seconds());
+
+            if (CodecTable.Lookup(profile.codec, wavCodec) == true) {
+                _recorder.Open(string(fileName), wavCodec, profile.channels, profile.sampleRate, profile.resolution);
+
+                if (_recorder.IsOpen() == true) {
+                    TRACE(Trace::Information, (_T("Recorder started on: %s"), fileName));
+                }
             }
+        }
 
-            _adminLock.Lock();
+        TRACE(Trace::Information, (_T("Audio transmission start")));
+    }
 
-            _sequence = 0;
+    void BluetoothRemoteControl::VoiceData()
+    {
+        _adminLock.Lock();
+
+        if (_transmission == true) {
+
+            ASSERT(_buffer != nullptr);
 
             if (_buffer != nullptr) {
+                if (_sequence != 0) {
+                    // Push out whatever is left (but only if a complete first chunk went out)
+                    SendOut(_buffer->Used());
+                }
+
                 _buffer->Reset();
             }
 
+            _transmission = false;
+
             if (_voiceHandler != nullptr) {
-                _voiceHandler->Start(profile);
+                _voiceHandler->StateChanged(Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STOPPED);
             }
             else {
-                event_audiotransmission(codecText);
+                Exchange::JBluetoothRemoteControl::Event::StateChanged(*this, Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STOPPED);
             }
 
             _adminLock.Unlock();
@@ -533,48 +489,12 @@ namespace Plugin {
                 _recorder.Close();
             }
 
-            if (_record != recorder::OFF) {
-
-                WAV::Recorder::codec wavCodec;
-                TCHAR fileName[256];
-                Core::Time now (Core::Time::Now());
-                ::snprintf(fileName, sizeof(fileName), _recordFile.c_str(), now.Hours(), now.Minutes(), now.Seconds());
-
-
-                if (CodecTable.Lookup(profile->Codec(), wavCodec) == true) {
-                    _recorder.Open(string(fileName), wavCodec, profile->Channels(), profile->SampleRate(), profile->Resolution());
-
-                    if (_recorder.IsOpen() == true) {
-                        TRACE(Trace::Information, (_T("Recorder started on: %s"), fileName));
-                    }
-                }
-            }
-
-            TRACE(Trace::Information, (_T("Audio transmission: %s"), codecText.c_str()));
+            TRACE(Trace::Information, (_T("Audio transmission end")));
         }
         else {
-
-            _adminLock.Lock();
-
-            if ((_buffer != nullptr) && (_sequence != 0)) {
-                // Push out whatever is left (but only if a complete first chunk went out)
-                SendOut(_buffer->Used());
-            }
-
-            if (_voiceHandler != nullptr) {
-                _voiceHandler->Stop();
-            }
-            else {
-                event_audiotransmission(string());
-            }
-
             _adminLock.Unlock();
 
-            if (_recorder.IsOpen() == true) {
-                _recorder.Close();
-            }
-
-            TRACE(Trace::Information, (_T("Audio transmission: end")));
+            TRACE(Trace::Error, (_T("Missing start of transmission event from the unit")));
         }
     }
 
@@ -582,34 +502,40 @@ namespace Plugin {
     {
         _adminLock.Lock();
 
-        const uint32_t chunkSize = ((_firstAudioChunkSize != 0) && (_sequence == 0)? _firstAudioChunkSize : _audioChunkSize);
+        if (_transmission == true) {
 
-        if (chunkSize != 0) {
-            ASSERT(_buffer != nullptr);
+            const uint32_t chunkSize = ((_firstAudioChunkSize != 0) && (_sequence == 0)? _firstAudioChunkSize : _audioChunkSize);
 
-            if (_buffer->Free() < length) {
-                const uint32_t newSize = std::max((_buffer->Capacity() * 2), (_buffer->Capacity() + length));
-                TRACE(Trace::Warning, (_T("Ring buffer size is too small, resizing from %d to %d bytes!"), _buffer->Capacity(), newSize));
-                _buffer->Resize(newSize);
+            if (chunkSize != 0) {
+                ASSERT(_buffer != nullptr);
+
+                if (_buffer->Free() < length) {
+                    const uint32_t newSize = std::max((_buffer->Capacity() * 2), (_buffer->Capacity() + length));
+                    TRACE(Trace::Warning, (_T("Ring buffer size is too small, resizing from %d to %d bytes!"), _buffer->Capacity(), newSize));
+                    _buffer->Resize(newSize);
+                }
+
+                const uint32_t written = _buffer->Push(length, dataBuffer);
+                DEBUG_VARIABLE(written);
+                ASSERT(written == length);
+
+                while (_buffer->Used() >= chunkSize) {
+                    SendOut(chunkSize);
+                }
+            }
+            else if (length > 0) {
+                SendOut(seq, length, dataBuffer);
             }
 
-            const uint32_t written = _buffer->Push(length, dataBuffer);
-            DEBUG_VARIABLE(written);
-            ASSERT(written == length);
+            _adminLock.Unlock();
 
-            while (_buffer->Used() >= chunkSize) {
-                SendOut(chunkSize);
+            if (_recorder.IsOpen() == true) {
+                _recorder.Write(length, dataBuffer);
             }
         }
-        else if (length > 0) {
-            SendOut(seq, length, dataBuffer);
+        else {
+            _adminLock.Unlock();
         }
-
-        if (_recorder.IsOpen() == true) {
-            _recorder.Write(length, dataBuffer);
-        }
-
-        _adminLock.Unlock();
     }
 
     void BluetoothRemoteControl::SendOut(const uint32_t seq, const uint32_t length, const uint8_t dataBuffer[])
@@ -618,19 +544,21 @@ namespace Plugin {
         ASSERT(dataBuffer != nullptr);
 
         if (_voiceHandler != nullptr) {
-            _voiceHandler->Data(seq, dataBuffer, length);
+            _voiceHandler->Data(seq, length, dataBuffer);
         }
         else {
             string frame;
             Core::ToString(dataBuffer, length, true, frame);
-            event_audioframe(seq, length, frame);
+            Exchange::JBluetoothRemoteControl::Event::Data(*this, seq, length, frame);
         }
     }
 
     void BluetoothRemoteControl::SendOut(const uint32_t length)
     {
         if (length != 0) {
-            uint8_t* buffer = static_cast<uint8_t*>(ALLOCA(length));
+            uint8_t* const buffer = static_cast<uint8_t*>(ALLOCA(length));
+            ASSERT(buffer != nullptr);
+
             const uint32_t read = _buffer->Pop(length, buffer);
 
             if (read > 0) {
@@ -638,7 +566,7 @@ namespace Plugin {
                 _sequence++;
             }
             else if (read < length) {
-                ASSERT(!"not enouqh data");
+                ASSERT(!"not enough data");
             }
         }
     }
@@ -646,23 +574,39 @@ namespace Plugin {
     void BluetoothRemoteControl::KeyEvent(const bool pressed, const uint32_t keyCode)
     {
         _adminLock.Lock();
+
         if (_inputHandler != nullptr) {
             uint32_t result = _inputHandler->KeyEvent(pressed, keyCode, _name);
             if (result == Core::ERROR_NONE) {
-                TRACE(Trace::Information, ("key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
+                TRACE(Trace::Information, ("Key send: %d (%s)", keyCode, pressed ? _T("pressed") : _T("released")));
             } else {
-                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? "pressed": "released"));
+                TRACE(Trace::Information, ("Unknown key send: %d (%s)", keyCode, pressed ? _T("pressed") : _T("released")));
             }
         }
 
         _adminLock.Unlock();
     }
 
-    void BluetoothRemoteControl::BatteryLevel(const uint8_t level)
+    void BluetoothRemoteControl::UpdateBatteryLevel(const uint8_t level)
     {
-        printf ("Battery level!!!!! %d\n", level);
-        _batteryLevel = level;
-        event_batterylevelchange(level);
+        printf("Battery level!!!!! %d\n", level);
+
+        _adminLock.Lock();
+
+        if (_batteryLevel != level) {
+
+            _batteryLevel = level;
+
+            for (auto const& observer : _observers) {
+                observer->BatteryLevelChange(level);
+            }
+
+            Exchange::JBluetoothRemoteControl::Event::BatteryLevelChange(*this, level);
+
+            TRACE(Trace::Information, (_T("Battery level: %d"), level));
+        }
+
+        _adminLock.Unlock();
     }
 
 } // namespace Plugin
