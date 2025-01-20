@@ -214,6 +214,7 @@ namespace Plugin {
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
                 , _texture()
+                , _pendingOutputs(0)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
                 _parent.Announce(*this);
