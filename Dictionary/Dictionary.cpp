@@ -192,27 +192,35 @@ namespace Plugin {
 
         ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
 
+
+        // MARCEL TODO prevent double same namespace entries in iterator!!!!!!!!!!!
+
         std::list<Exchange::IDictionary::PathEntry> pathentries;
 
         if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
         
             _adminLock.Lock();
 
-            //MARCEL TODO: we also need to add the namespaces under root level od course!!!!!!!!!!!!!!!!!!!!
+            DictionaryMap::const_iterator namespaces = _dictionary.cbegin();
 
-            DictionaryMap::const_iterator index(_dictionary.find(Delimiter()));
+            while (namespaces != _dictionary.cend()) {
+                ASSERT(namespaces->first.size() >= 1);
+                if (namespaces->first == Delimiter()) {
+                    const KeyValueContainer& container(namespaces->second);
+                    KeyValueContainer::const_iterator listIndex(container.begin());
 
-            if (index != _dictionary.end()) {
-                const KeyValueContainer& container(index->second);
-                KeyValueContainer::const_iterator listIndex(container.begin());
-
-                while ((listIndex != container.end())) {
-                    pathentries.push_back({ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
-                    listIndex++;
+                    while ((listIndex != container.end())) {
+                        pathentries.push_back({ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
+                        listIndex++;
+                    }
+                } else {
+                    string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, 0);
+                    pathentries.push_back({ (endpos == string::npos ? namespaces->first : namespaces->first.substr(0, endpos)), Exchange::IDictionary::Type::NAMESPACE });
                 }
-            }
+                ++namespaces;
+            };
 
-            _adminLock.Lock();
+            _adminLock.Unlock();
 
         } else {
 
@@ -222,7 +230,7 @@ namespace Plugin {
 
             while (namespaces != _dictionary.cend()) {
 
-                string namespacepart = namespaces->first.substr(0, path.size());  // please note std::string start_with is only c++ 20...
+                string namespacepart = namespaces->first.substr(0, path.size());  // please note std::string start_with is only c++ 20 and upwards...
 
                 if (namespacepart == path) {
                     if (path.size() == namespaces->first.size()) {
@@ -259,7 +267,7 @@ namespace Plugin {
                 ++namespaces;
             };
 
-            _adminLock.Lock();
+            _adminLock.Unlock();
         
         }
 
@@ -318,6 +326,9 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
+        ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
+
+
         _adminLock.Lock();
 
 #ifdef __DEBUG__
@@ -342,6 +353,8 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::Unregister(const string& path, const Exchange::IDictionary::INotification* sink)
     {
         ASSERT(sink != nullptr);
+
+        ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
 
         bool found = false;
 
