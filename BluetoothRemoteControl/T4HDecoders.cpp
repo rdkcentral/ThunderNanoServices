@@ -42,7 +42,7 @@ private:
     };
 
 public:
-    static constexpr Exchange::IBluetoothRemoteControl::codectype DecoderType = Exchange::IBluetoothRemoteControl::codectype::IMA_ADPCM;
+    static constexpr Exchange::IAudioStream::codectype DecoderType = Exchange::IAudioStream::codectype::IMA_ADPCM;
     static const TCHAR* Name;
 
 public:
@@ -136,7 +136,7 @@ private:
     const uint8_t  WindowSize = 32;
 
 public:
-    static constexpr Exchange::IBluetoothRemoteControl::codectype DecoderType = Exchange::IBluetoothRemoteControl::codectype::PCM;
+    static constexpr Exchange::IAudioStream::codectype DecoderType = Exchange::IAudioStream::codectype::PCM;
     static const TCHAR* Name;
 
 public:

@@ -21,7 +21,7 @@
 
 #include "Module.h"
 
-#include <interfaces/IBluetoothRemoteControl.h>
+#include <interfaces/IVoiceHandler.h>
 
 namespace Thunder {
 
@@ -35,8 +35,8 @@ namespace Decoders {
             virtual IDecoder* Factory(const string& configuration) = 0;
         };
 
-        static void Announce(const TCHAR name[], Exchange::IBluetoothRemoteControl::codectype, IFactory* factory);
-        static IDecoder* Instance(const TCHAR name[], Exchange::IBluetoothRemoteControl::codectype codec, const string& configuration);
+        static void Announce(const TCHAR name[], Exchange::IAudioStream::codectype, IFactory* factory);
+        static IDecoder* Instance(const TCHAR name[], Exchange::IAudioStream::codectype codec, const string& configuration);
 
         virtual uint32_t Frames() const = 0;
         virtual uint32_t Dropped() const = 0;

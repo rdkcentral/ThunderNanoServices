@@ -96,10 +96,10 @@ namespace Plugin {
         std::vector<Entry> _lut;
     };
 
-    static const LUT<Exchange::IBluetoothRemoteControl::codectype, WAV::Recorder::codec> CodecTable({
+    static const LUT<Exchange::IAudioStream::codectype, WAV::Recorder::codec> CodecTable({
 
-        { Exchange::IBluetoothRemoteControl::codectype::PCM,   WAV::Recorder::codec::PCM   },
-        { Exchange::IBluetoothRemoteControl::codectype::IMA_ADPCM, WAV::Recorder::codec::ADPCM }
+        { Exchange::IAudioStream::codectype::PCM,   WAV::Recorder::codec::PCM   },
+        { Exchange::IAudioStream::codectype::IMA_ADPCM, WAV::Recorder::codec::ADPCM }
 
     });
 
@@ -181,8 +181,8 @@ namespace Plugin {
             }
         }
 
+        Exchange::JAudioStream::Register(*this, this, this);
         Exchange::JBluetoothRemoteControl::Register(*this, this, this);
-        Exchange::JSONRPC::JBluetoothRemoteControlLegacy::Register(*this, this);
 
         return (string());
     }
@@ -192,8 +192,8 @@ namespace Plugin {
         ASSERT(service != nullptr);
         ASSERT(_service = service);
 
+        Exchange::JAudioStream::Unregister(*this);
         Exchange::JBluetoothRemoteControl::Unregister(*this);
-        Exchange::JSONRPC::JBluetoothRemoteControlLegacy::Unregister(*this);
 
         if (_recorder.IsOpen() == true) {
             _recorder.Close();
@@ -204,10 +204,17 @@ namespace Plugin {
             _gattRemote = nullptr;
         }
 
+        if (_audioHandler != nullptr) {
+            _audioHandler->Release();
+            _audioHandler = nullptr;
+        }
+
+#ifdef USE_VOICE_API
         if (_voiceHandler != nullptr) {
             _voiceHandler->Release();
             _voiceHandler = nullptr;
         }
+#endif
 
         if (_buffer != nullptr) {
             delete _buffer;
@@ -338,6 +345,8 @@ namespace Plugin {
         _buffer = nullptr;
 
         _adminLock.Unlock();
+
+        Exchange::JAudioStream::Event::StateChanged(*this, Exchange::IAudioStream::UNAVAILABLE, {});
     }
 
     void BluetoothRemoteControl::Operational(const GATTRemote::Data& settings)
@@ -347,7 +356,7 @@ namespace Plugin {
         ASSERT (_gattRemote != nullptr);
 
         if (settings.VoiceCommandHandle != 0) {
-            _gattRemote->Decoder(_configLine);
+            _gattRemote->DecoderFromConfigLine(_configLine);
 
             if (_buffer != nullptr) {
                 delete _buffer;
@@ -410,23 +419,35 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+
+        Exchange::JAudioStream::Event::StateChanged(*this, Exchange::IAudioStream::IDLE, {});
     }
 
-    void BluetoothRemoteControl::VoiceData(const Exchange::IBluetoothRemoteControl::audioprofile& profile)
+    void BluetoothRemoteControl::VoiceData(const Exchange::IAudioStream::audioprofile& profile)
     {
         _adminLock.Lock();
 
         if (_transmission == true) {
             // This should not happen, but let's be prepared
-            TRACE(Trace::Error, (_T("Missing end of transmission event from the unit`")));
+            TRACE(Trace::Error, (_T("Missing end of transmission event from the unit")));
             VoiceData();
         }
 
-        if (_voiceHandler != nullptr) {
-            _voiceHandler->StateChanged(Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STARTED);
+        ASSERT(_gattRemote != nullptr);
+        ASSERT(_gattRemote->SelectedProfile().IsSet() == true);
+
+        if (_audioHandler != nullptr) {
+            for (auto& observer : _streamObservers) {
+                observer->StateChanged(Exchange::IAudioStream::STARTED, _gattRemote->SelectedProfile());
+            }
         }
+#ifdef USE_VOICE_API
+        else if (_voiceHandler != nullptr) {
+            _voiceHandler->Start(_gattRemote->SelectedAudioProfile());
+        }
+#endif
         else {
-            Exchange::JBluetoothRemoteControl::Event::StateChanged(*this, Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STARTED);
+            Exchange::JAudioStream::Event::StateChanged(*this, Exchange::IAudioStream::STARTED, _gattRemote->SelectedProfile());
         }
 
         _sequence = 0;
@@ -476,11 +497,18 @@ namespace Plugin {
 
             _transmission = false;
 
-            if (_voiceHandler != nullptr) {
-                _voiceHandler->StateChanged(Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STOPPED);
+            if (_audioHandler != nullptr) {
+                for (auto& observer : _streamObservers) {
+                    observer->StateChanged(Exchange::IAudioStream::IDLE, {});
+                }
             }
+#ifdef USE_VOICE_API
+            else if (_voiceHandler != nullptr) {
+                _voiceHandler->Stop();
+            }
+#endif
             else {
-                Exchange::JBluetoothRemoteControl::Event::StateChanged(*this, Exchange::IBluetoothRemoteControl::IAudioTransmissionCallback::STOPPED);
+                Exchange::JAudioStream::Event::StateChanged(*this, Exchange::IAudioStream::IDLE, {});
             }
 
             _adminLock.Unlock();
@@ -543,13 +571,18 @@ namespace Plugin {
         ASSERT(length != 0);
         ASSERT(dataBuffer != nullptr);
 
-        if (_voiceHandler != nullptr) {
-            _voiceHandler->Data(seq, length, dataBuffer);
+        if (_audioHandler != nullptr) {
+            _audioHandler->Data(seq, {}, length, dataBuffer);
         }
+#ifdef USE_VOICE_API
+        else if (_voiceHandler != nullptr) {
+            _voiceHandler->Data(seq, dataBuffer, length);
+        }
+#endif
         else {
             string frame;
             Core::ToString(dataBuffer, length, true, frame);
-            Exchange::JBluetoothRemoteControl::Event::Data(*this, seq, length, frame);
+            Exchange::JAudioStream::Event::Data(*this, seq, {}, length, frame);
         }
     }
 

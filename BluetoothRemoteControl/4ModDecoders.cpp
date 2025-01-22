@@ -33,7 +33,7 @@ private:
     };
 
 public:
-    static constexpr Exchange::IBluetoothRemoteControl::codectype DecoderType = Exchange::IBluetoothRemoteControl::codectype::IMA_ADPCM;
+    static constexpr Exchange::IAudioStream::codectype DecoderType = Exchange::IAudioStream::codectype::IMA_ADPCM;
     static const TCHAR* Name;
 
 public:
@@ -166,7 +166,7 @@ static Decoders::DecoderFactory<ADPCM> _adpcmFactory;
 
 class PCM : public ADPCM {
 public:
-    static constexpr Exchange::IBluetoothRemoteControl::codectype DecoderType = Exchange::IBluetoothRemoteControl::codectype::PCM;
+    static constexpr Exchange::IAudioStream::codectype DecoderType = Exchange::IAudioStream::codectype::PCM;
 
 public:
     PCM() = delete;
