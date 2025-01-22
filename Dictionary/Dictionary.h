@@ -22,17 +22,16 @@
 
 #include "Module.h"
 #include <interfaces/IDictionary.h>
+#include <interfaces/json/JDictionary.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class Dictionary : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IDictionary {
+    class Dictionary : public PluginHost::IPlugin, public Exchange::IDictionary, public PluginHost::JSONRPC {
     public:
-        static const TCHAR NameSpaceDelimiter = '/';
         enum enumType {
             VOLATILE,
-            PERSISTENT,
-            CLOSURE
+            PERSISTENT
         };
 
     private:
@@ -101,83 +100,11 @@ namespace Plugin {
             bool _dirty;
         };
 
-        typedef std::map<const string, std::list<RuntimeEntry>> DictionaryMap;
-        typedef std::list<std::pair<const string, struct Exchange::IDictionary::INotification*>> ObserverMap;
-        typedef Core::IteratorType<const std::list<RuntimeEntry>, const RuntimeEntry&, std::list<RuntimeEntry>::const_iterator> InternalIterator;
+        using KeyValueContainer = std::list<RuntimeEntry>;
+        using DictionaryMap = std::unordered_map<string, KeyValueContainer>;
+        using ObserverMap = std::list<std::pair<const string, struct Exchange::IDictionary::INotification*>>;
 
     public:
-        class Iterator : public Exchange::IDictionary::IIterator {
-        private:
-            Iterator(const Iterator&) = delete;
-            Iterator& operator=(const Iterator&) = delete;
-
-        public:
-            Iterator()
-                : _iterator()
-                , _lifeTime(nullptr)
-            {
-            }
-            ~Iterator()
-            {
-            }
-
-            void Initialize()
-            {
-                _lifeTime = dynamic_cast<Core::IReferenceCounted*>(this);
-            }
-
-        public:
-            void Load(const InternalIterator& iterator)
-            {
-                ASSERT(_lifeTime != nullptr);
-                _iterator = iterator;
-            }
-            // IUnknown implementation
-            // -----------------------------------------------
-            uint32_t AddRef() const override
-            {
-                ASSERT(_lifeTime != nullptr);
-                return(_lifeTime->AddRef());
-            }
-            uint32_t Release() const override
-            {
-                ASSERT(_lifeTime != nullptr);
-                return (_lifeTime->Release());
-            }
-            BEGIN_INTERFACE_MAP(Iterator)
-            INTERFACE_ENTRY(Exchange::IDictionary::IIterator)
-            END_INTERFACE_MAP
-
-            // Exchange::IDictionary::IIterator implementation
-            // -----------------------------------------------
-            void Reset() override
-            {
-                _iterator.Reset(0);
-            }
-            bool IsValid() const override
-            {
-                return (_iterator.IsValid());
-            }
-            bool Next() override
-            {
-                return (_iterator.Next());
-            }
-
-            // Signal changes on the subscribed namespace..
-            const string Key() const override
-            {
-                return ((*_iterator).Key());
-            }
-            const string Value() const override
-            {
-                return ((*_iterator).Value());
-            }
-
-        private:
-            InternalIterator _iterator;
-            Core::IReferenceCounted* _lifeTime;
-        };
-
         class NameSpace : public Core::JSON::Container {
         public:
             class Entry : public Core::JSON::Container {
@@ -285,7 +212,7 @@ namespace Plugin {
                 NameSpace* current = this;
 
                 if (nameSpace.empty() == false) {
-                    Core::TextSegmentIterator iterator(Core::TextFragment(nameSpace), false, NameSpaceDelimiter);
+                    Core::TextSegmentIterator iterator(Core::TextFragment(nameSpace), false, Exchange::IDictionary::namespaceDelimiter);
 
                     while (iterator.Next() == true) {
                         if (iterator.Current().Length() == 0) {
@@ -340,7 +267,6 @@ namespace Plugin {
     public:
         Dictionary()
             : _adminLock()
-            , _skipURL(0)
             , _config()
             , _dictionary()
         {
@@ -349,8 +275,8 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(Dictionary)
         INTERFACE_ENTRY(IPlugin)
-        INTERFACE_ENTRY(IWeb)
         INTERFACE_ENTRY(Exchange::IDictionary)
+        INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
     public:
@@ -375,38 +301,33 @@ namespace Plugin {
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
         string Information() const override;
 
-        //  IWeb methods
-        // -------------------------------------------------------------------------------------------------------
-        // Whenever a request is received, it might carry some additional data in the body. This method allows
-        // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
-        // in the body of the request.
-        void Inbound(Thunder::Web::Request& request) override;
-
-        // If everything is received correctly, the request is passed on to us, through a thread from the thread pool, to
-        // do our thing and to return the result in the response object. Here the actual specific module work,
-        // based on a a request is handled.
-        Core::ProxyType<Web::Response> Process(const Thunder::Web::Request& request) override;
-
         //  IDictionary methods
         // -------------------------------------------------------------------------------------------------------
         // Direct method to Get a value from a key in a certain namespace from the dictionary.
-        // NameSpace and key MUST be filled.
-        Core::hresult Get(const string& nameSpace, const string& key, string& value) const override;
-        IDictionary::IIterator* Get(const string& nameSpace) const override;
+        // key MUST be filled.
+        Core::hresult Get(const string& path, const string& key, string& value /* @out */) const override;
+
+        // Direct Method to get the entries for a certain namespace
+        Core::hresult PathEntries(const string& path, IDictionary::IPathIterator*& entries /* @out */) const override;
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
-        // NameSpace and key MUST be filled.
-        Core::hresult Set(const string& nameSpace, const string& key, const string& value) override;
-        void Register(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
-        void Unregister(const string& nameSpace, struct Exchange::IDictionary::INotification* sink) override;
+        // key MUST be filled.
+        Core::hresult Set(const string& path, const string& key, const string& value) override;
+
+        Core::hresult Register(const string& path, Exchange::IDictionary::INotification* sink) override;
+        Core::hresult Unregister(const string& path, const Exchange::IDictionary::INotification* sink) override;
 
     private:
         bool CreateInternalDictionary(const string& currentSpace, const NameSpace& data);
         void CreateExternalDictionary(const string& currentSpace, NameSpace& data) const;
 
+        const string& Delimiter() const {
+            static string delimiter{ Exchange::IDictionary::namespaceDelimiter };
+            return delimiter;
+        }
+
     private:
         mutable Core::CriticalSection _adminLock;
-        uint8_t _skipURL;
         Config _config;
         DictionaryMap _dictionary;
         ObserverMap _observers;
