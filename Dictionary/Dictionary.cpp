@@ -76,7 +76,7 @@ namespace Plugin {
         while ((correctStructure == true) && (spaceIndex.Next() == true)) {
             string nameSpace(spaceIndex.Current().Name.Value());
             correctStructure = IsValidName(nameSpace);
-            correctStructure = correctStructure && CreateInternalDictionary(currentSpace + Exchange::IDictionary::namespaceDelimiter + nameSpace, spaceIndex.Current());
+            correctStructure = correctStructure && CreateInternalDictionary(currentSpace + nameSpace, spaceIndex.Current());
         }
 
         return (correctStructure);
@@ -115,6 +115,7 @@ namespace Plugin {
 
     /* virtual */ const string Dictionary::Initialize(PluginHost::IShell* service)
     {
+        /*
         _config.FromString(service->ConfigLine());
 
         Core::File dictionaryFile(service->PersistentPath() + _config.Storage.Value());
@@ -126,9 +127,9 @@ namespace Plugin {
             if (error.IsSet() == true) {
                 SYSLOG(Logging::ParsingError, (_T("Parsing failed with %s"), ErrorDisplayMessage(error.Value()).c_str()));
             }
-            CreateInternalDictionary(EMPTY_STRING, dictionary);
+            CreateInternalDictionary(Delimiter(), dictionary);
         }
-
+        */
         Exchange::JDictionary::Register(*this, this);
 
         // On succes return a name as a Callsign to be used in the URL, after the "service"prefix
@@ -139,7 +140,7 @@ namespace Plugin {
     {
 
         Exchange::JDictionary::Unregister(*this);
-
+        /*
         Core::File dictionaryFile(service->PersistentPath() + _config.Storage.Value());
 
         if (dictionaryFile.Create() == true) {
@@ -149,6 +150,7 @@ namespace Plugin {
                 SYSLOG(Logging::Shutdown, (_T("Error occured while trying to save dictionary data to file!")));
             }
         }
+        */
     }
 
     /* virtual */ string Dictionary::Information() const
@@ -192,9 +194,6 @@ namespace Plugin {
 
         ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
 
-
-        // MARCEL TODO prevent double same namespace entries in iterator!!!!!!!!!!!
-
         std::list<Exchange::IDictionary::PathEntry> pathentries;
 
         if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
@@ -210,12 +209,15 @@ namespace Plugin {
                     KeyValueContainer::const_iterator listIndex(container.begin());
 
                     while ((listIndex != container.end())) {
-                        pathentries.push_back({ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
+                        pathentries.emplace_back(Exchange::IDictionary::PathEntry{ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
                         listIndex++;
                     }
                 } else {
                     string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, 0);
-                    pathentries.push_back({ (endpos == string::npos ? namespaces->first : namespaces->first.substr(0, endpos)), Exchange::IDictionary::Type::NAMESPACE });
+                    const string& name = (endpos == string::npos ? namespaces->first : namespaces->first.substr(0, endpos));
+                    if (std::find_if(pathentries.cbegin(), pathentries.cend(), [&name](const Exchange::IDictionary::PathEntry& x) { return x.name == name; }) == pathentries.cend()) {
+                        pathentries.emplace_back(Exchange::IDictionary::PathEntry{ name, Exchange::IDictionary::Type::NAMESPACE });
+                    }
                 }
                 ++namespaces;
             };
@@ -257,10 +259,11 @@ namespace Plugin {
                             // no delimiter rest of string is the last nested namespace
                             subnamespace = namespaces->first.substr(path.size() + 1); //note this means get all chars starting from this position
                         } else {
-                            subnamespace = namespaces->first.substr(path.size() + 1, endpos - path.size() + 1);
+                            subnamespace = namespaces->first.substr(path.size() + 1, endpos - path.size() - 1);
                         }
-                        pathentries.push_back({ subnamespace, Exchange::IDictionary::Type::NAMESPACE });
-                     
+                        if (std::find_if(pathentries.cbegin(), pathentries.cend(), [&subnamespace](const Exchange::IDictionary::PathEntry& x) { return x.name == subnamespace; }) == pathentries.cend()) {
+                            pathentries.emplace_back(Exchange::IDictionary::PathEntry{ subnamespace, Exchange::IDictionary::Type::NAMESPACE });
+                        }
                     }
                 }
 
@@ -277,6 +280,21 @@ namespace Plugin {
         return (Core::ERROR_NONE);
     }
 
+
+    void Dictionary::NotifyForUpdate(const string& path, const string& key, const string& value) const
+    {
+        ObserverMap::const_iterator index(_observers.cbegin());
+
+        while (index != _observers.cend()) {
+            if (index->first == path) {
+                index->second->Modified(path, key, value);
+            }
+            index++;
+        }
+
+        Exchange::JDictionary::Event::Modified(*this, path, key, value);
+    }
+
     // Direct method to Set a value for a key in a certain namespace from the dictionary.
     // path and key MUST be filled.
     /* virtual */ Core::hresult Dictionary::Set(const string& path, const string& key, const string& value)
@@ -284,8 +302,6 @@ namespace Plugin {
         ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
-        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
-
         ASSERT(key.empty() == false);
 
         _adminLock.Lock();
@@ -298,28 +314,16 @@ namespace Plugin {
         }
 
         if (listIndex == container.end()) {
-            result = Core::ERROR_NONE;
             container.push_back(RuntimeEntry(key, value, VOLATILE));
+            NotifyForUpdate(path, key, value);
         } else if (listIndex->Value() != value) {
-            result = Core::ERROR_NONE;
             listIndex->Value(value);
-        }
-
-        if (result == Core::ERROR_NONE) {
-            ObserverMap::iterator index(_observers.begin());
-
-            // Right, we updated send out the modification !!!
-            while (index != _observers.end()) {
-                if (index->first == path) {
-                    index->second->Modified(path, key, value);
-                }
-                index++;
-            }
+            NotifyForUpdate(path, key, value);
         }
 
         _adminLock.Unlock();
 
-        return (result);
+        return (Core::ERROR_NONE);
     }
 
     /* virtual */ Core::hresult Dictionary::Register(const string& path, Exchange::IDictionary::INotification* sink)

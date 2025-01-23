@@ -320,6 +320,7 @@ namespace Plugin {
     private:
         bool CreateInternalDictionary(const string& currentSpace, const NameSpace& data);
         void CreateExternalDictionary(const string& currentSpace, NameSpace& data) const;
+        inline void NotifyForUpdate(const string& path, const string& key, const string& value) const;
 
         const string& Delimiter() const {
             static string delimiter{ Exchange::IDictionary::namespaceDelimiter };
