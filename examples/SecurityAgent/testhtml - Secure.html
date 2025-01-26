@@ -1,0 +1,214 @@
+<html>
+<body>
+<h3>Webbridge</h3>
+<h5>IP:PORT</h5>
+<input type="text" id="ipaddress" size="30"/>
+:
+<input type="text" id="ipport" size="10"/>
+<br />
+<br />
+<h3>Security Token</h3>
+<h5>test token</h5>
+<input type="text" id="testtoken" size="40"/>
+<h5>token data</h5>
+url <input type="text" id="tokendataurl" size="20"/>   user <input type="text" id="tokendatauser" size="20"/>
+<button onclick="createToken();">Create Token</button>
+<h5>token to be used</h5>
+<input type="text" id="token" size="60"/>
+Use token for requests:
+<input type="checkbox" id="usetoken"/>
+<h3>WebSocket</h3>
+<select id="protocol">
+    <option value="notification">Notification</option>
+    <option value="json">JSON</option>
+    <option value="text">Text</option>
+    <option value="raw">Raw</option>
+</select>
+<br />
+<h5>path</h5>
+<input type="text" id="sockpath" value="/Service/" size="100"/>
+<button onclick="createSocket();">Create socket</button>
+
+<h5>send message</h5>
+<input type="text" id="msg" placeholder="text to send" />
+<button onclick="sendMessage();">send msg</button>
+
+<h5>Spam message</h5>
+<input type="text" id="spamDelayMs" placeholder="delay in milliseconds" />
+<button onclick="spamMessage();">spam msg</button>
+<button onclick="stopSpam();">stop spam</button>
+
+<h3>Send XHR request</h3>
+<h5>Method</h5>
+<select id="method">
+	<option value="PUT">PUT</option>
+	<option value="POST">POST</option>
+	<option value="GET">GET</option>
+	<option value="DELETE">DELETE</option>
+</select>
+<h5>path</h5>
+<input type="text" id="path" value="/Service/" size="100"/>
+
+<h5>data</h5>
+send body data
+<input type="checkbox" id="postData"/>
+<textarea id="data" cols=100 rows=40/>
+</textarea>
+<br/>
+<button onclick="sendXHR()">send</button>
+<h3>Results</h3>
+<div>
+	<ul id="result">
+	</ul>
+</div>
+<script>
+	var url = document.getElementById('ipaddress');
+	var port = document.getElementById('ipport');
+	var sockpath = document.getElementById('sockpath');
+	var protocol = document.getElementById('protocol');
+	var msg = document.getElementById('msg');
+	var spamDelayMs = document.getElementById('spamDelayMs');
+	var ul = document.getElementById('result');
+	var socket = null;
+	var spamIntervalId = null;
+	var testtoken = document.getElementById('testtoken');
+	var token = document.getElementById('token');
+	var tokendataurl = document.getElementById('tokendataurl');
+	var tokendatauser = document.getElementById('tokendatauser');
+
+	if ((port === undefined) || (port.value == "")) {
+		port.value = "80";
+	}
+	
+
+	function createToken() {
+		tokensocket = new WebSocket("ws://" + url.value + ":" + port.value + '/jsonrpc/?token=' + testtoken.value, 'notification');
+
+		tokensocket.onmessage = function(msg){
+			const jsonreceived = msg.data;
+			addResultMessage('Token Message received: ' + jsonreceived);
+			const obj = JSON.parse(jsonreceived);
+			if(obj['result'] && obj['result']['token']) {
+			  token.value = obj.result.token;
+			} else {
+				addResultMessage('Error getting token!');
+			}
+			tokensocket.close();
+		}
+
+		tokensocket.onopen = function(){
+			addResultMessage('token socket opened');
+			var tokenjsonrpc = '{"jsonrpc": "2.0", "id": 42, "method": "SecurityAgent.1.createtoken", "params": {';
+			var extra = '';
+			if(tokendataurl.value != "") {
+				tokenjsonrpc += '"url": "' + tokendataurl.value + '"';
+				extra = ', ';
+			} 
+			if(tokendatauser.value != "") {
+				tokenjsonrpc += extra + '"user": "' + tokendatauser.value + '"';
+			} else if(extra == "") {
+				addResultMessage('Both url and user empty!');
+				tokensocket.close();
+				return;
+			} 
+			tokenjsonrpc += '}}';
+			addResultMessage('sent: ' + tokenjsonrpc);
+			tokensocket.send(tokenjsonrpc);
+		}
+
+		tokensocket.onerror = function(e){
+			console.log(e);
+			addResultMessage('token socket error, see console');
+			tokensocket = null;
+		}
+
+		tokensocket.onclose = function(){
+			addResultMessage('token socket closed');
+			tokensocket = null;
+		}
+
+	}
+	
+	function createSocket() {
+
+		if(document.getElementById('usetoken').checked) {
+			socket = new WebSocket("ws://" + url.value + ":" + port.value + sockpath.value + '?token=' + token.value, protocol.value);
+		} else {
+			socket = new WebSocket("ws://" + url.value + ":" + port.value + sockpath.value, protocol.value);
+		};
+
+		socket.onmessage = function(msg){
+			addResultMessage('Message received: ' + msg.data);
+		}
+
+		socket.onopen = function(){
+			addResultMessage('socket opened');
+		}
+
+		socket.onerror = function(e){
+			console.log(e);
+			addResultMessage('socket error, see console');
+			socket = null;
+		}
+
+		socket.onclose = function(){
+			addResultMessage('socket closed');
+			socket = null;
+		}
+	}
+
+	function sendMessage(){
+		if(!socket) return;
+		var d = new Date();
+		var n = d.getMilliseconds();
+		socket.send(msg.value);
+		addResultMessage('Message send: ' + msg.value + ' @' + n);
+	}
+
+	function spamMessage() {
+		stopSpam();
+		var interval = spamDelayMs.value && parseInt(spamDelayMs.value) || 1000;
+		spamIntervalId = setInterval(sendMessage, interval);
+	}
+
+	function stopSpam() {
+		if (spamIntervalId) clearInterval(spamIntervalId);
+	}
+
+	function addResultMessage(msg){
+		var li = document.createElement('li');
+		li.innerHTML = msg;
+		ul.insertBefore(li, ul.firstChild);
+	}
+
+	function sendXHR() {
+		var path = document.getElementById('path');
+		var method = document.getElementById('method');
+		var fullUrl = 'http://' + url.value + ':' + port.value + path.value;
+
+		var xhr = new XMLHttpRequest();
+	
+
+		xhr.open(method.value, fullUrl, true);
+		
+		if(document.getElementById('usetoken').checked) {
+			xhr.setRequestHeader('Authorization', 'Bearer ' + token.value);
+		};
+		
+		xhr.onreadystatechange = function() {
+			if(this.readyState === 4){
+				addResultMessage('Received response status: ' + this.status + ' ' + this.responseText);
+			}
+		};
+
+		var data  = null;
+		if (document.getElementById('postData').checked)
+			data = document.getElementById('data').value;
+
+		addResultMessage('Send request method: '+ method.value + ' url: ' + fullUrl + ' data:' + data );
+		xhr.send(data);
+	}
+
+</script>
+</body>
+</html>
