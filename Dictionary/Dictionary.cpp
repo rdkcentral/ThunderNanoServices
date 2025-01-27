@@ -113,7 +113,7 @@ namespace Plugin {
         }
     }
 
-    /* virtual */ const string Dictionary::Initialize(PluginHost::IShell* service)
+    /* virtual */ const string Dictionary::Initialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED )
     {
         /*
         _config.FromString(service->ConfigLine());
@@ -136,7 +136,7 @@ namespace Plugin {
         return (_T(""));
     }
 
-    /* virtual */ void Dictionary::Deinitialize(PluginHost::IShell* service)
+    /* virtual */ void Dictionary::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED )
     {
 
         Exchange::JDictionary::Unregister(*this);
