@@ -98,7 +98,7 @@ namespace Plugin {
 
     static const LUT<Exchange::IAudioStream::codectype, WAV::Recorder::codec> CodecTable({
 
-        { Exchange::IAudioStream::codectype::PCM,   WAV::Recorder::codec::PCM   },
+        { Exchange::IAudioStream::codectype::PCM,       WAV::Recorder::codec::PCM   },
         { Exchange::IAudioStream::codectype::IMA_ADPCM, WAV::Recorder::codec::ADPCM }
 
     });
