@@ -85,7 +85,8 @@
       }
     }
   },
-  "interface": {
-    "$ref": "{interfacedir}/IBluetoothRemoteControl.h"
-  }
+  "interface": [
+    { "$ref": "{interfacedir}/IBluetoothRemoteControl.h" },
+    { "$ref": "{interfacedir}/IAudioStream.h" }
+  ]
 }

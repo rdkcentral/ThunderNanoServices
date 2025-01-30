@@ -29,7 +29,7 @@ public:
     Key(const Key&) = delete;
     Key& operator= (const Key&) = delete;
 
-    Key(const TCHAR name[], const Exchange::IBluetoothRemoteControl::codectype codec)
+    Key(const TCHAR name[], const Exchange::IAudioStream::codectype codec)
         : _name(name)
         , _codec(codec) {
     }
@@ -48,12 +48,12 @@ public:
 
 private:
     const string _name;
-    Exchange::IBluetoothRemoteControl::codectype _codec;
+    Exchange::IAudioStream::codectype _codec;
 };
 
 static std::map<Key, IDecoder::IFactory*> _factories;
 
-/* static */ IDecoder* IDecoder::Instance(const TCHAR name[], Exchange::IBluetoothRemoteControl::codectype codec, const string& configuration)
+/* static */ IDecoder* IDecoder::Instance(const TCHAR name[], Exchange::IAudioStream::codectype codec, const string& configuration)
 {
     IDecoder* result = nullptr;
     std::map<Key, IDecoder::IFactory*>::iterator index = _factories.find(Key(name, codec));
@@ -63,7 +63,7 @@ static std::map<Key, IDecoder::IFactory*> _factories;
     return (result);
 }
 
-/* static */ void IDecoder::Announce(const TCHAR name[], Exchange::IBluetoothRemoteControl::codectype codec, IDecoder::IFactory* factory)
+/* static */ void IDecoder::Announce(const TCHAR name[], Exchange::IAudioStream::codectype codec, IDecoder::IFactory* factory)
 {
     // uses pair's piecewise constructor
     _factories.emplace(std::piecewise_construct,

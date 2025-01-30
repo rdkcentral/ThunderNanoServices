@@ -46,6 +46,7 @@ The table below provides and overview of acronyms used in this document and thei
 | <a name="acronym.JSON">JSON</a> | JavaScript Object Notation; a data interchange format |
 | <a name="acronym.JSON-RPC">JSON-RPC</a> | A remote procedure call protocol encoded in JSON |
 | <a name="acronym.PCM">PCM</a> | Pulse-code Modulation |
+| <a name="acronym.UUID">UUID</a> | Universally Unique Identifier |
 | <a name="acronym.WAV">WAV</a> | Waveform Audio File Format |
 
 The table below provides and overview of terms and abbreviations used in this document and their definitions.
@@ -103,8 +104,8 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- IBluetoothRemoteControlLegacy ([IBluetoothRemoteControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IBluetoothRemoteControl.h)) (version 1.0.0) (compliant format)
 - IBluetoothRemoteControl ([IBluetoothRemoteControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IBluetoothRemoteControl.h)) (version 1.0.0) (compliant format)
+- IAudioStream ([IAudioStream.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IAudioStream.h)) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -216,12 +217,6 @@ This method takes no parameters.
 
 The following properties are provided by the BluetoothRemoteControl plugin:
 
-BluetoothRemoteControlLegacy interface properties:
-
-| Property | R/W | Description |
-| :-------- | :-------- | :-------- |
-| [name](#property.name) <sup>deprecated</sup> | read-only | Name of the RCU device |
-
 BluetoothRemoteControl interface properties:
 
 | Property | R/W | Description |
@@ -230,52 +225,17 @@ BluetoothRemoteControl interface properties:
 | [metadata](#property.metadata) / [info](#property.metadata) | read-only | Device metadata |
 | [batterylevel](#property.batterylevel) | read-only | Battery level |
 | [voicecontrol](#property.voicecontrol) | read/write | Toggle voice control |
-| [audioprofile](#property.audioprofile) | read-only | Details of used audio format |
 
-<a name="property.name"></a>
-## *name [<sup>property</sup>](#head.Properties)*
+AudioStream interface properties:
 
-Provides access to the name of the RCU device.
-
-> This property is **read-only**.
-
-> ``name`` is an alternative name for this property. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
-
-### Value
-
-### Result
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Name of the RCU device |
-
-### Errors
-
-| Message | Description |
-| :-------- | :-------- |
-| ```ERROR_ILLEGAL_STATE``` | The RCU device is not assigned |
-
-### Example
-
-#### Get Request
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothRemoteControl.1.name"
-}
-```
-
-#### Get Response
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "result": "..."
-}
-```
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [name](#property.name) | read-only | Name of the stream |
+| [state](#property.state) | read-only | Current state of the stream |
+| [capabilities](#property.capabilities) | read-only | List of codecs supported by the stream |
+| [audioprofile](#property.audioprofile) | read/write | Preferred profile of the stream |
+| [time](#property.time) | read-only | Stream position |
+| [speed](#property.speed) | read/write | Stream speed |
 
 <a name="property.device"></a>
 ## *device [<sup>property</sup>](#head.Properties)*
@@ -494,10 +454,10 @@ Provides access to the toggle voice control.
 }
 ```
 
-<a name="property.audioprofile"></a>
-## *audioprofile [<sup>property</sup>](#head.Properties)*
+<a name="property.name"></a>
+## *name [<sup>property</sup>](#head.Properties)*
 
-Provides access to the details of used audio format.
+Provides access to the name of the stream.
 
 > This property is **read-only**.
 
@@ -507,18 +467,157 @@ Provides access to the details of used audio format.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Details of used audio format |
-| result.codec | string | mandatory | Compression method (pcm: uncompressed) (must be one of the following: *ima-adpcm, pcm*) |
-| result.channels | integer | mandatory | Number of audio channels |
-| result.resolution | integer | mandatory | Sample resultion in bits |
-| result.samplerate | integer | mandatory | Sample rate in hertz |
+| result | string | mandatory | Name of the stream |
 
 ### Errors
 
 | Message | Description |
 | :-------- | :-------- |
-| ```ERROR_ILLEGAL_STATE``` | The RCU device currently is not assigned |
-| ```ERROR_NOT_SUPPORTED``` | The device does not support voice input |
+| ```ERROR_ILLEGAL_STATE``` | The stream is not ready for this operation |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.name"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "..."
+}
+```
+
+<a name="property.state"></a>
+## *state [<sup>property</sup>](#head.Properties)*
+
+Provides access to the current state of the stream.
+
+> This property is **read-only**.
+
+### Value
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Current state of the stream (must be one of the following: *Idle, Started, Unavailable*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.state"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "Unavailable"
+}
+```
+
+<a name="property.capabilities"></a>
+## *capabilities [<sup>property</sup>](#head.Properties)*
+
+Provides access to the list of codecs supported by the stream.
+
+> This property is **read-only**.
+
+### Value
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of codecs supported by the stream |
+| result[#] | string | mandatory | *...* (must be one of the following: *IMA-ADPCM, PCM*) |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The stream is not ready for this operation |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.capabilities"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "PCM"
+  ]
+}
+```
+
+<a name="property.audioprofile"></a>
+## *audioprofile [<sup>property</sup>](#head.Properties)*
+
+Provides access to the preferred profile of the stream.
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Preferred profile of the stream |
+| (property).value | object | mandatory | *...* |
+| (property).value.codec | string | mandatory | Compression method (PCM: uncompressed) (must be one of the following: *IMA-ADPCM, PCM*) |
+| (property).value?.codecparams | opaque object | optional | Additional parameters for codec |
+| (property).value.channels | integer | mandatory | Number of audio channels |
+| (property).value.resolution | integer | mandatory | Sample resultion in bits |
+| (property).value.samplerate | integer | mandatory | Sample rate in hertz |
+| (property).value?.bitrate | integer | optional | Data rate of the compressed stream in bits per second |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Preferred profile of the stream |
+| result.codec | string | mandatory | Compression method (PCM: uncompressed) (must be one of the following: *IMA-ADPCM, PCM*) |
+| result?.codecparams | opaque object | optional | Additional parameters for codec |
+| result.channels | integer | mandatory | Number of audio channels |
+| result.resolution | integer | mandatory | Sample resultion in bits |
+| result.samplerate | integer | mandatory | Sample rate in hertz |
+| result?.bitrate | integer | optional | Data rate of the compressed stream in bits per second |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_NOT_SUPPORTED``` | Profile change is not supported by this stream |
+| ```ERROR_ILLEGAL_STATE``` | The stream is not ready for this operation |
+| ```ERROR_BAD_REQUEST``` | The profile specified is invalid |
+| ```ERROR_INPROGRESS``` | Stream is started, profile will be changed for the next streaming |
 
 ### Example
 
@@ -539,11 +638,157 @@ Provides access to the details of used audio format.
   "jsonrpc": "2.0",
   "id": 42,
   "result": {
-    "codec": "pcm",
+    "codec": "PCM",
+    "codecparams": {},
     "channels": 1,
     "resolution": 16,
-    "samplerate": 16000
+    "samplerate": 16000,
+    "bitrate": 64000
   }
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.audioprofile",
+  "params": {
+    "value": {
+      "codec": "PCM",
+      "codecparams": {},
+      "channels": 1,
+      "resolution": 16,
+      "samplerate": 16000,
+      "bitrate": 64000
+    }
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
+<a name="property.time"></a>
+## *time [<sup>property</sup>](#head.Properties)*
+
+Provides access to the stream position.
+
+> This property is **read-only**.
+
+### Value
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Stream position |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_NOT_SUPPORTED``` | Time reporting is not supported by this stream |
+| ```ERROR_ILLEGAL_STATE``` | The stream is not ready for this operation |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.time"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
+}
+```
+
+<a name="property.speed"></a>
+## *speed [<sup>property</sup>](#head.Properties)*
+
+Provides access to the stream speed.
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Stream speed |
+| (property).value | integer | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Stream speed |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_NOT_SUPPORTED``` | Speed setting is not supported by this stream |
+| ```ERROR_ILLEGAL_STATE``` | The stream is not ready for this operation |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.speed"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.speed",
+  "params": {
+    "value": 0
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
 }
 ```
 
@@ -558,95 +803,14 @@ BluetoothRemoteControl interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [audiotransmission](#notification.audiotransmission) | Signals beginning end of audio transmission |
-| [audioframe](#notification.audioframe) | Provides audio frame data |
 | [batterylevelchange](#notification.batterylevelchange) | Signals battery level change |
 
-<a name="notification.audiotransmission"></a>
-## *audiotransmission [<sup>notification</sup>](#head.Notifications)*
+AudioStream interface events:
 
-Signals beginning end of audio transmission.
-
-> If applicable, this notification may be sent out during registration, reflecting the current status.
-
-### Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.state | string | mandatory | New state of the voice transmission (must be one of the following: *Started, Stopped*) |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothRemoteControl.1.register",
-  "params": {
-    "event": "audiotransmission",
-    "id": "client"
-  }
-}
-```
-
-#### Message
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "client.audiotransmission",
-  "params": {
-    "state": "Stopped"
-  }
-}
-```
-
-<a name="notification.audioframe"></a>
-## *audioframe [<sup>notification</sup>](#head.Notifications)*
-
-Provides audio frame data.
-
-### Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.seq | integer | mandatory | Frame number in current transmission |
-| params.size | integer | mandatory | Size of the raw data frame in bytes |
-| params.data | string (base64) | mandatory | Raw audio data |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothRemoteControl.1.register",
-  "params": {
-    "event": "audioframe",
-    "id": "client"
-  }
-}
-```
-
-#### Message
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "client.audioframe",
-  "params": {
-    "seq": 1,
-    "size": 400,
-    "data": "..."
-  }
-}
-```
+| Notification | Description |
+| :-------- | :-------- |
+| [audioframe](#notification.audioframe) | Provides audio data |
+| [audiotransmission](#notification.audiotransmission) | Signals state of the stream |
 
 <a name="notification.batterylevelchange"></a>
 ## *batterylevelchange [<sup>notification</sup>](#head.Notifications)*
@@ -686,6 +850,109 @@ Signals battery level change.
   "method": "client.batterylevelchange",
   "params": {
     "level": 75
+  }
+}
+```
+
+<a name="notification.audioframe"></a>
+## *audioframe [<sup>notification</sup>](#head.Notifications)*
+
+Provides audio data.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params?.seq | integer | optional | Frame number in current transmission |
+| params?.timestamp | integer | optional | Timestamp of the frame |
+| params.length | integer | mandatory | Size of the raw data frame in bytes |
+| params.data | string (base64) | mandatory | Raw audio data, the format of the data is specified in the most recent *audiotransmission* notification |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.register",
+  "params": {
+    "event": "audioframe",
+    "id": "client"
+  }
+}
+```
+
+#### Message
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "client.audioframe",
+  "params": {
+    "seq": 1,
+    "timestamp": 0,
+    "length": 400,
+    "data": "..."
+  }
+}
+```
+
+<a name="notification.audiotransmission"></a>
+## *audiotransmission [<sup>notification</sup>](#head.Notifications)*
+
+Signals state of the stream.
+
+> If applicable, this notification may be sent out during registration, reflecting the current status.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.state | string | mandatory | New state of the stream (must be one of the following: *Idle, Started, Unavailable*) |
+| params?.profile | object | optional | Details on the format used in the stream |
+| params?.profile.codec | string | mandatory | Compression method (PCM: uncompressed) (must be one of the following: *IMA-ADPCM, PCM*) |
+| params?.profile?.codecparams | opaque object | optional | Additional parameters for codec |
+| params?.profile.channels | integer | mandatory | Number of audio channels |
+| params?.profile.resolution | integer | mandatory | Sample resultion in bits |
+| params?.profile.samplerate | integer | mandatory | Sample rate in hertz |
+| params?.profile?.bitrate | integer | optional | Data rate of the compressed stream in bits per second |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.register",
+  "params": {
+    "event": "audiotransmission",
+    "id": "client"
+  }
+}
+```
+
+#### Message
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "client.audiotransmission",
+  "params": {
+    "state": "Unavailable",
+    "profile": {
+      "codec": "PCM",
+      "codecparams": {},
+      "channels": 1,
+      "resolution": 16,
+      "samplerate": 16000,
+      "bitrate": 64000
+    }
   }
 }
 ```
