@@ -23,7 +23,7 @@
 
 #include <interfaces/IMath.h>
 
-namespace Thunder {
+namespace WPEFramework {
 
 namespace Plugin {
 
@@ -97,7 +97,7 @@ namespace Plugin {
 
     private:
         PluginHost::IShell *_service;
-        Core::SinkType<Notification> _notification;
+        Core::Sink<Notification> _notification;
         uint32_t _connectionId;
         Exchange::IMath *_mathImplementation;
     }; // class Castor

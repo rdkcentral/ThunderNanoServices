@@ -22,15 +22,15 @@
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IMath.h>
 
-namespace Thunder {
+namespace WPEFramework {
 
 namespace Plugin {
 
     class CastorImplementation: public Exchange::IMath, 
                                 public Exchange::IConfiguration,
-                                public Thunder::RPC::PluginSmartInterfaceType<Thunder::Exchange::IMath> {
+                                public WPEFramework::RPC::PluginSmartInterfaceType<WPEFramework::Exchange::IMath> {
     private:
-        using BaseClass = Thunder::RPC::PluginSmartInterfaceType<Thunder::Exchange::IMath>;
+        using BaseClass = WPEFramework::RPC::PluginSmartInterfaceType<WPEFramework::Exchange::IMath>;
 
         class Config : Core::JSON::Container {
         public:

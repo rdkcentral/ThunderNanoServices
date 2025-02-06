@@ -21,7 +21,7 @@
 
 #include "Pollux.h"
 
-namespace Thunder {
+namespace WPEFramework {
 
 namespace Plugin {
 

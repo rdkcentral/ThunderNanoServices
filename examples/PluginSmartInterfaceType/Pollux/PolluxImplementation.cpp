@@ -22,7 +22,7 @@
 #include <interfaces/IMath.h>
 
 
-namespace Thunder {
+namespace WPEFramework {
 
 namespace Plugin {
 

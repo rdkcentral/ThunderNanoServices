@@ -19,7 +19,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(Pollux)
 
-find_package(Thunder)
+find_package(WPEFramework)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
@@ -50,7 +50,7 @@ target_link_libraries(${MODULE_NAME}
         ${PLUGIN_YIN_DEFINITIONS})
 
 install(TARGETS ${MODULE_NAME} 
-DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
-    
+DESTINATION lib/${STORAGE_DIRECTORY}/plugins)
+        
 write_config()
     

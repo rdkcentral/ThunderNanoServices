@@ -23,7 +23,7 @@
 #include <interfaces/json/JMath.h>
 #include <interfaces/IConfiguration.h>
 
-namespace Thunder {
+namespace WPEFramework {
 
 namespace Plugin {
 
