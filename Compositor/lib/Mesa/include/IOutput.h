@@ -24,7 +24,9 @@
 namespace Thunder {
 
 namespace Compositor {
-    struct IOutput : Exchange::ICompositionBuffer {
+    struct IOutput 
+       : public Exchange::ICompositionBuffer
+       , public Core::IResource {
 
         ~IOutput() override = default;
 
