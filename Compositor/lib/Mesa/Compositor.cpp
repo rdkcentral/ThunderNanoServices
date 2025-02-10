@@ -341,6 +341,30 @@ namespace Plugin {
         }; // class Client
 
         class Bridge : public Core::PrivilegedRequest {
+        private:
+            class Callback : public Core::PrivilegedRequest::ICallback {
+            public:
+                Callback() = delete;
+                Callback(Callback&&) = delete;
+                Callback(const Callback&) = delete;
+                Callback& operator=(Callback&&) = delete;
+                Callback& operator=(const Callback&) = delete;
+
+                Callback(Bridge& parent) : _parent(parent) {}
+                ~Callback() override = default;
+
+            public:
+                void Request(const uint32_t id, Container& descriptors) override {
+                   _parent.Request(id, descriptors);
+                }
+                void Offer(const uint32_t id, Container&& descriptors) override {
+                   _parent.Offer(id, std::move(descriptors));
+                }
+
+            private:
+                Bridge& _parent;
+            };
+
         public:
             Bridge() = delete;
             Bridge(Bridge&&) = delete;
@@ -358,30 +382,30 @@ namespace Plugin {
                 Close();
             }
 
-        public:
-            uint8_t Service(const uint32_t id, const uint8_t maxSize, int container[]) override
-            {
-                uint8_t result(0);
-
-                ASSERT(maxSize > 0);
-
+        private:
+            void Request(const uint32_t id, Container& descriptors) {
                 if (id == DisplayId) {
-                    container[0] = _parent.Native();
-                    result = 1;
-                } else {
+                    descriptors.emplace_back(static_cast<int>(_parent.Native()));
+                } 
+                else {
                     Core::ProxyType<Client> client = _parent.ClientById(id);
 
                     if (client.IsValid() == false) {
                         TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
-                    } else {
-                        result = client->Descriptors(maxSize, container);
+                    } 
+                    else {
+                        int container[Core::PrivilegedRequest::MaxDescriptorsPerRequest];
+                        uint8_t result = client->Descriptors(sizeof(container), container);
+
+                        for (uint8_t index = 0; index < result; index++) {
+                            descriptors.emplace_back(container[index]);
+                        }
                     }
                 }
-
-                return result;
+            }
+            void Offer(const uint32_t id, Container&& descriptors) {
             }
 
-        private:
             CompositorImplementation& _parent;
         }; // class Bridge
 

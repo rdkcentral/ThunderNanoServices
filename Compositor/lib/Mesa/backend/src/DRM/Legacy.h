@@ -65,9 +65,7 @@ namespace Thunder {
 
                     uint32_t result = Core::ERROR_NONE;
 
-                    ASSERT(connector != nullptr);
                     ASSERT(connector.CrtController() != nullptr);
-                    ASSERT(connector.Plane() != nullptr);
 
                     uint32_t connectorId(connector.Properties().Id());
                     const uint32_t crtcId(connector.CrtController().Id());
