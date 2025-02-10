@@ -18,8 +18,13 @@
  */
 
 #include "../Module.h"
-#include "IGpu.h"
 #include "Connector.h"
+
+#ifdef USE_ATOMIC
+#include "Atomic.h"
+#else
+#include "Legacy.h"
+#endif
 
 #include <interfaces/IComposition.h>
 
@@ -36,6 +41,40 @@ namespace Thunder {
 
 namespace Compositor {
 
+namespace Backend {
+        uint32_t Connector::Backend::Commit() {
+            uint32_t result(Core::ERROR_GENERAL);
+
+            if (_flip.try_lock() == false) {
+                TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
+                result = Core::ERROR_INPROGRESS;
+            }
+            else {
+                result = Core::ERROR_NONE;
+
+                static bool doModeSet(true);
+                bool added = false;
+
+                Compositor::Backend::Transaction transaction(_gpuFd, doModeSet, this);
+
+                uint32_t outcome;
+                _parent.Swap();
+
+                if ( (transaction.Add(_parent) != Core::ERROR_NONE) ||
+                     (transaction.Commit()      != Core::ERROR_NONE) ) {
+                   _parent.Presented(0, 0); // notify connector implementation the buffer failed to display.
+                }
+                else {
+                    TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
+                }
+
+                doModeSet = transaction.ModeSet();
+            }
+            return result;
+        }
+    }
+
+
     Core::ProxyType<IOutput> CreateBuffer(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const PixelFormat& format, IOutput::ICallback* feedback)
     {
         Core::ProxyType<IOutput> result;
@@ -43,11 +82,11 @@ namespace Compositor {
         ASSERT(drmAvailable() == 1);
         ASSERT(connectorName.empty() == false);
 
-        static Core::ProxyMapType<string, Connector> connectors;
+        static Core::ProxyMapType<string, Backend::Connector> connectors;
 
         TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
 
-        Core::ProxyType<Connector> connector = connectors.Instance<Connector>(connectorName, connectorName, rectangle, format, feedback);
+        Core::ProxyType<Backend::Connector> connector = connectors.Instance<Backend::Connector>(connectorName, connectorName, rectangle, format, feedback);
 
         if ( (connector.IsValid()) && (connector->IsValid()) ) {
             result = Core::ProxyType<IOutput>(connector);

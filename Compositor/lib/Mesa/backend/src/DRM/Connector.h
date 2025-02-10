@@ -19,17 +19,11 @@
 #pragma once
 
 #include "../Module.h"
-#include "IGpu.h"
 
 #include <IOutput.h>
 #include <DRM.h>
 #include <DRMTypes.h>
-
-#ifdef USE_ATOMIC 
-#include "Atomic.h" 
-#else 
-#include "Legacy.h" 
-#endif
+#include <mutex>
 
 namespace Thunder {
 namespace Compositor {
@@ -199,113 +193,86 @@ namespace Compositor {
                             _gpuFd = Compositor::InvalidFileDescriptor;
                         }
                     }
-                    ~DRM()
-                    {
-                        if (_gpuFd > 0) {
-                            // _resourceMonitor.Unregister(*this);
+                }
+                ~Backend()
+                {
+                    if (_gpuFd > 0) {
+                        // _resourceMonitor.Unregister(*this);
 
-                            if ((drmIsMaster(_gpuFd) != 0) && (drmDropMaster(_gpuFd) != 0)) {
-                                TRACE(Trace::Error, ("Could not drop DRM master. Error: [%s]", strerror(errno)));
-                            }
-
-                            if (TRACE_ENABLED(Trace::Information)) {
-                                drmVersion* version = drmGetVersion(_gpuFd);
-                                TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_gpuFd), version->name));
-                                drmFreeVersion(version);
-                            }
-
-                            ::close(_gpuFd);
+                        if ((drmIsMaster(_gpuFd) != 0) && (drmDropMaster(_gpuFd) != 0)) {
+                            TRACE(Trace::Error, ("Could not drop DRM master. Error: [%s]", strerror(errno)));
                         }
-                    }
 
-                public:
-                    bool IsValid() const {
-                        return(_gpuFd != Compositor::InvalidFileDescriptor);
-                    }
-                    DRM::Identifier Id() const {
-                        return(_gpuId);
-                    }
-                    int Descriptor() const {
-                        return(_gpuFd);
-                    }
-                    void HandleEvent() {
-                        if (drmHandleEvent(_gpuFd, &_eventContext) != 0) {
-                            TRACE(Trace::Error, ("Failed to handle drm event"));
+                        if (TRACE_ENABLED(Trace::Information)) {
+                            drmVersion* version = drmGetVersion(_gpuFd);
+                            TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_gpuFd), version->name));
+                            drmFreeVersion(version);
                         }
+
+                        ::close(_gpuFd);
                     }
-                    uint32_t Commit() {
-                        uint32_t result(Core::ERROR_GENERAL);
+                }
 
-                        if (_flip.try_lock() == false) {
-                            TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
-                            result = Core::ERROR_INPROGRESS;
-                        }
-                        else {
-                            result = Core::ERROR_NONE;
-
-                            static bool doModeSet(true);
-                            bool added = false;
-
-                            Backend::Transaction transaction(_gpuFd, doModeSet, this);
-
-                            uint32_t outcome;
-                            _parent.Swap();
-
-                            if ( (transaction.Add(&_parent) != Core::ERROR_NONE) ||
-                                (transaction.Commit()      != Core::ERROR_NONE) ) {
-                                _parent.Presented(0, 0); // notify connector implementation the buffer failed to display.
-                            }
-                            else {
-                                TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
-                            }
-
-                            doModeSet = transaction.ModeSet();
-                        }
-                        return result;
+            public:
+                bool IsValid() const {
+                    return(_gpuFd != Compositor::InvalidFileDescriptor);
+                }
+                DRM::Identifier Id() const {
+                    return(_gpuId);
+                }
+                int Descriptor() const {
+                    return(_gpuFd);
+                }
+                const string& Node() const {
+                    return(_gpuNode);
+                }
+                void HandleEvent() {
+                    if (drmHandleEvent(_gpuFd, &_eventContext) != 0) {
+                        TRACE(Trace::Error, ("Failed to handle drm event"));
                     }
-
-                private:
-                    void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
-                    {
-                        _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
-                            if (connector->CrtController().Id() == crtc) {
-                                struct timespec presentationTimestamp;
-
-                                presentationTimestamp.tv_sec = seconds;
-                                presentationTimestamp.tv_nsec = useconds * 1000;
-
-                                connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
-                                // TODO: Check with Bram the intention of the Release()
-                                // connector->Release();
-
-                                --_pendingFlips;
-
-                                TRACE(Trace::Backend, ("Pageflip finished for %s, pending flips: %u", name.c_str(), _pendingFlips));
-                            }
-                        });
-
-                        if (_pendingFlips == 0) {
-                            // all connectors are flipped... ready for the next round.
-                            TRACE(Trace::Backend, ("all connectors are flipped... ready for the next round."));
-                            _flip.unlock();
-                        }
-                    }
-                    static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
-                    {
-                        ASSERT(userData != nullptr);
-
-                        reinterpret_cast<BackEnd*>(userData)->FinishPageFlip(crtc_id, seq, sec, usec);
-                    }
+                }
+                uint32_t Commit();
 
             private:
-                Connector& _parent;
-                const string _gpuNode;
-                int _gpuFd; // GPU opened as master or lease...
-                Compositor::DRM::Identifier _gpuId;
-                std::mutex _flip;
-                uint8_t _pendingFlips;
-                drmEventContext _eventContext;
-            };
+                void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
+                {
+                    if (_parent.CrtController().Id() == crtc) {
+                        struct timespec presentationTimestamp;
+
+                        presentationTimestamp.tv_sec = seconds;
+                        presentationTimestamp.tv_nsec = useconds * 1000;
+
+                        _parent.Presented(sequence, Core::Time(presentationTimestamp).Ticks());
+                        // TODO: Check with Bram the intention of the Release()
+                        // connector->Release();
+
+                        --_pendingFlips;
+
+                        TRACE(Trace::Backend, ("Pageflip finished for pending flips: %u", _pendingFlips));
+                    }
+
+                    if (_pendingFlips == 0) {
+                        // all connectors are flipped... ready for the next round.
+                        TRACE(Trace::Backend, ("all connectors are flipped... ready for the next round."));
+                        _flip.unlock();
+                    }
+                }
+                static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
+                {
+                    ASSERT(userData != nullptr);
+
+                    reinterpret_cast<Backend*>(userData)->FinishPageFlip(crtc_id, seq, sec, usec);
+                }
+
+        private:
+            Connector& _parent;
+            const string _gpuNode;
+            int _gpuFd; // GPU opened as master or lease...
+            Compositor::DRM::Identifier _gpuId;
+            std::mutex _flip;
+            uint8_t _pendingFlips;
+            drmEventContext _eventContext;
+        };
 
         public:
             Connector() = delete;
@@ -319,7 +286,7 @@ namespace Compositor {
                 , _x(rectangle.x)
                 , _y(rectangle.y)
                 , _format(format)
-                , _connector(_backend.Descriptor(), Compositor::DRM::object_type::Connector, backend.Id())
+                , _connector(_backend.Descriptor(), Compositor::DRM::object_type::Connector, _backend.Id())
                 , _crtc()
                 , _frameBuffer()
                 , _feedback(feedback)
@@ -327,7 +294,7 @@ namespace Compositor {
                 ASSERT(_feedback != nullptr);
 
                 if (Scan() == false) {
-                    TRACE(Trace::Backend, ("Connector %d is not in a valid state", connectorId));
+                    TRACE(Trace::Backend, ("Connector %d is not in a valid state", _backend.Id()));
                 } else {
                     ASSERT(_frameBuffer.IsValid() == true);
                     TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u,", this, _connector.Id(), _crtc.Id()));
@@ -441,7 +408,7 @@ namespace Compositor {
 
             const string& Node() const
             {
-                return backend.Node();
+                return _backend.Node();
             }
 
             //
@@ -458,7 +425,7 @@ namespace Compositor {
             void Handle(const uint16_t events) override
             {
                 if (((events & POLLIN) != 0) || ((events & POLLPRI) != 0)) {
-                    backend.HandleEvent();
+                    _backend.HandleEvent();
                 }
             }
 
