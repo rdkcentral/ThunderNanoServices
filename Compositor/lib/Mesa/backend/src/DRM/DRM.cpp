@@ -42,7 +42,7 @@ namespace Thunder {
 namespace Compositor {
 
 namespace Backend {
-        uint32_t Connector::Backend::Commit() {
+        uint32_t Connector::Backend::Commit(Connector& entry) {
             uint32_t result(Core::ERROR_GENERAL);
 
             if (_flip.try_lock() == false) {
@@ -58,11 +58,11 @@ namespace Backend {
                 Compositor::Backend::Transaction transaction(_gpuFd, doModeSet, this);
 
                 uint32_t outcome;
-                _parent.Swap();
+                entry.Swap();
 
-                if ( (transaction.Add(_parent) != Core::ERROR_NONE) ||
-                     (transaction.Commit()      != Core::ERROR_NONE) ) {
-                   _parent.Presented(0, 0); // notify connector implementation the buffer failed to display.
+                if ( (transaction.Add(entry) != Core::ERROR_NONE) ||
+                     (transaction.Commit()   != Core::ERROR_NONE) ) {
+                   entry.Presented(0, 0); // notify connector implementation the buffer failed to display.
                 }
                 else {
                     TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
