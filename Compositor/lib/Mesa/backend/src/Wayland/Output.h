@@ -45,7 +45,7 @@ namespace Compositor {
     namespace Backend {
         class WaylandOutput : public IOutput {
         public:
-            class Backend {
+            class Backend : public Core::IResource {
             public:
                 typedef struct __attribute__((packed, aligned(4))) {
                     uint32_t format;
@@ -90,8 +90,15 @@ namespace Compositor {
                 int Dispatch(const uint32_t events) const;
 
                 Core::ProxyType<IOutput> Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback);
-                handle Descriptor() const {
-                    return(_displayHandle);
+
+                handle Descriptor() const override {
+                    return (_displayHandle);
+                }
+                uint16_t Events() override {
+                    return (POLLIN | POLLOUT | POLLERR | POLLHUP);
+                }
+                void Handle(const uint16_t events) override {
+                    Dispatch(events);
                 }
 
             private:
@@ -187,15 +194,6 @@ namespace Compositor {
             int32_t Y() const override
             {
                 return _rectangle.y;
-            }
-            handle Descriptor() const override {
-                return (_backend.Descriptor());
-            }
-            uint16_t Events() override {
-                return (POLLIN | POLLOUT | POLLERR | POLLHUP);
-            }
-            void Handle(const uint16_t events) override {
-                _backend.Dispatch(events);
             }
 
         private:

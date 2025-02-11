@@ -390,12 +390,12 @@ namespace Compositor {
 
             wl_display_flush(_wlDisplay);
             _displayHandle = wl_display_get_fd(_wlDisplay);
-            // Core::ResourceMonitor::Instance().Register(_serverMonitor);
+            Core::ResourceMonitor::Instance().Register(*this);
         }
 
         WaylandOutput::Backend::~Backend()
         {
-            // Core::ResourceMonitor::Instance().Unregister(_serverMonitor);
+            Core::ResourceMonitor::Instance().Unregister(*this);
 
             if (_drmRenderFd != InvalidFileDescriptor) {
                 close(_drmRenderFd);
