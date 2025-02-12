@@ -93,3 +93,4 @@ if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)
     add_subdirectory(DynamicJSONRPCErrorMessage)
 endif()
 
+add_subdirectory(GeneratorShowcase)
