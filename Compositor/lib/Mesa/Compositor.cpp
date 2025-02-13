@@ -373,8 +373,9 @@ namespace Plugin {
             Bridge& operator=(const Bridge&) = delete;
 
             Bridge(CompositorImplementation& parent)
-                : Core::PrivilegedRequest()
+                : Core::PrivilegedRequest(&_callback)
                 , _parent(parent)
+                , _callback(*this)
             {
             }
             ~Bridge() override
@@ -403,10 +404,11 @@ namespace Plugin {
                     }
                 }
             }
-            void Offer(const uint32_t id, Container&& descriptors) {
+            void Offer(const uint32_t id VARIABLE_IS_NOT_USED, Container&& descriptors VARIABLE_IS_NOT_USED) {
             }
 
             CompositorImplementation& _parent;
+            Callback _callback;
         }; // class Bridge
 
         class Output {
