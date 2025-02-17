@@ -43,16 +43,19 @@ namespace Plugin {
     const Compositor::Color pink = { 1.0f, 0.411f, 0.705f, 1.0f };
     const Compositor::Color black = { 0.f, 0.f, 0.f, 1.0f };
 
-    class CompositorImplementation : public Exchange::IComposition, public Exchange::IComposition::IDisplay {
+    class CompositorImplementation
+        : public Exchange::IComposition,
+          public Exchange::IComposition::IDisplay {
     private:
-        CompositorImplementation(const CompositorImplementation&) = delete;
-        CompositorImplementation& operator=(const CompositorImplementation&) = delete;
+        static constexpr uint32_t DisplayId = 0;
 
         class Config : public Core::JSON::Container {
         public:
             class OutputConfig : public Core::JSON::Container {
             public:
+                OutputConfig& operator=(OutputConfig&&) = delete;
                 OutputConfig& operator=(const OutputConfig&) = delete;
+
                 OutputConfig()
                     : Core::JSON::Container()
                     , Connector("HDMI-A-1")
@@ -63,7 +66,16 @@ namespace Plugin {
                 {
                     Init();
                 }
-
+                OutputConfig(OutputConfig&& other)
+                    : Core::JSON::Container()
+                    , Connector(std::move(other.Connector))
+                    , X(std::move(other.X))
+                    , Y(std::move(other.Y))
+                    , Height(std::move(other.Height))
+                    , Width(std::move(other.Width))
+                {
+                    Init();
+                }
                 OutputConfig(const OutputConfig& other)
                     : Core::JSON::Container()
                     , Connector(other.Connector)
@@ -74,7 +86,6 @@ namespace Plugin {
                 {
                     Init();
                 }
-
                 ~OutputConfig() override = default;
 
             private:
@@ -95,7 +106,9 @@ namespace Plugin {
                 Core::JSON::DecUInt16 Width;
             };
 
+            Config(Config&&) = delete;
             Config(const Config&) = delete;
+            Config& operator=(Config&&) = delete;
             Config& operator=(const Config&) = delete;
 
             Config()
@@ -137,7 +150,9 @@ namespace Plugin {
         class DisplayDispatcher : public RPC::Communicator {
         public:
             DisplayDispatcher() = delete;
+            DisplayDispatcher(DisplayDispatcher&&) = delete;
             DisplayDispatcher(const DisplayDispatcher&) = delete;
+            DisplayDispatcher& operator=(DisplayDispatcher&&) = delete;
             DisplayDispatcher& operator=(const DisplayDispatcher&) = delete;
 
             DisplayDispatcher(
@@ -180,7 +195,379 @@ namespace Plugin {
             Exchange::IComposition::IDisplay* _parentInterface;
         };
 
+        class Client
+            : public Exchange::IComposition::IClient,
+              public Compositor::CompositorBuffer {
+        public:
+            Client() = delete;
+            Client(Client&&) = delete;
+            Client(const Client&) = delete;
+            Client& operator=(Client&&) = delete;
+            Client& operator=(const Client&) = delete;
+
+            Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
+                : Compositor::CompositorBuffer(Compositor::CreateBuffer(parent.Native(), width, height, Compositor::PixelFormat(parent.Format(), { parent.Modifier() })))
+                , _parent(parent)
+                , _id(Core::InterlockedIncrement(_sequence))
+                , _callsign(callsign)
+                , _opacity(255)
+                , _zIndex(0)
+                , _geometry({ 0, 0, width, height })
+                , _texture()
+                , _pendingOutputs(0)
+            {
+                Core::ResourceMonitor::Instance().Register(*this);
+                _parent.Announce(*this);
+                TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
+            }
+            ~Client() override
+            {
+                if (_texture.IsValid()) {
+                    _texture.Release(); // make sure to delete the texture so we are skipped by the renderer.
+                }
+
+                _parent.Revoke(*this);
+
+                Core::ResourceMonitor::Instance().Unregister(*this);
+
+                _parent.Render(*this); // request a render to remove this surface from the composition.
+
+                TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
+            }
+
+        public:
+            uint8_t Descriptors(const uint8_t maxSize, int container[])
+            {
+                return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
+            }
+            Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
+            {
+                return _texture;
+            }
+            void Texture(Core::ProxyType<Compositor::IRenderer::ITexture> texture)
+            {
+                ASSERT(_texture.IsValid() ^ texture.IsValid());
+                _texture = texture;
+            }
+
+            /**
+             * Compositor::CompositorBuffer methods
+             */
+            void Request() override
+            {
+                _parent.Render(*this);
+            }
+
+            /**
+             * Exchange::IComposition::IClient methods
+             */
+            Thunder::Core::instance_id Native() const override
+            {
+                return (_id);
+            }
+
+            string Name() const override
+            {
+                return _callsign;
+            }
+            void Opacity(const uint32_t value) override
+            {
+                _opacity = value;
+            }
+            uint32_t Opacity() const override
+            {
+                return _opacity;
+            }
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
+            {
+                _geometry = rectangle;
+                return Core::ERROR_NONE;
+            }
+            Exchange::IComposition::Rectangle Geometry() const override
+            {
+                return _geometry;
+            }
+            uint32_t ZOrder(const uint16_t index) override
+            {
+                _zIndex = index;
+                return Core::ERROR_NONE;
+            }
+            uint32_t ZOrder() const override
+            {
+                return _zIndex;
+            }
+
+        public:
+            // Core::IReferenceCounted
+            uint32_t AddRef() const override
+            {
+                return Core::ERROR_COMPOSIT_OBJECT;
+            }
+
+            uint32_t Release() const override
+            {
+                return Core::ERROR_COMPOSIT_OBJECT;
+            }
+
+            void Pending(uint8_t outputIndex)
+            {
+                _pendingOutputs |= (1 << outputIndex);
+            }
+
+            void Completed(uint8_t outputIndex)
+            {
+                _pendingOutputs &= ~(1 << outputIndex);
+
+                if (_pendingOutputs == 0) {
+                    Published();
+                }
+            }
+
+            BEGIN_INTERFACE_MAP(RemoteAccess)
+            INTERFACE_ENTRY(Exchange::IComposition::IClient)
+            END_INTERFACE_MAP
+
+        private:
+            CompositorImplementation& _parent;
+            uint32_t _id;
+            const string _callsign; // the callsign of the surface
+            uint32_t _opacity; // the opacity of the surface on the composition
+            uint16_t _zIndex; // the z-index of the surface on the composition
+            Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
+            Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
+            uint32_t _pendingOutputs;
+
+            static uint32_t _sequence;
+        }; // class Client
+
+        class Bridge : public Core::PrivilegedRequest {
+        private:
+            class Callback : public Core::PrivilegedRequest::ICallback {
+            public:
+                Callback() = delete;
+                Callback(Callback&&) = delete;
+                Callback(const Callback&) = delete;
+                Callback& operator=(Callback&&) = delete;
+                Callback& operator=(const Callback&) = delete;
+
+                Callback(Bridge& parent) : _parent(parent) {}
+                ~Callback() override = default;
+
+            public:
+                void Request(const uint32_t id, Container& descriptors) override {
+                   _parent.Request(id, descriptors);
+                }
+                void Offer(const uint32_t id, Container&& descriptors) override {
+                   _parent.Offer(id, std::move(descriptors));
+                }
+
+            private:
+                Bridge& _parent;
+            };
+
+        public:
+            Bridge() = delete;
+            Bridge(Bridge&&) = delete;
+            Bridge(const Bridge&) = delete;
+            Bridge& operator=(Bridge&&) = delete;
+            Bridge& operator=(const Bridge&) = delete;
+
+            Bridge(CompositorImplementation& parent)
+                : Core::PrivilegedRequest(&_callback)
+                , _parent(parent)
+                , _callback(*this)
+            {
+            }
+            ~Bridge() override
+            {
+                Close();
+            }
+
+        private:
+            void Request(const uint32_t id, Container& descriptors) {
+                if (id == DisplayId) {
+                    descriptors.emplace_back(static_cast<int>(_parent.Native()));
+                } 
+                else {
+                    Core::ProxyType<Client> client = _parent.ClientById(id);
+
+                    if (client.IsValid() == false) {
+                        TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
+                    } 
+                    else {
+                        int container[Core::PrivilegedRequest::MaxDescriptorsPerRequest];
+                        uint8_t result = client->Descriptors(sizeof(container), container);
+
+                        for (uint8_t index = 0; index < result; index++) {
+                            descriptors.emplace_back(container[index]);
+                        }
+                    }
+                }
+            }
+            void Offer(const uint32_t id VARIABLE_IS_NOT_USED, Container&& descriptors VARIABLE_IS_NOT_USED) {
+            }
+
+            CompositorImplementation& _parent;
+            Callback _callback;
+        }; // class Bridge
+
+        class Output {
+        public:
+            Output() = delete;
+            Output(Output&&) = delete;
+            Output(const Output&) = delete;
+            Output& operator=(Output&&) = delete;
+            Output& operator=(const Output&) = delete;
+
+            Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
+                : _index(Core::InterlockedIncrement(_indexes))
+                , _sink(*this)
+                , _connector()
+                , _gpuNode()
+                , _pts(Core::Time::Now().Ticks())
+                , _rendering()
+                , _commit()
+                , _pendingClients()
+                , _renderingClients()
+
+            {
+                _connector = Compositor::CreateBuffer(name, rectangle, format, &_sink);
+                TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
+            }
+
+            virtual ~Output()
+            {
+                _connector.Release();
+            }
+
+        private:
+            class Sink : public Compositor::IOutput::ICallback {
+            public:
+                Sink(Sink&&) = delete;
+                Sink(const Sink&) = delete;
+                Sink& operator=(Sink&&) = delete;
+                Sink& operator=(const Sink&) = delete;
+                Sink() = delete;
+
+                Sink(Output& parent)
+                    : _parent(parent)
+                {
+                }
+                ~Sink() override = default;
+
+                virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+                {
+                    _parent.HandleVSync(output, sequence, time);
+                }
+
+                // virtual void Display(const int fd, const std::string& node) override
+                // {
+                //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
+                //     _parent.HandleGPUNode(node);
+                // }
+
+            private:
+                Output& _parent;
+            };
+
+            void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
+            {
+                float fps = 1 / ((pts - _pts) / 1000000.0f);
+                _pts = pts;
+
+                for (Core::ProxyType<Client> client : _renderingClients) {
+                    client->Completed(_index);
+                }
+
+                _renderingClients.clear();
+
+                _commit.unlock();
+
+                TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
+            }
+
+            void HandleGPUNode(const std::string node)
+            {
+                if (_gpuNode.empty() == true) {
+                    _gpuNode = node;
+                }
+            }
+
+        public:
+            const std::string& GpuNode() const
+            {
+                return _gpuNode;
+            }
+
+            Exchange::IComposition::Rectangle Geometry() const
+            {
+                return { _connector->X(), _connector->Y(), _connector->Width(), _connector->Height() };
+            }
+
+            bool IsIntersecting(const Exchange::IComposition::Rectangle& rectangle)
+            {
+                return (
+                    std::min(_connector->X() + static_cast<int32_t>(_connector->Width()), rectangle.x + static_cast<int32_t>(rectangle.width)) > std::max(_connector->X(), rectangle.x) && // width > 0
+                    std::min(_connector->Y() + static_cast<int32_t>(_connector->Height()), rectangle.y + static_cast<int32_t>(rectangle.height)) > std::max(_connector->Y(), rectangle.y)); // height > 0
+            }
+
+            bool IsValid()
+            {
+                return _connector.IsValid();
+            }
+
+            Core::ProxyType<Compositor::IOutput> Buffer()
+            {
+                return _connector;
+            }
+
+            void Pending(Core::ProxyType<Client> client)
+            {
+                _rendering.Lock();
+                _pendingClients.emplace_back(client);
+                _rendering.Unlock();
+            }
+
+            void Commit()
+            {
+                _commit.lock();
+
+                _rendering.Lock();
+                _renderingClients = std::move(_pendingClients);
+                _rendering.Unlock();
+
+                for (Core::ProxyType<Client> client : _renderingClients) {
+                    client->Pending(_index);
+                }
+
+                _connector->Commit();
+            }
+
+        private:
+            const uint8_t _index;
+            Sink _sink;
+            Core::ProxyType<Compositor::IOutput> _connector;
+            std::string _gpuNode;
+            uint64_t _pts;
+
+            Core::CriticalSection _rendering;
+            std::mutex _commit;
+            std::vector<Core::ProxyType<Client>> _pendingClients;
+            std::vector<Core::ProxyType<Client>> _renderingClients;
+
+            static uint32_t _indexes;
+        };
+
+        using Clients = Core::ProxyMapType<string, Client>;
+        using Observers = std::vector<Exchange::IComposition::INotification*>;
+        using Outputs = std::list<Output>;
+
     public:
+        CompositorImplementation(CompositorImplementation&&) = delete;
+        CompositorImplementation(const CompositorImplementation&) = delete;
+        CompositorImplementation& operator=(CompositorImplementation&&) = delete;
+        CompositorImplementation& operator=(const CompositorImplementation&) = delete;
+
         CompositorImplementation()
             : _adminLock()
             , _format(DRM_FORMAT_INVALID)
@@ -195,14 +582,13 @@ namespace Plugin {
             , _engine()
             , _dispatcher(nullptr)
             , _canvasBuffer()
-            , _canvasTexture(nullptr)
+            , _canvasTexture()
             , _gpuIdentifier(0)
             , _gpuNode()
             , _renderNode()
             , _present(*this)
         {
         }
-
         ~CompositorImplementation() override
         {
             _dispatcher.reset(nullptr);
@@ -220,440 +606,6 @@ namespace Plugin {
                 _gpuIdentifier = -1;
             }
         }
-
-        BEGIN_INTERFACE_MAP(CompositorImplementation)
-        INTERFACE_ENTRY(Exchange::IComposition)
-        INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
-        END_INTERFACE_MAP
-
-    private:
-        class Client : public Exchange::IComposition::IClient, public Exchange::ICompositionBuffer {
-        public:
-            using Container = Core::ProxyMapType<string, Client>;
-
-            class SharedBuffer : public Compositor::CompositorBufferType<4> {
-            private:
-                using BaseClass = Thunder::Compositor::CompositorBufferType<4>;
-
-            public:
-                SharedBuffer() = delete;
-                SharedBuffer(const SharedBuffer&) = delete;
-                SharedBuffer& operator=(const SharedBuffer&) = delete;
-
-            public:
-                SharedBuffer(Exchange::ICompositionBuffer* parent)
-                    : BaseClass(std::to_string(parent->Identifier()), parent->Identifier(), parent->Width(), parent->Height(), parent->Format(), parent->Modifier(), parent->Type())
-                    , _parent(parent)
-                {
-
-                    Exchange::ICompositionBuffer::IIterator* planes = _parent->Planes(Compositor::DefaultTimeoutMs);
-                    ASSERT(planes != nullptr);
-
-                    while ((planes->Next() == true) && (planes->IsValid() == true)) {
-                        ASSERT(planes->IsValid() == true);
-                        BaseClass::Add(planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset());
-                        TRACE(Trace::Information, (_T("Client[%d] Added shared plane %" PRIuPTR " with stride: %d, offset=%d"), parent->Identifier(), planes->Plane()->Accessor(), planes->Plane()->Stride(), planes->Plane()->Offset()));
-                    }
-
-                    _parent->Completed(false);
-
-                    Core::ResourceMonitor::Instance().Register(*this);
-                }
-                virtual ~SharedBuffer()
-                {
-                    Core::ResourceMonitor::Instance().Unregister(*this);
-                }
-
-                uint32_t AddRef() const override
-                {
-                    return _parent->AddRef();
-                }
-
-                uint32_t Release() const override
-                {
-                    return _parent->Release();
-                }
-
-                void Render() override
-                {
-                    _parent->Render();
-                }
-
-            private:
-                Exchange::ICompositionBuffer* _parent;
-            }; // class SharedBuffer
-
-            class Bridge : public Core::PrivilegedRequest {
-                static constexpr uint32_t DisplayId = 0;
-
-            public:
-                Bridge(const Bridge&) = delete;
-                Bridge& operator=(const Bridge&) = delete;
-                Bridge() = delete;
-
-                Bridge(CompositorImplementation& parent)
-                    : Core::PrivilegedRequest()
-                    , _parent(parent)
-                    , _shareable()
-                {
-                }
-
-                virtual ~Bridge()
-                {
-                    Close();
-                }
-
-                uint8_t Service(const uint32_t id, const uint8_t maxSize, int container[]) override
-                {
-                    uint8_t result(0);
-
-                    if (id == DisplayId) {
-                        ASSERT(maxSize > 0);
-                        container[0] = _parent.Native();
-                        result = 1;
-                    } else {
-                        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-                        for (const SharedBuffer* buffer : _shareable) {
-
-                            ASSERT(buffer != nullptr);
-
-                            if (buffer->Identifier() == id) {
-                                result = buffer->Descriptors(maxSize, container);
-                                break;
-                            }
-                        }
-                    }
-
-                    return result;
-                }
-
-                void Announce(const SharedBuffer* buffer)
-                {
-                    ASSERT(buffer != nullptr);
-
-                    Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-                    std::list<const SharedBuffer*>::iterator index(std::find(_shareable.begin(), _shareable.end(), buffer));
-
-                    if (index == _shareable.end()) {
-                        _shareable.push_back(buffer);
-                        TRACE(Trace::Information, (_T("SharedBuffer %d Announced"), buffer->Identifier()));
-                    }
-                }
-
-                void Revoke(const SharedBuffer* buffer)
-                {
-                    ASSERT(buffer != nullptr);
-
-                    Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-                    std::list<const SharedBuffer*>::iterator index(std::find(_shareable.begin(), _shareable.end(), buffer));
-
-                    if (index != _shareable.end()) {
-                        TRACE(Trace::Information, (_T("SharedBuffer %d Revoked"), (*index)->Identifier()));
-                        _shareable.erase(index);
-                    }
-                }
-
-            private:
-                mutable Core::CriticalSection _adminLock;
-                CompositorImplementation& _parent;
-                std::list<const SharedBuffer*> _shareable;
-            }; // class Bridge
-
-        public:
-            Client() = delete;
-            Client(const Client&) = delete;
-            Client& operator=(const Client&) = delete;
-
-            Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
-                : _parent(parent)
-                , _callsign(callsign)
-                , _opacity(255)
-                , _zIndex(0)
-                , _geometry({ 0, 0, width, height })
-                , _buffer(Compositor::CreateBuffer(_parent.Native(), width, height, Compositor::PixelFormat(_parent.Format(), { _parent.Modifier() })))
-                , _sharedBuffer(this)
-                , _texture(nullptr)
-            {
-                ASSERT(_buffer.IsValid());
-                _parent.Announce(*this);
-
-                TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
-            }
-
-            virtual ~Client() override
-            {
-                _parent.Revoke(*this);
-
-                if (_texture != nullptr) {
-                    _texture->Release();
-                    _texture = nullptr;
-                }
-
-                _buffer.Release();
-
-                _parent.RequestRender(nullptr);
-
-                TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
-            }
-
-            /**
-             * Exchange::IComposition::IClient methods
-             */
-            Thunder::Core::instance_id Native() const
-            {
-                return _buffer->Identifier();
-            }
-
-            string Name() const
-            {
-                return _callsign;
-            }
-            void Opacity(const uint32_t value)
-            {
-                _opacity = value;
-            }
-            uint32_t Opacity() const
-            {
-                return _opacity;
-            }
-            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle)
-            {
-                _geometry = rectangle;
-                return Core::ERROR_NONE;
-            }
-            Exchange::IComposition::Rectangle Geometry() const
-            {
-                return _geometry;
-            }
-            uint32_t ZOrder(const uint16_t index)
-            {
-                _zIndex = index;
-                return Core::ERROR_NONE;
-            }
-            uint32_t ZOrder() const
-            {
-                return _zIndex;
-            }
-
-            BEGIN_INTERFACE_MAP(RemoteAccess)
-            INTERFACE_ENTRY(Exchange::IComposition::IClient)
-            END_INTERFACE_MAP
-
-            /**
-             * Exchange::ICompositionBuffer methods
-             */
-
-            uint32_t AddRef() const override
-            {
-                // We are not a reference counted object, so do nothing.
-                return (Core::ERROR_COMPOSIT_OBJECT);
-            }
-            uint32_t Release() const override
-            {
-                // We are not a reference counted object, so do nothing.
-                return (Core::ERROR_COMPOSIT_OBJECT);
-            }
-
-            uint32_t Identifier() const override
-            {
-                return (_buffer->Identifier());
-            }
-            IIterator* Planes(const uint32_t timeoutMs) override
-            {
-                return (_buffer->Planes(timeoutMs));
-            }
-            uint32_t Completed(const bool dirty) override
-            {
-                return (_buffer->Completed(dirty));
-            }
-            void Render() override
-            {
-                // uint32_t outputId =
-                _parent.RequestRender(this);
-                // _parent.WaitForVSync(outputId);
-            }
-            uint32_t Width() const override
-            {
-                return (_buffer->Width());
-            }
-            uint32_t Height() const override
-            {
-                return (_buffer->Height());
-            }
-            uint32_t Format() const override
-            {
-                return (_buffer->Format());
-            }
-            uint64_t Modifier() const override
-            {
-                return (_buffer->Modifier());
-            }
-            DataType Type() const override
-            {
-                return (_buffer->Type());
-            }
-
-            Compositor::IRenderer::ITexture* Texture()
-            {
-                return _texture;
-            }
-            void Texture(Compositor::IRenderer::ITexture* texture)
-            {
-                ASSERT((_texture != nullptr) ^ (texture != nullptr));
-                _texture = texture;
-            }
-
-            const SharedBuffer* Buffer() const
-            {
-                return &_sharedBuffer;
-            }
-
-        private:
-            CompositorImplementation& _parent;
-            const string _callsign; // the callsign of the surface
-            uint32_t _opacity; // the opacity of the surface on the composition
-            uint16_t _zIndex; // the z-index of the surface on the composition
-            Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
-            Core::ProxyType<Exchange::ICompositionBuffer> _buffer; // the actual GMB/DRMDumb buffer for the client to draw on.
-            const SharedBuffer _sharedBuffer; // the exported file descriptors pointing to _buffer planes.
-            Compositor::IRenderer::ITexture* _texture; // the texture handle that is known in the GPU/Renderer.
-        }; // class Client
-
-        class Output {
-        public:
-            Output(const Output&) = delete;
-            Output& operator=(const Output&) = delete;
-            Output() = delete;
-
-            Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
-                : _sink(*this)
-                , _rectangle(rectangle)
-                , _buffer()
-                , _gpuNode()
-                , _rendering()
-                , _vsync()
-                , _pts(Core::Time::Now().Ticks())
-            {
-                _buffer = Compositor::IOutput::Instance(name, _rectangle, format, &_sink);
-                TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
-            }
-
-            virtual ~Output()
-            {
-                _buffer.Release();
-            }
-
-        private:
-            class Sink : public Compositor::IOutput::IFeedback {
-            public:
-                Sink(const Sink&) = delete;
-                Sink& operator=(const Sink&) = delete;
-                Sink() = delete;
-
-                Sink(Output& parent)
-                    : _parent(parent)
-                {
-                }
-
-                virtual ~Sink() = default;
-
-                virtual void Presented(const Exchange::ICompositionBuffer::buffer_id id, const uint32_t sequence, const uint64_t time) override
-                {
-                    _parent.HandleVSync(id, sequence, time);
-                }
-
-                virtual void Display(const Exchange::ICompositionBuffer::buffer_id id, const std::string& node) override
-                {
-                    TRACE(Trace::Information, (_T("Connector id %d opened on %s"), id, node.c_str()));
-                    _parent.HandleGPUNode(node);
-                }
-
-            private:
-                Output& _parent;
-            };
-
-            void HandleVSync(const Exchange::ICompositionBuffer::buffer_id id VARIABLE_IS_NOT_USED, const uint32_t sequence, const uint64_t pts /*usec since epoch*/)
-            {
-                std::unique_lock<std::mutex> lock(_rendering);
-
-                float fps = 1 / ((pts - _pts) / 1000000.0f);
-                _pts = pts;
-
-                _vsync.notify_all();
-
-                TRACE(Trace::Information, ("Connector %u running at %.2f fps", Identifier(), fps));
-            }
-
-            void HandleGPUNode(const std::string node)
-            {
-                if (_gpuNode.empty() == true) {
-                    _gpuNode = node;
-                }
-            }
-
-        public:
-            uint32_t WaitForVSync(uint32_t timeoutMs)
-            {
-                uint32_t result(Core::ERROR_NONE);
-
-                std::unique_lock<std::mutex> lock(_rendering);
-
-                if (timeoutMs == Core::infinite) {
-                    _vsync.wait(lock);
-                } else {
-                    if (_vsync.wait_for(lock, std::chrono::seconds(10)) == std::cv_status::timeout) {
-                        result = Core::ERROR_TIMEDOUT;
-                    }
-                };
-
-                return result;
-            }
-
-            const std::string& GpuNode() const
-            {
-                return _gpuNode;
-            }
-
-            Exchange::IComposition::Rectangle Geometry() const
-            {
-                return _rectangle;
-            }
-
-            bool IsIntersecting(const Exchange::IComposition::Rectangle& rectangle)
-            {
-                return (std::min((_rectangle.x + _rectangle.width), (rectangle.x + rectangle.width)) > std::max(_rectangle.x, rectangle.x) && // width > 0
-                    std::min((_rectangle.y + _rectangle.height), (rectangle.y + rectangle.height)) > std::max(_rectangle.y, rectangle.y)); // height > 0
-            }
-
-            uint32_t Identifier() const
-            {
-                return (_buffer->Identifier());
-            }
-
-            bool IsValid()
-            {
-                return _buffer.IsValid();
-            }
-
-            Core::ProxyType<Exchange::ICompositionBuffer> Buffer()
-            {
-                return _buffer;
-            }
-
-        private:
-            Sink _sink;
-            Exchange::IComposition::Rectangle _rectangle;
-            Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
-            std::string _gpuNode;
-            std::mutex _rendering;
-            std::condition_variable _vsync;
-            uint64_t _pts;
-        };
-
-        static constexpr uint32_t InvalidId = uint32_t(~0);
 
     public:
         /**
@@ -707,8 +659,8 @@ namespace Plugin {
             _canvasBuffer = Compositor::CreateBuffer(_gpuIdentifier, config.Width.Value(), config.Height.Value(), _format);
             ASSERT(_canvasBuffer.IsValid());
 
-            _canvasTexture = _renderer->Texture(_canvasBuffer.operator->());
-            ASSERT(_canvasTexture != nullptr);
+            _canvasTexture = _renderer->Texture(_canvasBuffer);
+            ASSERT(_canvasTexture.IsValid());
 
             RenderCanvas();
 
@@ -740,7 +692,7 @@ namespace Plugin {
                     _engine.Release();
                     _clientBridge.Close();
 
-                    _canvasTexture->Release();
+                    _canvasTexture.Release();
                     _canvasBuffer.Release();
 
                     result = Core::ERROR_UNAVAILABLE;
@@ -753,9 +705,9 @@ namespace Plugin {
         {
             ASSERT(notification != nullptr);
 
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
+            _adminLock.Lock();
 
-            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
+            Observers::iterator index(std::find(_observers.begin(), _observers.end(), notification));
             ASSERT(index == _observers.end());
 
             if (index == _observers.end()) {
@@ -767,6 +719,8 @@ namespace Plugin {
                         notification->Attached(name, &(*element));
                     });
             }
+
+            _adminLock.Unlock();
         }
 
         void Unregister(Exchange::IComposition::INotification* notification) override
@@ -775,7 +729,7 @@ namespace Plugin {
 
             _adminLock.Lock();
 
-            std::list<Exchange::IComposition::INotification*>::iterator index(std::find(_observers.begin(), _observers.end(), notification));
+            Observers::iterator index(std::find(_observers.begin(), _observers.end(), notification));
 
             ASSERT(index != _observers.end());
 
@@ -794,32 +748,36 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-    private:
         void Announce(Client& client)
         {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
+            Core::ProxyType<Exchange::ICompositionBuffer> buffer(
+                static_cast<Core::IReferenceCounted&>(client),
+                static_cast<Exchange::ICompositionBuffer&>(client));
 
-            client.Texture(_renderer->Texture(&client));
-            _clientBridge.Announce(client.Buffer());
+            ASSERT(buffer.IsValid());
+
+            client.Texture(_renderer->Texture(buffer));
+
+            _adminLock.Lock();
 
             for (auto& observer : _observers) {
                 observer->Attached(client.Name(), &client);
             }
+            _adminLock.Unlock();
         }
 
         void Revoke(Client& client)
         {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
+            _adminLock.Lock();
 
             for (auto& observer : _observers) {
                 observer->Detached(client.Name());
             }
 
-            _clientBridge.Revoke(client.Buffer());
+            _adminLock.Unlock();
 
-            if (client.Texture() != nullptr) {
-                client.Texture()->Release();
-                client.Texture(nullptr);
+            if (client.Texture().IsValid()) {
+                client.Texture().Release();
             }
         }
 
@@ -833,46 +791,45 @@ namespace Plugin {
             return _modifier;
         }
 
-        uint32_t RequestRender(Client* client)
-        {
-            uint32_t outputId(InvalidId);
-
-            if (client == nullptr) {
-                _present.Trigger();
-            } else {
-                for (auto& output : _outputs) {
-                    if (output.IsIntersecting(client->Geometry())) {
-                        outputId = output.Identifier();
-
-                        _present.Trigger();
-
-                        if (output.WaitForVSync(Compositor::DefaultTimeoutMs) == Core::ERROR_TIMEDOUT) {
-                            TRACE(Trace::Error, (_T("%s vsync timeout... "), client->Name().c_str()));
-                        }
-
-                        break;
-                    } else {
-                        TRACE(Trace::Information, (_T("%s no intersection with output %d"), client->Name().c_str(), output.Identifier()));
-                    }
-                }
-            }
-
-            return outputId;
-        }
-
-    public:
         /**
          * Exchange::IComposition::IDisplay methods
          */
-
         Thunder::Core::instance_id Native() const override
         {
             return _gpuIdentifier;
         }
-
         string Port() const override
         {
             return string("Mesa3d");
+        }
+        // Useless Resolution functions, this should be controlled by DisplayControl
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
+        {
+            return (Core::ERROR_UNAVAILABLE);
+        }
+        Exchange::IComposition::ScreenResolution Resolution() const override
+        {
+            return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
+        }
+
+        BEGIN_INTERFACE_MAP(CompositorImplementation)
+        INTERFACE_ENTRY(Exchange::IComposition)
+        INTERFACE_ENTRY(Exchange::IComposition::IDisplay)
+        END_INTERFACE_MAP
+
+    private:
+        void Render(Client& client)
+        {
+            uint8_t index = 1;
+            for (auto& output : _outputs) {
+                if (output.IsIntersecting(client.Geometry())) {
+                    _present.Trigger(); // Only trigger a render loop if the client is actual visible on one of the outputs
+                    break;
+                } else {
+                    TRACE(Trace::Information, (_T("%s no intersection with output %d"), client.Name().c_str(), index));
+                }
+                index++;
+            }
         }
 
         IComposition::IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override
@@ -907,26 +864,28 @@ namespace Plugin {
             _clients.Visit([&](const string& name, const Core::ProxyType<Client> client) {
                 ASSERT(client.IsValid() == true);
 
-                client->Planes(Compositor::DefaultTimeoutMs);
-
                 if (client->Texture() != nullptr) {
+                    client->Acquire(Compositor::DefaultTimeoutMs);
+
                     Exchange::IComposition::Rectangle rectangle = client->Geometry();
 
-                    const Compositor::Box renderBox = { int(rectangle.x), int(rectangle.y), int(rectangle.width), int(rectangle.height) };
+                    const Exchange::IComposition::Rectangle renderBox = { rectangle.x, rectangle.y, rectangle.width, rectangle.height };
 
                     Compositor::Matrix clientProjection;
                     Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
 
-                    const Compositor::Box clientArea = { 0, 0, int(client->Texture()->Width()), int(client->Texture()->Height()) };
+                    const Exchange::IComposition::Rectangle clientArea = { 0, 0, client->Texture()->Width(), client->Texture()->Height() };
 
                     const float alpha = float(client->Opacity()) / float(Exchange::IComposition::maxOpacity);
 
                     _renderer->Render(client->Texture(), clientArea, clientProjection, alpha);
+
+                    client->Relinquish();
+
+                    client->Rendered();
                 } else {
                     TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), name.c_str()));
                 }
-
-                client->Completed(false);
             });
 
             _renderer->End(false);
@@ -939,51 +898,47 @@ namespace Plugin {
 
         uint64_t RenderOutputs()
         {
-            Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
             for (Output& output : _outputs) {
                 ASSERT(_renderer.IsValid() == true);
 
-                Core::ProxyType<Exchange::ICompositionBuffer> buffer = output.Buffer();
+                Core::ProxyType<Compositor::IOutput> buffer = output.Buffer();
 
                 ASSERT(buffer.IsValid() == true);
 
-                _renderer->Bind(buffer);
+                _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(buffer));
                 _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
 
-                const Compositor::Box renderBox = { 0, 0, int(buffer->Width()), int(buffer->Height()) };
+                const Exchange::IComposition::Rectangle renderBox = { 0, 0, buffer->Width(), buffer->Height() };
 
                 Compositor::Matrix canvasProjection;
                 Compositor::Transformation::ProjectBox(canvasProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
                 // what part of the canvas do we want to render on this output
-                const Compositor::Box canvasArea = {
+                const Exchange::IComposition::Rectangle canvasArea = {
                     0, // X
                     0, // Y
-                    int(_canvasTexture->Width()),
-                    int(_canvasTexture->Height())
+                    _canvasTexture->Width(),
+                    _canvasTexture->Height()
                 };
 
                 _renderer->Render(_canvasTexture, canvasArea, canvasProjection, 1.0);
 
                 _renderer->End(false);
 
-                buffer->Render(); // Blit to screen
+                _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
+                    ASSERT(client.IsValid() == true);
+
+                    if (output.IsIntersecting(client->Geometry())) {
+                        output.Pending(client);
+                    }
+                });
+
+                output.Commit(); // Blit to screen
 
                 _renderer->Unbind();
             }
 
             return Core::Time::Now().Ticks();
-        }
-
-        // Useless Resolution functions, this should be controlled by DisplayControl
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
-        {
-            return (Core::ERROR_UNAVAILABLE);
-        }
-        Exchange::IComposition::ScreenResolution Resolution() const override
-        {
-            return Exchange::IComposition::ScreenResolution::ScreenResolution_Unknown;
         }
 
         class Presenter : public Core::Thread {
@@ -1036,32 +991,36 @@ namespace Plugin {
             std::atomic<bool> _continue;
         };
 
-        void WaitForVSync(const uint32_t outputId)
+    private:
+        Core::ProxyType<Client> ClientById(const uint32_t id)
         {
-            if (outputId != InvalidId) {
-                for (auto& output : _outputs) {
-                    if (output.Identifier() == outputId) {
-                        output.WaitForVSync(Compositor::DefaultTimeoutMs);
-                    }
+            Core::ProxyType<Client> result;
+
+            _clients.Visit([&](const string& /* name */, const Core::ProxyType<Client>& element) {
+                if (id == element->Native()) {
+                    ASSERT(result.IsValid() == false);
+                    result = element;
                 }
-            }
+            });
+
+            return (result);
         }
 
     private:
         mutable Core::CriticalSection _adminLock;
         uint32_t _format;
         uint64_t _modifier;
-        std::list<Output> _outputs;
+        Outputs _outputs;
         Core::ProxyType<Compositor::IRenderer> _renderer;
-        std::list<Exchange::IComposition::INotification*> _observers;
-        Client::Bridge _clientBridge;
-        Client::Container _clients;
+        Observers _observers;
+        Bridge _clientBridge;
+        Clients _clients;
         uint64_t _lastFrame;
         Compositor::Color _background;
         Core::ProxyType<RPC::InvokeServer> _engine;
         std::unique_ptr<DisplayDispatcher> _dispatcher;
         Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
-        Compositor::IRenderer::ITexture* _canvasTexture;
+        Core::ProxyType<Compositor::IRenderer::ITexture> _canvasTexture;
         uint32_t _gpuIdentifier;
         std::string _gpuNode;
         std::string _renderNode;
@@ -1069,6 +1028,9 @@ namespace Plugin {
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
+
+    uint32_t CompositorImplementation::Output::_indexes = 0;
+    uint32_t CompositorImplementation::Client::_sequence = 1;
 
 } // namespace Plugin
 } // namespace Thunder

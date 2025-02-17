@@ -27,8 +27,15 @@
 
 #include <interfaces/IBluetooth.h>
 #include <interfaces/IKeyHandler.h>
+#include <interfaces/IBluetoothRemoteControl.h>
+#include <interfaces/json/JAudioStream.h>
+#include <interfaces/json/JBluetoothRemoteControl.h>
+
+#define USE_VOICE_API
+
+#ifdef USE_VOICE_API
 #include <interfaces/IVoiceHandler.h>
-#include <interfaces/json/JsonData_BluetoothRemoteControl.h>
+#endif
 
 namespace Thunder {
 
@@ -180,9 +187,14 @@ namespace Plugin {
 
 
     class BluetoothRemoteControl : public PluginHost::IPlugin
-                                 , public PluginHost::IWeb
-                                 , public PluginHost::JSONRPC
-                                 , public Exchange::IVoiceProducer {
+                                 , public PluginHost::JSONRPCSupportsEventStatus
+#ifdef USE_VOICE_API
+                                 , public Exchange::IVoiceProducer
+#endif
+                                 , public Exchange::IAudioStream
+                                 , public Exchange::JAudioStream::IHandler
+                                 , public Exchange::IBluetoothRemoteControl
+                                 , public Exchange::JBluetoothRemoteControl::IHandler {
     public:
         enum recorder {
             OFF               = 0x00,
@@ -260,7 +272,6 @@ namespace Plugin {
                         textData += hexArray[ (buffer[index] & 0x0F) ];
                     }
                     _text += textData + ']';
-
                 }
                 ~Flow() = default;
 
@@ -384,6 +395,7 @@ namespace Plugin {
                 std::list<Slot> _queue;
             };
 
+#ifdef USE_VOICE_API
             class AudioProfile : public Exchange::IVoiceProducer::IProfile {
             public:
                 AudioProfile(const AudioProfile&) = delete;
@@ -420,6 +432,7 @@ namespace Plugin {
                 uint32_t _sampleRate;
                 uint8_t _resolution;
             };
+#endif
 
             class Config : public Core::JSON::Container {
             public:
@@ -429,7 +442,7 @@ namespace Plugin {
                     Profile& operator=(const Profile&) = delete;
                     Profile()
                         : Core::JSON::Container()
-                        , Codec(Exchange::IVoiceProducer::IProfile::codec::PCM)
+                        , Codec(Exchange::IAudioStream::codectype::PCM)
                         , SampleRate(16000)
                         , Channels(1)
                         , Resolution(16)
@@ -445,7 +458,7 @@ namespace Plugin {
                     }
 
                 public:
-                    Core::JSON::EnumType<Exchange::IVoiceProducer::IProfile::codec> Codec;
+                    Core::JSON::EnumType<Exchange::IAudioStream::codectype> Codec;
                     Core::JSON::DecUInt32 SampleRate;
                     Core::JSON::DecUInt8 Channels;
                     Core::JSON::DecUInt8 Resolution;
@@ -462,7 +475,7 @@ namespace Plugin {
                     , CommandUUID()
                     , DataUUID()
                 {
-                    Add(_T("profile"), &AudioProfile);
+                    Add(_T("audioprofile"), &AudioProfile);
                     Add(_T("serviceuuid"), &ServiceUUID);
                     Add(_T("commanduuid"), &CommandUUID);
                     Add(_T("datauuid"), &DataUUID);
@@ -641,7 +654,7 @@ namespace Plugin {
                 , _hidReportCharacteristicsIterator(_hidReportCharacteristics.cbegin())
                 , _hid()
                 , _hidInputReports()
-                , _audioProfile(nullptr)
+                , _audioProfile()
                 , _decoder(nullptr)
             {
                 Config config;
@@ -677,7 +690,7 @@ namespace Plugin {
                 , _hidReportCharacteristicsIterator(_hidReportCharacteristics.cbegin())
                 , _hid()
                 , _hidInputReports()
-                , _audioProfile(nullptr)
+                , _audioProfile()
                 , _decoder(nullptr)
                 , _voiceEnabled(false)
             {
@@ -739,9 +752,7 @@ namespace Plugin {
                     delete _profile;
                 }
 
-                if (_audioProfile) {
-                    _audioProfile->Release();
-                }
+                _parent->Inoperational();
             }
 
         public:
@@ -773,12 +784,16 @@ namespace Plugin {
             {
                 return (_manufacturerName);
             }
-            inline Exchange::IVoiceProducer::IProfile* SelectedProfile() const
-            {
-                ASSERT(_audioProfile != nullptr);
-                _audioProfile->AddRef();
+            inline const Core::OptionalType<Exchange::IAudioStream::audioprofile>& SelectedProfile() const {
                 return (_audioProfile);
             }
+#ifdef USE_VOICE_API
+            inline AudioProfile* SelectedAudioProfile() const {
+                ASSERT(_audioProfile.IsSet() == true);
+                return (Core::ServiceType<AudioProfile>::Create<AudioProfile>(_audioProfile.Value().codec,
+                    _audioProfile.Value().channels, _audioProfile.Value().sampleRate, _audioProfile.Value().resolution));
+            }
+#endif
             inline bool VoiceOutput() const {
                 return (_voiceEnabled);
             }
@@ -799,7 +814,7 @@ namespace Plugin {
                             // If we start, reset.
                             if (enabled == false) {
                                 // We are done, signal that the button to speak has been released!
-                                _parent->VoiceData(nullptr);
+                                _parent->VoiceData();
                             }
                             else {
                                 // Looks like the TPress-to-talk button is pressed...
@@ -816,36 +831,58 @@ namespace Plugin {
                 }
                 return (result);
             }
-            void Decoder (const string& settings) {
+            void DecoderFromConfigLine(const string& configLine)
+            {
+                if (SelectedProfile().IsSet() == false) {
+                    Config config;
+                    config.FromString(configLine);
+                    SetDecoder(config.AudioProfile);
+                }
+            }
+#ifdef USE_VOICE_API
+            void Decoder(const string& profile)
+            {
                 Config::Profile config;
-                config.FromString(settings);
+                config.FromString(profile);
+                SetDecoder(config);
+            }
+#endif
+            void Decoder(const Exchange::IAudioStream::audioprofile& profile)
+            {
+                Config::Profile config;
+                config.SampleRate = profile.sampleRate;
+                config.Resolution = profile.resolution;
+                config.Channels = profile.channels;
+                config.Codec = profile.codec;
+                config.Configuration = profile.codecParams;
                 SetDecoder(config);
             }
 
         private:
             void SetDecoder(const Config::Profile& config) {
 
-                Core::EnumerateType<Exchange::IVoiceProducer::IProfile::codec> enumValue (config.Codec.Value());
-
                 if (_decoder != nullptr) {
                     delete _decoder;
-                    if (_audioProfile != nullptr) {
-                        _audioProfile->Release();
-                    }
                 }
+
+                Core::EnumerateType<Exchange::IAudioStream::codectype> enumValue(config.Codec.Value());
 
                 _decoder = Decoders::IDecoder::Instance(_manufacturerName.c_str(), enumValue.Value(), config.Configuration.Value());
                 if (_decoder == nullptr) {
                     TRACE(Trace::Error, (_T("Failed to create a decoder for %s type: [%s]"), _manufacturerName.c_str(), enumValue.Data()));
-                    _audioProfile = nullptr;
                 }
                 else {
                     TRACE(Flow, (_T("Created a decoder for %s type: [%s]"), _manufacturerName.c_str(), enumValue.Data()));
-                    _audioProfile = Core::ServiceType<AudioProfile>::Create<AudioProfile>(
-                        config.Codec.Value(),
-                        config.Channels.Value(),
-                        config.SampleRate.Value(),
-                        config.Resolution.Value());
+                    _audioProfile = { config.Codec.Value(), {}, config.Channels.Value(), config.Resolution.Value(), config.SampleRate.Value(), {} };
+
+                    if (config.Configuration.IsSet() == true) {
+                        _audioProfile.Value().codecParams = config.Configuration.Value();
+                    }
+
+                    if (config.Codec.Value() == Exchange::IAudioStream::IMA_ADPCM) {
+                        // Fixed 1:4 compression
+                        _audioProfile.Value().bitRate = ((config.Channels.Value() * config.Resolution.Value() * config.SampleRate.Value()) / 4);
+                    }
                 }
             }
             void Discover()
@@ -919,7 +956,7 @@ namespace Plugin {
                     // If we start, reset.
                     if (buffer[0] == 0) {
                         // We are done, signal that the button to speak has been released!
-                        _parent->VoiceData(nullptr);
+                        _parent->VoiceData();
                     }
                     else {
                         // Looks like the TPress-to-talk button is pressed...
@@ -928,7 +965,7 @@ namespace Plugin {
                     }
                 }
                 else if ( (handle == _batteryLevelHandle) && (length >= 1) ) {
-                    _parent->BatteryLevel(buffer[0]);
+                    _parent->UpdateBatteryLevel(buffer[0]);
                 }
 
                 _adminLock.Unlock();
@@ -947,7 +984,7 @@ namespace Plugin {
                     TRACE(Trace::Fatal, (_T("The device is already in use. Only 1 callback allowed")));
                 }
 
-                if (_profile == nullptr) {
+                if ((_profile == nullptr) && (_voiceCommandHandle != static_cast<uint8_t>(~0))) {
                     SetDecoder(config.AudioProfile);
                 }
 
@@ -1100,17 +1137,17 @@ namespace Plugin {
                                             for (auto& element : report.Elements()) {
                                                 if (element.Type() == USB::HID::Report::Element::INPUT) {
                                                     _hidInputReports.push_back(&report);
-					            _voiceDataHandle = report.ID();
+					                                _voiceDataHandle = report.ID();
                                                 }
-						else if (element.Type() == USB::HID::Report::Element::OUTPUT) {
+                                                else if (element.Type() == USB::HID::Report::Element::OUTPUT) {
                                                     _hidInputReports.push_back(&report);
-						}
+                                                }
                                             }
-					}
-				    }
-				    else {
-                                	TRACE(Flow, (_T("HID Report Map [0x%08X] not recognized"), collection.Usage()));
-				    }
+    	                				}
+                                    }
+                                    else {
+                                    	TRACE(Flow, (_T("HID Report Map [0x%08X] not recognized"), collection.Usage()));
+	                			    }
                                 }
                             }
 
@@ -1171,8 +1208,8 @@ namespace Plugin {
                     EnableEvents();
                 }
             }
-            void EnableEvents() {
-
+            void EnableEvents()
+            {
                 uint16_t notificationHandle;
                 ASSERT (_profile != nullptr);
 
@@ -1186,6 +1223,7 @@ namespace Plugin {
                         _hidReportCharacteristicsIterator++;
                         TRACE(Flow, (_T("Selecting handle: [0x%04X] for voice control"), _voiceCommandHandle));
                         EnableEvents();
+                        _voiceEnabled = true;
                     }
                     else {
                         _keysDataHandles.push_back((*_hidReportCharacteristicsIterator)->Handle());
@@ -1202,6 +1240,7 @@ namespace Plugin {
                     notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar, Bluetooth::GATTProfile::Service::Characteristic::Characteristic::Descriptor::ClientCharacteristicConfiguration);
                     _voiceCommandHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceCommandChar);
                     EnableEvents(_T("Voice Command handling"), notificationHandle);
+                    _voiceEnabled = true;
                 }
                 else if (_voiceDataHandle == static_cast<uint16_t>(~0)) {
                     notificationHandle = _profile->FindHandle(_profile->VoiceService, _profile->VoiceDataChar, Bluetooth::GATTProfile::Service::Characteristic::Descriptor::ClientCharacteristicConfiguration);
@@ -1258,7 +1297,7 @@ namespace Plugin {
                     _command.Read(_batteryLevelHandle);
                     Execute(CommunicationTimeOut, _command, [&](const GATTSocket::Command& cmd) {
                         if ((cmd.Error() == Core::ERROR_NONE) && (cmd.Result().Error() == 0) && (cmd.Result().Length() >= 1)) {
-                            _parent->BatteryLevel(cmd.Result().Data()[0]);
+                            _parent->UpdateBatteryLevel(cmd.Result().Data()[0]);
                         } else {
                             TRACE(Flow, (_T("Failed to retrieve battery level")));
                         }
@@ -1319,6 +1358,7 @@ namespace Plugin {
                             if (result != Core::ERROR_NONE) {
                                 TRACE(Trace::Error, (_T("Failed to close GATT socket [%s]"), _device->RemoteId().c_str()));
                             }
+                            _parent->Inoperational();
                         }
                     } else {
                         TRACE(Flow, (_T("Releasing device")));
@@ -1400,7 +1440,7 @@ namespace Plugin {
             std::list<const USB::HID::Report*> _hidInputReports;
 
             // What profile will this system be working with ???
-            AudioProfile* _audioProfile;
+            Core::OptionalType<Exchange::IAudioStream::audioprofile> _audioProfile;
             Decoders::IDecoder* _decoder;
             bool _startFrame;
             uint32_t _currentKey;
@@ -1412,17 +1452,19 @@ namespace Plugin {
         BluetoothRemoteControl(const BluetoothRemoteControl&) = delete;
         BluetoothRemoteControl& operator= (const BluetoothRemoteControl&) = delete;
         BluetoothRemoteControl()
-            : _skipURL()
-            , _adminLock()
+            : _adminLock()
             , _service()
             , _gattRemote(nullptr)
-            , _name(_T("NOT_AVAIALABLE"))
+            , _name()
             , _controller()
             , _keyMap()
             , _configLine()
             , _recordFile()
             , _batteryLevel(~0)
+#ifdef USE_VOICE_API
             , _voiceHandler(nullptr)
+#endif
+            , _audioHandler(nullptr)
             , _inputHandler(nullptr)
             , _record(recorder::OFF)
             , _recorder()
@@ -1430,26 +1472,57 @@ namespace Plugin {
             , _sequence(0)
             , _firstAudioChunkSize(0)
             , _audioChunkSize(0)
+            , _observers()
+            , _streamObservers()
+            , _transmission(false)
         {
-            RegisterAll();
         }
         ~BluetoothRemoteControl() override
         {
-            UnregisterAll();
         }
 
     public:
-        inline uint8_t BatteryLevel() const {
-            return (_batteryLevel);
-        }
-        string Name() const override {
-            return (_name);
-        }
-        uint32_t Error() const override
+
+#ifdef USE_VOICE_API
+        // Echange::IVoiceProducer overrides (all DEPRECATED)
+        Core::hresult Callback(Exchange::IVoiceHandler* callback) override
         {
-            return (_gattRemote != nullptr ? Core::ERROR_NONE : Core::ERROR_UNAVAILABLE);
+            Core::hresult result = Core::ERROR_NONE;
+
+            _adminLock.Lock();
+
+            if (_audioHandler != nullptr) {
+                result = Core::ERROR_UNAVAILABLE; // someone already installed IAudioStream::ICallback callback
+            }
+            else {
+                if (_voiceHandler != nullptr) {
+                    _voiceHandler->Release();
+                }
+
+                if (callback != nullptr) {
+                    callback->AddRef();
+
+                    // TODO SIGNAL STARTED
+                }
+
+                _voiceHandler = callback;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
         }
-        string MetaData() const override
+        string Name() const override
+        {
+            string name;
+            Name(name);
+            return (name);
+        }
+        virtual uint32_t Error() const override
+        {
+            return (_gattRemote != nullptr ? Core::ERROR_NONE : Core::ERROR_ILLEGAL_STATE);
+        }
+        virtual string MetaData() const override
         {
             string result;
 
@@ -1474,7 +1547,7 @@ namespace Plugin {
 
             return (result);
         }
-        void Configure(const string& settings) override
+        virtual void Configure(const string& settings) override
         {
             _adminLock.Lock();
 
@@ -1484,19 +1557,357 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-        uint32_t Callback(Exchange::IVoiceHandler* callback) override
+#endif // USE_VOICE_API
+
+        // Echange::IAudioStream overrides
+        Core::hresult Register(Exchange::IAudioStream::INotification* const notification) override
+        {
+            Core::hresult result = Core::ERROR_ALREADY_CONNECTED;
+
+            ASSERT(notification != nullptr);
+
+            _adminLock.Lock();
+
+            auto it = std::find(_streamObservers.begin(), _streamObservers.end(), notification);
+
+            ASSERT(it == _streamObservers.end());
+
+            if (it == _streamObservers.end()) {
+                notification->AddRef();
+                _streamObservers.push_back(notification);
+
+                if ((_gattRemote != nullptr) && (_gattRemote->SelectedProfile().IsSet() == true)) {
+                    if (_transmission == true) {
+                        for (auto& observer : _streamObservers) {
+                            observer->StateChanged(Exchange::IAudioStream::STARTED, _gattRemote->SelectedProfile());
+                        }
+                    }
+                    else {
+                        for (auto& observer : _streamObservers) {
+                            observer->StateChanged(Exchange::IAudioStream::IDLE, {});
+                        }
+                    }
+                }
+
+                result = Core::ERROR_NONE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Unregister(const Exchange::IAudioStream::INotification* const notification) override
+        {
+            Core::hresult result = Core::ERROR_ALREADY_RELEASED;
+
+            ASSERT(notification != nullptr);
+
+            _adminLock.Lock();
+
+            auto it = std::find(_streamObservers.cbegin(), _streamObservers.cend(), notification);
+            ASSERT(it != _streamObservers.cend());
+
+            if (it != _streamObservers.cend()) {
+                (*it)->Release();
+                _streamObservers.erase(it);
+
+                result = Core::ERROR_NONE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Callback(Exchange::IAudioStream::ICallback* const callback) override
+        {
+            Core::hresult result = Core::ERROR_NONE;
+
+            _adminLock.Lock();
+
+#ifdef USE_VOICE_API
+            if (_voiceHandler != nullptr) {
+                result = Core::ERROR_UNAVAILABLE; // someone already installed a IVoiceHandler callback
+            }
+            else
+#endif
+
+            {
+                if (_audioHandler != nullptr) {
+                    _audioHandler->Release();
+                }
+
+                if (callback != nullptr) {
+                    callback->AddRef();
+                }
+
+                _audioHandler = callback;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Name(string& name) const override
+        {
+            Core::hresult result = Core::ERROR_ILLEGAL_STATE;
+
+            _adminLock.Lock();
+
+            if (_gattRemote != nullptr) {
+                name = _gattRemote->Name();
+                result = Core::ERROR_NONE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Profile(const audioprofile& profile) override
+        {
+            Core::hresult result = Core::ERROR_BAD_REQUEST;
+
+            _adminLock.Lock();
+
+            if (_gattRemote != nullptr) {
+                auto const& p = _gattRemote->SelectedProfile();
+
+                // Only allow to toggle codec (PCM or IMA-ADPCM)
+                if (p.IsSet() == true) {
+                    if ((profile.sampleRate == p.Value().sampleRate) && (profile.resolution == p.Value().resolution) && (profile.channels == p.Value().channels)) {
+                        if ((profile.codec == Exchange::IAudioStream::codectype::PCM) || (profile.codec == Exchange::IAudioStream::codectype::IMA_ADPCM)) {
+
+                            _gattRemote->Decoder(profile);
+                            result = (_transmission == true? Core::ERROR_INPROGRESS : Core::ERROR_NONE);
+                        }
+                    }
+                }
+            }
+            else {
+                result = Core::ERROR_ILLEGAL_STATE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Profile(audioprofile& profile) const override
+        {
+            Core::hresult result = Core::ERROR_ILLEGAL_STATE;
+
+            _adminLock.Lock();
+
+            if (_gattRemote != nullptr) {
+                auto const& p = _gattRemote->SelectedProfile();
+
+                if (p.IsSet() == true) {
+                    profile = p.Value();
+                    result = Core::ERROR_NONE;
+                }
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult State(Exchange::IAudioStream::streamstate& state) const override
         {
             _adminLock.Lock();
-            if (_voiceHandler != nullptr) {
-                _voiceHandler->Release();
+
+            if ((_gattRemote == nullptr) || (_gattRemote->SelectedProfile().IsSet() == false)) {
+                state = Exchange::IAudioStream::streamstate::UNAVAILABLE;
             }
-            if (callback != nullptr) {
-                callback->AddRef();
+            else if (_transmission == false) {
+                state = Exchange::IAudioStream::streamstate::IDLE;
             }
-            _voiceHandler = callback;
+            else {
+                state = Exchange::IAudioStream::streamstate::STARTED;
+            }
+
             _adminLock.Unlock();
 
             return (Core::ERROR_NONE);
+        }
+        Core::hresult Capabilities(Exchange::IAudioStream::codectype& caps) const override
+        {
+            caps = static_cast<Exchange::IAudioStream::codectype>(static_cast<uint16_t>(Exchange::IAudioStream::codectype::PCM) | static_cast<uint16_t>(Exchange::IAudioStream::IMA_ADPCM));
+            return (Core::ERROR_NONE);
+        }
+        Core::hresult Time(uint32_t& time VARIABLE_IS_NOT_USED) const override
+        {
+            return (Core::ERROR_NOT_SUPPORTED);
+        }
+        Core::hresult Speed(const uint8_t speed VARIABLE_IS_NOT_USED) override
+        {
+            // This is live stream, no trickplays allowed :)
+            return (Core::ERROR_NOT_SUPPORTED);
+        }
+        Core::hresult Speed(uint8_t& speed) const override
+        {
+            Core::hresult result = Core::ERROR_NONE;
+
+            _adminLock.Lock();
+
+            if ((_gattRemote == nullptr) || (_gattRemote->SelectedProfile().IsSet() == false)) {
+                result = Core::ERROR_ILLEGAL_STATE;
+            }
+            else {
+                if (_transmission == true) {
+                    speed = 100;
+                }
+                else {
+                    speed = 0;
+                }
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+
+        // Exchange::IBluetoothRemoteControl overrides
+        uint32_t Assign(const string& address) override;
+        uint32_t Revoke() override;
+
+        Core::hresult Register(Exchange::IBluetoothRemoteControl::INotification* const notification) override
+        {
+            Core::hresult result = Core::ERROR_ALREADY_CONNECTED;
+
+            ASSERT(notification != nullptr);
+
+            _adminLock.Lock();
+
+            auto it = std::find(_observers.begin(), _observers.end(), notification);
+
+            ASSERT(it == _observers.end());
+
+            if (it == _observers.end()) {
+                notification->AddRef();
+                _observers.push_back(notification);
+
+                if ((_gattRemote != nullptr) && (_batteryLevel != static_cast<uint8_t>(~0))) {
+                    notification->BatteryLevelChange(_batteryLevel);
+                }
+
+                result = Core::ERROR_NONE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Unregister(const Exchange::IBluetoothRemoteControl::INotification* const notification) override
+        {
+            Core::hresult result = Core::ERROR_ALREADY_RELEASED;
+
+            ASSERT(notification != nullptr);
+
+            _adminLock.Lock();
+
+            auto it = std::find(_observers.cbegin(), _observers.cend(), notification);
+            ASSERT(it != _observers.cend());
+
+            if (it != _observers.cend()) {
+                (*it)->Release();
+                _observers.erase(it);
+
+                result = Core::ERROR_NONE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult BatteryLevel(uint8_t& level) const override
+        {
+            Core::hresult result = Core::ERROR_ILLEGAL_STATE;
+
+            _adminLock.Lock();
+
+            if (_gattRemote != nullptr) {
+                if (_batteryLevel != static_cast<uint8_t>(~0)) {
+                    level = _batteryLevel;
+                    result = Core::ERROR_NONE;
+                }
+                else {
+                    result = Core::ERROR_UNAVAILABLE;
+                }
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Metadata(Exchange::IBluetoothRemoteControl::unitmetadata& info) const override
+        {
+            Core::hresult result = Core::ERROR_ILLEGAL_STATE;
+
+            _adminLock.Lock();
+
+            if (_gattRemote != nullptr) {
+                info.name = _gattRemote->Name();
+                info.model = _gattRemote->ModelNumber();
+                info.serial = _gattRemote->SerialNumber();
+                info.firmware = _gattRemote->FirmwareRevision();
+                info.software = _gattRemote->SoftwareRevision();
+                info.manufacturer = _gattRemote->ManufacturerName();
+
+                result = Core::ERROR_NONE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult Device(string& address) const override
+        {
+            Core::hresult result = Core::ERROR_ILLEGAL_STATE;
+
+            _adminLock.Lock();
+
+            if (_gattRemote != nullptr) {
+                address = _gattRemote->Address();
+                result = Core::ERROR_NONE;
+            }
+
+            _adminLock.Unlock();
+
+            return (result);
+        }
+        Core::hresult VoiceControl(bool& value) const override
+        {
+            Core::hresult result = Core::ERROR_ILLEGAL_STATE;
+
+            if (_gattRemote != nullptr) {
+
+                auto const& profile = _gattRemote->SelectedProfile();
+
+                if (profile.IsSet() == true) {
+                    value = _gattRemote->VoiceOutput();
+                    result = Core::ERROR_NONE;
+                }
+                else {
+                    result = Core::ERROR_NOT_SUPPORTED;
+                }
+            }
+
+            return (result);
+        }
+        Core::hresult VoiceControl(const bool value) override
+        {
+            Core::hresult result = Core::ERROR_ILLEGAL_STATE;
+
+            if (_gattRemote != nullptr) {
+                auto const& profile = _gattRemote->SelectedProfile();
+
+                if (profile.IsSet() == true) {
+                    result = _gattRemote->VoiceOutput(value);
+                }
+                else {
+                    result = Core::ERROR_NOT_SUPPORTED;
+                }
+            }
+
+            return (result);
         }
 
         //   IPlugin methods
@@ -1505,64 +1916,91 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-        //   IWeb methods
-        // -------------------------------------------------------------------------------------------------------
-        void Inbound(Web::Request& request) override;
-        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
         BEGIN_INTERFACE_MAP(BluetoothRemoteControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
+#ifdef USE_VOICE_API
             INTERFACE_ENTRY(Exchange::IVoiceProducer)
+#endif
+            INTERFACE_ENTRY(Exchange::IAudioStream)
+            INTERFACE_ENTRY(Exchange::IBluetoothRemoteControl)
         END_INTERFACE_MAP
 
     private:
+        // Exchange::JBluetoothRemoteControl::IHander overrides
+        void OnBatteryLevelChangeEventRegistration(const string& client, const JSONRPCSupportsEventStatus::Status status) override
+        {
+            if (status == PluginHost::JSONRPCSupportsEventStatus::Status::registered) {
+
+                _adminLock.Lock();
+
+                const uint8_t level = (_gattRemote == nullptr? ~0 : _batteryLevel);
+
+                _adminLock.Unlock();
+
+                if (level != static_cast<uint8_t>(~0)) {
+                    Exchange::JBluetoothRemoteControl::Event::BatteryLevelChange(*this, level,
+                        [&client](const string& designator) {
+                            // Only send to the client that has just registered...
+                            return (designator.substr(0, designator.find('.')) == client);
+                        });
+                }
+            }
+        }
+
+        // Exchange::JAudioStream::IHander overrides
+        void OnStateChangedEventRegistration(const string& client, const JSONRPCSupportsEventStatus::Status status) override
+        {
+            if (status == JSONRPCSupportsEventStatus::Status::registered) {
+
+                _adminLock.Lock();
+
+                _adminLock.Unlock();
+
+                if (_gattRemote != nullptr) {
+                    if (_transmission == true) {
+                        Exchange::JAudioStream::Event::StateChanged(*this, Exchange::IAudioStream::STARTED, _gattRemote->SelectedProfile(),
+                            [&client](const string& designator) {
+                                // Only send to the client that has just registered...
+                                return (designator.substr(0, designator.find('.')) == client);
+                            });
+                    }
+                    else {
+                        Exchange::JAudioStream::Event::StateChanged(*this, Exchange::IAudioStream::IDLE, {},
+                            [&client](const string& designator) {
+                                // Only send to the client that has just registered...
+                                return (designator.substr(0, designator.find('.')) == client);
+                            });
+                    }
+                }
+            }
+        }
+
+    private:
         // Bluetooth Remote Control implementation
-        uint32_t Assign(const string& address);
-        uint32_t Revoke();
         void Connected(const string& name);
         void Operational(const GATTRemote::Data& settings);
         void SendOut(const uint32_t length);
         void SendOut(const uint32_t seq, const uint32_t length, const uint8_t dataBuffer[]);
-        void VoiceData(Exchange::IVoiceProducer::IProfile* profile);
+        void Inoperational();
+        void VoiceData();
+        void VoiceData(const Exchange::IAudioStream::audioprofile& profile);
         void VoiceData(const uint32_t seq, const uint16_t length, const uint8_t dataBuffer[]);
         void KeyEvent(const bool pressed, const uint32_t keyCode);
-        void BatteryLevel(const uint8_t level);
-
-        Core::ProxyType<Web::Response> GetMethod(Core::TextSegmentIterator& index);
-        Core::ProxyType<Web::Response> PutMethod(Core::TextSegmentIterator& index, const Web::Request& request);
-        Core::ProxyType<Web::Response> PostMethod(Core::TextSegmentIterator& index, const Web::Request& request);
-        Core::ProxyType<Web::Response> DeleteMethod(Core::TextSegmentIterator& index, const Web::Request& request);
-
-        // JSON-RPC
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_assign(const JsonData::BluetoothRemoteControl::AssignParamsData& params);
-        uint32_t endpoint_revoke();
-        uint32_t get_name(Core::JSON::String& response) const;
-        uint32_t get_address(Core::JSON::String& response) const;
-        uint32_t get_info(JsonData::BluetoothRemoteControl::InfoData& response) const;
-        uint32_t get_batterylevel(Core::JSON::DecUInt8& response) const;
-        uint32_t get_audioprofiles(Core::JSON::ArrayType<Core::JSON::String>& response) const;
-        uint32_t get_audioprofile(const string& index, JsonData::BluetoothRemoteControl::AudioprofileData& response) const;
-        uint32_t get_voicecontrol(Core::JSON::Boolean& response) const;
-        uint32_t set_voicecontrol(const Core::JSON::Boolean& response);
-        void event_audiotransmission(const string& profile = "");
-        void event_audioframe(const uint32_t& seq, const uint32_t size, const string& data);
-        void event_batterylevelchange(const uint8_t& level);
+        void UpdateBatteryLevel(const uint8_t level);
 
     private:
-        static uint32_t TimeToBytes(const uint32_t time, const uint32_t rate, const uint8_t channels, const uint8_t res) {
+        static uint32_t TimeToBytes(const uint32_t time, const uint32_t rate, const uint8_t channels, const uint8_t res)
+        {
             return ((time * (rate / 10) * channels * (res / 8)) / 100);
         }
-        static uint32_t TimeToBytes(const uint32_t time, Exchange::IVoiceProducer::IProfile* profile) {
-            ASSERT(profile != nullptr);
-            return (TimeToBytes(time, profile->SampleRate(), profile->Channels(), profile->Resolution()));
+        static uint32_t TimeToBytes(const uint32_t time, const Exchange::IAudioStream::audioprofile& profile)
+        {
+            return (TimeToBytes(time, profile.sampleRate, profile.channels, profile.resolution));
         }
 
     private:
-        uint8_t _skipURL;
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         GATTRemote* _gattRemote;
@@ -1572,7 +2010,10 @@ namespace Plugin {
         string _configLine;
         string _recordFile;
         uint8_t _batteryLevel;
-        Exchange::IVoiceHandler* _voiceHandler;
+#ifdef USE_VOICE_API
+        Exchange::IVoiceHandler* _voiceHandler; /* deprecated */
+#endif
+        Exchange::IAudioStream::ICallback* _audioHandler;
         PluginHost::VirtualInput* _inputHandler;
         recorder _record;
         WAV::Recorder _recorder;
@@ -1580,6 +2021,9 @@ namespace Plugin {
         uint16_t _sequence;
         uint32_t _firstAudioChunkSize;
         uint32_t _audioChunkSize;
+        std::vector<Exchange::IBluetoothRemoteControl::INotification*> _observers;
+        std::vector<Exchange::IAudioStream::INotification*> _streamObservers;
+        bool _transmission;
 
     }; // class BluetoothRemoteControl
 

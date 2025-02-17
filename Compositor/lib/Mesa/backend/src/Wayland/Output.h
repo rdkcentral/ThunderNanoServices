@@ -26,6 +26,7 @@
 #include <DRM.h>
 
 #include "IOutput.h"
+#include "IBackend.h"
 
 #include <wayland-client.h>
 #include "generated/presentation-time-client-protocol.h"
@@ -34,7 +35,7 @@
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
-        class WaylandOutput : public Exchange::ICompositionBuffer {
+        class WaylandOutput : public IOutput {
 
             struct PresentationFeedbackEvent {
                 PresentationFeedbackEvent() = delete;
@@ -80,16 +81,27 @@ namespace Compositor {
 
             virtual ~WaylandOutput();
 
-            uint32_t Identifier() const override;
+            Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
+            void Relinquish() override;
 
-            Exchange::ICompositionBuffer::IIterator* Planes(const uint32_t timeoutMs) override;
-            uint32_t Completed(const bool dirty) override;
-            void Render() override;
             uint32_t Width() const override;
             uint32_t Height() const override;
             uint32_t Format() const override;
             uint64_t Modifier() const override;
             Exchange::ICompositionBuffer::DataType Type() const override;
+
+            uint32_t Commit() override;
+            const string& Node() const override;
+
+            int32_t X() const override
+            {
+                return _rectangle.x;
+            }
+
+            int32_t Y() const override
+            {
+                return _rectangle.y;
+            }
 
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
@@ -107,10 +119,8 @@ namespace Compositor {
             static void onPresentationFeedbackDiscarded(void* data, struct wp_presentation_feedback* feedback);
             static const struct wp_presentation_feedback_listener presentationFeedbackListener;
 
-            void CreateBuffer();
-
+            void SurfaceConfigure();
             void PresentationFeedback(const PresentationFeedbackEvent& event);
-
             uint64_t NextSequence()
             {
                 return _commitSequence++;
@@ -122,8 +132,7 @@ namespace Compositor {
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;
             xdg_toplevel* _topLevelSurface;
-            uint32_t _height;
-            uint32_t _width;
+            Exchange::IComposition::Rectangle _rectangle;
             uint32_t _format;
             uint64_t _modifier;
             Compositor::Matrix _matrix;

@@ -5,8 +5,16 @@
     "callsign": "BluetoothRemoteControl",
     "locator": "libThunderBluetoothRemoteControl.so",
     "status": "alpha",
-    "description": "The Bluetooth Remote Control plugin allows configuring and enabling Bluetooth remote control units.",
-    "version": "1.0"
+    "description": "The Bluetooth Remote Control plugin allows configuring and enabling Bluetooth LE remote control units.",
+    "version": "1.0",
+    "acronyms": {
+      "ADPCM": "Adaptive Pulse-code Modulation",
+      "BLE": "Bluetooth Low Energy",
+      "GATT": "Generic Attribute Profile",
+      "PCM": "Pulse-code Modulation",
+      "UUID": "Universally Unique Identifier",
+      "WAV": "Waveform Audio File Format"
+    }
   },
   "configuration": {
     "type": "object",
@@ -17,25 +25,68 @@
         "properties": {
           "controller": {
             "type": "string",
-            "description": "Controller"
+            "description": "Name of the Bluetooth controller service (default: *BluetoothControl*)"
           },
           "keymap": {
             "type": "string",
-            "description": "Keymap"
+            "description": "Keymap name"
           },
           "keyingest": {
             "type": "boolean",
-            "description": "Enable keyingest"
+            "description": "Enable key ingestion"
+          },
+          "serviceuuid": {
+            "type": "string",
+            "description": "UUID of the voice control GATT service"
+          },
+          "commanduuid": {
+            "type": "string",
+            "description": "UUID of the voice control command GATT characteristic"
+          },
+          "datauuid": {
+            "type": "string",
+            "description": "UUID of the voice control data GATT characteristic"
           },
           "recorder": {
-            "type": "enum",
-            "description": "Recorder"
+            "type": "string",
+            "enum": [ "off","single", "sequenced", "single_persist", "sequenced_persist" ],
+            "description": "Enable voice data recording (debug purposes) to WAV file"
+          },
+          "audiobuffersize": {
+            "type": "integer",
+            "description": "Size of the audio buffer in miliseconds (if not set then determined automatically)"
+          },
+          "firstaudiochunksize": {
+            "type": "integer",
+            "description": "Size of the first audio transmission notification in miliseconds"
+          },
+          "audiochunksize": {
+            "type": "integer",
+            "description": "Size of the audio transmission notifications in miliseconds (if not set then audio data is not buffered)"
+          },
+          "audioprofile": {
+            "type": "object",
+            "properties": {
+              "samplerate": {
+                "type": "integer",
+                "description": "Audio data sample rate in Hz (e.g. 16000)"
+              },
+              "channels": {
+                "type": "integer",
+                "description": "Number of audio channels (e.g. 1 for mono stream)"
+              },
+              "resolution": {
+                "type": "integer",
+                "description": "Audio samples resolution in bits (e.g. 16)"
+              }
+            }
           }
         }
       }
     }
   },
-  "interface": {
-    "$ref": "{interfacedir}/BluetoothRemoteControl.json#"
-  }
+  "interface": [
+    { "$ref": "{interfacedir}/IBluetoothRemoteControl.h" },
+    { "$ref": "{interfacedir}/IAudioStream.h" }
+  ]
 }

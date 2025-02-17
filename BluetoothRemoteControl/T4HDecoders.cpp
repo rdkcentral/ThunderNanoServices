@@ -42,8 +42,8 @@ private:
     };
 
 public:
-    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::ADPCM;
-    static const TCHAR*                                        Name;
+    static constexpr Exchange::IAudioStream::codectype DecoderType = Exchange::IAudioStream::codectype::IMA_ADPCM;
+    static const TCHAR* Name;
 
 public:
     ADPCM() = delete;
@@ -136,8 +136,8 @@ private:
     const uint8_t  WindowSize = 32;
 
 public:
-    static constexpr Exchange::IVoiceProducer::IProfile::codec DecoderType = Exchange::IVoiceProducer::IProfile::codec::PCM;
-    static const TCHAR*                                        Name;
+    static constexpr Exchange::IAudioStream::codectype DecoderType = Exchange::IAudioStream::codectype::PCM;
+    static const TCHAR* Name;
 
 public:
     PCM() = delete;
@@ -304,4 +304,4 @@ private:
 static Decoders::DecoderFactory<PCM> _pcmFactory;
 /* static */ const TCHAR* PCM::Name = _T("Tech4Home");
 
-} // namespace 
+} // namespace

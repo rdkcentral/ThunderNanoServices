@@ -52,6 +52,7 @@ find_package(WaylandServer REQUIRED)
 find_package(WaylandEGL REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(EGL REQUIRED)
 find_package(PNG REQUIRED)
@@ -79,6 +80,7 @@ target_link_libraries(${TARGET}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         WaylandServer::WaylandServer
         WaylandEGL::WaylandEGL

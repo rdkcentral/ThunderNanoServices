@@ -42,7 +42,6 @@ set(PLUGIN_BLUETOOTHREMOTECONTROL_STARTMODE "Activated" CACHE STRING "Automatica
 
 add_library(${MODULE_NAME} SHARED
     BluetoothRemoteControl.cpp
-    BluetoothRemoteControlJsonRpc.cpp
     Administrator.cpp
     T4HDecoders.cpp
     4ModDecoders.cpp

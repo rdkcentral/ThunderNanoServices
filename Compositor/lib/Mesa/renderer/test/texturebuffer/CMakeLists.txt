@@ -15,35 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(CompileSettingsDebug CONFIG REQUIRED)
-find_package(${NAMESPACE}Core CONFIG REQUIRED)
-
-find_package(libdrm REQUIRED)
-
-add_library(PixelBuffer STATIC PixelBuffer.cpp)
-
-target_include_directories(PixelBuffer PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-
-target_link_libraries(PixelBuffer
-    PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Core::${NAMESPACE}Core
-        libdrm::libdrm
-)
-
+add_library(PixelBuffer INTERFACE)
+target_include_directories(PixelBuffer INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 add_library(PixelBuffer::PixelBuffer ALIAS PixelBuffer)
 
-
-add_library(DmaBuffer STATIC DmaBuffer.cpp)
-
-target_include_directories(DmaBuffer PUBLIC ${CMAKE_CURRENT_LIST_DIR})
-
-target_link_libraries(DmaBuffer
-    PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Core::${NAMESPACE}Core
-        libdrm::libdrm
-        common::include
-)
-
+add_library(DmaBuffer INTERFACE)
+target_include_directories(DmaBuffer INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 add_library(DmaBuffer::DmaBuffer ALIAS DmaBuffer)

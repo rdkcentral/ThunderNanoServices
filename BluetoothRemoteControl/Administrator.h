@@ -35,8 +35,8 @@ namespace Decoders {
             virtual IDecoder* Factory(const string& configuration) = 0;
         };
 
-        static void Announce(const TCHAR name[], Exchange::IVoiceProducer::IProfile::codec codec, IFactory* factory);
-        static IDecoder* Instance(const TCHAR name[], Exchange::IVoiceProducer::IProfile::codec codec, const string& configuration);
+        static void Announce(const TCHAR name[], Exchange::IAudioStream::codectype, IFactory* factory);
+        static IDecoder* Instance(const TCHAR name[], Exchange::IAudioStream::codectype codec, const string& configuration);
 
         virtual uint32_t Frames() const = 0;
         virtual uint32_t Dropped() const = 0;
