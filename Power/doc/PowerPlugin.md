@@ -62,19 +62,19 @@ The table below provides and overview of terms and abbreviations used in this do
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Power*) |
-| classname | string | Class name: *Power* |
-| locator | string | Library name: *libThunderPower.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.powerkey | number | <sup>*(optional)*</sup> Key associated as powerkey |
-| configuration?.offmode | string | <sup>*(optional)*</sup> Type of offmode |
-| configuration?.control | boolean | <sup>*(optional)*</sup> Enable control clients |
-| configuration?.gpiopin | number | <sup>*(optional)*</sup> GGIO pin (Broadcom) |
-| configuration?.gpiotype | sting | <sup>*(optional)*</sup> GPIO type (Broadcom) |
-| configuration?.statechange | number | <sup>*(optional)*</sup> Statechange (Broadcom) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Power*) |
+| classname | string | mandatory | Class name: *Power* |
+| locator | string | mandatory | Library name: *libThunderPower.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.powerkey | integer | optional | Key associated as powerkey |
+| configuration?.offmode | string | optional | Type of offmode |
+| configuration?.control | boolean | optional | Enable control clients |
+| configuration?.gpiopin | integer | optional | GGIO pin (Broadcom) |
+| configuration?.gpiotype | sting | optional | GPIO type (Broadcom) |
+| configuration?.statechange | integer | optional | Statechange (Broadcom) |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -101,26 +101,26 @@ Sets power state.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.powerstate | string | Power state (must be one of the following: *on*, *activestandby*, *passivestandby*, *suspendtoram*, *hibernate*, *poweroff*) |
-| params.timeout | number | Time to wait for power state change |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.powerstate | string | mandatory | Power state (must be one of the following: *activestandby, hibernate, on, passivestandby, poweroff, suspendtoram*) |
+| params.timeout | integer | mandatory | Time to wait for power state change |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | General failure |
-| 29 | ```ERROR_DUPLICATE_KEY``` | Trying to set the same power mode |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Power state is not supported |
-| 30 | ```ERROR_BAD_REQUEST``` | Invalid Power state or Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | General failure |
+| ```ERROR_DUPLICATE_KEY``` | Trying to set the same power mode |
+| ```ERROR_ILLEGAL_STATE``` | Power state is not supported |
+| ```ERROR_BAD_REQUEST``` | Invalid Power state or Bad JSON param data format |
 
 ### Example
 
@@ -155,9 +155,9 @@ The following properties are provided by the Power plugin:
 
 Power interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [state](#property.state) <sup>RO</sup> | Power state |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [state](#property.state) | read-only | Power state |
 
 <a name="property.state"></a>
 ## *state [<sup>property</sup>](#head.Properties)*
@@ -170,9 +170,9 @@ Provides access to the power state.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Power state (must be one of the following: *on*, *activestandby*, *passivestandby*, *suspendtoram*, *hibernate*, *poweroff*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Power state (must be one of the following: *activestandby, hibernate, on, passivestandby, poweroff, suspendtoram*) |
 
 ### Example
 

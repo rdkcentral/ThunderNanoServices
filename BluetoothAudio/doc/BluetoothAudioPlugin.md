@@ -74,27 +74,27 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *BluetoothAudio*) |
-| classname | string | Class name: *BluetoothAudio* |
-| locator | string | Library name: *libThunderBluetoothAudio.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| controller | string | <sup>*(optional)*</sup> Callsign of the Bluetooth controller service (typically *BluetoothControl*) |
-| server | object | <sup>*(optional)*</sup> BluetoothAudio server configuration |
-| server?.interface | number | <sup>*(optional)*</sup> Bluetooth interface to listen to for incomming connections |
-| server?.inactivitytimeout | number | <sup>*(optional)*</sup> Timeout to drop inactive connections (in ms) |
-| server?.psm | number | <sup>*(optional)*</sup> Port to listen to for incomming conections (typically 25) |
-| sink | object | <sup>*(optional)*</sup> BluetoothAudio sink configuration |
-| sink.codecs | object | Codec settings |
-| sink.codecs.LC-SBC | object | Settings for the LC-SBC codec |
-| sink.codecs.LC-SBC?.preset | string | <sup>*(optional)*</sup> Predefined audio quality setting (must be one of the following: *Compatible*, *LQ*, *MQ*, *HQ*, *XQ*) |
-| sink.codecs.LC-SBC?.bitpool | number | <sup>*(optional)*</sup> Custom audio quality based on bitpool value (used when *preset* is not specified) |
-| sink.codecs.LC-SBC?.channelmode | string | <sup>*(optional)*</sup> Channel mode for custom audio quality (used when *preset* is not specified) (must be one of the following: *Mono*, *Stereo*, *JointStereo*, *DualChannel*) |
-| source | object | <sup>*(optional)*</sup> BluetoothAudio source configuration |
-| source.codecs | object | Codec settings |
-| source.codecs?.LC-SBC | object | <sup>*(optional)*</sup> Settings for the LC-SBC codec |
-| source.codecs?.LC-SBC.maxbitpool | number | Maximum accepted bitpool value |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *BluetoothAudio*) |
+| classname | string | mandatory | Class name: *BluetoothAudio* |
+| locator | string | mandatory | Library name: *libThunderBluetoothAudio.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| controller | string | optional | Callsign of the Bluetooth controller service (typically *BluetoothControl*) |
+| server | object | optional | BluetoothAudio server configuration |
+| server?.interface | integer | optional | Bluetooth interface to listen to for incomming connections |
+| server?.inactivitytimeout | integer | optional | Timeout to drop inactive connections (in ms) |
+| server?.psm | integer | optional | Port to listen to for incomming conections (typically 25) |
+| sink | object | optional | BluetoothAudio sink configuration |
+| sink.codecs | object | mandatory | Codec settings |
+| sink.codecs.LC-SBC | object | mandatory | Settings for the LC-SBC codec |
+| sink.codecs.LC-SBC?.preset | string | optional | Predefined audio quality setting (must be one of the following: *Compatible, HQ, LQ, MQ, XQ*) |
+| sink.codecs.LC-SBC?.bitpool | integer | optional | Custom audio quality based on bitpool value (used when *preset* is not specified) |
+| sink.codecs.LC-SBC?.channelmode | string | optional | Channel mode for custom audio quality (used when *preset* is not specified) (must be one of the following: *DualChannel, JointStereo, Mono, Stereo*) |
+| source | object | optional | BluetoothAudio source configuration |
+| source.codecs | object | mandatory | Codec settings |
+| source.codecs?.LC-SBC | object | optional | Settings for the LC-SBC codec |
+| source.codecs?.LC-SBC.maxbitpool | integer | mandatory | Maximum accepted bitpool value |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -102,7 +102,10 @@ The table below lists configuration options of the plugin.
 This plugin implements the following interfaces:
 
 - IBluetoothAudio::ISink ([IBluetoothAudio.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IBluetoothAudio.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
+
 - IBluetoothAudio::ISource ([IBluetoothAudio.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IBluetoothAudio.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Methods"></a>
 # Methods
@@ -123,23 +126,23 @@ Assigns a Bluetooth sink device for audio playback.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.address | string | Address of the bluetooth device to assign |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string | mandatory | Address of the bluetooth device to assign |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_BAD_REQUEST``` | Device address value is invalid |
-|  | ```ERROR_ALREADY_CONNECTED``` | A sink device is already assigned |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_BAD_REQUEST``` | Device address value is invalid |
+| ```ERROR_ALREADY_CONNECTED``` | A sink device is already assigned |
 
 ### Example
 
@@ -177,15 +180,15 @@ This method takes no parameters.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ALREADY_RELEASED``` | No device is currently assigned as sink |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ALREADY_RELEASED``` | No device is currently assigned as sink |
 
 ### Example
 
@@ -216,28 +219,28 @@ The following properties are provided by the BluetoothAudio plugin:
 
 BluetoothAudio Sink interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [sink::state](#property.sink::state) <sup>RO</sup> | Current state o the audio sink device |
-| [sink::device](#property.sink::device) <sup>RO</sup> | Bluetooth address of the audio sink device |
-| [sink::type](#property.sink::type) <sup>RO</sup> | Type of the audio sink device |
-| [sink::latency](#property.sink::latency) | Latency of the audio sink device |
-| [sink::supportedcodecs](#property.sink::supportedcodecs) <sup>RO</sup> | Audio codecs supported by the audio sink device |
-| [sink::supporteddrms](#property.sink::supporteddrms) <sup>RO</sup> | DRM schemes supported by the audio sink device |
-| [sink::codec](#property.sink::codec) <sup>RO</sup> | Properites of the currently used audio codec |
-| [sink::drm](#property.sink::drm) <sup>RO</sup> | Properites of the currently used DRM scheme |
-| [sink::stream](#property.sink::stream) <sup>RO</sup> | v of the currently transmitted audio stream |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [sink::state](#property.sink::state) | read-only | Current state o the audio sink device |
+| [sink::device](#property.sink::device) | read-only | Bluetooth address of the audio sink device |
+| [sink::type](#property.sink::type) | read-only | Type of the audio sink device |
+| [sink::latency](#property.sink::latency) | read/write | Latency of the audio sink device |
+| [sink::supportedcodecs](#property.sink::supportedcodecs) | read-only | Audio codecs supported by the audio sink device |
+| [sink::supporteddrms](#property.sink::supporteddrms) | read-only | DRM schemes supported by the audio sink device |
+| [sink::codec](#property.sink::codec) | read-only | Properites of the currently used audio codec |
+| [sink::drm](#property.sink::drm) | read-only | Properites of the currently used DRM scheme |
+| [sink::stream](#property.sink::stream) | read-only | Properties of the currently transmitted audio stream |
 
 BluetoothAudio Source interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [source::state](#property.source::state) <sup>RO</sup> | Current state of the source device |
-| [source::device](#property.source::device) <sup>RO</sup> | Bluetooth address of the source device |
-| [source::type](#property.source::type) <sup>RO</sup> | Type of the audio source device |
-| [source::codec](#property.source::codec) <sup>RO</sup> | Properites of the currently used codec |
-| [source::drm](#property.source::drm) <sup>RO</sup> | Properties of the currently used DRM scheme |
-| [source::stream](#property.source::stream) <sup>RO</sup> | Properites of the currently transmitted audio stream |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [source::state](#property.source::state) | read-only | Current state of the source device |
+| [source::device](#property.source::device) | read-only | Bluetooth address of the source device |
+| [source::type](#property.source::type) | read-only | Type of the audio source device |
+| [source::codec](#property.source::codec) | read-only | Properites of the currently used codec |
+| [source::drm](#property.source::drm) | read-only | Properties of the currently used DRM scheme |
+| [source::stream](#property.source::stream) | read-only | Properites of the currently transmitted audio stream |
 
 <a name="property.sink::state"></a>
 ## *sink::state [<sup>property</sup>](#head.Properties)*
@@ -250,9 +253,9 @@ Provides access to the current state o the audio sink device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Current state o the audio sink device (must be one of the following: *Unassigned*, *Disconnected*, *Connecting*, *Connected*, *ConnectedBad*, *ConnectedRestricted*, *Ready*, *Streaming*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Current state o the audio sink device (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
 
 ### Example
 
@@ -287,15 +290,15 @@ Provides access to the bluetooth address of the audio sink device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Bluetooth address of the audio sink device |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Bluetooth address of the audio sink device |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | The sink device currently is not assigned |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The sink device currently is not assigned |
 
 ### Example
 
@@ -330,15 +333,15 @@ Provides access to the type of the audio sink device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Type of the audio sink device (must be one of the following: *Unknown*, *Headphone*, *Speaker*, *Recorder*, *Amplifier*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Type of the audio sink device (must be one of the following: *Amplifier, Headphone, Recorder, Speaker, Unknown*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected |
 
 ### Example
 
@@ -369,22 +372,22 @@ Provides access to the latency of the audio sink device.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Latency of the audio sink device |
-| (property).value | integer | Audio latency in milliseconds |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Latency of the audio sink device |
+| (property).value | integer | mandatory | Audio latency in milliseconds |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | integer |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Latency of the audio sink device |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_BAD_REQUEST``` | Latency value is invalid |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_BAD_REQUEST``` | Latency value is invalid |
 
 ### Example
 
@@ -442,16 +445,16 @@ Provides access to the audio codecs supported by the audio sink device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Audio codecs supported by the audio sink device |
-| result[#] | string |  (must be one of the following: *LC-SBC*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Audio codecs supported by the audio sink device |
+| result[#] | string | mandatory | *...* (must be one of the following: *LC-SBC*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected |
 
 ### Example
 
@@ -488,16 +491,16 @@ Provides access to the DRM schemes supported by the audio sink device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | DRM schemes supported by the audio sink device |
-| result[#] | string |  (must be one of the following: *DTCP*, *SCMS-T*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | DRM schemes supported by the audio sink device |
+| result[#] | string | mandatory | *...* (must be one of the following: *DTCP, SCMS-T*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected |
 
 ### Example
 
@@ -534,17 +537,17 @@ Provides access to the properites of the currently used audio codec.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Properites of the currently used audio codec |
-| result.codec | string | Audio codec used (must be one of the following: *LC-SBC*) |
-| result.settings | opaque object | Codec-specific audio quality preset, compression profile, etc |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Properites of the currently used audio codec |
+| result.codec | string | mandatory | Audio codec used (must be one of the following: *LC-SBC*) |
+| result.settings | opaque object | mandatory | Codec-specific audio quality preset, compression profile, etc |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | The sink device currently is not configured |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The sink device currently is not configured |
 
 ### Example
 
@@ -582,17 +585,17 @@ Provides access to the properites of the currently used DRM scheme.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Properites of the currently used DRM scheme |
-| result.drm | string | Content protection scheme used (must be one of the following: *DTCP*, *SCMS-T*) |
-| result.settings | opaque object | DRM-specific content protection level, encoding rules, etc |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Properites of the currently used DRM scheme |
+| result.drm | string | mandatory | Content protection scheme used (must be one of the following: *DTCP, SCMS-T*) |
+| result.settings | opaque object | mandatory | DRM-specific content protection level, encoding rules, etc |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected or not yet configured |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected or not yet configured |
 
 ### Example
 
@@ -622,7 +625,7 @@ Provides access to the properites of the currently used DRM scheme.
 <a name="property.sink::stream"></a>
 ## *sink::stream [<sup>property</sup>](#head.Properties)*
 
-Provides access to the v of the currently transmitted audio stream.
+Provides access to the properties of the currently transmitted audio stream.
 
 > This property is **read-only**.
 
@@ -630,20 +633,20 @@ Provides access to the v of the currently transmitted audio stream.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | v of the currently transmitted audio stream |
-| result.samplerate | integer | Sample rate in Hz |
-| result.bitrate | integer | Target bitrate in bits per second (eg. 320000) |
-| result.channels | integer | Number of audio channels |
-| result.resolution | integer | Sampling resolution in bits per sample |
-| result.isresampled | boolean | Indicates if the source stream is being resampled by the stack to match sink capabilities |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Properties of the currently transmitted audio stream |
+| result.samplerate | integer | mandatory | Sample rate in Hz |
+| result.bitrate | integer | mandatory | Target bitrate in bits per second (eg. 320000) |
+| result.channels | integer | mandatory | Number of audio channels |
+| result.resolution | integer | mandatory | Sampling resolution in bits per sample |
+| result.isresampled | boolean | mandatory | Indicates if the source stream is being resampled by the stack to match sink capabilities |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected or not yet configured |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | The sink device currently is not connected or not yet configured |
 
 ### Example
 
@@ -684,9 +687,9 @@ Provides access to the current state of the source device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Current state of the source device (must be one of the following: *Unassigned*, *Disconnected*, *Connecting*, *Connected*, *ConnectedBad*, *ConnectedRestricted*, *Ready*, *Streaming*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Current state of the source device (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
 
 ### Example
 
@@ -721,15 +724,15 @@ Provides access to the bluetooth address of the source device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Bluetooth address of the source device |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Bluetooth address of the source device |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | No source device is currently connected |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | No source device is currently connected |
 
 ### Example
 
@@ -764,15 +767,15 @@ Provides access to the type of the audio source device.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Type of the audio source device (must be one of the following: *Unknown*, *Player*, *Microphone*, *Tuner*, *Mixer*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Type of the audio source device (must be one of the following: *Microphone, Mixer, Player, Tuner, Unknown*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | No source device is currently connected |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | No source device is currently connected |
 
 ### Example
 
@@ -807,17 +810,17 @@ Provides access to the properites of the currently used codec.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Properites of the currently used codec |
-| result.codec | string | Audio codec used (must be one of the following: *LC-SBC*) |
-| result.settings | opaque object | Codec-specific audio quality preset, compression profile, etc |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Properites of the currently used codec |
+| result.codec | string | mandatory | Audio codec used (must be one of the following: *LC-SBC*) |
+| result.settings | opaque object | mandatory | Codec-specific audio quality preset, compression profile, etc |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | No source device is not connected or sink is not yet configured |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | No source device is not connected or sink is not yet configured |
 
 ### Example
 
@@ -855,17 +858,17 @@ Provides access to the properties of the currently used DRM scheme.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Properties of the currently used DRM scheme |
-| result.drm | string | Content protection scheme used (must be one of the following: *DTCP*, *SCMS-T*) |
-| result.settings | opaque object | DRM-specific content protection level, encoding rules, etc |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Properties of the currently used DRM scheme |
+| result.drm | string | mandatory | Content protection scheme used (must be one of the following: *DTCP, SCMS-T*) |
+| result.settings | opaque object | mandatory | DRM-specific content protection level, encoding rules, etc |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | No source device is connected or sink is not yet configured |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | No source device is connected or sink is not yet configured |
 
 ### Example
 
@@ -903,20 +906,20 @@ Provides access to the properites of the currently transmitted audio stream.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Properites of the currently transmitted audio stream |
-| result.samplerate | integer | Sample rate in Hz |
-| result.bitrate | integer | Target bitrate in bits per second (eg. 320000) |
-| result.channels | integer | Number of audio channels |
-| result.resolution | integer | Sampling resolution in bits per sample |
-| result.isresampled | boolean | Indicates if the source stream is being resampled by the stack to match sink capabilities |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Properites of the currently transmitted audio stream |
+| result.samplerate | integer | mandatory | Sample rate in Hz |
+| result.bitrate | integer | mandatory | Target bitrate in bits per second (eg. 320000) |
+| result.channels | integer | mandatory | Number of audio channels |
+| result.resolution | integer | mandatory | Sampling resolution in bits per sample |
+| result.isresampled | boolean | mandatory | Indicates if the source stream is being resampled by the stack to match sink capabilities |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_ILLEGAL_STATE``` | No source device is connected or sink is not yet configured |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_ILLEGAL_STATE``` | No source device is connected or sink is not yet configured |
 
 ### Example
 
@@ -955,58 +958,90 @@ The following events are provided by the BluetoothAudio plugin:
 
 BluetoothAudio Sink interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [sink::statechanged](#event.sink::statechanged) | Signals audio sink state change |
+| [sink::statechanged](#notification.sink::statechanged) | Signals audio sink state change |
 
 BluetoothAudio Source interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [source::statechanged](#event.source::statechanged) | Signals audio source state change |
+| [source::statechanged](#notification.source::statechanged) | Signals audio source state change |
 
-<a name="event.sink::statechanged"></a>
-## *sink::statechanged [<sup>event</sup>](#head.Notifications)*
+<a name="notification.sink::statechanged"></a>
+## *sink::statechanged [<sup>notification</sup>](#head.Notifications)*
 
 Signals audio sink state change.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.state | string |  (must be one of the following: *Unassigned*, *Disconnected*, *Connecting*, *Connected*, *ConnectedBad*, *ConnectedRestricted*, *Ready*, *Streaming*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.state | string | mandatory | Changed BluetoothAudio State (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.sink::statechanged",
+  "id": 42,
+  "method": "BluetoothAudio.1.register",
+  "params": {
+    "event": "sink::statechanged",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.sink::statechanged",
   "params": {
     "state": "Unassigned"
   }
 }
 ```
 
-<a name="event.source::statechanged"></a>
-## *source::statechanged [<sup>event</sup>](#head.Notifications)*
+<a name="notification.source::statechanged"></a>
+## *source::statechanged [<sup>notification</sup>](#head.Notifications)*
 
 Signals audio source state change.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.state | string |  (must be one of the following: *Unassigned*, *Disconnected*, *Connecting*, *Connected*, *ConnectedBad*, *ConnectedRestricted*, *Ready*, *Streaming*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.state | string | mandatory | Changed BluetoothAudio State (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.source::statechanged",
+  "id": 42,
+  "method": "BluetoothAudio.1.register",
+  "params": {
+    "event": "source::statechanged",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.source::statechanged",
   "params": {
     "state": "Unassigned"
   }

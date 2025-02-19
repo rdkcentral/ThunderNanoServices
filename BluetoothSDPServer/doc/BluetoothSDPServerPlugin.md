@@ -68,21 +68,21 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *BluetoothSDPServer*) |
-| classname | string | Class name: *BluetoothSDPServer* |
-| locator | string | Library name: *libThunderBluetoothSDPServer.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object |  |
-| configuration.controller | string | Callsign of the Bluetooth controller service (typically *BluetoothControl*) |
-| configuration?.provider | string | <sup>*(optional)*</sup> Name of the service provider (e.g. device manufacturer) |
-| configuration?.services | array | <sup>*(optional)*</sup>  |
-| configuration?.services[#] | object | <sup>*(optional)*</sup> Service settings |
-| configuration?.services[#]?.class | string | <sup>*(optional)*</sup> Class of the Bluetooth service (must be one of the following: *a2dp-audio-sink*, *a2dp-audio-source*) |
-| configuration?.services[#].callsign | string | Callsign of the service providing the functionality |
-| configuration?.services[#]?.name | string | <sup>*(optional)*</sup> Name of the service advertised over SDP |
-| configuration?.services[#]?.description | string | <sup>*(optional)*</sup> Description of the service advertised over SDP |
-| configuration?.services[#]?.public | boolean | <sup>*(optional)*</sup> Indicates if the service is listed in SDP PublicBrowseRoot group |
-| configuration?.services[#]?.parameters | object | <sup>*(optional)*</sup> Service-specific configuration parameters |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *BluetoothSDPServer*) |
+| classname | string | mandatory | Class name: *BluetoothSDPServer* |
+| locator | string | mandatory | Library name: *libThunderBluetoothSDPServer.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | mandatory | *...* |
+| configuration.controller | string | mandatory | Callsign of the Bluetooth controller service (typically *BluetoothControl*) |
+| configuration?.provider | string | optional | Name of the service provider (e.g. device manufacturer) |
+| configuration?.services | array | optional | *...* |
+| configuration?.services[#] | object | optional | Service settings |
+| configuration?.services[#]?.class | string | optional | Class of the Bluetooth service (must be one of the following: *a2dp-audio-sink, a2dp-audio-source*) |
+| configuration?.services[#].callsign | string | mandatory | Callsign of the service providing the functionality |
+| configuration?.services[#]?.name | string | optional | Name of the service advertised over SDP |
+| configuration?.services[#]?.description | string | optional | Description of the service advertised over SDP |
+| configuration?.services[#]?.public | boolean | optional | Indicates if the service is listed in SDP PublicBrowseRoot group |
+| configuration?.services[#]?.parameters | object | optional | Service-specific configuration parameters |
 

@@ -70,12 +70,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *VolumeControl*) |
-| classname | string | Class name: *VolumeControl* |
-| locator | string | Library name: *libWPEVolumeControl.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *VolumeControl*) |
+| classname | string | mandatory | Class name: *VolumeControl* |
+| locator | string | mandatory | Library name: *libWPEVolumeControl.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -83,6 +83,7 @@ The table below lists configuration options of the plugin.
 This plugin implements the following interfaces:
 
 - IVolumeControl ([IVolumeControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IVolumeControl.h)) (version 1.0.0) (uncompliant-extended format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Properties"></a>
 # Properties
@@ -91,10 +92,10 @@ The following properties are provided by the VolumeControl plugin:
 
 VolumeControl interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [muted](#property.muted) | Audio mute state |
-| [volume](#property.volume) | Audio volume level |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [muted](#property.muted) | read/write | Audio mute state |
+| [volume](#property.volume) | read/write | Audio volume level |
 
 <a name="property.muted"></a>
 ## *muted [<sup>property</sup>](#head.Properties)*
@@ -103,21 +104,21 @@ Provides access to the audio mute state.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | boolean | Mute state (true: muted, false: un-muted) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | boolean | mandatory | Mute state (true: muted, false: un-muted) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | boolean |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Mute state (true: muted, false: un-muted) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_GENERAL``` | Failed to set/retrieve muting state |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | Failed to set/retrieve muting state |
 
 ### Example
 
@@ -169,21 +170,21 @@ Provides access to the audio volume level.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | integer | Volume level in percent |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | integer | mandatory | Volume level in percent |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | integer |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Volume level in percent |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_GENERAL``` | Failed to set/retrieve audio volume |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | Failed to set/retrieve audio volume |
 
 ### Example
 
@@ -237,53 +238,85 @@ The following events are provided by the VolumeControl plugin:
 
 VolumeControl interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [volume](#event.volume) | Signals volume change |
-| [muted](#event.muted) | Signals mute state change |
+| [volume](#notification.volume) | Signals volume change |
+| [muted](#notification.muted) | Signals mute state change |
 
-<a name="event.volume"></a>
-## *volume [<sup>event</sup>](#head.Notifications)*
+<a name="notification.volume"></a>
+## *volume [<sup>notification</sup>](#head.Notifications)*
 
 Signals volume change.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.volume | integer | New bolume level in percent |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.volume | integer | mandatory | New bolume level in percent |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.volume",
+  "id": 42,
+  "method": "VolumeControl.1.register",
+  "params": {
+    "event": "volume",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.volume",
   "params": {
     "volume": 100
   }
 }
 ```
 
-<a name="event.muted"></a>
-## *muted [<sup>event</sup>](#head.Notifications)*
+<a name="notification.muted"></a>
+## *muted [<sup>notification</sup>](#head.Notifications)*
 
 Signals mute state change.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.muted | boolean | New mute state (true: muted, false: un-muted) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.muted | boolean | mandatory | New mute state (true: muted, false: un-muted) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.muted",
+  "id": 42,
+  "method": "VolumeControl.1.register",
+  "params": {
+    "event": "muted",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.muted",
   "params": {
     "muted": false
   }

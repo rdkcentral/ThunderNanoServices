@@ -71,17 +71,17 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *IOConnector*) |
-| classname | string | Class name: *IOConnector* |
-| locator | string | Library name: *libWPEIOConnector.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| pins | array | List of GPIO pins available on the system |
-| pins[#] | object | Pin properties |
-| pins[#].id | number | Pin ID |
-| pins[#].mode | string | Pin mode (must be one of the following: *Low*, *High*, *Both*, *Active*, *Inactive*, *Output*) |
-| pins[#]?.activelow | boolean | <sup>*(optional)*</sup> Denotes if pin is active in low state (default: *false*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *IOConnector*) |
+| classname | string | mandatory | Class name: *IOConnector* |
+| locator | string | mandatory | Library name: *libWPEIOConnector.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| pins | array | mandatory | List of GPIO pins available on the system |
+| pins[#] | object | mandatory | Pin properties |
+| pins[#].id | integer | mandatory | Pin ID |
+| pins[#].mode | string | mandatory | Pin mode (must be one of the following: *Active, Both, High, Inactive, Low, Output*) |
+| pins[#]?.activelow | boolean | optional | Denotes if pin is active in low state (default: *false*) |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -97,9 +97,9 @@ The following properties are provided by the IOConnector plugin:
 
 IOConnector interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [pin](#property.pin) | GPIO pin value |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [pin](#property.pin) | read/write | GPIO pin value |
 
 <a name="property.pin"></a>
 ## *pin [<sup>property</sup>](#head.Properties)*
@@ -108,25 +108,31 @@ Provides access to the GPIO pin value.
 
 Also see: [activity](#event.activity)
 
+> The *pin id* parameter shall be passed as the index to the property, e.g. ``IOConnector.1.pin@<pin-id>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| pin-id | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | number | GPIO pin value |
-
-> The *pin id* argument shall be passed as the index to the property, e.g. *IOConnector.1.pin@189*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | integer | mandatory | Value of the pin |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Value of the pin |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown pin ID given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown pin ID given |
 
 ### Example
 
@@ -180,12 +186,12 @@ The following events are provided by the IOConnector plugin:
 
 IOConnector interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [activity](#event.activity) | Notifies about GPIO pin activity |
+| [activity](#notification.activity) | Notifies about GPIO pin activity |
 
-<a name="event.activity"></a>
-## *activity [<sup>event</sup>](#head.Notifications)*
+<a name="notification.activity"></a>
+## *activity [<sup>notification</sup>](#head.Notifications)*
 
 Notifies about GPIO pin activity.
 
@@ -195,22 +201,42 @@ Register to this event to be notified about pin value changes
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.value | number | GPIO pin value |
+> The *pin ID* parameter shall be passed within the client ID during registration, e.g. *189.myid*
 
-> The *pin ID* argument shall be passed within the designator, e.g. *189.client.events.1*.
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.value | integer | mandatory | Value of the pin |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "189.client.events.1.activity",
+  "id": 42,
+  "method": "IOConnector.1.register",
+  "params": {
+    "event": "activity",
+    "id": "189.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "189.myid.activity",
   "params": {
     "value": 1
   }
 }
 ```
+
+> The *pin ID* parameter is passed within the designator, e.g. *189.myid.activity*.
 

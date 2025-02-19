@@ -33,6 +33,6 @@
     }
   },
   "interface": {
-    "$ref": "{cppinterfacedir}/IPollux.h"
+    "$ref": "{cppinterfacedir}/IMath.h"
   }
 }

@@ -62,23 +62,23 @@ The table below provides and overview of terms and abbreviations used in this do
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Yang*) |
-| classname | string | Class name: *Yang* |
-| locator | string | Library name: *libThunderYang.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object |  |
-| configuration?.yangcallsign | string | <sup>*(optional)*</sup> Callsign of the Yin service (typically *Yin*) |
-| configuration.etymology | string | Describes the meaning of yang |
-| configuration?.color | string | <sup>*(optional)*</sup> Default color of yang |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Yang*) |
+| classname | string | mandatory | Class name: *Yang* |
+| locator | string | mandatory | Library name: *libThunderYang.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | mandatory | *...* |
+| configuration?.yangcallsign | string | optional | Callsign of the Yin service (typically *Yin*) |
+| configuration.etymology | string | mandatory | Describes the meaning of yang |
+| configuration?.color | string | optional | Default color of yang |
 
 <a name="head.Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- Exchange::IYang ([IYang.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IYang.h)) (version 1.0.0) (compliant format)
+- IYang ([IYang.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IYang.h)) (version 1.0.0) (compliant format)
 
 <a name="head.Properties"></a>
 # Properties
@@ -87,12 +87,11 @@ The following properties are provided by the Yang plugin:
 
 Yang interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [color](#property.color) | Color of yang |
-| [etymology](#property.etymology) <sup>RO</sup> | Meaning of yang |
-| [balance](#property.balance) | Percentage of yang in the "universal balance" of the system |
-
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [color](#property.color) | read/write | Color of yang |
+| [etymology](#property.etymology) | read-only | Meaning of yang |
+| [balance](#property.balance) | read/write | Percentage of yang in the "universal balance" of the system |
 
 <a name="property.color"></a>
 ## *color [<sup>property</sup>](#head.Properties)*
@@ -101,16 +100,16 @@ Provides access to the color of yang.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Color of yang |
-| (property).value | string |  (must be one of the following: *Gray*, *DarkGray*, *Black*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Color of yang |
+| (property).value | string | mandatory | *...* (must be one of the following: *BLACK, DARK_GRAY, GRAY*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string |  (must be one of the following: *Gray*, *DarkGray*, *Black*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Color of yang (must be one of the following: *BLACK, DARK_GRAY, GRAY*) |
 
 ### Example
 
@@ -118,9 +117,9 @@ Provides access to the color of yang.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Yang.1.color"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Yang.1.color"
 }
 ```
 
@@ -128,9 +127,9 @@ Provides access to the color of yang.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "Gray"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "GRAY"
 }
 ```
 
@@ -138,12 +137,12 @@ Provides access to the color of yang.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Yang.1.color",
-    "params": {
-        "value": "Gray"
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Yang.1.color",
+  "params": {
+    "value": "GRAY"
+  }
 }
 ```
 
@@ -168,9 +167,9 @@ Provides access to the meaning of yang.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory |  |
 
 ### Example
 
@@ -178,9 +177,9 @@ Provides access to the meaning of yang.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Yang.1.etymology"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Yang.1.etymology"
 }
 ```
 
@@ -188,9 +187,9 @@ Provides access to the meaning of yang.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": "the dark side"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "the dark side"
 }
 ```
 
@@ -205,23 +204,23 @@ The Yin service is additionally required to change the yin/yang balance.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Percentage of yang in the "universal balance" of the system |
-| (property).value | integer |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Percentage of yang in the "universal balance" of the system |
+| (property).value | integer | mandatory |  |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | integer |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Percentage of yang in the "universal balance" of the system |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_BAD_REQUEST``` | Given percentage value is invalid |
-|  | ```ERROR_UNAVAILABLE``` | Can't set yang because yin is not available |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_BAD_REQUEST``` | Given percentage value is invalid |
+| ```ERROR_UNAVAILABLE``` | Can't set yang because yin is not available |
 
 ### Example
 
@@ -229,9 +228,9 @@ The Yin service is additionally required to change the yin/yang balance.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Yang.1.balance"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Yang.1.balance"
 }
 ```
 
@@ -239,9 +238,9 @@ The Yin service is additionally required to change the yin/yang balance.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "result": 0
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
 }
 ```
 
@@ -249,12 +248,12 @@ The Yin service is additionally required to change the yin/yang balance.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 42,
-    "method": "Yang.1.balance",
-    "params": {
-        "value": 50
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Yang.1.balance",
+  "params": {
+    "value": 50
+  }
 }
 ```
 
@@ -271,38 +270,53 @@ The Yin service is additionally required to change the yin/yang balance.
 <a name="head.Notifications"></a>
 # Notifications
 
-Notifications are autonomous events, triggered by the internals of the implementation, and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
 The following events are provided by the Yang plugin:
 
 Yang interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [balancechanged](#event.balancechanged) | Notifies of yang percentage change |
+| [balanceChanged](#notification.balanceChanged) | Notifies of yang percentage change |
 
-
-<a name="event.balancechanged"></a>
-## *balancechanged [<sup>event</sup>](#head.Notifications)*
+<a name="notification.balanceChanged"></a>
+## *balanceChanged [<sup>notification</sup>](#head.Notifications)*
 
 Notifies of yang percentage change.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.percentage | integer | New percentage of yang in the "universal balance" |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.percentage | integer | mandatory | New percentage of yang in the "universal balance" |
 
 ### Example
 
+#### Registration
+
 ```json
 {
-    "jsonrpc": "2.0",
-    "method": "client.events.1.balancechanged",
-    "params": {
-        "percentage": 50
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Yang.1.register",
+  "params": {
+    "event": "balanceChanged",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.balanceChanged",
+  "params": {
+    "percentage": 50
+  }
 }
 ```
 
