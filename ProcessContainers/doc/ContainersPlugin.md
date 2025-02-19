@@ -70,12 +70,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Containers*) |
-| classname | string | Class name: *Containers* |
-| locator | string | Library name: *libWPEContainers.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Containers*) |
+| classname | string | mandatory | Class name: *Containers* |
+| locator | string | mandatory | Library name: *libWPEContainers.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -103,26 +103,26 @@ Starts a new container.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.name | string | <sup>*(optional)*</sup> Name of container |
-| params?.command | string | <sup>*(optional)*</sup> Command that will be started in the container |
-| params?.parameters | array | <sup>*(optional)*</sup> List of parameters supplied to command |
-| params?.parameters[#] | string | <sup>*(optional)*</sup>  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params?.name | string | optional | Name of container |
+| params?.command | string | optional | Command that will be started in the container |
+| params?.parameters | array | optional | List of parameters supplied to command |
+| params?.parameters[#] | string | optional | *...* |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
-| 1 | ```ERROR_GENERAL``` | Failed to start container |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Container not found |
+| ```ERROR_GENERAL``` | Failed to start container |
 
 ### Example
 
@@ -160,22 +160,22 @@ Stops a container.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.name | string | Name of container |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.name | string | mandatory | Name of container |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Container not found |
 
 ### Example
 
@@ -209,12 +209,12 @@ The following properties are provided by the Containers plugin:
 
 Containers interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [containers](#property.containers) <sup>RO</sup> | List of active containers |
-| [networks](#property.networks) <sup>RO</sup> | List of network interfaces of the container |
-| [memory](#property.memory) <sup>RO</sup> | Memory taken by container |
-| [cpu](#property.cpu) <sup>RO</sup> | CPU time |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [containers](#property.containers) | read-only | List of active containers |
+| [networks](#property.networks) | read-only | List of network interfaces of the container |
+| [memory](#property.memory) | read-only | Memory taken by container |
+| [cpu](#property.cpu) | read-only | CPU time |
 
 <a name="property.containers"></a>
 ## *containers [<sup>property</sup>](#head.Properties)*
@@ -227,10 +227,10 @@ Provides access to the list of active containers.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of names of all containers |
-| result[#] | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of names of all containers |
+| result[#] | string | mandatory | *...* |
 
 ### Example
 
@@ -263,25 +263,31 @@ Provides access to the list of network interfaces of the container.
 
 > This property is **read-only**.
 
-### Value
+> The *name* parameter shall be passed as the index to the property, e.g. ``Containers.1.networks@<name>``.
 
-> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.networks@ContainerName*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| name | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of all network interfaces related to the container |
-| result[#] | object | Returns networks associated with the container |
-| result[#]?.interface | string | <sup>*(optional)*</sup> Interface name |
-| result[#]?.ips | array | <sup>*(optional)*</sup> List of ip addresses |
-| result[#]?.ips[#] | string | <sup>*(optional)*</sup> IP address |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of all network interfaces related to the container |
+| result[#] | object | mandatory | Returns networks associated with the container |
+| result[#]?.interface | string | optional | Interface name |
+| result[#]?.ips | array | optional | List of ip addresses |
+| result[#]?.ips[#] | string | optional | IP address |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Container not found |
 
 ### Example
 
@@ -319,24 +325,30 @@ Provides access to the memory taken by container.
 
 > This property is **read-only**.
 
-### Value
+> The *name* parameter shall be passed as the index to the property, e.g. ``Containers.1.memory@<name>``.
 
-> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.memory@ContainerName*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| name | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Memory allocated by the container, in bytes |
-| result?.allocated | number | <sup>*(optional)*</sup> Memory allocated by container |
-| result?.resident | number | <sup>*(optional)*</sup> Resident memory of the container |
-| result?.shared | number | <sup>*(optional)*</sup> Shared memory in the container |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Memory allocated by the container, in bytes |
+| result?.allocated | integer | optional | Memory allocated by container |
+| result?.resident | integer | optional | Resident memory of the container |
+| result?.shared | integer | optional | Shared memory in the container |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Container not found |
 
 ### Example
 
@@ -371,24 +383,30 @@ Provides access to the CPU time.
 
 > This property is **read-only**.
 
-### Value
+> The *name* parameter shall be passed as the index to the property, e.g. ``Containers.1.cpu@<name>``.
 
-> The *name* argument shall be passed as the index to the property, e.g. *Containers.1.cpu@ContainerName*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| name | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | CPU time spent on running the container, in nanoseconds |
-| result?.total | number | <sup>*(optional)*</sup> CPU-time spent on container, in nanoseconds |
-| result?.cores | array | <sup>*(optional)*</sup> Time spent on each cpu core, in nanoseconds |
-| result?.cores[#] | number | <sup>*(optional)*</sup>  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | CPU time spent on running the container, in nanoseconds |
+| result?.total | integer | optional | CPU-time spent on container, in nanoseconds |
+| result?.cores | array | optional | Time spent on each cpu core, in nanoseconds |
+| result?.cores[#] | integer | optional | *...* |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Container not found |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Container not found |
 
 ### Example
 

@@ -67,13 +67,13 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *FileTransfer*) |
-| classname | string | Class name: *FileTransfer* |
-| locator | string | Library name: *libThunderFileTransfer.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.port | number | <sup>*(optional)*</sup> Port number (default: 2201) |
-| configuration?.fullfile | boolean | <sup>*(optional)*</sup> If value failse update at the end of the file (default: false) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *FileTransfer*) |
+| classname | string | mandatory | Class name: *FileTransfer* |
+| locator | string | mandatory | Library name: *libThunderFileTransfer.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.port | integer | optional | Port number (default: 2201) |
+| configuration?.fullfile | boolean | optional | If value failse update at the end of the file (default: false) |
 

@@ -67,12 +67,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Commander*) |
-| classname | string | Class name: *Commander* |
-| locator | string | Library name: *libThunderCommander.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| sequencers | array | <sup>*(optional)*</sup> List of sequencers |
-| sequencers[#] | string | <sup>*(optional)*</sup>  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Commander*) |
+| classname | string | mandatory | Class name: *Commander* |
+| locator | string | mandatory | Library name: *libThunderCommander.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| sequencers | array | optional | List of sequencers |
+| sequencers[#] | string | optional | *...* |
 
