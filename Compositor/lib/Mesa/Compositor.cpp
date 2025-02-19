@@ -206,7 +206,7 @@ namespace Plugin {
             Client& operator=(const Client&) = delete;
 
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
-                : Compositor::CompositorBuffer(Compositor::CreateBuffer(parent.Native(), width, height, Compositor::PixelFormat(parent.Format(), { parent.Modifier() })))
+                : Compositor::CompositorBuffer(width, height, parent.Format(), parent.Modifier(), Exchange::ICompositionBuffer::TYPE_DMA)
                 , _parent(parent)
                 , _id(Core::InterlockedIncrement(_sequence))
                 , _callsign(callsign)
@@ -240,6 +240,12 @@ namespace Plugin {
             {
                 return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
             }
+
+            void AttachPlanes(Core::PrivilegedRequest::Container& descriptors)
+            {
+                Compositor::CompositorBuffer::Planes(descriptors.data(), descriptors.size());
+            }
+
             Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
             {
                 return _texture;
@@ -350,15 +356,20 @@ namespace Plugin {
                 Callback& operator=(Callback&&) = delete;
                 Callback& operator=(const Callback&) = delete;
 
-                Callback(Bridge& parent) : _parent(parent) {}
+                Callback(Bridge& parent)
+                    : _parent(parent)
+                {
+                }
                 ~Callback() override = default;
 
             public:
-                void Request(const uint32_t id, Container& descriptors) override {
-                   _parent.Request(id, descriptors);
+                void Request(const uint32_t id, Container& descriptors) override
+                {
+                    _parent.Request(id, descriptors);
                 }
-                void Offer(const uint32_t id, Container&& descriptors) override {
-                   _parent.Offer(id, std::move(descriptors));
+                void Offer(const uint32_t id, Container&& descriptors) override
+                {
+                    _parent.Offer(id, std::move(descriptors));
                 }
 
             private:
@@ -384,17 +395,16 @@ namespace Plugin {
             }
 
         private:
-            void Request(const uint32_t id, Container& descriptors) {
+            void Request(const uint32_t id, Container& descriptors)
+            {
                 if (id == DisplayId) {
                     descriptors.emplace_back(static_cast<int>(_parent.Native()));
-                } 
-                else {
+                } else {
                     Core::ProxyType<Client> client = _parent.ClientById(id);
 
                     if (client.IsValid() == false) {
                         TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
-                    } 
-                    else {
+                    } else {
                         int container[Core::PrivilegedRequest::MaxDescriptorsPerRequest];
                         uint8_t result = client->Descriptors(sizeof(container), container);
 
@@ -404,7 +414,21 @@ namespace Plugin {
                     }
                 }
             }
-            void Offer(const uint32_t id VARIABLE_IS_NOT_USED, Container&& descriptors VARIABLE_IS_NOT_USED) {
+            void Offer(const uint32_t id, Core::PrivilegedRequest::Container&& descriptors)
+            {
+                Core::ProxyType<Client> client = _parent.ClientById(id);
+
+                if (client.IsValid() == true) {
+                    client->AttachPlanes(descriptors);
+
+                    Core::ProxyType<Exchange::ICompositionBuffer> buffer(client);
+
+                    client->Texture(_parent.Texture(buffer));
+                } else {
+                    TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
+                }
+
+                descriptors.clear();
             }
 
             CompositorImplementation& _parent;
@@ -696,7 +720,11 @@ namespace Plugin {
                     _canvasBuffer.Release();
 
                     result = Core::ERROR_UNAVAILABLE;
+
+                    TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));
                 }
+            } else {
+                TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), bridgePath.c_str(), result));
             }
             return (result);
         }
@@ -748,16 +776,15 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        void Announce(Client& client)
+        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::ICompositionBuffer> buffer)
         {
-            Core::ProxyType<Exchange::ICompositionBuffer> buffer(
-                static_cast<Core::IReferenceCounted&>(client),
-                static_cast<Exchange::ICompositionBuffer&>(client));
 
             ASSERT(buffer.IsValid());
+            return _renderer->Texture(buffer);
+        }
 
-            client.Texture(_renderer->Texture(buffer));
-
+        void Announce(Client& client)
+        {
             _adminLock.Lock();
 
             for (auto& observer : _observers) {
@@ -872,7 +899,7 @@ namespace Plugin {
                     const Exchange::IComposition::Rectangle renderBox = { rectangle.x, rectangle.y, rectangle.width, rectangle.height };
 
                     Compositor::Matrix clientProjection;
-                    Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
+                    Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
                     const Exchange::IComposition::Rectangle clientArea = { 0, 0, client->Texture()->Width(), client->Texture()->Height() };
 
@@ -1021,7 +1048,7 @@ namespace Plugin {
         std::unique_ptr<DisplayDispatcher> _dispatcher;
         Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
         Core::ProxyType<Compositor::IRenderer::ITexture> _canvasTexture;
-        uint32_t _gpuIdentifier;
+        int _gpuIdentifier;
         std::string _gpuNode;
         std::string _renderNode;
         Presenter _present;
