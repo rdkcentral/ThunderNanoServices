@@ -67,12 +67,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Dictionary*) |
-| classname | string | Class name: *Dictionary* |
-| locator | string | Library name: *libThunderDictionary.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.storage | string | <sup>*(optional)*</sup> Filename of DataModel file (default: DataModel.json) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Dictionary*) |
+| classname | string | mandatory | Class name: *Dictionary* |
+| locator | string | mandatory | Library name: *libThunderDictionary.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.storage | string | optional | Filename of DataModel file (default: DataModel.json) |
 

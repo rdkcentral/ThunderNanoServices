@@ -71,16 +71,16 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *NetworkControl*) |
-| classname | string | Class name: *NetworkControl* |
-| locator | string | Library name: *libThunderNetworkControl.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.dnsfile | string | <sup>*(optional)*</sup> Path to DNS resolve file (default: /etc/resolv.conf) |
-| configuration?.response | number | <sup>*(optional)*</sup> Maximum response time out of the DHCP server |
-| configuration?.retries | number | <sup>*(optional)*</sup> Maximum number of retries to the DHCP server |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *NetworkControl*) |
+| classname | string | mandatory | Class name: *NetworkControl* |
+| locator | string | mandatory | Library name: *libThunderNetworkControl.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.dnsfile | string | optional | Path to DNS resolve file (default: /etc/resolv.conf) |
+| configuration?.response | integer | optional | Maximum response time out of the DHCP server |
+| configuration?.retries | integer | optional | Maximum number of retries to the DHCP server |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -88,6 +88,7 @@ The table below lists configuration options of the plugin.
 This plugin implements the following interfaces:
 
 - INetworkControl ([INetworkControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/INetworkControl.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Methods"></a>
 # Methods
@@ -107,16 +108,16 @@ Flush and reload requested interface.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.interface | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.interface | string | mandatory | Name of the interface to be flushed |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Example
 
@@ -150,13 +151,13 @@ The following properties are provided by the NetworkControl plugin:
 
 NetworkControl interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [interfaces](#property.interfaces) <sup>RO</sup> | Currently available interfaces |
-| [status](#property.status) <sup>RO</sup> | Status of requested interface |
-| [network](#property.network) | Network info of requested interface |
-| [dns](#property.dns) | DNS list |
-| [up](#property.up) | Provides given requested interface is up or not |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [interfaces](#property.interfaces) | read-only | Currently available interfaces |
+| [status](#property.status) | read-only | Status of requested interface |
+| [network](#property.network) | read/write | Network info of requested interface |
+| [dns](#property.dns) | read/write | DNS list |
+| [up](#property.up) | read/write | Provides given requested interface is up or not |
 
 <a name="property.interfaces"></a>
 ## *interfaces [<sup>property</sup>](#head.Properties)*
@@ -169,10 +170,10 @@ Provides access to the currently available interfaces.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Currently available interfaces |
-| result[#] | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Currently available interfaces |
+| result[#] | string | mandatory | *...* |
 
 ### Example
 
@@ -205,15 +206,21 @@ Provides access to the status of requested interface.
 
 > This property is **read-only**.
 
-### Value
+> The *interface* parameter shall be passed as the index to the property, e.g. ``NetworkControl.1.status@<interface>``.
 
-> The *interface* argument shall be passed as the index to the property, e.g. *NetworkControl.1.status@xyz*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| interface | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Status of requested interface (must be one of the following: *Unavailable*, *Available*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Status of requested interface (must be one of the following: *Available, Unavailable*) |
 
 ### Example
 
@@ -242,30 +249,42 @@ Provides access to the status of requested interface.
 
 Provides access to the network info of requested interface.
 
+> The *interface* parameter shall be passed as the index to the property, e.g. ``NetworkControl.1.network@<interface>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| interface | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Network info of requested interface |
-| (property).value | array |  |
-| (property).value[#] | object |  |
-| (property).value[#].address | string |  |
-| (property).value[#].defaultgateway | string |  |
-| (property).value[#].mask | integer |  |
-| (property).value[#].mode | string |  (must be one of the following: *Static*, *Dynamic*) |
-
-> The *interface* argument shall be passed as the index to the property, e.g. *NetworkControl.1.network@xyz*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Network info of requested interface |
+| (property).value | array | mandatory | *...* |
+| (property).value[#] | object | mandatory | *...* |
+| (property).value[#].address | string | mandatory | IP Address |
+| (property).value[#].defaultgateway | string | mandatory | Default Gateway |
+| (property).value[#].mask | integer | mandatory | Network mask |
+| (property).value[#].mode | string | mandatory | Mode of interface activation Dynamic or Static (must be one of the following: *Dynamic, Static*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | object |  |
-| result[#].address | string |  |
-| result[#].defaultgateway | string |  |
-| result[#].mask | integer |  |
-| result[#].mode | string |  (must be one of the following: *Static*, *Dynamic*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Info about requested interface |
+| result[#] | object | mandatory | *...* |
+| result[#].address | string | mandatory | IP Address |
+| result[#].defaultgateway | string | mandatory | Default Gateway |
+| result[#].mask | integer | mandatory | Network mask |
+| result[#].mode | string | mandatory | Mode of interface activation Dynamic or Static (must be one of the following: *Dynamic, Static*) |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Failed to set/retrieve network |
 
 ### Example
 
@@ -333,18 +352,24 @@ Provides access to the DNS list.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | DNS list |
-| (property).value | array |  |
-| (property).value[#] | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | DNS list |
+| (property).value | array | mandatory | *...* |
+| (property).value[#] | string | mandatory | *...* |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of DNS |
+| result[#] | string | mandatory | *...* |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Failed to set/retrieve DNS |
 
 ### Example
 
@@ -400,20 +425,32 @@ Provides access to the DNS list.
 
 Provides access to the provides given requested interface is up or not.
 
+> The *interface* parameter shall be passed as the index to the property, e.g. ``NetworkControl.1.up@<interface>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| interface | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Provides given requested interface is up or not |
-| (property).value | boolean |  |
-
-> The *interface* argument shall be passed as the index to the property, e.g. *NetworkControl.1.up@xyz*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Provides given requested interface is up or not |
+| (property).value | boolean | mandatory | *...* |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | boolean |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Up/Down requested interface |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Failed to set/retrieve UP |
 
 ### Example
 
@@ -469,26 +506,44 @@ The following events are provided by the NetworkControl plugin:
 
 NetworkControl interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [update](#event.update) |  |
+| [update](#notification.update) | Signal interface update |
 
-<a name="event.update"></a>
-## *update [<sup>event</sup>](#head.Notifications)*
+<a name="notification.update"></a>
+## *update [<sup>notification</sup>](#head.Notifications)*
 
-### Parameters
+Signal interface update.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.interfacename | string |  |
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.interfacename | string | mandatory | Name of the interface where an update occured |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.update",
+  "id": 42,
+  "method": "NetworkControl.1.register",
+  "params": {
+    "event": "update",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.update",
   "params": {
     "interfacename": "..."
   }

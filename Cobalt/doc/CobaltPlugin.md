@@ -71,23 +71,23 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Cobalt*) |
-| classname | string | Class name: *Cobalt* |
-| locator | string | Library name: *libThunderCobalt.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.url | string | <sup>*(optional)*</sup> The URL that is loaded upon starting the browser |
-| configuration?.width | number | <sup>*(optional)*</sup> The width in pixels of the surface to be used by the application |
-| configuration?.height | number | <sup>*(optional)*</sup> The height in pixels of the surface to be used by the application |
-| configuration?.repeatstart | number | <sup>*(optional)*</sup> The number of milliseconds a key should be pressed to start reapeating (set max to adhere to Thunder) |
-| configuration?.repeatinterval | number | <sup>*(optional)*</sup> The number of milliseconds the repeated key is send after it started repeating (set max to adhere to Thunder) |
-| configuration?.clientidentifier | string | <sup>*(optional)*</sup> An identifier, used during the surface creation as additional information |
-| configuration?.operatorname | string | <sup>*(optional)*</sup> The name of the operator that owns the infrastructure on which this device is running |
-| configuration?.language | string | <sup>*(optional)*</sup> The language to be used to for user interaction |
-| configuration?.connection | string | <sup>*(optional)*</sup> The type of connection that is used for internet connectivity (must be one of the following: *cable*, *wireless*) |
-| configuration?.playbackrates | boolean | <sup>*(optional)*</sup> If enabled, Cobalt supports different rates, otherwise, it supports only 0 and 1 (default: true) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Cobalt*) |
+| classname | string | mandatory | Class name: *Cobalt* |
+| locator | string | mandatory | Library name: *libThunderCobalt.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.url | string | optional | The URL that is loaded upon starting the browser |
+| configuration?.width | integer | optional | The width in pixels of the surface to be used by the application |
+| configuration?.height | integer | optional | The height in pixels of the surface to be used by the application |
+| configuration?.repeatstart | integer | optional | The number of milliseconds a key should be pressed to start reapeating (set max to adhere to Thunder) |
+| configuration?.repeatinterval | integer | optional | The number of milliseconds the repeated key is send after it started repeating (set max to adhere to Thunder) |
+| configuration?.clientidentifier | string | optional | An identifier, used during the surface creation as additional information |
+| configuration?.operatorname | string | optional | The name of the operator that owns the infrastructure on which this device is running |
+| configuration?.language | string | optional | The language to be used to for user interaction |
+| configuration?.connection | string | optional | The type of connection that is used for internet connectivity (must be one of the following: *cable, wireless*) |
+| configuration?.playbackrates | boolean | optional | If enabled, Cobalt supports different rates, otherwise, it supports only 0 and 1 (default: true) |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -120,22 +120,22 @@ Use this method to recursively delete contents of a directory
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.path | string | Path to directory (within the persistent storage) to delete contents of |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.path | string | mandatory | Path to directory (within the persistent storage) to delete contents of |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | The given path was incorrect |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | The given path was incorrect |
 
 ### Example
 
@@ -169,17 +169,17 @@ The following properties are provided by the Cobalt plugin:
 
 Browser interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [url](#property.url) | URL loaded in the browser |
-| [visibility](#property.visibility) | Current browser visibility |
-| [fps](#property.fps) <sup>RO</sup> | Current number of frames per second the browser is rendering |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [url](#property.url) | read/write | URL loaded in the browser |
+| [visibility](#property.visibility) | read/write | Current browser visibility |
+| [fps](#property.fps) | read-only | Current number of frames per second the browser is rendering |
 
 StateControl interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [state](#property.state) | Running state of the service |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [state](#property.state) | read/write | Running state of the service |
 
 <a name="property.url"></a>
 ## *url [<sup>property</sup>](#head.Properties)*
@@ -190,21 +190,21 @@ Also see: [urlchange](#event.urlchange)
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | URL loaded in the browser |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | URL loaded in the browser |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | URL loaded in the browser |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 15 | ```ERROR_INCORRECT_URL``` | Incorrect URL given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_INCORRECT_URL``` | Incorrect URL given |
 
 ### Example
 
@@ -258,21 +258,21 @@ Also see: [visibilitychange](#event.visibilitychange)
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Current browser visibility (must be one of the following: *visible*, *hidden*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Current browser visibility (must be one of the following: *hidden, visible*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string |  (must be one of the following: *visible*, *hidden*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Current browser visibility (must be one of the following: *hidden, visible*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Returned when the operation is unavailable |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Returned when the operation is unavailable |
 
 ### Example
 
@@ -328,9 +328,9 @@ Provides access to the current number of frames per second the browser is render
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | Current number of frames per second the browser is rendering |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Current number of frames per second the browser is rendering |
 
 ### Example
 
@@ -363,15 +363,15 @@ Also see: [statechange](#event.statechange)
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Running state of the service (must be one of the following: *resumed*, *suspended*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Running state of the service (must be one of the following: *resumed, suspended*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string |  (must be one of the following: *resumed*, *suspended*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Running state of the service (must be one of the following: *resumed, suspended*) |
 
 ### Example
 
@@ -425,36 +425,52 @@ The following events are provided by the Cobalt plugin:
 
 Browser interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [urlchange](#event.urlchange) | Signals a URL change in the browser |
-| [visibilitychange](#event.visibilitychange) | Signals a visibility change of the browser |
+| [urlchange](#notification.urlchange) | Signals a URL change in the browser |
+| [visibilitychange](#notification.visibilitychange) | Signals a visibility change of the browser |
 
 StateControl interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [statechange](#event.statechange) | Signals a state change of the service |
+| [statechange](#notification.statechange) | Signals a state change of the service |
 
-<a name="event.urlchange"></a>
-## *urlchange [<sup>event</sup>](#head.Notifications)*
+<a name="notification.urlchange"></a>
+## *urlchange [<sup>notification</sup>](#head.Notifications)*
 
 Signals a URL change in the browser.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.url | string | The URL that has been loaded or requested |
-| params.loaded | boolean | Determines if the URL has just been loaded (true) or if URL change has been requested (false) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.url | string | mandatory | The URL that has been loaded or requested |
+| params.loaded | boolean | mandatory | Determines if the URL has just been loaded (true) or if URL change has been requested (false) (default: *True*) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.urlchange",
+  "id": 42,
+  "method": "Cobalt.1.register",
+  "params": {
+    "event": "urlchange",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.urlchange",
   "params": {
     "url": "https://www.google.com",
     "loaded": false
@@ -462,48 +478,80 @@ Signals a URL change in the browser.
 }
 ```
 
-<a name="event.visibilitychange"></a>
-## *visibilitychange [<sup>event</sup>](#head.Notifications)*
+<a name="notification.visibilitychange"></a>
+## *visibilitychange [<sup>notification</sup>](#head.Notifications)*
 
 Signals a visibility change of the browser.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.hidden | boolean | Determines if the browser has been hidden (true) or made visible (false) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.hidden | boolean | mandatory | Determines if the browser has been hidden (true) or made visible (false) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.visibilitychange",
+  "id": 42,
+  "method": "Cobalt.1.register",
+  "params": {
+    "event": "visibilitychange",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.visibilitychange",
   "params": {
     "hidden": false
   }
 }
 ```
 
-<a name="event.statechange"></a>
-## *statechange [<sup>event</sup>](#head.Notifications)*
+<a name="notification.statechange"></a>
+## *statechange [<sup>notification</sup>](#head.Notifications)*
 
 Signals a state change of the service.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.suspended | boolean | Determines if the service has entered suspended state (true) or resumed state (false) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.suspended | boolean | mandatory | Determines if the service has entered suspended state (true) or resumed state (false) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.statechange",
+  "id": 42,
+  "method": "Cobalt.1.register",
+  "params": {
+    "event": "statechange",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.statechange",
   "params": {
     "suspended": false
   }

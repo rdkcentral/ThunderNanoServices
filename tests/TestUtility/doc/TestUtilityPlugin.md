@@ -70,12 +70,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *TestUtility*) |
-| classname | string | Class name: *TestUtility* |
-| locator | string | Library name: *libThunderTestUtility.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *TestUtility*) |
+| classname | string | mandatory | Class name: *TestUtility* |
+| locator | string | mandatory | Library name: *libThunderTestUtility.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -103,27 +103,27 @@ Runs a memory test command.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.command | string | Test command name |
-| params?.size | number | <sup>*(optional)*</sup> The amount of memory in KB for allocation (applicable for *Malloc* commands) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.command | string | mandatory | Test command name |
+| params?.size | integer | optional | The amount of memory in KB for allocation (applicable for *Malloc* commands) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.allocated | number | Already allocated memory in KB |
-| result.size | number | Current allocation in KB |
-| result.resident | number | Resident memory in KB |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result.allocated | integer | mandatory | Already allocated memory in KB |
+| result.size | integer | mandatory | Current allocation in KB |
+| result.resident | integer | mandatory | Resident memory in KB |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown category |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -162,25 +162,25 @@ Runs a crash test command.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.command | string | Test command name |
-| params?.delay | number | <sup>*(optional)*</sup> Delay (in seconds) before the crash attempt (applicable for *Crash* command) |
-| params?.count | number | <sup>*(optional)*</sup> How many times a Crash command will be executed consecutively (applicable for *CrashNTimes* command) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.command | string | mandatory | Test command name |
+| params?.delay | integer | optional | Delay (in seconds) before the crash attempt (applicable for *Crash* command) |
+| params?.count | integer | optional | How many times a Crash command will be executed consecutively (applicable for *CrashNTimes* command) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown category |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -216,12 +216,12 @@ The following properties are provided by the TestUtility plugin:
 
 TestUtility interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [commands](#property.commands) <sup>RO</sup> | List of test commands |
-| [description](#property.description) <sup>RO</sup> | Description of a test command |
-| [parameters](#property.parameters) <sup>RO</sup> | Parameters of a test command |
-| [shutdowntimeout](#property.shutdowntimeout) <sup>WO</sup> | Timeout to be waited before deactivating the plugin |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [commands](#property.commands) | read-only | List of test commands |
+| [description](#property.description) | read-only | Description of a test command |
+| [parameters](#property.parameters) | read-only | Parameters of a test command |
+| [shutdowntimeout](#property.shutdowntimeout) | write-only | Timeout to be waited before deactivating the plugin |
 
 <a name="property.commands"></a>
 ## *commands [<sup>property</sup>](#head.Properties)*
@@ -234,10 +234,10 @@ Provides access to the list of test commands.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of test commands |
-| result[#] | string | Available test commands |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of test commands |
+| result[#] | string | mandatory | Available test commands |
 
 ### Example
 
@@ -270,23 +270,29 @@ Provides access to the description of a test command.
 
 > This property is **read-only**.
 
-### Value
+> The *command* parameter shall be passed as the index to the property, e.g. ``TestUtility.1.description@<command>``.
 
-> The *command* argument shall be passed as the index to the property, e.g. *TestUtility.1.description@Malloc*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| command | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Description of a test command |
-| result.description | string | Test command description |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Description of a test command |
+| result.description | string | mandatory | Test command description |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown category |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -319,31 +325,37 @@ Provides access to the parameters of a test command.
 
 > This property is **read-only**.
 
-### Value
+> The *command* parameter shall be passed as the index to the property, e.g. ``TestUtility.1.parameters@<command>``.
 
-> The *command* argument shall be passed as the index to the property, e.g. *TestUtility.1.parameters@Malloc*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| command | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Parameters of a test command |
-| result?.input | array | <sup>*(optional)*</sup>  |
-| result?.input[#] | object | <sup>*(optional)*</sup>  |
-| result?.input[#].name | string | Test command input parameter |
-| result?.input[#].type | string | Test command input parameter type (must be one of the following: *Number*, *String*, *Boolean*, *Object*, *Symbol*) |
-| result?.input[#].comment | string | Test command input parameter description |
-| result.output | object |  |
-| result.output.name | string | Test command output parameter |
-| result.output.type | string | Test command output parameter type (must be one of the following: *Number*, *String*, *Boolean*, *Object*, *Symbol*) |
-| result.output.comment | string | Test command output parameter description |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Parameters of a test command |
+| result?.input | array | optional | Input parameter list |
+| result?.input[#] | object | optional | *...* |
+| result?.input[#].name | string | mandatory | Test command parameter |
+| result?.input[#].type | string | mandatory | Test command parameter type (must be one of the following: *Boolean, Number, Object, String, Symbol*) |
+| result?.input[#].comment | string | mandatory | Test command parameter description |
+| result.output | object | mandatory | Output parameter list |
+| result.output.name | string | mandatory | Test command parameter |
+| result.output.type | string | mandatory | Test command parameter type (must be one of the following: *Boolean, Number, Object, String, Symbol*) |
+| result.output.comment | string | mandatory | Test command parameter description |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown category |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -389,9 +401,9 @@ Provides access to the timeout to be waited before deactivating the plugin.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | number | Timeout in milli seconds |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | integer | mandatory | Timeout in milli seconds |
 
 ### Example
 

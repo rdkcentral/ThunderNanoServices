@@ -3,9 +3,9 @@
 * [BackOffice](BackOffice/doc/BackOfficePlugin.md)
 * [BluetoothAudio](BluetoothAudio/doc/BluetoothAudioPlugin.md)
 * [BluetoothControl](BluetoothControl/doc/BluetoothControlPlugin.md)
-* [BluetoothSDPServer](BluetoothAudioSink/doc/BluetoothSDPServerPlugin.md)
 * [BluetoothRemoteControl](BluetoothRemoteControl/doc/BluetoothRemoteControlPlugin.md)
-* CECContro
+* [BluetoothSDPServer](BluetoothAudioSink/doc/BluetoothSDPServerPlugin.md)
+* CECControl
 * [Cobalt](Cobalt/doc/CobaltPlugin.md)
 * [Commander](Commnader/doc/CommanderPlugin.md)
 * [Compositor](Compositor/doc/CompositorPlugin.md)
@@ -25,6 +25,7 @@
 * [ProcessMonitor](ProcessMonitor/doc/ProcessMonitorPlugin.md)
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)
 * [ResourceMonitor](ResourceMonitor/doc/ResourceMonitorPlugin.md)
+* ScriptEngine
 * SecureShellServer
 * Snapshot
 * [Spark](Spark/doc/SparkPlugin.md)
@@ -35,6 +36,7 @@
 * [SystemCommands](SystemCommands/doc/SystemCommandsPlugin.md)
 * SystemdConnector
 * [TimeSync](TimeSync/doc/TimeSyncPlugin.md)
+* VaultProvisioning
 * [VolumeControl](VolumeControl/doc/VolumeControlPlugin.md)
 * [WebPA](WebPA/doc/WebPAPlugin.md)
 * WebProxy

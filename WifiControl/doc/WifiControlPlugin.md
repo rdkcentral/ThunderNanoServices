@@ -71,18 +71,18 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *WifiControl*) |
-| classname | string | Class name: *WifiControl* |
-| locator | string | Library name: *libWPEWifiControl.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.connector | string | <sup>*(optional)*</sup> Connector name |
-| configuration?.interface | string | <sup>*(optional)*</sup> Interface name |
-| configuration?.application | string | <sup>*(optional)*</sup> Application name |
-| configuration?.autoconnect | string | <sup>*(optional)*</sup> Enable autoconnect |
-| configuration?.retryinterval | string | <sup>*(optional)*</sup> Retry interval |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *WifiControl*) |
+| classname | string | mandatory | Class name: *WifiControl* |
+| locator | string | mandatory | Library name: *libWPEWifiControl.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.connector | string | optional | Connector name |
+| configuration?.interface | string | optional | Interface name |
+| configuration?.application | string | optional | Application name |
+| configuration?.autoconnect | string | optional | Enable autoconnect |
+| configuration?.retryinterval | string | optional | Retry interval |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -90,6 +90,7 @@ The table below lists configuration options of the plugin.
 This plugin implements the following interfaces:
 
 - IWifiControl ([IWifiControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IWifiControl.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Methods"></a>
 # Methods
@@ -117,9 +118,9 @@ This method takes no parameters.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Example
 
@@ -154,9 +155,9 @@ This method takes no parameters.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Example
 
@@ -187,16 +188,16 @@ Connect device to requested SSID.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.configssid | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.configssid | string | mandatory | SSID to be connected |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Example
 
@@ -230,16 +231,16 @@ Disconnect device from requested SSID.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.configssid | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.configssid | string | mandatory | SSID to be disconnected |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Example
 
@@ -277,11 +278,11 @@ This method takes no parameters.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.connectedssid | string |  |
-| result.isscanning | boolean |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result.connectedssid | string | mandatory | SSID of connected router/ap |
+| result.isscanning | boolean | mandatory | Scanning is in progress or not |
 
 ### Example
 
@@ -315,12 +316,12 @@ The following properties are provided by the WifiControl plugin:
 
 WifiControl interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [networks](#property.networks) <sup>RO</sup> | Provides available networks information |
-| [securities](#property.securities) <sup>RO</sup> | Provides security method of requested SSID |
-| [configs](#property.configs) <sup>RO</sup> | Provides configs list |
-| [config](#property.config) | Provide config details for requested SSID |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [networks](#property.networks) | read-only | Provides available networks information |
+| [securities](#property.securities) | read-only | Provides security method of requested SSID |
+| [configs](#property.configs) | read-only | Provides configs list |
+| [config](#property.config) | read/write | Provide config details for requested SSID |
 
 <a name="property.networks"></a>
 ## *networks [<sup>property</sup>](#head.Properties)*
@@ -333,16 +334,16 @@ Provides access to the provides available networks information.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Provides available networks information |
-| result[#] | object |  |
-| result[#].ssid | string |  |
-| result[#].bssid | integer |  |
-| result[#].frequency | integer |  |
-| result[#].signal | integer |  |
-| result[#].security | array |  |
-| result[#].security[#] | string |  (must be one of the following: *Open*, *WEP*, *WPA*, *WPA2*, *WPS*, *Enterprise*, *WPA_WPA2*, *Unknown*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Provides available networks information |
+| result[#] | object | mandatory | *...* |
+| result[#].ssid | string | mandatory | SSID of the network |
+| result[#].bssid | integer | mandatory | BSSID of the network |
+| result[#].frequency | integer | mandatory | Frequency used |
+| result[#].signal | integer | mandatory | Signal strength |
+| result[#].security | array | mandatory | Security method |
+| result[#].security[#] | string | mandatory | *...* (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
 
 ### Example
 
@@ -383,19 +384,25 @@ Provides access to the provides security method of requested SSID.
 
 > This property is **read-only**.
 
-### Value
+> The *ssid* parameter shall be passed as the index to the property, e.g. ``WifiControl.1.securities@<ssid>``.
 
-> The *ssid* argument shall be passed as the index to the property, e.g. *WifiControl.1.securities@xyz*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| ssid | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Provides security method of requested SSID |
-| result[#] | object |  |
-| result[#].method | string |  (must be one of the following: *Open*, *WEP*, *WPA*, *WPA2*, *WPS*, *Enterprise*, *WPA_WPA2*, *Unknown*) |
-| result[#].keys | array |  |
-| result[#].keys[#] | string |  (must be one of the following: *PSK*, *EAP*, *CCMP*, *TKIP*, *Preauth*, *PBC*, *PIN*, *PSK_HASHED*, *None*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Provides security method of requested SSID |
+| result[#] | object | mandatory | *...* |
+| result[#].method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
+| result[#].keys | array | mandatory | Security Keys |
+| result[#].keys[#] | string | mandatory | *...* (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
 
 ### Example
 
@@ -437,10 +444,10 @@ Provides access to the provides configs list.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Provides configs list |
-| result[#] | string |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Provides configs list |
+| result[#] | string | mandatory | *...* |
 
 ### Example
 
@@ -471,34 +478,40 @@ Provides access to the provides configs list.
 
 Provides access to the provide config details for requested SSID.
 
+> The *ssid* parameter shall be passed as the index to the property, e.g. ``WifiControl.1.config@<ssid>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| ssid | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Provide config details for requested SSID |
-| (property).value | object |  |
-| (property).value.hidden | boolean |  |
-| (property).value.accesspoint | boolean |  |
-| (property).value.ssid | string |  |
-| (property).value.secret | string |  |
-| (property).value.identity | string |  |
-| (property).value.method | string |  (must be one of the following: *Open*, *WEP*, *WPA*, *WPA2*, *WPS*, *Enterprise*, *WPA_WPA2*, *Unknown*) |
-| (property).value.key | string |  (must be one of the following: *PSK*, *EAP*, *CCMP*, *TKIP*, *Preauth*, *PBC*, *PIN*, *PSK_HASHED*, *None*) |
-
-> The *ssid* argument shall be passed as the index to the property, e.g. *WifiControl.1.config@xyz*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Provide config details for requested SSID |
+| (property).value | object | mandatory | *...* |
+| (property).value.hidden | boolean | mandatory | Visibility of the router (hidden or visible) |
+| (property).value.accesspoint | boolean | mandatory | Accesspoint or not |
+| (property).value.ssid | string | mandatory | SSID of the router/ap |
+| (property).value.secret | string | mandatory | Secret key used |
+| (property).value.identity | string | mandatory | Identity |
+| (property).value.method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
+| (property).value.key | string | mandatory | Security Info: method and keys (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.hidden | boolean |  |
-| result.accesspoint | boolean |  |
-| result.ssid | string |  |
-| result.secret | string |  |
-| result.identity | string |  |
-| result.method | string |  (must be one of the following: *Open*, *WEP*, *WPA*, *WPA2*, *WPS*, *Enterprise*, *WPA_WPA2*, *Unknown*) |
-| result.key | string |  (must be one of the following: *PSK*, *EAP*, *CCMP*, *TKIP*, *Preauth*, *PBC*, *PIN*, *PSK_HASHED*, *None*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Details about requested SSID |
+| result.hidden | boolean | mandatory | Visibility of the router (hidden or visible) |
+| result.accesspoint | boolean | mandatory | Accesspoint or not |
+| result.ssid | string | mandatory | SSID of the router/ap |
+| result.secret | string | mandatory | Secret key used |
+| result.identity | string | mandatory | Identity |
+| result.method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
+| result.key | string | mandatory | Security Info: method and keys (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
 
 ### Example
 
@@ -570,47 +583,79 @@ The following events are provided by the WifiControl plugin:
 
 WifiControl interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [networkchange](#event.networkchange) | Notifies that Network were added, removed or modified |
-| [connectionchange](#event.connectionchange) | Notifies that wifi connection changes |
+| [networkchange](#notification.networkchange) | Notifies that Network were added, removed or modified |
+| [connectionchange](#notification.connectionchange) | Notifies that wifi connection changes |
 
-<a name="event.networkchange"></a>
-## *networkchange [<sup>event</sup>](#head.Notifications)*
+<a name="notification.networkchange"></a>
+## *networkchange [<sup>notification</sup>](#head.Notifications)*
 
 Notifies that Network were added, removed or modified.
 
-### Parameters
+### Notification Parameters
 
-This event carries no parameters.
+This notification carries no parameters.
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.networkchange"
+  "id": 42,
+  "method": "WifiControl.1.register",
+  "params": {
+    "event": "networkchange",
+    "id": "myid"
+  }
 }
 ```
 
-<a name="event.connectionchange"></a>
-## *connectionchange [<sup>event</sup>](#head.Notifications)*
-
-Notifies that wifi connection changes.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.ssid | string |  |
-
-### Example
+#### Notification
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.connectionchange",
+  "method": "myid.networkchange"
+}
+```
+
+<a name="notification.connectionchange"></a>
+## *connectionchange [<sup>notification</sup>](#head.Notifications)*
+
+Notifies that wifi connection changes.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.ssid | string | mandatory | SSID of connection changed network |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.register",
+  "params": {
+    "event": "connectionchange",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.connectionchange",
   "params": {
     "ssid": "..."
   }

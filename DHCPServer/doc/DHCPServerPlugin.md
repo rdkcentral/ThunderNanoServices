@@ -64,20 +64,20 @@ The table below provides and overview of terms and abbreviations used in this do
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *DHCPServer*) |
-| classname | string | Class name: *DHCPServer* |
-| locator | string | Library name: *libThunderDHCPServer.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | Server configuration |
-| configuration.name | string | Name of the server |
-| configuration.servers | array | List of configured DHCP servers |
-| configuration.servers[#] | object | Configuration of a server |
-| configuration.servers[#].interface | string | Name of the network interface to bind to |
-| configuration.servers[#].poolstart | number | IP pool start number |
-| configuration.servers[#].poolsize | number | IP pool size (in IP numbers) |
-| configuration.servers[#]?.router | number | <sup>*(optional)*</sup> IP of router |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *DHCPServer*) |
+| classname | string | mandatory | Class name: *DHCPServer* |
+| locator | string | mandatory | Library name: *libThunderDHCPServer.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | mandatory | Server configuration |
+| configuration.name | string | mandatory | Name of the server |
+| configuration.servers | array | mandatory | List of configured DHCP servers |
+| configuration.servers[#] | object | mandatory | Configuration of a server |
+| configuration.servers[#].interface | string | mandatory | Name of the network interface to bind to |
+| configuration.servers[#].poolstart | integer | mandatory | IP pool start number |
+| configuration.servers[#].poolsize | integer | mandatory | IP pool size (in IP numbers) |
+| configuration.servers[#]?.router | integer | optional | IP of router |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -105,24 +105,24 @@ Activates a DHCP server.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.interface | string | Network interface name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.interface | string | mandatory | Network interface name |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Failed to activate server |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Invalid interface name given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Server is already activated |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | Failed to activate server |
+| ```ERROR_UNKNOWN_KEY``` | Invalid interface name given |
+| ```ERROR_ILLEGAL_STATE``` | Server is already activated |
 
 ### Example
 
@@ -156,24 +156,24 @@ Deactivates a DHCP server.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.interface | string | Network interface name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.interface | string | mandatory | Network interface name |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Failed to deactivate server |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Invalid interface name given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Server is not activated |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | Failed to deactivate server |
+| ```ERROR_UNKNOWN_KEY``` | Invalid interface name given |
+| ```ERROR_ILLEGAL_STATE``` | Server is not activated |
 
 ### Example
 
@@ -207,9 +207,9 @@ The following properties are provided by the DHCPServer plugin:
 
 DHCPServer interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [status](#property.status) <sup>RO</sup> | Server status |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [status](#property.status) | read-only | Server status |
 
 <a name="property.status"></a>
 ## *status [<sup>property</sup>](#head.Properties)*
@@ -218,32 +218,38 @@ Provides access to the server status.
 
 > This property is **read-only**.
 
-### Value
+> The *server* parameter shall be passed as the index to the property, e.g. ``DHCPServer.1.status@<server>``.
 
-> The *server* argument shall be passed as the index to the property, e.g. *DHCPServer.1.status@eth0*. If omitted, status of all configured servers is returned.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| server | string | mandatory | If omitted, status of all configured servers is returned |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of configured servers |
-| result[#] | object |  |
-| result[#].interface | string | Network interface name |
-| result[#].active | boolean | Denotes if server is currently active |
-| result[#]?.begin | string | <sup>*(optional)*</sup> IP address pool start |
-| result[#]?.end | string | <sup>*(optional)*</sup> IP address pool end |
-| result[#]?.router | string | <sup>*(optional)*</sup> Router IP address |
-| result[#]?.leases | array | <sup>*(optional)*</sup> List of IP address leases |
-| result[#]?.leases[#] | object | <sup>*(optional)*</sup> Lease description |
-| result[#]?.leases[#].name | string | Client identifier (or client hardware address if identifier is absent) |
-| result[#]?.leases[#].ip | string | Client IP address |
-| result[#]?.leases[#]?.expires | string | <sup>*(optional)*</sup> Client IP expiration time (in ISO8601 format, empty: never expires) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of configured servers |
+| result[#] | object | mandatory | *...* |
+| result[#].interface | string | mandatory | Network interface name |
+| result[#].active | boolean | mandatory | Denotes if server is currently active |
+| result[#]?.begin | string | optional | IP address pool start |
+| result[#]?.end | string | optional | IP address pool end |
+| result[#]?.router | string | optional | Router IP address |
+| result[#]?.leases | array | optional | List of IP address leases |
+| result[#]?.leases[#] | object | optional | Lease description |
+| result[#]?.leases[#].name | string | mandatory | Client identifier (or client hardware address if identifier is absent) |
+| result[#]?.leases[#].ip | string | mandatory | Client IP address |
+| result[#]?.leases[#]?.expires | string | optional | Client IP expiration time (in ISO8601 format, empty: never expires) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Invalid server name given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Invalid server name given |
 
 ### Example
 
