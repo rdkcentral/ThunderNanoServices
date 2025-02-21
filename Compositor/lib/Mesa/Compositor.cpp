@@ -195,9 +195,78 @@ namespace Plugin {
             Exchange::IComposition::IDisplay* _parentInterface;
         };
 
-        class Client
-            : public Exchange::IComposition::IClient,
-              public Compositor::CompositorBuffer {
+        class Client : public Exchange::IComposition::IClient, public Compositor::CompositorBuffer {
+            class Forwarder : public Exchange::IComposition::IClient {
+            public:
+                Forwarder() = delete;
+                Forwarder(Forwarder&&) = delete;
+                Forwarder(const Forwarder&) = delete;
+                Forwarder& operator=(Forwarder&&) = delete;
+                Forwarder& operator=(const Forwarder&) = delete;
+
+                Forwarder(Client& client)
+                    : _client(client)
+                {
+                }
+                ~Forwarder() override = default;
+
+                BEGIN_INTERFACE_MAP(Forwarder)
+                INTERFACE_ENTRY(Exchange::IComposition::IClient)
+                END_INTERFACE_MAP
+
+                // Core::IReferenceCounted
+                uint32_t AddRef() const override
+                {
+                    std::cout << "-- BRAM DEBUG " << __FILE__ << ":" << __LINE__ << " : " << __FUNCTION__ << std::endl;
+
+                    return Core::ERROR_COMPOSIT_OBJECT;
+                }
+
+                uint32_t Release() const override
+                {
+                    std::cout << "-- BRAM DEBUG " << __FILE__ << ":" << __LINE__ << " : " << __FUNCTION__ << std::endl;
+
+                    return Core::ERROR_COMPOSIT_OBJECT;
+                }
+
+                // Exchange::IComposition::IClient methods
+                Thunder::Core::instance_id Native() const override
+                {
+                    return (_client.Native());
+                }
+                string Name() const override
+                {
+                    return _client.Name();
+                }
+                void Opacity(const uint32_t value) override
+                {
+                    _client.Opacity(value);
+                }
+                uint32_t Opacity() const override
+                {
+                    return _client.Opacity();
+                }
+                uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
+                {
+                    return _client.Geometry(rectangle);
+                }
+                Exchange::IComposition::Rectangle Geometry() const override
+                {
+                    return _client.Geometry();
+                }
+                uint32_t ZOrder(const uint16_t index) override
+                {
+                    return _client.ZOrder(index);
+                }
+                uint32_t ZOrder() const override
+                {
+                    return _client.ZOrder();
+                }
+
+            private:
+                Client& _client;
+            };
+
         public:
             Client() = delete;
             Client(Client&&) = delete;
@@ -215,10 +284,10 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _pendingOutputs(0)
+                , _forwarder(*this) 
             {
                 Core::ResourceMonitor::Instance().Register(*this);
-                _parent.Announce(*this);
-                TRACE(Trace::Information, (_T("Client %s[%p] created"), _callsign.c_str(), this));
+                _parent.Announce(&_forwarder);
             }
             ~Client() override
             {
@@ -226,9 +295,9 @@ namespace Plugin {
                     _texture.Release(); // make sure to delete the texture so we are skipped by the renderer.
                 }
 
-                _parent.Revoke(*this);
-
                 Core::ResourceMonitor::Instance().Unregister(*this);
+
+                _parent.Revoke(&_forwarder);
 
                 _parent.Render(*this); // request a render to remove this surface from the composition.
 
@@ -304,17 +373,6 @@ namespace Plugin {
             }
 
         public:
-            // Core::IReferenceCounted
-            uint32_t AddRef() const override
-            {
-                return Core::ERROR_COMPOSIT_OBJECT;
-            }
-
-            uint32_t Release() const override
-            {
-                return Core::ERROR_COMPOSIT_OBJECT;
-            }
-
             void Pending(uint8_t outputIndex)
             {
                 _pendingOutputs |= (1 << outputIndex);
@@ -342,6 +400,7 @@ namespace Plugin {
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             uint32_t _pendingOutputs;
+            Forwarder _forwarder;
 
             static uint32_t _sequence;
         }; // class Client
@@ -496,7 +555,7 @@ namespace Plugin {
 
             void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
             {
-                float fps = 1 / ((pts - _pts) / 1000000.0f);
+                // float fps = 1 / ((pts - _pts) / 1000000.0f);
                 _pts = pts;
 
                 for (Core::ProxyType<Client> client : _renderingClients) {
@@ -507,7 +566,7 @@ namespace Plugin {
 
                 _commit.unlock();
 
-                TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
+                // TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
             }
 
             void HandleGPUNode(const std::string node)
@@ -783,29 +842,25 @@ namespace Plugin {
             return _renderer->Texture(buffer);
         }
 
-        void Announce(Client& client)
+        void Announce(Exchange::IComposition::IClient* client)
         {
             _adminLock.Lock();
 
             for (auto& observer : _observers) {
-                observer->Attached(client.Name(), &client);
+                observer->Attached(client->Name(), client);
             }
             _adminLock.Unlock();
         }
 
-        void Revoke(Client& client)
+        void Revoke(Exchange::IComposition::IClient* client)
         {
             _adminLock.Lock();
 
             for (auto& observer : _observers) {
-                observer->Detached(client.Name());
+                observer->Detached(client->Name());
             }
 
             _adminLock.Unlock();
-
-            if (client.Texture().IsValid()) {
-                client.Texture().Release();
-            }
         }
 
         uint32_t Format() const
