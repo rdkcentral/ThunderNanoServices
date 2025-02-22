@@ -69,12 +69,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Doggo*) |
-| classname | string | Class name: *Doggo* |
-| locator | string | Library name: *libWPEDoggo.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Doggo*) |
+| classname | string | mandatory | Class name: *Doggo* |
+| locator | string | mandatory | Library name: *libWPEDoggo.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -82,6 +82,7 @@ The table below lists configuration options of the plugin.
 This plugin implements the following interfaces:
 
 - IWatchDog ([IWatchDog.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IWatchDog.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Methods"></a>
 # Methods
@@ -101,16 +102,16 @@ Touch the watchdog as a sign of life.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.callsign | string | In case a specific watchdog needs to be padded pass |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.callsign | string | mandatory | In case a specific watchdog needs to be padded pass the name of the callsign for which we want to touch |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Example
 

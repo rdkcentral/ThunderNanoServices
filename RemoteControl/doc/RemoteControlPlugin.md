@@ -71,35 +71,35 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *RemoteControl*) |
-| classname | string | Class name: *RemoteControl* |
-| locator | string | Library name: *libThunderRemoteControl.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.mapfile | string | <sup>*(optional)*</sup> Map File |
-| configuration?.postlookupfile | string | <sup>*(optional)*</sup> PostLookup File |
-| configuration?.passon | boolean | <sup>*(optional)*</sup> Enable passon |
-| configuration?.repeatstart | number | <sup>*(optional)*</sup> Maximum number of repeats |
-| configuration?.repeatinterval | number | <sup>*(optional)*</sup> Maximum duration between repeats |
-| configuration?.releasetimeout | number | <sup>*(optional)*</sup> Release timeout |
-| configuration?.devices | array | <sup>*(optional)*</sup> List of devices |
-| configuration?.devices[#] | object | <sup>*(optional)*</sup>  |
-| configuration?.devices[#]?.name | string | <sup>*(optional)*</sup> Name |
-| configuration?.devices[#]?.mapfile | string | <sup>*(optional)*</sup> Map File |
-| configuration?.devices[#]?.passon | boolean | <sup>*(optional)*</sup> Enable passon |
-| configuration?.devices[#]?.settings | string | <sup>*(optional)*</sup> Settings |
-| configuration?.virtuals | array | <sup>*(optional)*</sup> List of virtuals |
-| configuration?.virtuals[#] | object | <sup>*(optional)*</sup>  |
-| configuration?.virtuals[#]?.name | string | <sup>*(optional)*</sup> Name |
-| configuration?.virtuals[#]?.mapfile | string | <sup>*(optional)*</sup> Map File |
-| configuration?.virtuals[#]?.passon | boolean | <sup>*(optional)*</sup> Enable passon |
-| configuration?.virtuals[#]?.settings | string | <sup>*(optional)*</sup> Settings |
-| configuration?.links | array | <sup>*(optional)*</sup> List of Links |
-| configuration?.links[#] | object | <sup>*(optional)*</sup>  |
-| configuration?.links[#]?.name | string | <sup>*(optional)*</sup> Name |
-| configuration?.links[#]?.mapfile | string | <sup>*(optional)*</sup> Map File |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *RemoteControl*) |
+| classname | string | mandatory | Class name: *RemoteControl* |
+| locator | string | mandatory | Library name: *libThunderRemoteControl.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.mapfile | string | optional | Map File |
+| configuration?.postlookupfile | string | optional | PostLookup File |
+| configuration?.passon | boolean | optional | Enable passon |
+| configuration?.repeatstart | integer | optional | Maximum number of repeats |
+| configuration?.repeatinterval | integer | optional | Maximum duration between repeats |
+| configuration?.releasetimeout | integer | optional | Release timeout |
+| configuration?.devices | array | optional | List of devices |
+| configuration?.devices[#] | object | optional | *...* |
+| configuration?.devices[#]?.name | string | optional | Name |
+| configuration?.devices[#]?.mapfile | string | optional | Map File |
+| configuration?.devices[#]?.passon | boolean | optional | Enable passon |
+| configuration?.devices[#]?.settings | string | optional | Settings |
+| configuration?.virtuals | array | optional | List of virtuals |
+| configuration?.virtuals[#] | object | optional | *...* |
+| configuration?.virtuals[#]?.name | string | optional | Name |
+| configuration?.virtuals[#]?.mapfile | string | optional | Map File |
+| configuration?.virtuals[#]?.passon | boolean | optional | Enable passon |
+| configuration?.virtuals[#]?.settings | string | optional | Settings |
+| configuration?.links | array | optional | List of Links |
+| configuration?.links[#] | object | optional | *...* |
+| configuration?.links[#]?.name | string | optional | Name |
+| configuration?.links[#]?.mapfile | string | optional | Map File |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -136,29 +136,29 @@ Gets key code details.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.code | integer | mandatory | Key code |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result.code | number | Key code |
-| result.key | number | Key ingest value |
-| result?.modifiers | array | <sup>*(optional)*</sup> List of key modifiers |
-| result?.modifiers[#] | string | <sup>*(optional)*</sup> Key modifier (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result.code | integer | mandatory | Key code |
+| result.key | integer | mandatory | Key ingest value |
+| result?.modifiers | array | optional | List of key modifiers |
+| result?.modifiers[#] | string | optional | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -199,27 +199,27 @@ Sends a key to a device (press and release).
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.code | integer | mandatory | Key code |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
-| 36 | ```ERROR_ALREADY_RELEASED``` | Key is already released |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
+| ```ERROR_ALREADY_RELEASED``` | Key is already released |
 
 ### Example
 
@@ -254,26 +254,26 @@ Presses a key on a device.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.code | integer | mandatory | Key code |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
 
 ### Example
 
@@ -308,27 +308,27 @@ Releases a key on a device.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.code | integer | mandatory | Key code |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 28 | ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
-| 36 | ```ERROR_ALREADY_RELEASED``` | Key is already released |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| ```ERROR_UNKNOWN_TABLE``` | Key map table does not exist |
+| ```ERROR_ALREADY_RELEASED``` | Key is already released |
 
 ### Example
 
@@ -363,28 +363,28 @@ Adds a key code to the key map.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
-| params.key | number | Key ingest value |
-| params?.modifiers | array | <sup>*(optional)*</sup> List of key modifiers |
-| params?.modifiers[#] | string | <sup>*(optional)*</sup> Key modifier (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.code | integer | mandatory | Key code |
+| params.key | integer | mandatory | Key ingest value |
+| params?.modifiers | array | optional | List of key modifiers |
+| params?.modifiers[#] | string | optional | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Code already exists |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| ```ERROR_UNKNOWN_KEY``` | Code already exists |
 
 ### Example
 
@@ -423,28 +423,28 @@ Modifies a key code in the key map.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
-| params.key | number | Key ingest value |
-| params?.modifiers | array | <sup>*(optional)*</sup> List of key modifiers |
-| params?.modifiers[#] | string | <sup>*(optional)*</sup> Key modifier (must be one of the following: *leftshift*, *rightshift*, *leftalt*, *rightalt*, *leftctrl*, *rightctrl*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.code | integer | mandatory | Key code |
+| params.key | integer | mandatory | Key ingest value |
+| params?.modifiers | array | optional | List of key modifiers |
+| params?.modifiers[#] | string | optional | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| ```ERROR_UNKNOWN_KEY``` | Key does not exist |
 
 ### Example
 
@@ -483,25 +483,25 @@ Deletes a key code from the key map.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.code | number | Key code |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.code | integer | mandatory | Key code |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Key does not exist |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Key does not exist |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -536,26 +536,26 @@ Re-loads the device's key map from persistent memory.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 1 | ```ERROR_GENERAL``` | File does not exist |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Illegal state |
-| 6 | ```ERROR_OPENING_FAILED``` | Opening failed |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_GENERAL``` | File does not exist |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| ```ERROR_ILLEGAL_STATE``` | Illegal state |
+| ```ERROR_OPENING_FAILED``` | Opening failed |
 
 ### Example
 
@@ -589,25 +589,25 @@ Saves the device's key map into persistent path.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 1 | ```ERROR_GENERAL``` | File is not created |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Illegal state |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_GENERAL``` | File is not created |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| ```ERROR_ILLEGAL_STATE``` | Illegal state |
 
 ### Example
 
@@ -641,24 +641,24 @@ Activates pairing mode of a device.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 1 | ```ERROR_GENERAL``` | Failed to activate pairing |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_GENERAL``` | Failed to activate pairing |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -692,25 +692,25 @@ Unpairs a device.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | Device name |
-| params.bindid | string | Binding ID |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | Device name |
+| params.bindid | string | mandatory | Binding ID |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 1 | ```ERROR_GENERAL``` | Failed to unpair the device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_GENERAL``` | Failed to unpair the device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -745,10 +745,10 @@ The following properties are provided by the RemoteControl plugin:
 
 RemoteControl interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [devices](#property.devices) <sup>RO</sup> | Names of all available devices |
-| [device](#property.device) <sup>RO</sup> | Metadata of a specific device |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [devices](#property.devices) | read-only | Names of all available devices |
+| [device](#property.device) | read-only | Metadata of a specific device |
 
 <a name="property.devices"></a>
 ## *devices [<sup>property</sup>](#head.Properties)*
@@ -761,10 +761,10 @@ Provides access to the names of all available devices.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Names of all available devices |
-| result[#] | string | Device name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Names of all available devices |
+| result[#] | string | mandatory | Device name |
 
 ### Example
 
@@ -797,24 +797,30 @@ Provides access to the metadata of a specific device.
 
 > This property is **read-only**.
 
-### Value
+> The *device* parameter shall be passed as the index to the property, e.g. ``RemoteControl.1.device@<device>``.
 
-> The *device* argument shall be passed as the index to the property, e.g. *RemoteControl.1.device@DevInput*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| device | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Metadata of a specific device |
-| result.metadata | string | Device metadata |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Metadata of a specific device |
+| result.metadata | string | mandatory | Device metadata |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Metadata not supported on a virtual device |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown device |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | Metadata not supported on a virtual device |
+| ```ERROR_UNAVAILABLE``` | Unknown device |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -849,33 +855,53 @@ The following events are provided by the RemoteControl plugin:
 
 RemoteControl interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [keypressed](#event.keypressed) | Notifies of a key press/release action |
+| [keypressed](#notification.keypressed) | Notifies of a key press/release action |
 
-<a name="event.keypressed"></a>
-## *keypressed [<sup>event</sup>](#head.Notifications)*
+<a name="notification.keypressed"></a>
+## *keypressed [<sup>notification</sup>](#head.Notifications)*
 
 Notifies of a key press/release action.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.pressed | boolean | Denotes if the key was pressed (true) or released (false) |
+> The *key code* parameter shall be passed within the client ID during registration, e.g. *42.myid*
 
-> The *key code* argument shall be passed within the designator, e.g. *42.client.events.1*.
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.pressed | boolean | mandatory | Denotes if the key was pressed (true) or released (false) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "42.client.events.1.keypressed",
+  "id": 42,
+  "method": "RemoteControl.1.register",
+  "params": {
+    "event": "keypressed",
+    "id": "42.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "42.myid.keypressed",
   "params": {
     "pressed": false
   }
 }
 ```
+
+> The *key code* parameter is passed within the designator, e.g. *42.myid.keypressed*.
 

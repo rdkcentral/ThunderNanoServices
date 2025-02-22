@@ -67,10 +67,10 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *SubsystemControl*) |
-| classname | string | Class name: *SubsystemControl* |
-| locator | string | Library name: *libThunderSubsystemControl.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *SubsystemControl*) |
+| classname | string | mandatory | Class name: *SubsystemControl* |
+| locator | string | mandatory | Library name: *libThunderSubsystemControl.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 

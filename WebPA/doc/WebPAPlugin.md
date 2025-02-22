@@ -67,20 +67,20 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *WebPA*) |
-| classname | string | Class name: *WebPA* |
-| locator | string | Library name: *libThunderWebPA.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.interface | string | <sup>*(optional)*</sup> Interface |
-| configuration?.pingwaittime | string | <sup>*(optional)*</sup> Ping waittime timout |
-| configuration?.webpaurl | string | <sup>*(optional)*</sup> WebPA url |
-| configuration?.paroduslocalurl | string | <sup>*(optional)*</sup> Parodus local url |
-| configuration?.partnerid | string | <sup>*(optional)*</sup> Partner id |
-| configuration?.webpabackoffmax | string | <sup>*(optional)*</sup> WebPA backoff max |
-| configuration?.sslcertpath | string | <sup>*(optional)*</sup> Path of SSL certification |
-| configuration?.forceipv4 | string | <sup>*(optional)*</sup> Force IPv4 |
-| configuration?.location | string | <sup>*(optional)*</sup> Location |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *WebPA*) |
+| classname | string | mandatory | Class name: *WebPA* |
+| locator | string | mandatory | Library name: *libThunderWebPA.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.interface | string | optional | Interface |
+| configuration?.pingwaittime | string | optional | Ping waittime timout |
+| configuration?.webpaurl | string | optional | WebPA url |
+| configuration?.paroduslocalurl | string | optional | Parodus local url |
+| configuration?.partnerid | string | optional | Partner id |
+| configuration?.webpabackoffmax | string | optional | WebPA backoff max |
+| configuration?.sslcertpath | string | optional | Path of SSL certification |
+| configuration?.forceipv4 | string | optional | Force IPv4 |
+| configuration?.location | string | optional | Location |
 

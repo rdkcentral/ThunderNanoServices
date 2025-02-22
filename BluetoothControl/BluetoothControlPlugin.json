@@ -68,6 +68,6 @@
     }
   },
   "interface": {
-    "$ref": "{interfacedir}/BluetoothControl.json#"
+    "$ref": "{cppinterfacedir}/IBluetooth.h"
   }
 }
