@@ -196,37 +196,44 @@ namespace Plugin {
         };
 
         class Client : public Exchange::IComposition::IClient, public Compositor::CompositorBuffer {
-            class Forwarder : public Exchange::IComposition::IClient {
+        private:
+            class Remote : public Exchange::IComposition::IClient {
             public:
-                Forwarder() = delete;
-                Forwarder(Forwarder&&) = delete;
-                Forwarder(const Forwarder&) = delete;
-                Forwarder& operator=(Forwarder&&) = delete;
-                Forwarder& operator=(const Forwarder&) = delete;
+                Remote() = delete;
+                Remote(Remote&&) = delete;
+                Remote(const Remote&) = delete;
+                Remote& operator=(Remote&&) = delete;
+                Remote& operator=(const Remote&) = delete;
 
-                Forwarder(Client& client)
+                Remote(Client& client)
                     : _client(client)
-                {
+                    , _refCount(0) {
                 }
-                ~Forwarder() override = default;
+                ~Remote() override = default;
 
-                BEGIN_INTERFACE_MAP(Forwarder)
+            public:
+                // Core::IUnknown
+                BEGIN_INTERFACE_MAP(Remote)
                 INTERFACE_ENTRY(Exchange::IComposition::IClient)
                 END_INTERFACE_MAP
 
                 // Core::IReferenceCounted
                 uint32_t AddRef() const override
                 {
-                    std::cout << "-- BRAM DEBUG " << __FILE__ << ":" << __LINE__ << " : " << __FUNCTION__ << std::endl;
-
-                    return Core::ERROR_COMPOSIT_OBJECT;
+                    if (Core::InterlockedIncrement(_refCount) == 0) {
+                        _client.Announce();
+                    }
+                    return Core::ERROR_NONE;
                 }
 
                 uint32_t Release() const override
                 {
-                    std::cout << "-- BRAM DEBUG " << __FILE__ << ":" << __LINE__ << " : " << __FUNCTION__ << std::endl;
-
-                    return Core::ERROR_COMPOSIT_OBJECT;
+                    if (Core::InterlockedDecrement(_refCount) == 1) {
+                        // Time to say goodby, all remote clients died..
+                        _client.Revoke();
+                        return (Core::ERROR_DESTRUCTED);
+                    }
+                    return Core::ERROR_NONE;
                 }
 
                 // Exchange::IComposition::IClient methods
@@ -264,6 +271,7 @@ namespace Plugin {
                 }
 
             private:
+                uint32_t _refCount;
                 Client& _client;
             };
 
@@ -284,10 +292,9 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _pendingOutputs(0)
-                , _forwarder(*this) 
+                , _remoteClient(*this) 
             {
                 Core::ResourceMonitor::Instance().Register(*this);
-                _parent.Announce(&_forwarder);
             }
             ~Client() override
             {
@@ -297,14 +304,16 @@ namespace Plugin {
 
                 Core::ResourceMonitor::Instance().Unregister(*this);
 
-                _parent.Revoke(&_forwarder);
-
                 _parent.Render(*this); // request a render to remove this surface from the composition.
 
                 TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
             }
 
         public:
+            Exchange::IComposition::IClient* External() {
+                _remoteClient.AddRef();
+                return (&_remoteClient);
+            }
             uint8_t Descriptors(const uint8_t maxSize, int container[])
             {
                 return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
@@ -371,13 +380,10 @@ namespace Plugin {
             {
                 return _zIndex;
             }
-
-        public:
             void Pending(uint8_t outputIndex)
             {
                 _pendingOutputs |= (1 << outputIndex);
             }
-
             void Completed(uint8_t outputIndex)
             {
                 _pendingOutputs &= ~(1 << outputIndex);
@@ -387,9 +393,17 @@ namespace Plugin {
                 }
             }
 
-            BEGIN_INTERFACE_MAP(RemoteAccess)
+            BEGIN_INTERFACE_MAP(Client)
             INTERFACE_ENTRY(Exchange::IComposition::IClient)
             END_INTERFACE_MAP
+
+        private:
+            void Announce() {
+                _parent.Announce(this);
+            }
+            void Revoke() {
+                _parent.Revoke(this);
+            }
 
         private:
             CompositorImplementation& _parent;
@@ -400,7 +414,7 @@ namespace Plugin {
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             uint32_t _pendingOutputs;
-            Forwarder _forwarder;
+            Remote _remoteClient;
 
             static uint32_t _sequence;
         }; // class Client
@@ -925,8 +939,7 @@ namespace Plugin {
             ASSERT(object.IsValid() == true);
 
             if (object.IsValid() == true) {
-                client = &(*object);
-                client->AddRef();
+                client = object->External();
                 TRACE(Trace::Information, (_T("Created client[%p] %s, "), client, name.c_str()));
             }
 
