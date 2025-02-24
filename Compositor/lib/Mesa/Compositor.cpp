@@ -221,7 +221,7 @@ namespace Plugin {
                 uint32_t AddRef() const override
                 {
                     if (Core::InterlockedIncrement(_refCount) == 0) {
-                        _client.Announce();
+                        const_cast<Client&>(_client).Announce();
                     }
                     return Core::ERROR_NONE;
                 }
@@ -230,7 +230,7 @@ namespace Plugin {
                 {
                     if (Core::InterlockedDecrement(_refCount) == 1) {
                         // Time to say goodby, all remote clients died..
-                        _client.Revoke();
+                        const_cast<Client&>(_client).Revoke();
                         return (Core::ERROR_DESTRUCTED);
                     }
                     return Core::ERROR_NONE;
@@ -271,7 +271,7 @@ namespace Plugin {
                 }
 
             private:
-                uint32_t _refCount;
+                mutable uint32_t _refCount;
                 Client& _client;
             };
 
