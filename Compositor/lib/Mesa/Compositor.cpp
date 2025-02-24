@@ -51,12 +51,12 @@ namespace Plugin {
 
         class Config : public Core::JSON::Container {
         public:
-            class OutputConfig : public Core::JSON::Container {
+            class Output : public Core::JSON::Container {
             public:
-                OutputConfig& operator=(OutputConfig&&) = delete;
-                OutputConfig& operator=(const OutputConfig&) = delete;
+                Output& operator=(Output&&) = delete;
+                Output& operator=(const Output&) = delete;
 
-                OutputConfig()
+                Output()
                     : Core::JSON::Container()
                     , Connector("HDMI-A-1")
                     , X(0)
@@ -66,7 +66,7 @@ namespace Plugin {
                 {
                     Init();
                 }
-                OutputConfig(OutputConfig&& other)
+                Output(Output&& other)
                     : Core::JSON::Container()
                     , Connector(std::move(other.Connector))
                     , X(std::move(other.X))
@@ -76,7 +76,7 @@ namespace Plugin {
                 {
                     Init();
                 }
-                OutputConfig(const OutputConfig& other)
+                Output(const Output& other)
                     : Core::JSON::Container()
                     , Connector(other.Connector)
                     , X(other.X)
@@ -86,7 +86,7 @@ namespace Plugin {
                 {
                     Init();
                 }
-                ~OutputConfig() override = default;
+                ~Output() override = default;
 
             private:
                 void Init()
@@ -121,7 +121,7 @@ namespace Plugin {
                 , Width(0)
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
-                , Outputs()
+                , Out()
             {
                 Add(_T("bufferconnector"), &BufferConnector);
                 Add(_T("displayconnector"), &DisplayConnector);
@@ -131,7 +131,7 @@ namespace Plugin {
                 Add(_T("width"), &Width);
                 Add(_T("format"), &Format);
                 Add(_T("modifier"), &Modifier);
-                Add(_T("outputs"), &Outputs);
+                Add(_T("output"), &Out);
             }
 
             ~Config() override = default;
@@ -144,7 +144,7 @@ namespace Plugin {
             Core::JSON::DecUInt16 Width;
             Core::JSON::HexUInt32 Format;
             Core::JSON::HexUInt64 Modifier;
-            Core::JSON::ArrayType<OutputConfig> Outputs;
+            Output Out;
         };
 
         class DisplayDispatcher : public RPC::Communicator {
@@ -231,7 +231,7 @@ namespace Plugin {
                     if (Core::InterlockedDecrement(_refCount) == 1) {
                         // Time to say goodby, all remote clients died..
                         const_cast<Client&>(_client).Revoke();
-                        return (Core::ERROR_DESTRUCTED);
+                        return (Core::ERROR_DESTRUCTION_SUCCEEDED);
                     }
                     return Core::ERROR_NONE;
                 }
@@ -657,7 +657,6 @@ namespace Plugin {
 
         using Clients = Core::ProxyMapType<string, Client>;
         using Observers = std::vector<Exchange::IComposition::INotification*>;
-        using Outputs = std::list<Output>;
 
     public:
         CompositorImplementation(CompositorImplementation&&) = delete;
@@ -669,7 +668,7 @@ namespace Plugin {
             : _adminLock()
             , _format(DRM_FORMAT_INVALID)
             , _modifier(DRM_FORMAT_MOD_INVALID)
-            , _outputs()
+            , _output(nullptr)
             , _renderer()
             , _observers()
             , _clientBridge(*this)
@@ -688,7 +687,10 @@ namespace Plugin {
         }
         ~CompositorImplementation() override
         {
-            _dispatcher.reset(nullptr);
+            if (_dispatcher != nullptr) {
+                delete _dispatcher;
+                _dispatcher = nullptr;
+            }
 
             if (_engine.IsValid()) {
                 _engine.Release();
@@ -697,6 +699,11 @@ namespace Plugin {
             _clientBridge.Close();
             _clients.Clear();
             _renderer.Release();
+
+            if (_output != nullptr) {
+                delete _output;
+                _output = nullptr;
+            }
 
             if (_gpuIdentifier > 0) {
                 ::close(_gpuIdentifier);
@@ -722,83 +729,88 @@ namespace Plugin {
 
             // FIXME: this needs to be moved to a plugin and the the buffer should be shared via
             //        a CompositorBuffer. For now embed the outputs in the compositor.
-            if (config.Outputs.IsSet() == true) {
-                auto index = config.Outputs.Elements();
-
-                while (index.Next() == true) {
-                    Exchange::IComposition::Rectangle rectangle;
-
-                    rectangle.x = index.Current().X.Value();
-                    rectangle.y = index.Current().Y.Value();
-                    rectangle.width = index.Current().Width.Value();
-                    rectangle.height = index.Current().Height.Value();
-
-                    _outputs.emplace_back(index.Current().Connector.Value(), rectangle, _format);
-
-                    ASSERT(_outputs.back().IsValid());
-
-                    TRACE(Trace::Information, ("Initialzed connector %s", index.Current().Connector.Value().c_str()));
-                }
+            if (config.Out.IsSet() == false) {
+                TRACE(Trace::Error, (_T("No connector defined. Please define an output.")));
+                result = Core::ERROR_INCOMPLETE_CONFIG;
             }
+            else {
+                Exchange::IComposition::Rectangle rectangle;
 
-            if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
-                _gpuIdentifier = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
-            } else {
-                ASSERT(_gpuNode.empty() == false);
-                _gpuIdentifier = ::open(_gpuNode.c_str(), O_RDWR | O_CLOEXEC);
-            }
+                rectangle.x = config.Out.X.Value();
+                rectangle.y = config.Out.Y.Value();
+                rectangle.width = config.Out.Width.Value();
+                rectangle.height = config.Out.Height.Value();
 
-            ASSERT(_gpuIdentifier > 0);
+                _output = new Output(config.Out.Connector.Value(), rectangle, _format);
 
-            _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
-            ASSERT(_renderer.IsValid());
+                ASSERT((_output != nullptr) && (_output->IsValid()));
 
-            _canvasBuffer = Compositor::CreateBuffer(_gpuIdentifier, config.Width.Value(), config.Height.Value(), _format);
-            ASSERT(_canvasBuffer.IsValid());
+                TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
 
-            _canvasTexture = _renderer->Texture(_canvasBuffer);
-            ASSERT(_canvasTexture.IsValid());
-
-            RenderCanvas();
-
-            std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
-            result = _clientBridge.Open(bridgePath);
-
-            if (result == Core::ERROR_NONE) {
-                std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
-
-                ASSERT(_dispatcher == nullptr);
-
-                _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
-
-                _dispatcher.reset(new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine));
-
-                if (_dispatcher->IsListening()) {
-                    PluginHost::ISubSystem* subSystems = service->SubSystems();
-
-                    ASSERT(subSystems != nullptr);
-
-                    if (subSystems != nullptr) {
-                        subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                        subSystems->Release();
-                    }
-
-                    TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
+                if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
+                    _gpuIdentifier = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
                 } else {
-                    _dispatcher.reset(nullptr);
-                    _engine.Release();
-                    _clientBridge.Close();
+                    ASSERT(_gpuNode.empty() == false);
+                    _gpuIdentifier = ::open(_gpuNode.c_str(), O_RDWR | O_CLOEXEC);
+                }
+
+                ASSERT(_gpuIdentifier > 0);
+
+                _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
+                ASSERT(_renderer.IsValid());
+
+                _canvasBuffer = Compositor::CreateBuffer(_gpuIdentifier, config.Width.Value(), config.Height.Value(), _format);
+                ASSERT(_canvasBuffer.IsValid());
+
+                _canvasTexture = _renderer->Texture(_canvasBuffer);
+                ASSERT(_canvasTexture.IsValid());
+
+                RenderCanvas();
+
+                std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
+                result = _clientBridge.Open(bridgePath);
+
+                if (result != Core::ERROR_NONE) {
+                    TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), bridgePath.c_str(), result));
 
                     _canvasTexture.Release();
                     _canvasBuffer.Release();
-
-                    result = Core::ERROR_UNAVAILABLE;
-
-                    TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));
                 }
-            } else {
-                TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), bridgePath.c_str(), result));
-            }
+                else {
+                    std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
+
+                    ASSERT(_dispatcher == nullptr);
+
+                    _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+
+                    _dispatcher = new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine);
+
+                    if (_dispatcher->IsListening() == false) {
+                        delete _dispatcher;
+                        _dispatcher = nullptr;
+                        _engine.Release();
+
+                        _canvasTexture.Release();
+                        _canvasBuffer.Release();
+    
+                        result = Core::ERROR_UNAVAILABLE;
+    
+                        TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));    
+                    }
+                    else {
+                        PluginHost::ISubSystem* subSystems = service->SubSystems();
+
+                        ASSERT(subSystems != nullptr);
+
+                        if (subSystems != nullptr) {
+                            subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                            subSystems->Release();
+                        }
+
+                        TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
+                    }
+                }
+            } 
             return (result);
         }
 
@@ -917,14 +929,10 @@ namespace Plugin {
         void Render(Client& client)
         {
             uint8_t index = 1;
-            for (auto& output : _outputs) {
-                if (output.IsIntersecting(client.Geometry())) {
-                    _present.Trigger(); // Only trigger a render loop if the client is actual visible on one of the outputs
-                    break;
-                } else {
-                    TRACE(Trace::Information, (_T("%s no intersection with output %d"), client.Name().c_str(), index));
-                }
-                index++;
+            if (_output->IsIntersecting(client.Geometry())) {
+                _present.Trigger(); // Only trigger a render loop if the client is actual visible on one of the outputs
+            } else {
+                TRACE(Trace::Information, (_T("%s no intersection with output %d"), client.Name().c_str(), index));
             }
         }
 
@@ -993,45 +1001,43 @@ namespace Plugin {
 
         uint64_t RenderOutputs()
         {
-            for (Output& output : _outputs) {
-                ASSERT(_renderer.IsValid() == true);
+            ASSERT(_renderer.IsValid() == true);
 
-                Core::ProxyType<Compositor::IOutput> buffer = output.Buffer();
+            Core::ProxyType<Compositor::IOutput> buffer = _output->Buffer();
 
-                ASSERT(buffer.IsValid() == true);
+            ASSERT(buffer.IsValid() == true);
 
-                _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(buffer));
-                _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
+            _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(buffer));
+            _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
 
-                const Exchange::IComposition::Rectangle renderBox = { 0, 0, buffer->Width(), buffer->Height() };
+            const Exchange::IComposition::Rectangle renderBox = { 0, 0, buffer->Width(), buffer->Height() };
 
-                Compositor::Matrix canvasProjection;
-                Compositor::Transformation::ProjectBox(canvasProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
+            Compositor::Matrix canvasProjection;
+            Compositor::Transformation::ProjectBox(canvasProjection, renderBox, Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
 
-                // what part of the canvas do we want to render on this output
-                const Exchange::IComposition::Rectangle canvasArea = {
-                    0, // X
-                    0, // Y
-                    _canvasTexture->Width(),
-                    _canvasTexture->Height()
-                };
+            // what part of the canvas do we want to render on this output
+            const Exchange::IComposition::Rectangle canvasArea = {
+                0, // X
+                0, // Y
+                _canvasTexture->Width(),
+                _canvasTexture->Height()
+            };
 
-                _renderer->Render(_canvasTexture, canvasArea, canvasProjection, 1.0);
+            _renderer->Render(_canvasTexture, canvasArea, canvasProjection, 1.0);
 
-                _renderer->End(false);
+            _renderer->End(false);
 
-                _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
-                    ASSERT(client.IsValid() == true);
+            _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
+                ASSERT(client.IsValid() == true);
 
-                    if (output.IsIntersecting(client->Geometry())) {
-                        output.Pending(client);
-                    }
-                });
+                if (_output->IsIntersecting(client->Geometry())) {
+                    _output->Pending(client);
+                }
+            });
 
-                output.Commit(); // Blit to screen
+            _output->Commit(); // Blit to screen
 
-                _renderer->Unbind();
-            }
+            _renderer->Unbind();
 
             return Core::Time::Now().Ticks();
         }
@@ -1105,7 +1111,7 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
         uint32_t _format;
         uint64_t _modifier;
-        Outputs _outputs;
+        Output* _output;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         Observers _observers;
         Bridge _clientBridge;
@@ -1113,7 +1119,7 @@ namespace Plugin {
         uint64_t _lastFrame;
         Compositor::Color _background;
         Core::ProxyType<RPC::InvokeServer> _engine;
-        std::unique_ptr<DisplayDispatcher> _dispatcher;
+        DisplayDispatcher* _dispatcher;
         Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
         Core::ProxyType<Compositor::IRenderer::ITexture> _canvasTexture;
         int _gpuIdentifier;
