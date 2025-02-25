@@ -232,7 +232,7 @@ namespace Plugin {
                     if (Core::InterlockedDecrement(_refCount) == 1) {
                         // Time to say goodby, all remote clients died..
                         const_cast<Client&>(_client).Revoke();
-                        return (Core::ERROR_DESTRUCTED);
+                        return (Core::ERROR_DESTRUCTION_SUCCEEDED);
                     }
                     return Core::ERROR_NONE;
                 }
@@ -293,7 +293,7 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _pendingOutputs(0)
-                , _remoteClient(*this) 
+                , _remoteClient(*this)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
             }
