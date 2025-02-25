@@ -26,108 +26,17 @@
 #include <DRM.h>
 
 #include "IOutput.h"
-#include "Input.h"
+#include "IBackend.h"
 
 #include <wayland-client.h>
 #include "generated/presentation-time-client-protocol.h"
-#include "generated/xdg-shell-client-protocol.h"
-#include "generated/drm-client-protocol.h"
-#include "generated/linux-dmabuf-unstable-v1-client-protocol.h"
-#include "generated/pointer-gestures-unstable-v1-client-protocol.h"
-#include "generated/presentation-time-client-protocol.h"
-#include "generated/relative-pointer-unstable-v1-client-protocol.h"
-#include "generated/xdg-activation-v1-client-protocol.h"
-#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
         class WaylandOutput : public IOutput {
-        public:
-            class Backend : public Core::IResource {
-            public:
-                typedef struct __attribute__((packed, aligned(4))) {
-                    uint32_t format;
-                    uint32_t padding;
-                    uint64_t modifier;
-                } WaylandFormat;
 
-            private:
-                using FormatRegister = std::unordered_map<uint32_t, std::vector<uint64_t> >;
-                Backend();
-
-            public:
-                Backend(Backend&&) = delete;
-                Backend(const Backend&) = delete;
-                Backend& operator=(Backend&&) = delete;
-                Backend& operator=(const Backend&) = delete;
-
-                static Backend& Instance();
-                virtual ~Backend();
-
-            public:
-                wl_surface* Surface() const;
-                xdg_surface* WindowSurface(wl_surface* surface) const;
-                int RoundTrip() const;
-                int Flush() const;
-                void Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const;
-                int RenderNode() const;
-
-                wl_buffer* CreateBuffer(Exchange::ICompositionBuffer* buffer) const;
-
-                struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const;
-                struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const;
-
-                void RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version);
-
-                void PresentationClock(const uint32_t clockType);
-                void HandleDmaFormatTable(int32_t fd, uint32_t size);
-
-                void OpenDrmRender(drmDevice* device);
-                void OpenDrmRender(const std::string& name);
-
-                int Dispatch(const uint32_t events) const;
-
-                Core::ProxyType<IOutput> Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback);
-
-                handle Descriptor() const override {
-                    return (_displayHandle);
-                }
-                uint16_t Events() override {
-                    return (POLLIN | POLLOUT | POLLERR | POLLHUP);
-                }
-                void Handle(const uint16_t events) override {
-                    Dispatch(events);
-                }
-
-            private:
-                int _drmRenderFd;
-                std::string _activationToken;
-
-                wl_display* _wlDisplay;
-                wl_registry* _wlRegistry;
-                wl_compositor* _wlCompositor;
-                wl_drm* _wlDrm;
-                clockid_t _presentationClock;
-                int _displayHandle;
-
-                xdg_wm_base* _xdgWmBase;
-                zxdg_decoration_manager_v1* _wlZxdgDecorationManagerV1;
-                zwp_pointer_gestures_v1* _wlZwpPointerGesturesV1;
-                wp_presentation* _wlPresentation;
-                zwp_linux_dmabuf_v1* _wlZwpLinuxDmabufV1;
-                wl_shm* _wlShm;
-                zwp_relative_pointer_manager_v1* _wlZwpRelativePointerManagerV1;
-                xdg_activation_v1* _wlXdgActivationV1;
-                zwp_linux_dmabuf_feedback_v1* _wlZwpLinuxDmabufFeedbackV1;
-                FormatRegister _dmaFormats;
-
-                Input _input;
-
-            }; // Backend
-
-        private:
             struct PresentationFeedbackEvent {
                 PresentationFeedbackEvent() = delete;
                 PresentationFeedbackEvent(const PresentationFeedbackEvent& copy) = delete;
@@ -167,13 +76,11 @@ namespace Compositor {
             WaylandOutput() = delete;
             WaylandOutput(WaylandOutput&&) = delete;
             WaylandOutput(const WaylandOutput&) = delete;
-            WaylandOutput& operator=(WaylandOutput&&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
+            WaylandOutput(Wayland::IBackend& backend, const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format);
 
-            WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format);
-            ~WaylandOutput() override;
+            virtual ~WaylandOutput();
 
-        public:
             Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
             void Relinquish() override;
 
@@ -220,7 +127,7 @@ namespace Compositor {
             }
 
         private:
-            Backend& _backend;
+            Wayland::IBackend& _backend;
             wl_surface* _surface;
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;
