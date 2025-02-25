@@ -18,6 +18,7 @@
  */
 
 #include "../Module.h"
+#include "IGpu.h"
 #include "Connector.h"
 
 #include <DRM.h>

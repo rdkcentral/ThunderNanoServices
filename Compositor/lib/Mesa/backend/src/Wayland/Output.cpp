@@ -138,8 +138,10 @@ namespace Compositor {
             .discarded = onPresentationFeedbackDiscarded,
         };
 
-        WaylandOutput::WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
-            : _backend(WaylandOutput::Backend::Instance())
+        WaylandOutput::WaylandOutput(
+            Wayland::IBackend& backend, const string& name,
+            const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
+            : _backend(backend)
             , _surface(nullptr)
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
