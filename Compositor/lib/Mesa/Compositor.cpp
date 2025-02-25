@@ -206,8 +206,9 @@ namespace Plugin {
                 Remote& operator=(const Remote&) = delete;
 
                 Remote(Client& client)
-                    : _client(client)
-                    , _refCount(0) {
+                    : _refCount(0)
+                    , _client(client)
+                {
                 }
                 ~Remote() override = default;
 
@@ -310,7 +311,8 @@ namespace Plugin {
             }
 
         public:
-            Exchange::IComposition::IClient* External() {
+            Exchange::IComposition::IClient* External()
+            {
                 _remoteClient.AddRef();
                 return (&_remoteClient);
             }
@@ -398,10 +400,12 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            void Announce() {
+            void Announce()
+            {
                 _parent.Announce(this);
             }
-            void Revoke() {
+            void Revoke()
+            {
                 _parent.Revoke(this);
             }
 
