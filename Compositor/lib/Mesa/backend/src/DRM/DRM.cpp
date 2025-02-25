@@ -53,11 +53,11 @@ namespace Backend {
                 result = Core::ERROR_NONE;
 
                 static bool doModeSet(true);
-                bool added = false;
+                // bool added = false;
 
                 Compositor::Backend::Transaction transaction(_gpuFd, doModeSet, this);
 
-                uint32_t outcome;
+                // uint32_t outcome;
                 entry.Swap();
 
                 if ( (transaction.Add(entry) != Core::ERROR_NONE) ||

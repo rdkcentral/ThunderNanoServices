@@ -206,8 +206,9 @@ namespace Plugin {
                 Remote& operator=(const Remote&) = delete;
 
                 Remote(Client& client)
-                    : _client(client)
-                    , _refCount(0) {
+                    : _refCount(0)
+                    , _client(client)
+                {
                 }
                 ~Remote() override = default;
 
@@ -292,7 +293,7 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _pendingOutputs(0)
-                , _remoteClient(*this) 
+                , _remoteClient(*this)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
             }
@@ -310,7 +311,8 @@ namespace Plugin {
             }
 
         public:
-            Exchange::IComposition::IClient* External() {
+            Exchange::IComposition::IClient* External()
+            {
                 _remoteClient.AddRef();
                 return (&_remoteClient);
             }
@@ -398,10 +400,12 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            void Announce() {
+            void Announce()
+            {
                 _parent.Announce(this);
             }
-            void Revoke() {
+            void Revoke()
+            {
                 _parent.Revoke(this);
             }
 
@@ -732,8 +736,7 @@ namespace Plugin {
             if (config.Out.IsSet() == false) {
                 TRACE(Trace::Error, (_T("No connector defined. Please define an output.")));
                 result = Core::ERROR_INCOMPLETE_CONFIG;
-            }
-            else {
+            } else {
                 Exchange::IComposition::Rectangle rectangle;
 
                 rectangle.x = config.Out.X.Value();
@@ -775,8 +778,7 @@ namespace Plugin {
 
                     _canvasTexture.Release();
                     _canvasBuffer.Release();
-                }
-                else {
+                } else {
                     std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
 
                     ASSERT(_dispatcher == nullptr);
@@ -792,12 +794,11 @@ namespace Plugin {
 
                         _canvasTexture.Release();
                         _canvasBuffer.Release();
-    
+
                         result = Core::ERROR_UNAVAILABLE;
-    
-                        TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));    
-                    }
-                    else {
+
+                        TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));
+                    } else {
                         PluginHost::ISubSystem* subSystems = service->SubSystems();
 
                         ASSERT(subSystems != nullptr);
@@ -810,7 +811,7 @@ namespace Plugin {
                         TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
                     }
                 }
-            } 
+            }
             return (result);
         }
 

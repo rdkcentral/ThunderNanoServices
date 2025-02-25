@@ -267,7 +267,7 @@ namespace Compositor {
                 }
 
             private:
-                void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
+                void FinishPageFlip(const Compositor::DRM::Identifier crtc VARIABLE_IS_NOT_USED, const unsigned sequence, unsigned seconds, const unsigned useconds)
                 {
                     struct timespec presentationTimestamp;
 
