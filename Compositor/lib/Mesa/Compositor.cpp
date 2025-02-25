@@ -221,7 +221,7 @@ namespace Plugin {
                 // Core::IReferenceCounted
                 uint32_t AddRef() const override
                 {
-                    if (Core::InterlockedIncrement(_refCount) == 0) {
+                    if (Core::InterlockedIncrement(_refCount) == 1) {
                         const_cast<Client&>(_client).Announce();
                     }
                     return Core::ERROR_NONE;
@@ -229,7 +229,7 @@ namespace Plugin {
 
                 uint32_t Release() const override
                 {
-                    if (Core::InterlockedDecrement(_refCount) == 1) {
+                    if (Core::InterlockedDecrement(_refCount) == 0) {
                         // Time to say goodby, all remote clients died..
                         const_cast<Client&>(_client).Revoke();
                         return (Core::ERROR_DESTRUCTION_SUCCEEDED);
@@ -299,10 +299,6 @@ namespace Plugin {
             }
             ~Client() override
             {
-                if (_texture.IsValid()) {
-                    _texture.Release(); // make sure to delete the texture so we are skipped by the renderer.
-                }
-
                 Core::ResourceMonitor::Instance().Unregister(*this);
 
                 _parent.Render(*this); // request a render to remove this surface from the composition.
@@ -406,6 +402,10 @@ namespace Plugin {
             }
             void Revoke()
             {
+                if (_texture.IsValid()) {
+                    _texture.Release(); // make sure to delete the texture so we are skipped by the renderer.
+                }
+
                 _parent.Revoke(this);
             }
 
