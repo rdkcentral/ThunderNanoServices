@@ -58,22 +58,15 @@ private:
         Sink() = delete;
 
         Sink(RenderTest& parent)
-            : _parent(parent)
-        {
+            : _parent(parent) {
         }
 
-        virtual ~Sink() = default;
+        ~Sink() override = default;
 
-        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+        void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
         {
             _parent.HandleVSync(output, sequence, time);
         }
-
-        // virtual void Display(const int fd, const std::string& node) override
-        // {
-        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
-        //     // _parent.HandleGPUNode(node);
-        // }
 
     private:
         RenderTest& _parent;
@@ -113,7 +106,7 @@ public:
 
         ASSERT(_renderFd >= 0);
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        _renderer = Compositor::IRenderer::Instance(_renderFd, Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
         ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
@@ -123,7 +116,7 @@ public:
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
 
-        NewFrame();
+        //NewFrame();
     }
 
     ~RenderTest()
@@ -167,7 +160,9 @@ public:
 private:
     void Render()
     {
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
         _running = true;
+        _renderer->ViewPort(_connector->Width(), _connector->Height());
 
         while (_running) {
             NewFrame();
@@ -182,8 +177,6 @@ private:
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
-        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
@@ -196,9 +189,8 @@ private:
         float x = float(renderWidth / 2.0f) * cosX;
         float y = float(renderHeight / 2.0f) * sinY;
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        _renderer->Bind();
 
-        _renderer->Begin(width, height);
         _renderer->Clear(background);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
@@ -210,7 +202,7 @@ private:
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
 
-        _renderer->End(false);
+        _renderer->Unbind();
 
         uint32_t commit;
 
@@ -221,7 +213,6 @@ private:
             std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit. 
         }
 
-        _renderer->Unbind();
 
         rotation += _radPerFrame;
     }

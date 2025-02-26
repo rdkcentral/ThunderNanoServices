@@ -110,7 +110,7 @@ public:
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        _renderer = Compositor::IRenderer::Instance(_renderFd, Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
 
         ASSERT(_renderer.IsValid());
 
@@ -181,9 +181,9 @@ private:
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        _renderer->Bind();
 
-        _renderer->Begin(width, height);
+        _renderer->ViewPort(width, height);
         _renderer->Clear(background);
 
         constexpr int16_t squareSize(300);
@@ -204,8 +204,6 @@ private:
                 _renderer->Quadrangle(color, matrix);
             }
         }
-
-        _renderer->End();
 
         _connector->Commit();
 

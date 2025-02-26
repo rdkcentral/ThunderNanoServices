@@ -119,7 +119,7 @@ public:
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        _renderer = Compositor::IRenderer::Instance(_renderFd,Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
 
         _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
 
@@ -196,9 +196,9 @@ private:
         const uint16_t renderWidth(512);
         const uint16_t renderHeight(512);
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        _renderer->Bind();
 
-        _renderer->Begin(width, height);
+        _renderer->ViewPort(width, height);
         _renderer->Clear(background);
 
         const Exchange::IComposition::Rectangle renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
@@ -208,8 +208,6 @@ private:
 
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
-
-        _renderer->End(false);
 
         _connector->Commit();
 

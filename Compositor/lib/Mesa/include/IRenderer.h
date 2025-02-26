@@ -24,6 +24,7 @@
 namespace Thunder {
 namespace Compositor {
     struct EXTERNAL IRenderer {
+
         virtual ~IRenderer() = default;
 
         struct ITexture {
@@ -33,6 +34,9 @@ namespace Compositor {
 
             virtual uint32_t Width() const = 0;
             virtual uint32_t Height() const = 0;
+
+            virtual uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const = 0;
+
         }; // struct ITexture
 
         /**
@@ -41,15 +45,7 @@ namespace Compositor {
          * @param identifier ID for this Renderer, allows for reuse.
          * @return Core::ProxyType<IRenderer>
          */
-        static Core::ProxyType<IRenderer> Instance(Identifier identifier);
-
-        // /**
-        //  * @brief Install a callback to receive e.g. the
-        //  *
-        //  * @param callback A callback pointer, or nullptr to unset the callback.
-        //  * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
-        //  */
-        // virtual uint32_t Callback(ICallback* callback) = 0;
+        static Core::ProxyType<IRenderer> Instance(const int identifier, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer);
 
         /**
          * @brief Binds a frame buffer to the renderer, all render related actions will be done using this buffer.
@@ -57,7 +53,7 @@ namespace Compositor {
          * @param buffer A preallocated buffer to be used or ```nullptr``` to clear.
          * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
          */
-        virtual uint32_t Bind(Core::ProxyType<Exchange::ICompositionBuffer> buffer) = 0;
+        virtual uint32_t Bind() = 0;
 
         /**
          * @brief Clears the active frame buffer from the renderer.
@@ -65,22 +61,13 @@ namespace Compositor {
         virtual void Unbind() = 0;
 
         /**
-         * @brief Start a render pass with the provided viewport.
-         *
-         * This should be called after a binding a buffer, callee must call
-         * End() when they are done rendering.
+         * @brief Set a viewport.
          *
          * @param width Viewport width in pixels
          * @param height Viewport height in pixels
-         * @return false on failure, in which case compositors shouldn't try rendering.
+         * @return Core::ERROR_UNAVAILABLE on failure, in which case compositors shouldn't try rendering.
          */
-        virtual bool Begin(uint32_t width, uint32_t height) = 0;
-
-        /**
-         * @brief Ends a render pass.
-         *
-         */
-        virtual void End(bool dump = false) = 0;
+        virtual uint32_t ViewPort(const uint32_t width, const uint32_t height) = 0;
 
         /**
          * @brief Clear the viewport with the provided color
@@ -88,6 +75,20 @@ namespace Compositor {
          * @param color
          */
         virtual void Clear(const Color color) = 0;
+
+        /**
+         * @brief   Renders a texture on the bound buffer at the given region with
+         *          transforming and transparency info.
+         *
+         * @param texture           Texture to be rendered
+         * @param region            The coordinates and size where to render.
+         * @param transformation    A transformation matrix
+         * @param alpha             The opacity of the render
+         *
+         *
+         * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
+         */
+        virtual uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transform, float alpha) = 0;
 
         /**
          * @brief Scissor defines a rectangle, called the scissor box, in window coordinates.
@@ -108,20 +109,6 @@ namespace Compositor {
         virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
 
         /**
-         * @brief   Renders a texture on the bound buffer at the given region with
-         *          transforming and transparency info.
-         *
-         * @param texture           Texture to be rendered
-         * @param region            The coordinates and size where to render.
-         * @param transformation    A transformation matrix
-         * @param alpha             The opacity of the render
-         *
-         *
-         * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
-         */
-        virtual uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transform, float alpha) = 0;
-
-        /**
          * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.
          *
          * @param region            The coordinates and size where to render.
@@ -134,22 +121,6 @@ namespace Compositor {
          *
          */
         virtual uint32_t Quadrangle(const Color color, const Matrix transformation) = 0;
-
-        /**
-         * @brief  Returns the buffer currently bound to the renderer
-         *
-         * @return ICompositionBuffer* or nullptr if no buffer is bound.
-         *
-         */
-        virtual Core::ProxyType<Exchange::ICompositionBuffer> Bound() const = 0;
-
-        /**
-         * TODO: We probably want this so we can do screen dumps
-         *
-         * @brief Reads out of pixels of the currently bound buffer into data.
-         *        `stride` is in bytes.
-         */
-        // virtual uint32_t DumpPixels(uint32_t sourceX, uint32_t sourceY, uint32_t destinationX, uint32_t destinationY, Exchange::ICompositionBuffer* data) = 0;
 
         /**
          * @brief Returns a list of pixel @PixelFormat valid for rendering.

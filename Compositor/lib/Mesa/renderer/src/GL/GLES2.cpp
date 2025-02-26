@@ -35,6 +35,7 @@ namespace Thunder {
 namespace Compositor {
     namespace Renderer {
         class GLES : public IRenderer {
+        private:
             using PointCoordinates = std::array<GLfloat, 8>;
 
             static constexpr PointCoordinates Vertices = {
@@ -103,99 +104,77 @@ namespace Compositor {
             class FrameBuffer {
             public:
                 FrameBuffer() = delete;
+                FrameBuffer(FrameBuffer&&) = delete;
                 FrameBuffer(const FrameBuffer&) = delete;
+                FrameBuffer& operator=(FrameBuffer&&) = delete;
                 FrameBuffer& operator=(const FrameBuffer&) = delete;
 
-                FrameBuffer(const GLES& parent, Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
-                    : _parent(parent)
-                    , _buffer(buffer)
-                    , _eglImage(EGL_NO_IMAGE)
+                FrameBuffer(API::GL& api, EGLImage eglImage, const bool external)
+                    : _api(api)
+                    , _eglImage(eglImage)
                     , _glFrameBuffer(0)
                     , _glRenderBuffer(0)
-                    , _external(false)
+                    , _external(external)
                 {
-                    _eglImage = _parent.Egl().CreateImage(buffer.operator->(), _external);
-
                     ASSERT(_eglImage != EGL_NO_IMAGE);
+
                     // If this triggers the platform is very old (pre-2008) and not supporting OpenGL 3.0 or higher.
-                    ASSERT(_parent.Gles().glEGLImageTargetRenderbufferStorageOES != nullptr);
+                    ASSERT(_api.glEGLImageTargetRenderbufferStorageOES != nullptr);
 
                     PushDebug();
 
                     glGenRenderbuffers(1, &_glRenderBuffer);
-                    glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
-
-                    _parent.Gles().glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
-
-                    glBindRenderbuffer(GL_RENDERBUFFER, 0);
                     glGenFramebuffers(1, &_glFrameBuffer);
 
-                    Bind();
-
-                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
-
-                    GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-                    Unbind();
+                    glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
+                    _api.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
+                    glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
                     PopDebug();
 
-                    ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
-                    TRACE(Trace::GL, ("Created FrameBuffer %dpx x %dpx", _buffer->Width(), _buffer->Height()));
+                    TRACE(Trace::GL, ("Created FrameBuffer"));
                 }
-
                 ~FrameBuffer()
                 {
-                    Renderer::EGL::ContextBackup backup;
-
-                    _parent.Egl().SetCurrent();
-
                     Unbind();
 
                     PushDebug();
-
                     glDeleteFramebuffers(1, &_glFrameBuffer);
                     glDeleteRenderbuffers(1, &_glRenderBuffer);
-
                     PopDebug();
-
-                    _parent.Egl().ResetCurrent();
 
                     TRACE(Trace::GL, ("FrameBuffer %p destructed", this));
                 }
 
+            public:
                 void Unbind()
                 {
                     PushDebug();
                     glFlush();
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                    glBindRenderbuffer(GL_RENDERBUFFER, 0);
                     PopDebug();
                 }
-
-                uint32_t Bind()
+                void Bind()
                 {
                     PushDebug();
+                    glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
                     glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
+                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
+                    ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
                     PopDebug();
-                    return 0;
                 }
-
-                bool External() const
-                {
-                    return _external;
+                bool External() const {
+                    return (_external);
                 }
 
             private:
-                const GLES& _parent;
-                Core::ProxyType<Exchange::ICompositionBuffer>& _buffer;
-
+                API::GL& _api;
                 EGLImage _eglImage;
                 GLuint _glFrameBuffer;
                 GLuint _glRenderBuffer;
-
                 bool _external;
             };
-
             class Program {
             public:
                 enum class Variant : uint8_t {
@@ -220,7 +199,6 @@ namespace Compositor {
                 {
                     ASSERT(_id != GL_FALSE);
                 }
-
                 virtual ~Program()
                 {
                     ASSERT(_id != GL_FALSE);
@@ -229,6 +207,9 @@ namespace Compositor {
                         glDeleteProgram(_id);
                     }
                 };
+
+            public:
+                virtual uint32_t Draw(const GLuint id, GLenum target, const bool hasAlpha, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const = 0;
 
             private:
                 GLuint Compile(GLenum type, const char* source)
@@ -325,7 +306,6 @@ namespace Compositor {
                 GLint _projection;
                 GLint _position;
             };
-
             class ColorProgram : public Program {
             public:
                 enum { ID = static_cast<std::underlying_type<VariantType>::type>(Variant::SOLID) };
@@ -334,22 +314,25 @@ namespace Compositor {
                 ColorProgram()
                     : Program(ID)
                     , _color(glGetUniformLocation(Id(), "color"))
+                    , _colorValue ({ 0.0, 0.0, 0.0, 0.0 })
                 {
                     TRACE(Trace::Information, ("Created Color Program: id=%d, projection=%d, position=%d color=%d", Id(), Projection(), Position(), Color()));
                 }
+                ~ColorProgram() override = default;
 
-                virtual ~ColorProgram() = default;
-
+            public:
                 GLint Color() const
                 {
                     return _color;
                 }
-
-                bool Draw(const Compositor::Color& color, const Matrix& matrix)
+                void Color(const Compositor::Color& color)
                 {
+                    _colorValue = color;
+                }
+                uint32_t Draw(const Compositor::Color& color, const Matrix& matrix) const {
                     PushDebug();
 
-                    if (color[3] >= 1.0) {
+                    if (_colorValue[3] >= 1.0) {
                         glDisable(GL_BLEND);
                     } else {
                         glEnable(GL_BLEND);
@@ -359,7 +342,7 @@ namespace Compositor {
 
                     glUniformMatrix3fv(Projection(), 1, GL_FALSE, &matrix[0]);
 
-                    glUniform4f(_color, color[0], color[1], color[2], color[3]);
+                    glUniform4f(_color, _colorValue[0], _colorValue[1], _colorValue[2], _colorValue[3]);
 
                     glVertexAttribPointer(Position(), 2, GL_FLOAT, GL_FALSE, 0, &Vertices[0]);
 
@@ -371,13 +354,18 @@ namespace Compositor {
 
                     PopDebug();
 
-                    return glGetError() == GL_NO_ERROR;
+                    return (glGetError() == GL_NO_ERROR ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+ 
+                }
+                uint32_t Draw(const GLuint, GLenum, const bool, const float&, const Matrix& matrix, const PointCoordinates&) const
+                {
+                    return (Draw(_colorValue, matrix));
                 }
 
             private:
                 GLint _color;
+                Compositor::Color _colorValue;
             };
-
             template <const Program::VariantType VARIANT, const uint8_t TEXTURE_COUNT>
             class TextureProgramType : public Program {
             public:
@@ -404,30 +392,26 @@ namespace Compositor {
 
                     TRACE(Trace::Information, ("Created Texture Program: id=%d, projection=%d, position=%d coordinates=%d, alpha=%d", Id(), Projection(), Position(), Coordinates(), Alpha()));
                 }
+                ~TextureProgramType() override = default;
 
-                virtual ~TextureProgramType() = default;
-
+            public:
                 GLint TextureId(const uint8_t id) const
                 {
                     return _textureIds[id];
                 }
-
                 GLint TextureCount() const
                 {
                     return _textureIds.size();
                 }
-
                 GLint Coordinates() const
                 {
                     return _coordinates;
                 }
-
                 GLuint Alpha() const
                 {
                     return _alpha;
                 }
-
-                bool Draw(const GLuint id, GLenum target, const bool hasAlpha, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
+                uint32_t Draw(const GLuint id, GLenum target, const bool hasAlpha, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const override
                 {
                     PushDebug();
 
@@ -463,7 +447,7 @@ namespace Compositor {
 
                     PopDebug();
 
-                    return glGetError() == GL_NO_ERROR;
+                    return (glGetError() == GL_NO_ERROR ? Core::ERROR_NONE : Core::ERROR_GENERAL);
                 }
 
             private:
@@ -485,6 +469,11 @@ namespace Compositor {
                 using Programs = std::unordered_map<Program::VariantType, Program*>;
 
             public:
+                ProgramRegistry(ProgramRegistry&&) = delete;
+                ProgramRegistry(const ProgramRegistry&) = delete;
+                ProgramRegistry& operator=(ProgramRegistry&&) = delete;
+                ProgramRegistry& operator=(const ProgramRegistry&) = delete;
+
                 ProgramRegistry() = default;
                 ~ProgramRegistry()
                 {
@@ -519,7 +508,6 @@ namespace Compositor {
 
             static bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
             {
-
                 png_structp pngPointer = nullptr;
 
                 pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
@@ -660,10 +648,10 @@ namespace Compositor {
                     , _textureId(0)
                     , _image(EGL_NO_IMAGE)
                     , _buffer(buffer)
+                    , _program(nullptr)
+                    , _hasAlpha(DRM::HasAlpha(_buffer->Format()))
                 {
                     ASSERT(_buffer != nullptr);
-
-                    _parent.Add(this);
 
                     if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
                         ImportDMABuffer();
@@ -675,13 +663,24 @@ namespace Compositor {
 
                     ASSERT(_textureId != 0);
 
+                    if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
+                        _program = _parent.Programs().QueryType<ExternalProgram>();
+                    }
+                    else if ((_target == GL_TEXTURE_2D)) {
+                        if (_hasAlpha == true) {
+                            _program = _parent.Programs().QueryType<RGBAProgram>();
+                        } else {
+                            _program = _parent.Programs().QueryType<RGBXProgram>();
+                        }
+                    }
+
+                    ASSERT(_program != nullptr);
+ 
                     // Snapshot();
                 }
 
                 ~GLESTexture() override
                 {
-                    _parent.Remove(this);
-
                     Renderer::EGL::ContextBackup backup;
                     _parent.Egl().SetCurrent();
 
@@ -692,61 +691,34 @@ namespace Compositor {
                     }
                 }
 
+            public:
                 /**
                  *  IRenderer::ITexture
                  */
-                virtual bool IsValid() const
+                bool IsValid() const override
                 {
                     return (_textureId != 0);
                 }
-
-                bool Invalidate()
-                {
-                    bool result(
-                        (_buffer->Type() != Exchange::ICompositionBuffer::TYPE_DMA)
-                        || ((_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES)));
-
-                    if ((_image != EGL_NO_IMAGE) && (_target != GL_TEXTURE_EXTERNAL_OES)) {
-                        Renderer::EGL::ContextBackup backup;
-
-                        _parent.Egl().SetCurrent();
-
-                        glBindTexture(_target, _textureId);
-                        _parent.Gles().glEGLImageTargetTexture2DOES(_target, _image);
-                        glBindTexture(_target, 0);
-                    }
-                    return result;
-                }
-
                 uint32_t Width() const override { return _buffer->Width(); }
                 uint32_t Height() const override { return _buffer->Height(); }
                 GLenum Target() const { return _target; }
                 GLuint Id() const { return _textureId; }
 
-                bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
+                uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const override
                 {
-                    bool result(false);
-                    bool hasAlpha(DRM::HasAlpha(_buffer->Format()));
+                    const GLfloat x1 = region.x / _buffer->Width();
+                    const GLfloat y1 = region.y / _buffer->Height();
+                    const GLfloat x2 = (region.x + region.width) / _buffer->Width();
+                    const GLfloat y2 = (region.y + region.height) / _buffer->Height();
 
-                    if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
-                        ExternalProgram* program = _parent.Programs().QueryType<ExternalProgram>();
-                        ASSERT(program != nullptr);
-                        result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
-                    }
+                    const PointCoordinates coordinates = {
+                        x2, y1, // top right
+                        x1, y1, // top left
+                        x2, y2, // bottom right
+                        x1, y2, // bottom left
+                    };
 
-                    if ((_target == GL_TEXTURE_2D)) {
-                        if (hasAlpha == true) {
-                            RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
-                            ASSERT(program != nullptr);
-                            result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
-                        } else {
-                            RGBXProgram* program = _parent.Programs().QueryType<RGBXProgram>();
-                            ASSERT(program != nullptr);
-                            result = program->Draw(_textureId, _target, false, alpha, matrix, coordinates);
-                        }
-                    }
-
-                    return result;
+                    return (_program->Draw(_textureId, _target, _hasAlpha, alpha, matrix, coordinates));
                 }
 
             private:
@@ -837,14 +809,19 @@ namespace Compositor {
                 GLuint _textureId;
                 EGLImageKHR _image;
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+                Program* _program;
+                bool _hasAlpha;
+
             }; //  class GLESTexture
 
         public:
             GLES() = delete;
-            GLES(GLES const&) = delete;
-            GLES& operator=(GLES const&) = delete;
+            GLES(GLES&&) = delete;
+            GLES(const GLES&) = delete;
+            GLES& operator=(GLES&&) = delete;
+            GLES& operator=(const GLES&) = delete;
 
-            GLES(int drmDevFd)
+            GLES(const int drmDevFd, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
                 : _egl(drmDevFd)
                 , _frameBuffer(nullptr)
                 , _viewportWidth(0)
@@ -874,6 +851,13 @@ namespace Compositor {
                 }
 #endif
 
+                if (_gles.glGetGraphicsResetStatusKHR != nullptr) {
+                    GLenum status = _gles.glGetGraphicsResetStatusKHR();
+                    if (status != GL_NO_ERROR) {
+                        TRACE(Trace::Error, ("GPU reset (%s)", API::GL::ResetStatusString(status)));
+                    }
+                }
+
                 PushDebug();
 
                 _programs.Announce<ColorProgram>();
@@ -887,6 +871,11 @@ namespace Compositor {
 
                 PopDebug();
 
+
+fprintf(stdout, "-------------------------- %s ------------------------- %d -----------------\n", __FUNCTION__, __LINE__); fflush(stdout);
+                bool external(false);
+                _frameBuffer.reset(new FrameBuffer(_gles, _egl.CreateImage(buffer.operator->(),external), external));
+fprintf(stdout, "-------------------------- %s ------------------------- %d -----------------\n", __FUNCTION__, __LINE__); fflush(stdout);
                 _egl.ResetCurrent();
             }
 
@@ -915,39 +904,26 @@ namespace Compositor {
 
             void Unbind()
             {
-                _frameBuffer.reset();
                 _egl.ResetCurrent();
+                _rendering = false;
             }
 
-            uint32_t Bind(Core::ProxyType<Exchange::ICompositionBuffer> buffer) override
+            uint32_t Bind() override
             {
                 ASSERT(_rendering == false);
 
+                _rendering = true;
                 _egl.SetCurrent();
 
-                _frameBuffer.reset(new FrameBuffer(*this, buffer));
-
                 _frameBuffer->Bind();
+                return (Core::ERROR_NONE);
+           }
 
-                return Core::ERROR_NONE;
-            }
-
-            bool Begin(uint32_t width, uint32_t height) override
+            uint32_t ViewPort(const uint32_t width, const uint32_t height) override
             {
-                ASSERT((_rendering == false) && (_egl.IsCurrent() == true));
-
-                _rendering = true;
-
-                if (_gles.glGetGraphicsResetStatusKHR != nullptr) {
-                    GLenum status = _gles.glGetGraphicsResetStatusKHR();
-                    if (status != GL_NO_ERROR) {
-                        TRACE(Trace::Error, ("GPU reset (%s)", API::GL::ResetStatusString(status)));
-                        return false;
-                    }
-                }
-
                 PushDebug();
 
+                _egl.SetCurrent();
                 glViewport(0, 0, width, height);
 
                 _viewportWidth = width;
@@ -958,16 +934,14 @@ namespace Compositor {
 
                 glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
+                _egl.ResetCurrent();
                 PopDebug();
 
                 return (glGetError() == GL_NO_ERROR);
+ 
             }
-
-            void End(bool dump) override
+            void Dump () 
             {
-                ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
-
-                if (dump == true) {
                     std::vector<uint8_t> pixels;
                     Exchange::IComposition::Rectangle box = { 0, 0, _viewportWidth, _viewportHeight };
                     if (Snapshot(box, DRM_FORMAT_ARGB8888, pixels) == true) {
@@ -977,11 +951,6 @@ namespace Compositor {
 
                         WritePNG(ss.str(), pixels, _viewportWidth, _viewportHeight);
                     }
-                }
-
-                // nothing to do
-
-                _rendering = false;
             }
 
             void Clear(const Color color) override
@@ -1017,34 +986,14 @@ namespace Compositor {
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true) && (texture != nullptr));
 
-                const auto index = std::find(_textures.begin(), _textures.end(), &(*texture));
-
                 uint32_t result(Core::ERROR_BAD_REQUEST);
 
-                if (index != _textures.end()) {
-                    const GLESTexture* glesTexture = reinterpret_cast<const GLESTexture*>(*index);
+                Matrix gl_matrix;
+                Transformation::Multiply(gl_matrix, _projection, transformation);
+                Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_NORMAL], transformation);
+                Transformation::Transpose(gl_matrix, gl_matrix);
 
-                    Matrix gl_matrix;
-                    Transformation::Multiply(gl_matrix, _projection, transformation);
-                    Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_NORMAL], transformation);
-                    Transformation::Transpose(gl_matrix, gl_matrix);
-
-                    const GLfloat x1 = region.x / glesTexture->Width();
-                    const GLfloat y1 = region.y / glesTexture->Height();
-                    const GLfloat x2 = (region.x + region.width) / glesTexture->Width();
-                    const GLfloat y2 = (region.y + region.height) / glesTexture->Height();
-
-                    const PointCoordinates coordinates = {
-                        x2, y1, // top right
-                        x1, y1, // top left
-                        x2, y2, // bottom right
-                        x1, y2, // bottom left
-                    };
-
-                    result = (glesTexture->Draw(alpha, gl_matrix, coordinates) == true) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
-                }
-
-                return result;
+                return ((texture->Draw(alpha, gl_matrix, region) == true) ? Core::ERROR_NONE : Core::ERROR_GENERAL);
             }
 
             uint32_t Quadrangle(const Color color, const Matrix transformation) override
@@ -1072,11 +1021,6 @@ namespace Compositor {
             {
                 return _egl.Formats();
             }
-            Core::ProxyType<Exchange::ICompositionBuffer> Bound() const override
-            {
-                return (Core::ProxyType<Exchange::ICompositionBuffer>());
-            }
-
             const Matrix& Projection() const
             {
                 return _projection;
@@ -1116,31 +1060,10 @@ namespace Compositor {
 
                 return glGetError() == GL_NO_ERROR;
             }
-
-            void Add(IRenderer::ITexture* texture)
-            {
-                auto index = std::find(_textures.begin(), _textures.end(), texture);
-
-                ASSERT(index == _textures.end());
-
-                _textures.emplace_back(texture);
-            }
-
-            void Remove(IRenderer::ITexture* texture)
-            {
-                auto index = std::find(_textures.begin(), _textures.end(), texture);
-
-                if (index != _textures.end()) {
-                    _textures.erase(index);
-                }
-            }
-
             ProgramRegistry& Programs()
             {
                 return _programs;
             }
-
-            using TextureRegister = std::list<IRenderer::ITexture*>;
 
         private:
             static API::GL _gles;
@@ -1153,7 +1076,6 @@ namespace Compositor {
             Matrix _projection;
             ProgramRegistry _programs;
             mutable bool _rendering;
-            TextureRegister _textures;
         }; // class GLES
 
         API::GL GLES::_gles;
@@ -1162,13 +1084,11 @@ namespace Compositor {
 
     } // namespace Renderer
 
-    Core::ProxyType<IRenderer> IRenderer::Instance(Core::instance_id identifier)
+    Core::ProxyType<IRenderer> IRenderer::Instance(const int identifier, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
     {
-        ASSERT(int(identifier) >= 0); // this should be a valid file descriptor.
+        ASSERT(identifier >= 0); // this should be a valid file descriptor.
 
-        static Core::ProxyMapType<Core::instance_id, IRenderer> glRenderers;
-
-        return glRenderers.Instance<Renderer::GLES>(identifier, static_cast<int>(identifier));
+        return (Core::ProxyType<IRenderer>(Core::ProxyType<Renderer::GLES>::Create(identifier, buffer)));
     }
 
 } // namespace Compositor
