@@ -30,8 +30,6 @@ namespace Compositor {
         struct ITexture {
             virtual ~ITexture() = default;
 
-            virtual bool IsValid() const = 0;
-
             virtual uint32_t Width() const = 0;
             virtual uint32_t Height() const = 0;
 
@@ -46,19 +44,6 @@ namespace Compositor {
          * @return Core::ProxyType<IRenderer>
          */
         static Core::ProxyType<IRenderer> Instance(const int identifier, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer);
-
-        /**
-         * @brief Binds a frame buffer to the renderer, all render related actions will be done using this buffer.
-         *
-         * @param buffer A preallocated buffer to be used or ```nullptr``` to clear.
-         * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
-         */
-        virtual uint32_t Bind() = 0;
-
-        /**
-         * @brief Clears the active frame buffer from the renderer.
-         */
-        virtual void Unbind() = 0;
 
         /**
          * @brief Set a viewport.

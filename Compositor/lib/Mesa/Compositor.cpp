@@ -965,7 +965,6 @@ namespace Plugin {
 
             ASSERT((_canvasBuffer.IsValid() == true) && (_renderer.IsValid() == true) && (_canvas.IsValid() == true));
 
-            _canvas->Bind();
             _canvas->ViewPort(_canvasBuffer->Width(), _canvasBuffer->Height());
             _canvas->Clear(_background);
 
@@ -996,8 +995,6 @@ namespace Plugin {
                 }
             });
 
-            _canvas->Unbind();
-
             RenderOutputs();
 
             return Core::Time::Now().Ticks();
@@ -1011,7 +1008,6 @@ namespace Plugin {
 
             ASSERT(buffer.IsValid() == true);
 
-            _renderer->Bind();
             _renderer->ViewPort(buffer->Width(), buffer->Height()); // set viewport for render
 
             const Exchange::IComposition::Rectangle renderBox = { 0, 0, buffer->Width(), buffer->Height() };
@@ -1038,8 +1034,6 @@ namespace Plugin {
             });
 
             _output->Commit(); // Blit to screen
-
-            _renderer->Unbind();
 
             return Core::Time::Now().Ticks();
         }

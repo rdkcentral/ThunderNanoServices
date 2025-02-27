@@ -196,8 +196,6 @@ private:
         const uint16_t renderWidth(512);
         const uint16_t renderHeight(512);
 
-        _renderer->Bind();
-
         _renderer->ViewPort(width, height);
         _renderer->Clear(background);
 
@@ -212,8 +210,6 @@ private:
         _connector->Commit();
 
         WaitForVSync(100);
-
-        _renderer->Unbind();
 
         rotation += _period.count() * (2. * M_PI) / (_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 

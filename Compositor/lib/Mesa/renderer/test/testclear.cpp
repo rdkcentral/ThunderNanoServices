@@ -203,14 +203,10 @@ private:
     {
         const auto start = std::chrono::high_resolution_clock::now();
 
-        _renderer->Bind();
-
         _renderer->ViewPort(_connector->Width(), _connector->Height());
         _renderer->Clear(_color);
 
         _connector->Commit();
-
-        _renderer->Unbind();
 
         _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / _period.count()));
 

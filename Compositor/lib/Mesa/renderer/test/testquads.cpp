@@ -181,8 +181,6 @@ private:
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        _renderer->Bind();
-
         _renderer->ViewPort(width, height);
         _renderer->Clear(background);
 
@@ -209,8 +207,6 @@ private:
 
         WaitForVSync(100);
         
-        _renderer->Unbind();
-
         rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);

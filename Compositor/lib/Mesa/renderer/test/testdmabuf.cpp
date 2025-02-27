@@ -101,19 +101,25 @@ public:
             { 0, 0, 1080, 1920 },
             _format, &_sink);
 
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
         ASSERT(_connector.IsValid());
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
         TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         ASSERT(_renderFd >= 0);
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         _renderer = Compositor::IRenderer::Instance(_renderFd, Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
         ASSERT(_renderer.IsValid());
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
         _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
-        ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
 
         //NewFrame();
@@ -162,7 +168,9 @@ private:
     {
         fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
         _running = true;
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
         _renderer->ViewPort(_connector->Width(), _connector->Height());
+        fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         while (_running) {
             NewFrame();
@@ -189,9 +197,8 @@ private:
         float x = float(renderWidth / 2.0f) * cosX;
         float y = float(renderHeight / 2.0f) * sinY;
 
-        _renderer->Bind();
-
         _renderer->Clear(background);
+        // fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         const Exchange::IComposition::Rectangle renderBox = { static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), renderWidth, renderHeight };
@@ -201,8 +208,6 @@ private:
 
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         _renderer->Render(_texture, textureBox, matrix, alpha);
-
-        _renderer->Unbind();
 
         uint32_t commit;
 
