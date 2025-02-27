@@ -75,32 +75,32 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *DIALServer*) |
-| classname | string | Class name: *DIALServer* |
-| locator | string | Library name: *libThunderDIALServer.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | Server configuration |
-| configuration.name | string | User-friendly name of the device |
-| configuration.model | string | Name of the device model |
-| configuration.description | string | Short description of the device |
-| configuration?.modelnumber | string | <sup>*(optional)*</sup> Device model number |
-| configuration?.modelurl | string | <sup>*(optional)*</sup> URL to device model website |
-| configuration.manufacturer | string | Name of the device manufacturer |
-| configuration?.manufacturerurl | string | <sup>*(optional)*</sup> URL to manufacturer website |
-| configuration?.serialnumber | string | <sup>*(optional)*</sup> Device serial number |
-| configuration?.upc | string | <sup>*(optional)*</sup> Device UPC barcode number (Universal Product Code) |
-| configuration?.interface | string | <sup>*(optional)*</sup> Server interface IP and port (default: SSDP multicast address and port) |
-| configuration?.webserver | string | <sup>*(optional)*</sup> Callsign of a service implementing the web server functionality (default: *WebServer*) |
-| configuration?.switchboard | string | <sup>*(optional)*</sup> Callsign of a service implementing the switchboard functionality (default: *SwitchBoard*). If defined and the service is available then start/stop requests will be relayed to the *SwitchBoard* rather than handled by the *Controller* directly. This is used only in non-passive mode |
-| configuration.apps | array | List of supported applications |
-| configuration.apps[#] | object | (an application definition) |
-| configuration.apps[#].name | string | Name of the application |
-| configuration.apps[#]?.handler | string | <sup>*(optional)*</sup> Name of the application handler. If not defined then *name* will be used instead |
-| configuration.apps[#]?.callsign | string | <sup>*(optional)*</sup> Callsign of the service implementing the application. If defined and the service is available then the *Controller* will be used to unconditionally start/stop the application by activating/deactivating its service directly (active mode), or by the *SwitchBoard* if selected and available (switchboard mode). If not defined then these operations will be handed over to JavaScript, by sending a notification and using *handler* (or *name*) property to identify the application (passive mode) |
-| configuration.apps[#]?.url | string | <sup>*(optional)*</sup> A URL related to the application |
-| configuration.apps[#]?.allowstop | boolean | <sup>*(optional)*</sup> Denotes if the application can be stopped *(true)* or not *(false, default)* |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *DIALServer*) |
+| classname | string | mandatory | Class name: *DIALServer* |
+| locator | string | mandatory | Library name: *libThunderDIALServer.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | mandatory | Server configuration |
+| configuration.name | string | mandatory | User-friendly name of the device |
+| configuration.model | string | mandatory | Name of the device model |
+| configuration.description | string | mandatory | Short description of the device |
+| configuration?.modelnumber | string | optional | Device model number |
+| configuration?.modelurl | string | optional | URL to device model website |
+| configuration.manufacturer | string | mandatory | Name of the device manufacturer |
+| configuration?.manufacturerurl | string | optional | URL to manufacturer website |
+| configuration?.serialnumber | string | optional | Device serial number |
+| configuration?.upc | string | optional | Device UPC barcode number (Universal Product Code) |
+| configuration?.interface | string | optional | Server interface IP and port (default: SSDP multicast address and port) |
+| configuration?.webserver | string | optional | Callsign of a service implementing the web server functionality (default: *WebServer*) |
+| configuration?.switchboard | string | optional | Callsign of a service implementing the switchboard functionality (default: *SwitchBoard*). If defined and the service is available then start/stop requests will be relayed to the *SwitchBoard* rather than handled by the *Controller* directly. This is used only in non-passive mode |
+| configuration.apps | array | mandatory | List of supported applications |
+| configuration.apps[#] | object | mandatory | (an application definition) |
+| configuration.apps[#].name | string | mandatory | Name of the application |
+| configuration.apps[#]?.handler | string | optional | Name of the application handler. If not defined then *name* will be used instead |
+| configuration.apps[#]?.callsign | string | optional | Callsign of the service implementing the application. If defined and the service is available then the *Controller* will be used to unconditionally start/stop the application by activating/deactivating its service directly (active mode), or by the *SwitchBoard* if selected and available (switchboard mode). If not defined then these operations will be handed over to JavaScript, by sending a notification and using *handler* (or *name*) property to identify the application (passive mode) |
+| configuration.apps[#]?.url | string | optional | A URL related to the application |
+| configuration.apps[#]?.allowstop | boolean | optional | Denotes if the application can be stopped *(true)* or not *(false, default)* |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -116,9 +116,9 @@ The following properties are provided by the DIALServer plugin:
 
 DIALServer interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [state](#property.state) | Current application running state |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [state](#property.state) | read/write | Current application running state |
 
 <a name="property.state"></a>
 ## *state [<sup>property</sup>](#head.Properties)*
@@ -129,26 +129,32 @@ Provides access to the current application running state.
 
 This property can be used to update the running status of an un-managed application (i.e. running in *passive mode*). For DIALServer-managed applications this property shall be considered *read-only*.
 
+> The *application name* parameter shall be passed as the index to the property, e.g. ``DIALServer.1.state@<application-name>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| application-name | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | Current application running state (must be one of the following: *Stopped*, *Started*, *Hidden*) |
-
-> The *application name* argument shall be passed as the index to the property, e.g. *DIALServer.1.state@YouTube*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Current application running state (must be one of the following: *Hidden, Started, Stopped*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string |  (must be one of the following: *Stopped*, *Started*, *Hidden*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Current application running state (must be one of the following: *Hidden, Started, Stopped*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Specified application does not exist |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Specified application is running in *active mode* |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Specified application does not exist |
+| ```ERROR_ILLEGAL_STATE``` | Specified application is running in *active mode* |
 
 ### Example
 
@@ -202,16 +208,16 @@ The following events are provided by the DIALServer plugin:
 
 DIALServer interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [start](#event.start) | Signals that application launch (or show if previously hidden) was requested over DIAL |
-| [stop](#event.stop) | Signals that application stop was requested over DIAL |
-| [hide](#event.hide) | Signals that application hide was requested over DIAL |
-| <sup>deprecated</sup> [show](#event.show) | Signals that application show was requested over DIAL |
-| <sup>deprecated</sup> [change](#event.change) | Signals that application URL change was requested over DIAL |
+| [start](#notification.start) | Signals that application launch (or show if previously hidden) was requested over DIAL |
+| [stop](#notification.stop) | Signals that application stop was requested over DIAL |
+| [hide](#notification.hide) | Signals that application hide was requested over DIAL |
+| [show](#notification.show) <sup>deprecated</sup> | Signals that application show was requested over DIAL |
+| [change](#notification.change) <sup>deprecated</sup> | Signals that application URL change was requested over DIAL |
 
-<a name="event.start"></a>
-## *start [<sup>event</sup>](#head.Notifications)*
+<a name="notification.start"></a>
+## *start [<sup>notification</sup>](#head.Notifications)*
 
 Signals that application launch (or show if previously hidden) was requested over DIAL.
 
@@ -219,21 +225,37 @@ Signals that application launch (or show if previously hidden) was requested ove
 
 This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.application | string | Application name |
-| params?.parameters | string | <sup>*(optional)*</sup> Additional application-specific parameters |
-| params?.payload | string | <sup>*(optional)*</sup> Additional application-specific payload |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.application | string | mandatory | Application name |
+| params?.parameters | string | optional | Additional application-specific parameters |
+| params?.payload | string | optional | Additional application-specific payload |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.start",
+  "id": 42,
+  "method": "DIALServer.1.register",
+  "params": {
+    "event": "start",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.start",
   "params": {
     "application": "YouTube",
     "parameters": "watch?v=zpp045FBbQY",
@@ -242,8 +264,8 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 }
 ```
 
-<a name="event.stop"></a>
-## *stop [<sup>event</sup>](#head.Notifications)*
+<a name="notification.stop"></a>
+## *stop [<sup>notification</sup>](#head.Notifications)*
 
 Signals that application stop was requested over DIAL.
 
@@ -251,20 +273,36 @@ Signals that application stop was requested over DIAL.
 
 This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.application | string | Application name |
-| params?.parameters | string | <sup>*(optional)*</sup> Additional application-specific parameters |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.application | string | mandatory | Application name |
+| params?.parameters | string | optional | Additional application-specific parameters |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.stop",
+  "id": 42,
+  "method": "DIALServer.1.register",
+  "params": {
+    "event": "stop",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.stop",
   "params": {
     "application": "YouTube",
     "parameters": "watch?v=zpp045FBbQY"
@@ -272,8 +310,8 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 }
 ```
 
-<a name="event.hide"></a>
-## *hide [<sup>event</sup>](#head.Notifications)*
+<a name="notification.hide"></a>
+## *hide [<sup>notification</sup>](#head.Notifications)*
 
 Signals that application hide was requested over DIAL.
 
@@ -281,79 +319,127 @@ Signals that application hide was requested over DIAL.
 
 This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.application | string | Application name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.application | string | mandatory | Application name |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.hide",
+  "id": 42,
+  "method": "DIALServer.1.register",
+  "params": {
+    "event": "hide",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.hide",
   "params": {
     "application": "YouTube"
   }
 }
 ```
 
-<a name="event.show"></a>
-## *show [<sup>event</sup>](#head.Notifications)*
+<a name="notification.show"></a>
+## *show [<sup>notification</sup>](#head.Notifications)*
 
 Signals that application show was requested over DIAL.
 
-> This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
+> ``show`` is an alternative name for this notification. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
 ### Description
 
 This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.application | string | Application name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.application | string | mandatory | Application name |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.show",
+  "id": 42,
+  "method": "DIALServer.1.register",
+  "params": {
+    "event": "show",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.show",
   "params": {
     "application": "YouTube"
   }
 }
 ```
 
-<a name="event.change"></a>
-## *change [<sup>event</sup>](#head.Notifications)*
+<a name="notification.change"></a>
+## *change [<sup>notification</sup>](#head.Notifications)*
 
 Signals that application URL change was requested over DIAL.
 
-> This API is **deprecated** and may be removed in the future. It is no longer recommended for use in new implementations.
+> ``change`` is an alternative name for this notification. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
 ### Description
 
 This event is sent out only for un-managed applications (i.e. in *passive mode*).
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.application | string | Application name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.application | string | mandatory | Application name |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.change",
+  "id": 42,
+  "method": "DIALServer.1.register",
+  "params": {
+    "event": "change",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.change",
   "params": {
     "application": "YouTube"
   }

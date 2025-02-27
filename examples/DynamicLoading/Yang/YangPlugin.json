@@ -33,6 +33,6 @@
     }
   },
   "interface": {
-    "$ref": "{cppinterfacedir}/IYang.h"
+    "$ref": "interfaces/IYang.h"
   }
 }

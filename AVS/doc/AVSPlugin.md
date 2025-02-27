@@ -70,20 +70,20 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *AVS*) |
-| classname | string | Class name: *AVS* |
-| locator | string | Library name: *libThunderAVS.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration.alexaclientconfig | string | The path to the AlexaClientSDKConfig.json (e.g /usr/share/Thunder/AVS/AlexaClientSDKConfig.json) |
-| configuration?.smartscreenconfig | string | <sup>*(optional)*</sup> The path to the SmartScreenSDKConfig.json (e.g /usr/share/Thunder/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled |
-| configuration?.kwdmodelspath | string | <sup>*(optional)*</sup> Path to the Keyword Detection models (e.g /usr/share/Thunder/AVS/models). The path mus contain the localeToModels.json file |
-| configuration?.loglevel | string | <sup>*(optional)*</sup> Capitalized log level of the AVS components. Possible values: NONE, CRITICAL, ERROR, WARN, INFO. Debug log levels start from DEBUG0 up to DEBUG0 |
-| configuration.audiosource | string | The callsign of the plugin that provides the voice audio input or PORTAUDIO, when the portaudio library should be used. (e.g BluetoothRemoteControll, PORTAUDIO) |
-| configuration?.enablesmartscreen | boolean | <sup>*(optional)*</sup> Enable the SmartScreen support in the runtime. The SmartScreen functionality must be compiled in |
-| configuration?.enablekwd | boolean | <sup>*(optional)*</sup> Enable the Keyword Detection engine in the runtime. The KWD functionality must be compiled in |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *AVS*) |
+| classname | string | mandatory | Class name: *AVS* |
+| locator | string | mandatory | Library name: *libThunderAVS.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration.alexaclientconfig | string | mandatory | The path to the AlexaClientSDKConfig.json (e.g /usr/share/Thunder/AVS/AlexaClientSDKConfig.json) |
+| configuration?.smartscreenconfig | string | optional | The path to the SmartScreenSDKConfig.json (e.g /usr/share/Thunder/AVS/SmartScreenSDKConfig.json). This config will be used only when SmartScreen functionality is enabled |
+| configuration?.kwdmodelspath | string | optional | Path to the Keyword Detection models (e.g /usr/share/Thunder/AVS/models). The path mus contain the localeToModels.json file |
+| configuration?.loglevel | string | optional | Capitalized log level of the AVS components. Possible values: NONE, CRITICAL, ERROR, WARN, INFO. Debug log levels start from DEBUG0 up to DEBUG0 |
+| configuration.audiosource | string | mandatory | The callsign of the plugin that provides the voice audio input or PORTAUDIO, when the portaudio library should be used. (e.g BluetoothRemoteControll, PORTAUDIO) |
+| configuration?.enablesmartscreen | boolean | optional | Enable the SmartScreen support in the runtime. The SmartScreen functionality must be compiled in |
+| configuration?.enablekwd | boolean | optional | Enable the Keyword Detection engine in the runtime. The KWD functionality must be compiled in |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -91,6 +91,7 @@ The table below lists configuration options of the plugin.
 This plugin implements the following interfaces:
 
 - IAVSController ([IAVSClient.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IAVSClient.h)) (version 1.0.0) (uncompliant-collapsed format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Methods"></a>
 # Methods
@@ -111,21 +112,21 @@ Mutes the audio output of AVS.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| muted | boolean |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | boolean | mandatory | *...* |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_GENERAL``` | when there is a fatal error or authorisation is not possible |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | when there is a fatal error or authorisation is not possible |
 
 ### Example
 
@@ -157,21 +158,21 @@ Starts or stops the voice recording, skipping keyword detection.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| started | boolean |  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | boolean | mandatory | *...* |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-|  | ```ERROR_GENERAL``` | when there is a fatal error or authorisation is not possible |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | when there is a fatal error or authorisation is not possible |
 
 ### Example
 
@@ -205,27 +206,43 @@ The following events are provided by the AVS plugin:
 
 AVSController interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [dialoguestatechange](#event.dialoguestatechange) | notifies about dialogue state changes |
+| [dialoguestatechange](#notification.dialoguestatechange) | Notifies about dialogue state changes |
 
-<a name="event.dialoguestatechange"></a>
-## *dialoguestatechange [<sup>event</sup>](#head.Notifications)*
+<a name="notification.dialoguestatechange"></a>
+## *dialoguestatechange [<sup>notification</sup>](#head.Notifications)*
 
-notifies about dialogue state changes.
+Notifies about dialogue state changes.
 
-### Parameters
+### Notification Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| state | string | The new state (must be one of the following: *Idle*, *Listening*, *Expecting*, *Thinking*, *Speaking*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | string | mandatory | The new state (must be one of the following: *Expecting, Idle, Listening, Speaking, Thinking*) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.dialoguestatechange",
+  "id": 42,
+  "method": "AVS.1.register",
+  "params": {
+    "event": "dialoguestatechange",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.dialoguestatechange",
   "params": "SPEAKING"
 }
 ```

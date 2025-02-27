@@ -67,15 +67,15 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *ResourceMonitor*) |
-| classname | string | Class name: *ResourceMonitor* |
-| locator | string | Library name: *libThunderResourceMonitor.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object | <sup>*(optional)*</sup>  |
-| configuration?.path | string | <sup>*(optional)*</sup> Path of resource |
-| configuration?.interval | number | <sup>*(optional)*</sup> Duration between measurements (default: 5) |
-| configuration?.mode | string | <sup>*(optional)*</sup> Mode (options: "single", "multiple", "callsign", "classname") |
-| configuration?.parent-name | string | <sup>*(optional)*</sup> Name of parent process |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *ResourceMonitor*) |
+| classname | string | mandatory | Class name: *ResourceMonitor* |
+| locator | string | mandatory | Library name: *libThunderResourceMonitor.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | optional | *...* |
+| configuration?.path | string | optional | Path of resource |
+| configuration?.interval | integer | optional | Duration between measurements (default: 5) |
+| configuration?.mode | string | optional | Mode (options: "single", "multiple", "callsign", "classname") |
+| configuration?.parent-name | string | optional | Name of parent process |
 

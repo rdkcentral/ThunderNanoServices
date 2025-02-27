@@ -70,12 +70,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *TestController*) |
-| classname | string | Class name: *TestController* |
-| locator | string | Library name: *libThunderTestController.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *TestController*) |
+| classname | string | mandatory | Class name: *TestController* |
+| locator | string | mandatory | Library name: *libThunderTestController.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -102,28 +102,28 @@ Runs a single test or multiple tests.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.category | string | <sup>*(optional)*</sup> Test category name, if omitted: all tests are executed |
-| params?.test | string | <sup>*(optional)*</sup> Test name, if omitted: all tests of category are executed |
-| params?.args | string | <sup>*(optional)*</sup> The test arguments in JSON format |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params?.category | string | optional | Test category name, if omitted: all tests are executed |
+| params?.test | string | optional | Test name, if omitted: all tests of category are executed |
+| params?.args | string | optional | The test arguments in JSON format |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of test results |
-| result[#] | object |  |
-| result[#].test | string | Test name |
-| result[#].status | string | Test status |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of test results |
+| result[#] | object | mandatory | *...* |
+| result[#].test | string | mandatory | Test name |
+| result[#].status | string | mandatory | Test status |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category/test |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad json param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown category/test |
+| ```ERROR_BAD_REQUEST``` | Bad json param data format |
 
 ### Example
 
@@ -164,11 +164,11 @@ The following properties are provided by the TestController plugin:
 
 TestController interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [categories](#property.categories) <sup>RO</sup> | List of test categories |
-| [tests](#property.tests) <sup>RO</sup> | List of tests for a category |
-| [description](#property.description) <sup>RO</sup> | Description of a test |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [categories](#property.categories) | read-only | List of test categories |
+| [tests](#property.tests) | read-only | List of tests for a category |
+| [description](#property.description) | read-only | Description of a test |
 
 <a name="property.categories"></a>
 ## *categories [<sup>property</sup>](#head.Properties)*
@@ -181,10 +181,10 @@ Provides access to the list of test categories.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of test categories |
-| result[#] | string | Test category name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of test categories |
+| result[#] | string | mandatory | Test category name |
 
 ### Example
 
@@ -217,23 +217,29 @@ Provides access to the list of tests for a category.
 
 > This property is **read-only**.
 
-### Value
+> The *category* parameter shall be passed as the index to the property, e.g. ``TestController.1.tests@<category>``.
 
-> The *category* argument shall be passed as the index to the property, e.g. *TestController.1.tests@JSONRPC*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| category | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of tests for a category |
-| result[#] | string | Test name |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of tests for a category |
+| result[#] | string | mandatory | Test name |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown category |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
@@ -266,23 +272,29 @@ Provides access to the description of a test.
 
 > This property is **read-only**.
 
-### Value
+> The *test* parameter shall be passed as the index to the property, e.g. ``TestController.1.description@<test>``.
 
-> The *test* argument shall be passed as the index to the property, e.g. *TestController.1.description@JSONRPC*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| test | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Description of a test |
-| result.description | string | Test description |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Description of a test |
+| result.description | string | mandatory | Test description |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown category/test |
-| 30 | ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown category/test |
+| ```ERROR_BAD_REQUEST``` | Bad JSON param data format |
 
 ### Example
 
