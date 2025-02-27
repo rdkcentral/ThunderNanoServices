@@ -339,11 +339,6 @@ namespace Compositor {
             return ("");
         }
 
-        /* static */ WaylandOutput::Backend& WaylandOutput::Backend::Instance() {
-            static WaylandOutput::Backend singleton;
-            return (singleton);
-        }
-
         WaylandOutput::Backend::Backend()
             : _drmRenderFd(InvalidFileDescriptor)
             , _activationToken()
@@ -849,6 +844,8 @@ namespace Compositor {
 
             return result;
         }
+
+        /* static */ Core::UniqueType<WaylandOutput::Backend> WaylandOutput::Backend::_singleton;
 
     } // namespace Backend
 

@@ -221,6 +221,8 @@ namespace Compositor {
             if (_surface != nullptr) {
                 wl_surface_destroy(_surface);
             }
+
+            _backend.Drop();
         }
 
         Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)

@@ -41,6 +41,7 @@
 #include "generated/xdg-shell-client-protocol.h"
 
 namespace Thunder {
+
 namespace Compositor {
     namespace Backend {
         class WaylandOutput : public IOutput {
@@ -55,7 +56,9 @@ namespace Compositor {
 
             private:
                 using FormatRegister = std::unordered_map<uint32_t, std::vector<uint64_t> >;
+                friend class Core::UniqueType<Backend>;
                 Backend();
+                virtual ~Backend();
 
             public:
                 Backend(Backend&&) = delete;
@@ -63,8 +66,13 @@ namespace Compositor {
                 Backend& operator=(Backend&&) = delete;
                 Backend& operator=(const Backend&) = delete;
 
-                static Backend& Instance();
-                virtual ~Backend();
+                static Backend& Instance() {
+                    return (_singleton.Instance());
+                }
+                void Drop() {
+                    _singleton.Drop();
+                }
+
 
             public:
                 wl_surface* Surface() const;
@@ -124,6 +132,8 @@ namespace Compositor {
                 FormatRegister _dmaFormats;
 
                 Input _input;
+
+                static Core::UniqueType<Backend> _singleton;
 
             }; // Backend
 

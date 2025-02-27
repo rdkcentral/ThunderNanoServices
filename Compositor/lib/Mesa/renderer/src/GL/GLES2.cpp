@@ -521,6 +521,9 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                     if (_image != EGL_NO_IMAGE) {
                         _parent.Egl().DestroyImage(_image);
                     }
+                    if (_program != nullptr) {
+                        delete _program;
+                    }
                 }
 
             public:
@@ -902,7 +905,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
             }
             const Matrix& Projection() const
             {
-                return _projection;
+                return (_projection);
             }
 
         private:
