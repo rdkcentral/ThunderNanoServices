@@ -105,7 +105,10 @@ The table below lists configuration options of the plugin.
 This plugin implements the following interfaces:
 
 - IBluetoothRemoteControl ([IBluetoothRemoteControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IBluetoothRemoteControl.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
+
 - IAudioStream ([IAudioStream.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IAudioStream.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Methods"></a>
 # Methods
@@ -809,8 +812,8 @@ AudioStream interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [audioframe](#notification.audioframe) | Provides audio data |
 | [audiotransmission](#notification.audiotransmission) | Signals state of the stream |
+| [audioframe](#notification.audioframe) | Provides audio data |
 
 <a name="notification.batterylevelchange"></a>
 ## *batterylevelchange [<sup>notification</sup>](#head.Notifications)*
@@ -819,7 +822,7 @@ Signals battery level change.
 
 > If applicable, this notification may be sent out during registration, reflecting the current status.
 
-### Parameters
+### Notification Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
@@ -837,65 +840,19 @@ Signals battery level change.
   "method": "BluetoothRemoteControl.1.register",
   "params": {
     "event": "batterylevelchange",
-    "id": "client"
+    "id": "myid"
   }
 }
 ```
 
-#### Message
+#### Notification
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.batterylevelchange",
+  "method": "myid.batterylevelchange",
   "params": {
     "level": 75
-  }
-}
-```
-
-<a name="notification.audioframe"></a>
-## *audioframe [<sup>notification</sup>](#head.Notifications)*
-
-Provides audio data.
-
-### Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params?.seq | integer | optional | Frame number in current transmission |
-| params?.timestamp | integer | optional | Timestamp of the frame |
-| params.length | integer | mandatory | Size of the raw data frame in bytes |
-| params.data | string (base64) | mandatory | Raw audio data, the format of the data is specified in the most recent *audiotransmission* notification |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothRemoteControl.1.register",
-  "params": {
-    "event": "audioframe",
-    "id": "client"
-  }
-}
-```
-
-#### Message
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "client.audioframe",
-  "params": {
-    "seq": 1,
-    "timestamp": 0,
-    "length": 400,
-    "data": "..."
   }
 }
 ```
@@ -907,7 +864,7 @@ Signals state of the stream.
 
 > If applicable, this notification may be sent out during registration, reflecting the current status.
 
-### Parameters
+### Notification Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
@@ -932,17 +889,17 @@ Signals state of the stream.
   "method": "BluetoothRemoteControl.1.register",
   "params": {
     "event": "audiotransmission",
-    "id": "client"
+    "id": "myid"
   }
 }
 ```
 
-#### Message
+#### Notification
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.audiotransmission",
+  "method": "myid.audiotransmission",
   "params": {
     "state": "Unavailable",
     "profile": {
@@ -953,6 +910,52 @@ Signals state of the stream.
       "samplerate": 16000,
       "bitrate": 64000
     }
+  }
+}
+```
+
+<a name="notification.audioframe"></a>
+## *audioframe [<sup>notification</sup>](#head.Notifications)*
+
+Provides audio data.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params?.seq | integer | optional | Frame number in current transmission |
+| params?.timestamp | integer | optional | Timestamp of the frame |
+| params.length | integer | mandatory | Size of the raw data frame in bytes |
+| params.data | string (base64) | mandatory | Raw audio data, the format of the data is specified in the most recent *audiotransmission* notification |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.register",
+  "params": {
+    "event": "audioframe",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.audioframe",
+  "params": {
+    "seq": 1,
+    "timestamp": 0,
+    "length": 400,
+    "data": "..."
   }
 }
 ```
