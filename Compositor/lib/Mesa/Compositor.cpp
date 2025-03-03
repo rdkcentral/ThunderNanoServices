@@ -271,8 +271,8 @@ namespace Plugin {
                 }
 
             private:
-                mutable uint32_t _refCount;
                 Client& _client;
+                mutable uint32_t _refCount;
             };
 
         public:

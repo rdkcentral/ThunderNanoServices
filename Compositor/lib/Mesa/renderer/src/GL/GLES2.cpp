@@ -355,10 +355,18 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
             };
             class ColorProgram : public Program {
             public:
-                ColorProgram()
+                ColorProgram(const Compositor::Color& color)
                     : Program(Variant::SOLID)
-                    , _color(glGetUniformLocation(Id(), "color"))
-                    , _colorValue ({ 0.0, 0.0, 0.0, 0.0 }) {
+                    , _color(glGetUniformLocation(Id(), "color")) {
+
+                    glUniform4f(_color, color[0], color[1], color[2], color[3]);
+
+                    if (color[3] >= 1.0) {
+                        glDisable(GL_BLEND);
+                    } else {
+                        glEnable(GL_BLEND);
+                    }
+ 
                     TRACE(Trace::Information, ("Created Color Program: id=%d, projection=%d, position=%d color=%d", Id(), Projection(), Position(), Color()));
                 }
                 ~ColorProgram() override = default;
@@ -367,23 +375,12 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 GLint Color() const {
                     return _color;
                 }
-                void Color(const Compositor::Color& color) {
-                    _colorValue = color;
-                }
-                uint32_t Draw(const Compositor::Color& color, const Matrix& matrix) const {
+                uint32_t Draw(const Matrix& matrix) const {
                     PushDebug();
-
-                    if (_colorValue[3] >= 1.0) {
-                        glDisable(GL_BLEND);
-                    } else {
-                        glEnable(GL_BLEND);
-                    }
 
                     glUseProgram(Id());
 
                     glUniformMatrix3fv(Projection(), 1, GL_FALSE, &matrix[0]);
-
-                    glUniform4f(_color, _colorValue[0], _colorValue[1], _colorValue[2], _colorValue[3]);
 
                     glVertexAttribPointer(Position(), 2, GL_FLOAT, GL_FALSE, 0, &Vertices[0]);
 
@@ -398,12 +395,11 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                     return (glGetError() == GL_NO_ERROR ? Core::ERROR_NONE : Core::ERROR_GENERAL);
                 }
                 uint32_t Draw(const GLuint, GLenum, const float&, const Matrix& matrix, const PointCoordinates&) const override {
-                    return (Draw(_colorValue, matrix));
+                    return (Draw(matrix));
                 }
 
             private:
                 GLint _color;
-                Compositor::Color _colorValue;
             };
             template <const Program::Variant VARIANT, const uint8_t TEXTURE_COUNT>
             class TextureProgramType : public Program {
@@ -882,6 +878,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
             uint32_t Quadrangle(const Color color, const Matrix transformation) override
             {
+                _egl.SetCurrent();
+
                 ASSERT(_egl.IsCurrent() == true);
 
                 Matrix gl_matrix;
@@ -889,9 +887,13 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_FLIPPED_180], transformation);
                 Transformation::Transpose(gl_matrix, gl_matrix);
 
-                ColorProgram program;
+                ColorProgram program(color);
 
-                return (program.Draw(color, gl_matrix) == true) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+                uint32_t result = (program.Draw(gl_matrix) ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+
+                _egl.ResetCurrent();
+
+                return (result);
             }
 
             const std::vector<PixelFormat>& RenderFormats() const override
