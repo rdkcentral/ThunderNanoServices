@@ -36,6 +36,7 @@ endif()
 if(TEST_AUTOMATION_TOOLS)
     add_subdirectory(TestAutomationComRpc)
     add_subdirectory(TestAutomationMemory)
+    add_subdirectory(TestAutomationUtils)
 endif()
 
 if(PLUGIN_TESTCONTROLLER)
