@@ -114,7 +114,7 @@ public:
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        _renderer = Compositor::IRenderer::Instance(_renderFd, Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
 
         ASSERT(_renderer.IsValid());
 
@@ -203,15 +203,10 @@ private:
     {
         const auto start = std::chrono::high_resolution_clock::now();
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
-
-        _renderer->Begin(_connector->Width(), _connector->Height());
+        _renderer->ViewPort(_connector->Width(), _connector->Height());
         _renderer->Clear(_color);
-        _renderer->End();
 
         _connector->Commit();
-
-        _renderer->Unbind();
 
         _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / _period.count()));
 
