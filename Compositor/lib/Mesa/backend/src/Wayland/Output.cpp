@@ -138,10 +138,8 @@ namespace Compositor {
             .discarded = onPresentationFeedbackDiscarded,
         };
 
-        WaylandOutput::WaylandOutput(
-            Wayland::IBackend& backend, const string& name,
-            const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
-            : _backend(backend)
+        WaylandOutput::WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
+            : _backend(WaylandOutput::BackendImpl::Instance())
             , _surface(nullptr)
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
@@ -223,6 +221,8 @@ namespace Compositor {
             if (_surface != nullptr) {
                 wl_surface_destroy(_surface);
             }
+
+            _backend.Drop();
         }
 
         Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
@@ -293,10 +293,9 @@ namespace Compositor {
             return (Core::ERROR_NONE);
         }
 
-        const string& WaylandOutput::Node() const /* override */
+        IOutput::IBackend* WaylandOutput::Backend() /* override */
         {
-            static string result("TODO");
-            return result;
+            return (&_backend);
         }
 
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)

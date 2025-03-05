@@ -110,7 +110,7 @@ public:
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        _renderer = Compositor::IRenderer::Instance(_renderFd, Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
 
         ASSERT(_renderer.IsValid());
 
@@ -181,9 +181,7 @@ private:
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
-
-        _renderer->Begin(width, height);
+        _renderer->ViewPort(width, height);
         _renderer->Clear(background);
 
         constexpr int16_t squareSize(300);
@@ -205,14 +203,10 @@ private:
             }
         }
 
-        _renderer->End();
-
         _connector->Commit();
 
         WaitForVSync(100);
         
-        _renderer->Unbind();
-
         rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
