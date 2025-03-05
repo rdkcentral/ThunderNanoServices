@@ -229,7 +229,7 @@ namespace Compositor {
                     Connectors::iterator entry = std::find(_connectors.begin(), _connectors.end(), &connector);
                     ASSERT(entry == _connectors.end());
                     if (entry == _connectors.end()) {
-                        _connectors.erase(entry);
+                        _connectors.emplace_back(&connector);
                     }
                     _adminLock.Unlock();
                 }
