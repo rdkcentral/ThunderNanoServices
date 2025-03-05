@@ -1,0 +1,16 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "TestAutomationUtils Plugin",
+      "callsign": "TestAutomationUtils",
+      "locator": "libThunderTestAutomationUtils.so",
+      "status": "production",
+      "description": "TestAutomationUtils helps you to provide some special functionality convenient for testing",
+      "version": "1.0"
+    },
+
+    "interface": {
+      "$cppref": "{cppinterfacedir}/ITestAutomation.h"
+    }
+  }
+  
