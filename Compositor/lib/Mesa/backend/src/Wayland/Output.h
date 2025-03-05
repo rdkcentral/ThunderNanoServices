@@ -46,7 +46,7 @@ namespace Compositor {
     namespace Backend {
         class WaylandOutput : public IOutput {
         public:
-            class Backend : public Core::IResource {
+            class BackendImpl : public IOutput::IBackend {
             public:
                 typedef struct __attribute__((packed, aligned(4))) {
                     uint32_t format;
@@ -56,17 +56,17 @@ namespace Compositor {
 
             private:
                 using FormatRegister = std::unordered_map<uint32_t, std::vector<uint64_t> >;
-                friend class Core::UniqueType<Backend>;
-                Backend();
-                virtual ~Backend();
+                friend class Core::UniqueType<BackendImpl>;
+                BackendImpl();
+                virtual ~BackendImpl();
 
             public:
-                Backend(Backend&&) = delete;
-                Backend(const Backend&) = delete;
-                Backend& operator=(Backend&&) = delete;
-                Backend& operator=(const Backend&) = delete;
+                BackendImpl(BackendImpl&&) = delete;
+                BackendImpl(const BackendImpl&) = delete;
+                BackendImpl& operator=(BackendImpl&&) = delete;
+                BackendImpl& operator=(const BackendImpl&) = delete;
 
-                static Backend& Instance() {
+                static BackendImpl& Instance() {
                     return (_singleton.Instance());
                 }
                 void Drop() {
@@ -108,6 +108,10 @@ namespace Compositor {
                 void Handle(const uint16_t events) override {
                     Dispatch(events);
                 }
+                const string& Node() const override {
+                    static string displayName ("Wayland");
+                    return (displayName);
+                }
 
             private:
                 int _drmRenderFd;
@@ -133,9 +137,9 @@ namespace Compositor {
 
                 Input _input;
 
-                static Core::UniqueType<Backend> _singleton;
+                static Core::UniqueType<BackendImpl> _singleton;
 
-            }; // Backend
+            }; // BackendImpl
 
         private:
             struct PresentationFeedbackEvent {
@@ -194,7 +198,7 @@ namespace Compositor {
             Exchange::ICompositionBuffer::DataType Type() const override;
 
             uint32_t Commit() override;
-            const string& Node() const override;
+            IOutput::IBackend* Backend() override;
 
             int32_t X() const override
             {
@@ -230,7 +234,7 @@ namespace Compositor {
             }
 
         private:
-            Backend& _backend;
+            BackendImpl& _backend;
             wl_surface* _surface;
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;

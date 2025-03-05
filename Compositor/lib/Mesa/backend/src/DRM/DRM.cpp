@@ -42,7 +42,7 @@ namespace Thunder {
 namespace Compositor {
 
 namespace Backend {
-        uint32_t Connector::Backend::Commit(Connector& entry) {
+        uint32_t Connector::BackendImpl::Commit(Connector& entry) {
             uint32_t result(Core::ERROR_GENERAL);
 
             if (_flip.try_lock() == false) {

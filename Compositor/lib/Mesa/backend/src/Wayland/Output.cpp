@@ -139,7 +139,7 @@ namespace Compositor {
         };
 
         WaylandOutput::WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
-            : _backend(WaylandOutput::Backend::Instance())
+            : _backend(WaylandOutput::BackendImpl::Instance())
             , _surface(nullptr)
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
@@ -293,10 +293,9 @@ namespace Compositor {
             return (Core::ERROR_NONE);
         }
 
-        const string& WaylandOutput::Node() const /* override */
+        IOutput::IBackend* WaylandOutput::Backend() /* override */
         {
-            static string result("TODO");
-            return result;
+            return (&_backend);
         }
 
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)

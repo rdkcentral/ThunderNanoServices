@@ -51,7 +51,7 @@ namespace Compositor {
          */
         static void onPresentationClockId(void* data, struct wp_presentation* presentation, uint32_t clockType)
         {
-            WaylandOutput::Backend* implementation = static_cast<WaylandOutput::Backend*>(data);
+            WaylandOutput::BackendImpl* implementation = static_cast<WaylandOutput::BackendImpl*>(data);
             implementation->PresentationClock(clockType);
         }
 
@@ -86,7 +86,7 @@ namespace Compositor {
          */
         static void onDrmHandleDevice(void* data, struct wl_drm* drm, const char* name)
         {
-            WaylandOutput::Backend* implementation = static_cast<WaylandOutput::Backend*>(data);
+            WaylandOutput::BackendImpl* implementation = static_cast<WaylandOutput::BackendImpl*>(data);
             implementation->OpenDrmRender(name);
         }
 
@@ -203,7 +203,7 @@ namespace Compositor {
 
         static void onLinuxDmabufFeedbackFormatTable(void* data, struct zwp_linux_dmabuf_feedback_v1* zwp_linux_dmabuf_feedback_v1, int32_t fd, uint32_t size)
         {
-            WaylandOutput::Backend* implementation = static_cast<WaylandOutput::Backend*>(data);
+            WaylandOutput::BackendImpl* implementation = static_cast<WaylandOutput::BackendImpl*>(data);
             implementation->HandleDmaFormatTable(fd, size);
         }
 
@@ -217,7 +217,7 @@ namespace Compositor {
          */
         static void onLinuxDmabufFeedbackMainDevice(void* data, struct zwp_linux_dmabuf_feedback_v1* zwp_linux_dmabuf_feedback_v1, struct wl_array* mainDevice)
         {
-            WaylandOutput::Backend* implementation = static_cast<WaylandOutput::Backend*>(data);
+            WaylandOutput::BackendImpl* implementation = static_cast<WaylandOutput::BackendImpl*>(data);
 
             if (implementation != nullptr) {
                 dev_t device;
@@ -310,7 +310,7 @@ namespace Compositor {
          */
         static void onRegistryGlobal(void* data, struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version)
         {
-            WaylandOutput::Backend* implementation = static_cast<WaylandOutput::Backend*>(data);
+            WaylandOutput::BackendImpl* implementation = static_cast<WaylandOutput::BackendImpl*>(data);
 
             if (implementation != nullptr) {
                 implementation->RegisterInterface(registry, name, iface, version);
@@ -339,7 +339,7 @@ namespace Compositor {
             return ("");
         }
 
-        WaylandOutput::Backend::Backend()
+        WaylandOutput::BackendImpl::BackendImpl()
             : _drmRenderFd(InvalidFileDescriptor)
             , _activationToken()
             , _wlDisplay(wl_display_connect(DisplayName()[0] != '\0' ? DisplayName() : nullptr))
@@ -359,7 +359,7 @@ namespace Compositor {
             , _dmaFormats()
             , _input()
         {
-            TRACE(Trace::Backend, ("Starting WaylandOutput::Backend* backend"));
+            TRACE(Trace::Backend, ("Starting WaylandOutput::BackendImpl backend"));
             ASSERT(_wlDisplay != nullptr);
             ASSERT(_wlRegistry != nullptr);
 
@@ -388,7 +388,7 @@ namespace Compositor {
             Core::ResourceMonitor::Instance().Register(*this);
         }
 
-        WaylandOutput::Backend::~Backend()
+        WaylandOutput::BackendImpl::~BackendImpl()
         {
             Core::ResourceMonitor::Instance().Unregister(*this);
 
@@ -448,7 +448,7 @@ namespace Compositor {
          * @param iface A string representing the name of the interface being registered.
          * @param version The version number of the interface being registered.
          */
-        void WaylandOutput::Backend::RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version)
+        void WaylandOutput::BackendImpl::RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version)
         {
             TRACE(Trace::Backend, ("Received interface: %s v%d", iface, version));
 
@@ -496,7 +496,7 @@ namespace Compositor {
          * @param clock The `clock` parameter is an unsigned 32-bit integer that represents the presentation
          * clock value. This function sets the `_presentationClock` member variable to the value of `clock`.
          */
-        void WaylandOutput::Backend::PresentationClock(const uint32_t clockType)
+        void WaylandOutput::BackendImpl::PresentationClock(const uint32_t clockType)
         {
             _presentationClock = clockType;
 
@@ -518,7 +518,7 @@ namespace Compositor {
          * be mapped in bytes. It is used in the mmap() function call to specify the size of the memory region
          * to be mapped.
          */
-        void WaylandOutput::Backend::HandleDmaFormatTable(int fd, uint32_t size)
+        void WaylandOutput::BackendImpl::HandleDmaFormatTable(int fd, uint32_t size)
         {
             void* map = ::mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
 
@@ -567,7 +567,7 @@ namespace Compositor {
          *
          * @param device A pointer to a structure representing a DRM device.
          */
-        void WaylandOutput::Backend::OpenDrmRender(drmDevice* device)
+        void WaylandOutput::BackendImpl::OpenDrmRender(drmDevice* device)
         {
             string renderNode = DRM::GetNode(DRM_NODE_RENDER, device);
 
@@ -588,7 +588,7 @@ namespace Compositor {
          *
          * @param name A string representing the name of the DRM node to be opened.
          */
-        void WaylandOutput::Backend::OpenDrmRender(const string& name)
+        void WaylandOutput::BackendImpl::OpenDrmRender(const string& name)
         {
             if (_drmRenderFd == InvalidFileDescriptor) {
                 std::vector<std::string> nodes;
@@ -614,7 +614,7 @@ namespace Compositor {
          *
          * @return an integer value, which represents the number of events that were dispatched.
          */
-        int WaylandOutput::Backend::Dispatch(const uint32_t events) const
+        int WaylandOutput::BackendImpl::Dispatch(const uint32_t events) const
         {
 
             if ((events & POLLHUP) || (events & POLLERR)) {
@@ -652,7 +652,7 @@ namespace Compositor {
          *
          * @return a Wayland surface (`wl_surface*`).
          */
-        wl_surface* WaylandOutput::Backend::Surface() const
+        wl_surface* WaylandOutput::BackendImpl::Surface() const
         {
             wl_surface* surface = wl_compositor_create_surface(_wlCompositor);
 
@@ -674,24 +674,24 @@ namespace Compositor {
          *
          * @return an xdg_surface pointer.
          */
-        xdg_surface* WaylandOutput::Backend::WindowSurface(wl_surface* surface) const
+        xdg_surface* WaylandOutput::BackendImpl::WindowSurface(wl_surface* surface) const
         {
             xdg_surface* xdgSurface = xdg_wm_base_get_xdg_surface(_xdgWmBase, surface);
 
             return xdgSurface;
         };
 
-        int WaylandOutput::Backend::RoundTrip() const
+        int WaylandOutput::BackendImpl::RoundTrip() const
         {
             return wl_display_roundtrip(_wlDisplay);
         }
 
-        int WaylandOutput::Backend::Flush() const
+        int WaylandOutput::BackendImpl::Flush() const
         {
             return wl_display_flush(_wlDisplay);
         }
 
-        void WaylandOutput::Backend::Format(const Compositor::PixelFormat& requested, uint32_t& format, uint64_t& modifier) const
+        void WaylandOutput::BackendImpl::Format(const Compositor::PixelFormat& requested, uint32_t& format, uint64_t& modifier) const
         {
             format = DRM_FORMAT_INVALID;
             modifier = DRM_FORMAT_MOD_INVALID;
@@ -712,17 +712,17 @@ namespace Compositor {
             }
         }
 
-        int WaylandOutput::Backend::RenderNode() const
+        int WaylandOutput::BackendImpl::RenderNode() const
         {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        struct zxdg_toplevel_decoration_v1* WaylandOutput::Backend::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
+        struct zxdg_toplevel_decoration_v1* WaylandOutput::BackendImpl::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
         {
             ASSERT(topLevelSurface != nullptr);
             return (_wlZxdgDecorationManagerV1 != nullptr) ? zxdg_decoration_manager_v1_get_toplevel_decoration(_wlZxdgDecorationManagerV1, topLevelSurface) : nullptr;
         }
-        struct wp_presentation_feedback* WaylandOutput::Backend::GetFeedbackInterface(wl_surface* surface) const
+        struct wp_presentation_feedback* WaylandOutput::BackendImpl::GetFeedbackInterface(wl_surface* surface) const
         {
             ASSERT(surface != nullptr);
             return (_wlPresentation != NULL) ? wp_presentation_feedback(_wlPresentation, surface) : nullptr;
@@ -830,7 +830,7 @@ namespace Compositor {
          *
          * @return a pointer to a `wl_buffer` object.
          */
-        wl_buffer* WaylandOutput::Backend::CreateBuffer(Exchange::ICompositionBuffer* buffer) const
+        wl_buffer* WaylandOutput::BackendImpl::CreateBuffer(Exchange::ICompositionBuffer* buffer) const
         {
             ASSERT(buffer != nullptr);
 
@@ -845,7 +845,7 @@ namespace Compositor {
             return result;
         }
 
-        /* static */ Core::UniqueType<WaylandOutput::Backend> WaylandOutput::Backend::_singleton;
+        /* static */ Core::UniqueType<WaylandOutput::BackendImpl> WaylandOutput::BackendImpl::_singleton;
 
     } // namespace Backend
 

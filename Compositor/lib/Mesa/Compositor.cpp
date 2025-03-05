@@ -115,7 +115,6 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , BufferConnector(_T("bufferconnector"))
                 , DisplayConnector("displayconnector")
-                , GPU()
                 , Render()
                 , Height(0)
                 , Width(0)
@@ -125,7 +124,6 @@ namespace Plugin {
             {
                 Add(_T("bufferconnector"), &BufferConnector);
                 Add(_T("displayconnector"), &DisplayConnector);
-                Add(_T("gpu"), &GPU);
                 Add(_T("render"), &Render);
                 Add(_T("height"), &Height);
                 Add(_T("width"), &Width);
@@ -138,7 +136,6 @@ namespace Plugin {
 
             Core::JSON::String BufferConnector;
             Core::JSON::String DisplayConnector;
-            Core::JSON::String GPU;
             Core::JSON::String Render;
             Core::JSON::DecUInt16 Height;
             Core::JSON::DecUInt16 Width;
@@ -510,6 +507,28 @@ namespace Plugin {
         }; // class Bridge
 
         class Output {
+        private:
+            class Sink : public Compositor::IOutput::ICallback {
+            public:
+                Sink(Sink&&) = delete;
+                Sink(const Sink&) = delete;
+                Sink& operator=(Sink&&) = delete;
+                Sink& operator=(const Sink&) = delete;
+                Sink() = delete;
+
+                Sink(Output& parent)
+                    : _parent(parent) {
+                }
+                ~Sink() override = default;
+
+                virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override {
+                    _parent.HandleVSync(output, sequence, time);
+                }
+
+            private:
+                Output& _parent;
+            };
+
         public:
             Output() = delete;
             Output(Output&&) = delete;
@@ -521,82 +540,19 @@ namespace Plugin {
                 : _index(Core::InterlockedIncrement(_indexes))
                 , _sink(*this)
                 , _connector()
-                , _gpuNode()
                 , _pts(Core::Time::Now().Ticks())
                 , _rendering()
                 , _commit()
                 , _pendingClients()
-                , _renderingClients()
-
-            {
+                , _renderingClients() {
                 _connector = Compositor::CreateBuffer(name, rectangle, format, &_sink);
                 TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
             }
-
-            virtual ~Output()
-            {
+            ~Output() {
                 _connector.Release();
             }
 
-        private:
-            class Sink : public Compositor::IOutput::ICallback {
-            public:
-                Sink(Sink&&) = delete;
-                Sink(const Sink&) = delete;
-                Sink& operator=(Sink&&) = delete;
-                Sink& operator=(const Sink&) = delete;
-                Sink() = delete;
-
-                Sink(Output& parent)
-                    : _parent(parent)
-                {
-                }
-                ~Sink() override = default;
-
-                virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
-                {
-                    _parent.HandleVSync(output, sequence, time);
-                }
-
-                // virtual void Display(const int fd, const std::string& node) override
-                // {
-                //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
-                //     _parent.HandleGPUNode(node);
-                // }
-
-            private:
-                Output& _parent;
-            };
-
-            void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
-            {
-                // float fps = 1 / ((pts - _pts) / 1000000.0f);
-                _pts = pts;
-
-                for (Core::ProxyType<Client> client : _renderingClients) {
-                    client->Completed(_index);
-                }
-
-                _renderingClients.clear();
-
-                _commit.unlock();
-
-                // TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
-            }
-
-            void HandleGPUNode(const std::string node)
-            {
-                if (_gpuNode.empty() == true) {
-                    _gpuNode = node;
-                }
-            }
-
         public:
-            const std::string& GpuNode() const
-            {
-                return _gpuNode;
-            }
-
             Exchange::IComposition::Rectangle Geometry() const
             {
                 return { _connector->X(), _connector->Y(), _connector->Width(), _connector->Height() };
@@ -617,6 +573,10 @@ namespace Plugin {
             Core::ProxyType<Compositor::IOutput> Buffer()
             {
                 return _connector;
+            }
+
+            int Descriptor() {
+                return (_connector->Backend()->Descriptor());
             }
 
             void Pending(Core::ProxyType<Client> client)
@@ -642,10 +602,26 @@ namespace Plugin {
             }
 
         private:
+            void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
+            {
+                // float fps = 1 / ((pts - _pts) / 1000000.0f);
+                _pts = pts;
+
+                for (Core::ProxyType<Client> client : _renderingClients) {
+                    client->Completed(_index);
+                }
+
+                _renderingClients.clear();
+
+                _commit.unlock();
+
+                // TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
+            }
+
+        private:
             const uint8_t _index;
             Sink _sink;
             Core::ProxyType<Compositor::IOutput> _connector;
-            std::string _gpuNode;
             uint64_t _pts;
 
             Core::CriticalSection _rendering;
@@ -682,7 +658,6 @@ namespace Plugin {
             , _canvasBuffer()
             , _canvasTexture()
             , _gpuIdentifier(0)
-            , _gpuNode()
             , _renderNode()
             , _present(*this)
         {
@@ -750,12 +725,7 @@ namespace Plugin {
 
                 TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
 
-                if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
-                    _gpuIdentifier = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
-                } else {
-                    ASSERT(_gpuNode.empty() == false);
-                    _gpuIdentifier = ::open(_gpuNode.c_str(), O_RDWR | O_CLOEXEC);
-                }
+                _gpuIdentifier = _output->Descriptor();
 
                 ASSERT(_gpuIdentifier > 0);
 
@@ -1120,7 +1090,6 @@ namespace Plugin {
         Core::ProxyType<Exchange::ICompositionBuffer> _canvasBuffer;
         Core::ProxyType<Compositor::IRenderer::ITexture> _canvasTexture;
         int _gpuIdentifier;
-        std::string _gpuNode;
         std::string _renderNode;
         Presenter _present;
     };

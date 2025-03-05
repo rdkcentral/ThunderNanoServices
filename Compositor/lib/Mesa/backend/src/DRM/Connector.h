@@ -135,12 +135,12 @@ namespace Compositor {
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
                 Compositor::DRM::Identifier _frameId[2];
             };
-            class Backend : public Core::IResource {
+            class BackendImpl : public IOutput::IBackend {
             private:
                 using Connectors = std::vector<Connector*>;
 
             protected:
-                Backend(const string& gpuNode)
+                BackendImpl(const string& gpuNode)
                     : _adminLock()
                     , _gpuNode(gpuNode)
                     , _gpuFd(Compositor::DRM::OpenGPU(_gpuNode))
@@ -192,13 +192,13 @@ namespace Compositor {
                 }
  
             public:
-                Backend() = delete;
-                Backend(Backend&&) = delete;
-                Backend(const Backend&) = delete;
-                Backend& operator=(Backend&&) = delete;
-                Backend& operator=(const Backend&) = delete;
+                BackendImpl() = delete;
+                BackendImpl(BackendImpl&&) = delete;
+                BackendImpl(const BackendImpl&) = delete;
+                BackendImpl& operator=(BackendImpl&&) = delete;
+                BackendImpl& operator=(const BackendImpl&) = delete;
 
-                ~Backend()
+                ~BackendImpl()
                 {
                     if (_gpuFd > 0) {
                         Core::ResourceMonitor::Instance().Unregister(*this);
@@ -217,10 +217,10 @@ namespace Compositor {
                     }
                 }
 
-                static Core::ProxyType<Backend> Instance (const string& connectorName) {
-                    static Core::ProxyMapType<string, Backend> backends;
+                static Core::ProxyType<BackendImpl> Instance (const string& connectorName) {
+                    static Core::ProxyMapType<string, BackendImpl> backends;
                     string gpuNode (DRM::GetGPUNode(connectorName));
-                    return (backends.Instance<Backend>(gpuNode, gpuNode));
+                    return (backends.Instance<BackendImpl>(gpuNode, gpuNode));
                 }
 
             public:
@@ -244,9 +244,6 @@ namespace Compositor {
                 bool IsValid() const {
                     return(_gpuFd != Compositor::InvalidFileDescriptor);
                 }
-                const string& Node() const {
-                    return(_gpuNode);
-                }
                 uint32_t Commit(Connector&);
 
                 //
@@ -265,7 +262,13 @@ namespace Compositor {
                         }
                     }
                 }
-
+                //
+                // IBackend members
+                // -----------------------------------------------------------------
+                const string& Node() const override {
+                    return(_gpuNode);
+                }
+ 
             private:
                 void FinishPageFlip(const Compositor::DRM::Identifier /* crtc */, const unsigned sequence, unsigned seconds, const unsigned useconds)
                 {
@@ -297,7 +300,7 @@ namespace Compositor {
                 {
                     ASSERT(userData != nullptr);
 
-                    reinterpret_cast<Backend*>(userData)->FinishPageFlip(crtc_id, seq, sec, usec);
+                    reinterpret_cast<BackendImpl*>(userData)->FinishPageFlip(crtc_id, seq, sec, usec);
                 }
 
         private:
@@ -318,7 +321,7 @@ namespace Compositor {
             Connector& operator=(const Connector&) = delete;
 
             Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const PixelFormat format, IOutput::ICallback* feedback)
-                : _backend(Backend::Instance(connectorName))
+                : _backend(BackendImpl::Instance(connectorName))
                 , _x(rectangle.x)
                 , _y(rectangle.y)
                 , _format(format)
@@ -408,7 +411,7 @@ namespace Compositor {
             void Swap() {
                 _frameBuffer.Swap();
             }
-            uint32_t Commit() {
+            uint32_t Commit() override {
                 uint32_t result(Core::ERROR_NONE);
 
                 if (IsEnabled() == true) {
@@ -419,8 +422,8 @@ namespace Compositor {
 
                 return result;
             }
-            const string& Node() const {
-                return _backend->Node();
+            IOutput::IBackend* Backend() override {
+                return &(*_backend);
             }
 
         private:
@@ -559,7 +562,7 @@ namespace Compositor {
             }
 
         private:
-            Core::ProxyType<Backend> _backend;
+            Core::ProxyType<BackendImpl> _backend;
             int32_t _x;
             int32_t _y;
             const Compositor::PixelFormat _format;
