@@ -40,11 +40,15 @@ namespace Plugin {
     const string SystemCommands::Initialize(PluginHost::IShell* service)
     {
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
+
+        Exchange::JSystemCommands::Register(*this, this);
+
         return string();
     }
 
     void SystemCommands::Deinitialize(PluginHost::IShell*)
     {
+        Exchange::JSystemCommands::Unregister(*this);
     }
 
     string SystemCommands::Information() const
@@ -98,9 +102,9 @@ namespace Plugin {
         return result;
     }
 
-    uint32_t SystemCommands::USBReset(const std::string& device)
+    Core::hresult SystemCommands::USBReset(const std::string& device)
     {
-        return _implemetation.USBReset(device);
+        return (_implemetation.USBReset(device));
     }
 
 } // namespace Plugin
