@@ -30,6 +30,41 @@ namespace Thunder {
 namespace Plugin {
 
     class TestAutomationComRpc : public PluginHost::IPlugin, public QualityAssurance::IComRpc, public PluginHost::JSONRPC {
+    private:
+
+        class Notification : public RPC::IRemoteConnection::INotification {
+        public:
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
+            Notification(Notification&&) = delete;
+            Notification& operator=(Notification&&) = delete;
+
+            explicit Notification(TestAutomationComRpc& parent)
+                : _parent(parent)
+            {
+            }
+            ~Notification() = default;
+
+        public:
+            void Activated(RPC::IRemoteConnection* /* connection */) override
+            {
+            }
+            void Deactivated(RPC::IRemoteConnection* connectionId) override
+            {
+                _parent.Deactivated(connectionId);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */) override
+            {
+            }
+
+            BEGIN_INTERFACE_MAP(Notification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            END_INTERFACE_MAP
+
+        private:
+            TestAutomationComRpc& _parent;
+        };
+
     public:
         TestAutomationComRpc(const TestAutomationComRpc&) = delete;
         TestAutomationComRpc& operator=(const TestAutomationComRpc&) = delete;
@@ -40,14 +75,12 @@ namespace Plugin {
             : _implementation(nullptr)
             , _connectionId(0)
             , _service(nullptr)
+            , _notification(*this)
 
         {
         }
 
-        ~TestAutomationComRpc() override
-        {
-        }
-       
+        ~TestAutomationComRpc() override = default;
 
         BEGIN_INTERFACE_MAP(TestAutomationComRpc)
             INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -67,11 +100,11 @@ namespace Plugin {
     private:
        void Deactivated(RPC::IRemoteConnection* connection);
 
+    private:
         QualityAssurance::IComRpc::IComRpcInternal* _implementation;
-
         uint32_t _connectionId;
         PluginHost::IShell* _service;
-
+        Core::SinkType<Notification> _notification;
     };
 
 } // Namespace Plugin.
