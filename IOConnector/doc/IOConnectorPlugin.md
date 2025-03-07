@@ -132,7 +132,7 @@ Provides access to the GPIO pin value.
 
 | Message | Description |
 | :-------- | :-------- |
-| ```ERROR_UNKNOWNKEY``` | Unknown pin ID given |
+| ```ERROR_UNKNOWN_KEY``` | Unknown pin ID given |
 
 ### Example
 
@@ -206,7 +206,7 @@ Notifies about GPIO pin activity.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.value | integer | mandatory | *...* |
+| params.value | integer | mandatory | Value of the pin |
 
 ### Example
 
@@ -231,7 +231,7 @@ Notifies about GPIO pin activity.
   "jsonrpc": "2.0",
   "method": "189.myid.activity",
   "params": {
-    "value": 0
+    "value": 1
   }
 }
 ```
