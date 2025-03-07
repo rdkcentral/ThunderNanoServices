@@ -39,11 +39,15 @@ namespace Plugin {
 
     const string TestAutomationUtils::Initialize(PluginHost::IShell* service)
     {
-        ASSERT (_service == nullptr);
-        ASSERT (service != nullptr);
+        ASSERT(_implementation == nullptr);
+        ASSERT(_service == nullptr);
+        ASSERT(service != nullptr);
+        ASSERT(_connectionId == 0);
 
         _service = service;
         _service->AddRef(); 
+
+        _service->Register(&_notification);
 
         _implementation = _service->Root<QualityAssurance::ITestUtils>(_connectionId, 2000, _T("TestAutomationUtilsImplementation"));
         
@@ -64,6 +68,8 @@ namespace Plugin {
     void TestAutomationUtils::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
+        
+        _service->Unregister(&_notification);
 
         if (_implementation != nullptr) {
             QualityAssurance::JTestUtils::Unregister(*this);
@@ -82,22 +88,23 @@ namespace Plugin {
         
         _service->Release();
         _service = nullptr;
-        
+        _connectionId = 0;        
     }
 
     string TestAutomationUtils::Information() const
     {
         return string();
     }
-
     
     void TestAutomationUtils::Deactivated(RPC::IRemoteConnection* connection)
     {
-        if (connection->Id() == _connectionId) {
+        // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
+        // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
+        if (_connectionId == connection->Id()) {
+
             ASSERT(_service != nullptr);
-            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service,
-                PluginHost::IShell::DEACTIVATED,
-                PluginHost::IShell::FAILURE));
+
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
    

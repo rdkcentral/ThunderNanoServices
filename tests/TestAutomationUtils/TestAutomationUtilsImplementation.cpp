@@ -42,8 +42,10 @@ namespace Plugin {
         // ITestUtils Methods
         Core::hresult Crash() const override
         {
+            SYSLOG(Logging::Notification, (_T("TestAutomation::TestUtils is about to crash!")));
             char* c = nullptr;
             c[0] = 'a';
+            SYSLOG(Logging::Error, (_T("TestAutomation::TestUtils did not crash...")));
             return Core::ERROR_NONE;
         }
 
