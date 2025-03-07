@@ -88,7 +88,8 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [IOConnector.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/IOConnector.json) (version 1.0.0) (uncompliant-extended format)
+- IIOConnector ([IIOConnector.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IIOConnector.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Properties"></a>
 # Properties
@@ -106,33 +107,32 @@ IOConnector interface properties:
 
 Provides access to the GPIO pin value.
 
-Also see: [activity](#event.activity)
-
-> The *pin id* parameter shall be passed as the index to the property, e.g. ``IOConnector.1.pin@<pin-id>``.
+> The *index* parameter shall be passed as the index to the property, e.g. ``IOConnector.1.pin@<index>``.
 
 ### Index
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| pin-id | string | mandatory | *...* |
+| index | string | mandatory | Pin ID |
 
 ### Value
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| (property) | integer | mandatory | Value of the pin |
+| (property) | object | mandatory | GPIO pin value |
+| (property).value | integer | mandatory | Value of the pin |
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Value of the pin |
+| result | integer | mandatory | GPIO pin value |
 
 ### Errors
 
 | Message | Description |
 | :-------- | :-------- |
-| ```ERROR_UNKNOWN_KEY``` | Unknown pin ID given |
+| ```ERROR_UNKNOWNKEY``` | Unknown pin ID given |
 
 ### Example
 
@@ -142,7 +142,7 @@ Also see: [activity](#event.activity)
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "IOConnector.1.pin@189"
+  "method": "IOConnector.1.pin@xyz"
 }
 ```
 
@@ -152,7 +152,7 @@ Also see: [activity](#event.activity)
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": 1
+  "result": 0
 }
 ```
 
@@ -162,8 +162,10 @@ Also see: [activity](#event.activity)
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "IOConnector.1.pin@189",
-  "params": 1
+  "method": "IOConnector.1.pin@xyz",
+  "params": {
+    "value": 1
+  }
 }
 ```
 
@@ -195,20 +197,16 @@ IOConnector interface events:
 
 Notifies about GPIO pin activity.
 
-### Description
-
-Register to this event to be notified about pin value changes
-
 ### Parameters
 
-> The *pin ID* parameter shall be passed within the client ID during registration, e.g. *189.myid*
+> The *id* parameter shall be passed within the client ID during registration, e.g. *189.myid*
 
 ### Notification Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.value | integer | mandatory | Value of the pin |
+| params.value | integer | mandatory | *...* |
 
 ### Example
 
@@ -233,10 +231,10 @@ Register to this event to be notified about pin value changes
   "jsonrpc": "2.0",
   "method": "189.myid.activity",
   "params": {
-    "value": 1
+    "value": 0
   }
 }
 ```
 
-> The *pin ID* parameter is passed within the designator, e.g. *189.myid.activity*.
+> The *id* parameter is passed within the designator, e.g. *189.myid.activity*.
 

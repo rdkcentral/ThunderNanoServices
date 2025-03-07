@@ -25,12 +25,15 @@
 #include "Module.h"
 
 #include <interfaces/IExternal.h>
+#include <interfaces/IIOConnector.h>
+#include <interfaces/json/JIOConnector.h>
 
 namespace Thunder {
 namespace Plugin {
 
     class IOConnector
-        : public PluginHost::IPlugin,
+        : public Exchange::IIOConnector,
+          public PluginHost::IPlugin,
           public PluginHost::IWeb,
           public Exchange::IExternal::ICatalog,
           public PluginHost::JSONRPC,
@@ -287,6 +290,7 @@ namespace Plugin {
         INTERFACE_ENTRY(Exchange::IExternal::ICatalog)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         INTERFACE_ENTRY(Exchange::IInputPin::ICatalog)
+        INTERFACE_ENTRY(Exchange::IIOConnector)
         END_INTERFACE_MAP
 
     public:
@@ -311,23 +315,26 @@ namespace Plugin {
 
     private:
         void Activity();
+        void NotifyConnectorActivity(const string& id, const int32_t& value) const;
         void GetMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
         void PostMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
 
         // JsonRpc methods
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t get_pin(const string& index, Core::JSON::DecSInt32& response) const;
-        uint32_t set_pin(const string& index, const Core::JSON::DecSInt32& param);
-        void event_pinactivity(const string& id, const int32_t& value);
+        Core::hresult Register(const string& id, Exchange::IIOConnector::INotification* const notification) override;
+        Core::hresult Unregister(const string& id, const Exchange::IIOConnector::INotification* const notification) override;
+        Core::hresult Pin(const string& index, const int32_t& pinvalue) override;
+        Core::hresult Pin(const string& index, int32_t& pinvalue) const override;
 
     private:
-        Core::CriticalSection _adminLock;
+        using ObserverMap = std::list<std::pair<const string, struct Exchange::IIOConnector::INotification*>>;
+
+        mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         Core::SinkType<Sink> _sink;
         Pins _pins;
         uint8_t _skipURL;
         NotificationList _notifications;
+        ObserverMap _observers;
     };
 
 } // namespace Plugin
