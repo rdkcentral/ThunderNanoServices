@@ -145,7 +145,6 @@ namespace Compositor {
                     , _gpuNode(gpuNode)
                     , _gpuFd(Compositor::DRM::OpenGPU(_gpuNode))
                     , _flip()
-                    , _pendingFlips(0)
                     , _connectors()
                 {
                     ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
@@ -276,25 +275,18 @@ namespace Compositor {
 
                     presentationTimestamp.tv_sec = seconds;
                     presentationTimestamp.tv_nsec = useconds * 1000;
+                    uint64_t stamp = Core::Time(presentationTimestamp).Ticks();
 
                     _adminLock.Lock();
 
                     for (auto& entry : _connectors) {
-                        entry->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
+                        entry->Presented(sequence, stamp);
                     }  
-                    _connectors.clear();
-
                     _adminLock.Unlock();
 
-                    --_pendingFlips;
+                    TRACE(Trace::Backend, ("Pageflip finished"));
 
-                    TRACE(Trace::Backend, ("Pageflip finished for pending flips: %u", _pendingFlips));
-
-                    if (_pendingFlips == 0) {
-                        // all connectors are flipped... ready for the next round.
-                        TRACE(Trace::Backend, ("all connectors are flipped... ready for the next round."));
-                        _flip.unlock();
-                    }
+                    _flip.unlock();
                 }
                 static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
                 {

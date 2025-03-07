@@ -44,7 +44,6 @@ namespace Compositor {
 namespace Backend {
         uint32_t Connector::BackendImpl::Commit(Connector& entry) {
             uint32_t result(Core::ERROR_GENERAL);
-
             if (_flip.try_lock() == false) {
                 TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
                 result = Core::ERROR_INPROGRESS;
@@ -71,7 +70,6 @@ namespace Backend {
             return result;
         }
     }
-
 
     Core::ProxyType<IOutput> CreateBuffer(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const PixelFormat& format, IOutput::ICallback* feedback)
     {
