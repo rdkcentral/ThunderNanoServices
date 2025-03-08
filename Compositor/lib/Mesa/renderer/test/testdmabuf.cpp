@@ -58,22 +58,15 @@ private:
         Sink() = delete;
 
         Sink(RenderTest& parent)
-            : _parent(parent)
-        {
+            : _parent(parent) {
         }
 
-        virtual ~Sink() = default;
+        ~Sink() override = default;
 
-        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+        void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
         {
             _parent.HandleVSync(output, sequence, time);
         }
-
-        // virtual void Display(const int fd, const std::string& node) override
-        // {
-        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
-        //     // _parent.HandleGPUNode(node);
-        // }
 
     private:
         RenderTest& _parent;
@@ -103,27 +96,26 @@ public:
         , _fps()
         , _sequence(0)
     {
-        _connector = Compositor::CreateBuffer(
-            connectorId,
-            { 0, 0, 1080, 1920 },
-            _format, &_sink);
-
-        ASSERT(_connector.IsValid());
-        TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
-
-        ASSERT(_renderFd >= 0);
+       ASSERT(_renderFd >= 0);
 
         _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
+        _connector = Compositor::CreateBuffer(
+            connectorId,
+            { 0, 0, 1080, 1920 },
+            _format, 
+            _renderer,
+            &_sink);
+
+        ASSERT(_connector.IsValid());
+        TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
+
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
         _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
-        ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
-
-        NewFrame();
     }
 
     ~RenderTest()
@@ -168,6 +160,7 @@ private:
     void Render()
     {
         _running = true;
+        _renderer->ViewPort(_connector->Width(), _connector->Height());
 
         while (_running) {
             NewFrame();
@@ -182,8 +175,6 @@ private:
 
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
-        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
 
@@ -196,10 +187,8 @@ private:
         float x = float(renderWidth / 2.0f) * cosX;
         float y = float(renderHeight / 2.0f) * sinY;
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
-
-        _renderer->Begin(width, height);
-        _renderer->Clear(background);
+        _renderer->Clear(_connector->Texture(), background);
+        // fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         const Exchange::IComposition::Rectangle renderBox = { static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), renderWidth, renderHeight };
@@ -208,9 +197,7 @@ private:
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
 
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
-        _renderer->Render(_texture, textureBox, matrix, alpha);
-
-        _renderer->End(false);
+        _renderer->Render(_connector->Texture(), _texture, textureBox, matrix, alpha);
 
         uint32_t commit;
 
@@ -221,7 +208,6 @@ private:
             std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit. 
         }
 
-        _renderer->Unbind();
 
         rotation += _radPerFrame;
     }

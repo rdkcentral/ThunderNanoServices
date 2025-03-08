@@ -20,11 +20,12 @@
 #pragma once
 
 #include "CompositorTypes.h"
+#include "IRenderer.h"
 
 namespace Thunder {
 
 namespace Compositor {
-    struct IOutput : Exchange::ICompositionBuffer {
+    struct IOutput : public Exchange::ICompositionBuffer {
 
         ~IOutput() override = default;
 
@@ -40,19 +41,31 @@ namespace Compositor {
             virtual void Presented(const IOutput* output, const uint32_t sequence, const uint64_t time) = 0;
         }; // struct ICallback
 
+        struct EXTERNAL IBackend : public Core::IResource {
+            virtual ~IBackend() = default;
+
+            /**
+             * @brief  Get the node where this output is bound to.
+             *
+             * @return string  e.g. Wayland display name or DRM node.
+             */
+            virtual const string& Node() const = 0;
+
+        }; // struct IBackend
+
+        /*
+         * @brief  Get the texture associated with this output where the render should end up.
+         *
+         * @return texture 
+         */
+        virtual Core::ProxyType<IRenderer::ITexture> Texture() = 0;
+ 
         /**
-         * @brief  Trigger to start bringing the buffer contents to the output.
+         * @brief  Commit triggers a swap.
          *
          * @return uint32_t Sequence number of the commit.
          */
         virtual uint32_t Commit() = 0;
-
-        /**
-         * @brief  Get the node where this output is bound to.
-         *
-         * @return string  e.g. Wayland display name or DRM node.
-         */
-        virtual const string& Node() const = 0;
 
         /**
          * @brief  Get the X position of this output in the complete composition.
@@ -67,6 +80,13 @@ namespace Compositor {
          * @return int Y position in pixels.
          */
         virtual int32_t Y() const = 0;
+
+        /**
+         * @brief  Get the backend that it handling this output.
+         *
+         * @return IBackend* interface.
+         */
+        virtual IBackend* Backend() = 0;
     };
 
     /**
@@ -85,6 +105,7 @@ namespace Compositor {
         const string& connector,
         const Exchange::IComposition::Rectangle& rectangle,
         const Compositor::PixelFormat& format,
+        const Core::ProxyType<IRenderer>& renderer,
         IOutput::ICallback* callback);
 
 } // namespace Compositor
