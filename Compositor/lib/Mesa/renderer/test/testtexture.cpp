@@ -111,19 +111,20 @@ public:
         , _fps()
         , _sequence(0)
     {
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
+
+        ASSERT(_renderer.IsValid());
+
         _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
             _format,
+            _renderer,
             &_sink);
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd,Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
-
         _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
-
-        ASSERT(_renderer.IsValid());
 
         NewFrame();
     }
@@ -197,7 +198,7 @@ private:
         const uint16_t renderHeight(512);
 
         _renderer->ViewPort(width, height);
-        _renderer->Clear(background);
+        _renderer->Clear(_connector->Texture(), background);
 
         const Exchange::IComposition::Rectangle renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
         Compositor::Matrix matrix;
@@ -205,7 +206,7 @@ private:
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
 
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
-        _renderer->Render(_texture, textureBox, matrix, alpha);
+        _renderer->Render(_connector->Texture(), _texture, textureBox, matrix, alpha);
 
         _connector->Commit();
 

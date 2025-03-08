@@ -20,6 +20,7 @@
 #pragma once
 
 #include "CompositorTypes.h"
+#include "IRenderer.h"
 
 namespace Thunder {
 
@@ -52,8 +53,15 @@ namespace Compositor {
 
         }; // struct IBackend
 
+        /*
+         * @brief  Get the texture associated with this output where the render should end up.
+         *
+         * @return texture 
+         */
+        virtual Core::ProxyType<IRenderer::ITexture> Texture() = 0;
+ 
         /**
-         * @brief  Trigger to start bringing the buffer contents to the output.
+         * @brief  Commit triggers a swap.
          *
          * @return uint32_t Sequence number of the commit.
          */
@@ -97,6 +105,7 @@ namespace Compositor {
         const string& connector,
         const Exchange::IComposition::Rectangle& rectangle,
         const Compositor::PixelFormat& format,
+        const Core::ProxyType<IRenderer>& renderer,
         IOutput::ICallback* callback);
 
 } // namespace Compositor

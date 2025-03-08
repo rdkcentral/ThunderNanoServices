@@ -37,13 +37,17 @@ namespace Compositor {
                 FrameBufferImplementation& operator=(FrameBufferImplementation&&) = delete;
                 FrameBufferImplementation& operator=(const FrameBufferImplementation&&) = delete;
 
-                FrameBufferImplementation()
+                FrameBufferImplementation(IRenderer* renderer)
                     : _swap()
                     , _fd(-1)
                     , _activePlane(~0)
                 {
                     _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
                     _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
+                    if (renderer != nullptr) {
+                        _texture[0] = renderer->Texture(_buffer[0]);
+                        _texture[1] = renderer->Texture(_buffer[1]);
+                    }
                 }
                 ~FrameBufferImplementation()
                 {
@@ -52,6 +56,10 @@ namespace Compositor {
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
                         _buffer[0].Release();
                         _buffer[1].Release();
+                        if (_texture[0] != nullptr) {
+                            _texture[0].Release();
+                            _texture[1].Release();
+                        }
                         ::close(_fd);
                     }
                 }
@@ -121,6 +129,10 @@ namespace Compositor {
                 {
                     return _buffer[_activePlane];
                 }
+                Core::ProxyType<IRenderer::ITexture> Texture() const
+                {
+                    return _texture[_activePlane];
+                }
                 void Swap()
                 {
                     _swap.Lock();
@@ -133,6 +145,7 @@ namespace Compositor {
                 int _fd;
                 uint8_t _activePlane;
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
+                Core::ProxyType<IRenderer::ITexture> _texture[2];
                 Compositor::DRM::Identifier _frameId[2];
             };
             class BackendImpl : public IOutput::IBackend {
@@ -312,14 +325,14 @@ namespace Compositor {
             Connector& operator=(Connector&&) = delete;
             Connector& operator=(const Connector&) = delete;
 
-            Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const PixelFormat format, IOutput::ICallback* feedback)
+            Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const PixelFormat format, IRenderer* renderer, IOutput::ICallback* feedback)
                 : _backend(BackendImpl::Instance(connectorName))
                 , _x(rectangle.x)
                 , _y(rectangle.y)
                 , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, Compositor::DRM::FindConnectorId(_backend->Descriptor(), connectorName))
                 , _crtc()
-                , _frameBuffer()
+                , _frameBuffer(renderer)
                 , _feedback(feedback) {
                 ASSERT(_feedback != nullptr);
 
@@ -328,6 +341,7 @@ namespace Compositor {
                 } else {
                     ASSERT(_frameBuffer.IsValid() == true);
                     TRACE(Trace::Backend, ("Connector %s for Id=%u Crtc=%u,", connectorName.c_str(), _connector.Id(), _crtc.Id()));
+                    
                 }
                 _backend->Announce(*this);
             }
@@ -368,11 +382,35 @@ namespace Compositor {
             Exchange::ICompositionBuffer::DataType Type() const {
                 return (_frameBuffer.Type());
             }
+
+            /**
+             * IOutput implementation
+             *
+             * Returning the info of the back buffer because its used to
+             * draw a new frame.
+             */
             int32_t X() const override {
                 return _x;
             }
             int32_t Y() const override {
                 return _y;
+            }
+            uint32_t Commit() override {
+                uint32_t result(Core::ERROR_NONE);
+
+                if (IsEnabled() == true) {
+                    _backend->Commit(*this);
+                } else {
+                    result = Core::ERROR_ILLEGAL_STATE;
+                }
+
+                return result;
+            }
+            IOutput::IBackend* Backend() override {
+                return &(*_backend);
+            }
+            Core::ProxyType<IRenderer::ITexture> Texture() override {
+                return (_frameBuffer.Texture());
             }
 
             /**
@@ -402,20 +440,6 @@ namespace Compositor {
             }
             void Swap() {
                 _frameBuffer.Swap();
-            }
-            uint32_t Commit() override {
-                uint32_t result(Core::ERROR_NONE);
-
-                if (IsEnabled() == true) {
-                    _backend->Commit(*this);
-                } else {
-                    result = Core::ERROR_ILLEGAL_STATE;
-                }
-
-                return result;
-            }
-            IOutput::IBackend* Backend() override {
-                return &(*_backend);
             }
 
         private:

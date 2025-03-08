@@ -307,31 +307,20 @@ namespace Plugin {
                 _remoteClient.AddRef();
                 return (&_remoteClient);
             }
-            uint8_t Descriptors(const uint8_t maxSize, int container[])
-            {
+            uint8_t Descriptors(const uint8_t maxSize, int container[]) {
                 return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
             }
-
-            void AttachPlanes(Core::PrivilegedRequest::Container& descriptors)
-            {
+            void AttachPlanes(Core::PrivilegedRequest::Container& descriptors) {
                 Compositor::CompositorBuffer::Planes(descriptors.data(), descriptors.size());
             }
-
-            Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
-            {
+            Core::ProxyType<Compositor::IRenderer::ITexture> Texture() {
                 return _texture;
-            }
-            void Texture(Core::ProxyType<Compositor::IRenderer::ITexture> texture)
-            {
-                ASSERT(_texture.IsValid() ^ texture.IsValid());
-                _texture = texture;
             }
 
             /**
              * Compositor::CompositorBuffer methods
              */
-            void Request() override
-            {
+            void Request() override {
                 _parent.Render(*this);
                 _pending.store(true);
             }
@@ -339,43 +328,33 @@ namespace Plugin {
             /**
              * Exchange::IComposition::IClient methods
              */
-            Thunder::Core::instance_id Native() const override
-            {
+            Thunder::Core::instance_id Native() const override {
                 return (_id);
             }
-
-            string Name() const override
-            {
+            string Name() const override {
                 return _callsign;
             }
-            void Opacity(const uint32_t value) override
-            {
+            void Opacity(const uint32_t value) override {
                 _opacity = value;
             }
-            uint32_t Opacity() const override
-            {
+            uint32_t Opacity() const override {
                 return _opacity;
             }
-            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
-            {
+            uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override {
                 _geometry = rectangle;
                 return Core::ERROR_NONE;
             }
-            Exchange::IComposition::Rectangle Geometry() const override
-            {
+            Exchange::IComposition::Rectangle Geometry() const override {
                 return _geometry;
             }
-            uint32_t ZOrder(const uint16_t index) override
-            {
+            uint32_t ZOrder(const uint16_t index) override {
                 _zIndex = index;
                 return Core::ERROR_NONE;
             }
-            uint32_t ZOrder() const override
-            {
+            uint32_t ZOrder() const override {
                 return _zIndex;
             }
-            void Completed()
-            {
+            void Completed() {
                 bool expected = true;
                 if (_pending.compare_exchange_strong(expected, false) == true) {
                     Published();
@@ -490,7 +469,8 @@ namespace Plugin {
                     client->AttachPlanes(descriptors);
                     Core::ProxyType<Exchange::ICompositionBuffer> buffer(client);
 
-                    client->Texture(_parent.Texture(buffer));
+                    // client->Texture(_parent.Texture(buffer));
+                    _parent.Texture(buffer);
                 } else {
                     TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
                 }
@@ -535,9 +515,9 @@ namespace Plugin {
             Output& operator=(Output&&) = delete;
             Output& operator=(const Output&) = delete;
 
-            Output(CompositorImplementation& parent, const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
+            Output(CompositorImplementation& parent, const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Core::ProxyType<Compositor::IRenderer> renderer)
                 : _sink(parent)
-                , _connector(Compositor::CreateBuffer(name, rectangle, format, &_sink)) {
+                , _connector(Compositor::CreateBuffer(name, rectangle, format, renderer, &_sink)) {
                 TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
             }
             ~Output() {
@@ -564,6 +544,9 @@ namespace Plugin {
             }
             void Commit() {
                 _connector->Commit();
+            }
+            Core::ProxyType<Compositor::IRenderer::ITexture> Texture() {
+                return (_connector->Texture());
             }
 
         private:
@@ -622,8 +605,7 @@ namespace Plugin {
         /**
          * Exchange::IComposition methods
          */
-        uint32_t Configure(PluginHost::IShell* service) override
-        {
+        uint32_t Configure(PluginHost::IShell* service) override {
             uint32_t result = Core::ERROR_NONE;
 
             string configuration(service->ConfigLine());
@@ -648,7 +630,12 @@ namespace Plugin {
                 rectangle.width = config.Out.Width.Value();
                 rectangle.height = config.Out.Height.Value();
 
-                _output = new Output(*this, config.Out.Connector.Value(), rectangle, _format);
+                _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
+                ASSERT(_renderer.IsValid());
+
+                _renderer->ViewPort(rectangle.width, rectangle.height);
+
+                _output = new Output(*this, config.Out.Connector.Value(), rectangle, _format, _renderer);
 
                 TRACE(Trace::Information, ("Opening Render node %s", config.Render.Value().c_str()));
                 _renderDescriptor = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
@@ -656,11 +643,6 @@ namespace Plugin {
                 ASSERT((_output != nullptr) && (_output->IsValid()));
 
                 TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
-
-                _renderer = Compositor::IRenderer::Instance(_renderDescriptor, _output->Buffer());
-                ASSERT(_renderer.IsValid());
-
-                _renderer->ViewPort(rectangle.width, rectangle.height);
 
                 std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
                 result = _clientBridge.Open(bridgePath);
@@ -702,9 +684,7 @@ namespace Plugin {
             } 
             return (result);
         }
-
-        void Register(Exchange::IComposition::INotification* notification) override
-        {
+        void Register(Exchange::IComposition::INotification* notification) override {
             ASSERT(notification != nullptr);
 
             _adminLock.Lock();
@@ -724,9 +704,7 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-
-        void Unregister(Exchange::IComposition::INotification* notification) override
-        {
+        void Unregister(Exchange::IComposition::INotification* notification) override {
             ASSERT(notification != nullptr);
 
             _adminLock.Lock();
@@ -749,16 +727,11 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-
-        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::ICompositionBuffer> buffer)
-        {
-
+        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::ICompositionBuffer> buffer) {
             ASSERT(buffer.IsValid());
             return _renderer->Texture(buffer);
         }
-
-        void Announce(Exchange::IComposition::IClient* client)
-        {
+        void Announce(Exchange::IComposition::IClient* client) {
             _adminLock.Lock();
 
             for (auto& observer : _observers) {
@@ -766,9 +739,7 @@ namespace Plugin {
             }
             _adminLock.Unlock();
         }
-
-        void Revoke(Exchange::IComposition::IClient* client)
-        {
+        void Revoke(Exchange::IComposition::IClient* client) {
             _adminLock.Lock();
 
             for (auto& observer : _observers) {
@@ -777,36 +748,28 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-
-        uint32_t Format() const
-        {
+        uint32_t Format() const {
             return _format;
         }
-
-        uint64_t Modifier() const
-        {
+        uint64_t Modifier() const {
             return _modifier;
         }
 
         /**
          * Exchange::IComposition::IDisplay methods
          */
-        Thunder::Core::instance_id Native() const override
-        {
+        Thunder::Core::instance_id Native() const override {
             // Hier wordt de render node descriptor terug gegeven..
             return _renderDescriptor;
         }
-        string Port() const override
-        {
+        string Port() const override {
             return string("Mesa3d");
         }
         // Useless Resolution functions, this should be controlled by DisplayControl
-        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
-        {
+        uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override {
             return (Core::ERROR_NONE);
         }
-        Exchange::IComposition::ScreenResolution Resolution() const override
-        {
+        Exchange::IComposition::ScreenResolution Resolution() const override {
 
   fprintf(stdout, "-------------------- %s ------------------------ %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
             _clients.Visit([&](const string& name, const Core::ProxyType<Client>& element) {
@@ -840,7 +803,7 @@ namespace Plugin {
 
                     const float alpha = float(client.Opacity()) / float(Exchange::IComposition::maxOpacity);
 
-                    _renderer->Render(client.Texture(), clientArea, clientProjection, alpha);
+                    _renderer->Render(_output->Texture(), client.Texture(), clientArea, clientProjection, alpha);
 
                     client.Relinquish();
                     client.Rendered();

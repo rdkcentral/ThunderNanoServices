@@ -184,7 +184,7 @@ namespace Compositor {
             WaylandOutput& operator=(WaylandOutput&&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
 
-            WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format);
+            WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer);
             ~WaylandOutput() override;
 
         public:
@@ -197,6 +197,7 @@ namespace Compositor {
             uint64_t Modifier() const override;
             Exchange::ICompositionBuffer::DataType Type() const override;
 
+            Core::ProxyType<IRenderer::ITexture> Texture() override;
             uint32_t Commit() override;
             IOutput::IBackend* Backend() override;
 
@@ -243,7 +244,9 @@ namespace Compositor {
             uint32_t _format;
             uint64_t _modifier;
             Compositor::Matrix _matrix;
+            Core::ProxyType<IRenderer>& _renderer;
             Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+            Core::ProxyType<IRenderer::ITexture> _texture;
             Core::Event _signal;
             uint64_t _commitSequence;
         }; // WaylandOutput

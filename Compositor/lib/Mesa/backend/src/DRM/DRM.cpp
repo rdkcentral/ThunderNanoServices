@@ -71,7 +71,12 @@ namespace Backend {
         }
     }
 
-    Core::ProxyType<IOutput> CreateBuffer(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const PixelFormat& format, IOutput::ICallback* feedback)
+    Core::ProxyType<IOutput> CreateBuffer(
+        const string& connectorName, 
+        const Exchange::IComposition::Rectangle& rectangle, 
+        const PixelFormat& format, 
+        const Core::ProxyType<IRenderer>& renderer, 
+        IOutput::ICallback* feedback)
     {
         Core::ProxyType<IOutput> result;
 
@@ -82,7 +87,7 @@ namespace Backend {
 
         TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
 
-        Core::ProxyType<Backend::Connector> connector = connectors.Instance<Backend::Connector>(connectorName, connectorName, rectangle, format, feedback);
+        Core::ProxyType<Backend::Connector> connector = connectors.Instance<Backend::Connector>(connectorName, connectorName, rectangle, format, &(*renderer), feedback);
 
         if ( (connector.IsValid()) && (connector->IsValid()) ) {
             result = Core::ProxyType<IOutput>(connector);

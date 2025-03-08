@@ -96,19 +96,21 @@ public:
         , _fps()
         , _sequence(0)
     {
+       ASSERT(_renderFd >= 0);
+
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        ASSERT(_renderer.IsValid());
+        TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
+
         _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
-            _format, &_sink);
+            _format, 
+            _renderer,
+            &_sink);
 
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
-
-        ASSERT(_renderFd >= 0);
-
-        _renderer = Compositor::IRenderer::Instance(_renderFd, Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
-        ASSERT(_renderer.IsValid());
-        TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
         _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
@@ -185,7 +187,7 @@ private:
         float x = float(renderWidth / 2.0f) * cosX;
         float y = float(renderHeight / 2.0f) * sinY;
 
-        _renderer->Clear(background);
+        _renderer->Clear(_connector->Texture(), background);
         // fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
@@ -195,7 +197,7 @@ private:
         Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
 
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
-        _renderer->Render(_texture, textureBox, matrix, alpha);
+        _renderer->Render(_connector->Texture(), _texture, textureBox, matrix, alpha);
 
         uint32_t commit;
 

@@ -138,7 +138,7 @@ namespace Compositor {
             .discarded = onPresentationFeedbackDiscarded,
         };
 
-        WaylandOutput::WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
+        WaylandOutput::WaylandOutput(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer)
             : _backend(WaylandOutput::BackendImpl::Instance())
             , _surface(nullptr)
             , _windowSurface(nullptr)
@@ -147,7 +147,9 @@ namespace Compositor {
             , _rectangle(rectangle)
             , _format()
             , _modifier()
+            , _renderer(renderer)
             , _buffer()
+            , _texture()
             , _signal(false, true)
             , _commitSequence(0)
         {
@@ -268,7 +270,12 @@ namespace Compositor {
             ASSERT(_backend.RenderNode() > 0);
 
             if (_buffer.IsValid() == false) {
+
+                ASSERT(_renderer.IsValid() == true);
+
                 _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _rectangle.width, _rectangle.height, Compositor::PixelFormat(_format, { _modifier }));
+
+                _texture = _renderer->Texture(_buffer);
 
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
 
@@ -276,11 +283,16 @@ namespace Compositor {
 
                 wl_surface_attach(_surface, buffer, 0, 0);
 
+                _renderer.Release();
+
                 _signal.SetEvent();
             }
 
             Commit();
 
+        }
+        Core::ProxyType<IRenderer::ITexture> WaylandOutput::Texture() {
+            return(_texture);
         }
         uint32_t WaylandOutput::Commit()
         {

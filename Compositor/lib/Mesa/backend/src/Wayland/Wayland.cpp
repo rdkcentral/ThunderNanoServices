@@ -865,13 +865,13 @@ namespace Compositor {
      * @return A `Core::ProxyType` object that wraps an instance of `IOutput`.
      */
 
-    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, IOutput::ICallback* feedback)
+    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
     {
         static Core::ProxyMapType<string, Backend::WaylandOutput> windows;
 
         Core::ProxyType<IOutput> result;
 
-        Core::ProxyType<Backend::WaylandOutput> window = windows.Instance<Backend::WaylandOutput>(name, name, rectangle, format);
+        Core::ProxyType<Backend::WaylandOutput> window = windows.Instance<Backend::WaylandOutput>(name, name, rectangle, format, renderer);
 
         if (window.IsValid()) {
             result = Core::ProxyType<IOutput>(window);

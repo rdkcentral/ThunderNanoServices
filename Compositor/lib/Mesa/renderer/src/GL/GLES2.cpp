@@ -532,8 +532,10 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 uint32_t Height() const override { 
                     return _buffer->Height(); 
                 }
-                uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const override
-                {
+                void Bind() override {
+                    GLES_API.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _image);
+                }
+                uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const override {
                     const GLfloat x1 = region.x / _buffer->Width();
                     const GLfloat y1 = region.y / _buffer->Height();
                     const GLfloat x2 = (region.x + region.width) / _buffer->Width();
@@ -548,7 +550,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                     return (_program->Draw(_textureId, _target, alpha, matrix, coordinates));
                 }
-
                 GLenum Target() const { 
                     return (_target); 
                 }
@@ -563,12 +564,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                     _image = _parent.Egl().CreateImage(&(*_buffer), external);
                     ASSERT(_image != EGL_NO_IMAGE);
 
-                    _target = (external == true ? GL_TEXTURE_EXTERNAL_OES : GL_TEXTURE_2D);
-
-                    return (_image);
-                }
-                void SetProgram() {
-                    if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
+                    if (external == true) {
+                        _target = GL_TEXTURE_EXTERNAL_OES;
                         _program = new ExternalProgram;
                     }
                     else if (DRM::HasAlpha(_buffer->Format())) {
@@ -578,6 +575,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                     }
 
                     ASSERT(_program != nullptr);
+
+                    return (_image);
                 }
 
             private:
@@ -628,8 +627,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                     glBindTexture(GLESTexture::Target(), 0);
 
-                    GLESTexture::SetProgram();
-
                     TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d external=%s", GLESTexture::Id(), buffer->Width(), buffer->Height(), GLESTexture::Target() == GL_TEXTURE_EXTERNAL_OES ? "true" : "false"));
                 }
                 ~GLESDMATexture() override = default;
@@ -672,8 +669,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                     buffer->Relinquish();
 
-                    GLESTexture::SetProgram();
-
                     TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", GLESTexture::Id(), buffer->Width(), buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
                 ~GLESPixelTexture() override = default;
@@ -687,9 +682,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
             GLES& operator=(GLES&&) = delete;
             GLES& operator=(const GLES&) = delete;
 
-            GLES(const int drmDevFd, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+            GLES(const int drmDevFd)
                 : _egl(drmDevFd)
-                , _image(EGL_NO_IMAGE)
                 , _glFrameBuffer(0)
                 , _glRenderBuffer(0)
                 , _viewportWidth(0)
@@ -724,10 +718,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                     }
                 }
 
-                bool external(false);
-                _image = _egl.CreateImage(buffer.operator->(), external);
-                ASSERT(_image != EGL_NO_IMAGE);
-
                 // If this triggers the platform is very old (pre-2008) and not supporting OpenGL 3.0 or higher.
                 ASSERT(GLES_API.glEGLImageTargetRenderbufferStorageOES != nullptr);
 
@@ -735,10 +725,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                 glGenRenderbuffers(1, &_glRenderBuffer);
                 glGenFramebuffers(1, &_glFrameBuffer);
-
-                glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
-                GLES_API.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _image);
-                glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
                 glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
                 glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
@@ -765,14 +751,12 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 PopDebug();
 
 #ifdef __DEBUG__
-
                 const std::string glExtensions(reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
 
                 if (API::HasExtension(glExtensions, "GL_KHR_debug")) {
                     glDisable(GL_DEBUG_OUTPUT_KHR);
                     GLES_API.glDebugMessageCallbackKHR(nullptr, nullptr);
                 }
-
 #endif
 
                 _egl.ResetCurrent();
@@ -813,30 +797,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 }
             }
 
-            void Clear(const Color color) override
-            {
-                _egl.SetCurrent();
-                PushDebug();
-                glClearColor(color[0], color[1], color[2], color[3]);
-                glClear(GL_COLOR_BUFFER_BIT);
-                PopDebug();
-                _egl.ResetCurrent();
-            }
-
-            void Scissor(const Exchange::IComposition::Rectangle* box) override
-            {
-                ASSERT(_egl.IsCurrent() == true);
-
-                PushDebug();
-                if (box != nullptr) {
-                    glScissor(box->x, box->y, box->width, box->height);
-                    glEnable(GL_SCISSOR_TEST);
-                } else {
-                    glDisable(GL_SCISSOR_TEST);
-                }
-                PopDebug();
-            }
-
             Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
             {
                 Core::ProxyType<ITexture> result;
@@ -858,11 +818,23 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 return (result);
             }
 
-            uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
+            void Clear(const Core::ProxyType<ITexture>& image, const Color color) override
+            {
+                _egl.SetCurrent();
+                image->Bind();
+                PushDebug();
+                glClearColor(color[0], color[1], color[2], color[3]);
+                glClear(GL_COLOR_BUFFER_BIT);
+                PopDebug();
+                _egl.ResetCurrent();
+            }
+
+            uint32_t Render(const Core::ProxyType<ITexture>& image, const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
             {
                 _egl.SetCurrent();
 
                 ASSERT((_egl.IsCurrent() == true) && (texture != nullptr));
+                image->Bind();
 
                 Matrix gl_matrix;
                 Transformation::Multiply(gl_matrix, _projection, transformation);
@@ -871,16 +843,36 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                 uint32_t result = (texture->Draw(alpha, gl_matrix, region) ? Core::ERROR_NONE : Core::ERROR_GENERAL);
 
+                glBindRenderbuffer(GL_RENDERBUFFER, 0);
                 _egl.ResetCurrent();
 
                 return (result);
             }
 
-            uint32_t Quadrangle(const Color color, const Matrix transformation) override
+            void Scissor(const Core::ProxyType<ITexture>& image, const Exchange::IComposition::Rectangle* box) override
+            {
+                _egl.SetCurrent();
+                ASSERT(_egl.IsCurrent() == true);
+
+                image->Bind();
+                PushDebug();
+                if (box != nullptr) {
+                    glScissor(box->x, box->y, box->width, box->height);
+                    glEnable(GL_SCISSOR_TEST);
+                } else {
+                    glDisable(GL_SCISSOR_TEST);
+                }
+                _egl.ResetCurrent();
+                PopDebug();
+            }
+
+ 
+            uint32_t Quadrangle(const Core::ProxyType<ITexture>& image, const Color color, const Matrix transformation) override
             {
                 _egl.SetCurrent();
 
                 ASSERT(_egl.IsCurrent() == true);
+                image->Bind();
 
                 Matrix gl_matrix;
                 Transformation::Multiply(gl_matrix, _projection, transformation);
@@ -934,7 +926,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
         private:
             EGL _egl;
-            EGLImage _image;
             GLuint _glFrameBuffer;
             GLuint _glRenderBuffer;
             uint32_t _viewportWidth;
@@ -948,11 +939,11 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
     } // namespace Renderer
 
-    Core::ProxyType<IRenderer> IRenderer::Instance(const int identifier, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+    Core::ProxyType<IRenderer> IRenderer::Instance(const int identifier)
     {
         ASSERT(identifier >= 0); // this should be a valid file descriptor.
 
-        return (Core::ProxyType<IRenderer>(Core::ProxyType<Renderer::GLES>::Create(identifier, buffer)));
+        return (Core::ProxyType<IRenderer>(Core::ProxyType<Renderer::GLES>::Create(identifier)));
     }
 
 } // namespace Compositor

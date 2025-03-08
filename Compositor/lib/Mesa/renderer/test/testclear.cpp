@@ -107,16 +107,18 @@ public:
         , _sequence(0)
 
     {
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
+
+        ASSERT(_renderer.IsValid());
+
         _connector = Compositor::CreateBuffer(
             connectorId,
             { 0, 0, 1080, 1920 },
-            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }), &_sink);
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
+            _renderer,
+            &_sink);
 
         ASSERT(_connector.IsValid());
-
-        _renderer = Compositor::IRenderer::Instance(_renderFd, Core::ProxyType<Exchange::ICompositionBuffer>(_connector));
-
-        ASSERT(_renderer.IsValid());
 
         NewFrame();
     }
@@ -204,7 +206,7 @@ private:
         const auto start = std::chrono::high_resolution_clock::now();
 
         _renderer->ViewPort(_connector->Width(), _connector->Height());
-        _renderer->Clear(_color);
+        _renderer->Clear(_connector->Texture(), _color);
 
         _connector->Commit();
 

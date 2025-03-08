@@ -33,6 +33,8 @@ namespace Compositor {
             virtual uint32_t Width() const = 0;
             virtual uint32_t Height() const = 0;
 
+            virtual void Bind() = 0;
+
             virtual uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const = 0;
 
         }; // struct ITexture
@@ -43,7 +45,16 @@ namespace Compositor {
          * @param identifier ID for this Renderer, allows for reuse.
          * @return Core::ProxyType<IRenderer>
          */
-        static Core::ProxyType<IRenderer> Instance(const int identifier, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer);
+        static Core::ProxyType<IRenderer> Instance(const int identifier);
+
+        /**
+         * @brief   Creates a texture in the gpu bound to this buffer
+         *
+         * @param buffer   The buffer representing the data to be associated with context.
+         *
+         * @return ITexture upon success, nullptr on error.
+         */
+        virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
 
         /**
          * @brief Set a viewport.
@@ -59,7 +70,7 @@ namespace Compositor {
          *
          * @param color
          */
-        virtual void Clear(const Color color) = 0;
+        virtual void Clear(const Core::ProxyType<ITexture>& image, const Color color) = 0;
 
         /**
          * @brief   Renders a texture on the bound buffer at the given region with
@@ -73,7 +84,7 @@ namespace Compositor {
          *
          * @return uint32_t Core::ERROR_NONE if all went ok, error code otherwise.
          */
-        virtual uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transform, float alpha) = 0;
+        virtual uint32_t Render(const Core::ProxyType<ITexture>& image, const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transform, float alpha) = 0;
 
         /**
          * @brief Scissor defines a rectangle, called the scissor box, in window coordinates.
@@ -82,16 +93,7 @@ namespace Compositor {
          *
          * @param box a box describing the region to write or nullptr to disable
          */
-        virtual void Scissor(const Exchange::IComposition::Rectangle* box) = 0;
-
-        /**
-         * @brief   Creates a texture in the gpu bound to this renderer
-         *
-         * @param buffer   The buffer representing the pixel data.
-         *
-         * @return ITexture upon success, nullptr on error.
-         */
-        virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
+        virtual void Scissor(const Core::ProxyType<ITexture>& image, const Exchange::IComposition::Rectangle* box) = 0;
 
         /**
          * @brief   Renders a solid quadrangle* in the specified color with the specified matrix.
@@ -105,7 +107,7 @@ namespace Compositor {
          *    a four-sided polygon.
          *
          */
-        virtual uint32_t Quadrangle(const Color color, const Matrix transformation) = 0;
+        virtual uint32_t Quadrangle(const Core::ProxyType<ITexture>& image, const Color color, const Matrix transformation) = 0;
 
         /**
          * @brief Returns a list of pixel @PixelFormat valid for rendering.
