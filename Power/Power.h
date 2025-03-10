@@ -22,7 +22,7 @@
 
 #include "Module.h"
 #include <interfaces/IPower.h>
-#include <interfaces/json/JsonData_Power.h>
+#include <interfaces/json/JPower.h>
 
 namespace Thunder {
 namespace Plugin {
@@ -192,12 +192,10 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _powerOffMode(Exchange::IPower::PCState::SuspendToRAM)
             , _currentState(Exchange::IPower::PCState::On)
         {
-            RegisterAll();
         }
 POP_WARNING()
         virtual ~Power()
         {
-            UnregisterAll();
         }
 
     public:
@@ -236,10 +234,10 @@ POP_WARNING()
 
         //  IPower methods
         // -------------------------------------------------------------------------------------------------------
-        void Register(IPower::INotification* sink) override;
-        void Unregister(IPower::INotification* sink) override;
-        PCState GetState() const override;
-        uint32_t SetState(const PCState, const uint32_t) override;
+        Core::hresult Register(Exchange::IPower::INotification* const sink) override;
+        Core::hresult Unregister(const Exchange::IPower::INotification* const sink) override;
+        Core::hresult GetState(Exchange::IPower::PCState& state) const override;
+        Core::hresult SetState(const Exchange::IPower::PCState& state, const uint32_t waitTime) override;
         void PowerKey() override;
 
         void PowerChange(const Exchange::IPower::PCState state, const Exchange::IPower::PCPhase phase);
@@ -249,14 +247,6 @@ POP_WARNING()
         void Activated(const string& callsign, PluginHost::IShell* plugin);
         void Deactivated(const string& callsign, PluginHost::IShell* plugin);
         void ControlClients(Exchange::IPower::PCState state);
-
-        void RegisterAll();
-        void UnregisterAll();
-        inline bool InRange(Exchange::IPower::PCState value);
-        inline Exchange::IPower::PCState TranslateIn(JsonData::Power::StateType value);
-        inline JsonData::Power::StateType TranslateOut(Exchange::IPower::PCState value) const;
-        uint32_t endpoint_set(const JsonData::Power::PowerData& params);
-        uint32_t get_state(Core::JSON::EnumType<JsonData::Power::StateType>& response) const;
 
     private:
         Core::CriticalSection _adminLock;
