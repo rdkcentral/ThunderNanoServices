@@ -50,9 +50,6 @@ namespace Thunder {
                 }
 
             public:
-                bool IsValid() const {
-                    return ((_error == Core::ERROR_NONE) || (_error == Core::ERROR_NOT_EXIST));
-                }
                 bool HasData() const {
                     return (_error == Core::ERROR_NONE);
                 }
@@ -91,10 +88,6 @@ namespace Thunder {
                     else if (_error == Core::ERROR_NOT_EXIST) {
                         _error = Core::ERROR_NONE;
                     }
-
-                    // Did not find the next two in the example no clue what they do... Leave them in for now :-)
-                    // Property(connectorId, entry.Properties().Id(DRM::property::LinkStatus), DRM_MODE_LINK_STATUS_GOOD);
-                    // Property(connectorId, entry.Properties().Id(DRM::property::ContentType), DRM_MODE_CONTENT_TYPE_GRAPHICS);
                 }
                 uint32_t Commit(void* userData) {
                     int drmResult;

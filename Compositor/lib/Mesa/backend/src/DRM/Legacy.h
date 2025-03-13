@@ -38,28 +38,12 @@ namespace Thunder {
                 Transaction& operator= (Transaction&&) = delete;
                 Transaction& operator= (const Transaction&) = delete;
 
-                Transaction(const int fd, const bool modeSet, void* userData) 
-                    : _fd(fd)
-                    , _flags()
-                    , _modeSet(modeSet)
-                    , _userData(userData) {
+                Transaction(const int fd) 
+                    : _fd(fd) {
                 }
                 ~Transaction() = default;
 
             public:
-                bool ModeSet() const {
-                    bool lastValue = _modeSet;
-                    _modeSet = false;
-                    return (lastValue);
-                }
-                uint32_t Flags() const {
-                    return (_flags);
-                }
-                void Flags(const uint32_t flags) {
-                    _flags = flags;
-                }
-                void Clear() {
-                }
                 uint32_t Add (Connector& connector) {
 
                     uint32_t result = Core::ERROR_NONE;
@@ -73,30 +57,23 @@ namespace Thunder {
 
                     int drmResult(0);
 
-                    if ((connector.IsEnabled()) && (ModeSet() == true)) {
+                    const drmModeModeInfo* mode(connector.CrtController());
 
-                        const drmModeModeInfo* mode(nullptr);
-                        uint32_t dpms = DRM_MODE_DPMS_OFF;
+                    if ((drmResult = drmModeConnectorSetProperty(_fd, connectorId, connector.Properties().Id(Compositor::DRM::property::Dpms), DRM_MODE_DPMS_ON)) != 0) {
+                        TRACE_GLOBAL(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector.IsEnabled() ? "on" : "off", connectorId, drmResult, strerror(errno)));
+                        result = Core::ERROR_GENERAL;
+                    }
+                    else {
+                        constexpr uint32_t X = 0;
+                        constexpr uint32_t Y = 0;
 
-                        mode = connector.CrtController();
-                        dpms = DRM_MODE_DPMS_ON;
-
-                        if ((drmResult = drmModeConnectorSetProperty(_fd, connectorId, connector.Properties().Id(Compositor::DRM::property::Dpms), dpms)) != 0) {
-                            TRACE_GLOBAL(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector.IsEnabled() ? "on" : "off", connectorId, drmResult, strerror(errno)));
-                            result = Core::ERROR_GENERAL;
-                        }
-                        else {
-                            constexpr uint32_t X = 0;
-                            constexpr uint32_t Y = 0;
-
-                            /*
-                                * Use the same mode as the previous operation on the CRTC and specified connector(s)
-                                * New framebuffer Id, x, and y properties will set at vblank.
-                                */
-                            if ((drmResult = drmModeSetCrtc(_fd, crtcId, connector.FrameBufferId(), X, Y, &connectorId, 1, const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
-                                TRACE_GLOBAL(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", crtcId, drmResult, strerror(errno)));
-                                result = Core::ERROR_INCOMPLETE_CONFIG;
-                            }
+                        /*
+                         * Use the same mode as the previous operation on the CRTC and specified connector(s)
+                         * New framebuffer Id, x, and y properties will set at vblank.
+                         */
+                        if ((drmResult = drmModeSetCrtc(_fd, crtcId, connector.ActiveFrameBufferId(), X, Y, &connectorId, 1, const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
+                            TRACE_GLOBAL(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", crtcId, drmResult, strerror(errno)));
+                            result = Core::ERROR_INCOMPLETE_CONFIG;
                         }
                     }
 
@@ -114,15 +91,15 @@ namespace Thunder {
                     }
                     return (result);
                 }
-                uint32_t Commit() {
+                uint32_t Initial() {
+                    return (Core::ERROR_NONE);
+                }
+                uint32_t Commit(void* /* userData */) {
                     return (Core::ERROR_NONE);
                 }
 
             private:
                 int _fd;
-                uint32_t _flags;
-                mutable bool _modeSet;
-                void* _userData;
             };
             
         } // namespace Backend

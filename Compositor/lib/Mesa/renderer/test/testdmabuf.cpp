@@ -211,6 +211,7 @@ private:
 
 
         rotation += _radPerFrame;
+        SleepMs(50);
     }
 
     void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)

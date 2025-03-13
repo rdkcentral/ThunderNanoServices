@@ -34,9 +34,8 @@ namespace Compositor {
             private:
                 enum mode : uint8_t {
                     FRAMEBUFFER_INDEX  = 0x01,
-                    DISABLED           = 0x20,
-                    REQUEST_TO_PUBLISH = 0x40,
-                    PENDING_PUBLISH    = 0x80
+                    PENDING_PUBLISH    = 0x40,
+                    DISABLED           = 0x80
                  };
 
             public:
@@ -128,33 +127,31 @@ namespace Compositor {
                 Compositor::DRM::Identifier Id() const {
                     return _frameId[(_activePlane & mode::FRAMEBUFFER_INDEX) ^ mode::FRAMEBUFFER_INDEX];
                 }
-                void Commit() {
+                bool Commit() {
+                    bool issueCommit (false);
                     _swap.Lock();
-                    _activePlane |= mode::REQUEST_TO_PUBLISH;
-                    _swap.Unlock();
- 
-                }
-                bool Swap(bool& swapped) {
-                    swapped = false;
-                    _swap.Lock();
-                    bool pendingPublish = (_activePlane & mode::PENDING_PUBLISH);
-                    if ((_activePlane & (mode::REQUEST_TO_PUBLISH|mode::DISABLED)) != mode::REQUEST_TO_PUBLISH) {
-                       _activePlane &= (~PENDING_PUBLISH);
-                    }
-                    else {
-                       // Make sure another process/client is not writing on this buffer while we need to swap it :-)
-                       uint8_t lockBuffer = (_activePlane & mode::FRAMEBUFFER_INDEX);
-                       if (_buffer[lockBuffer]->Acquire(50) == nullptr) {
-                           TRACE(Trace::Error, ("Could not lock a buffer to swap FrameBuffers"));
-                       }
-                       else {
-                           _activePlane = mode::PENDING_PUBLISH | ((_activePlane & mode::FRAMEBUFFER_INDEX) ^ mode::FRAMEBUFFER_INDEX);
-                           swapped = true;
+                    if ((_activePlane & mode::PENDING_PUBLISH) == 0) {
+                        issueCommit = true;
+
+                        // Make sure another process/client is not writing on this buffer while we need to swap it :-)
+                        uint8_t lockBuffer = (_activePlane & mode::FRAMEBUFFER_INDEX);
+                        if (_buffer[lockBuffer]->Acquire(50) == nullptr) {
+                            TRACE(Trace::Error, ("Could not lock a buffer to swap FrameBuffers"));
+                        }
+                        else {
+                            _activePlane = mode::PENDING_PUBLISH | ((_activePlane & mode::FRAMEBUFFER_INDEX) ^ mode::FRAMEBUFFER_INDEX);
                            _buffer[lockBuffer]->Relinquish();
                         }
                     }
                     _swap.Unlock();
-                    return(pendingPublish);
+                    return (issueCommit);
+                }
+                bool Published() {
+                    _swap.Lock();
+                    bool pending((_activePlane & mode::PENDING_PUBLISH) != 0);
+                    _activePlane &= ~(mode::PENDING_PUBLISH);
+                    _swap.Unlock();
+                    return (pending);
                 }
 
             private:
@@ -169,12 +166,6 @@ namespace Compositor {
             };
             class BackendImpl : public IOutput::IBackend {
             private:
-                enum mode : uint8_t {
-                    IDLE,
-                    REQUEST,
-                    IN_PROGRESS
-                };
-
                 using Connectors = std::vector<Connector*>;
 
             protected:
@@ -182,8 +173,7 @@ namespace Compositor {
                     : _adminLock()
                     , _gpuNode(gpuNode)
                     , _gpuFd(Compositor::DRM::OpenGPU(_gpuNode))
-                    , _connectors()
-                    , _mode(IDLE) {
+                    , _connectors() {
                     ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
   
                     if (_gpuFd != Compositor::InvalidFileDescriptor) {
@@ -296,12 +286,6 @@ namespace Compositor {
                             TRACE(Trace::Error, ("Failed to handle drm event"));
                         }
                     }
-                    mode expected = mode::REQUEST;
-                    if (_mode.compare_exchange_weak(expected, mode::IN_PROGRESS)) {
-                        if (drmHandleEvent(_gpuFd, &_eventContext) != 0) {
-                            TRACE(Trace::Error, ("Failed to handle drm event [Forced]"));
-                        }
-                    }
                 }
                 //
                 // IBackend members
@@ -309,20 +293,11 @@ namespace Compositor {
                 const string& Node() const override {
                     return(_gpuNode);
                 }
-                void Commit() {
-                    // Seems we need to initiate a SWAP 
-                    mode expected = mode::IDLE;
-                    if (_mode.compare_exchange_weak(expected, mode::REQUEST)) {
-                        // Core::ResourceMonitor::Instance().Break();
-                        PageFlip(0, Core::Time::Now().Ticks());
-                    }
-                }
+                uint32_t Commit(Connector&);
 
             private:
-                void PageFlip(const unsigned int sequence, const uint64_t stamp);
-                static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
-                {
-                    ASSERT(userData != nullptr);
+                void PageFlip(const unsigned int sequence, const unsigned sec, const unsigned usec) {
+                    static uint64_t previous = 0;
 
                     struct timespec presentationTimestamp;
 
@@ -330,7 +305,24 @@ namespace Compositor {
                     presentationTimestamp.tv_nsec = usec* 1000;
                     uint64_t stamp = Core::Time(presentationTimestamp).Ticks();
 
-                    reinterpret_cast<BackendImpl*>(userData)->PageFlip(seq, stamp);
+                    uint32_t elapsed = (stamp - previous) / Core::Time::TicksPerMillisecond;
+                    float fps = 1 / (elapsed / 1000.0f);
+                    previous = stamp;
+
+ fprintf(stdout, "------------------------------- %s -------------------- %d ------Elapsed: %d mS ------- FPS [%f]---- \n", __FUNCTION__, __LINE__, elapsed, fps);
+                    _adminLock.Lock();
+
+                    for (Connector*& entry : _connectors) {
+                        entry->Published(sequence, stamp);
+                    }
+
+                    _adminLock.Unlock();
+                }
+                static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
+                {
+                    ASSERT(userData != nullptr);
+
+                    reinterpret_cast<BackendImpl*>(userData)->PageFlip(seq, sec, usec);
                 }
 
         private:
@@ -339,7 +331,6 @@ namespace Compositor {
             int _gpuFd; // GPU opened as master or lease...
             drmEventContext _eventContext;
             Connectors _connectors;
-            std::atomic<mode> _mode;
         };
 
         public:
@@ -423,9 +414,11 @@ namespace Compositor {
                 return _y;
             }
             uint32_t Commit() override {
-                _frameBuffer.Commit();
-                _backend->Commit();
-                return (Core::ERROR_NONE);
+                uint32_t result = Core::ERROR_NONE;
+                if (_frameBuffer.Commit() == true) {
+                    result = _backend->Commit(*this);
+                }
+                return (result);
             }
             IOutput::IBackend* Backend() override {
                 return &(*_backend);
@@ -453,14 +446,10 @@ namespace Compositor {
             const Compositor::DRM::CRTCProperties& CrtController() const {
                 return _crtc;
             }
-            bool Swap(const unsigned int sequence, const uint64_t stamp) {
-                bool swapped;
-                if (_frameBuffer.Swap(swapped) == true) {
-                    if (_feedback != nullptr) {
-                        _feedback->Presented(this, sequence, stamp);
-                    }
+            void Published(const unsigned int sequence, const uint64_t stamp) {
+                if ((_frameBuffer.Published() == true) && (_feedback != nullptr)) {
+                    _feedback->Presented(this, sequence, stamp);
                 }
-                return (swapped);
             }
 
         private:

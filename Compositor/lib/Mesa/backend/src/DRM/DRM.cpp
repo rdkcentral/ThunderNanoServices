@@ -42,30 +42,12 @@ namespace Thunder {
     namespace Compositor {
 
         namespace Backend {
-
-            void Connector::BackendImpl::PageFlip(const unsigned int sequence, const uint64_t stamp) {
+            uint32_t Connector::BackendImpl::Commit(Connector& connector) {
                 Transaction transaction(_gpuFd);
-
-                _adminLock.Lock();
-
-                for (Connector*& entry : _connectors) {
-                    if (entry->Swap(sequence, stamp) == true) {
-                        transaction.Add(*entry);
-                    }
-                }
-
-                _adminLock.Unlock();
-
-                if (transaction.HasData() == false) {
-                    mode expected = mode::IN_PROGRESS;
-                    _mode.compare_exchange_weak(expected, mode::IDLE);
-                }
-                else if (transaction.Commit(this) != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, ("Pageflip Transaction failed to commit"));
-                    mode expected = mode::IN_PROGRESS;
-                    _mode.compare_exchange_weak(expected, mode::IDLE);
-                }
+                transaction.Add(connector);
+                return (transaction.Commit(this));
             }
+
             bool Connector::Scan() {
                 bool result(false);
 
