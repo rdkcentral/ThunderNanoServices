@@ -533,7 +533,9 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                     return _buffer->Height(); 
                 }
                 void Bind() override {
+                fprintf(stdout, " --------------------------- %s ---------------------- %d -------------[%d] OK=%d-------\n", __FUNCTION__, __LINE__, glGetError(), GL_NO_ERROR); fflush(stdout);
                     GLES_API.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _image);
+                fprintf(stdout, " --------------------------- %s ---------------------- %d -------------[%d] OK=%d-------\n", __FUNCTION__, __LINE__, glGetError(), GL_NO_ERROR); fflush(stdout);
                 }
                 uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const override {
                     const GLfloat x1 = region.x / _buffer->Width();
@@ -548,7 +550,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                         x1, y2, // bottom left
                     };
 
-                    return (_program->Draw(_textureId, _target, alpha, matrix, coordinates));
+                    uint32_t result = _program->Draw(_textureId, _target, alpha, matrix, coordinates);
+                    return (result);
                 }
                 GLenum Target() const { 
                     return (_target); 
@@ -728,8 +731,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                 glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
                 glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
-                glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
-                ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+                // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
 
                 PopDebug();
 
@@ -821,7 +823,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
             void Clear(const Core::ProxyType<ITexture>& image, const Color color) override
             {
                 _egl.SetCurrent();
-                image->Bind();
+                Bind(image);
+
                 PushDebug();
                 glClearColor(color[0], color[1], color[2], color[3]);
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -832,9 +835,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
             uint32_t Render(const Core::ProxyType<ITexture>& image, const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
             {
                 _egl.SetCurrent();
-
-                ASSERT((_egl.IsCurrent() == true) && (texture != nullptr));
-                image->Bind();
+                Bind(image);
 
                 Matrix gl_matrix;
                 Transformation::Multiply(gl_matrix, _projection, transformation);
@@ -852,9 +853,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
             void Scissor(const Core::ProxyType<ITexture>& image, const Exchange::IComposition::Rectangle* box) override
             {
                 _egl.SetCurrent();
-                ASSERT(_egl.IsCurrent() == true);
 
-                image->Bind();
+                Bind(image);
                 PushDebug();
                 if (box != nullptr) {
                     glScissor(box->x, box->y, box->width, box->height);
@@ -870,9 +870,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
             uint32_t Quadrangle(const Core::ProxyType<ITexture>& image, const Color color, const Matrix transformation) override
             {
                 _egl.SetCurrent();
-
-                ASSERT(_egl.IsCurrent() == true);
-                image->Bind();
+                Bind(image);
 
                 Matrix gl_matrix;
                 Transformation::Multiply(gl_matrix, _projection, transformation);
@@ -905,6 +903,14 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
         private:
             const EGL& Egl() const {
                 return _egl;
+            }
+            void Bind(const Core::ProxyType<ITexture>& image) {
+                image->Bind();
+
+                glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
+                ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+
+ 
             }
             bool Snapshot(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels) {
                 PushDebug();

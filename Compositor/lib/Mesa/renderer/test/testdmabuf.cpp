@@ -98,6 +98,8 @@ public:
     {
        ASSERT(_renderFd >= 0);
 
+       
+
         _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
@@ -188,7 +190,6 @@ private:
         float y = float(renderHeight / 2.0f) * sinY;
 
         _renderer->Clear(_connector->Texture(), background);
-        // fprintf(stdout, " -------------------------------- %s ---------------------- %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
 
         // const Compositor::Box renderBox = { ((width / 2) - (renderWidth / 2)), ((height / 2) - (renderHeight / 2)), renderWidth, renderHeight };
         const Exchange::IComposition::Rectangle renderBox = { static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), renderWidth, renderHeight };
@@ -315,9 +316,9 @@ int main(int argc, char* argv[])
         const std::vector<string> modules = {
             "CompositorRenderTest",
             "CompositorBuffer",
-            "CompositorBackendOFF",
-            "CompositorRendererOFF",
-            "DRMCommon"
+            "CompositorBackendOff",
+            "CompositorRendererOff",
+            "DRMCommonOff"
         };
 
         for (auto module : modules) {

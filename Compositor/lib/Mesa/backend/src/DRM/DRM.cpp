@@ -39,37 +39,172 @@ MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace Thunder {
 
-namespace Compositor {
+    namespace Compositor {
 
-namespace Backend {
-        uint32_t Connector::BackendImpl::Commit(Connector& entry) {
-            uint32_t result(Core::ERROR_GENERAL);
-            if (_flip.try_lock() == false) {
-                TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
-                result = Core::ERROR_INPROGRESS;
-            }
-            else {
-                result = Core::ERROR_NONE;
+        namespace Backend {
 
-                static bool doModeSet(true);
+            void Connector::BackendImpl::PageFlip(const unsigned int sequence, const uint64_t stamp) {
+                Transaction transaction(_gpuFd);
 
-                Compositor::Backend::Transaction transaction(_gpuFd, doModeSet, this);
+                _adminLock.Lock();
 
-                entry.Swap();
-
-                if ( (transaction.Add(entry) != Core::ERROR_NONE) ||
-                     (transaction.Commit()   != Core::ERROR_NONE) ) {
-                   entry.Presented(0, 0); // notify connector implementation the buffer failed to display.
-                }
-                else {
-                    TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
+                for (Connector*& entry : _connectors) {
+                    if (entry->Swap(sequence, stamp) == true) {
+                        transaction.Add(*entry);
+                    }
                 }
 
-                doModeSet = transaction.ModeSet();
+                _adminLock.Unlock();
+
+                if (transaction.HasData() == false) {
+                    mode expected = mode::IN_PROGRESS;
+                    _mode.compare_exchange_weak(expected, mode::IDLE);
+                }
+                else if (transaction.Commit(this) != Core::ERROR_NONE) {
+                    TRACE(Trace::Error, ("Pageflip Transaction failed to commit"));
+                    mode expected = mode::IN_PROGRESS;
+                    _mode.compare_exchange_weak(expected, mode::IDLE);
+                }
             }
-            return result;
-        }
-    }
+            bool Connector::Scan() {
+                bool result(false);
+
+                int backendFd = _backend->Descriptor();
+
+                drmModeResPtr drmModeResources = drmModeGetResources(backendFd);
+                drmModePlaneResPtr drmModePlaneResources = drmModeGetPlaneResources(backendFd);
+
+                ASSERT(drmModeResources != nullptr);
+                ASSERT(drmModePlaneResources != nullptr);
+
+                drmModeEncoderPtr encoder = NULL;
+
+                TRACE(Trace::Backend, ("Found %d connectors", drmModeResources->count_connectors));
+                TRACE(Trace::Backend, ("Found %d encoders", drmModeResources->count_encoders));
+                TRACE(Trace::Backend, ("Found %d CRTCs", drmModeResources->count_crtcs));
+                TRACE(Trace::Backend, ("Found %d planes", drmModePlaneResources->count_planes));
+
+                for (int c = 0; c < drmModeResources->count_connectors; c++) {
+                    drmModeConnectorPtr drmModeConnector = drmModeGetConnector(backendFd, drmModeResources->connectors[c]);
+
+                    ASSERT(drmModeConnector != nullptr);
+
+                    /* Find our drmModeConnector if it's connected*/
+                    if ((drmModeConnector->connector_id != _connector.Id()) && (drmModeConnector->connection != DRM_MODE_CONNECTED)) {
+                        continue;
+                    }
+
+                    /* Find the encoder (a deprecated KMS object) for this drmModeConnector. */
+                    ASSERT(drmModeConnector->encoder_id != Compositor::InvalidIdentifier);
+
+                    const char* name = drmModeGetConnectorTypeName(drmModeConnector->connector_type);
+                    TRACE(Trace::Backend, ("Connector %s-%u connected", name, drmModeConnector->connector_type_id));
+
+                    /* Get a bitmask of CRTCs the connector is compatible with. */
+                    uint32_t _possibleCrtcs = drmModeConnectorGetPossibleCrtcs(backendFd, drmModeConnector);
+
+                    if (_possibleCrtcs == 0) {
+                        TRACE(Trace::Error, ("No CRTC possible for id", drmModeConnector->connector_id));
+                    }
+
+                    ASSERT(_possibleCrtcs != 0);
+
+                    for (uint8_t e = 0; e < drmModeResources->count_encoders; e++) {
+                        if (drmModeResources->encoders[e] == drmModeConnector->encoder_id) {
+                            encoder = drmModeGetEncoder(backendFd, drmModeResources->encoders[e]);
+                            break;
+                        }
+                    }
+
+                    if (encoder != nullptr) { /*
+                                               * Find the CRTC currently used by this drmModeConnector. It is possible to
+                                               * use a different CRTC if desired, however unlike the pre-atomic API,
+                                               * we have to explicitly change every object in the routing path.
+                                               */
+
+                        drmModePlanePtr plane(nullptr);
+                        drmModeCrtcPtr crtc(nullptr);
+
+                        ASSERT(encoder->crtc_id != Compositor::InvalidIdentifier);
+                        TRACE(Trace::Information, ("Start looking for crtc_id: %d", encoder->crtc_id));
+
+                        for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
+                            if (drmModeResources->crtcs[c] == encoder->crtc_id) {
+                                crtc = drmModeGetCrtc(backendFd, drmModeResources->crtcs[c]);
+                                break;
+                            }
+                        }
+
+                        /* Ensure the CRTC is active. */
+                        ASSERT(crtc != nullptr);
+                        ASSERT(crtc->crtc_id != 0);
+                        /*
+                         * On the banana pi, the following ASSERT fired but, although the documentation
+                         * suggests that buffer_id means disconnected, the screen was not disconnected
+                         * Hence wht the ASSERT is, until further investigation, commented out !!!
+                         * ASSERT(crtc->buffer_id != 0);
+                         */
+
+                        /*
+                         * The kernel doesn't directly tell us what it considers to be the
+                         * single primary plane for this CRTC (i.e. what would be updated
+                         * by drmModeSetCrtc), but if it's already active then we can cheat
+                         * by looking for something displaying the same framebuffer ID,
+                         * since that information is duplicated.
+                         */
+                        for (uint8_t p = 0; p < drmModePlaneResources->count_planes; p++) {
+                            plane = drmModeGetPlane(backendFd, drmModePlaneResources->planes[p]);
+
+                            TRACE(Trace::Backend, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB ID %" PRIu32, plane->plane_id, plane->crtc_id, plane->fb_id));
+
+                            if ((plane->crtc_id == crtc->crtc_id) && (plane->fb_id == crtc->buffer_id)) {
+                                break;
+                            }
+                        }
+
+                        ASSERT(plane);
+
+                        uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
+
+                        TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
+
+                        _crtc.Load(backendFd, crtc);
+                        _blob.Load(backendFd, static_cast<const drmModeModeInfo*>(_crtc), sizeof(drmModeModeInfo));
+                        _primaryPlane.Load(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
+
+                        Compositor::DRM::Properties primaryPlane(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
+
+                        _frameBuffer.Configure(backendFd, crtc->width, crtc->height, _format);
+                        Transaction transaction(_backend->Descriptor());
+                        transaction.Add(*this);
+                        ASSERT (transaction.HasData());
+                        if (transaction.Initial() != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, ("Failed to initialize transaction based display"));
+                        }
+
+                        // _refreshRate = crtc->mode.vrefresh;
+
+                        plane = drmModeGetPlane(backendFd, primaryPlane.Id());
+
+                        drmModeFreeCrtc(crtc);
+                        drmModeFreePlane(plane);
+
+                        drmModeFreeEncoder(encoder);
+
+                        result = ((_crtc.Id() != Compositor::InvalidIdentifier) && (primaryPlane.Id() != Compositor::InvalidIdentifier));
+                    } else {
+                        TRACE(Trace::Error, ("Failed to get encoder for id %u", drmModeConnector->connector_id));
+                    }
+
+                    break;
+                }
+
+                drmModeFreeResources(drmModeResources);
+                drmModeFreePlaneResources(drmModePlaneResources);
+
+                return result;
+            }
+        } 
 
     Core::ProxyType<IOutput> CreateBuffer(
         const string& connectorName, 
@@ -87,7 +222,7 @@ namespace Backend {
 
         TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
 
-        Core::ProxyType<Backend::Connector> connector = connectors.Instance<Backend::Connector>(connectorName, connectorName, rectangle, format, &(*renderer), feedback);
+        Core::ProxyType<Backend::Connector> connector = connectors.Instance<Backend::Connector>(connectorName, connectorName, rectangle, format, renderer, feedback);
 
         if ( (connector.IsValid()) && (connector->IsValid()) ) {
             result = Core::ProxyType<IOutput>(connector);
@@ -96,5 +231,5 @@ namespace Backend {
         return result;
     }
 
-} // namespace Compositor
+    } // namespace Compositor
 } // Thunder
