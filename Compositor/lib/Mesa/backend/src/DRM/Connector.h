@@ -34,6 +34,7 @@ namespace Compositor {
             private:
                 enum mode : uint8_t {
                     FRAMEBUFFER_INDEX  = 0x01,
+                    PENDING_COMMIT     = 0x20,
                     PENDING_PUBLISH    = 0x40,
                     DISABLED           = 0x80
                  };
@@ -130,7 +131,10 @@ namespace Compositor {
                 bool Commit() {
                     bool issueCommit (false);
                     _swap.Lock();
-                    if ((_activePlane & mode::PENDING_PUBLISH) == 0) {
+                    if ((_activePlane & mode::PENDING_PUBLISH) != 0) {
+                        _activePlane |= mode::PENDING_COMMIT;
+                    }
+                    else {
                         issueCommit = true;
 
                         // Make sure another process/client is not writing on this buffer while we need to swap it :-)
@@ -146,12 +150,28 @@ namespace Compositor {
                     _swap.Unlock();
                     return (issueCommit);
                 }
-                bool Published() {
+                bool Published(bool& commit) {
+                    bool publish(false);
                     _swap.Lock();
-                    bool pending((_activePlane & mode::PENDING_PUBLISH) != 0);
-                    _activePlane &= ~(mode::PENDING_PUBLISH);
+                    if ((_activePlane & mode::PENDING_COMMIT) != 0) {
+                        // Seems we need to swap and keep the publish
+                        // Make sure another process/client is not writing on this buffer while we need to swap it :-)
+                        uint8_t lockBuffer = (_activePlane & mode::FRAMEBUFFER_INDEX);
+                        if (_buffer[lockBuffer]->Acquire(50) == nullptr) {
+                            TRACE(Trace::Error, ("Could not lock a buffer to swap FrameBuffers"));
+                        }
+                        else {
+                            _activePlane = mode::PENDING_PUBLISH | ((_activePlane & mode::FRAMEBUFFER_INDEX) ^ mode::FRAMEBUFFER_INDEX);
+                            _buffer[lockBuffer]->Relinquish();
+                        }
+                    }
+                    else {
+                       commit = false;
+                       publish = ((_activePlane & mode::PENDING_PUBLISH) != 0);
+                       _activePlane &= ~(mode::PENDING_PUBLISH);
+                    }
                     _swap.Unlock();
-                    return (pending);
+                    return (publish);
                 }
 
             private:
@@ -296,28 +316,7 @@ namespace Compositor {
                 uint32_t Commit(Connector&);
 
             private:
-                void PageFlip(const unsigned int sequence, const unsigned sec, const unsigned usec) {
-                    static uint64_t previous = 0;
-
-                    struct timespec presentationTimestamp;
-
-                    presentationTimestamp.tv_sec = sec;
-                    presentationTimestamp.tv_nsec = usec* 1000;
-                    uint64_t stamp = Core::Time(presentationTimestamp).Ticks();
-
-                    uint32_t elapsed = (stamp - previous) / Core::Time::TicksPerMillisecond;
-                    float fps = 1 / (elapsed / 1000.0f);
-                    previous = stamp;
-
- fprintf(stdout, "------------------------------- %s -------------------- %d ------Elapsed: %d mS ------- FPS [%f]---- \n", __FUNCTION__, __LINE__, elapsed, fps);
-                    _adminLock.Lock();
-
-                    for (Connector*& entry : _connectors) {
-                        entry->Published(sequence, stamp);
-                    }
-
-                    _adminLock.Unlock();
-                }
+                void PageFlip(const unsigned int sequence, const unsigned sec, const unsigned usec);
                 static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
                 {
                     ASSERT(userData != nullptr);
@@ -446,10 +445,12 @@ namespace Compositor {
             const Compositor::DRM::CRTCProperties& CrtController() const {
                 return _crtc;
             }
-            void Published(const unsigned int sequence, const uint64_t stamp) {
-                if ((_frameBuffer.Published() == true) && (_feedback != nullptr)) {
+            bool Published(const unsigned int sequence, const uint64_t stamp) {
+                bool commit;
+                if ((_frameBuffer.Published(commit) == true) && (_feedback != nullptr)) {
                     _feedback->Presented(this, sequence, stamp);
                 }
+                return (commit);
             }
 
         private:
