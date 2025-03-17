@@ -21,7 +21,7 @@
 
 #include <core/core.h>
 #include <messaging/messaging.h>
-#include <compositorbuffer/CompositorBufferType.h>
+#include <graphicsbuffer/GraphicsBufferType.h>
 #include <array>
 
 #include <interfaces/IComposition.h>
