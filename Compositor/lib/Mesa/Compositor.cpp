@@ -29,7 +29,7 @@
 #include <IRenderer.h>
 #include <Transformation.h>
 
-#include <compositorbuffer/CompositorBufferType.h>
+#include <graphicsbuffer/GraphicsBufferType.h>
 
 #include <drm_fourcc.h>
 
@@ -192,8 +192,10 @@ namespace Plugin {
             Exchange::IComposition::IDisplay* _parentInterface;
         };
 
-        class Client : public Exchange::IComposition::IClient, public Compositor::CompositorBuffer {
+        class Client : public Exchange::IComposition::IClient, public Graphics::ServerBufferType<1> {
         private:
+            using BaseClass = Graphics::ServerBufferType<1>;
+
             class Remote : public Exchange::IComposition::IClient {
             public:
                 Remote() = delete;
@@ -280,7 +282,7 @@ namespace Plugin {
             Client& operator=(const Client&) = delete;
 
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
-                : Compositor::CompositorBuffer(width, height, parent.Format(), parent.Modifier(), Exchange::ICompositionBuffer::TYPE_DMA)
+                : BaseClass(width, height, parent.Format(), parent.Modifier(), Exchange::IGraphicsBuffer::TYPE_DMA)
                 , _parent(parent)
                 , _id(Core::InterlockedIncrement(_sequence))
                 , _callsign(callsign)
@@ -308,10 +310,10 @@ namespace Plugin {
                 return (&_remoteClient);
             }
             uint8_t Descriptors(const uint8_t maxSize, int container[]) {
-                return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
+                return (BaseClass::Descriptors(maxSize, container));
             }
             void AttachPlanes(Core::PrivilegedRequest::Container& descriptors) {
-                Compositor::CompositorBuffer::Planes(descriptors.data(), descriptors.size());
+                BaseClass::Planes(descriptors.data(), descriptors.size());
             }
             Core::ProxyType<Compositor::IRenderer::ITexture> Texture() {
                 return _texture;
@@ -630,55 +632,60 @@ namespace Plugin {
                 rectangle.width = config.Out.Width.Value();
                 rectangle.height = config.Out.Height.Value();
 
-                _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
-                ASSERT(_renderer.IsValid());
-
-                _renderer->ViewPort(rectangle.width, rectangle.height);
-
-                _output = new Output(*this, config.Out.Connector.Value(), rectangle, _format, _renderer);
-
-                TRACE(Trace::Information, ("Opening Render node %s", config.Render.Value().c_str()));
                 _renderDescriptor = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
+                TRACE(Trace::Information, ("Opening Render node %s", config.Render.Value().c_str()));
 
-                ASSERT((_output != nullptr) && (_output->IsValid()));
-
-                TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
-
-                std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
-                result = _clientBridge.Open(bridgePath);
-
-                if (result != Core::ERROR_NONE) {
-                    TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), bridgePath.c_str(), result));
+                if (_renderDescriptor < 0) {
+                    result = Core::ERROR_INVALID_DESIGNATOR;
                 }
                 else {
-                    std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
+                    _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
+                    ASSERT(_renderer.IsValid());
 
-                    ASSERT(_dispatcher == nullptr);
+                    _renderer->ViewPort(rectangle.width, rectangle.height);
 
-                    _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+                    _output = new Output(*this, config.Out.Connector.Value(), rectangle, _format, _renderer);
+                    ASSERT((_output != nullptr) && (_output->IsValid()));
 
-                    _dispatcher = new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine);
+                    TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
 
-                    if (_dispatcher->IsListening() == false) {
-                        delete _dispatcher;
-                        _dispatcher = nullptr;
-                        _engine.Release();
+                    std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
+                    result = _clientBridge.Open(bridgePath);
 
-                        result = Core::ERROR_UNAVAILABLE;
-    
-                        TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));    
+                    if (result != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), bridgePath.c_str(), result));
                     }
                     else {
-                        PluginHost::ISubSystem* subSystems = service->SubSystems();
+                        std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
 
-                        ASSERT(subSystems != nullptr);
+                        ASSERT(_dispatcher == nullptr);
 
-                        if (subSystems != nullptr) {
-                            subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
-                            subSystems->Release();
+                        _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
+
+                        _dispatcher = new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine);
+
+                        if (_dispatcher->IsListening() == false) {
+                            delete _dispatcher;
+                            _dispatcher = nullptr;
+
+                            _engine.Release();
+
+                            result = Core::ERROR_UNAVAILABLE;
+    
+                            TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));    
                         }
+                        else {
+                            PluginHost::ISubSystem* subSystems = service->SubSystems();
 
-                        TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
+                            ASSERT(subSystems != nullptr);
+
+                            if (subSystems != nullptr) {
+                                subSystems->Set(PluginHost::ISubSystem::GRAPHICS, nullptr);
+                                subSystems->Release();
+                            }
+
+                            TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
+                        }
                     }
                 }
             } 
