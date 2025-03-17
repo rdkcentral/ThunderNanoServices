@@ -27,23 +27,6 @@ namespace Plugin {
 
     using namespace JsonData::TimeSync;
 
-    // Registration
-    //
-
-    void TimeSync::RegisterAll()
-    {
-        Register<void,void>(_T("synchronize"), &TimeSync::endpoint_synchronize, this);
-        Property<SynctimeData>(_T("synctime"), &TimeSync::get_synctime, nullptr, this);
-        Property<Core::JSON::String>(_T("time"), &TimeSync::get_time, &TimeSync::set_time, this);
-    }
-
-    void TimeSync::UnregisterAll()
-    {
-        Unregister(_T("synchronize"));
-        Unregister(_T("time"));
-        Unregister(_T("synctime"));
-    }
-
     // API implementation
     //
 
@@ -75,48 +58,6 @@ namespace Plugin {
         }
 
         return Core::ERROR_NONE;
-    }
-
-    // Property: time - Current system time
-    // Return codes:
-    //  - ERROR_NONE: Success
-    uint32_t TimeSync::get_time(Core::JSON::String& response) const
-    {
-        response = Core::Time::Now().ToISO8601();
-        return Core::ERROR_NONE;
-    }
-
-    // Property: time - Current system time
-    // Return codes:
-    //  - ERROR_NONE: Success
-    //  - ERROR_BAD_REQUEST: The time is invalid
-    uint32_t TimeSync::set_time(const Core::JSON::String& param)
-    {
-        uint32_t result = Core::ERROR_NONE;
-        Core::Time newTime(0);
-
-        if (param.IsSet() && !param.Value().empty()) {
-            const string& time = param.Value();
-            newTime.FromISO8601(time);
-
-            if (!newTime.IsValid()) {
-                result = Core::ERROR_BAD_REQUEST;
-            }
-        }
-
-        if (result == Core::ERROR_NONE) {
-            // Stop automatic synchronisation
-            _client->Cancel();
-            _job.Revoke();
-
-            if (newTime.IsValid()) {
-                Core::SystemInfo::Instance().SetTime(newTime);
-            }
-
-            EnsureSubsystemIsActive();
-        }
-
-        return result;
     }
 
     // Event: timechange - Signals a time change

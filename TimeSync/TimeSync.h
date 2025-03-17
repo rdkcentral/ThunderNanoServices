@@ -22,7 +22,7 @@
 
 #include "Module.h"
 #include <interfaces/ITimeSync.h>
-#include <interfaces/json/JsonData_TimeSync.h>
+#include <interfaces/json/JTimeSync.h>
 
 namespace Thunder {
 namespace Plugin {
@@ -208,21 +208,20 @@ namespace Plugin {
         void SyncedTime(const uint64_t timeTicks);
         void EnsureSubsystemIsActive();
 
-        // JSON RPC
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_synchronize();
-        uint32_t get_synctime(JsonData::TimeSync::SynctimeData& response) const;
-        uint32_t get_time(Core::JSON::String& response) const;
-        uint32_t set_time(const Core::JSON::String& param);
-        void event_timechange();
+        void NotifyTimeChanged() const;
+
+        virtual Core::hresult Register(INotification* const notification) = 0;
+        virtual Core::hresult Unregister(const INotification* const notification) = 0;
 
     private:
+        using TimeSyncObservers = std::list<Exchange::ITimeSync::INotification*>;
+
         uint16_t _skipURL;
         uint32_t _periodicity;
         Exchange::ITimeSync* _client;
         Core::SinkType<Notification> _sink;
         PluginHost::ISubSystem* _subSystem;
+        TimeSyncObservers _timeSyncObservers;
 
         Core::WorkerPool::JobType<TimeSync&> _job;
     };
