@@ -71,12 +71,6 @@ class RenderTest {
             _parent.HandleVSync(output, sequence, time);
         }
 
-        // virtual void Display(const int fd, const std::string& node) override
-        // {
-        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
-        //     // _parent.HandleGPUNode(node);
-        // }
-
     private:
         RenderTest& _parent;
     };
@@ -109,7 +103,8 @@ public:
 
         _connector = Compositor::CreateBuffer(
             connectorId,
-            { 0, 0, 1080, 1920 },
+            1080, 
+            1920,
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }), 
             _renderer,
             &_sink);

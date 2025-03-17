@@ -106,7 +106,8 @@ public:
 
         _connector = Compositor::CreateBuffer(
             connectorId,
-            { 0, 0, 1080, 1920 },
+            1080, 
+            1920,
             _format, 
             _renderer,
             &_sink);

@@ -68,20 +68,6 @@ namespace Compositor {
         virtual uint32_t Commit() = 0;
 
         /**
-         * @brief  Get the X position of this output in the complete composition.
-         *
-         * @return X position in pixels
-         */
-        virtual int32_t X() const = 0;
-
-        /**
-         * @brief  Get the Y position of this output in the complete composition.
-         *
-         * @return int Y position in pixels.
-         */
-        virtual int32_t Y() const = 0;
-
-        /**
          * @brief  Get the backend that it handling this output.
          *
          * @return IBackend* interface.
@@ -103,7 +89,8 @@ namespace Compositor {
 
     EXTERNAL Core::ProxyType<IOutput> CreateBuffer(
         const string& connector,
-        const Exchange::IComposition::Rectangle& rectangle,
+        const uint32_t width,
+        const uint32_t height,
         const Compositor::PixelFormat& format,
         const Core::ProxyType<IRenderer>& renderer,
         IOutput::ICallback* callback);

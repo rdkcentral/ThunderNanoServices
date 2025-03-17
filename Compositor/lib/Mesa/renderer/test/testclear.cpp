@@ -113,7 +113,8 @@ public:
 
         _connector = Compositor::CreateBuffer(
             connectorId,
-            { 0, 0, 1080, 1920 },
+            1080, 
+            1920,
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
             _renderer,
             &_sink);

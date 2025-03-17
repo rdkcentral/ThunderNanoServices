@@ -214,7 +214,8 @@ namespace Thunder {
 
     Core::ProxyType<IOutput> CreateBuffer(
         const string& connectorName, 
-        const Exchange::IComposition::Rectangle& rectangle, 
+        const uint32_t width,
+        const uint32_t height,
         const PixelFormat& format, 
         const Core::ProxyType<IRenderer>& renderer, 
         IOutput::ICallback* feedback)
@@ -228,7 +229,7 @@ namespace Thunder {
 
         TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
 
-        Core::ProxyType<Backend::Connector> connector = connectors.Instance<Backend::Connector>(connectorName, connectorName, rectangle, format, renderer, feedback);
+        Core::ProxyType<Backend::Connector> connector = connectors.Instance<Backend::Connector>(connectorName, connectorName, width, height, format, renderer, feedback);
 
         if ( (connector.IsValid()) && (connector->IsValid()) ) {
             result = Core::ProxyType<IOutput>(connector);

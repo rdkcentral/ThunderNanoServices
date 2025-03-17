@@ -339,10 +339,8 @@ namespace Compositor {
             Connector& operator=(Connector&&) = delete;
             Connector& operator=(const Connector&) = delete;
 
-            Connector(const string& connectorName, const Exchange::IComposition::Rectangle& rectangle, const PixelFormat format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
+            Connector(const string& connectorName, const uint32_t, const uint32_t, const PixelFormat format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
                 : _backend(BackendImpl::Instance(connectorName))
-                , _x(rectangle.x)
-                , _y(rectangle.y)
                 , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, Compositor::DRM::FindConnectorId(_backend->Descriptor(), connectorName))
                 , _crtc()
@@ -406,12 +404,6 @@ namespace Compositor {
              * Returning the info of the back buffer because its used to
              * draw a new frame.
              */
-            int32_t X() const override {
-                return _x;
-            }
-            int32_t Y() const override {
-                return _y;
-            }
             uint32_t Commit() override {
                 uint32_t result = Core::ERROR_NONE;
                 if (_frameBuffer.Commit() == true) {
@@ -458,8 +450,6 @@ namespace Compositor {
 
         private:
             Core::ProxyType<BackendImpl> _backend;
-            int32_t _x;
-            int32_t _y;
             const Compositor::PixelFormat _format;
             Compositor::DRM::Properties _connector;
             Compositor::DRM::CRTCProperties _crtc;

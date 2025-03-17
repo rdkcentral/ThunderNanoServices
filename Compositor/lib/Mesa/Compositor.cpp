@@ -517,9 +517,9 @@ namespace Plugin {
             Output& operator=(Output&&) = delete;
             Output& operator=(const Output&) = delete;
 
-            Output(CompositorImplementation& parent, const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Core::ProxyType<Compositor::IRenderer> renderer)
+            Output(CompositorImplementation& parent, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, Core::ProxyType<Compositor::IRenderer> renderer)
                 : _sink(parent)
-                , _connector(Compositor::CreateBuffer(name, rectangle, format, renderer, &_sink)) {
+                , _connector(Compositor::CreateBuffer(name, width, height, format, renderer, &_sink)) {
                 TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
             }
             ~Output() {
@@ -527,16 +527,14 @@ namespace Plugin {
             }
 
         public:
-            Exchange::IComposition::Rectangle Geometry() const {
-                return { _connector->X(), _connector->Y(), _connector->Width(), _connector->Height() };
-            }
-            bool IsIntersecting(const Exchange::IComposition::Rectangle& rectangle) {
-                return (
-                    std::min(_connector->X() + static_cast<int32_t>(_connector->Width()), rectangle.x + static_cast<int32_t>(rectangle.width)) > std::max(_connector->X(), rectangle.x) && // width > 0
-                    std::min(_connector->Y() + static_cast<int32_t>(_connector->Height()), rectangle.y + static_cast<int32_t>(rectangle.height)) > std::max(_connector->Y(), rectangle.y)); // height > 0
-            }
-            bool IsValid() {
+           bool IsValid() {
                 return _connector.IsValid();
+            }
+            uint32_t Width() const {
+                return(_connector->Width());
+            }
+            uint32_t Height() const {
+                return(_connector->Height());
             }
             Core::ProxyType<Exchange::ICompositionBuffer> Buffer() {
                 return Core::ProxyType<Exchange::ICompositionBuffer>(_connector);
@@ -567,6 +565,8 @@ namespace Plugin {
 
         CompositorImplementation()
             : _adminLock()
+            , _X(0)
+            , _Y(0)
             , _format(DRM_FORMAT_INVALID)
             , _modifier(DRM_FORMAT_MOD_INVALID)
             , _output(nullptr)
@@ -644,7 +644,7 @@ namespace Plugin {
 
                     _renderer->ViewPort(rectangle.width, rectangle.height);
 
-                    _output = new Output(*this, config.Out.Connector.Value(), rectangle, _format, _renderer);
+                    _output = new Output(*this, config.Out.Connector.Value(), rectangle.width, rectangle.height, _format, _renderer);
                     ASSERT((_output != nullptr) && (_output->IsValid()));
 
                     TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
@@ -793,10 +793,16 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        bool IsIntersecting(const Exchange::IComposition::Rectangle& rectangle) {
+            return (
+                std::min(_X + static_cast<int32_t>(_output->Width()), rectangle.x + static_cast<int32_t>(rectangle.width)) > std::max(_X, rectangle.x) && // width > 0
+                std::min(_Y + static_cast<int32_t>(_output->Height()), rectangle.y + static_cast<int32_t>(rectangle.height)) > std::max(_Y, rectangle.y)); // height > 0
+        }
+ 
         void Render(Client& client)
         {
             uint8_t index = 1;
-            if (_output->IsIntersecting(client.Geometry())) {
+            if (IsIntersecting(client.Geometry())) {
                 if (client.Texture() == nullptr) {
                     TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), client.Name().c_str()));
                 }
@@ -861,6 +867,8 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _adminLock;
+        int32_t _X;
+        int32_t _Y;
         uint32_t _format;
         uint64_t _modifier;
         Output* _output;
