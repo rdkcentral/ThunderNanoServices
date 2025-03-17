@@ -49,21 +49,14 @@ namespace Thunder {
             }
 
             void Connector::BackendImpl::PageFlip(const unsigned int sequence, const unsigned sec, const unsigned usec) {
-                static uint64_t previous = 0;
-
                 struct timespec presentationTimestamp;
-
-                Transaction transaction(_gpuFd);
 
                 presentationTimestamp.tv_sec = sec;
                 presentationTimestamp.tv_nsec = usec* 1000;
                 uint64_t stamp = Core::Time(presentationTimestamp).Ticks();
 
-                uint32_t elapsed = (stamp - previous) / Core::Time::TicksPerMillisecond;
-                float fps = 1 / (elapsed / 1000.0f);
-                previous = stamp;
+                Transaction transaction(_gpuFd);
 
- fprintf(stdout, "------------------------------- %s -------------------- %d ------Elapsed: %d mS ------- FPS [%f]---- \n", __FUNCTION__, __LINE__, elapsed, fps);
                 _adminLock.Lock();
 
                 for (Connector*& entry : _connectors) {

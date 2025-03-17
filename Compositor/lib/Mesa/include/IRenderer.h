@@ -33,7 +33,7 @@ namespace Compositor {
             virtual uint32_t Width() const = 0;
             virtual uint32_t Height() const = 0;
 
-            virtual void Bind() = 0;
+            virtual unsigned int Id() const = 0;
 
             virtual uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const = 0;
 

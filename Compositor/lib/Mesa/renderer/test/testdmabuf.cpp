@@ -93,12 +93,12 @@ public:
         , _rendering()
         , _vsync()
         , _ppts(Core::Time::Now().Ticks())
-        , _fps()
+        , _fps(0.0f)
+        , _min(1000.0f)
+        , _max(0.0f)
         , _sequence(0)
-    {
+        , _rotation(0.0f) {
        ASSERT(_renderFd >= 0);
-
-       
 
         _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
@@ -118,10 +118,11 @@ public:
         _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
+        _ids[0] = 0;
+        _ids[1] = 0;
     }
 
-    ~RenderTest()
-    {
+    ~RenderTest() {
         Stop();
 
         _renderer.Release();
@@ -130,9 +131,7 @@ public:
 
         ::close(_renderFd);
     }
-
-    void Start()
-    {
+    void Start() {
         TRACE(Trace::Information, ("Starting RenderTest"));
 
         _renderStart = std::chrono::high_resolution_clock::now();
@@ -140,9 +139,7 @@ public:
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
         _render = std::thread(&RenderTest::Render, this);
     }
-
-    void Stop()
-    {
+    void Stop() {
         TRACE(Trace::Information, ("Stopping RenderTest"));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
@@ -152,30 +149,38 @@ public:
             _render.join();
         }
     }
-
-    bool Running() const
-    {
+    unsigned int Current() {
+        unsigned int id(_connector->Texture()->Id());
+        if ((_ids[0] == 0) || (_ids[0] == id)) {
+            _ids[0] =  id;
+            return (1);
+        }
+        else if ((_ids[1] == 0) || (_ids[1] == id)) {
+            _ids[1] = id;
+            return (2);
+        }
+        return (0);
+    }
+    bool Running() const {
         return _running;
     }
-
-private:
-    void Render()
-    {
-        _running = true;
-        _renderer->ViewPort(_connector->Width(), _connector->Height());
-
-        while (_running) {
-            NewFrame();
-        }
+    void Rotate(const float& degrees) {
+        _rotation += degrees;
     }
-
+    void Statistics(float& min, float& fps, float& max) {
+        min = _min;
+        max = _max;
+        fps = _fps;
+    }
+    void ResetStatistics() {
+        _min = _fps;
+        _max = _fps;
+    }
     void NewFrame()
     {
-        static float rotation = 0.f;
-
         const float runtime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - _renderStart).count();
 
-        float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
+        float alpha = (_running == false ? 1.0f : 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime)));
 
         const uint16_t width(_connector->Width());
         const uint16_t height(_connector->Height());
@@ -183,8 +188,8 @@ private:
         const uint16_t renderWidth(720);
         const uint16_t renderHeight(720);
 
-        const float cosX = cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
-        const float sinY = sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
+        const float cosX = cos(M_PI * 2.0f * (_rotation * (180.0f / M_PI)) / 360.0f);
+        const float sinY = sin(M_PI * 2.0f * (_rotation * (180.0f / M_PI)) / 360.0f);
 
         float x = float(renderWidth / 2.0f) * cosX;
         float y = float(renderHeight / 2.0f) * sinY;
@@ -208,21 +213,27 @@ private:
             TRACE(Trace::Error, ("Commit failed: %d", commit));
             std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit. 
         }
-
-
-        rotation += _radPerFrame;
     }
 
-    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
-    {
+private:
+    void Render() {
+        _running = true;
+        _renderer->ViewPort(_connector->Width(), _connector->Height());
+
+        while (_running) {
+            NewFrame();
+            Rotate(_radPerFrame);
+        }
+    }
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/) {
         _fps = 1 / ((pts - _ppts) / 1000000.0f);
+        if (_fps < _min) _min = _fps;
+        if (_fps > _max) _max = _fps;
         _sequence = sequence;
         _ppts = pts;
         _vsync.notify_all();
     }
-
-    void WaitForVSync(uint32_t timeoutMs)
-    {
+    void WaitForVSync(uint32_t timeoutMs) {
         std::unique_lock<std::mutex> lock(_rendering);
 
         if (timeoutMs == Core::infinite) {
@@ -230,7 +241,6 @@ private:
         } else {
             _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
         }
-        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
     }
 
 private:
@@ -250,7 +260,11 @@ private:
     std::condition_variable _vsync;
     uint64_t _ppts;
     float _fps;
+    float _min;
+    float _max;
     uint32_t _sequence;
+    float _rotation;
+    unsigned int _ids[2];
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {
@@ -338,7 +352,32 @@ int main(int argc, char* argv[])
 
             switch (keyPress) {
             case 'S': {
-                (test.Running() == false) ? test.Start() : test.Stop();
+                if (test.Running() == false) {
+                    printf("Running the Render test!\n");
+                    test.Start();
+                }
+                else {
+                    printf("Pausing the Render test!\n");
+                    test.Stop();
+                }
+                break;
+            }
+            case 'I': {
+                float min, fps, max;
+                test.Statistics(min, fps, max);
+                printf("FPS: [%f] < [%f] < [%f]\n", min, fps, max);
+                break;
+            }
+            case 'R': { 
+                printf("Reset the FPS statistics\n");
+                test.ResetStatistics();
+                break;
+            }
+            case 'F': {
+                unsigned int id = test.Current();
+                printf("Flip screen and add 90 degrees! [On: {%s}]\n", id == 0 ? "ERROR" : id == 1 ? "FRONT" : "BACK");
+                test.Rotate (90 * (180.0f / M_PI));
+                test.NewFrame();
                 break;
             }
             default:

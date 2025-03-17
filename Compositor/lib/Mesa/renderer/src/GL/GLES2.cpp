@@ -532,10 +532,8 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 uint32_t Height() const override { 
                     return _buffer->Height(); 
                 }
-                void Bind() override {
-                fprintf(stdout, " --------------------------- %s ---------------------- %d -------------[%d] OK=%d-------\n", __FUNCTION__, __LINE__, glGetError(), GL_NO_ERROR); fflush(stdout);
-                    GLES_API.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _image);
-                fprintf(stdout, " --------------------------- %s ---------------------- %d -------------[%d] OK=%d-------\n", __FUNCTION__, __LINE__, glGetError(), GL_NO_ERROR); fflush(stdout);
+                unsigned int Id() const override {
+                    return (reinterpret_cast<unsigned int>(_image));
                 }
                 uint32_t Draw(const float& alpha, const Matrix& matrix, const Exchange::IComposition::Rectangle& region) const override {
                     const GLfloat x1 = region.x / _buffer->Width();
@@ -556,7 +554,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 GLenum Target() const { 
                     return (_target); 
                 }
-                GLuint Id() const { 
+                GLuint TextureId() const { 
                     return (_textureId); 
                 }
 
@@ -621,7 +619,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                     EGLImageKHR image = GLESTexture::CreateImage();
 
-                    glBindTexture(GLESTexture::Target(), GLESTexture::Id());
+                    glBindTexture(GLESTexture::Target(), GLESTexture::TextureId());
 
                     glTexParameteri(GLESTexture::Target(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(GLESTexture::Target(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -630,7 +628,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                     glBindTexture(GLESTexture::Target(), 0);
 
-                    TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d external=%s", GLESTexture::Id(), buffer->Width(), buffer->Height(), GLESTexture::Target() == GL_TEXTURE_EXTERNAL_OES ? "true" : "false"));
+                    TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d external=%s", GLESTexture::TextureId(), buffer->Width(), buffer->Height(), GLESTexture::Target() == GL_TEXTURE_EXTERNAL_OES ? "true" : "false"));
                 }
                 ~GLESDMATexture() override = default;
             }; //  class GLESDMATexture
@@ -657,7 +655,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                     GLPixelFormat glFormat = ConvertFormat(buffer->Format());
 
-                    glBindTexture(GLESTexture::Target(), GLESTexture::Id());
+                    glBindTexture(GLESTexture::Target(), GLESTexture::TextureId());
 
                     glTexParameteri(GLESTexture::Target(), GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                     glTexParameteri(GLESTexture::Target(), GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -672,7 +670,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
 
                     buffer->Relinquish();
 
-                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", GLESTexture::Id(), buffer->Width(), buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
+                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", GLESTexture::TextureId(), buffer->Width(), buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
                 ~GLESPixelTexture() override = default;
 
@@ -729,9 +727,6 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 glGenRenderbuffers(1, &_glRenderBuffer);
                 glGenFramebuffers(1, &_glFrameBuffer);
 
-                glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
-                glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
-                // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
 
                 PopDebug();
 
@@ -805,13 +800,13 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 _egl.SetCurrent();
                 if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
                     Core::ProxyType<GLESPixelTexture> texture = Core::ProxyType<GLESPixelTexture>::Create(*this, buffer);
-                    if (texture->Id() != 0) {
+                    if (reinterpret_cast<EGLImageKHR>(texture->Id()) != EGL_NO_IMAGE) {
                         result = Core::ProxyType<ITexture>(texture);
                     }
                 }
                 else if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
                     Core::ProxyType<GLESDMATexture> texture = Core::ProxyType<GLESDMATexture>::Create(*this, buffer);
-                    if (texture->Id() != 0) {
+                    if (reinterpret_cast<EGLImageKHR>(texture->Id()) != EGL_NO_IMAGE) {
                         result = Core::ProxyType<ITexture>(texture);
                     }
                 }
@@ -905,12 +900,11 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 return _egl;
             }
             void Bind(const Core::ProxyType<ITexture>& image) {
-                image->Bind();
-
+                glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
+                glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
+                GLES_API.glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, reinterpret_cast<EGLImageKHR>(image->Id()));
                 glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
                 ASSERT(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-
- 
             }
             bool Snapshot(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels) {
                 PushDebug();
