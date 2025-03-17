@@ -87,17 +87,11 @@ namespace Plugin {
                 , System(_T("Controller"))
                 , WorkDir()
                 , InputSwitch(_T("InputSwitch"))
-                , Connector("connector")
-                , BufferConnector(_T("bufferconnector"))
-                , DisplayConnector("displayconnector")
                 , NewOnTop(true)
             {
                 Add(_T("system"), &System);
                 Add(_T("workdir"), &WorkDir);
                 Add(_T("inputswitch"), &InputSwitch);
-                Add(_T("connector"), &Connector);
-                Add(_T("bufferconnector"), &BufferConnector);
-                Add(_T("displayconnector"), &DisplayConnector);
                 Add(_T("newontop"), &NewOnTop);
             }
             ~Config() override = default;
@@ -106,9 +100,6 @@ namespace Plugin {
             Core::JSON::String System;
             Core::JSON::String WorkDir;
             Core::JSON::String InputSwitch;
-            Core::JSON::String Connector;
-            Core::JSON::String BufferConnector;
-            Core::JSON::String DisplayConnector;
             Core::JSON::Boolean NewOnTop;
         };
 

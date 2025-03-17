@@ -113,8 +113,6 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , BufferConnector(_T("bufferconnector"))
-                , DisplayConnector("displayconnector")
                 , Render()
                 , Height(0)
                 , Width(0)
@@ -122,8 +120,6 @@ namespace Plugin {
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
                 , Out()
             {
-                Add(_T("bufferconnector"), &BufferConnector);
-                Add(_T("displayconnector"), &DisplayConnector);
                 Add(_T("render"), &Render);
                 Add(_T("height"), &Height);
                 Add(_T("width"), &Width);
@@ -134,8 +130,6 @@ namespace Plugin {
 
             ~Config() override = default;
 
-            Core::JSON::String BufferConnector;
-            Core::JSON::String DisplayConnector;
             Core::JSON::String Render;
             Core::JSON::DecUInt16 Height;
             Core::JSON::DecUInt16 Width;
@@ -639,6 +633,11 @@ namespace Plugin {
                     result = Core::ERROR_INVALID_DESIGNATOR;
                 }
                 else {
+                    string comPath; 
+
+                    Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), comPath);
+                    comPath = Core::Directory::Normalize(comPath);
+
                     _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
                     ASSERT(_renderer.IsValid());
 
@@ -649,20 +648,17 @@ namespace Plugin {
 
                     TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
 
-                    std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
-                    result = _clientBridge.Open(bridgePath);
+                    result = _clientBridge.Open(comPath + _T("comrpc"));
 
                     if (result != Core::ERROR_NONE) {
-                        TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), bridgePath.c_str(), result));
+                        TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), (comPath + _T("comrpc")).c_str(), result));
                     }
                     else {
-                        std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
-
                         ASSERT(_dispatcher == nullptr);
 
                         _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
 
-                        _dispatcher = new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine);
+                        _dispatcher = new DisplayDispatcher(Core::NodeId((comPath+_T("descriptor")).c_str()), service->ProxyStubPath(), this, _engine);
 
                         if (_dispatcher->IsListening() == false) {
                             delete _dispatcher;
@@ -672,7 +668,7 @@ namespace Plugin {
 
                             result = Core::ERROR_UNAVAILABLE;
     
-                            TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));    
+                            TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), (comPath+_T("descriptor")).c_str()));    
                         }
                         else {
                             PluginHost::ISubSystem* subSystems = service->SubSystems();
@@ -684,7 +680,7 @@ namespace Plugin {
                                 subSystems->Release();
                             }
 
-                            TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
+                            TRACE(Trace::Information, (_T("PID %d Compositor configured, compath: %s"), getpid(), comPath.c_str()));
                         }
                     }
                 }

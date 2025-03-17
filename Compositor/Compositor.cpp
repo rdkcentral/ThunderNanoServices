@@ -186,19 +186,16 @@ namespace Plugin {
 
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        if ((config.BufferConnector.IsSet() == true) && (config.BufferConnector.Value().empty() == false)) {
-            std::string bufferPath = service->VolatilePath() + config.BufferConnector.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_BUFFER_CONNECTOR"), bufferPath, true);
-        }
-
-        if ((config.DisplayConnector.IsSet() == true) && (config.DisplayConnector.Value().empty() == false)) {
-            std::string displayPath = service->VolatilePath() + config.DisplayConnector.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_DISPLAY_CONNECTOR"), displayPath, true);
-        }
-
         // See if the mandatory XDG environment variable is set, otherwise we will set it.
         if (Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), result) == false) {
-            string runTimeDir((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->PersistentPath() + config.WorkDir.Value());
+            string runTimeDir;
+
+            if (config.WorkDir.IsSet() == true) {
+                runTimeDir = ((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->VolatilePath() + config.WorkDir.Value());
+            }
+            else {
+                runTimeDir = service->VolatilePath() + service->Callsign();
+            }
 
             Core::SystemInfo::SetEnvironment(_T("XDG_RUNTIME_DIR"), runTimeDir);
 
