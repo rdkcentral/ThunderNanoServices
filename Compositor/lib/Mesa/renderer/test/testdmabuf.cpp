@@ -116,7 +116,7 @@ public:
         TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
         _ids[0] = 0;

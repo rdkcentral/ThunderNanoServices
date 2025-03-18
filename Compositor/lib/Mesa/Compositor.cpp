@@ -22,7 +22,7 @@
 #include <messaging/messaging.h>
 
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include <IBuffer.h>
 #include <IOutput.h>
@@ -114,15 +114,11 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , Render()
-                , Height(0)
-                , Width(0)
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
                 , Out()
             {
                 Add(_T("render"), &Render);
-                Add(_T("height"), &Height);
-                Add(_T("width"), &Width);
                 Add(_T("format"), &Format);
                 Add(_T("modifier"), &Modifier);
                 Add(_T("output"), &Out);
@@ -131,8 +127,6 @@ namespace Plugin {
             ~Config() override = default;
 
             Core::JSON::String Render;
-            Core::JSON::DecUInt16 Height;
-            Core::JSON::DecUInt16 Width;
             Core::JSON::HexUInt32 Format;
             Core::JSON::HexUInt64 Modifier;
             Output Out;
@@ -312,6 +306,9 @@ namespace Plugin {
             Core::ProxyType<Compositor::IRenderer::ITexture> Texture() {
                 return _texture;
             }
+            void Texture(const Core::ProxyType<Compositor::IRenderer::ITexture>& texture) {
+                _texture = texture;
+            }
 
             /**
              * Compositor::CompositorBuffer methods
@@ -366,11 +363,9 @@ namespace Plugin {
                 _parent.Announce(this);
             }
             void Revoke() {
-
                 if (_texture.IsValid()) {
                     _texture.Release(); // make sure to delete the texture so we are skipped by the renderer.
                 }
-
                 _parent.Revoke(this);
             }
 
@@ -463,10 +458,8 @@ namespace Plugin {
                 if (client.IsValid() == true) {
 
                     client->AttachPlanes(descriptors);
-                    Core::ProxyType<Exchange::ICompositionBuffer> buffer(client);
-
-                    // client->Texture(_parent.Texture(buffer));
-                    _parent.Texture(buffer);
+                    fprintf(stdout, "--------------------------------------- %s -------------------------------- %d -----------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
+                    client->Texture(_parent.Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(client)));
                 } else {
                     TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
                 }
@@ -530,8 +523,8 @@ namespace Plugin {
             uint32_t Height() const {
                 return(_connector->Height());
             }
-            Core::ProxyType<Exchange::ICompositionBuffer> Buffer() {
-                return Core::ProxyType<Exchange::ICompositionBuffer>(_connector);
+            Core::ProxyType<Exchange::IGraphicsBuffer> Buffer() {
+                return Core::ProxyType<Exchange::IGraphicsBuffer>(_connector);
             }
             int Descriptor() {
                 return (_connector->Backend()->Descriptor());
@@ -648,17 +641,18 @@ namespace Plugin {
 
                     TRACE(Trace::Information, ("Initialzed connector %s", config.Out.Connector.Value().c_str()));
 
-                    result = _clientBridge.Open(comPath + _T("comrpc"));
+                    result = _clientBridge.Open(comPath + _T("descriptor"));
 
                     if (result != Core::ERROR_NONE) {
                         TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), (comPath + _T("comrpc")).c_str(), result));
+                        result = Core::ERROR_OPENING_FAILED;
                     }
                     else {
                         ASSERT(_dispatcher == nullptr);
 
                         _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
 
-                        _dispatcher = new DisplayDispatcher(Core::NodeId((comPath+_T("descriptor")).c_str()), service->ProxyStubPath(), this, _engine);
+                        _dispatcher = new DisplayDispatcher(Core::NodeId((comPath+_T("comrpc")).c_str()), service->ProxyStubPath(), this, _engine);
 
                         if (_dispatcher->IsListening() == false) {
                             delete _dispatcher;
@@ -730,7 +724,7 @@ namespace Plugin {
 
             _adminLock.Unlock();
         }
-        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::ICompositionBuffer> buffer) {
+        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::IGraphicsBuffer> buffer) {
             ASSERT(buffer.IsValid());
             return _renderer->Texture(buffer);
         }
@@ -774,9 +768,7 @@ namespace Plugin {
         }
         Exchange::IComposition::ScreenResolution Resolution() const override {
 
-  fprintf(stdout, "-------------------- %s ------------------------ %d -------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
-            _clients.Visit([&](const string& name, const Core::ProxyType<Client>& element) {
-  fprintf(stdout, "Rendering: %s\n", name.c_str()); fflush(stdout);
+            _clients.Visit([&](const string& /* name */, const Core::ProxyType<Client>& element) {
                 const_cast<CompositorImplementation*>(this)->Render(*element);
             });
 
@@ -798,6 +790,7 @@ namespace Plugin {
         void Render(Client& client)
         {
             uint8_t index = 1;
+                    fprintf(stdout, "--------------------------------------- %s -------------------------------- %d -----------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
             if (IsIntersecting(client.Geometry())) {
                 if (client.Texture() == nullptr) {
                     TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), client.Name().c_str()));

@@ -194,7 +194,7 @@ namespace Plugin {
                 runTimeDir = ((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->VolatilePath() + config.WorkDir.Value());
             }
             else {
-                runTimeDir = service->VolatilePath() + service->Callsign();
+                runTimeDir = service->VolatilePath();
             }
 
             Core::SystemInfo::SetEnvironment(_T("XDG_RUNTIME_DIR"), runTimeDir);
@@ -207,15 +207,35 @@ namespace Plugin {
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: CompositorImplementation";
         } else {
+            uint32_t result;
             RegisterAll();
             _composition->Register(&_notification);
-            _composition->Configure(_service);
+            if ((result = _composition->Configure(_service)) != Core::ERROR_NONE) {
+                switch(result) {
+                    case Core::ERROR_INCOMPLETE_CONFIG:
+                         message = _T("No output connector defined.");
+                         break;
+                    case Core::ERROR_INVALID_DESIGNATOR:
+                         message = _T("Could not open the render node.");
+                         break;
+                    case Core::ERROR_OPENING_FAILED:
+                         message = _T("Could not open the descriptor connector.");
+                         break;
+                    case Core::ERROR_UNAVAILABLE:
+                         message = _T("Could not open the COMRPC connector.");
+                         break;
+                    default:
+                         message = string(_T("Failed to start the compositor. Error: ")) + Core::NumberType<uint32_t>(result).Text();
+                         break;
+                }
+            }
+            else {
+                _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
+                _inputSwitchCallsign = config.InputSwitch.Value();
+                _newOnTop = config.NewOnTop.Value();
 
-            _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
-            _inputSwitchCallsign = config.InputSwitch.Value();
-            _newOnTop = config.NewOnTop.Value();
-
-            _brightness = _composition->QueryInterface<Exchange::IBrightness>();
+                _brightness = _composition->QueryInterface<Exchange::IBrightness>();
+            }
         }
 
         // On success return empty, to indicate there is no error text.

@@ -227,7 +227,7 @@ namespace Compositor {
             _backend.Drop();
         }
 
-        Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
+        Exchange::IGraphicsBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
         {
             return (_buffer.IsValid() == true) ? _buffer->Acquire(timeoutMs) : nullptr;
         }
@@ -259,9 +259,9 @@ namespace Compositor {
             return (_buffer.IsValid() == true) ? _buffer->Modifier() : 0;
         }
 
-        Exchange::ICompositionBuffer::DataType WaylandOutput::Type() const
+        Exchange::IGraphicsBuffer::DataType WaylandOutput::Type() const
         {
-            return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::ICompositionBuffer::DataType::TYPE_INVALID;
+            return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::IGraphicsBuffer::DataType::TYPE_INVALID;
         }
 
         void WaylandOutput::SurfaceConfigure() {

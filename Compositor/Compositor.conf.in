@@ -5,9 +5,6 @@ configuration = JSON()
 configuration.add("resolution", "@PLUGIN_COMPOSITOR_RESOLUTION@")
 configuration.add("newontop", "false")
 
-if "@PLUGIN_COMPOSITOR_CONNECTOR@":
-    configuration.add("connector", "@PLUGIN_COMPOSITOR_CONNECTOR@")
-
 if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Nexus":
     if boolean("@PLUGIN_COMPOSITOR_NXSERVER@"):
         memory_settings = JSON()
@@ -74,11 +71,9 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
             configuration.add("outputs", output_configs_list)
 
 if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
-    configuration.add("height", "@PLUGIN_COMPOSITOR_CANVAS_HEIGHT@")
-    configuration.add("width", "@PLUGIN_COMPOSITOR_CANVAS_WIDTH@")
-    configuration.add("bufferconnector", "@PLUGIN_COMPOSITOR_BUFFER_CONNECTOR@")
-    configuration.add("displayconnector", "@PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR@")
-    
+    if "@PLUGIN_COMPOSITOR_RENDER_NODE@":
+        configuration.add("render", "@PLUGIN_COMPOSITOR_RENDER_NODE@")
+
     if "@PLUGIN_COMPOSITOR_OUTPUTS@":
         output_paramaters = "@PLUGIN_COMPOSITOR_OUTPUTS@".split(';')
         if len(output_paramaters) >= 1:
@@ -95,9 +90,6 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
                 
 
         configuration.add("output", output_config)
-
-    if "@PLUGIN_COMPOSITOR_RENDER_NODE@":
-        configuration.add("render", "@PLUGIN_COMPOSITOR_RENDER_NODE@")
 
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")

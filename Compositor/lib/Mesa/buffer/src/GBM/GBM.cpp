@@ -149,9 +149,9 @@ namespace Thunder {
 
     namespace Compositor {
 
-        class GBM : public LocalBufferType<4> {
+        class GBM : public Graphics::LocalBufferType<4> {
         private:
-            using BaseClass = LocalBufferType<4>;
+            using BaseClass = Graphics::LocalBufferType<4>;
         public:
             GBM() = delete;
             GBM(GBM&&) = delete;
@@ -171,7 +171,6 @@ namespace Thunder {
                     ASSERT(_device != nullptr);
 
                     if (_device != nullptr) {
-
                         _bo = gbm_bo_create_with_modifiers(_device, width, height, format.Type(), format.Modifiers().data(), format.Modifiers().size());
 
                         if (_bo == nullptr) {
@@ -244,7 +243,7 @@ namespace Thunder {
             gbm_bo* _bo;
         }; // class GBM
 
-        /* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+        /* extern */ Core::ProxyType<Exchange::IGraphicsBuffer> CreateBuffer(
             Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
@@ -252,7 +251,7 @@ namespace Thunder {
         {
             // ASSERT(drmAvailable() == 1);
 
-            Core::ProxyType<Exchange::ICompositionBuffer> result;
+            Core::ProxyType<Exchange::IGraphicsBuffer> result;
 
             int drmFd = DRM::ReopenNode(identifier, true);
 
@@ -262,7 +261,7 @@ namespace Thunder {
                 Core::ProxyType<GBM> entry = Core::ProxyType<GBM>::Create(drmFd, width, height, format);
 
                 if (entry->IsValid() == true) {
-                    result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
+                    result = Core::ProxyType<Exchange::IGraphicsBuffer>(entry);
                 }
             }
 

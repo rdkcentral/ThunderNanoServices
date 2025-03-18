@@ -122,11 +122,15 @@ namespace Thunder {
                         }
                     }
 
-                    if (encoder != nullptr) { /*
-                                               * Find the CRTC currently used by this drmModeConnector. It is possible to
-                                               * use a different CRTC if desired, however unlike the pre-atomic API,
-                                               * we have to explicitly change every object in the routing path.
-                                               */
+                    if (encoder == nullptr) { 
+                        TRACE(Trace::Error, ("Failed to get encoder for id %u", drmModeConnector->connector_id));
+                    }
+                    else {
+                        /*
+                         * Find the CRTC currently used by this drmModeConnector. It is possible to
+                         * use a different CRTC if desired, however unlike the pre-atomic API,
+                         * we have to explicitly change every object in the routing path.
+                         */
 
                         drmModePlanePtr plane(nullptr);
                         drmModeCrtcPtr crtc(nullptr);
@@ -181,25 +185,32 @@ namespace Thunder {
                         Compositor::DRM::Properties primaryPlane(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
 
                         _frameBuffer.Configure(backendFd, crtc->width, crtc->height, _format);
-                        Transaction transaction(_backend->Descriptor());
-                        transaction.Add(*this);
-                        ASSERT (transaction.HasData());
-                        if (transaction.Initial() != Core::ERROR_NONE) {
-                            TRACE(Trace::Error, ("Failed to initialize transaction based display"));
+
+                        if (_frameBuffer.IsValid() == false) {
+                            TRACE(Trace::Error, ("Failed to initialize the FrameBuffers"));
                         }
+                        else {
+                            Transaction transaction(_backend->Descriptor());
+                            transaction.Add(*this);
+                            ASSERT (transaction.HasData());
 
-                        // _refreshRate = crtc->mode.vrefresh;
+                            if (transaction.Initial() != Core::ERROR_NONE) {
+                                TRACE(Trace::Error, ("Failed to initialize transaction based display"));
+                                _frameBuffer.Destroy();
+                            }
+                            else {
+                                // _refreshRate = crtc->mode.vrefresh;
 
-                        plane = drmModeGetPlane(backendFd, primaryPlane.Id());
+                                plane = drmModeGetPlane(backendFd, primaryPlane.Id());
+
+                                result = ((_crtc.Id() != Compositor::InvalidIdentifier) && (primaryPlane.Id() != Compositor::InvalidIdentifier));
+                            }
+                        }
 
                         drmModeFreeCrtc(crtc);
                         drmModeFreePlane(plane);
 
                         drmModeFreeEncoder(encoder);
-
-                        result = ((_crtc.Id() != Compositor::InvalidIdentifier) && (primaryPlane.Id() != Compositor::InvalidIdentifier));
-                    } else {
-                        TRACE(Trace::Error, ("Failed to get encoder for id %u", drmModeConnector->connector_id));
                     }
 
                     break;

@@ -51,14 +51,21 @@ namespace Compositor {
                     , _activePlane(~0)
                     , _renderer(renderer)
                 {
-                    _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
-                    _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
+                    _buffer[0] = Core::ProxyType<Exchange::IGraphicsBuffer>();
+                    _buffer[1] = Core::ProxyType<Exchange::IGraphicsBuffer>();
                     _texture[0] = Core::ProxyType<IRenderer::ITexture>();
                     _texture[1] = Core::ProxyType<IRenderer::ITexture>();
-               }
-                ~FrameBufferImplementation()
-                {
-                    if (IsValid()) {
+                }
+                ~FrameBufferImplementation() {
+                    Destroy();
+                }
+
+            public:
+                bool IsValid() const {
+                    return (_activePlane != static_cast<uint8_t>(~0));
+                }
+                void Destroy() {
+                    if (_activePlane != static_cast<uint8_t>(~0)) {
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[0]);
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
                         _buffer[0].Release();
@@ -66,12 +73,8 @@ namespace Compositor {
                         _texture[0].Release();
                         _texture[1].Release();
                         ::close(_fd);
+                        _activePlane = ~0;
                     }
-                }
-
-            public:
-                bool IsValid() const {
-                    return (_activePlane != static_cast<uint8_t>(~0));
                 }
                 void Configure(const int fd, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format) {
                     // Configure should only be called once..
@@ -95,7 +98,6 @@ namespace Compositor {
                             }
                             _activePlane = 1;
                             _fd = ::dup(fd);
-
                        }
                     }
                 }
@@ -119,7 +121,7 @@ namespace Compositor {
                 uint64_t Modifier() const {
                     return (_buffer[0]->Modifier());
                 }
-                Exchange::ICompositionBuffer::DataType Type() const {
+                Exchange::IGraphicsBuffer::DataType Type() const {
                     return (_buffer[0]->Type());
                 }
                 Core::ProxyType<IRenderer::ITexture> Texture() const {
@@ -179,7 +181,7 @@ namespace Compositor {
                 int _fd;
                 uint8_t _activePlane;
                 Core::ProxyType<IRenderer> _renderer;
-                Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
+                Core::ProxyType<Exchange::IGraphicsBuffer> _buffer[2];
                 Core::ProxyType<IRenderer::ITexture> _texture[2];
                 Compositor::DRM::Identifier _frameId[2];
           
@@ -371,7 +373,7 @@ namespace Compositor {
             }
 
             /**
-             * Exchange::ICompositionBuffer implementation
+             * Exchange::IGraphicsBuffer implementation
              *
              * Returning the info of the back buffer because its used to
              * draw a new frame.
@@ -394,7 +396,7 @@ namespace Compositor {
             uint64_t Modifier() const override {
                 return (_frameBuffer.Modifier());
             }
-            Exchange::ICompositionBuffer::DataType Type() const {
+            Exchange::IGraphicsBuffer::DataType Type() const {
                 return (_frameBuffer.Type());
             }
 

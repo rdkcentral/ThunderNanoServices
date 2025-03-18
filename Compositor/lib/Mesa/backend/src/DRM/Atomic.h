@@ -61,6 +61,7 @@ namespace Thunder {
                     const uint32_t connectorId(entry.Properties().Id());
                     const uint32_t crtcId(entry.CrtController().Id());
                     const uint32_t planeId(entry.Plane().Id());
+
                     const Compositor::DRM::Identifier fbId(entry.ActiveFrameBufferId());
 
                     TRACE(Trace::Backend, ("Commit for connector: %d, CRTC: %d, Plane: %d, Framebuffer: %d", connectorId, crtcId, planeId, fbId));

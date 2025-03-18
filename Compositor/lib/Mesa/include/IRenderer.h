@@ -54,7 +54,7 @@ namespace Compositor {
          *
          * @return ITexture upon success, nullptr on error.
          */
-        virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
+        virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) = 0;
 
         /**
          * @brief Set a viewport.

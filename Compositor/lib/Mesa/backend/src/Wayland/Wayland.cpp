@@ -23,7 +23,7 @@
 #include <DRM.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include "IOutput.h"
 #include "Input.h"
@@ -733,12 +733,12 @@ namespace Compositor {
          *
          * @param api a pointer to the zwp_linux_dmabuf_v1 object, which is used to create the buffer
          * parameters and the buffer itself.
-         * @param buffer A pointer to an object of type Exchange::ICompositionBuffer, which represents a buffer
+         * @param buffer A pointer to an object of type Exchange::IGraphicsBuffer, which represents a buffer
          * used for compositing.
          *
          * @return A `wl_buffer*` is being returned.
          */
-        wl_buffer* ImportDmabuf(zwp_linux_dmabuf_v1* api, Exchange::ICompositionBuffer* buffer)
+        wl_buffer* ImportDmabuf(zwp_linux_dmabuf_v1* api, Exchange::IGraphicsBuffer* buffer)
         {
             ASSERT((buffer != nullptr) && (api != nullptr));
 
@@ -747,7 +747,7 @@ namespace Compositor {
 
             struct zwp_linux_buffer_params_v1* params = zwp_linux_dmabuf_v1_create_params(api);
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
+            Exchange::IGraphicsBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             uint8_t i(0);
@@ -787,18 +787,18 @@ namespace Compositor {
          *
          * @param api A pointer to a Wayland shared memory (wl_shm) object, which is used to create a shared
          * memory pool for the buffer.
-         * @param buffer A pointer to an object of type Exchange::ICompositionBuffer, which represents a buffer
+         * @param buffer A pointer to an object of type Exchange::IGraphicsBuffer, which represents a buffer
          * used for composing images or video frames.
          *
          * @return a pointer to a `wl_buffer` object.
          */
-        wl_buffer* ImportShm(wl_shm* api, Exchange::ICompositionBuffer* buffer)
+        wl_buffer* ImportShm(wl_shm* api, Exchange::IGraphicsBuffer* buffer)
         {
             ASSERT((buffer != nullptr) && (api != nullptr));
 
             enum wl_shm_format wl_shm_format = ConvertDrmFormat(buffer->Format());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
+            Exchange::IGraphicsBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             uint32_t size(0);
@@ -823,22 +823,22 @@ namespace Compositor {
         /**
          * This function creates a Wayland buffer based on the type of composition buffer provided.
          *
-         * @param buffer A pointer to an object that implements the Exchange::ICompositionBuffer
+         * @param buffer A pointer to an object that implements the Exchange::IGraphicsBuffer
          * interface. This object represents a buffer that can be used for displaying graphics or video
          * content. The function checks the type of the buffer (raw or DMA) and imports it into the
          * Wayland compositor using the appropriate protocol (wl_sh
          *
          * @return a pointer to a `wl_buffer` object.
          */
-        wl_buffer* WaylandOutput::BackendImpl::CreateBuffer(Exchange::ICompositionBuffer* buffer) const
+        wl_buffer* WaylandOutput::BackendImpl::CreateBuffer(Exchange::IGraphicsBuffer* buffer) const
         {
             ASSERT(buffer != nullptr);
 
             wl_buffer* result(nullptr);
 
-            if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+            if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
                 result = ImportShm(_wlShm, buffer);
-            } else if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+            } else if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
                 result = ImportDmabuf(_wlZwpLinuxDmabufV1, buffer);
             }
 

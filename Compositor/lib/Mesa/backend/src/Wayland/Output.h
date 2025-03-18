@@ -22,7 +22,7 @@
 #include <CompositorTypes.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 #include <DRM.h>
 
 #include "IOutput.h"
@@ -82,7 +82,7 @@ namespace Compositor {
                 void Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const;
                 int RenderNode() const;
 
-                wl_buffer* CreateBuffer(Exchange::ICompositionBuffer* buffer) const;
+                wl_buffer* CreateBuffer(Exchange::IGraphicsBuffer* buffer) const;
 
                 struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const;
                 struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const;
@@ -188,14 +188,14 @@ namespace Compositor {
             ~WaylandOutput() override;
 
         public:
-            Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
+            Exchange::IGraphicsBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
             void Relinquish() override;
 
             uint32_t Width() const override;
             uint32_t Height() const override;
             uint32_t Format() const override;
             uint64_t Modifier() const override;
-            Exchange::ICompositionBuffer::DataType Type() const override;
+            Exchange::IGraphicsBuffer::DataType Type() const override;
 
             Core::ProxyType<IRenderer::ITexture> Texture() override;
             uint32_t Commit() override;
@@ -245,7 +245,7 @@ namespace Compositor {
             uint64_t _modifier;
             Compositor::Matrix _matrix;
             Core::ProxyType<IRenderer>& _renderer;
-            Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+            Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
             Core::ProxyType<IRenderer::ITexture> _texture;
             Core::Event _signal;
             uint64_t _commitSequence;

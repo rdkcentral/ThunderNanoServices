@@ -498,7 +498,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 GLESTexture& operator=(GLESTexture&&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
-                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : _parent(parent)
                     , _target(GL_TEXTURE_2D)
                     , _textureId(0)
@@ -600,7 +600,7 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 GLenum _target;
                 GLuint _textureId;
                 EGLImageKHR _image;
-                Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+                Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
                 Program* _program;
 
             }; //  class GLESTexture
@@ -613,9 +613,9 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 GLESDMATexture& operator=(GLESDMATexture&&) = delete;
                 GLESDMATexture& operator=(const GLESDMATexture&) = delete;
 
-                GLESDMATexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                GLESDMATexture(GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : GLESTexture (parent, buffer) {
-                    ASSERT(buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA);
+                    ASSERT(buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA);
 
                     EGLImageKHR image = GLESTexture::CreateImage();
 
@@ -641,11 +641,11 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 GLESPixelTexture& operator=(GLESPixelTexture&&) = delete;
                 GLESPixelTexture& operator=(const GLESPixelTexture&) = delete;
 
-                GLESPixelTexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                GLESPixelTexture(GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : GLESTexture (parent, buffer) {
-                    ASSERT (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW);
+                    ASSERT (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW);
 
-                    Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
+                    Exchange::IGraphicsBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
 
                     planes->Next(); // select first plane.
 
@@ -794,17 +794,17 @@ static bool DumpTex(const Exchange::IComposition::Rectangle& box, const uint32_t
                 }
             }
 
-            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
+            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
                 Core::ProxyType<ITexture> result;
                 _egl.SetCurrent();
-                if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+                if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
                     Core::ProxyType<GLESPixelTexture> texture = Core::ProxyType<GLESPixelTexture>::Create(*this, buffer);
                     if (reinterpret_cast<EGLImageKHR>(texture->Id()) != EGL_NO_IMAGE) {
                         result = Core::ProxyType<ITexture>(texture);
                     }
                 }
-                else if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+                else if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
                     Core::ProxyType<GLESDMATexture> texture = Core::ProxyType<GLESDMATexture>::Create(*this, buffer);
                     if (reinterpret_cast<EGLImageKHR>(texture->Id()) != EGL_NO_IMAGE) {
                         result = Core::ProxyType<ITexture>(texture);

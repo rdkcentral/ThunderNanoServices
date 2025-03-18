@@ -125,7 +125,7 @@ public:
 
         ASSERT(_connector.IsValid());
 
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
 
         NewFrame();
     }
