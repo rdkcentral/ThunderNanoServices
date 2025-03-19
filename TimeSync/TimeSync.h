@@ -27,7 +27,10 @@
 namespace Thunder {
 namespace Plugin {
 
-    class TimeSync : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class TimeSync : public Exchange::ITimeSync
+                   , public PluginHost::IPlugin
+                   , public PluginHost::IWeb
+                   , public PluginHost::JSONRPC {
     public:
         template <typename TimeRep = Core::JSON::String>
         class Data : public Core::JSON::Container {
@@ -71,7 +74,7 @@ namespace Plugin {
         };
 
     private:
-        class Notification : protected Exchange::ITimeSync::INotification {
+        class Notification : protected Exchange::ITimeSync::ISource::INotification {
         private:
             Notification() = delete;
             Notification(const Notification&) = delete;
@@ -90,7 +93,7 @@ namespace Plugin {
             }
 
         public:
-            void Initialize(Exchange::ITimeSync* client, bool start = true)
+            void Initialize(Exchange::ITimeSync::ISource* client, bool start = true)
             {
                 ASSERT(_client == nullptr);
                 ASSERT(client != nullptr);
@@ -130,13 +133,13 @@ namespace Plugin {
             }
 
             BEGIN_INTERFACE_MAP(Notification)
-            INTERFACE_ENTRY(Exchange::ITimeSync::INotification)
+            INTERFACE_ENTRY(Exchange::ITimeSync::ISource::INotification)
             END_INTERFACE_MAP
 
         private:
             Core::CriticalSection _adminLock;
             TimeSync& _parent;
-            Exchange::ITimeSync* _client;
+            Exchange::ITimeSync::ISource* _client;
         };
 
         class Config : public Core::JSON::Container {
@@ -183,7 +186,8 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
-        INTERFACE_AGGREGATE(Exchange::ITimeSync, _client)
+        INTERFACE_ENTRY(Exchange::ITimeSync)
+        INTERFACE_AGGREGATE(Exchange::ITimeSync::ISource, _client)
         END_INTERFACE_MAP
 
     public:
@@ -210,17 +214,23 @@ namespace Plugin {
 
         void NotifyTimeChanged() const;
 
-        virtual Core::hresult Register(INotification* const notification) = 0;
-        virtual Core::hresult Unregister(const INotification* const notification) = 0;
+        Core::hresult Synchronize() override;
+        Core::hresult SyncTime(Exchange::ITimeSync::TimeInfo& info) const override;
+        Core::hresult Time(Core::Time& time) const override;
+        Core::hresult Time(const Core::Time& time) override;
+
+        Core::hresult Register(Exchange::ITimeSync::INotification* const notification) override;
+        Core::hresult Unregister(const Exchange::ITimeSync::INotification* const notification) override;
 
     private:
         using TimeSyncObservers = std::list<Exchange::ITimeSync::INotification*>;
 
         uint16_t _skipURL;
         uint32_t _periodicity;
-        Exchange::ITimeSync* _client;
+        Exchange::ITimeSync::ISource* _client;
         Core::SinkType<Notification> _sink;
         PluginHost::ISubSystem* _subSystem;
+        mutable Core::CriticalSection _adminLock;
         TimeSyncObservers _timeSyncObservers;
 
         Core::WorkerPool::JobType<TimeSync&> _job;
