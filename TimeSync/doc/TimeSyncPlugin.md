@@ -223,13 +223,13 @@ Provides access to the current system time.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| (property) | string | mandatory | Current system time |
+| (property) | string | mandatory | System time in ISO8601 format |
 
 ### Errors
 
 | Message | Description |
 | :-------- | :-------- |
-| ```ERROR_BADREQUEST``` | The time is invalid |
+| ```ERROR_BAD_REQUEST``` | The time is invalid |
 
 ### Example
 
@@ -249,7 +249,7 @@ Provides access to the current system time.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "..."
+  "result": "2019-05-07T07:20:26Z"
 }
 ```
 
