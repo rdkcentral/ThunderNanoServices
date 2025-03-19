@@ -376,6 +376,7 @@ namespace Plugin {
             uint32_t _opacity; // the opacity of the surface on the composition
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
+            Core::ProxyType<Exchange::IGraphicsBuffer> _buffer; // This is the actual buffer schared between compositor and client
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
             std::atomic<bool> _pending;
@@ -790,29 +791,26 @@ namespace Plugin {
         void Render(Client& client)
         {
             uint8_t index = 1;
-                    fprintf(stdout, "--------------------------------------- %s -------------------------------- %d -----------------------\n", __FUNCTION__, __LINE__); fflush(stdout);
-            if (IsIntersecting(client.Geometry())) {
-                if (client.Texture() == nullptr) {
-                    TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), client.Name().c_str()));
-                }
-                else {
-                    client.Acquire(Compositor::DefaultTimeoutMs);
-
-                    Compositor::Matrix clientProjection;
-                    Compositor::Transformation::ProjectBox(clientProjection, client.Geometry(), Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
-
-                    const Exchange::IComposition::Rectangle clientArea = { 0, 0, client.Texture()->Width(), client.Texture()->Height() };
-
-                    const float alpha = float(client.Opacity()) / float(Exchange::IComposition::maxOpacity);
-
-                    _renderer->Render(_output->Texture(), client.Texture(), clientArea, clientProjection, alpha);
-
-                    client.Relinquish();
-                    client.Rendered();
-                    _output->Commit();
-                }
-            } else {
+            if (!IsIntersecting(client.Geometry())) {
                 TRACE(Trace::Information, (_T("%s no intersection with output %d"), client.Name().c_str(), index));
+            } else if (client.Texture() == nullptr) {
+                TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), client.Name().c_str()));
+            }
+            else {
+                client.Acquire(Compositor::DefaultTimeoutMs);
+
+                Compositor::Matrix clientProjection;
+                Compositor::Transformation::ProjectBox(clientProjection, client.Geometry(), Compositor::Transformation::TRANSFORM_NORMAL, 0, _renderer->Projection());
+
+                const Exchange::IComposition::Rectangle clientArea = { 0, 0, client.Texture()->Width(), client.Texture()->Height() };
+
+                const float alpha = float(client.Opacity()) / float(Exchange::IComposition::maxOpacity);
+
+                _renderer->Render(_output->Texture(), client.Texture(), clientArea, clientProjection, alpha);
+
+                client.Relinquish();
+                client.Rendered();
+                _output->Commit();
             }
         }
 
