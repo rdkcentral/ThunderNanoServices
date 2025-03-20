@@ -52,7 +52,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     Power.cpp
-    PowerJsonRpc
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
