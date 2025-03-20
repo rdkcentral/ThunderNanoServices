@@ -47,18 +47,18 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     TimeSync::TimeSync()
         : _skipURL(0)
         , _periodicity(0)
-        , _client(Core::ServiceType<NTPClient>::Create<Exchange::ITimeSync>())
+        , _client(Core::ServiceType<NTPClient>::Create<Exchange::ITimeSync::ISource>())
         , _sink(this)
         , _subSystem(nullptr)
+        , _adminLock()
+        , _timeSyncObservers()
         , _job(*this)
     {
-        RegisterAll();
     }
 POP_WARNING()
 
     /* virtual */ TimeSync::~TimeSync()
     {
-        UnregisterAll();
         _client->Release();
     }
 
@@ -81,7 +81,10 @@ POP_WARNING()
             static_cast<NTPClient*>(_client)->Initialize(index, config.Retries.Value(), config.Interval.Value());
 
             _sink.Initialize(_client, start);
-        } else {
+
+            Exchange::JTimeSync::Register(*this, this);
+        }
+        else {
             message = _T("Subsystem could not be obtained, TimeSync init failed");
         }
 
@@ -93,6 +96,9 @@ POP_WARNING()
         ASSERT(service != nullptr);
 
         if (_subSystem != nullptr) {
+
+            Exchange::JTimeSync::Unregister(*this);
+
             _job.Revoke();
             _sink.Deinitialize();
 
@@ -200,7 +206,7 @@ POP_WARNING()
             TRACE(Trace::Information, (_T("Waking up again at %s."), newSyncTime.ToRFC1123(false).c_str()));
             _job.Reschedule(newSyncTime);
 
-            event_timechange();
+            NotifyTimeChanged();
         }
     }
 
@@ -211,6 +217,131 @@ POP_WARNING()
         if (_subSystem->IsActive(PluginHost::ISubSystem::TIME) == false) {
             _subSystem->Set(PluginHost::ISubSystem::TIME, _client);
         }
+    }
+
+    void TimeSync::NotifyTimeChanged() const
+    {
+        _adminLock.Lock();
+ 
+        for (auto observer : _timeSyncObservers) {
+            observer->TimeChanged();
+        }
+
+        _adminLock.Unlock();
+
+        Exchange::JTimeSync::Event::TimeChanged(*this);
+    }
+
+    Core::hresult TimeSync::Synchronize()
+    {
+        _adminLock.Lock();
+
+        uint32_t result = _client->Synchronize();
+
+        _adminLock.Unlock();
+
+        if ((result != Core::ERROR_NONE) && (result != Core::ERROR_INPROGRESS) && (result != Core::ERROR_INCOMPLETE_CONFIG)) {
+            result = Core::ERROR_INCOMPLETE_CONFIG;
+        }
+
+        return (result);
+    }
+
+    Core::hresult TimeSync::SyncTime(Exchange::ITimeSync::TimeInfo& info) const
+    {
+        Core::hresult result = Core::ERROR_UNAVAILABLE;
+
+        _adminLock.Lock();
+
+        info.time = Core::Time(_client->SyncTime());
+
+        if (info.time.IsValid() == true) {
+
+            info.source = _client->Source();
+            result = Core::ERROR_NONE;
+        }
+
+        _adminLock.Unlock();
+
+        return (result);
+    }
+
+    Core::hresult TimeSync::Time(Core::Time& time) const
+    {
+        time = Core::Time::Now();
+
+        return (Core::ERROR_NONE);
+    }
+
+    Core::hresult TimeSync::Time(const Core::Time& time)
+    {
+        uint32_t result = Core::ERROR_NONE;
+
+        if (time.IsValid() == true) {
+
+            _adminLock.Lock();
+
+            // Stop automatic synchronisation
+            _client->Cancel();
+            _job.Revoke();
+
+            _adminLock.Unlock();
+
+            Core::SystemInfo::Instance().SetTime(time);
+
+            EnsureSubsystemIsActive();
+        }
+        else {
+            result = Core::ERROR_BAD_REQUEST;
+        }
+
+        return (result);
+    }
+
+    Core::hresult TimeSync::Register(Exchange::ITimeSync::INotification* const notification)
+    {
+        Core::hresult result = Core::ERROR_ALREADY_CONNECTED;
+
+        ASSERT(notification != nullptr);
+
+        _adminLock.Lock();
+
+        auto it = std::find(_timeSyncObservers.begin(), _timeSyncObservers.end(), notification);
+        ASSERT(it == _timeSyncObservers.end());
+
+        if (it == _timeSyncObservers.end()) {
+            notification->AddRef();
+
+            _timeSyncObservers.push_back(notification);
+
+            result = Core::ERROR_NONE;
+        }
+        _adminLock.Unlock();
+
+        return (result);
+    }
+
+    Core::hresult TimeSync::Unregister(const Exchange::ITimeSync::INotification* const notification)
+    {
+        Core::hresult result = Core::ERROR_ALREADY_RELEASED;
+
+        ASSERT(notification != nullptr);
+
+        _adminLock.Lock();
+
+        auto it = std::find(_timeSyncObservers.cbegin(), _timeSyncObservers.cend(), notification);
+        ASSERT(it != _timeSyncObservers.cend());
+
+        if (it != _timeSyncObservers.cend()) {
+            (*it)->Release();
+
+            _timeSyncObservers.erase(it);
+
+            result = Core::ERROR_NONE;
+        }
+        _adminLock.Unlock();
+
+        return (result);
     }
 
 } // namespace Plugin

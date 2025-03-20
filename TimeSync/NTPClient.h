@@ -26,7 +26,7 @@
 namespace Thunder {
 namespace Plugin {
 
-    class NTPClient : public Core::SocketDatagram, public Exchange::ITimeSync, public PluginHost::ISubSystem::ITime {
+    class NTPClient : public Core::SocketDatagram, public Exchange::ITimeSync::ISource, public PluginHost::ISubSystem::ITime {
     public:
         static constexpr uint32_t MilliSeconds = 1000;
         static constexpr uint32_t MicroSeconds = 1000 * MilliSeconds;
@@ -338,8 +338,8 @@ namespace Plugin {
 
     public:
         void Initialize(SourceIterator& sources, const uint16_t retries, const uint16_t delay);
-        void Register(Exchange::ITimeSync::INotification* notification) override;
-        void Unregister(Exchange::ITimeSync::INotification* notification) override;
+        void Register(Exchange::ITimeSync::ISource::INotification* notification) override;
+        void Unregister(Exchange::ITimeSync::ISource::INotification* notification) override;
 
         uint32_t Synchronize() override;
         void Cancel() override;
@@ -353,7 +353,7 @@ namespace Plugin {
         }
 
         BEGIN_INTERFACE_MAP(NTPClient)
-        INTERFACE_ENTRY(Exchange::ITimeSync)
+        INTERFACE_ENTRY(Exchange::ITimeSync::ISource)
         INTERFACE_ENTRY(PluginHost::ISubSystem::ITime)
         END_INTERFACE_MAP
 
@@ -382,7 +382,7 @@ namespace Plugin {
         uint32_t _currentAttempt;
         ServerList _servers;
         ServerIterator _serverIndex;
-        std::list<Exchange::ITimeSync::INotification*> _clients;
+        std::list<Exchange::ITimeSync::ISource::INotification*> _clients;
 
         Core::WorkerPool::JobType<NTPClient&> _job;
     };

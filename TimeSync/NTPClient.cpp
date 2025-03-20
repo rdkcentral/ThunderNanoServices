@@ -135,13 +135,13 @@ POP_WARNING()
         return (_serverIndex.IsValid() == true ? string(_T("NTP://")) + (*_serverIndex) + '/' : _T("NTP:///"));
     }
 
-    /* virtual */ void NTPClient::Register(Exchange::ITimeSync::INotification* notification)
+    /* virtual */ void NTPClient::Register(Exchange::ITimeSync::ISource::INotification* notification)
     {
         ASSERT(notification != nullptr);
 
         _adminLock.Lock();
 
-        std::list<Exchange::ITimeSync::INotification*>::iterator index(std::find(_clients.begin(), _clients.end(), notification));
+        std::list<Exchange::ITimeSync::ISource::INotification*>::iterator index(std::find(_clients.begin(), _clients.end(), notification));
         ASSERT(index == _clients.end());
 
         if (index == _clients.end()) {
@@ -152,13 +152,13 @@ POP_WARNING()
         _adminLock.Unlock();
     }
 
-    /* virtual */ void NTPClient::Unregister(Exchange::ITimeSync::INotification* notification)
+    /* virtual */ void NTPClient::Unregister(Exchange::ITimeSync::ISource::INotification* notification)
     {
         ASSERT(notification != nullptr);
 
         _adminLock.Lock();
 
-        std::list<Exchange::ITimeSync::INotification*>::iterator index(std::find(_clients.begin(), _clients.end(), notification));
+        std::list<Exchange::ITimeSync::ISource::INotification*>::iterator index(std::find(_clients.begin(), _clients.end(), notification));
 
         ASSERT(index != _clients.end());
 
@@ -344,7 +344,7 @@ POP_WARNING()
             TRACE(Trace::Error, (_T("Could not determine a valid time")));
         }
 
-        std::list<Exchange::ITimeSync::INotification*>::iterator index(_clients.begin());
+        std::list<Exchange::ITimeSync::ISource::INotification*>::iterator index(_clients.begin());
 
         while (index != _clients.end()) {
             (*index)->Completed();

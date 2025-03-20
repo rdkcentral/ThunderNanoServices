@@ -42,6 +42,6 @@
     ]
   },
   "interface": {
-    "$ref": "{interfacedir}/TimeSync.json#"
+    "$ref": "{cppinterfacedir}/ITimeSync.h"
   }
 }
