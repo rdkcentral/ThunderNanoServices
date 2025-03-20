@@ -147,7 +147,7 @@ namespace Plugin {
             NameSpace dictionary;
             CreateExternalDictionary(EMPTY_STRING, dictionary);
             if (dictionary.IElement::ToFile(dictionaryFile) == false) {
-                SYSLOG(Logging::Shutdown, (_T("Error occured while trying to save dictionary data to file!")));
+                SYSLOG(Logging::Deactivate, (_T("Error occured while trying to save dictionary data to file!")));
             }
         }
         */
