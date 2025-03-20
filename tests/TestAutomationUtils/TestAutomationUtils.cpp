@@ -17,7 +17,7 @@
  * limitations under the License.
  */
  
-#include "TestAutomationComRpc.h"
+#include "TestAutomationUtils.h"
 
 
 namespace Thunder {
@@ -25,7 +25,7 @@ namespace Plugin {
 
     namespace {
 
-        static Metadata<TestAutomationComRpc> metadata(
+        static Metadata<TestAutomationUtils> metadata(
             // Version
             1, 0, 0,
             // Preconditions
@@ -37,7 +37,7 @@ namespace Plugin {
         );
     }
 
-    const string TestAutomationComRpc::Initialize(PluginHost::IShell* service)
+    const string TestAutomationUtils::Initialize(PluginHost::IShell* service)
     {
         ASSERT(_implementation == nullptr);
         ASSERT(_service == nullptr);
@@ -49,33 +49,33 @@ namespace Plugin {
 
         _service->Register(&_notification);
 
-        _implementation = _service->Root<QualityAssurance::IComRpc::IComRpcInternal>(_connectionId, 2000, _T("TestAutomationComRpcImplementation"));
-        QualityAssurance::JComRpc::Register(*this, this);
+        _implementation = _service->Root<QualityAssurance::ITestUtils>(_connectionId, 2000, _T("TestAutomationUtilsImplementation"));
         
         string result;
         if (_implementation == nullptr) {
-            result = _T("Couldn't create TestAutomationComRpc instance");
+            result = _T("Couldn't create TestAutomationUtils instance");
         } else {
+            QualityAssurance::JTestUtils::Register(*this, _implementation);
 
-            if (_connectionId == 0){ //Running this plugin in process does not make any sense. It will not do proper test!
-                result = _T("Running this plugin in process does not make any sense. It will not do proper test!");
+            if (_connectionId == 0){ //Running this plugin in process does not make any sense. It will crash Thunder!
+                result = _T("Running this plugin in process does not make any sense. It will crash Thunder!");
             }
         }
         return (result);
     }
 
 
-    void TestAutomationComRpc::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
+    void TestAutomationUtils::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
-
+        
         _service->Unregister(&_notification);
 
-        QualityAssurance::JComRpc::Unregister(*this);
         if (_implementation != nullptr) {
+            QualityAssurance::JTestUtils::Unregister(*this);
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            VARIABLE_IS_NOT_USED uint32_t result = _implementation->Release();
+            VARIABLE_IS_NOT_USED uint32_t result =  _implementation->Release();
             _implementation = nullptr;
 
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
@@ -91,13 +91,12 @@ namespace Plugin {
         _connectionId = 0;        
     }
 
-    string TestAutomationComRpc::Information() const
+    string TestAutomationUtils::Information() const
     {
         return string();
     }
-
     
-    void TestAutomationComRpc::Deactivated(RPC::IRemoteConnection* connection)
+    void TestAutomationUtils::Deactivated(RPC::IRemoteConnection* connection)
     {
         // This can potentially be called on a socket thread, so the deactivation (wich in turn kills this object) must be done
         // on a seperate thread. Also make sure this call-stack can be unwound before we are totally destructed.
@@ -107,23 +106,6 @@ namespace Plugin {
 
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
-    }
-
-    Core::hresult TestAutomationComRpc::TestBigString(const uint32_t length)
-    {
-        printf("TestAutomationComRpc::TestBigString -> Method called!\n");
-        ASSERT(_implementation != nullptr);
-        const uint32_t stringLength = length * 1024;
-        string bigString;
-        bigString.resize(stringLength, 'a');
-        bigString.replace(0, 8, "testaaaa");
-        bigString.replace(bigString.length() - 8, 8, "testzzzz");
- 
-        TRACE(Trace::Information, (_T("InP: Length Of The String Is " + std::to_string(bigString.length()))));
-        TRACE(Trace::Information, (_T("InP: Content Of The String Is " + bigString)));
-
-        return _implementation->BigStringTest(bigString);
-     
     }
    
 }
