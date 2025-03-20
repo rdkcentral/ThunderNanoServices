@@ -23,7 +23,7 @@
 
 #include <core/core.h>
 #include <localtracer/localtracer.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 #include <messaging/messaging.h>
 
 #include <IRenderer.h>
@@ -144,7 +144,7 @@ int main(int /*argc*/, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> buffer = Compositor::CreateBuffer(fdRender, 1920, 1080, format);
+        Core::ProxyType<Exchange::IGraphicsBuffer> buffer = Compositor::CreateBuffer(fdRender, 1920, 1080, format);
 
         assert(buffer.operator->());
         assert(buffer->Width() == 1920);
@@ -159,7 +159,7 @@ int main(int /*argc*/, const char* argv[])
 
         Compositor::PixelFormat format(DRM_FORMAT_XRGB8888);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> buffer = Compositor::CreateBuffer(fdCard, 1920, 1080, format);
+        Core::ProxyType<Exchange::IGraphicsBuffer> buffer = Compositor::CreateBuffer(fdCard, 1920, 1080, format);
 
         assert(buffer.operator->());
 
@@ -167,7 +167,7 @@ int main(int /*argc*/, const char* argv[])
         assert(buffer->Height() == 1080);
         assert(buffer->Format() == format.Type());
 
-        Exchange::ICompositionBuffer::IIterator* index = buffer->Acquire(Compositor::DefaultTimeoutMs);
+        Exchange::IGraphicsBuffer::IIterator* index = buffer->Acquire(Compositor::DefaultTimeoutMs);
         assert(index != nullptr);
 
         while (index->Next() == true) {

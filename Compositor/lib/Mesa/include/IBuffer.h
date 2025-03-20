@@ -33,9 +33,9 @@ namespace Compositor {
      * @param height Height in pixels
      * @param format Pixel layout for this buffer
      *
-     * @return Core::ProxyType<Exchange::ICompositionBuffer> The allocated buffer
+     * @return Core::ProxyType<Exchange::IGraphicsBuffer> The allocated buffer
      */
-    EXTERNAL Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+    EXTERNAL Core::ProxyType<Exchange::IGraphicsBuffer> CreateBuffer(
         const Identifier identifier,
         const uint32_t width,
         const uint32_t height,

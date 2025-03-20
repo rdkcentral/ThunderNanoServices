@@ -27,7 +27,7 @@
 namespace Thunder {
 
 namespace Exchange {
-    struct ICompositionBuffer;
+    struct IGraphicsBuffer;
 }
 
 namespace Compositor {  
@@ -46,7 +46,7 @@ namespace Compositor {
          *
          */
         extern int ReopenNode(const int fd, const bool openRenderNode);
-        extern uint32_t CreateFrameBuffer(const int cardFd, Exchange::ICompositionBuffer* buffer);
+        extern uint32_t CreateFrameBuffer(const int cardFd, Exchange::IGraphicsBuffer* buffer);
         extern void DestroyFrameBuffer(const int cardFd, const uint32_t frameBufferId);
         extern bool HasNode(const drmDevice* device, const char* deviceName);
         extern int OpenGPU(const std::string& gpuNode);

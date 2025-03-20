@@ -1,4 +1,5 @@
 #include "DRMTypes.h"
+#include <unistd.h>
 
 #define _T(x) x
 #define TCHAR char
@@ -105,6 +106,19 @@ namespace Thunder {
 
             const TCHAR* Property::PropertyToString() const {
                 return (Compositor::DRM::PropertyToString(_property));
+            }
+
+            Property::Blob::~Blob() {
+                if (_fd != -1) {
+                    drmModeDestroyPropertyBlob(_fd, _id);
+                    ::close(_fd);
+                }
+            }
+            void Property::Blob::Load(const int fd, const void* data, size_t size) {
+                int presult;
+                if ((presult = drmModeCreatePropertyBlob(fd, data, size, &_id)) >= 0) {
+                    _fd = ::dup(fd);
+                }
             }
 
             void Properties::Load(const int descriptor, object_type type, const Identifier objectId)
