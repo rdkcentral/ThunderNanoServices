@@ -117,6 +117,35 @@ namespace Compositor {
 
         class Property {
         public:
+            class Blob {
+            public:
+                Blob(Blob&&) = delete;
+                Blob(const Blob&) = delete;
+                Blob& operator=(Blob&&) = delete;
+                Blob& operator= (const Blob&) = delete;
+
+                Blob() : _fd(-1), _id(0) {
+                }
+                Blob(const int fd, const void* data, size_t size) {
+                    Load(fd, data, size);
+                }
+                ~Blob();
+
+            public:
+                Identifier Id() const {
+                    return(_id);
+                }
+                bool IsValid() const {
+                    return (_fd != -1);
+                }
+                void Load(const int fd, const void* data, size_t size);
+        
+            private:
+                int _fd;
+                Identifier _id;
+            };
+
+        public:
             Property()
                 : _property(property::InvalidProperty)
                 , _id(InvalidIdentifier)

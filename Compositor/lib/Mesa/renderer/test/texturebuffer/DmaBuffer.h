@@ -1,6 +1,6 @@
 #pragma once
 
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include "../../src/GL/RenderAPI.h"
 #include "../../src/GL/EGL.h"
@@ -15,9 +15,9 @@
 
 namespace Thunder {
 namespace Compositor {
-    class DmaBuffer : public Exchange::ICompositionBuffer {
+    class DmaBuffer : public Exchange::IGraphicsBuffer {
 
-        class Iterator : public Exchange::ICompositionBuffer::IIterator {
+        class Iterator : public Exchange::IGraphicsBuffer::IIterator {
         public:
             Iterator(DmaBuffer& parent)
                 : _parent(parent)
@@ -171,7 +171,7 @@ namespace Compositor {
             }
         }
 
-        Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t /*timeoutMs*/) override
+        Exchange::IGraphicsBuffer::IIterator* Acquire(const uint32_t /*timeoutMs*/) override
         {
             return &_iterator;
         }
@@ -210,9 +210,9 @@ namespace Compositor {
             return _modifiers;
         }
 
-        Exchange::ICompositionBuffer::DataType Type() const override
+        Exchange::IGraphicsBuffer::DataType Type() const override
         {
-            return Exchange::ICompositionBuffer::TYPE_DMA;
+            return Exchange::IGraphicsBuffer::TYPE_DMA;
         }
 
     protected:

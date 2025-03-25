@@ -25,7 +25,7 @@
 
 #include <core/core.h>
 #include <messaging/messaging.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 #include <drm_fourcc.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -395,12 +395,12 @@ namespace Compositor {
          * This function creates a DRM framebuffer object for a given composition buffer.
          *
          * @param cardFd A file descriptor for the DRM device.
-         * @param buffer A pointer to an object that implements the Exchange::ICompositionBuffer interface,
+         * @param buffer A pointer to an object that implements the Exchange::IGraphicsBuffer interface,
          * which represents a buffer used for composition.
          *
          * @return a uint32_t value, which is the ID of the allocated DRM framebuffer object.
          */
-        uint32_t CreateFrameBuffer(const int cardFd, Exchange::ICompositionBuffer* buffer)
+        uint32_t CreateFrameBuffer(const int cardFd, Exchange::IGraphicsBuffer* buffer)
         {
             ASSERT(cardFd > 0);
             ASSERT(buffer != nullptr);
@@ -422,7 +422,7 @@ namespace Compositor {
 
             modifiers.fill(buffer->Modifier());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
+            Exchange::IGraphicsBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             while (planes->Next() == true) {

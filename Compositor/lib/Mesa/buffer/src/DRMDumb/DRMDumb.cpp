@@ -20,7 +20,7 @@
 #include "../Module.h"
 
 #include <IBuffer.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 #include <CompositorTypes.h>
 #include <DrmCommon.h>
 
@@ -104,7 +104,7 @@ namespace Thunder {
             DRMDumb& operator=(const DRMDumb&) = delete;
 
             DRMDumb(const int drmFd, uint32_t width, uint32_t height, const PixelFormat& format)
-                : LocalBuffer(width, height, format.Type(), DRM_FORMAT_MOD_LINEAR, Exchange::ICompositionBuffer::TYPE_DMA)
+                : LocalBuffer(width, height, format.Type(), DRM_FORMAT_MOD_LINEAR, Exchange::IGraphicsBuffer::TYPE_DMA)
             {
                 ASSERT(drmFd != -1);
                 ASSERT(drmGetNodeTypeFromFd(drmFd) == DRM_NODE_PRIMARY);
@@ -170,7 +170,7 @@ namespace Thunder {
         {
             ASSERT(drmAvailable() > 0);
 
-            Core::ProxyType<Exchange::ICompositionBuffer> result;
+            Core::ProxyType<Exchange::IGraphicsBuffer> result;
             int fd = DRM::ReopenNode(static_cast<int>(identifier), false);
 
             ASSERT(fd >= 0);
@@ -178,7 +178,7 @@ namespace Thunder {
             if (fd >= 0) {
                 Core::ProxyType<DRMDumb> entry = Core::ProxyType<DRMDumb>::Create(fd, width, height, format, callback);
                 if (entry->IsValid() == false) {
-                    result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
+                    result = Core::ProxyType<Exchange::IGraphicsBuffer>(entry);
                 }
                 ::close(fd);
             }

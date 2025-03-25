@@ -186,19 +186,16 @@ namespace Plugin {
 
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        if ((config.BufferConnector.IsSet() == true) && (config.BufferConnector.Value().empty() == false)) {
-            std::string bufferPath = service->VolatilePath() + config.BufferConnector.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_BUFFER_CONNECTOR"), bufferPath, true);
-        }
-
-        if ((config.DisplayConnector.IsSet() == true) && (config.DisplayConnector.Value().empty() == false)) {
-            std::string displayPath = service->VolatilePath() + config.DisplayConnector.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_DISPLAY_CONNECTOR"), displayPath, true);
-        }
-
         // See if the mandatory XDG environment variable is set, otherwise we will set it.
         if (Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), result) == false) {
-            string runTimeDir((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->PersistentPath() + config.WorkDir.Value());
+            string runTimeDir;
+
+            if (config.WorkDir.IsSet() == true) {
+                runTimeDir = ((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->VolatilePath() + config.WorkDir.Value());
+            }
+            else {
+                runTimeDir = service->VolatilePath();
+            }
 
             Core::SystemInfo::SetEnvironment(_T("XDG_RUNTIME_DIR"), runTimeDir);
 
@@ -210,15 +207,35 @@ namespace Plugin {
         if (_composition == nullptr) {
             message = "Instantiating the compositor failed. Could not load: CompositorImplementation";
         } else {
+            uint32_t result;
             RegisterAll();
             _composition->Register(&_notification);
-            _composition->Configure(_service);
+            if ((result = _composition->Configure(_service)) != Core::ERROR_NONE) {
+                switch(result) {
+                    case Core::ERROR_INCOMPLETE_CONFIG:
+                         message = _T("No output connector defined.");
+                         break;
+                    case Core::ERROR_INVALID_DESIGNATOR:
+                         message = _T("Could not open the render node.");
+                         break;
+                    case Core::ERROR_OPENING_FAILED:
+                         message = _T("Could not open the descriptor connector.");
+                         break;
+                    case Core::ERROR_UNAVAILABLE:
+                         message = _T("Could not open the COMRPC connector.");
+                         break;
+                    default:
+                         message = string(_T("Failed to start the compositor. Error: ")) + Core::NumberType<uint32_t>(result).Text();
+                         break;
+                }
+            }
+            else {
+                _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
+                _inputSwitchCallsign = config.InputSwitch.Value();
+                _newOnTop = config.NewOnTop.Value();
 
-            _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
-            _inputSwitchCallsign = config.InputSwitch.Value();
-            _newOnTop = config.NewOnTop.Value();
-
-            _brightness = _composition->QueryInterface<Exchange::IBrightness>();
+                _brightness = _composition->QueryInterface<Exchange::IBrightness>();
+            }
         }
 
         // On success return empty, to indicate there is no error text.
