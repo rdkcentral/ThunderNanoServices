@@ -209,16 +209,6 @@ namespace Compositor {
                 return (_frameBuffer.Type());
             }
 
-            int32_t X() const override
-            {
-                return _x;
-            }
-
-            int32_t Y() const override
-            {
-                return _y;
-            }
-
             /**
              * Connector methods
              */
