@@ -134,6 +134,7 @@ namespace Compositor {
             Core::Event _signal;
             uint64_t _commitSequence;
             const Core::ProxyType<Compositor::IRenderer>& _renderer;
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer;
         }; // WaylandOutput
 
     } // namespace Backend
