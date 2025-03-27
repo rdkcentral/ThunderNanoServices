@@ -20,7 +20,7 @@
 #pragma once
 
 #include "CompositorTypes.h"
-
+#include "IRenderer.h"
 namespace Thunder {
 
 namespace Compositor {
@@ -69,8 +69,10 @@ namespace Compositor {
 
     EXTERNAL Core::ProxyType<IOutput> CreateBuffer(
         const string& connector,
-        const Exchange::IComposition::Rectangle& rectangle,
+        const uint32_t width,
+        const uint32_t height,
         const Compositor::PixelFormat& format,
+        const Core::ProxyType<IRenderer>& renderer,
         IOutput::ICallback* callback);
 
 } // namespace Compositor

@@ -856,9 +856,9 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback)
+        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
         {
-            return (Core::ProxyType<IOutput> (_windows.Instance<Backend::WaylandOutput>(name, *this, name, rectangle, format)));
+            return (Core::ProxyType<IOutput> (_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, format, renderer)));
         }
 
         struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
@@ -1007,11 +1007,11 @@ namespace Compositor {
      * @return A `Core::ProxyType` object that wraps an instance of `IOutput`.
      */
 
-    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, IOutput::ICallback* feedback)
+    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance();
 
-        return backend.Output(name, rectangle, format, feedback);
+        return backend.Output(name, width, height, format, renderer, feedback);
     }
 } // namespace Compositor
 } // namespace Thunder

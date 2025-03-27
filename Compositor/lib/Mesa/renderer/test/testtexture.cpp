@@ -111,19 +111,17 @@ public:
         , _fps()
         , _sequence(0)
     {
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        ASSERT(_renderer.IsValid());
+
         _connector = Compositor::CreateBuffer(
-            connectorId,
-            { 0, 0, 1080, 1920 },
-            _format,
-            &_sink);
+            connectorId, 1920, 1080,
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
+            _renderer, &_sink);
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
-
         _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
-
-        ASSERT(_renderer.IsValid());
 
         NewFrame();
     }

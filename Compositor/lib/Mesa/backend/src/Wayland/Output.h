@@ -77,7 +77,7 @@ namespace Compositor {
             WaylandOutput(WaylandOutput&&) = delete;
             WaylandOutput(const WaylandOutput&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
-            WaylandOutput(Wayland::IBackend& backend, const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format);
+            WaylandOutput(Wayland::IBackend& backend, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer);
 
             virtual ~WaylandOutput();
 
@@ -122,13 +122,15 @@ namespace Compositor {
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;
             xdg_toplevel* _topLevelSurface;
-            Exchange::IComposition::Rectangle _rectangle;
+            const uint32_t _width;
+            const uint32_t _height;
             uint32_t _format;
             uint64_t _modifier;
             Compositor::Matrix _matrix;
             Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
             Core::Event _signal;
             uint64_t _commitSequence;
+            const Core::ProxyType<Compositor::IRenderer>& _renderer;
         }; // WaylandOutput
 
     } // namespace Backend
