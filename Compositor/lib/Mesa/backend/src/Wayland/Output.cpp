@@ -154,8 +154,6 @@ namespace Compositor {
             , _signal(false, true)
             , _commitSequence(0)
             , _renderer(renderer)
-            , _frameBuffer()
-
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
@@ -274,10 +272,6 @@ namespace Compositor {
                 _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
                 ASSERT(_buffer.IsValid() == true);
 
-                if(_renderer.IsValid() == true) {
-                    _frameBuffer = _renderer->FrameBuffer(_buffer);
-                    ASSERT(_frameBuffer.IsValid() == true);
-                }
 
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
 
