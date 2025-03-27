@@ -81,6 +81,7 @@ namespace Compositor {
 
             virtual ~WaylandOutput();
 
+            // ICompositionBuffer methods
             Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
             void Relinquish() override;
 
@@ -90,8 +91,10 @@ namespace Compositor {
             uint64_t Modifier() const override;
             Exchange::ICompositionBuffer::DataType Type() const override;
 
+            // IOutput methods
             uint32_t Commit() override;
             const string& Node() const override;
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override;
 
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
@@ -131,6 +134,7 @@ namespace Compositor {
             Core::Event _signal;
             uint64_t _commitSequence;
             const Core::ProxyType<Compositor::IRenderer>& _renderer;
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer;
         }; // WaylandOutput
 
     } // namespace Backend

@@ -50,6 +50,8 @@ namespace Compositor {
                     if (IsValid() == true) {
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[0]);
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
+                        _frameBuffer[0].Release();
+                        _frameBuffer[1].Release();
                         _buffer[0].Release();
                         _buffer[1].Release();
                         ::close(_fd);
@@ -78,6 +80,12 @@ namespace Compositor {
                         } else {
                             _frameId[0] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[0].operator->());
                             _frameId[1] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[1].operator->());
+
+                            if (renderer.IsValid() == true) {
+                                _frameBuffer[0] = renderer->FrameBuffer(_buffer[0]);
+                                _frameBuffer[1] = renderer->FrameBuffer(_buffer[1]);
+                            }
+
                             _activePlane = 0;
                             _fd = ::dup(fd);
                         }
@@ -128,12 +136,18 @@ namespace Compositor {
                     _swap.Unlock();
                 }
 
+                Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const
+                {
+                    return (_frameBuffer[_activePlane ^ 1]);
+                }
+
             private:
                 Core::CriticalSection _swap;
                 int _fd;
                 uint8_t _activePlane;
                 Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
                 Compositor::DRM::Identifier _frameId[2];
+                Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer[2];
             };
 
         public:
@@ -258,6 +272,7 @@ namespace Compositor {
                 _frameBuffer.Swap();
             }
 
+            // IOutput methods
             uint32_t Commit()
             {
                 uint32_t result(Core::ERROR_NONE);
@@ -274,6 +289,10 @@ namespace Compositor {
             const string& Node() const
             {
                 return _gpuNode;
+            }
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override
+            {
+                return _frameBuffer.FrameBuffer();
             }
 
         private:

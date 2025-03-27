@@ -849,9 +849,12 @@ namespace Plugin {
 
             ASSERT(buffer.IsValid() == true);
 
-            _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(buffer));
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = buffer->FrameBuffer();
+
+            _renderer->Bind(frameBuffer);
+
             _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
-            
+
             _renderer->Clear(_background);
 
             _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
@@ -862,7 +865,7 @@ namespace Plugin {
 
             _output->Commit(); // Blit to screen
 
-            _renderer->Unbind();
+            _renderer->Unbind(frameBuffer);
 
             return Core::Time::Now().Ticks();
         }

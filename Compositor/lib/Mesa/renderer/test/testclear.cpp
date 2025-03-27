@@ -202,7 +202,9 @@ private:
     {
         const auto start = std::chrono::high_resolution_clock::now();
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+
+        _renderer->Bind(frameBuffer);
 
         _renderer->Begin(_connector->Width(), _connector->Height());
         _renderer->Clear(_color);
@@ -210,7 +212,7 @@ private:
 
         _connector->Commit();
 
-        _renderer->Unbind();
+        _renderer->Unbind(frameBuffer);
 
         _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / _period.count()));
 

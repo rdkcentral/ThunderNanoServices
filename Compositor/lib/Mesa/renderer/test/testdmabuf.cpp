@@ -197,7 +197,9 @@ private:
         float x = float(renderWidth / 2.0f) * cosX;
         float y = float(renderHeight / 2.0f) * sinY;
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+
+        _renderer->Bind(frameBuffer);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
@@ -219,10 +221,10 @@ private:
             WaitForVSync(100);
         } else {
             TRACE(Trace::Error, ("Commit failed: %d", commit));
-            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit. 
+            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit.
         }
 
-        _renderer->Unbind();
+        _renderer->Unbind(frameBuffer);
 
         rotation += _radPerFrame;
     }
@@ -328,11 +330,11 @@ int main(int argc, char* argv[])
         tracer.Callback(&printer);
 
         const std::vector<string> modules = {
-            "CompositorRenderTest",
-            "CompositorBuffer",
+            "CompositorRenderTestOFF",
+            "CompositorBufferOFF",
             "CompositorBackendOFF",
             "CompositorRendererOFF",
-            "DRMCommon"
+            "DRMCommonOFF"
         };
 
         for (auto module : modules) {

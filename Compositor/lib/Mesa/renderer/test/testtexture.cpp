@@ -194,7 +194,9 @@ private:
         const uint16_t renderWidth(512);
         const uint16_t renderHeight(512);
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+
+        _renderer->Bind(frameBuffer);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
@@ -213,7 +215,7 @@ private:
 
         WaitForVSync(100);
 
-        _renderer->Unbind();
+        _renderer->Unbind(frameBuffer);
 
         rotation += _period.count() * (2. * M_PI) / (_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 

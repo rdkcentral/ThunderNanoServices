@@ -154,6 +154,8 @@ namespace Compositor {
             , _signal(false, true)
             , _commitSequence(0)
             , _renderer(renderer)
+            , _frameBuffer()
+
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
@@ -220,6 +222,10 @@ namespace Compositor {
             if (_surface != nullptr) {
                 wl_surface_destroy(_surface);
             }
+
+            if (_frameBuffer.IsValid() == true) {
+                _frameBuffer.Release();
+            }       
         }
 
         Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
@@ -268,6 +274,10 @@ namespace Compositor {
                 _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
                 ASSERT(_buffer.IsValid() == true);
 
+                if(_renderer.IsValid() == true) {
+                    _frameBuffer = _renderer->FrameBuffer(_buffer);
+                    ASSERT(_frameBuffer.IsValid() == true);
+                }
 
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
 
@@ -296,6 +306,11 @@ namespace Compositor {
         {
             static string result("TODO");
             return result;
+        }
+
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> WaylandOutput::FrameBuffer() /* override */
+        {
+            return _frameBuffer;
         }
 
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)
