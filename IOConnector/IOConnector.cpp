@@ -96,13 +96,12 @@ namespace Plugin
         , _pins()
         , _skipURL(0)
         , _notifications()
+        , _observers()
     {
-        RegisterAll();
     }
 
     /* virtual */ IOConnector::~IOConnector()
     {
-        UnregisterAll();
     }
 
     /* virtual */ const string IOConnector::Initialize(PluginHost::IShell * service)
@@ -116,6 +115,8 @@ namespace Plugin
         _service->AddRef();
 
         _skipURL = _service->WebPrefix().length();
+
+        Exchange::JIOConnector::Register(*this, this);
 
         auto index(config.Pins.Elements());
 
@@ -300,6 +301,8 @@ namespace Plugin
         if (_service != nullptr) {
             ASSERT(_service == service);
 
+            Exchange::JIOConnector::Unregister(*this);
+
             _adminLock.Lock();
 
             for (std::pair<const uint32_t, PinHandler>& product : _pins) {
@@ -419,12 +422,140 @@ namespace Plugin
                     string pinAsText (Core::NumberType<uint16_t>(pin->Identifier() & 0xFFFF).Text());
                     _service->Notify(_T("{ \"id\": ") + pinAsText + _T(", \"state\": \"") + (value != 0 ? _T("Set\" }") : _T("Clear\" }")));
 
-                    event_pinactivity(pinAsText, value);
+                    NotifyConnectorActivity(pinAsText, value);
                 }
             }
 
             index++;
         }
+    }
+
+    Core::hresult IOConnector::Register(const string& id, Exchange::IIOConnector::INotification* const notification)
+    {
+        ASSERT(notification != nullptr);
+
+        _adminLock.Lock();
+
+#ifdef __DEBUG__
+        ObserverMap::iterator index(_observers.begin());
+
+        // DO NOT REGISTER THE SAME NOTIFICATION SINK ON THE SAME NAMESPACE MORE THAN ONCE. !!!!!!
+        while (index != _observers.end()) {
+            ASSERT((index->second != notification) || (id != index->first));
+
+            index++;
+        }
+#endif
+
+        notification->AddRef();
+        _observers.push_back(std::pair<string, struct Exchange::IIOConnector::INotification*>(id, notification));
+
+        _adminLock.Unlock();
+
+        return (Core::ERROR_NONE);
+    }
+
+    Core::hresult IOConnector::Unregister(const string& id, const Exchange::IIOConnector::INotification* const notification)
+    {
+        ASSERT(notification != nullptr);
+
+        bool found = false;
+
+        _adminLock.Lock();
+
+        ObserverMap::iterator index(_observers.begin());
+
+        while ((found == false) && (index != _observers.end())) {
+
+            found = ((index->second == notification) && (id == index->first));
+
+            if (found == false) {
+                index++;
+            }
+        }
+
+        if (index != _observers.end()) {
+            index->second->Release();
+            _observers.erase(index);
+        }
+
+        _adminLock.Unlock();
+
+        return (Core::ERROR_NONE);
+    }
+
+    Core::hresult IOConnector::Pin(const string& index, const int32_t& pinvalue)
+    {
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+
+        if (index.empty() == false) {
+
+            uint32_t pinId = atoi(index.c_str());
+
+            if (pinId <= 0xFFFF) {
+
+                Pins::iterator entry = _pins.begin();
+
+                while (entry != _pins.end()) {
+
+                    if ((entry->first & 0xFFFF) == pinId) {
+
+                        entry->second.Set(pinvalue != 0);
+                        result = Core::ERROR_NONE;
+                        break;
+                    }
+                    else {
+                        ++entry;
+                    }
+                }
+            }
+        }
+
+        return (result);
+    }
+
+    Core::hresult IOConnector::Pin(const string& index, int32_t& pinvalue) const
+    {
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+
+        if (index.empty() == false) {
+
+            uint32_t pinId = atoi(index.c_str());
+
+            if (pinId <= 0xFFFF) {
+
+                Pins::const_iterator entry = _pins.cbegin();
+
+                while (entry != _pins.cend()) {
+
+                    if ((entry->first & 0xFFFF) == pinId) {
+
+                        pinvalue = entry->second.Get();
+                        result = Core::ERROR_NONE;
+                        break;
+                    }
+                    else {
+                        ++entry;
+                    }
+                }
+            }
+        }
+
+        return (result);
+    }
+
+    void IOConnector::NotifyConnectorActivity(const string& id, const int32_t& value) const
+    {
+        _adminLock.Lock();
+
+        for (auto observer : _observers) {
+            if (observer.first == id) {
+                observer.second->Activity(id, value);
+            }
+        }
+        _adminLock.Unlock();
+
+        Exchange::JIOConnector::Event::Activity(*this, id, value);
     }
 
 } // namespace Plugin
