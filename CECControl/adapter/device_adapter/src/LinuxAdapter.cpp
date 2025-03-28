@@ -37,32 +37,32 @@ namespace CEC {
         };
 
         static constexpr conversion_entry _table_role_to_LogAdressType[] = {
-            { .from = CEC_DEVICE_TV, .to = CEC_LOG_ADDR_TYPE_TV },
-            { .from = CEC_DEVICE_RECORDER, .to = CEC_LOG_ADDR_TYPE_RECORD },
-            { .from = CEC_DEVICE_TUNER, .to = CEC_LOG_ADDR_TYPE_TUNER },
-            { .from = CEC_DEVICE_PLAYBACK, .to = CEC_LOG_ADDR_TYPE_PLAYBACK },
-            { .from = CEC_DEVICE_AUDIOSYSTEM, .to = CEC_LOG_ADDR_TYPE_AUDIOSYSTEM },
-            { .from = CEC_DEVICE_SWITCH, .to = CEC_LOG_ADDR_TYPE_SPECIFIC },
-            { .from = CEC_DEVICE_VIDEOPROCESSOR, .to = CEC_LOG_ADDR_TYPE_SPECIFIC },
-            { .from = CEC_DEVICE_UNKNOWN, .to = CEC_LOG_ADDR_TYPE_UNREGISTERED }
+            { CEC_DEVICE_TV, CEC_LOG_ADDR_TYPE_TV },
+            { CEC_DEVICE_RECORDER, CEC_LOG_ADDR_TYPE_RECORD },
+            { CEC_DEVICE_TUNER, CEC_LOG_ADDR_TYPE_TUNER },
+            { CEC_DEVICE_PLAYBACK, CEC_LOG_ADDR_TYPE_PLAYBACK },
+            { CEC_DEVICE_AUDIOSYSTEM, CEC_LOG_ADDR_TYPE_AUDIOSYSTEM },
+            { CEC_DEVICE_SWITCH, CEC_LOG_ADDR_TYPE_SPECIFIC },
+            { CEC_DEVICE_VIDEOPROCESSOR, CEC_LOG_ADDR_TYPE_SPECIFIC },
+            { CEC_DEVICE_UNKNOWN, CEC_LOG_ADDR_TYPE_UNREGISTERED }
         };
         static constexpr conversion_entry _table_role_to_PrimaryDeviceType[] = {
-            { .from = CEC_DEVICE_TV, .to = CEC_OP_PRIM_DEVTYPE_TV },
-            { .from = CEC_DEVICE_RECORDER, .to = CEC_OP_PRIM_DEVTYPE_RECORD },
-            { .from = CEC_DEVICE_TUNER, .to = CEC_OP_PRIM_DEVTYPE_TUNER },
-            { .from = CEC_DEVICE_PLAYBACK, .to = CEC_OP_PRIM_DEVTYPE_PLAYBACK },
-            { .from = CEC_DEVICE_AUDIOSYSTEM, .to = CEC_OP_PRIM_DEVTYPE_AUDIOSYSTEM },
-            { .from = CEC_DEVICE_SWITCH, .to = CEC_OP_PRIM_DEVTYPE_SWITCH },
-            { .from = CEC_DEVICE_VIDEOPROCESSOR, .to = CEC_OP_PRIM_DEVTYPE_PROCESSOR }
+            { CEC_DEVICE_TV, CEC_OP_PRIM_DEVTYPE_TV },
+            { CEC_DEVICE_RECORDER, CEC_OP_PRIM_DEVTYPE_RECORD },
+            { CEC_DEVICE_TUNER, CEC_OP_PRIM_DEVTYPE_TUNER },
+            { CEC_DEVICE_PLAYBACK, CEC_OP_PRIM_DEVTYPE_PLAYBACK },
+            { CEC_DEVICE_AUDIOSYSTEM, CEC_OP_PRIM_DEVTYPE_AUDIOSYSTEM },
+            { CEC_DEVICE_SWITCH, CEC_OP_PRIM_DEVTYPE_SWITCH },
+            { CEC_DEVICE_VIDEOPROCESSOR, CEC_OP_PRIM_DEVTYPE_PROCESSOR }
         };
         static constexpr conversion_entry _table_role_to_AllDeviceType[] = {
-            { .from = CEC_DEVICE_TV, .to = CEC_OP_ALL_DEVTYPE_TV },
-            { .from = CEC_DEVICE_RECORDER, .to = CEC_OP_ALL_DEVTYPE_RECORD },
-            { .from = CEC_DEVICE_TUNER, .to = CEC_OP_ALL_DEVTYPE_TUNER },
-            { .from = CEC_DEVICE_PLAYBACK, .to = CEC_OP_ALL_DEVTYPE_PLAYBACK },
-            { .from = CEC_DEVICE_AUDIOSYSTEM, .to = CEC_OP_ALL_DEVTYPE_AUDIOSYSTEM },
-            { .from = CEC_DEVICE_SWITCH, .to = CEC_OP_ALL_DEVTYPE_SWITCH },
-            { .from = CEC_DEVICE_VIDEOPROCESSOR, .to = CEC_OP_ALL_DEVTYPE_SWITCH }
+            { CEC_DEVICE_TV, CEC_OP_ALL_DEVTYPE_TV },
+            { CEC_DEVICE_RECORDER, CEC_OP_ALL_DEVTYPE_RECORD },
+            { CEC_DEVICE_TUNER, CEC_OP_ALL_DEVTYPE_TUNER },
+            { CEC_DEVICE_PLAYBACK, CEC_OP_ALL_DEVTYPE_PLAYBACK },
+            { CEC_DEVICE_AUDIOSYSTEM, CEC_OP_ALL_DEVTYPE_AUDIOSYSTEM },
+            { CEC_DEVICE_SWITCH, CEC_OP_ALL_DEVTYPE_SWITCH },
+            { CEC_DEVICE_VIDEOPROCESSOR, CEC_OP_ALL_DEVTYPE_SWITCH }
         };
 
         static constexpr uint8_t max_osd_length = 15;
