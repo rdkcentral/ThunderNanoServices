@@ -93,16 +93,6 @@ namespace Compositor {
             uint32_t Commit() override;
             const string& Node() const override;
 
-            int32_t X() const override
-            {
-                return _rectangle.x;
-            }
-
-            int32_t Y() const override
-            {
-                return _rectangle.y;
-            }
-
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
             static const struct xdg_surface_listener windowSurfaceListener;
