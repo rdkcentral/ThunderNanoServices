@@ -182,7 +182,6 @@
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="NTPClient.cpp" />
     <ClCompile Include="TimeSync.cpp" />
-    <ClCompile Include="TimeSyncJsonRpc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Module.h" />
