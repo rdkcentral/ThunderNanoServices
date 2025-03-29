@@ -453,7 +453,7 @@ namespace Plugin {
             Output& operator=(Output&&) = delete;
             Output& operator=(const Output&) = delete;
 
-            Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format)
+            Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<Compositor::IRenderer>& renderer)
                 : _sink(*this)
                 , _connector()
                 , _gpuNode()
@@ -464,15 +464,7 @@ namespace Plugin {
                 , _renderingClients()
 
             {
-                // TODO: remove the x and y from CreateBuffer, it is not used.
-                Exchange::IComposition::Rectangle rectangle;
-
-                rectangle.x = 0;
-                rectangle.y = 0;
-                rectangle.width = width;
-                rectangle.height = height;
-
-                _connector = Compositor::CreateBuffer(name, rectangle, format, &_sink);
+                _connector = Compositor::CreateBuffer(name, width, height, format, renderer, &_sink);
                 TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
             }
 
@@ -652,16 +644,6 @@ namespace Plugin {
             _format = config.Format.Value();
             _modifier = config.Modifier.Value();
 
-            if (config.Output.IsSet() == false) {
-                return Core::ERROR_INCOMPLETE_CONFIG;
-            } else {
-                _output = Core::ProxyType<Output>::Create(config.Output.Value(), config.Width.Value(), config.Height.Value(), _format);
-
-                ASSERT(_output.IsValid());
-
-                TRACE(Trace::Information, ("Initialzed connector %s", config.Output.Value().c_str()));
-            }
-
             if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
                 _gpuIdentifier = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
             } else {
@@ -673,6 +655,15 @@ namespace Plugin {
 
             _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
             ASSERT(_renderer.IsValid());
+
+            if (config.Output.IsSet() == false) {
+                return Core::ERROR_INCOMPLETE_CONFIG;
+            } else {
+                _output = Core::ProxyType<Output>::Create(config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
+                ASSERT(_output.IsValid());
+                
+                TRACE(Trace::Information, ("Initialzed connector %s", config.Output.Value().c_str()));
+            }
 
             RenderOutput();
 
@@ -858,9 +849,12 @@ namespace Plugin {
 
             ASSERT(buffer.IsValid() == true);
 
-            _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(buffer));
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = buffer->FrameBuffer();
+
+            _renderer->Bind(frameBuffer);
+
             _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
-            
+
             _renderer->Clear(_background);
 
             _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
@@ -871,7 +865,7 @@ namespace Plugin {
 
             _output->Commit(); // Blit to screen
 
-            _renderer->Unbind();
+            _renderer->Unbind(frameBuffer);
 
             return Core::Time::Now().Ticks();
         }

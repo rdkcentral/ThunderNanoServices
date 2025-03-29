@@ -107,16 +107,15 @@ public:
         , _sequence(0)
 
     {
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        ASSERT(_renderer.IsValid());
+
         _connector = Compositor::CreateBuffer(
-            connectorId,
-            { 0, 0, 1080, 1920 },
-            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }), &_sink);
+            connectorId, 1920, 1080,
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
+            _renderer, &_sink);
 
         ASSERT(_connector.IsValid());
-
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
-
-        ASSERT(_renderer.IsValid());
 
         NewFrame();
     }
@@ -203,7 +202,9 @@ private:
     {
         const auto start = std::chrono::high_resolution_clock::now();
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+
+        _renderer->Bind(frameBuffer);
 
         _renderer->Begin(_connector->Width(), _connector->Height());
         _renderer->Clear(_color);
@@ -211,7 +212,7 @@ private:
 
         _connector->Commit();
 
-        _renderer->Unbind();
+        _renderer->Unbind(frameBuffer);
 
         _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / _period.count()));
 
