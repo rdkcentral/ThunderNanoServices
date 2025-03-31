@@ -792,7 +792,7 @@ namespace Plugin
             _adminLock.Lock();
             ConfigMap::iterator index(_configs.find(ssid));
             if (index != _configs.end()) {
-                if (configInfo.ssid.empty() == true) {
+                if (configInfo.ssid.Value().empty() == true) {
                     _controller->Destroy(ssid);
                     _configs.erase(index);
                 } else {
@@ -819,17 +819,17 @@ namespace Plugin
                     if (status == true) {
                         if ((settings.key & SecurityInfo::Key::PSK_HASHED) != 0) {
                             status = profile.Hash(settings.secret);
-                            TRACE_GLOBAL(Trace::Information, (_T("Setting Hash %s is %s"), settings.secret.c_str(), (status ? "Success": "Failed")));
+                            TRACE_GLOBAL(Trace::Information, (_T("Setting Hash %s is %s"), settings.secret.Value().c_str(), (status ? "Success": "Failed")));
                         } else {
                             status = profile.PresharedKey(settings.secret);
-                            TRACE_GLOBAL(Trace::Information, (_T("Setting PresharedKey %s is %s"), settings.secret.c_str(), (status ? "Success": "Failed")));
+                            TRACE_GLOBAL(Trace::Information, (_T("Setting PresharedKey %s is %s"), settings.secret.Value().c_str(), (status ? "Success": "Failed")));
                         }
                     }
 
                 } else if ((settings.method & Security::ENTERPRISE) != 0) {
                     // Seems we are in Enterprise mode !!!
                     status = profile.Enterprise(settings.identity, settings.secret);
-                    TRACE_GLOBAL(Trace::Information, (_T("Setting Enterprise values %s:%s is %s"),settings.identity.c_str(), settings.secret.c_str(), (status ? "Success": "Failed")));
+                    TRACE_GLOBAL(Trace::Information, (_T("Setting Enterprise values %s:%s is %s"),settings.identity.Value().c_str(), settings.secret.Value().c_str(), (status ? "Success": "Failed")));
                 } else if ((settings.method & Security::OPEN) != 0) {
                     // Seems we are in OPEN mode !!!
                     status = profile.Unsecure();
