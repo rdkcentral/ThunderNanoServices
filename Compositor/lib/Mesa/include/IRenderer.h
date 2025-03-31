@@ -26,6 +26,21 @@ namespace Compositor {
     struct EXTERNAL IRenderer {
         virtual ~IRenderer() = default;
 
+        /**
+         * @brief A frame buffer represents an image used as a target for rendering.
+         */
+        struct IFrameBuffer{
+            virtual ~IFrameBuffer() = default;
+
+            virtual bool IsValid() const = 0;
+
+            virtual void Bind() const = 0;
+            virtual void Unbind() const = 0;
+        }; // struct IFrameBuffer
+
+        /**
+         * @brief A texture represents an image used as a source for rendering.
+         */
         struct ITexture {
             virtual ~ITexture() = default;
 
@@ -43,26 +58,18 @@ namespace Compositor {
          */
         static Core::ProxyType<IRenderer> Instance(Identifier identifier);
 
-        // /**
-        //  * @brief Install a callback to receive e.g. the
-        //  *
-        //  * @param callback A callback pointer, or nullptr to unset the callback.
-        //  * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
-        //  */
-        // virtual uint32_t Callback(ICallback* callback) = 0;
-
         /**
          * @brief Binds a frame buffer to the renderer, all render related actions will be done using this buffer.
          *
          * @param buffer A preallocated buffer to be used or ```nullptr``` to clear.
          * @return uint32_t Core::ERROR_NONE upon success, error otherwise.
          */
-        virtual uint32_t Bind(Core::ProxyType<Exchange::ICompositionBuffer> buffer) = 0;
+        virtual uint32_t Bind(const Core::ProxyType<IFrameBuffer>& framebuffer) = 0;
 
         /**
          * @brief Clears the active frame buffer from the renderer.
          */
-        virtual void Unbind() = 0;
+        virtual uint32_t Unbind(const Core::ProxyType<IFrameBuffer>& framebuffer) = 0;
 
         /**
          * @brief Start a render pass with the provided viewport.
@@ -99,11 +106,29 @@ namespace Compositor {
         virtual void Scissor(const Exchange::IComposition::Rectangle* box) = 0;
 
         /**
-         * @brief   Creates a texture in the gpu bound to this renderer
+         * @brief Creates a framebuffer from the given composition buffer.
          *
-         * @param buffer   The buffer representing the pixel data.
+         * This method is responsible for generating a framebuffer object
+         * that corresponds to the provided composition buffer. The framebuffer
+         * can then be used for rendering operations.
          *
-         * @return ITexture upon success, nullptr on error.
+         * @param buffer A proxy to the composition buffer from which the framebuffer
+         *               will be created. This buffer contains the necessary data
+         *               for rendering.
+         * @return A proxy to the created framebuffer object.
+         */
+        virtual Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
+
+        /**
+         * @brief Retrieves a texture representation from a composition buffer.
+         *
+         * This method takes a proxy to an ICompositionBuffer and returns a proxy
+         * to an ITexture that represents the texture derived from the buffer.
+         *
+         * @param buffer A proxy to the ICompositionBuffer from which the texture
+         *               will be created.
+         * @return A proxy to the ITexture representing the texture derived from
+         *         the provided composition buffer.
          */
         virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
 

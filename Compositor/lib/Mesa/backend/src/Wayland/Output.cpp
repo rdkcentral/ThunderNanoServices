@@ -140,18 +140,22 @@ namespace Compositor {
 
         WaylandOutput::WaylandOutput(
             Wayland::IBackend& backend, const string& name,
-            const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format)
+            const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer)
             : _backend(backend)
             , _surface(nullptr)
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
             , _topLevelSurface(nullptr)
-            , _rectangle(rectangle)
+            , _width(width)
+            , _height(height)
             , _format()
             , _modifier()
             , _buffer()
             , _signal(false, true)
             , _commitSequence(0)
+            , _renderer(renderer)
+            , _frameBuffer()
+
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
@@ -160,11 +164,6 @@ namespace Compositor {
 
             ASSERT(_format != DRM_FORMAT_INVALID);
             ASSERT(_modifier != DRM_FORMAT_MOD_INVALID);
-
-            if (Compositor::Rectangle::IsDefault(rectangle)) {
-                _rectangle.width = 1280;
-                _rectangle.height = 720;
-            }
 
             _surface = _backend.Surface();
 
@@ -223,6 +222,10 @@ namespace Compositor {
             if (_surface != nullptr) {
                 wl_surface_destroy(_surface);
             }
+
+            if (_frameBuffer.IsValid() == true) {
+                _frameBuffer.Release();
+            }       
         }
 
         Exchange::ICompositionBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
@@ -268,7 +271,13 @@ namespace Compositor {
             ASSERT(_backend.RenderNode() > 0);
 
             if (_buffer.IsValid() == false) {
-                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _rectangle.width, _rectangle.height, Compositor::PixelFormat(_format, { _modifier }));
+                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
+                ASSERT(_buffer.IsValid() == true);
+
+                if(_renderer.IsValid() == true) {
+                    _frameBuffer = _renderer->FrameBuffer(_buffer);
+                    ASSERT(_frameBuffer.IsValid() == true);
+                }
 
                 wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
 
@@ -297,6 +306,11 @@ namespace Compositor {
         {
             static string result("TODO");
             return result;
+        }
+
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> WaylandOutput::FrameBuffer() /* override */
+        {
+            return _frameBuffer;
         }
 
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)

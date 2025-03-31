@@ -28,6 +28,41 @@ namespace Thunder {
 namespace Plugin {
 
     class TestAutomationUtils : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    private:
+
+        class Notification : public RPC::IRemoteConnection::INotification {
+        public:
+            Notification(const Notification&) = delete;
+            Notification& operator=(const Notification&) = delete;
+            Notification(Notification&&) = delete;
+            Notification& operator=(Notification&&) = delete;
+
+            explicit Notification(TestAutomationUtils& parent)
+                : _parent(parent)
+            {
+            }
+            ~Notification() = default;
+
+        public:
+            void Activated(RPC::IRemoteConnection* /* connection */) override
+            {
+            }
+            void Deactivated(RPC::IRemoteConnection* connectionId) override
+            {
+                _parent.Deactivated(connectionId);
+            }
+            void Terminated(RPC::IRemoteConnection* /* connection */) override
+            {
+            }
+
+            BEGIN_INTERFACE_MAP(Notification)
+            INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
+            END_INTERFACE_MAP
+
+        private:
+        TestAutomationUtils& _parent;
+        };
+
     public:
         TestAutomationUtils(const TestAutomationUtils&) = delete;
         TestAutomationUtils& operator=(const TestAutomationUtils&) = delete;
@@ -38,7 +73,7 @@ namespace Plugin {
             : _implementation(nullptr)
             , _connectionId(0)
             , _service(nullptr)
-
+            , _notification(*this)
         {
         }
 
@@ -60,11 +95,11 @@ namespace Plugin {
     private:
        void Deactivated(RPC::IRemoteConnection* connection);
 
+    private:
         QualityAssurance::ITestUtils* _implementation;
-
         uint32_t _connectionId;
         PluginHost::IShell* _service;
-
+        Core::SinkType<Notification> _notification;
     };
 
 } // Namespace Plugin.
