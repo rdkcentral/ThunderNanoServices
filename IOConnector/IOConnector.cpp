@@ -419,10 +419,10 @@ namespace Plugin
                     index->second.Handle();
                 } else {
                     int32_t value = (pin->Get() ? 1 : 0);
-                    string pinAsText (Core::NumberType<uint16_t>(pin->Identifier() & 0xFFFF).Text());
-                    _service->Notify(_T("{ \"id\": ") + pinAsText + _T(", \"state\": \"") + (value != 0 ? _T("Set\" }") : _T("Clear\" }")));
+                    uint32_t pinID = (pin->Identifier() & 0xFFFF;
+                    _service->Notify(_T("{ \"id\": ") + pinID + _T(", \"state\": \"") + (value != 0 ? _T("Set\" }") : _T("Clear\" }")));
 
-                    NotifyConnectorActivity(pinAsText, value);
+                    NotifyConnectorActivity(pinID, value);
                 }
             }
 
@@ -430,7 +430,7 @@ namespace Plugin
         }
     }
 
-    Core::hresult IOConnector::Register(const string& id, Exchange::IIOConnector::INotification* const notification)
+    Core::hresult IOConnector::Register(const uint32_t id, Exchange::IIOConnector::INotification* const notification)
     {
         ASSERT(notification != nullptr);
 
@@ -455,7 +455,7 @@ namespace Plugin
         return (Core::ERROR_NONE);
     }
 
-    Core::hresult IOConnector::Unregister(const string& id, const Exchange::IIOConnector::INotification* const notification)
+    Core::hresult IOConnector::Unregister(const uint32_t id, const Exchange::IIOConnector::INotification* const notification)
     {
         ASSERT(notification != nullptr);
 
@@ -484,29 +484,24 @@ namespace Plugin
         return (Core::ERROR_NONE);
     }
 
-    Core::hresult IOConnector::Pin(const string& index, const int32_t& pinvalue)
+    Core::hresult IOConnector::Pin(const uint32_t index, const int32_t pinvalue)
     {
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
-        if (index.empty() == false) {
+        if (index <= 0xFFFF) {
 
-            uint32_t pinId = atoi(index.c_str());
+            Pins::iterator entry = _pins.begin();
 
-            if (pinId <= 0xFFFF) {
+            while (entry != _pins.end()) {
 
-                Pins::iterator entry = _pins.begin();
+                if ((entry->first & 0xFFFF) == index) {
 
-                while (entry != _pins.end()) {
-
-                    if ((entry->first & 0xFFFF) == pinId) {
-
-                        entry->second.Set(pinvalue != 0);
-                        result = Core::ERROR_NONE;
-                        break;
-                    }
-                    else {
-                        ++entry;
-                    }
+                    entry->second.Set(pinvalue != 0);
+                    result = Core::ERROR_NONE;
+                    break;
+                }
+                else {
+                    ++entry;
                 }
             }
         }
@@ -514,29 +509,24 @@ namespace Plugin
         return (result);
     }
 
-    Core::hresult IOConnector::Pin(const string& index, int32_t& pinvalue) const
+    Core::hresult IOConnector::Pin(const uint32_t index, int32_t& pinvalue) const
     {
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
-        if (index.empty() == false) {
+        if (index <= 0xFFFF) {
 
-            uint32_t pinId = atoi(index.c_str());
+            Pins::const_iterator entry = _pins.cbegin();
 
-            if (pinId <= 0xFFFF) {
+            while (entry != _pins.cend()) {
 
-                Pins::const_iterator entry = _pins.cbegin();
+                if ((entry->first & 0xFFFF) == index) {
 
-                while (entry != _pins.cend()) {
-
-                    if ((entry->first & 0xFFFF) == pinId) {
-
-                        pinvalue = entry->second.Get();
-                        result = Core::ERROR_NONE;
-                        break;
-                    }
-                    else {
-                        ++entry;
-                    }
+                    pinvalue = entry->second.Get();
+                    result = Core::ERROR_NONE;
+                    break;
+                }
+                else {
+                    ++entry;
                 }
             }
         }
@@ -544,7 +534,7 @@ namespace Plugin
         return (result);
     }
 
-    void IOConnector::NotifyConnectorActivity(const string& id, const int32_t& value) const
+    void IOConnector::NotifyConnectorActivity(const uint32_t id, const int32_t value) const
     {
         _adminLock.Lock();
 
