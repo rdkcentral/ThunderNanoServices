@@ -315,18 +315,18 @@ namespace Plugin {
 
     private:
         void Activity();
-        void NotifyConnectorActivity(const uint32_t id, const int32_t value) const;
+        void NotifyConnectorActivity(const uint16_t id, const int32_t value) const;
         void GetMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
         void PostMethod(Web::Response& response, Core::TextSegmentIterator& index, GPIO::Pin& pin);
 
         // JsonRpc methods
-        Core::hresult Register(const uint32_t id, Exchange::IIOConnector::INotification* const notification) override;
-        Core::hresult Unregister(const uint32_t id, const Exchange::IIOConnector::INotification* const notification) override;
-        Core::hresult Pin(const uint32_t index, const int32_t pinvalue) override;
-        Core::hresult Pin(const uint32_t index, int32_t& pinvalue) const override;
+        Core::hresult Register(const uint16_t id, Exchange::IIOConnector::INotification* const notification) override;
+        Core::hresult Unregister(const uint16_t id, const Exchange::IIOConnector::INotification* const notification) override;
+        Core::hresult Pin(const uint16_t index, const int32_t pinvalue) override;
+        Core::hresult Pin(const uint16_t index, int32_t& pinvalue) const override;
 
     private:
-        using ObserverMap = std::list<std::pair<const uint32_t, struct Exchange::IIOConnector::INotification*>>;
+        using ObserverMap = std::list<std::pair<const uint16_t, struct Exchange::IIOConnector::INotification*>>;
 
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;

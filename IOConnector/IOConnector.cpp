@@ -419,8 +419,8 @@ namespace Plugin
                     index->second.Handle();
                 } else {
                     int32_t value = (pin->Get() ? 1 : 0);
-                    uint32_t pinID = (pin->Identifier() & 0xFFFF;
-                    _service->Notify(_T("{ \"id\": ") + pinID + _T(", \"state\": \"") + (value != 0 ? _T("Set\" }") : _T("Clear\" }")));
+                    uint16_t pinID = (pin->Identifier() & 0xFFFF);
+                    _service->Notify(_T("{ \"id\": ") + Core::NumberType<uint16_t>(pinID).Text() + _T(", \"state\": \"") + (value != 0 ? _T("Set\" }") : _T("Clear\" }")));
 
                     NotifyConnectorActivity(pinID, value);
                 }
@@ -430,7 +430,7 @@ namespace Plugin
         }
     }
 
-    Core::hresult IOConnector::Register(const uint32_t id, Exchange::IIOConnector::INotification* const notification)
+    Core::hresult IOConnector::Register(const uint16_t id, Exchange::IIOConnector::INotification* const notification)
     {
         ASSERT(notification != nullptr);
 
@@ -448,14 +448,14 @@ namespace Plugin
 #endif
 
         notification->AddRef();
-        _observers.push_back(std::pair<string, struct Exchange::IIOConnector::INotification*>(id, notification));
+        _observers.push_back(std::pair<uint16_t, struct Exchange::IIOConnector::INotification*>(id, notification));
 
         _adminLock.Unlock();
 
         return (Core::ERROR_NONE);
     }
 
-    Core::hresult IOConnector::Unregister(const uint32_t id, const Exchange::IIOConnector::INotification* const notification)
+    Core::hresult IOConnector::Unregister(const uint16_t id, const Exchange::IIOConnector::INotification* const notification)
     {
         ASSERT(notification != nullptr);
 
@@ -484,57 +484,51 @@ namespace Plugin
         return (Core::ERROR_NONE);
     }
 
-    Core::hresult IOConnector::Pin(const uint32_t index, const int32_t pinvalue)
+    Core::hresult IOConnector::Pin(const uint16_t index, const int32_t pinvalue)
     {
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
-        if (index <= 0xFFFF) {
+        Pins::iterator entry = _pins.begin();
 
-            Pins::iterator entry = _pins.begin();
+        while (entry != _pins.end()) {
 
-            while (entry != _pins.end()) {
+            if ((entry->first & 0xFFFF) == index) {
 
-                if ((entry->first & 0xFFFF) == index) {
-
-                    entry->second.Set(pinvalue != 0);
-                    result = Core::ERROR_NONE;
-                    break;
-                }
-                else {
-                    ++entry;
-                }
+                entry->second.Set(pinvalue != 0);
+                result = Core::ERROR_NONE;
+                break;
+            }
+            else {
+                ++entry;
             }
         }
 
         return (result);
     }
 
-    Core::hresult IOConnector::Pin(const uint32_t index, int32_t& pinvalue) const
+    Core::hresult IOConnector::Pin(const uint16_t index, int32_t& pinvalue) const
     {
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
-        if (index <= 0xFFFF) {
+        Pins::const_iterator entry = _pins.cbegin();
 
-            Pins::const_iterator entry = _pins.cbegin();
+        while (entry != _pins.cend()) {
 
-            while (entry != _pins.cend()) {
+            if ((entry->first & 0xFFFF) == index) {
 
-                if ((entry->first & 0xFFFF) == index) {
-
-                    pinvalue = entry->second.Get();
-                    result = Core::ERROR_NONE;
-                    break;
-                }
-                else {
-                    ++entry;
-                }
+                pinvalue = entry->second.Get();
+                result = Core::ERROR_NONE;
+                break;
+            }
+            else {
+                ++entry;
             }
         }
 
         return (result);
     }
 
-    void IOConnector::NotifyConnectorActivity(const uint32_t id, const int32_t value) const
+    void IOConnector::NotifyConnectorActivity(const uint16_t id, const int32_t value) const
     {
         _adminLock.Lock();
 
