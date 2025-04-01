@@ -55,9 +55,9 @@ option(PLUGIN_COMPOSITOR_NXSERVER "Include a nexus server (Used in Wayland)" OFF
 set(PLUGIN_COMPOSITOR_IMPLEMENTATION_LIB "lib${PLATFORM_COMPOSITOR}.so" CACHE STRING "Specify a library with a compositor implementation." )
 set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolution")
 
-set(PLUGIN_COMPOSITOR_OUTPUTS "HDMI-A-1;0;0;1080;1920"  CACHE STRING "Specify the outputs (name1;x;y;h;w|name2;x;y;h;w) that the compositor should use." )
-set(PLUGIN_COMPOSITOR_CANVAS_HEIGHT "720"  CACHE STRING "Specify the height of the canvas that the compositor uses for drawing." )
-set(PLUGIN_COMPOSITOR_CANVAS_WIDTH "1280"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
+set(PLUGIN_COMPOSITOR_OUTPUT "HDMI-A-1"  CACHE STRING "Specify the output (name1;h;w) that the compositor should use." )
+set(PLUGIN_COMPOSITOR_CANVAS_HEIGHT "1080"  CACHE STRING "Specify the height of the canvas that the compositor uses for drawing." )
+set(PLUGIN_COMPOSITOR_CANVAS_WIDTH "1920"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_BUFFER_CONNECTOR "buffer|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR "display|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_RENDER_NODE ""  CACHE STRING "Manually specify the render node to use (e.g. /dev/dri/renderDxxx or /dev/dri/cardx)." )
