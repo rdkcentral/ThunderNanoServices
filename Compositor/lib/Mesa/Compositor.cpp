@@ -608,7 +608,10 @@ namespace Plugin {
         }
         ~CompositorImplementation() override
         {
-            _dispatcher.reset(nullptr);
+            if (_dispatcher != nullptr) {
+                delete _dispatcher;
+                _dispatcher = nullptr;
+            }
 
             if (_engine.IsValid()) {
                 _engine.Release();
@@ -678,9 +681,9 @@ namespace Plugin {
 
                 _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
 
-                _dispatcher.reset(new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine));
+                _dispatcher = new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine);
 
-                if (_dispatcher->IsListening()) {
+                if (_dispatcher->IsListening() == true) {
                     PluginHost::ISubSystem* subSystems = service->SubSystems();
 
                     ASSERT(subSystems != nullptr);
@@ -692,10 +695,11 @@ namespace Plugin {
 
                     TRACE(Trace::Information, (_T("PID %d Compositor configured, communicator: %s, bridge: %s"), getpid(), _dispatcher->Connector().c_str(), bridgePath.c_str()));
                 } else {
-                    _dispatcher.reset(nullptr);
+                    delete _dispatcher;
+                    _dispatcher = nullptr;
+
                     _engine.Release();
                     _clientBridge.Close();
-
 
                     result = Core::ERROR_UNAVAILABLE;
 
@@ -978,7 +982,7 @@ namespace Plugin {
         uint64_t _lastFrame;
         Compositor::Color _background;
         Core::ProxyType<RPC::InvokeServer> _engine;
-        std::unique_ptr<DisplayDispatcher> _dispatcher;
+        DisplayDispatcher* _dispatcher;
         int _gpuIdentifier;
         std::string _gpuNode;
         std::string _renderNode;
