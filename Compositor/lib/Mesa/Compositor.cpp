@@ -139,6 +139,8 @@ namespace Plugin {
 
         class Client : public Exchange::IComposition::IClient, public Compositor::CompositorBuffer {
         private:
+            using BaseClass = Compositor::CompositorBuffer;
+
             class Remote : public Exchange::IComposition::IClient {
             public:
                 Remote() = delete;
@@ -226,7 +228,7 @@ namespace Plugin {
             Client& operator=(const Client&) = delete;
 
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
-                : Compositor::CompositorBuffer(width, height, parent.Format(), parent.Modifier(), Exchange::ICompositionBuffer::TYPE_DMA)
+                : BaseClass(width, height, parent.Format(), parent.Modifier(), Exchange::ICompositionBuffer::TYPE_DMA)
                 , _parent(parent)
                 , _id(Core::InterlockedIncrement(_sequence))
                 , _callsign(callsign)
@@ -256,12 +258,12 @@ namespace Plugin {
             }
             uint8_t Descriptors(const uint8_t maxSize, int container[])
             {
-                return (Compositor::CompositorBuffer::Descriptors(maxSize, container));
+                return (BaseClass::Descriptors(maxSize, container));
             }
 
             void AttachPlanes(Core::PrivilegedRequest::Container& descriptors)
             {
-                Compositor::CompositorBuffer::Planes(descriptors.data(), descriptors.size());
+                BaseClass::Planes(descriptors.data(), descriptors.size());
             }
 
             Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
