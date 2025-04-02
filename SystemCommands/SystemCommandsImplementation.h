@@ -35,25 +35,20 @@ namespace Plugin {
         {
             Core::hresult result = Core::ERROR_NONE;
 
-            if (device.empty() == true) {
-                result = Core::ERROR_UNAVAILABLE;
+            int fd = open(device.c_str(), O_WRONLY);
+
+            if (fd < 0) {
+                TRACE(Trace::Error, (_T("Opening of %s failed."), device.c_str()));
+                result = Core::ERROR_GENERAL;
             }
             else {
-                int fd = open(device.c_str(), O_WRONLY);
+                int rc = ioctl(fd, USBDEVFS_RESET, 0);
 
-                if (fd < 0) {
-                    TRACE(Trace::Error, (_T("Opening of %s failed."), device.c_str()));
-                    result = Core::ERROR_GENERAL;
+                if (rc < 0) {
+                    TRACE(Trace::Error, (_T("ioctl(USBDEVFS_RESET) failed with %d. Errno: %d"), rc, errno));
+                    result = Core::ERROR_UNAVAILABLE;
                 }
-                else {
-                    int rc = ioctl(fd, USBDEVFS_RESET, 0);
-
-                    if (rc < 0) {
-                        TRACE(Trace::Error, (_T("ioctl(USBDEVFS_RESET) failed with %d. Errno: %d"), rc, errno));
-                        result = Core::ERROR_GENERAL;
-                    }
-                    close(fd);
-                }
+                close(fd);
             }
 
             return (result);
