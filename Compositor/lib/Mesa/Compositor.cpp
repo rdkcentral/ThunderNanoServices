@@ -456,7 +456,6 @@ namespace Plugin {
             Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<Compositor::IRenderer>& renderer)
                 : _sink(*this)
                 , _connector()
-                , _gpuNode()
                 , _pts(Core::Time::Now().Ticks())
                 , _rendering()
                 , _commit()
@@ -513,18 +512,7 @@ namespace Plugin {
                 // TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
             }
 
-            void HandleGPUNode(const std::string node)
-            {
-                if (_gpuNode.empty() == true) {
-                    _gpuNode = node;
-                }
-            }
-
         public:
-            const std::string& GpuNode() const
-            {
-                return _gpuNode;
-            }
 
             uint32_t Width() const
             {
@@ -565,7 +553,6 @@ namespace Plugin {
         private:
             Sink _sink;
             Core::ProxyType<Compositor::IOutput> _connector;
-            std::string _gpuNode;
             uint64_t _pts;
 
             Core::CriticalSection _rendering;
@@ -597,7 +584,6 @@ namespace Plugin {
             , _engine()
             , _dispatcher(nullptr)
             , _gpuIdentifier(0)
-            , _gpuNode()
             , _renderNode()
             , _present(*this)
         {
@@ -647,8 +633,7 @@ namespace Plugin {
             if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
                 _gpuIdentifier = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
             } else {
-                ASSERT(_gpuNode.empty() == false);
-                _gpuIdentifier = ::open(_gpuNode.c_str(), O_RDWR | O_CLOEXEC);
+                return Core::ERROR_INCOMPLETE_CONFIG;
             }
 
             ASSERT(_gpuIdentifier > 0);
@@ -980,7 +965,6 @@ namespace Plugin {
         Core::ProxyType<RPC::InvokeServer> _engine;
         DisplayDispatcher* _dispatcher;
         int _gpuIdentifier;
-        std::string _gpuNode;
         std::string _renderNode;
         Presenter _present;
     };
