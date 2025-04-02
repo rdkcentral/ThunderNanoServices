@@ -591,7 +591,7 @@ namespace Plugin {
             : _adminLock()
             , _format(DRM_FORMAT_INVALID)
             , _modifier(DRM_FORMAT_MOD_INVALID)
-            , _output()
+            , _output(nullptr)
             , _renderer()
             , _observers()
             , _clientBridge(*this)
@@ -618,8 +618,9 @@ namespace Plugin {
             _clients.Clear();
             _renderer.Release();
 
-            if (_output.IsValid()) {
-                _output.Release();
+            if (_output != nullptr) {
+                delete _output;
+                _output = nullptr;
             }
 
             if (_gpuIdentifier > 0) {
@@ -659,8 +660,8 @@ namespace Plugin {
             if (config.Output.IsSet() == false) {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
-                _output = Core::ProxyType<Output>::Create(config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
-                ASSERT(_output.IsValid());
+                _output = new Output(*this, config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
+                ASSERT((_output != nullptr) && (_output->IsValid()));
                 
                 TRACE(Trace::Information, ("Initialzed connector %s", config.Output.Value().c_str()));
             }
@@ -969,7 +970,7 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
         uint32_t _format;
         uint64_t _modifier;
-        Core::ProxyType<Output> _output;
+        Output* _output;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         Observers _observers;
         Bridge _clientBridge;
