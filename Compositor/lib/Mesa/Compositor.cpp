@@ -236,7 +236,6 @@ namespace Plugin {
                 , _zIndex(0)
                 , _geometry({ 0, 0, width, height })
                 , _texture()
-                , _pendingOutputs(0)
                 , _remoteClient(*this)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
@@ -352,7 +351,6 @@ namespace Plugin {
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
-            uint32_t _pendingOutputs;
             Remote _remoteClient;
 
             static uint32_t _sequence;
