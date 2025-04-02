@@ -526,18 +526,14 @@ namespace Plugin {
                 return _gpuNode;
             }
 
-            Exchange::IComposition::Rectangle Geometry() const
+            uint32_t Width() const
             {
-                return { 0, 0, _connector->Width(), _connector->Height() };
+                return (_connector->Width());
             }
-
-            // bool IsIntersecting(const Exchange::IComposition::Rectangle& rectangle)
-            // {
-            //     return (
-            //         std::min(_connector->X() + static_cast<int32_t>(_connector->Width()), rectangle.x + static_cast<int32_t>(rectangle.width)) > std::max(_connector->X(), rectangle.x) && // width > 0
-            //         std::min(_connector->Y() + static_cast<int32_t>(_connector->Height()), rectangle.y + static_cast<int32_t>(rectangle.height)) > std::max(_connector->Y(), rectangle.y)); // height > 0
-            // }
-
+            uint32_t Height() const
+            {
+                return (_connector->Height());
+            }
             bool IsValid()
             {
                 return _connector.IsValid();
