@@ -582,7 +582,7 @@ namespace Plugin {
             , _background(pink)
             , _engine()
             , _dispatcher(nullptr)
-            , _gpuIdentifier(0)
+            , _renderDescriptor(Compositor::InvalidFileDescriptor)
             , _renderNode()
             , _present(*this)
         {
@@ -607,9 +607,9 @@ namespace Plugin {
                 _output = nullptr;
             }
 
-            if (_gpuIdentifier > 0) {
-                ::close(_gpuIdentifier);
-                _gpuIdentifier = -1;
+            if (_renderDescriptor != Compositor::InvalidFileDescriptor) {
+                ::close(_renderDescriptor);
+                _renderDescriptor = Compositor::InvalidFileDescriptor;
             }
         }
 
@@ -630,14 +630,14 @@ namespace Plugin {
             _modifier = config.Modifier.Value();
 
             if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
-                _gpuIdentifier = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
+                _renderDescriptor = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
             } else {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             }
 
-            ASSERT(_gpuIdentifier > 0);
+            ASSERT(_renderDescriptor != Compositor::InvalidFileDescriptor);
 
-            _renderer = Compositor::IRenderer::Instance(_gpuIdentifier);
+            _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
             ASSERT(_renderer.IsValid());
 
             if (config.Output.IsSet() == false) {
@@ -780,7 +780,7 @@ namespace Plugin {
          */
         Thunder::Core::instance_id Native() const override
         {
-            return _gpuIdentifier;
+            return _renderDescriptor;
         }
         string Port() const override
         {
@@ -962,7 +962,7 @@ namespace Plugin {
         Compositor::Color _background;
         Core::ProxyType<RPC::InvokeServer> _engine;
         DisplayDispatcher* _dispatcher;
-        int _gpuIdentifier;
+        int _renderDescriptor;
         std::string _renderNode;
         Presenter _present;
     };
