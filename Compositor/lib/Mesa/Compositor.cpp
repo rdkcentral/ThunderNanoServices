@@ -513,7 +513,6 @@ namespace Plugin {
             }
 
         public:
-
             uint32_t Width() const
             {
                 return (_connector->Width());
@@ -644,7 +643,7 @@ namespace Plugin {
             if (config.Output.IsSet() == false) {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
-                _output = new Output(*this, config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
+                _output = new Output(config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
                 ASSERT((_output != nullptr) && (_output->IsValid()));
                 
                 TRACE(Trace::Information, ("Initialzed connector %s", config.Output.Value().c_str()));
@@ -741,7 +740,6 @@ namespace Plugin {
 
         Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::ICompositionBuffer> buffer)
         {
-
             ASSERT(buffer.IsValid());
             return _renderer->Texture(buffer);
         }
