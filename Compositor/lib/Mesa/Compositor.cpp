@@ -810,7 +810,7 @@ namespace Plugin {
         // Useless Resolution functions, this should be controlled by DisplayControl
         uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
         {
-            return (Core::ERROR_UNAVAILABLE);
+            return (Core::ERROR_NONE);
         }
         Exchange::IComposition::ScreenResolution Resolution() const override
         {
