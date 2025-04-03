@@ -1,0 +1,7 @@
+startmode = "@PLUGIN_TESTPLUGIN_STARTMODE@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTPLUGIN_MODE@")
+configuration.add("root", root)

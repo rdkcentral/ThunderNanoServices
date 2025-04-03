@@ -1,0 +1,16 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "TestPlugin Plugin",
+    "callsign": "TestPlugin",
+    "locator": "libThunderTestPlugin.so",
+    "status": "development",
+    "description": [
+    ""
+    ],
+    "version": "1.0"
+  },
+  "interface": {
+    "$cppref": "{cppinterfacedir}/TestPluginImplementation.h"
+  }
+}
