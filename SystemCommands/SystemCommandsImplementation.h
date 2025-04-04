@@ -31,23 +31,27 @@ namespace Plugin {
         SystemCommandsImplementation() = default;
         ~SystemCommandsImplementation() = default;
 
-        uint32_t USBReset(const std::string& device)
+        Core::hresult USBReset(const std::string& device)
         {
-            uint32_t result = Core::ERROR_NONE;
+            Core::hresult result = Core::ERROR_NONE;
+
             int fd = open(device.c_str(), O_WRONLY);
+
             if (fd < 0) {
                 TRACE(Trace::Error, (_T("Opening of %s failed."), device.c_str()));
                 result = Core::ERROR_GENERAL;
-            } else {
+            }
+            else {
                 int rc = ioctl(fd, USBDEVFS_RESET, 0);
+
                 if (rc < 0) {
                     TRACE(Trace::Error, (_T("ioctl(USBDEVFS_RESET) failed with %d. Errno: %d"), rc, errno));
-                    result = Core::ERROR_GENERAL;
+                    result = Core::ERROR_UNAVAILABLE;
                 }
                 close(fd);
             }
 
-            return result;
+            return (result);
         }
 
     private:
