@@ -271,9 +271,8 @@ namespace Plugin {
             {
                 return _texture;
             }
-            void Texture(Core::ProxyType<Compositor::IRenderer::ITexture> texture)
+            void Texture(const Core::ProxyType<Compositor::IRenderer::ITexture>& texture)
             {
-                ASSERT(_texture.IsValid() ^ texture.IsValid());
                 _texture = texture;
             }
 
