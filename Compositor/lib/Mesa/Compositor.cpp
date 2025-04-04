@@ -237,6 +237,8 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _remoteClient(*this)
+                , _pending(false)
+                , _lock()
             {
                 Core::ResourceMonitor::Instance().Register(*this);
             }
@@ -282,6 +284,27 @@ namespace Plugin {
             {
                 _parent.Render();
             }
+
+            void Pending()
+            {
+                std::lock_guard<std::mutex> lock(_lock); // Protect shared resources
+                bool expected = false;
+
+                if (_pending.compare_exchange_strong(expected, true) == true) {
+                    Rendered();
+                }
+                }
+
+            void Completed()
+            {
+                std::lock_guard<std::mutex> lock(_lock); // Protect shared resources
+
+                bool expected = true;
+
+                if (_pending.compare_exchange_strong(expected, false) == true) {
+                    Published();
+                }
+                }
 
             /**
              * Exchange::IComposition::IClient methods
@@ -352,6 +375,8 @@ namespace Plugin {
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
+            std::atomic<bool> _pending;
+            std::mutex _lock;
 
             static uint32_t _sequence;
         }; // class Client
@@ -453,14 +478,9 @@ namespace Plugin {
             Output& operator=(Output&&) = delete;
             Output& operator=(const Output&) = delete;
 
-            Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<Compositor::IRenderer>& renderer)
-                : _sink(*this)
+            Output(CompositorImplementation& parent, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<Compositor::IRenderer>& renderer)
+                : _sink(parent)
                 , _connector()
-                , _pts(Core::Time::Now().Ticks())
-                , _rendering()
-                , _commit()
-                , _pendingClients()
-                , _renderingClients()
 
             {
                 _connector = Compositor::CreateBuffer(name, width, height, format, renderer, &_sink);
@@ -481,7 +501,7 @@ namespace Plugin {
                 Sink& operator=(const Sink&) = delete;
                 Sink() = delete;
 
-                Sink(Output& parent)
+                Sink(CompositorImplementation& parent)
                     : _parent(parent)
                 {
                 }
@@ -489,28 +509,12 @@ namespace Plugin {
 
                 virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
                 {
-                    _parent.HandleVSync(output, sequence, time);
+                    _parent.VSync(output, sequence, time);
                 }
 
             private:
-                Output& _parent;
+                CompositorImplementation& _parent;
             };
-
-            void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts /*usec since epoch*/)
-            {
-                // float fps = 1 / ((pts - _pts) / 1000000.0f);
-                _pts = pts;
-
-                for (Core::ProxyType<Client> client : _renderingClients) {
-                    client->Published();
-                }
-
-                _renderingClients.clear();
-
-                _commit.unlock();
-
-                // TRACE(Trace::Information, ("Connector running at %.2f fps", fps));
-            }
 
         public:
             uint32_t Width() const
@@ -531,33 +535,14 @@ namespace Plugin {
                 return _connector;
             }
 
-            void Pending(Core::ProxyType<Client> client)
-            {
-                _rendering.Lock();
-                _pendingClients.emplace_back(client);
-                _rendering.Unlock();
-            }
-
             void Commit()
             {
-                _commit.lock();
-
-                _rendering.Lock();
-                _renderingClients = std::move(_pendingClients);
-                _rendering.Unlock();
-
                 _connector->Commit();
             }
 
         private:
             Sink _sink;
             Core::ProxyType<Compositor::IOutput> _connector;
-            uint64_t _pts;
-
-            Core::CriticalSection _rendering;
-            std::mutex _commit;
-            std::vector<Core::ProxyType<Client>> _pendingClients;
-            std::vector<Core::ProxyType<Client>> _renderingClients;
         };
 
         using Clients = Core::ProxyMapType<string, Client>;
@@ -577,6 +562,7 @@ namespace Plugin {
             , _renderer()
             , _observers()
             , _clientBridge(*this)
+            , _clientLock()
             , _clients()
             , _lastFrame(0)
             , _background(pink)
@@ -585,6 +571,7 @@ namespace Plugin {
             , _renderDescriptor(Compositor::InvalidFileDescriptor)
             , _renderNode()
             , _present(*this)
+            , _inProgress()
         {
         }
         ~CompositorImplementation() override
@@ -643,13 +630,13 @@ namespace Plugin {
             if (config.Output.IsSet() == false) {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
-                _output = new Output(config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
+                _output = new Output(*this, config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
                 ASSERT((_output != nullptr) && (_output->IsValid()));
                 
                 TRACE(Trace::Information, ("Initialzed connector %s", config.Output.Value().c_str()));
             }
 
-            RenderOutput();
+            RenderOutput(); // guarantee that the output is rendered once.
 
             std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
             result = _clientBridge.Open(bridgePath);
@@ -802,6 +789,18 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
+        {
+        {
+                std::lock_guard<std::mutex> lock(_clientLock);
+                _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
+                    client->Completed();
+                });
+            }
+
+            _inProgress.unlock();
+        }
+
         void Render()
         {
             _present.Trigger();
@@ -827,7 +826,12 @@ namespace Plugin {
 
         uint64_t RenderOutput()
         {
+
+            ASSERT(_output != nullptr);
+            ASSERT(_output->IsValid() == true);
             ASSERT(_renderer.IsValid() == true);
+
+            _inProgress.lock();
 
             Core::ProxyType<Compositor::IOutput> buffer = _output->Buffer();
 
@@ -841,9 +845,12 @@ namespace Plugin {
 
             _renderer->Clear(_background);
 
+            {
+                std::lock_guard<std::mutex> lock(_clientLock);
             _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
                 RenderClient(client);
             });
+            }
 
             _renderer->End(false);
 
@@ -876,9 +883,7 @@ namespace Plugin {
 
                 client->Relinquish();
 
-                _output->Pending(client);
-
-                client->Rendered();
+                client->Pending();
             } else {
                 TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), client->Name().c_str()));
             }
@@ -968,6 +973,7 @@ namespace Plugin {
         Core::ProxyType<Compositor::IRenderer> _renderer;
         Observers _observers;
         Bridge _clientBridge;
+        std::mutex _clientLock;
         Clients _clients;
         uint64_t _lastFrame;
         Compositor::Color _background;
@@ -976,6 +982,7 @@ namespace Plugin {
         int _renderDescriptor;
         std::string _renderNode;
         Presenter _present;
+        std::mutex _inProgress;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
