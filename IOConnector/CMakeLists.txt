@@ -40,7 +40,6 @@ set(PLUGIN_IOCONNECTOR_STARTMODE "Activated" CACHE STRING "Automatically start I
 add_library(${MODULE_NAME} SHARED 
     Module.cpp
     IOConnector.cpp
-    IOConnectorJsonRpc.cpp
     GPIO.cpp
     Handler.cpp
     Reporter.cpp

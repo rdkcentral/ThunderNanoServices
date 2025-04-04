@@ -46,6 +46,6 @@
     "required": [ "pins" ]
   },
   "interface": {
-    "$ref": "{interfacedir}/IOConnector.json#"
+    "$ref": "{cppinterfacedir}/IIOConnector.h"
   }
 }
