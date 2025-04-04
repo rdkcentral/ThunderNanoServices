@@ -891,23 +891,36 @@ namespace Plugin {
             Presenter& operator=(Presenter&&) = delete;
             Presenter& operator=(const Presenter&) = delete;
 
+            static constexpr const char* PresenterThreadName = "CompositorPresenter";
+
             Presenter(CompositorImplementation& parent)
-                : Core::Thread(Thread::DefaultStackSize(), "CompositorPresenter")
+                : Core::Thread(Thread::DefaultStackSize(), PresenterThreadName)
                 , _parent(parent)
+                , _continue(false)
             {
             }
 
-            ~Presenter() = default;
+            ~Presenter() override
+            {
+                Core::Thread::Stop();
+
+                _continue.store(false, std::memory_order_acq_rel);
+
+                Core::Thread::Wait(Core::Thread::STOPPED, 100);
+            }
 
             uint32_t Trigger()
             {
                 uint32_t result(Core::ERROR_NONE);
 
-                if (Thread::IsRunning() == true) {
-                    _continue = true;
-                    result = Core::ERROR_INPROGRESS;
-                } else {
+                bool expected = false;
+
+                // Attempt to set the `_continue` flag to `true` and start the thread.
+                if (_continue.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
                     Thread::Run();
+                } else {
+                    // Thread is already running, return an error.
+                    result = Core::ERROR_INPROGRESS;
                 }
 
                 return result;
@@ -916,17 +929,15 @@ namespace Plugin {
         private:
             uint32_t Worker() override
             {
-                uint32_t delay(Core::infinite);
+                bool expected = true;
 
-                _continue = false;
-
+                while (_continue.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
                 _parent.RenderOutput();
-
-                if (_continue == false) {
-                    Core::Thread::Block();
                 }
 
-                return delay;
+                    Core::Thread::Block();
+
+                return Core::infinite;
             }
 
         private:
