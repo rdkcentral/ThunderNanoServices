@@ -39,14 +39,14 @@ namespace Plugin {
 
             if (fd < 0) {
                 TRACE(Trace::Error, (_T("Opening of %s failed."), device.c_str()));
-                result = Core::ERROR_GENERAL;
+                result = Core::ERROR_UNAVAILABLE;
             }
             else {
                 int rc = ioctl(fd, USBDEVFS_RESET, 0);
 
                 if (rc < 0) {
                     TRACE(Trace::Error, (_T("ioctl(USBDEVFS_RESET) failed with %d. Errno: %d"), rc, errno));
-                    result = Core::ERROR_UNAVAILABLE;
+                    result = Core::ERROR_GENERAL;
                 }
                 close(fd);
             }
