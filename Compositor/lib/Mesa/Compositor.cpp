@@ -141,6 +141,12 @@ namespace Plugin {
         private:
             using BaseClass = Compositor::CompositorBuffer;
 
+            enum class State : uint8_t {
+                IDLE = 0x00,
+                RENDERING = 0x01,
+                PRESENTING = 0x02,
+            };
+
             class Remote : public Exchange::IComposition::IClient {
             public:
                 Remote() = delete;
@@ -237,8 +243,9 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _remoteClient(*this)
-                , _pending(false)
+                , _state(State::IDLE)
                 , _lock()
+                , _renderLock()
             {
                 Core::ResourceMonitor::Instance().Register(*this);
             }
@@ -281,29 +288,45 @@ namespace Plugin {
              */
             void Request() override
             {
-                _parent.Render();
+                _renderLock.lock();
+
+                State expected(State::IDLE);
+
+                std::lock_guard<std::mutex> lock(_lock);
+                if (_state.compare_exchange_strong(expected, State::RENDERING) == true) {
+                    _parent.Render(); // Trigger rendering operations
+                } else {
+                    TRACE(Trace::Error, (_T("Surface %s[%d] is not idle, but received a Request event while in %d"), _callsign.c_str(), _id, _state.load()));
+                }
             }
 
             void Pending()
             {
-                std::lock_guard<std::mutex> lock(_lock); // Protect shared resources
-                bool expected = false;
+                State expected(State::RENDERING);
 
-                if (_pending.compare_exchange_strong(expected, true) == true) {
+                std::lock_guard<std::mutex> lock(_lock);
+                if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
                     Rendered();
+                } else {
+                    TRACE(Trace::Error, (_T("Surface %s[%d] is not rendering, but received a Pending event while in %d"), _callsign.c_str(), _id, _state.load()));
                 }
-                }
+            }
 
             void Completed()
             {
-                std::lock_guard<std::mutex> lock(_lock); // Protect shared resources
+                State expected(State::PRESENTING);
 
-                bool expected = true;
-
-                if (_pending.compare_exchange_strong(expected, false) == true) {
+                std::lock_guard<std::mutex> lock(_lock);
+                if (_state.compare_exchange_strong(expected, State::IDLE) == true) {
                     Published();
+                    _renderLock.unlock();
+                } else {
+                    if (_state.load() == State::RENDERING) {
+                        _parent.Render();
+                        TRACE(Trace::Warning, (_T("Surface %s[%d] is rendering, but vsync just fired, requested a new render to guarantuee frame processing"), _callsign.c_str(), _id));
+                    }
                 }
-                }
+            }
 
             /**
              * Exchange::IComposition::IClient methods
@@ -374,8 +397,9 @@ namespace Plugin {
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
-            std::atomic<bool> _pending;
+            std::atomic<State> _state;
             std::mutex _lock;
+            std::mutex _renderLock;
 
             static uint32_t _sequence;
         }; // class Client
@@ -631,7 +655,7 @@ namespace Plugin {
             } else {
                 _output = new Output(*this, config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
                 ASSERT((_output != nullptr) && (_output->IsValid()));
-                
+
                 TRACE(Trace::Information, ("Initialzed connector %s", config.Output.Value().c_str()));
             }
 
@@ -790,7 +814,7 @@ namespace Plugin {
     private:
         void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
         {
-        {
+            {
                 std::lock_guard<std::mutex> lock(_clientLock);
                 _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
                     client->Completed();
@@ -825,7 +849,6 @@ namespace Plugin {
 
         uint64_t RenderOutput()
         {
-
             ASSERT(_output != nullptr);
             ASSERT(_output->IsValid() == true);
             ASSERT(_renderer.IsValid() == true);
@@ -846,9 +869,9 @@ namespace Plugin {
 
             {
                 std::lock_guard<std::mutex> lock(_clientLock);
-            _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
-                RenderClient(client);
-            });
+                _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
+                    RenderClient(client);
+                });
             }
 
             _renderer->End(false);
@@ -936,10 +959,10 @@ namespace Plugin {
                 bool expected = true;
 
                 while (_continue.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
-                _parent.RenderOutput();
+                    _parent.RenderOutput();
                 }
 
-                    Core::Thread::Block();
+                Core::Thread::Block();
 
                 return Core::infinite;
             }
