@@ -17,19 +17,17 @@
  * limitations under the License.
  */
  
-#ifndef __TESTAUTOMATIONCOMRPC_H
-#define __TESTAUTOMATIONCOMRPC_H
-
+#pragma once
 
 #include "Module.h"
 #include <qa_interfaces/ITestAutomation.h>
-#include <qa_interfaces/json/JComRpc.h>
+#include <qa_interfaces/json/JTestUtils.h>
 
 
 namespace Thunder {
 namespace Plugin {
 
-    class TestAutomationComRpc : public PluginHost::IPlugin, public QualityAssurance::IComRpc, public PluginHost::JSONRPC {
+    class TestAutomationUtils : public PluginHost::IPlugin, public PluginHost::JSONRPC {
     private:
 
         class Notification : public RPC::IRemoteConnection::INotification {
@@ -39,7 +37,7 @@ namespace Plugin {
             Notification(Notification&&) = delete;
             Notification& operator=(Notification&&) = delete;
 
-            explicit Notification(TestAutomationComRpc& parent)
+            explicit Notification(TestAutomationUtils& parent)
                 : _parent(parent)
             {
             }
@@ -62,34 +60,31 @@ namespace Plugin {
             END_INTERFACE_MAP
 
         private:
-            TestAutomationComRpc& _parent;
+        TestAutomationUtils& _parent;
         };
 
     public:
-        TestAutomationComRpc(const TestAutomationComRpc&) = delete;
-        TestAutomationComRpc& operator=(const TestAutomationComRpc&) = delete;
-        TestAutomationComRpc(TestAutomationComRpc&&) = delete;
-        TestAutomationComRpc& operator=(TestAutomationComRpc&&) = delete;
+        TestAutomationUtils(const TestAutomationUtils&) = delete;
+        TestAutomationUtils& operator=(const TestAutomationUtils&) = delete;
+        TestAutomationUtils(TestAutomationUtils&&) = delete;
+        TestAutomationUtils& operator=(TestAutomationUtils&&) = delete;
 
-        TestAutomationComRpc()
+        TestAutomationUtils()
             : _implementation(nullptr)
             , _connectionId(0)
             , _service(nullptr)
             , _notification(*this)
-
         {
         }
 
-        ~TestAutomationComRpc() override = default;
+        ~TestAutomationUtils() override = default;
+       
 
-        BEGIN_INTERFACE_MAP(TestAutomationComRpc)
+        BEGIN_INTERFACE_MAP(TestAutomationUtils)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_ENTRY(QualityAssurance::IComRpc)
+            INTERFACE_AGGREGATE(QualityAssurance::ITestUtils, _implementation)
         END_INTERFACE_MAP
-
-        //   ITestAutomationComRpc Methods
-        Core::hresult TestBigString(const uint32_t length) override;
 
         //   IPlugin methods
         // -------------------------------------------------------------------------------------------------------
@@ -101,7 +96,7 @@ namespace Plugin {
        void Deactivated(RPC::IRemoteConnection* connection);
 
     private:
-        QualityAssurance::IComRpc::IComRpcInternal* _implementation;
+        QualityAssurance::ITestUtils* _implementation;
         uint32_t _connectionId;
         PluginHost::IShell* _service;
         Core::SinkType<Notification> _notification;
@@ -112,4 +107,3 @@ namespace Plugin {
 
 
 
-#endif // __TESTAUTOMATIONCOMRPC_H

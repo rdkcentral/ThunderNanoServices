@@ -77,10 +77,11 @@ namespace Compositor {
             WaylandOutput(WaylandOutput&&) = delete;
             WaylandOutput(const WaylandOutput&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
-            WaylandOutput(Wayland::IBackend& backend, const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format);
+            WaylandOutput(Wayland::IBackend& backend, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer);
 
             virtual ~WaylandOutput();
 
+            // ICompositionBuffer methods
             Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
             void Relinquish() override;
 
@@ -90,18 +91,10 @@ namespace Compositor {
             uint64_t Modifier() const override;
             Exchange::ICompositionBuffer::DataType Type() const override;
 
+            // IOutput methods
             uint32_t Commit() override;
             const string& Node() const override;
-
-            int32_t X() const override
-            {
-                return _rectangle.x;
-            }
-
-            int32_t Y() const override
-            {
-                return _rectangle.y;
-            }
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override;
 
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
@@ -132,13 +125,16 @@ namespace Compositor {
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;
             xdg_toplevel* _topLevelSurface;
-            Exchange::IComposition::Rectangle _rectangle;
+            const uint32_t _width;
+            const uint32_t _height;
             uint32_t _format;
             uint64_t _modifier;
             Compositor::Matrix _matrix;
             Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
             Core::Event _signal;
             uint64_t _commitSequence;
+            const Core::ProxyType<Compositor::IRenderer>& _renderer;
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer;
         }; // WaylandOutput
 
     } // namespace Backend
