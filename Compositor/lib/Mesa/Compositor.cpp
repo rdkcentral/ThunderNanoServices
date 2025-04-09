@@ -580,7 +580,7 @@ namespace Plugin {
             , _renderDescriptor(Compositor::InvalidFileDescriptor)
             , _renderNode()
             , _present(*this)
-            , _presenting(State::IDLE)
+            , _state(State::IDLE)
         {
         }
         ~CompositorImplementation() override
@@ -815,10 +815,10 @@ namespace Plugin {
 
             State expected = State::PRESENTING;
 
-            if (_presenting.compare_exchange_strong(expected, State::IDLE) == false) {
+            if (_state.compare_exchange_strong(expected, State::IDLE) == false) {
                 expected = State::PENDING;
 
-                if (_presenting.compare_exchange_strong(expected, State::PRESENTING) == true) {
+                if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
                     _present.Trigger();
                 }
             }
@@ -828,10 +828,10 @@ namespace Plugin {
         {
             State expected = State::PRESENTING;
 
-            if (_presenting.compare_exchange_strong(expected, State::PENDING) == false) {
+            if (_state.compare_exchange_strong(expected, State::PENDING) == false) {
                 expected = State::IDLE;
 
-                if (_presenting.compare_exchange_strong(expected, State::PRESENTING) == true) {
+                if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
                     _present.Trigger();
                 }
             }
@@ -993,7 +993,7 @@ namespace Plugin {
         int _renderDescriptor;
         std::string _renderNode;
         Presenter _present;
-        std::atomic<State> _presenting;
+        std::atomic<State> _state;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
