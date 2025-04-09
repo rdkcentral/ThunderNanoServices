@@ -244,8 +244,6 @@ namespace Plugin {
                 , _texture()
                 , _remoteClient(*this)
                 , _state(State::IDLE)
-                , _lock()
-                , _renderLock()
             {
                 Core::ResourceMonitor::Instance().Register(*this);
             }
@@ -288,15 +286,13 @@ namespace Plugin {
              */
             void Request() override
             {
-                _renderLock.lock();
-
                 State expected(State::IDLE);
 
-                std::lock_guard<std::mutex> lock(_lock);
                 if (_state.compare_exchange_strong(expected, State::RENDERING) == true) {
                     _parent.Render(); // Trigger rendering operations
                 } else {
-                    TRACE(Trace::Error, (_T("Surface %s[%d] is not idle, but received a Request event while in %d"), _callsign.c_str(), _id, _state.load()));
+                    TRACE(Trace::Error, (_T("Surface %s[%d] is not idle, but received a Request event  while in %d"), _callsign.c_str(), _id, _state.load()));
+                    ASSERT(false);
                 }
             }
 
@@ -304,7 +300,6 @@ namespace Plugin {
             {
                 State expected(State::RENDERING);
 
-                std::lock_guard<std::mutex> lock(_lock);
                 if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
                     Rendered();
                 } else {
@@ -316,15 +311,8 @@ namespace Plugin {
             {
                 State expected(State::PRESENTING);
 
-                std::lock_guard<std::mutex> lock(_lock);
                 if (_state.compare_exchange_strong(expected, State::IDLE) == true) {
                     Published();
-                    _renderLock.unlock();
-                } else {
-                    if (_state.load() == State::RENDERING) {
-                        _parent.Render();
-                        TRACE(Trace::Warning, (_T("Surface %s[%d] is rendering, but vsync just fired, requested a new render to guarantuee frame processing"), _callsign.c_str(), _id));
-                    }
                 }
             }
 
@@ -398,8 +386,6 @@ namespace Plugin {
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
             std::atomic<State> _state;
-            std::mutex _lock;
-            std::mutex _renderLock;
 
             static uint32_t _sequence;
         }; // class Client
@@ -594,7 +580,7 @@ namespace Plugin {
             , _renderDescriptor(Compositor::InvalidFileDescriptor)
             , _renderNode()
             , _present(*this)
-            , _inProgress()
+            , _presenting(State::IDLE)
         {
         }
         ~CompositorImplementation() override
@@ -812,6 +798,12 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
+        enum class State : uint8_t {
+            IDLE = 0x00,
+            PRESENTING = 0x01,
+            PENDING = 0x02,
+        };
+
         void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
         {
             {
@@ -821,12 +813,28 @@ namespace Plugin {
                 });
             }
 
-            _inProgress.unlock();
+            State expected = State::PRESENTING;
+
+            if (_presenting.compare_exchange_strong(expected, State::IDLE) == false) {
+                expected = State::PENDING;
+
+                if (_presenting.compare_exchange_strong(expected, State::PRESENTING) == true) {
+                    _present.Trigger();
+                }
+            }
         }
 
         void Render()
         {
-            _present.Trigger();
+            State expected = State::PRESENTING;
+
+            if (_presenting.compare_exchange_strong(expected, State::PENDING) == false) {
+                expected = State::IDLE;
+
+                if (_presenting.compare_exchange_strong(expected, State::PRESENTING) == true) {
+                    _present.Trigger();
+                }
+            }
         }
 
         IComposition::IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override
@@ -847,13 +855,11 @@ namespace Plugin {
             return client;
         }
 
-        uint64_t RenderOutput()
+        uint64_t RenderOutput() /* 3000uS rpi4*/
         {
             ASSERT(_output != nullptr);
             ASSERT(_output->IsValid() == true);
             ASSERT(_renderer.IsValid() == true);
-
-            _inProgress.lock();
 
             Core::ProxyType<Compositor::IOutput> buffer = _output->Buffer();
 
@@ -870,7 +876,7 @@ namespace Plugin {
             {
                 std::lock_guard<std::mutex> lock(_clientLock);
                 _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
-                    RenderClient(client);
+                    RenderClient(client); // ~500-900 uS rpi4
                 });
             }
 
@@ -931,38 +937,21 @@ namespace Plugin {
             {
                 Core::Thread::Stop();
 
-                _continue.store(false, std::memory_order_acq_rel);
-
                 Core::Thread::Wait(Core::Thread::STOPPED, 100);
             }
 
-            uint32_t Trigger()
+            void Trigger()
             {
-                uint32_t result(Core::ERROR_NONE);
-
-                bool expected = false;
-
-                // Attempt to set the `_continue` flag to `true` and start the thread.
-                if (_continue.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
-                    Thread::Run();
-                } else {
-                    // Thread is already running, return an error.
-                    result = Core::ERROR_INPROGRESS;
-                }
-
-                return result;
+                Thread::Run();
             }
 
         private:
             uint32_t Worker() override
             {
-                bool expected = true;
-
-                while (_continue.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
-                    _parent.RenderOutput();
-                }
-
                 Core::Thread::Block();
+
+
+                _parent.RenderOutput(); // 3000us
 
                 return Core::infinite;
             }
@@ -1004,7 +993,7 @@ namespace Plugin {
         int _renderDescriptor;
         std::string _renderNode;
         Presenter _present;
-        std::mutex _inProgress;
+        std::atomic<State> _presenting;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
