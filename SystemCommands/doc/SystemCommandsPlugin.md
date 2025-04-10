@@ -81,7 +81,7 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [SystemCommands.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/SystemCommands.json) (version 1.0.0) (compliant format)
+- ISystemCommands ([ISystemCommands.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/ISystemCommands.h)) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -99,28 +99,24 @@ SystemCommands interface methods:
 
 Resets a USB device.
 
-### Description
-
-With this method a USB device can be reset using USBFS_RESET ioctl command.
-
 ### Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.device | string | mandatory | USB device to reset (default: */dev/usb/001*) |
+| params.device | string | mandatory | USB device to reset |
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null (default: *None*) |
+| result | null | mandatory | Always null |
 
 ### Errors
 
 | Message | Description |
 | :-------- | :-------- |
-| ```ERROR_GENERAL``` | Failed to reset the USB device |
+| ```ERROR_GENERAL``` | Failed to reset USB device |
 | ```ERROR_UNAVAILABLE``` | Unknown USB device |
 
 ### Example
