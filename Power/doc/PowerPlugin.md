@@ -15,6 +15,7 @@ Power plugin for Thunder framework.
 - [Interfaces](#head.Interfaces)
 - [Methods](#head.Methods)
 - [Properties](#head.Properties)
+- [Notifications](#head.Notifications)
 
 <a name="head.Introduction"></a>
 # Introduction
@@ -22,7 +23,7 @@ Power plugin for Thunder framework.
 <a name="head.Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Power plugin. It includes detailed specification about its configuration, methods and properties provided.
+This document describes purpose and functionality of the Power plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a name="head.Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -81,7 +82,8 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- [Power.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Power.json) (version 1.0.0) (compliant format)
+- IPower ([IPower.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IPower.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a name="head.Methods"></a>
 # Methods
@@ -92,26 +94,26 @@ Power interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [set](#method.set) | Sets power state |
+| [setstate](#method.setstate) | Set the power state |
 
-<a name="method.set"></a>
-## *set [<sup>method</sup>](#head.Methods)*
+<a name="method.setstate"></a>
+## *setstate [<sup>method</sup>](#head.Methods)*
 
-Sets power state.
+Set the power state.
 
 ### Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.powerstate | string | mandatory | Power state (must be one of the following: *activestandby, hibernate, on, passivestandby, poweroff, suspendtoram*) |
-| params.timeout | integer | mandatory | Time to wait for power state change |
+| params.state | string | mandatory | The power state to set (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
+| params.waittime | integer | mandatory | The time to wait for the power state to be set in seconds |
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null (default: *None*) |
+| result | null | mandatory | Always null |
 
 ### Errors
 
@@ -130,10 +132,10 @@ Sets power state.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.set",
+  "method": "Power.1.setstate",
   "params": {
-    "powerstate": "on",
-    "timeout": 0
+    "state": "Hibernate",
+    "waittime": 10
   }
 }
 ```
@@ -157,12 +159,12 @@ Power interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [state](#property.state) | read-only | Power state |
+| [getstate](#property.getstate) | read-only | Get the current power state |
 
-<a name="property.state"></a>
-## *state [<sup>property</sup>](#head.Properties)*
+<a name="property.getstate"></a>
+## *getstate [<sup>property</sup>](#head.Properties)*
 
-Provides access to the power state.
+Provides access to the get the current power state.
 
 > This property is **read-only**.
 
@@ -172,7 +174,7 @@ Provides access to the power state.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Power state (must be one of the following: *activestandby, hibernate, on, passivestandby, poweroff, suspendtoram*) |
+| result | string | mandatory | The current power state (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
 
 ### Example
 
@@ -182,7 +184,7 @@ Provides access to the power state.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.state"
+  "method": "Power.1.getstate"
 }
 ```
 
@@ -192,7 +194,64 @@ Provides access to the power state.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "on"
+  "result": "PassiveStandby"
+}
+```
+
+<a name="head.Notifications"></a>
+# Notifications
+
+Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
+
+The following events are provided by the Power plugin:
+
+Power interface events:
+
+| Notification | Description |
+| :-------- | :-------- |
+| [statechange](#notification.statechange) | Signals a change in the power state |
+
+<a name="notification.statechange"></a>
+## *statechange [<sup>notification</sup>](#head.Notifications)*
+
+Signals a change in the power state.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.origin | string | mandatory | The state the device is transitioning from (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
+| params.destination | string | mandatory | The state the device is transitioning to (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
+| params.phase | string | mandatory | The phase of the transition (must be one of the following: *After, Before*) |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Power.1.register",
+  "params": {
+    "event": "statechange",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.statechange",
+  "params": {
+    "origin": "ActiveStandby",
+    "destination": "SuspendToRAM",
+    "phase": "After"
+  }
 }
 ```
 

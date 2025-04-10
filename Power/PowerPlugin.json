@@ -46,6 +46,6 @@
     }
   },
   "interface": {
-    "$ref": "{interfacedir}/Power.json"
+    "$ref": "{cppinterfacedir}/IPower.h"
   }
 }
