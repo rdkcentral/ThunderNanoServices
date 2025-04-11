@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.IO_Connector_Plugin"></a>
+<a id="head_IO_Connector_Plugin"></a>
 # IO Connector Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ IOConnector plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the IOConnector plugin. It includes detailed specification about its configuration, properties provided and notifications sent.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -49,7 +49,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -59,14 +59,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The IO Connector plugin provides access to GPIO pins.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -83,14 +83,15 @@ The table below lists configuration options of the plugin.
 | pins[#].mode | string | mandatory | Pin mode (must be one of the following: *Active, Both, High, Inactive, Low, Output*) |
 | pins[#]?.activelow | boolean | optional | Denotes if pin is active in low state (default: *false*) |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- [IOConnector.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/IOConnector.json) (version 1.0.0) (uncompliant-extended format)
+- IIOConnector ([IIOConnector.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IIOConnector.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the IOConnector plugin:
@@ -99,34 +100,31 @@ IOConnector interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [pin](#property.pin) | read/write | GPIO pin value |
+| [pin](#property_pin) | read/write | GPIO pin value |
 
-<a name="property.pin"></a>
-## *pin [<sup>property</sup>](#head.Properties)*
+<a id="property_pin"></a>
+## *pin [<sup>property</sup>](#head_Properties)*
 
 Provides access to the GPIO pin value.
 
-Also see: [activity](#event.activity)
-
-> The *pin id* parameter shall be passed as the index to the property, e.g. ``IOConnector.1.pin@<pin-id>``.
+> The *id* parameter shall be passed as the index to the property, i.e. ``pin@<id>``.
 
 ### Index
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| pin-id | string | mandatory | *...* |
+| id | integer | mandatory | Pin ID |
 
 ### Value
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| (property) | integer | mandatory | Value of the pin |
-
-### Result
+| (property) | object | mandatory | GPIO pin value |
+| (property).value | integer | mandatory | Value of the pin |
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Value of the pin |
+| (property) | integer | mandatory | GPIO pin value |
 
 ### Errors
 
@@ -142,7 +140,7 @@ Also see: [activity](#event.activity)
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "IOConnector.1.pin@189"
+  "method": "IOConnector.1.pin@0"
 }
 ```
 
@@ -152,7 +150,7 @@ Also see: [activity](#event.activity)
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": 1
+  "result": 0
 }
 ```
 
@@ -162,8 +160,10 @@ Also see: [activity](#event.activity)
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "IOConnector.1.pin@189",
-  "params": 1
+  "method": "IOConnector.1.pin@0",
+  "params": {
+    "value": 1
+  }
 }
 ```
 
@@ -177,7 +177,7 @@ Also see: [activity](#event.activity)
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -188,20 +188,16 @@ IOConnector interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [activity](#notification.activity) | Notifies about GPIO pin activity |
+| [activity](#notification_activity) | Notifies about GPIO pin activity |
 
-<a name="notification.activity"></a>
-## *activity [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_activity"></a>
+## *activity [<sup>notification</sup>](#head_Notifications)*
 
 Notifies about GPIO pin activity.
 
-### Description
-
-Register to this event to be notified about pin value changes
-
 ### Parameters
 
-> The *pin ID* parameter shall be passed within the client ID during registration, e.g. *189.myid*
+> The *id* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<id>.<client-id>``.
 
 ### Notification Parameters
 
@@ -238,5 +234,7 @@ Register to this event to be notified about pin value changes
 }
 ```
 
-> The *pin ID* parameter is passed within the designator, e.g. *189.myid.activity*.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<id>.<client-id>.activity``.
+
+> The *id* parameter is passed within the notification designator, i.e. ``<id>.<client-id>.activity``.
 
