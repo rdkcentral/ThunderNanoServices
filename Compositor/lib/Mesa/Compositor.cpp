@@ -882,9 +882,9 @@ namespace Plugin {
 
             _renderer->End(false);
 
-            _output->Commit(); // Blit to screen
-
             _renderer->Unbind(frameBuffer);
+
+            _output->Commit(); // Blit to screen
 
             return Core::Time::Now().Ticks();
         }
