@@ -215,6 +215,8 @@ private:
 
         _renderer->End(false);
 
+        _renderer->Unbind(frameBuffer);
+
         uint32_t commit;
 
         if ((commit = _connector->Commit()) == Core::ERROR_NONE) {
@@ -223,8 +225,6 @@ private:
             TRACE(Trace::Error, ("Commit failed: %d", commit));
             std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit.
         }
-
-        _renderer->Unbind(frameBuffer);
 
         rotation += _radPerFrame;
     }
