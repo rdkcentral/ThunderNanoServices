@@ -18,7 +18,7 @@
  */
 #pragma once
 
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include <wayland-client-protocol.h>
 #include "generated/presentation-time-client-protocol.h"
@@ -44,7 +44,7 @@ namespace Compositor {
 
                 virtual int RenderNode() const = 0;
 
-                virtual wl_buffer* CreateBuffer(Exchange::ICompositionBuffer* buffer) const = 0;
+                virtual wl_buffer* CreateBuffer(Exchange::IGraphicsBuffer* buffer) const = 0;
 
                 virtual struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const = 0;
                 virtual struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const = 0;

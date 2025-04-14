@@ -22,7 +22,7 @@
 #include <messaging/messaging.h>
 
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include <IBuffer.h>
 #include <IOutput.h>
@@ -465,7 +465,7 @@ namespace Plugin {
                 if (client.IsValid() == true) {
                     client->AttachPlanes(descriptors);
 
-                    Core::ProxyType<Exchange::ICompositionBuffer> buffer(client);
+                    Core::ProxyType<Exchange::IGraphicsBuffer> buffer(client);
 
                     client->Texture(_parent.Texture(buffer));
                 } else {
@@ -734,7 +734,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::ICompositionBuffer> buffer)
+        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::IGraphicsBuffer> buffer)
         {
             ASSERT(buffer.IsValid());
             return _renderer->Texture(buffer);

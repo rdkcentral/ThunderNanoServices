@@ -244,7 +244,7 @@ namespace Thunder {
             gbm_bo* _bo;
         }; // class GBM
 
-        /* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+        /* extern */ Core::ProxyType<Exchange::IGraphicsBuffer> CreateBuffer(
             Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
@@ -252,7 +252,7 @@ namespace Thunder {
         {
             // ASSERT(drmAvailable() == 1);
 
-            Core::ProxyType<Exchange::ICompositionBuffer> result;
+            Core::ProxyType<Exchange::IGraphicsBuffer> result;
 
             int drmFd = DRM::ReopenNode(identifier, true);
 
@@ -262,7 +262,7 @@ namespace Thunder {
                 Core::ProxyType<GBM> entry = Core::ProxyType<GBM>::Create(drmFd, width, height, format);
 
                 if (entry->IsValid() == true) {
-                    result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
+                    result = Core::ProxyType<Exchange::IGraphicsBuffer>(entry);
                 }
             }
 
