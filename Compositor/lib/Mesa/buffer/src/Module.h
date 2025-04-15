@@ -28,7 +28,7 @@
 #include <CompositorTypes.h>
 #include <IBuffer.h>
 
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #if HAVE_GBM_MODIFIERS
 #ifndef GBM_MAX_PLANES

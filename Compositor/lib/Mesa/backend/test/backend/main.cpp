@@ -68,7 +68,7 @@ int main(int argc, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer;
+        Core::ProxyType<Exchange::IGraphicsBuffer> framebuffer;
 
         char keyPress;
 

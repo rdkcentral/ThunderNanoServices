@@ -22,14 +22,14 @@
 #include <messaging/messaging.h>
 
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include <IBuffer.h>
 #include <IOutput.h>
 #include <IRenderer.h>
 #include <Transformation.h>
 
-#include <compositorbuffer/CompositorBufferType.h>
+#include <graphicsbuffer/GraphicsBufferType.h>
 
 #include <drm_fourcc.h>
 
@@ -137,9 +137,9 @@ namespace Plugin {
             Exchange::IComposition::IDisplay* _parentInterface;
         };
 
-        class Client : public Exchange::IComposition::IClient, public Compositor::CompositorBuffer {
+        class Client : public Exchange::IComposition::IClient, public Graphics::ServerBufferType<1> {
         private:
-            using BaseClass = Compositor::CompositorBuffer;
+            using BaseClass = Graphics::ServerBufferType<1>;
 
             enum class State : uint8_t {
                 IDLE = 0x00,
@@ -234,7 +234,7 @@ namespace Plugin {
             Client& operator=(const Client&) = delete;
 
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
-                : BaseClass(width, height, parent.Format(), parent.Modifier(), Exchange::ICompositionBuffer::TYPE_DMA)
+                : BaseClass(width, height, parent.Format(), parent.Modifier(), Exchange::IGraphicsBuffer::TYPE_DMA)
                 , _parent(parent)
                 , _id(Core::InterlockedIncrement(_sequence))
                 , _callsign(callsign)
@@ -465,7 +465,7 @@ namespace Plugin {
                 if (client.IsValid() == true) {
                     client->AttachPlanes(descriptors);
 
-                    Core::ProxyType<Exchange::ICompositionBuffer> buffer(client);
+                    Core::ProxyType<Exchange::IGraphicsBuffer> buffer(client);
 
                     client->Texture(_parent.Texture(buffer));
                 } else {
@@ -734,7 +734,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::ICompositionBuffer> buffer)
+        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::IGraphicsBuffer> buffer)
         {
             ASSERT(buffer.IsValid());
             return _renderer->Texture(buffer);

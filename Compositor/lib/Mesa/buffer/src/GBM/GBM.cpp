@@ -149,7 +149,9 @@ namespace Thunder {
 
     namespace Compositor {
 
-        class GBM : public LocalBuffer {
+        class GBM : public Graphics::LocalBufferType<4> {
+        private:
+            using BaseClass = Graphics::LocalBufferType<4>;
         public:
             GBM() = delete;
             GBM(GBM&&) = delete;
@@ -158,7 +160,7 @@ namespace Thunder {
             GBM& operator=(const GBM&) = delete;
 
             GBM(const int drmFd, const uint32_t width, const uint32_t height, const PixelFormat& format)
-                : LocalBuffer(width, height, format.Type(), 0, Exchange::ICompositionBuffer::TYPE_DMA)
+                : BaseClass(width, height, format.Type(), 0, Exchange::IGraphicsBuffer::TYPE_DMA)
                 , _device(nullptr)
                 , _bo(nullptr) {
                 ASSERT(drmFd != InvalidFileDescriptor);
@@ -199,7 +201,7 @@ namespace Thunder {
                                 uint32_t offset = gbm_bo_get_offset(_bo, index);
                                 uint32_t stride = gbm_bo_get_stride_for_plane(_bo, index);
 
-                                LocalBuffer::Add(fd, stride, offset);
+                                BaseClass::Add(fd, stride, offset);
 
                                 ::close(fd);
                             }
@@ -242,7 +244,7 @@ namespace Thunder {
             gbm_bo* _bo;
         }; // class GBM
 
-        /* extern */ Core::ProxyType<Exchange::ICompositionBuffer> CreateBuffer(
+        /* extern */ Core::ProxyType<Exchange::IGraphicsBuffer> CreateBuffer(
             Identifier identifier, 
             const uint32_t width, 
             const uint32_t height, 
@@ -250,7 +252,7 @@ namespace Thunder {
         {
             // ASSERT(drmAvailable() == 1);
 
-            Core::ProxyType<Exchange::ICompositionBuffer> result;
+            Core::ProxyType<Exchange::IGraphicsBuffer> result;
 
             int drmFd = DRM::ReopenNode(identifier, true);
 
@@ -260,7 +262,7 @@ namespace Thunder {
                 Core::ProxyType<GBM> entry = Core::ProxyType<GBM>::Create(drmFd, width, height, format);
 
                 if (entry->IsValid() == true) {
-                    result = Core::ProxyType<Exchange::ICompositionBuffer>(entry);
+                    result = Core::ProxyType<Exchange::IGraphicsBuffer>(entry);
                 }
             }
 
