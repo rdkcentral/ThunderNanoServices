@@ -68,9 +68,7 @@ int main(int argc, const char* argv[])
         uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
         Compositor::PixelFormat format(DRM_FORMAT_ARGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
 
-        Core::ProxyType<Exchange::ICompositionBuffer> framebuffer;
-
-        const Exchange::IComposition::Rectangle rectangle = { 0, 0, 1080, 1920 };
+        Core::ProxyType<Exchange::IGraphicsBuffer> framebuffer;
 
         char keyPress;
 
@@ -93,7 +91,8 @@ int main(int argc, const char* argv[])
 
             case 'A': {
                 if (framebuffer.IsValid() == false) {
-                    framebuffer = Compositor::CreateBuffer(ConnectorId, rectangle, format, nullptr);
+                    Core::ProxyType<Compositor::IRenderer> dummy;
+                    framebuffer = Compositor::CreateBuffer(ConnectorId, 1920, 1080, format, dummy, nullptr);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %ux%u", framebuffer->Height(), framebuffer->Width()));
                 }
                 break;

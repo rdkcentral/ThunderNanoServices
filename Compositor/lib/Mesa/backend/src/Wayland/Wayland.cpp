@@ -23,7 +23,7 @@
 #include <DRM.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include "IOutput.h"
 #include "Input.h"
@@ -115,7 +115,7 @@ namespace Compositor {
             void Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const override;
             int RenderNode() const override;
 
-            wl_buffer* CreateBuffer(Exchange::ICompositionBuffer* buffer) const override;
+            wl_buffer* CreateBuffer(Exchange::IGraphicsBuffer* buffer) const override;
 
             struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const override;
             struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const override;
@@ -157,7 +157,7 @@ namespace Compositor {
             Input _input;
             ServerMonitor _serverMonitor;
 
-            Core::ProxyMapType<string, Exchange::ICompositionBuffer> _windows;
+            Core::ProxyMapType<string, Exchange::IGraphicsBuffer> _windows;
 
         }; // class WaylandImplementation
 
@@ -856,9 +856,9 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback)
+        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
         {
-            return (Core::ProxyType<IOutput> (_windows.Instance<Backend::WaylandOutput>(name, *this, name, rectangle, format)));
+            return (Core::ProxyType<IOutput> (_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, format, renderer)));
         }
 
         struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
@@ -877,12 +877,12 @@ namespace Compositor {
          *
          * @param api a pointer to the zwp_linux_dmabuf_v1 object, which is used to create the buffer
          * parameters and the buffer itself.
-         * @param buffer A pointer to an object of type Exchange::ICompositionBuffer, which represents a buffer
+         * @param buffer A pointer to an object of type Exchange::IGraphicsBuffer, which represents a buffer
          * used for compositing.
          *
          * @return A `wl_buffer*` is being returned.
          */
-        wl_buffer* ImportDmabuf(zwp_linux_dmabuf_v1* api, Exchange::ICompositionBuffer* buffer)
+        wl_buffer* ImportDmabuf(zwp_linux_dmabuf_v1* api, Exchange::IGraphicsBuffer* buffer)
         {
             ASSERT((buffer != nullptr) && (api != nullptr));
 
@@ -891,7 +891,7 @@ namespace Compositor {
 
             struct zwp_linux_buffer_params_v1* params = zwp_linux_dmabuf_v1_create_params(api);
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
+            Exchange::IGraphicsBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             uint8_t i(0);
@@ -931,18 +931,18 @@ namespace Compositor {
          *
          * @param api A pointer to a Wayland shared memory (wl_shm) object, which is used to create a shared
          * memory pool for the buffer.
-         * @param buffer A pointer to an object of type Exchange::ICompositionBuffer, which represents a buffer
+         * @param buffer A pointer to an object of type Exchange::IGraphicsBuffer, which represents a buffer
          * used for composing images or video frames.
          *
          * @return a pointer to a `wl_buffer` object.
          */
-        wl_buffer* ImportShm(wl_shm* api, Exchange::ICompositionBuffer* buffer)
+        wl_buffer* ImportShm(wl_shm* api, Exchange::IGraphicsBuffer* buffer)
         {
             ASSERT((buffer != nullptr) && (api != nullptr));
 
             enum wl_shm_format wl_shm_format = ConvertDrmFormat(buffer->Format());
 
-            Exchange::ICompositionBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
+            Exchange::IGraphicsBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
 
             uint32_t size(0);
@@ -967,22 +967,22 @@ namespace Compositor {
         /**
          * This function creates a Wayland buffer based on the type of composition buffer provided.
          *
-         * @param buffer A pointer to an object that implements the Exchange::ICompositionBuffer
+         * @param buffer A pointer to an object that implements the Exchange::IGraphicsBuffer
          * interface. This object represents a buffer that can be used for displaying graphics or video
          * content. The function checks the type of the buffer (raw or DMA) and imports it into the
          * Wayland compositor using the appropriate protocol (wl_sh
          *
          * @return a pointer to a `wl_buffer` object.
          */
-        wl_buffer* WaylandImplementation::CreateBuffer(Exchange::ICompositionBuffer* buffer) const
+        wl_buffer* WaylandImplementation::CreateBuffer(Exchange::IGraphicsBuffer* buffer) const
         {
             ASSERT(buffer != nullptr);
 
             wl_buffer* result(nullptr);
 
-            if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+            if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
                 result = ImportShm(_wlShm, buffer);
-            } else if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+            } else if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
                 result = ImportDmabuf(_wlZwpLinuxDmabufV1, buffer);
             }
 
@@ -1007,11 +1007,11 @@ namespace Compositor {
      * @return A `Core::ProxyType` object that wraps an instance of `IOutput`.
      */
 
-    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, IOutput::ICallback* feedback)
+    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance();
 
-        return backend.Output(name, rectangle, format, feedback);
+        return backend.Output(name, width, height, format, renderer, feedback);
     }
 } // namespace Compositor
 } // namespace Thunder

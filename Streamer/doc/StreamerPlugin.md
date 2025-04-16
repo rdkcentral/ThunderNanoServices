@@ -71,12 +71,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *Streamer*) |
-| classname | string | Class name: *Streamer* |
-| locator | string | Library name: *libThunderStreamer.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *Streamer*) |
+| classname | string | mandatory | Class name: *Streamer* |
+| locator | string | mandatory | Library name: *libThunderStreamer.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -107,23 +107,23 @@ Creates a stream instance.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.type | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.type | string | mandatory | Stream type (must be one of the following: *cable, dab, handheld, ip, multicast, rf, satellite, terrestrial, undefined, unicast*) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | Stream ID |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Stream ID |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 30 | ```ERROR_BAD_REQUEST``` | Invalid stream type given |
-| 2 | ```ERROR_UNAVAILABLE``` | Fronted of the selected stream type is not available |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_BAD_REQUEST``` | Invalid stream type given |
+| ```ERROR_UNAVAILABLE``` | Fronted of the selected stream type is not available |
 
 ### Example
 
@@ -157,22 +157,22 @@ Destroys a stream instance.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.id | number | Stream ID |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.id | integer | mandatory | Stream ID |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -208,26 +208,26 @@ Also see: [statechange](#event.statechange)
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.id | number | Stream ID |
-| params.location | string | Location of the source to load |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.id | integer | mandatory | Stream ID |
+| params.location | string | mandatory | Location of the source to load |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 15 | ```ERROR_INCORRECT_URL``` | Invalid location given |
-| 1 | ```ERROR_GENERAL``` | Undefined loading error |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_INCORRECT_URL``` | Invalid location given |
+| ```ERROR_GENERAL``` | Undefined loading error |
+| ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state |
 
 ### Example
 
@@ -262,25 +262,25 @@ Attaches a decoder to the streamer.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.id | number | Stream ID |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.id | integer | mandatory | Stream ID |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 12 | ```ERROR_INPROGRESS``` | Decoder already attached |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state |
-| 2 | ```ERROR_UNAVAILABLE``` | No free decoders available |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_INPROGRESS``` | Decoder already attached |
+| ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state |
+| ```ERROR_UNAVAILABLE``` | No free decoders available |
 
 ### Example
 
@@ -314,24 +314,24 @@ Detaches a decoder from the streamer.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.id | number | Stream ID |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.id | integer | mandatory | Stream ID |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state or decoder not attached |
-| 12 | ```ERROR_INPROGRESS``` | Decoder is in use |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_ILLEGAL_STATE``` | Stream is not in a valid state or decoder not attached |
+| ```ERROR_INPROGRESS``` | Decoder is in use |
 
 ### Example
 
@@ -365,19 +365,19 @@ The following properties are provided by the Streamer plugin:
 
 Streamer interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [speed](#property.speed) | Playback speed |
-| [position](#property.position) | Stream position |
-| [window](#property.window) | Stream playback window |
-| [speeds](#property.speeds) <sup>RO</sup> | Speeds supported by the stream player |
-| [streams](#property.streams) <sup>RO</sup> | All created stream instance IDs |
-| [type](#property.type) <sup>RO</sup> | Type of a stream |
-| [drm](#property.drm) <sup>RO</sup> | DRM type associated with a stream |
-| [state](#property.state) <sup>RO</sup> | Current state of a stream |
-| [metadata](#property.metadata) <sup>RO</sup> | Metadata associated with the stream |
-| [error](#property.error) <sup>RO</sup> | Most recent error code |
-| [elements](#property.elements) <sup>RO</sup> | Stream elements |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [speed](#property.speed) | read/write | Playback speed |
+| [position](#property.position) | read/write | Stream position |
+| [window](#property.window) | read/write | Stream playback window |
+| [speeds](#property.speeds) | read-only | Speeds supported by the stream player |
+| [streams](#property.streams) | read-only | All created stream instance IDs |
+| [type](#property.type) | read-only | Type of a stream |
+| [drm](#property.drm) | read-only | DRM type associated with a stream |
+| [state](#property.state) | read-only | Current state of a stream |
+| [metadata](#property.metadata) | read-only | Metadata associated with the stream |
+| [error](#property.error) | read-only | Most recent error code |
+| [elements](#property.elements) | read-only | Stream elements |
 
 <a name="property.speed"></a>
 ## *speed [<sup>property</sup>](#head.Properties)*
@@ -390,26 +390,32 @@ Speed (in percentage)
 
 Also see: [statechange](#event.statechange)
 
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.speed@<stream-id>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | number | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.speed@0*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | integer | mandatory | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
 
 ### Example
 
@@ -459,26 +465,32 @@ Also see: [statechange](#event.statechange)
 
 Provides access to the stream position.
 
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.position@<stream-id>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | number | Position (in milliseconds) |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.position@0*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | integer | mandatory | Position (in milliseconds) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | Position (in milliseconds) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Position (in milliseconds) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
 
 ### Example
 
@@ -528,34 +540,40 @@ Provides access to the stream position.
 
 Provides access to the stream playback window.
 
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.window@<stream-id>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Geometry of the window |
-| (property).x | number | Horizontal position of the window (in pixels) |
-| (property).y | number | Vertical position of the window (in pixels) |
-| (property).width | number | Width of the window (in pixels) |
-| (property).height | number | Height of the window (in pixels) |
-
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.window@0*.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Geometry of the window |
+| (property).x | integer | mandatory | Horizontal position of the window (in pixels) |
+| (property).y | integer | mandatory | Vertical position of the window (in pixels) |
+| (property).width | integer | mandatory | Width of the window (in pixels) |
+| (property).height | integer | mandatory | Height of the window (in pixels) |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Geometry of the window |
-| result.x | number | Horizontal position of the window (in pixels) |
-| result.y | number | Vertical position of the window (in pixels) |
-| result.width | number | Width of the window (in pixels) |
-| result.height | number | Height of the window (in pixels) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Geometry of the window |
+| result.x | integer | mandatory | Horizontal position of the window (in pixels) |
+| result.y | integer | mandatory | Vertical position of the window (in pixels) |
+| result.width | integer | mandatory | Width of the window (in pixels) |
+| result.height | integer | mandatory | Height of the window (in pixels) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
 
 ### Example
 
@@ -617,23 +635,29 @@ Provides access to the speeds supported by the stream player.
 
 > This property is **read-only**.
 
-### Value
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.speeds@<stream-id>``.
 
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.speeds@0*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Supported speeds (in percentage) |
-| result[#] | integer | (speeds in percentage) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Supported speeds (in percentage) |
+| result[#] | integer | mandatory | (speeds in percentage) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 5 | ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_ILLEGAL_STATE``` | Player is not in a valid state or decoder not attached |
 
 ### Example
 
@@ -676,10 +700,10 @@ Provides access to the all created stream instance IDs.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | Stream IDs |
-| result[#] | number | (a stream ID) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | Stream IDs |
+| result[#] | integer | mandatory | (a stream ID) |
 
 ### Example
 
@@ -715,21 +739,27 @@ Provides access to the type of a stream.
 
 > This property is **read-only**.
 
-### Value
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.type@<stream-id>``.
 
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.type@0*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Stream type (must be one of the following: *undefined*, *cable*, *handheld*, *satellite*, *terrestrial*, *dab*, *rf*, *unicast*, *multicast*, *ip*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Stream type (must be one of the following: *cable, dab, handheld, ip, multicast, rf, satellite, terrestrial, undefined, unicast*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -762,21 +792,27 @@ Provides access to the DRM type associated with a stream.
 
 Also see: [drmchange](#event.drmchange)
 
-### Value
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.drm@<stream-id>``.
 
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.drm@0*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | DRM used (must be one of the following: *none*, *clearkey*, *playready*, *widevine*, *unknown*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | DRM used (must be one of the following: *clearkey, none, playready, unknown, widevine*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -809,21 +845,27 @@ Provides access to the current state of a stream.
 
 Also see: [statechange](#event.statechange)
 
-### Value
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.state@<stream-id>``.
 
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.state@0*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Stream state (must be one of the following: *controlled, error, idle, loading, prepared*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -854,21 +896,27 @@ Provides access to the metadata associated with the stream.
 
 > This property is **read-only**.
 
-### Value
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.metadata@<stream-id>``.
 
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.metadata@0*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | Custom implementation-specific metadata |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | Custom implementation-specific metadata |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -899,21 +947,27 @@ Provides access to the most recent error code.
 
 > This property is **read-only**.
 
-### Value
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.error@<stream-id>``.
 
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.error@0*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | Custom implementation-specific error code value |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Custom implementation-specific error code value |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
 
 ### Example
 
@@ -944,24 +998,30 @@ Provides access to the stream elements.
 
 > This property is **read-only**.
 
-### Value
+> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.elements@<stream-id>``.
 
-> The *stream id* argument shall be passed as the index to the property, e.g. *Streamer.1.elements@0*.
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| stream-id | string | mandatory | *...* |
+
+### Value
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array | List of stream elements |
-| result[#] | object | Stream element |
-| result[#].type | string | Stream element type (must be one of the following: *video*, *audio*, *subtitles*, *teletext*, *data*) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | List of stream elements |
+| result[#] | object | mandatory | Stream element |
+| result[#].type | string | mandatory | Stream element type (must be one of the following: *audio, data, subtitles, teletext, video*) |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
-| 2 | ```ERROR_UNAVAILABLE``` | Stream elements retrieval not supported |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Unknown stream ID given |
+| ```ERROR_UNAVAILABLE``` | Stream elements retrieval not supported |
 
 ### Example
 
@@ -998,141 +1058,241 @@ The following events are provided by the Streamer plugin:
 
 Streamer interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [statechange](#event.statechange) | Notifies of stream state change |
-| [timeupdate](#event.timeupdate) | Notifies of stream position change |
-| [stream](#event.stream) | Notifies of a custom stream incident |
-| [player](#event.player) | Notifies of a custom player incident |
-| [drm](#event.drm) | Notifies of a custom DRM-related incident |
+| [statechange](#notification.statechange) | Notifies of stream state change |
+| [timeupdate](#notification.timeupdate) | Notifies of stream position change |
+| [stream](#notification.stream) | Notifies of a custom stream incident |
+| [player](#notification.player) | Notifies of a custom player incident |
+| [drm](#notification.drm) | Notifies of a custom DRM-related incident |
 
-<a name="event.statechange"></a>
-## *statechange [<sup>event</sup>](#head.Notifications)*
+<a name="notification.statechange"></a>
+## *statechange [<sup>notification</sup>](#head.Notifications)*
 
 Notifies of stream state change.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.state | string | Stream state (must be one of the following: *idle*, *loading*, *prepared*, *controlled*, *error*) |
+> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
 
-> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.state | string | mandatory | Stream state (must be one of the following: *controlled, error, idle, loading, prepared*) |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.client.events.1.statechange",
+  "id": 42,
+  "method": "Streamer.1.register",
+  "params": {
+    "event": "statechange",
+    "id": "0.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "0.myid.statechange",
   "params": {
     "state": "controlled"
   }
 }
 ```
 
-<a name="event.timeupdate"></a>
-## *timeupdate [<sup>event</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.statechange*.
+
+<a name="notification.timeupdate"></a>
+## *timeupdate [<sup>notification</sup>](#head.Notifications)*
 
 Notifies of stream position change. This event is fired every second to indicate the current stream position. It does not fire if the stream is paused (i.e. speed is set to 0).
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.time | number | Stream position in miliseconds |
+> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
 
-> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.time | integer | mandatory | Stream position in miliseconds |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.client.events.1.timeupdate",
+  "id": 42,
+  "method": "Streamer.1.register",
+  "params": {
+    "event": "timeupdate",
+    "id": "0.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "0.myid.timeupdate",
   "params": {
     "time": 30000
   }
 }
 ```
 
-<a name="event.stream"></a>
-## *stream [<sup>event</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.timeupdate*.
+
+<a name="notification.stream"></a>
+## *stream [<sup>notification</sup>](#head.Notifications)*
 
 Notifies of a custom stream incident.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.code | number | Implementation-specific incident code |
+> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
 
-> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.code | integer | mandatory | Implementation-specific incident code |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.client.events.1.stream",
+  "id": 42,
+  "method": "Streamer.1.register",
+  "params": {
+    "event": "stream",
+    "id": "0.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "0.myid.stream",
   "params": {
     "code": 1
   }
 }
 ```
 
-<a name="event.player"></a>
-## *player [<sup>event</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.stream*.
+
+<a name="notification.player"></a>
+## *player [<sup>notification</sup>](#head.Notifications)*
 
 Notifies of a custom player incident.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.code | number | Implementation-specific incident code |
+> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
 
-> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.code | integer | mandatory | Implementation-specific incident code |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.client.events.1.player",
+  "id": 42,
+  "method": "Streamer.1.register",
+  "params": {
+    "event": "player",
+    "id": "0.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "0.myid.player",
   "params": {
     "code": 1
   }
 }
 ```
 
-<a name="event.drm"></a>
-## *drm [<sup>event</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.player*.
+
+<a name="notification.drm"></a>
+## *drm [<sup>notification</sup>](#head.Notifications)*
 
 Notifies of a custom DRM-related incident.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.code | number | Implementation-specific incident code |
+> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
 
-> The *Stream ID* argument shall be passed within the designator, e.g. *0.client.events.1*.
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.code | integer | mandatory | Implementation-specific incident code |
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.client.events.1.drm",
+  "id": 42,
+  "method": "Streamer.1.register",
+  "params": {
+    "event": "drm",
+    "id": "0.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "0.myid.drm",
   "params": {
     "code": 1
   }
 }
 ```
+
+> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.drm*.
 

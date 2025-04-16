@@ -797,7 +797,7 @@ namespace Plugin {
             TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' pin state change notifications"), client.c_str(),
                 status == Status::registered? "registered" : "unregistered", name.c_str()));
 
-            // A JSON-RPC client registered for "pinchanged" notifications, let them know the state of the high pins already
+            // A JSON-RPC client registered for "pinchanged" notifications, let them know the state if the pin is lit already.
             // Only the registering client will recieve this extra notification, via the default sendif method generated.
             // The tricky part here is the client designator also carries index of the pin.
             if (status == Status::registered) {

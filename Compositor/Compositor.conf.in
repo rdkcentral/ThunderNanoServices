@@ -79,29 +79,11 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
     configuration.add("bufferconnector", "@PLUGIN_COMPOSITOR_BUFFER_CONNECTOR@")
     configuration.add("displayconnector", "@PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR@")
     
-    if "@PLUGIN_COMPOSITOR_OUTPUTS@":
-        outputs = []
-        for output in "@PLUGIN_COMPOSITOR_OUTPUTS@".split('|'):
-            output_paramaters = output.split(';')
-            print(output_paramaters)
-            if len(output_paramaters) >= 1:
-                output_config = JSON()
-                output_config.add("connector", output_paramaters[0])
-
-                if len(output_paramaters) >= 3:
-                    output_config.add("x", output_paramaters[1])
-                    output_config.add("y", output_paramaters[2])
-
-                if len(output_paramaters) >= 5:
-                    output_config.add("width", output_paramaters[3])
-                    output_config.add("height", output_paramaters[4])
-                
-                outputs.append(output_config)
-
-        configuration.add("outputs", outputs)
-
     if "@PLUGIN_COMPOSITOR_RENDER_NODE@":
         configuration.add("render", "@PLUGIN_COMPOSITOR_RENDER_NODE@")
+
+    if "@PLUGIN_COMPOSITOR_OUTPUT@":
+        configuration.add("output", "@PLUGIN_COMPOSITOR_OUTPUT@")
 
 rootconfig = JSON()
 rootconfig.add("mode", "@PLUGIN_COMPOSITOR_MODE@")

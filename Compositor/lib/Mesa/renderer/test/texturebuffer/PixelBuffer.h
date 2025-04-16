@@ -1,15 +1,15 @@
 #pragma once
 
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include "Textures.h"
 
 namespace Thunder {
 namespace Compositor {
-    class PixelBuffer : public Exchange::ICompositionBuffer {
+    class PixelBuffer : public Exchange::IGraphicsBuffer {
 
         using Pixel = std::array<uint8_t, 4>;
-        class Iterator : public Exchange::ICompositionBuffer::IIterator {
+        class Iterator : public Exchange::IGraphicsBuffer::IIterator {
         public:
             Iterator(PixelBuffer& parent, const Texture::PixelData& source)
                 : _parent(parent)
@@ -72,7 +72,7 @@ namespace Compositor {
 
         virtual ~PixelBuffer() = default;
 
-        Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t /* timeoutMs */) override
+        Exchange::IGraphicsBuffer::IIterator* Acquire(const uint32_t /* timeoutMs */) override
         {
             return &_planes;
         }
@@ -101,9 +101,9 @@ namespace Compositor {
             return DRM_FORMAT_MOD_LINEAR;
         }
 
-        Exchange::ICompositionBuffer::DataType Type() const override
+        Exchange::IGraphicsBuffer::DataType Type() const override
         {
-            return Exchange::ICompositionBuffer::TYPE_RAW;
+            return Exchange::IGraphicsBuffer::TYPE_RAW;
         }
 
     private:

@@ -21,7 +21,7 @@ find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(ClientCompositorBufferType REQUIRED)
+find_package(ClientGraphicsBufferType REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 find_package(gbm REQUIRED)
@@ -47,7 +47,7 @@ target_link_libraries(${PLATFORM_COMPOSITOR}
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ClientCompositorBufferType::ClientCompositorBufferType
+        ClientGraphicsBufferType::ClientGraphicsBufferType
         CompileSettingsDebug::CompileSettingsDebug
         common::include
         common::buffer

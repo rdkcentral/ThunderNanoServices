@@ -20,11 +20,11 @@
 #pragma once
 
 #include "CompositorTypes.h"
-
+#include "IRenderer.h"
 namespace Thunder {
 
 namespace Compositor {
-    struct IOutput : Exchange::ICompositionBuffer {
+    struct IOutput : Exchange::IGraphicsBuffer {
 
         ~IOutput() override = default;
 
@@ -40,6 +40,13 @@ namespace Compositor {
             virtual void Presented(const IOutput* output, const uint32_t sequence, const uint64_t time) = 0;
         }; // struct ICallback
 
+        /*
+         * @brief  Get the framebuffer associated with this output where the render should end up.
+         *
+         * @return Proxy to the framebuffer 
+         */
+        virtual Core::ProxyType<IRenderer::IFrameBuffer> FrameBuffer() const = 0;
+
         /**
          * @brief  Trigger to start bringing the buffer contents to the output.
          *
@@ -53,20 +60,6 @@ namespace Compositor {
          * @return string  e.g. Wayland display name or DRM node.
          */
         virtual const string& Node() const = 0;
-
-        /**
-         * @brief  Get the X position of this output in the complete composition.
-         *
-         * @return X position in pixels
-         */
-        virtual int32_t X() const = 0;
-
-        /**
-         * @brief  Get the Y position of this output in the complete composition.
-         *
-         * @return int Y position in pixels.
-         */
-        virtual int32_t Y() const = 0;
     };
 
     /**
@@ -83,8 +76,10 @@ namespace Compositor {
 
     EXTERNAL Core::ProxyType<IOutput> CreateBuffer(
         const string& connector,
-        const Exchange::IComposition::Rectangle& rectangle,
+        const uint32_t width,
+        const uint32_t height,
         const Compositor::PixelFormat& format,
+        const Core::ProxyType<IRenderer>& renderer,
         IOutput::ICallback* callback);
 
 } // namespace Compositor

@@ -42,14 +42,16 @@ namespace Compositor {
                     , _fd(-1)
                     , _activePlane(~0)
                 {
-                    _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
-                    _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
+                    _buffer[0] = Core::ProxyType<Exchange::IGraphicsBuffer>();
+                    _buffer[1] = Core::ProxyType<Exchange::IGraphicsBuffer>();
                 }
                 ~FrameBufferImplementation()
                 {
                     if (IsValid() == true) {
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[0]);
                         Compositor::DRM::DestroyFrameBuffer(_fd, _frameId[1]);
+                        _frameBuffer[0].Release();
+                        _frameBuffer[1].Release();
                         _buffer[0].Release();
                         _buffer[1].Release();
                         ::close(_fd);
@@ -61,7 +63,7 @@ namespace Compositor {
                 {
                     return (_activePlane != static_cast<uint8_t>(~0));
                 }
-                void Configure(const int fd, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format)
+                void Configure(const int fd, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer)
                 {
                     // Configure should only be called once..
                     ASSERT(IsValid() == false);
@@ -78,6 +80,12 @@ namespace Compositor {
                         } else {
                             _frameId[0] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[0].operator->());
                             _frameId[1] = Compositor::DRM::CreateFrameBuffer(fd, _buffer[1].operator->());
+
+                            if (renderer.IsValid() == true) {
+                                _frameBuffer[0] = renderer->FrameBuffer(_buffer[0]);
+                                _frameBuffer[1] = renderer->FrameBuffer(_buffer[1]);
+                            }
+
                             _activePlane = 0;
                             _fd = ::dup(fd);
                         }
@@ -109,7 +117,7 @@ namespace Compositor {
                 {
                     return (_buffer[0]->Modifier());
                 }
-                Exchange::ICompositionBuffer::DataType Type() const
+                Exchange::IGraphicsBuffer::DataType Type() const
                 {
                     return (_buffer[0]->Type());
                 }
@@ -117,7 +125,7 @@ namespace Compositor {
                 {
                     return _frameId[_activePlane];
                 }
-                Core::ProxyType<Exchange::ICompositionBuffer> Buffer() const
+                Core::ProxyType<Exchange::IGraphicsBuffer> Buffer() const
                 {
                     return _buffer[_activePlane];
                 }
@@ -128,12 +136,18 @@ namespace Compositor {
                     _swap.Unlock();
                 }
 
+                Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const
+                {
+                    return (_frameBuffer[_activePlane ^ 1]);
+                }
+
             private:
                 Core::CriticalSection _swap;
                 int _fd;
                 uint8_t _activePlane;
-                Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
+                Core::ProxyType<Exchange::IGraphicsBuffer> _buffer[2];
                 Compositor::DRM::Identifier _frameId[2];
+                Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer[2];
             };
 
         public:
@@ -143,21 +157,34 @@ namespace Compositor {
             Connector& operator=(Connector&&) = delete;
             Connector& operator=(const Connector&) = delete;
 
-            Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, VARIABLE_IS_NOT_USED const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat format, Compositor::IOutput::ICallback* feedback)
+            Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, const uint32_t width VARIABLE_IS_NOT_USED, const uint32_t height VARIABLE_IS_NOT_USED, const Compositor::PixelFormat format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
                 : _backend(backend)
-                , _x(rectangle.x)
-                , _y(rectangle.y)
+                , _width(0)
+                , _height(0)
                 , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, connectorId)
                 , _crtc()
                 , _frameBuffer()
                 , _feedback(feedback)
+                , _renderer(renderer)
             {
                 ASSERT(_feedback != nullptr);
 
-                if (Scan() == false) {
+                int backendFd = _backend->Descriptor();
+
+                if (Scan(backendFd) == false) {
                     TRACE(Trace::Backend, ("Connector %d is not in a valid state", connectorId));
                 } else {
+                    // TODO:    The framebuffer always need to match the dimension of the connected screen.
+                    //          If the requested width and height are not equal to the current _width and _height
+                    //          after the scan we need to modeset the connector before configure the framebuffer.
+                    //          This is not implemented yet. For now we ignore the requested width and height and
+                    //          use the current CRTC's width and height that are set after scanning the connector.
+
+                    ASSERT((_width != 0) && (_height != 0));
+
+                    _frameBuffer.Configure(backendFd, _width, _height, _format, _renderer);
+
                     ASSERT(_frameBuffer.IsValid() == true);
                     TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u,", this, _connector.Id(), _crtc.Id()));
                 }
@@ -175,7 +202,7 @@ namespace Compositor {
             }
 
             /**
-             * Exchange::ICompositionBuffer implementation
+             * Exchange::IGraphicsBuffer implementation
              *
              * Returning the info of the back buffer because its used to
              * draw a new frame.
@@ -204,19 +231,9 @@ namespace Compositor {
             {
                 return (_frameBuffer.Modifier());
             }
-            Exchange::ICompositionBuffer::DataType Type() const
+            Exchange::IGraphicsBuffer::DataType Type() const
             {
                 return (_frameBuffer.Type());
-            }
-
-            int32_t X() const override
-            {
-                return _x;
-            }
-
-            int32_t Y() const override
-            {
-                return _y;
             }
 
             /**
@@ -255,6 +272,7 @@ namespace Compositor {
                 _frameBuffer.Swap();
             }
 
+            // IOutput methods
             uint32_t Commit()
             {
                 uint32_t result(Core::ERROR_NONE);
@@ -272,13 +290,15 @@ namespace Compositor {
             {
                 return _gpuNode;
             }
+            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override
+            {
+                return _frameBuffer.FrameBuffer();
+            }
 
         private:
-            bool Scan()
+            bool Scan(const int backendFd)
             {
                 bool result(false);
-
-                int backendFd = _backend->Descriptor();
 
                 drmModeResPtr drmModeResources = drmModeGetResources(backendFd);
                 drmModePlaneResPtr drmModePlaneResources = drmModeGetPlaneResources(backendFd);
@@ -383,9 +403,8 @@ namespace Compositor {
 
                         Compositor::DRM::Properties primaryPlane(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
 
-                        _frameBuffer.Configure(backendFd, crtc->width, crtc->height, _format);
-
-                        // _refreshRate = crtc->mode.vrefresh;
+                        _width = crtc->width;
+                        _height = crtc->height;
 
                         plane = drmModeGetPlane(backendFd, primaryPlane.Id());
 
@@ -418,8 +437,8 @@ namespace Compositor {
 
         private:
             Core::ProxyType<Compositor::IBackend> _backend;
-            int32_t _x;
-            int32_t _y;
+            int32_t _width;
+            int32_t _height;
             const Compositor::PixelFormat _format;
             Compositor::DRM::Properties _connector;
             Compositor::DRM::CRTCProperties _crtc;
@@ -430,6 +449,7 @@ namespace Compositor {
             FrameBufferImplementation _frameBuffer;
 
             Compositor::IOutput::ICallback* _feedback;
+            const Core::ProxyType<IRenderer>& _renderer;
         };
     }
 }

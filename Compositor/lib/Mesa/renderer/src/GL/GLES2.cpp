@@ -100,22 +100,23 @@ namespace Compositor {
 #define PopDebug()
 #endif
             // Framebuffers are usually connected to an output, it's the buffer for the composition to be rendered on.
-            class FrameBuffer {
+            class GLESFrameBuffer : public IFrameBuffer {
             public:
-                FrameBuffer() = delete;
-                FrameBuffer(const FrameBuffer&) = delete;
-                FrameBuffer& operator=(const FrameBuffer&) = delete;
+                GLESFrameBuffer() = delete;
+                GLESFrameBuffer(const GLESFrameBuffer&) = delete;
+                GLESFrameBuffer& operator=(const GLESFrameBuffer&) = delete;
 
-                FrameBuffer(const GLES& parent, Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                GLESFrameBuffer(const GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : _parent(parent)
-                    , _buffer(buffer)
-                    , _eglImage(EGL_NO_IMAGE)
+                    , _external(false)
+                    , _eglImage()
                     , _glFrameBuffer(0)
                     , _glRenderBuffer(0)
-                    , _external(false)
                 {
-                    _eglImage = _parent.Egl().CreateImage(buffer.operator->(), _external);
+                    _parent.Egl().SetCurrent();
+                    ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
+                    _eglImage = _parent.Egl().CreateImage(buffer.operator->(), _external);
                     ASSERT(_eglImage != EGL_NO_IMAGE);
                     // If this triggers the platform is very old (pre-2008) and not supporting OpenGL 3.0 or higher.
                     ASSERT(_parent.Gles().glEGLImageTargetRenderbufferStorageOES != nullptr);
@@ -141,10 +142,12 @@ namespace Compositor {
                     PopDebug();
 
                     ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
-                    TRACE(Trace::GL, ("Created FrameBuffer %dpx x %dpx", _buffer->Width(), _buffer->Height()));
+                    TRACE(Trace::GL, ("Created GLESFrameBuffer %dpx x %dpx", buffer->Width(), buffer->Height()));
+
+                    _parent.Egl().ResetCurrent();
                 }
 
-                ~FrameBuffer()
+                ~GLESFrameBuffer()
                 {
                     Renderer::EGL::ContextBackup backup;
 
@@ -161,23 +164,31 @@ namespace Compositor {
 
                     _parent.Egl().ResetCurrent();
 
-                    TRACE(Trace::GL, ("FrameBuffer %p destructed", this));
+                    TRACE(Trace::GL, ("GLESFrameBuffer %p destructed", this));
                 }
 
-                void Unbind()
+                bool IsValid() const override
                 {
+                    return ((_glFrameBuffer != 0) && (_glRenderBuffer != 0) && (_eglImage != EGL_NO_IMAGE));
+                }
+
+                void Unbind() const override
+                {
+                    ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
+
                     PushDebug();
                     glFlush();
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
                     PopDebug();
                 }
 
-                uint32_t Bind()
+                void Bind() const override
                 {
+                    ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
+
                     PushDebug();
                     glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
                     PopDebug();
-                    return 0;
                 }
 
                 bool External() const
@@ -187,13 +198,10 @@ namespace Compositor {
 
             private:
                 const GLES& _parent;
-                Core::ProxyType<Exchange::ICompositionBuffer>& _buffer;
-
+                bool _external;
                 EGLImage _eglImage;
                 GLuint _glFrameBuffer;
                 GLuint _glRenderBuffer;
-
-                bool _external;
             };
 
             class Program {
@@ -654,7 +662,7 @@ namespace Compositor {
                 GLESTexture& operator=(GLESTexture&&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
-                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : _parent(parent)
                     , _target(GL_TEXTURE_2D)
                     , _textureId(0)
@@ -665,11 +673,11 @@ namespace Compositor {
 
                     _parent.Add(this);
 
-                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+                    if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
                         ImportDMABuffer();
                     }
 
-                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+                    if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
                         ImportPixelBuffer();
                     }
 
@@ -703,7 +711,7 @@ namespace Compositor {
                 bool Invalidate()
                 {
                     bool result(
-                        (_buffer->Type() != Exchange::ICompositionBuffer::TYPE_DMA)
+                        (_buffer->Type() != Exchange::IGraphicsBuffer::TYPE_DMA)
                         || ((_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES)));
 
                     if ((_image != EGL_NO_IMAGE) && (_target != GL_TEXTURE_EXTERNAL_OES)) {
@@ -796,7 +804,7 @@ namespace Compositor {
 
                 void ImportPixelBuffer()
                 {
-                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
+                    Exchange::IGraphicsBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
 
                     // uint8_t index(0);
 
@@ -836,7 +844,7 @@ namespace Compositor {
                 GLenum _target;
                 GLuint _textureId;
                 EGLImageKHR _image;
-                Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+                Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
             }; //  class GLESTexture
 
         public:
@@ -846,7 +854,6 @@ namespace Compositor {
 
             GLES(int drmDevFd)
                 : _egl(drmDevFd)
-                , _frameBuffer(nullptr)
                 , _viewportWidth(0)
                 , _viewportHeight(0)
                 , _programs()
@@ -913,23 +920,32 @@ namespace Compositor {
                 TRACE(Trace::GL, ("GLES2 renderer %p destructed", this));
             }
 
-            void Unbind()
+            uint32_t Unbind(const Core::ProxyType<IFrameBuffer>& frameBuffer) override
             {
-                _frameBuffer.reset();
+                if (frameBuffer.IsValid() == true) {
+                    frameBuffer->Unbind();
+                } else {
+                    return Core::ERROR_BAD_REQUEST;
+                }
+
                 _egl.ResetCurrent();
+
+                return  (eglGetError() == EGL_SUCCESS ) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
             }
 
-            uint32_t Bind(Core::ProxyType<Exchange::ICompositionBuffer> buffer) override
+            uint32_t Bind(const Core::ProxyType<IFrameBuffer>& frameBuffer) override
             {
                 ASSERT(_rendering == false);
 
                 _egl.SetCurrent();
+                
+                if (frameBuffer.IsValid() == true) {
+                    frameBuffer->Bind();
+                } else {
+                    return Core::ERROR_BAD_REQUEST;
+                }
 
-                _frameBuffer.reset(new FrameBuffer(*this, buffer));
-
-                _frameBuffer->Bind();
-
-                return Core::ERROR_NONE;
+                return (eglGetError() == EGL_SUCCESS) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
             }
 
             bool Begin(uint32_t width, uint32_t height) override
@@ -1008,7 +1024,12 @@ namespace Compositor {
                 PopDebug();
             }
 
-            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
+            Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
+            {
+                return (Core::ProxyType<IFrameBuffer>(Core::ProxyType<GLESFrameBuffer>::Create(*this, buffer)));
+            };
+
+            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
                 return (Core::ProxyType<ITexture>(Core::ProxyType<GLESTexture>::Create(*this, buffer)));
             };
@@ -1072,9 +1093,9 @@ namespace Compositor {
             {
                 return _egl.Formats();
             }
-            Core::ProxyType<Exchange::ICompositionBuffer> Bound() const override
+            Core::ProxyType<Exchange::IGraphicsBuffer> Bound() const override
             {
-                return (Core::ProxyType<Exchange::ICompositionBuffer>());
+                return (Core::ProxyType<Exchange::IGraphicsBuffer>());
             }
 
             const Matrix& Projection() const
@@ -1095,7 +1116,7 @@ namespace Compositor {
 
             bool InContext() const
             {
-                return ((_egl.IsCurrent() == true) && (_frameBuffer != nullptr));
+                return (_egl.IsCurrent() == true);
             }
 
             bool Snapshot(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels)
@@ -1147,7 +1168,6 @@ namespace Compositor {
 
         private:
             EGL _egl;
-            std::unique_ptr<FrameBuffer> _frameBuffer;
             uint32_t _viewportWidth;
             uint32_t _viewportHeight;
             Matrix _projection;

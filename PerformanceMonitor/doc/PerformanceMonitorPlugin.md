@@ -70,12 +70,12 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *PerformanceMonitor*) |
-| classname | string | Class name: *PerformanceMonitor* |
-| locator | string | Library name: *libThunderPerformanceMonitor.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *PerformanceMonitor*) |
+| classname | string | mandatory | Class name: *PerformanceMonitor* |
+| locator | string | mandatory | Library name: *libThunderPerformanceMonitor.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
@@ -109,9 +109,9 @@ This method takes no parameters.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Example
 
@@ -142,18 +142,18 @@ Interface to test send data.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
-| params?.length | number | <sup>*(optional)*</sup>  |
-| params?.duration | number | <sup>*(optional)*</sup>  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params?.data | string | optional | Any string data upto the size specified in the length |
+| params?.length | integer | optional | Size of the data |
+| params?.duration | integer | optional | Duration of the measurements |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | number | Size of data received by the jsonrpc interface |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Size of data received by the jsonrpc interface |
 
 ### Example
 
@@ -189,18 +189,18 @@ Interface to test receive data.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | number | Size of data to be provided by the jsonrpc interface |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | integer | mandatory | Size of data to be provided by the jsonrpc interface |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
-| result?.length | number | <sup>*(optional)*</sup>  |
-| result?.duration | number | <sup>*(optional)*</sup>  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result?.data | string | optional | Any string data upto the size specified in the length |
+| result?.length | integer | optional | Size of the data |
+| result?.duration | integer | optional | Duration of the measurements |
 
 ### Example
 
@@ -236,21 +236,21 @@ Interface to test exchange data.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
-| params?.length | number | <sup>*(optional)*</sup>  |
-| params?.duration | number | <sup>*(optional)*</sup>  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params?.data | string | optional | Any string data upto the size specified in the length |
+| params?.length | integer | optional | Size of the data |
+| params?.duration | integer | optional | Duration of the measurements |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object |  |
-| result?.data | string | <sup>*(optional)*</sup> Any string data upto the size specified in the length |
-| result?.length | number | <sup>*(optional)*</sup>  |
-| result?.duration | number | <sup>*(optional)*</sup>  |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result?.data | string | optional | Any string data upto the size specified in the length |
+| result?.length | integer | optional | Size of the data |
+| result?.duration | integer | optional | Duration of the measurements |
 
 ### Example
 
@@ -290,9 +290,9 @@ The following properties are provided by the PerformanceMonitor plugin:
 
 PerformanceMonitor interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [measurement](#property.measurement) <sup>RO</sup> | Retrieve the performance measurement against given package size |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [measurement](#property.measurement) | read-only | Retrieve the performance measurement against given package size |
 
 <a name="property.measurement"></a>
 ## *measurement [<sup>property</sup>](#head.Properties)*
@@ -301,49 +301,55 @@ Provides access to the retrieve the performance measurement against given packag
 
 > This property is **read-only**.
 
+> The *package size* parameter shall be passed as the index to the property, e.g. ``PerformanceMonitor.1.measurement@<package-size>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| package-size | string | mandatory | Size of package whose statistics info has to be retrieved |
+
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | object | Retrieve the performance measurement against given package size. Measurements will be provided in milliseconds |
-| (property).serialization | object | Time taken to complete serialization |
-| (property).serialization?.minimum | number | <sup>*(optional)*</sup>  |
-| (property).serialization?.maximum | number | <sup>*(optional)*</sup>  |
-| (property).serialization?.average | number | <sup>*(optional)*</sup>  |
-| (property).serialization?.count | number | <sup>*(optional)*</sup>  |
-| (property).deserialization | object | Time taken to complete deserialization |
-| (property).deserialization?.minimum | number | <sup>*(optional)*</sup>  |
-| (property).deserialization?.maximum | number | <sup>*(optional)*</sup>  |
-| (property).deserialization?.average | number | <sup>*(optional)*</sup>  |
-| (property).deserialization?.count | number | <sup>*(optional)*</sup>  |
-| (property).execution | object | Time taken to complete execution |
-| (property).execution?.minimum | number | <sup>*(optional)*</sup>  |
-| (property).execution?.maximum | number | <sup>*(optional)*</sup>  |
-| (property).execution?.average | number | <sup>*(optional)*</sup>  |
-| (property).execution?.count | number | <sup>*(optional)*</sup>  |
-| (property).threadpool | object | Time taken to complete threadpool wait |
-| (property).threadpool?.minimum | number | <sup>*(optional)*</sup>  |
-| (property).threadpool?.maximum | number | <sup>*(optional)*</sup>  |
-| (property).threadpool?.average | number | <sup>*(optional)*</sup>  |
-| (property).threadpool?.count | number | <sup>*(optional)*</sup>  |
-| (property).communication | object | Time taken to complete communication |
-| (property).communication?.minimum | number | <sup>*(optional)*</sup>  |
-| (property).communication?.maximum | number | <sup>*(optional)*</sup>  |
-| (property).communication?.average | number | <sup>*(optional)*</sup>  |
-| (property).communication?.count | number | <sup>*(optional)*</sup>  |
-| (property).total | object | Time taken to complete whole jsonrpc process |
-| (property).total?.minimum | number | <sup>*(optional)*</sup>  |
-| (property).total?.maximum | number | <sup>*(optional)*</sup>  |
-| (property).total?.average | number | <sup>*(optional)*</sup>  |
-| (property).total?.count | number | <sup>*(optional)*</sup>  |
-
-> The *package size* argument shall be passed as the index to the property, e.g. *PerformanceMonitor.1.measurement@1000*. Size of package whose statistics info has to be retrieved.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Retrieve the performance measurement against given package size. Measurements will be provided in milliseconds |
+| (property).serialization | object | mandatory | Time taken to complete serialization |
+| (property).serialization?.minimum | integer | optional | Minimum value of measurements |
+| (property).serialization?.maximum | integer | optional | Maximum value of measurements |
+| (property).serialization?.average | integer | optional | Average value of measurements |
+| (property).serialization?.count | integer | optional | How many times measurement has been collected |
+| (property).deserialization | object | mandatory | Time taken to complete deserialization |
+| (property).deserialization?.minimum | integer | optional | Minimum value of measurements |
+| (property).deserialization?.maximum | integer | optional | Maximum value of measurements |
+| (property).deserialization?.average | integer | optional | Average value of measurements |
+| (property).deserialization?.count | integer | optional | How many times measurement has been collected |
+| (property).execution | object | mandatory | Time taken to complete execution |
+| (property).execution?.minimum | integer | optional | Minimum value of measurements |
+| (property).execution?.maximum | integer | optional | Maximum value of measurements |
+| (property).execution?.average | integer | optional | Average value of measurements |
+| (property).execution?.count | integer | optional | How many times measurement has been collected |
+| (property).threadpool | object | mandatory | Time taken to complete threadpool wait |
+| (property).threadpool?.minimum | integer | optional | Minimum value of measurements |
+| (property).threadpool?.maximum | integer | optional | Maximum value of measurements |
+| (property).threadpool?.average | integer | optional | Average value of measurements |
+| (property).threadpool?.count | integer | optional | How many times measurement has been collected |
+| (property).communication | object | mandatory | Time taken to complete communication |
+| (property).communication?.minimum | integer | optional | Minimum value of measurements |
+| (property).communication?.maximum | integer | optional | Maximum value of measurements |
+| (property).communication?.average | integer | optional | Average value of measurements |
+| (property).communication?.count | integer | optional | How many times measurement has been collected |
+| (property).total | object | mandatory | Time taken to complete whole jsonrpc process |
+| (property).total?.minimum | integer | optional | Minimum value of measurements |
+| (property).total?.maximum | integer | optional | Maximum value of measurements |
+| (property).total?.average | integer | optional | Average value of measurements |
+| (property).total?.count | integer | optional | How many times measurement has been collected |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null (default: *None*) |
 
 ### Example
 

@@ -103,22 +103,23 @@ public:
         , _fps()
         , _sequence(0)
     {
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        ASSERT(_renderer.IsValid());
+
         _connector = Compositor::CreateBuffer(
-            connectorId,
-            { 0, 0, 1080, 1920 },
-            _format, &_sink);
+            connectorId, 1920, 1080,
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
+            _renderer, &_sink);
 
         ASSERT(_connector.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created connector: %p", _connector.operator->()));
 
         ASSERT(_renderFd >= 0);
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
-        ASSERT(_renderer.IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
@@ -196,7 +197,9 @@ private:
         float x = float(renderWidth / 2.0f) * cosX;
         float y = float(renderHeight / 2.0f) * sinY;
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+
+        _renderer->Bind(frameBuffer);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
@@ -212,16 +215,16 @@ private:
 
         _renderer->End(false);
 
+        _renderer->Unbind(frameBuffer);
+
         uint32_t commit;
 
         if ((commit = _connector->Commit()) == Core::ERROR_NONE) {
             WaitForVSync(100);
         } else {
             TRACE(Trace::Error, ("Commit failed: %d", commit));
-            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit. 
+            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit.
         }
-
-        _renderer->Unbind();
 
         rotation += _radPerFrame;
     }
@@ -327,11 +330,11 @@ int main(int argc, char* argv[])
         tracer.Callback(&printer);
 
         const std::vector<string> modules = {
-            "CompositorRenderTest",
-            "CompositorBuffer",
+            "CompositorRenderTestOFF",
+            "CompositorBufferOFF",
             "CompositorBackendOFF",
             "CompositorRendererOFF",
-            "DRMCommon"
+            "DRMCommonOFF"
         };
 
         for (auto module : modules) {

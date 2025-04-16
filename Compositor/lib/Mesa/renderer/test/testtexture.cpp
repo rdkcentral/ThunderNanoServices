@@ -111,19 +111,17 @@ public:
         , _fps()
         , _sequence(0)
     {
+        _renderer = Compositor::IRenderer::Instance(_renderFd);
+        ASSERT(_renderer.IsValid());
+
         _connector = Compositor::CreateBuffer(
-            connectorId,
-            { 0, 0, 1080, 1920 },
-            _format,
-            &_sink);
+            connectorId, 1920, 1080,
+            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
+            _renderer, &_sink);
 
         ASSERT(_connector.IsValid());
 
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
-
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
-
-        ASSERT(_renderer.IsValid());
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
 
         NewFrame();
     }
@@ -196,7 +194,9 @@ private:
         const uint16_t renderWidth(512);
         const uint16_t renderHeight(512);
 
-        _renderer->Bind(static_cast<Core::ProxyType<Exchange::ICompositionBuffer>>(_connector));
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+
+        _renderer->Bind(frameBuffer);
 
         _renderer->Begin(width, height);
         _renderer->Clear(background);
@@ -211,11 +211,11 @@ private:
 
         _renderer->End(false);
 
+        _renderer->Unbind(frameBuffer);
+
         _connector->Commit();
 
         WaitForVSync(100);
-
-        _renderer->Unbind();
 
         rotation += _period.count() * (2. * M_PI) / (_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 

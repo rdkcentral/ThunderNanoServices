@@ -79,8 +79,8 @@ namespace Exchange {
             // @brief A pin
             // @param pin Pin number
             // @retval ERROR_UNAVAILABLE Unknown pin number
-            virtual Core::hresult Pin(uint8_t pin /* @index */ , const bool high) = 0;
-            virtual Core::hresult Pin(uint8_t pin /* @index */, bool& high /* @out */) const = 0;
+            virtual Core::hresult Pin(const uint8_t pin /* @index */ , const bool high) = 0;
+            virtual Core::hresult Pin(const uint8_t pin /* @index */, bool& high /* @out */) const = 0;
         };
 
         // @brief Acquires a device

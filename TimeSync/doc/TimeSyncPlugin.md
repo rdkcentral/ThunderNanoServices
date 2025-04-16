@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Time_Sync_Plugin"></a>
+<a id="head_Time_Sync_Plugin"></a>
 # Time Sync Plugin
 
 **Version: 1.0**
@@ -10,28 +10,28 @@ TimeSync plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the TimeSync plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -49,7 +49,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -59,39 +59,40 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The Time Sync plugin provides time synchronization functionality from various time sources (e.g. NTP).
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *TimeSync*) |
-| classname | string | Class name: *TimeSync* |
-| locator | string | Library name: *libThunderTimeSync.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| deferred | boolean | <sup>*(deprecated)*</sup> <sup>*(optional)*</sup> Determines if automatic time sync shall be initially disabled. This parameter is deprecated and SubSystemControl could be used instead |
-| periodicity | number | <sup>*(optional)*</sup> Periodicity of time synchronization (in hours), 0 for one-off synchronization |
-| retries | number | <sup>*(optional)*</sup> Number of synchronization attempts if the source cannot be reached (may be 0) |
-| interval | number | <sup>*(optional)*</sup> Time to wait (in milliseconds) before retrying a synchronization attempt after a failure |
-| sources | array | Time sources |
-| sources[#] | string | (a time source entry) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *TimeSync*) |
+| classname | string | mandatory | Class name: *TimeSync* |
+| locator | string | mandatory | Library name: *libThunderTimeSync.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| deferred | boolean | optional | <sup>*(deprecated)*</sup> Determines if automatic time sync shall be initially disabled. This parameter is deprecated and SubSystemControl could be used instead |
+| periodicity | integer | optional | Periodicity of time synchronization (in hours), 0 for one-off synchronization |
+| retries | integer | optional | Number of synchronization attempts if the source cannot be reached (may be 0) |
+| interval | integer | optional | Time to wait (in milliseconds) before retrying a synchronization attempt after a failure |
+| sources | array | mandatory | Time sources |
+| sources[#] | string | mandatory | (a time source entry) |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- [TimeSync.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/TimeSync.json) (version 1.0.0) (uncompliant-extended format)
+- ITimeSync ([ITimeSync.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/ITimeSync.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the TimeSync plugin:
@@ -100,16 +101,14 @@ TimeSync interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [synchronize](#method.synchronize) | Synchronizes time |
+| [synchronize](#method_synchronize) <sup>deprecated</sup> | Synchronizes time |
 
-<a name="method.synchronize"></a>
-## *synchronize [<sup>method</sup>](#head.Methods)*
+<a id="method_synchronize"></a>
+## *synchronize [<sup>method</sup>](#head_Methods)*
 
 Synchronizes time.
 
-### Description
-
-Use this method to synchronize the system time with the currently configured time source. If automatic time synchronization is initially disabled or stopped, it will be restarted.
+> ``synchronize`` is an alternative name for this method. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
 ### Parameters
 
@@ -117,16 +116,16 @@ This method takes no parameters.
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 12 | ```ERROR_INPROGRESS``` | Returned when the method is called while previously triggered synchronization is in progress. |
-| 23 | ```ERROR_INCOMPLETE_CONFIG``` | Returned when the source configuration is missing or invalid. |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_INPROGRESS``` | Returned when the method is called while previously triggered synchronization is in progress |
+| ```ERROR_INCOMPLETE_CONFIG``` | Returned when the source configuration is missing or invalid |
 
 ### Example
 
@@ -150,34 +149,38 @@ This method takes no parameters.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the TimeSync plugin:
 
 TimeSync interface properties:
 
-| Property | Description |
-| :-------- | :-------- |
-| [synctime](#property.synctime) <sup>RO</sup> | Most recent synchronized time |
-| [time](#property.time) | Current system time |
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [synctime](#property_synctime) | read-only | Time of the most recent synchronization |
+| [time](#property_time) <sup>deprecated</sup> | read/write | Current system time |
 
-<a name="property.synctime"></a>
-## *synctime [<sup>property</sup>](#head.Properties)*
+<a id="property_synctime"></a>
+## *synctime [<sup>property</sup>](#head_Properties)*
 
-Provides access to the most recent synchronized time.
+Provides access to the time of the most recent synchronization.
 
 > This property is **read-only**.
 
 ### Value
 
-### Result
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Time of the most recent synchronization |
+| (property).time | string | mandatory | Synchronized time (in ISO8601 format); empty string if the time has never been synchronized |
+| (property)?.source | string | optional | The synchronization source like an NTP server |
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | object | Most recent synchronized time |
-| result.time | string | Synchronized time (in ISO8601 format); empty string if the time has never been synchronized |
-| result?.source | string | <sup>*(optional)*</sup> The synchronization source e.g. an NTP server |
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | There has not been any successful time synchronization yet |
 
 ### Example
 
@@ -204,32 +207,29 @@ Provides access to the most recent synchronized time.
 }
 ```
 
-<a name="property.time"></a>
-## *time [<sup>property</sup>](#head.Properties)*
+<a id="property_time"></a>
+## *time [<sup>property</sup>](#head_Properties)*
 
 Provides access to the current system time.
 
-### Description
-
-Upon setting this property automatic time synchronization will be stopped. Usage of this property is deprecated and the SubSystem control plugin can be used as an alternative to achieve the same
+> ``time`` is an alternative name for this property. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
 ### Value
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| (property) | string | System time (in ISO8601 format) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Current system time |
+| (property).value | string | mandatory | *...* |
 
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | string | System time (in ISO8601 format) |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | System time in ISO8601 format |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 30 | ```ERROR_BAD_REQUEST``` | The time is invalid |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_BAD_REQUEST``` | The time is invalid |
 
 ### Example
 
@@ -260,7 +260,9 @@ Upon setting this property automatic time synchronization will be stopped. Usage
   "jsonrpc": "2.0",
   "id": 42,
   "method": "TimeSync.1.time",
-  "params": "2019-05-07T07:20:26Z"
+  "params": {
+    "value": "..."
+  }
 }
 ```
 
@@ -274,7 +276,7 @@ Upon setting this property automatic time synchronization will be stopped. Usage
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -283,25 +285,45 @@ The following events are provided by the TimeSync plugin:
 
 TimeSync interface events:
 
-| Event | Description |
+| Notification | Description |
 | :-------- | :-------- |
-| [timechange](#event.timechange) | Signals a time change |
+| [timechanged](#notification_timechanged) / [timechange](#notification_timechanged) | Signals a time change |
 
-<a name="event.timechange"></a>
-## *timechange [<sup>event</sup>](#head.Notifications)*
+<a id="notification_timechanged"></a>
+## *timechanged [<sup>notification</sup>](#head_Notifications)*
 
 Signals a time change.
 
-### Parameters
+> ``timechange`` is an alternative name for this notification. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
-This event carries no parameters.
+### Notification Parameters
+
+This notification carries no parameters.
 
 ### Example
+
+#### Registration
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "client.events.1.timechange"
+  "id": 42,
+  "method": "TimeSync.1.register",
+  "params": {
+    "event": "timechanged",
+    "id": "myid"
+  }
 }
 ```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.timechanged"
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.timechanged``.
 

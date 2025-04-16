@@ -69,19 +69,19 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *SystemCommands*) |
-| classname | string | Class name: *SystemCommands* |
-| locator | string | Library name: *libThunderSystemCommands.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *SystemCommands*) |
+| classname | string | mandatory | Class name: *SystemCommands* |
+| locator | string | mandatory | Library name: *libThunderSystemCommands.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a name="head.Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- [SystemCommands.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/SystemCommands.json) (version 1.0.0) (compliant format)
+- ISystemCommands ([ISystemCommands.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/ISystemCommands.h)) (version 1.0.0) (compliant format)
 
 <a name="head.Methods"></a>
 # Methods
@@ -99,29 +99,25 @@ SystemCommands interface methods:
 
 Resets a USB device.
 
-### Description
-
-With this method a USB device can be reset using USBFS_RESET ioctl command.
-
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.device | string | USB device to reset |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device | string | mandatory | USB device to reset |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 1 | ```ERROR_GENERAL``` | Failed to reset the USB device |
-| 2 | ```ERROR_UNAVAILABLE``` | Unknown USB device |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_GENERAL``` | Failed to reset USB device |
+| ```ERROR_UNAVAILABLE``` | Unknown USB device |
 
 ### Example
 

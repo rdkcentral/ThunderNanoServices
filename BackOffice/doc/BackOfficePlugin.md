@@ -67,20 +67,20 @@ The plugin is designed to be loaded and executed within the Thunder framework. F
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| callsign | string | Plugin instance name (default: *BackOffice*) |
-| classname | string | Class name: *BackOffice* |
-| locator | string | Library name: *libThunderBackOffice.so* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
-| configuration | object |  |
-| configuration.server_address | string | Back office server address |
-| configuration.server_port | number | Back office server port |
-| configuration.customer | string | Customer name |
-| configuration.platform | string | Platform name |
-| configuration.country | string | Country code |
-| configuration?.type | string | <sup>*(optional)*</sup> Type |
-| configuration?.session | number | <sup>*(optional)*</sup> session number |
-| configuration.callsign_mapping | string | Mapping on how to map callsigns to server accepted names |
-| configuration.state_mapping | string | Mapping on how to map state to server accepted states |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *BackOffice*) |
+| classname | string | mandatory | Class name: *BackOffice* |
+| locator | string | mandatory | Library name: *libThunderBackOffice.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
+| configuration | object | mandatory | *...* |
+| configuration.server_address | string | mandatory | Back office server address |
+| configuration.server_port | integer | mandatory | Back office server port |
+| configuration.customer | string | mandatory | Customer name |
+| configuration.platform | string | mandatory | Platform name |
+| configuration.country | string | mandatory | Country code |
+| configuration?.type | string | optional | Type |
+| configuration?.session | integer | optional | Session number |
+| configuration.callsign_mapping | string | mandatory | Mapping on how to map callsigns to server accepted names |
+| configuration.state_mapping | string | mandatory | Mapping on how to map state to server accepted states |
 
