@@ -32,7 +32,8 @@ namespace Thunder {
 namespace Plugin {
 
     class GeneratorShowcase : public PluginHost::IPlugin
-                            , public PluginHost::JSONRPCSupportsEventStatus {
+                            , public PluginHost::JSONRPCSupportsEventStatus
+                            , public Exchange::JSimpleInstanceObjects::IHandler {
     public:
         GeneratorShowcase()
             : _service(nullptr)
@@ -320,7 +321,7 @@ namespace Plugin {
 
     private:
         class ImaginaryHost : public Exchange::ISimpleInstanceObjects {
-
+        public:
             class Device : public Exchange::ISimpleInstanceObjects::IDevice {
             public:
                 Device(GeneratorShowcase& parent, const string& name)
@@ -391,52 +392,141 @@ namespace Plugin {
 
                     return (result);
                 }
+                Core::hresult Name(const string& name) override
+                {
+                    SetName(name);
+                    return (Core::ERROR_NONE);
+                }
                 Core::hresult Name(string& name) const override
                 {
                     _lock.Lock();
                     name = _name;
                     _lock.Unlock();
 
-                    return Core::ERROR_NONE;
+                    return (Core::ERROR_NONE);
+
                 }
                 Core::hresult Enable() override
                 {
-                    _lock.Lock();
+                    // Mock enabling in 1 second :)
+                    _job.Schedule([this](){
+                        SetState(Exchange::ISimpleInstanceObjects::ENABLED);
+                    }, 1000);
 
-                    if (_state != Exchange::ISimpleInstanceObjects::ENABLED) {
-
-                        // Mock enabling in 1 second :)
-                        _job.Schedule([this](){
-                            StateChanged(Exchange::ISimpleInstanceObjects::ENABLED);
-                        }, 1000);
-                    }
-
-                    _lock.Unlock();
-
-                    return Core::ERROR_NONE;
+                    return (Core::ERROR_NONE);
                 }
                 Core::hresult Disable() override
                 {
+                    SetState(Exchange::ISimpleInstanceObjects::DISABLED);
+                    return (Core::ERROR_NONE);
+                }
+                Core::hresult Pin(const uint8_t pin, const bool high) override
+                {
+                    SetPin(pin, high);
+                    return (Core::ERROR_NONE);
+                }
+                Core::hresult Pin(const uint8_t pin, bool& high) const override
+                {
+                    Core::hresult result = Core::ERROR_UNAVAILABLE;
+
                     _lock.Lock();
 
-                    if (_state != Exchange::ISimpleInstanceObjects::DISABLED) {
-                        StateChanged(Exchange::ISimpleInstanceObjects::DISABLED);
+                    auto it = _pins.find(pin);
+                    if (it != _pins.end()) {
+                        high = (*it).second;
+                        result = Core::ERROR_NONE;
+                    }
+                    else {
+                        TRACE(Trace::Error, (_T("Pin not found")));
                     }
 
                     _lock.Unlock();
 
-                    return Core::ERROR_NONE;
+                    return (result);
                 }
 
-            private:
-                void StateChanged(const Exchange::ISimpleInstanceObjects::state state)
+            public:
+                Exchange::ISimpleInstanceObjects::state State() const
+                {
+                    return (_state);
+                }
+                void IteratePins(const std::function<void(const uint8_t pin, const bool high)>& cb)
                 {
                     _lock.Lock();
 
-                    _state = state;
+                    for (auto const& pin : _pins) {
+                        cb(pin.first, pin.second);
+                    }
 
-                    for (auto const& observer : _observers) {
-                        observer->StateChanged(state);
+                    _lock.Unlock();
+                }
+                bool PinStatus(const uint8_t pin)
+                {
+                    bool value = false;
+
+                    _lock.Lock();
+
+                    auto it = _pins.find(pin);
+                    if (it != _pins.end()) {
+                        value = (*it).second;
+                    }
+
+                    _lock.Unlock();
+
+                    return (value);
+                }
+
+            private:
+                void SetName(const string& name)
+                {
+                    _lock.Lock();
+
+                    if (_name != name) {
+                        _name = name;
+
+                        for (auto const& observer : _observers) {
+                            observer->NameChanged(name);
+                        }
+                    }
+
+                    _lock.Unlock();
+                }
+                void SetState(const Exchange::ISimpleInstanceObjects::state state)
+                {
+                    _lock.Lock();
+
+                    if (_state != state) {
+
+                        _state = state;
+
+                        for (auto const& observer : _observers) {
+                            observer->StateChanged(state);
+                        }
+                    }
+
+                    _lock.Unlock();
+                }
+                void SetPin(const uint8_t pin, const bool high)
+                {
+                    _lock.Lock();
+
+                    auto it = _pins.find(pin);
+
+                    if (it != _pins.end()) {
+                        if ((*it).second != high) {
+                            (*it).second = high;
+
+                            for (auto const& observer : _observers) {
+                                observer->PinChanged(pin, high);
+                            }
+                        }
+                    }
+                    else {
+                        _pins.emplace(pin, high);
+
+                        for (auto const& observer : _observers) {
+                            observer->PinChanged(pin, high);
+                        }
                     }
 
                     _lock.Unlock();
@@ -453,6 +543,7 @@ namespace Plugin {
                 DecoupledJob _job;
                 string _name;
                 Exchange::ISimpleInstanceObjects::state _state;
+                std::map<uint8_t, bool> _pins;
                 std::vector<Exchange::ISimpleInstanceObjects::IDevice::INotification*> _observers;
 
             }; // class Device
@@ -499,7 +590,7 @@ namespace Plugin {
                 }
                 else {
                     string deviceName;
-                    device->Name(deviceName);
+                    static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(device)->Name(deviceName);
 
                     auto it = _devices.find(deviceName);
 
@@ -546,7 +637,7 @@ namespace Plugin {
             ASSERT(_imaginaryHost != nullptr);
 
             Exchange::JSimpleAsync::Register(*this, _imaginaryServer);
-            Exchange::JSimpleInstanceObjects::Register(*this, _imaginaryHost, _storage);
+            Exchange::JSimpleInstanceObjects::Register(*this, _imaginaryHost, this, _storage);
 
             // Register for channel closures
             service->Register(&_notification);
@@ -558,9 +649,9 @@ namespace Plugin {
                 ASSERT(device != nullptr);
 
                 if (acquired == true) {
-                    // device was acquireds
+                    // device was acquired
                     string name;
-                    device->Name(name);
+                    static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
                     TRACE(Trace::Information, (_T("Device %s acquired"), name.c_str()));
 
                     ASSERT(_deviceNotificationSinks.find(device) == _deviceNotificationSinks.end());
@@ -570,7 +661,7 @@ namespace Plugin {
                 else {
                     // device is about to be relinquished
                     string name;
-                    device->Name(name);
+                    static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
                     TRACE(Trace::Information, (_T("Device %s released"), name.c_str()));
 
                     auto it = _deviceNotificationSinks.find(device);
@@ -648,9 +739,17 @@ namespace Plugin {
             ImaginaryHostNotificationImpl& operator=(ImaginaryHostNotificationImpl&&) = delete;
 
         public:
+            void NameChanged(const string& name) override
+            {
+                Exchange::JSimpleInstanceObjects::Event::NameChanged(_parent, _parent._storage, _device, name);
+            }
             void StateChanged(const Exchange::ISimpleInstanceObjects::state state) override
             {
                 Exchange::JSimpleInstanceObjects::Event::StateChanged(_parent, _parent._storage, _device, state);
+            }
+            void PinChanged(const uint8_t pin, const bool high) override
+            {
+                Exchange::JSimpleInstanceObjects::Event::PinChanged(_parent, _parent._storage, _device, pin, high);
             }
 
         public:
@@ -671,6 +770,46 @@ namespace Plugin {
 
             // A websocket channel was closed, we may need to release some resources!
             Exchange::JSimpleInstanceObjects::Link::Closed(_storage, channel);
+        }
+
+    private:
+        void OnStateChangedEventRegistration(Exchange::ISimpleInstanceObjects::IDevice* object, const string& client, const JSONRPCSupportsEventStatus::Status status) override
+        {
+            string name;
+            static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
+
+            TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' state change notifications"), client.c_str(),
+                status == Status::registered? "registered" : "unregistered", name.c_str()));
+
+            // A JSON-RPC client registers for "statechanged" notifications, let them know the state of the device already.
+            // Only the registering client will recieve this extra notification, via the default sendif method generated.
+            if (status == Status::registered) {
+                ImaginaryHost::Device* device = static_cast<ImaginaryHost::Device*>(object);
+
+                Exchange::JSimpleInstanceObjects::Event::StateChanged(*this, _storage, object, device->State(), client);
+            }
+        }
+        void OnPinChangedEventRegistration(Exchange::ISimpleInstanceObjects::IDevice* object, const string& client, const JSONRPCSupportsEventStatus::Status status) override
+        {
+            string name;
+            static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
+
+            TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' pin state change notifications"), client.c_str(),
+                status == Status::registered? "registered" : "unregistered", name.c_str()));
+
+            // A JSON-RPC client registered for "pinchanged" notifications, let them know the state of the high pins already
+            // Only the registering client will recieve this extra notification, via the default sendif method generated.
+            // The tricky part here is the client designator also carries index of the pin.
+            if (status == Status::registered) {
+                ImaginaryHost::Device* device = static_cast<ImaginaryHost::Device*>(object);
+
+                device->IteratePins([this, object, client](const uint8_t index, const bool high) {
+
+                    if (high == true) {
+                        Exchange::JSimpleInstanceObjects::Event::PinChanged(*this, _storage, object, index, true, client);
+                    }
+                });
+            }
         }
 
     private:

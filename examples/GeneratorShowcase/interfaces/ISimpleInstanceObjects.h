@@ -44,9 +44,18 @@ namespace Exchange {
 
                 enum { ID = ISimpleInstanceObjects::ID + 1 };
 
+                // @brief Signals device name changes
+                // @param state New name of the device
+                virtual void NameChanged(const string& state) = 0;
+
+                // @statuslistener
                 // @brief Signals device state changes
                 // @param state New state of the device
                 virtual void StateChanged(const state state) = 0;
+
+                // @statuslistener
+                // @brief Signals pin state changes
+                virtual void PinChanged(const uint8_t pin /* @index */, const bool high) = 0;
             };
 
             virtual Core::hresult Register(INotification* const notification) = 0;
@@ -56,14 +65,22 @@ namespace Exchange {
             // @brief Name of the device
             // @param name Name of the device (e.g. "usb")
             virtual Core::hresult Name(string& name /* @out */) const = 0;
+            virtual Core::hresult Name(const string& name) = 0;
 
             // @brief Enable the device
-            // @retval ERROR_ALREADY_CONNECT The device is already enabled
+            // @retval ERROR_ALREADY_CONNECTED The device is already enabled
             virtual Core::hresult Enable() = 0;
 
             // @brief Disable the device
             // @retval ERROR_ALREADY_RELEASED The device is not enabled
             virtual Core::hresult Disable() = 0;
+
+            // @property
+            // @brief A pin
+            // @param pin Pin number
+            // @retval ERROR_UNAVAILABLE Unknown pin number
+            virtual Core::hresult Pin(uint8_t pin /* @index */ , const bool high) = 0;
+            virtual Core::hresult Pin(uint8_t pin /* @index */, bool& high /* @out */) const = 0;
         };
 
         // @brief Acquires a device
