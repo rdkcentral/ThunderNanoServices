@@ -64,6 +64,7 @@ namespace Plugin {
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
                 , Output()
+                , AutoScale(true)
             {
                 Add(_T("render"), &Render);
                 Add(_T("height"), &Height);
@@ -71,6 +72,7 @@ namespace Plugin {
                 Add(_T("format"), &Format);
                 Add(_T("modifier"), &Modifier);
                 Add(_T("output"), &Output);
+                Add(_T("autoscale"), &AutoScale);
             }
 
             ~Config() override = default;
@@ -81,6 +83,7 @@ namespace Plugin {
             Core::JSON::HexUInt32 Format;
             Core::JSON::HexUInt64 Modifier;
             Core::JSON::String Output;
+            Core::JSON::Boolean AutoScale;
         };
 
         class DisplayDispatcher : public RPC::Communicator {
@@ -238,6 +241,7 @@ namespace Plugin {
                 , _texture()
                 , _remoteClient(*this)
                 , _state(State::IDLE)
+                , _geometryChanged(false)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
             }
@@ -334,9 +338,16 @@ namespace Plugin {
             uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
             {
                 _geometry = rectangle;
+                _geometryChanged = true;
                 _parent.Render();
                 return Core::ERROR_NONE;
             }
+
+            bool GeometryChanged() const
+            {
+                return _geometryChanged;
+            }
+
             Exchange::IComposition::Rectangle Geometry() const override
             {
                 return _geometry;
@@ -380,6 +391,7 @@ namespace Plugin {
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
             std::atomic<State> _state;
+            bool _geometryChanged = false;
 
             static uint32_t _sequence;
         }; // class Client
@@ -575,6 +587,7 @@ namespace Plugin {
             , _renderNode()
             , _present(*this)
             , _state(State::IDLE)
+            , _autoScale(true)
         {
         }
         ~CompositorImplementation() override
@@ -630,6 +643,10 @@ namespace Plugin {
             _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
             ASSERT(_renderer.IsValid());
 
+            if(config.AutoScale.IsSet() == true) {
+                _autoScale = config.AutoScale.Value();
+            } 
+            
             if (config.Output.IsSet() == false) {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
@@ -894,9 +911,16 @@ namespace Plugin {
             if (client->Texture() != nullptr) {
                 client->Acquire(Compositor::DefaultTimeoutMs);
 
-                Exchange::IComposition::Rectangle rectangle = client->Geometry();
+                Exchange::IComposition::Rectangle renderBox;
 
-                const Exchange::IComposition::Rectangle renderBox = { rectangle.x, rectangle.y, rectangle.width, rectangle.height };
+                if ((_autoScale == true) && (client->GeometryChanged() == false)) {
+                    renderBox.x = 0;
+                    renderBox.y = 0;
+                    renderBox.width = _output->Width();
+                    renderBox.height = _output->Height();
+                } else {
+                    renderBox = client->Geometry();
+                }
 
                 Compositor::Matrix clientProjection;
                 Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
@@ -991,6 +1015,7 @@ namespace Plugin {
         std::string _renderNode;
         Presenter _present;
         std::atomic<State> _state;
+        bool _autoScale;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
