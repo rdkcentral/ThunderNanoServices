@@ -58,8 +58,6 @@ set(PLUGIN_COMPOSITOR_RESOLUTION "720p" CACHE STRING "Specify the startup resolu
 set(PLUGIN_COMPOSITOR_OUTPUT "HDMI-A-1"  CACHE STRING "Specify the output (name1;h;w) that the compositor should use." )
 set(PLUGIN_COMPOSITOR_CANVAS_HEIGHT "1080"  CACHE STRING "Specify the height of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_CANVAS_WIDTH "1920"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
-set(PLUGIN_COMPOSITOR_BUFFER_CONNECTOR "buffer|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
-set(PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR "display|775"  CACHE STRING "Specify the width of the canvas that the compositor uses for drawing." )
 set(PLUGIN_COMPOSITOR_RENDER_NODE ""  CACHE STRING "Manually specify the render node to use (e.g. /dev/dri/renderDxxx or /dev/dri/cardx)." )
 
 set(PLUGIN_COMPOSITOR_WESTON_TTY_LIST "1;2;3;4" CACHE STRING "TTY ids for weston drm backend")

@@ -58,35 +58,32 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , BufferConnector(_T("bufferconnector"))
-                , DisplayConnector("displayconnector")
                 , Render()
                 , Height(0)
                 , Width(0)
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
                 , Output()
+                , AutoScale(true)
             {
-                Add(_T("bufferconnector"), &BufferConnector);
-                Add(_T("displayconnector"), &DisplayConnector);
                 Add(_T("render"), &Render);
                 Add(_T("height"), &Height);
                 Add(_T("width"), &Width);
                 Add(_T("format"), &Format);
                 Add(_T("modifier"), &Modifier);
                 Add(_T("output"), &Output);
+                Add(_T("autoscale"), &AutoScale);
             }
 
             ~Config() override = default;
 
-            Core::JSON::String BufferConnector;
-            Core::JSON::String DisplayConnector;
             Core::JSON::String Render;
             Core::JSON::DecUInt16 Height;
             Core::JSON::DecUInt16 Width;
             Core::JSON::HexUInt32 Format;
             Core::JSON::HexUInt64 Modifier;
             Core::JSON::String Output;
+            Core::JSON::Boolean AutoScale;
         };
 
         class DisplayDispatcher : public RPC::Communicator {
@@ -244,6 +241,7 @@ namespace Plugin {
                 , _texture()
                 , _remoteClient(*this)
                 , _state(State::IDLE)
+                , _geometryChanged(false)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
             }
@@ -340,9 +338,16 @@ namespace Plugin {
             uint32_t Geometry(const Exchange::IComposition::Rectangle& rectangle) override
             {
                 _geometry = rectangle;
+                _geometryChanged = true;
                 _parent.Render();
                 return Core::ERROR_NONE;
             }
+
+            bool GeometryChanged() const
+            {
+                return _geometryChanged;
+            }
+
             Exchange::IComposition::Rectangle Geometry() const override
             {
                 return _geometry;
@@ -386,11 +391,12 @@ namespace Plugin {
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
             std::atomic<State> _state;
+            bool _geometryChanged = false;
 
             static uint32_t _sequence;
         }; // class Client
 
-        class Bridge : public Core::PrivilegedRequest {
+        class DescriptorExchange : public Core::PrivilegedRequest {
         private:
             class Callback : public Core::PrivilegedRequest::ICallback {
             public:
@@ -400,7 +406,7 @@ namespace Plugin {
                 Callback& operator=(Callback&&) = delete;
                 Callback& operator=(const Callback&) = delete;
 
-                Callback(Bridge& parent)
+                Callback(DescriptorExchange& parent)
                     : _parent(parent)
                 {
                 }
@@ -417,23 +423,23 @@ namespace Plugin {
                 }
 
             private:
-                Bridge& _parent;
+                DescriptorExchange& _parent;
             };
 
         public:
-            Bridge() = delete;
-            Bridge(Bridge&&) = delete;
-            Bridge(const Bridge&) = delete;
-            Bridge& operator=(Bridge&&) = delete;
-            Bridge& operator=(const Bridge&) = delete;
+            DescriptorExchange() = delete;
+            DescriptorExchange(DescriptorExchange&&) = delete;
+            DescriptorExchange(const DescriptorExchange&) = delete;
+            DescriptorExchange& operator=(DescriptorExchange&&) = delete;
+            DescriptorExchange& operator=(const DescriptorExchange&) = delete;
 
-            Bridge(CompositorImplementation& parent)
+            DescriptorExchange(CompositorImplementation& parent)
                 : Core::PrivilegedRequest(&_callback)
                 , _parent(parent)
                 , _callback(*this)
             {
             }
-            ~Bridge() override
+            ~DescriptorExchange() override
             {
                 Close();
             }
@@ -447,7 +453,7 @@ namespace Plugin {
                     Core::ProxyType<Client> client = _parent.ClientById(id);
 
                     if (client.IsValid() == false) {
-                        TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
+                        TRACE(Trace::Information, (_T("DescriptorExchange for Id [%d] not found"), id));
                     } else {
                         int container[Core::PrivilegedRequest::MaxDescriptorsPerRequest];
                         uint8_t result = client->Descriptors(sizeof(container), container);
@@ -469,7 +475,7 @@ namespace Plugin {
 
                     client->Texture(_parent.Texture(buffer));
                 } else {
-                    TRACE(Trace::Information, (_T("Bridge for Id [%d] not found"), id));
+                    TRACE(Trace::Information, (_T("DescriptorExchange Id [%d] not found"), id));
                 }
 
                 descriptors.clear();
@@ -477,7 +483,7 @@ namespace Plugin {
 
             CompositorImplementation& _parent;
             Callback _callback;
-        }; // class Bridge
+        }; // class DescriptorExchange
 
         class Output {
         public:
@@ -570,7 +576,7 @@ namespace Plugin {
             , _output(nullptr)
             , _renderer()
             , _observers()
-            , _clientBridge(*this)
+            , _descriptorExchange(*this)
             , _clientLock()
             , _clients()
             , _lastFrame(0)
@@ -581,6 +587,7 @@ namespace Plugin {
             , _renderNode()
             , _present(*this)
             , _state(State::IDLE)
+            , _autoScale(true)
         {
         }
         ~CompositorImplementation() override
@@ -594,7 +601,7 @@ namespace Plugin {
                 _engine.Release();
             }
 
-            _clientBridge.Close();
+            _descriptorExchange.Close();
             _clients.Clear();
             _renderer.Release();
 
@@ -636,6 +643,10 @@ namespace Plugin {
             _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
             ASSERT(_renderer.IsValid());
 
+            if(config.AutoScale.IsSet() == true) {
+                _autoScale = config.AutoScale.Value();
+            } 
+            
             if (config.Output.IsSet() == false) {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
@@ -647,17 +658,21 @@ namespace Plugin {
 
             RenderOutput(); // guarantee that the output is rendered once.
 
-            std::string bridgePath = service->VolatilePath() + config.BufferConnector.Value();
-            result = _clientBridge.Open(bridgePath);
+            string basePath;
+            Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), basePath);
+            basePath = Core::Directory::Normalize(basePath);
+
+            const string bridgePath = basePath + _T("descriptors");
+            result = _descriptorExchange.Open(bridgePath);
 
             if (result == Core::ERROR_NONE) {
-                std::string connectorPath = service->VolatilePath() + config.DisplayConnector.Value();
+                const string comrpcPath = basePath + _T("comrpc");
 
                 ASSERT(_dispatcher == nullptr);
 
                 _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
 
-                _dispatcher = new DisplayDispatcher(Core::NodeId(connectorPath.c_str()), service->ProxyStubPath(), this, _engine);
+                _dispatcher = new DisplayDispatcher(Core::NodeId(comrpcPath.c_str()), service->ProxyStubPath(), this, _engine);
 
                 if (_dispatcher->IsListening() == true) {
                     PluginHost::ISubSystem* subSystems = service->SubSystems();
@@ -675,11 +690,11 @@ namespace Plugin {
                     _dispatcher = nullptr;
 
                     _engine.Release();
-                    _clientBridge.Close();
+                    _descriptorExchange.Close();
 
                     result = Core::ERROR_UNAVAILABLE;
 
-                    TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), connectorPath.c_str()));
+                    TRACE(Trace::Error, (_T("Failed to open display dispatcher %s"), comrpcPath.c_str()));
                 }
             } else {
                 TRACE(Trace::Error, (_T("Failed to open client bridge %s error %d"), bridgePath.c_str(), result));
@@ -896,9 +911,16 @@ namespace Plugin {
             if (client->Texture() != nullptr) {
                 client->Acquire(Compositor::DefaultTimeoutMs);
 
-                Exchange::IComposition::Rectangle rectangle = client->Geometry();
+                Exchange::IComposition::Rectangle renderBox;
 
-                const Exchange::IComposition::Rectangle renderBox = { rectangle.x, rectangle.y, rectangle.width, rectangle.height };
+                if ((_autoScale == true) && (client->GeometryChanged() == false)) {
+                    renderBox.x = 0;
+                    renderBox.y = 0;
+                    renderBox.width = _output->Width();
+                    renderBox.height = _output->Height();
+                } else {
+                    renderBox = client->Geometry();
+                }
 
                 Compositor::Matrix clientProjection;
                 Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
@@ -950,7 +972,6 @@ namespace Plugin {
             {
                 Core::Thread::Block();
 
-
                 _parent.RenderOutput(); // 3000us
 
                 return Core::infinite;
@@ -983,7 +1004,7 @@ namespace Plugin {
         Output* _output;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         Observers _observers;
-        Bridge _clientBridge;
+        DescriptorExchange _descriptorExchange;
         std::mutex _clientLock;
         Clients _clients;
         uint64_t _lastFrame;
@@ -994,6 +1015,7 @@ namespace Plugin {
         std::string _renderNode;
         Presenter _present;
         std::atomic<State> _state;
+        bool _autoScale;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
