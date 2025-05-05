@@ -171,7 +171,7 @@ namespace Plugin {
     {
         string message;
         string result;
-        
+
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
         ASSERT(_composition == nullptr);
@@ -186,19 +186,15 @@ namespace Plugin {
 
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
 
-        if ((config.BufferConnector.IsSet() == true) && (config.BufferConnector.Value().empty() == false)) {
-            std::string bufferPath = service->VolatilePath() + config.BufferConnector.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_BUFFER_CONNECTOR"), bufferPath, true);
-        }
-
-        if ((config.DisplayConnector.IsSet() == true) && (config.DisplayConnector.Value().empty() == false)) {
-            std::string displayPath = service->VolatilePath() + config.DisplayConnector.Value();
-            Core::SystemInfo::SetEnvironment(_T("COMPOSITOR_DISPLAY_CONNECTOR"), displayPath, true);
-        }
-
         // See if the mandatory XDG environment variable is set, otherwise we will set it.
         if (Core::SystemInfo::GetEnvironment(_T("XDG_RUNTIME_DIR"), result) == false) {
-            string runTimeDir((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->PersistentPath() + config.WorkDir.Value());
+            string runTimeDir;
+
+            if (config.WorkDir.IsSet() == true) {
+                runTimeDir = ((config.WorkDir.Value()[0] == '/') ? config.WorkDir.Value() : service->VolatilePath() + config.WorkDir.Value());
+            } else {
+                runTimeDir = service->VolatilePath();
+            }
 
             Core::SystemInfo::SetEnvironment(_T("XDG_RUNTIME_DIR"), runTimeDir);
 
@@ -461,19 +457,17 @@ namespace Plugin {
             if ((pos = name.find_first_of(':')) == string::npos) {
                 if (_newOnTop == true) {
                     list.push_front(entry);
-                }
-                else {
+                } else {
                     list.push_back(entry);
                 }
-            }
-            else {
+            } else {
                 int value = 1;
                 // Make sure the entry we add is in the right order. Video below Graphics...
                 std::list<client_info>::iterator index = list.begin();
-                string comparison = name.substr(0, pos+1);
+                string comparison = name.substr(0, pos + 1);
 
                 while ((index != list.end()) && (value != 0)) {
-                    string rhs = (*index).name.substr(0, pos+1);
+                    string rhs = (*index).name.substr(0, pos + 1);
                     value = comparison.compare(rhs);
                     TRACE(Trace::Information, (_T("Comparison: [%s] == [%s] => [%d]"), comparison.c_str(), rhs.c_str(), value));
                     if (value != 0) {
@@ -486,17 +480,14 @@ namespace Plugin {
                     // No entry found yet, pushto front than
                     if (_newOnTop == true) {
                         list.push_front(entry);
-                    }
-                    else {
+                    } else {
                         list.push_back(entry);
                     }
-                }
-                else {
+                } else {
                     // We got an entry, where do we want to put ours ?
-                    if  ( (name[pos+1] == 'g') || (name[pos+1] == '1') ) {
+                    if ((name[pos + 1] == 'g') || (name[pos + 1] == '1')) {
                         TRACE(Trace::Information, (_T("Sub Client [%s]:[graphics] was found it is inserted before video: %s"), name.substr(0, pos).c_str(), (*index).name.c_str()));
-                    }
-                    else {
+                    } else {
                         TRACE(Trace::Information, (_T("Sub Client [%s]:[video] was found it is inserted after graphics video: %s"), name.substr(0, pos).c_str(), (*index).name.c_str()));
                         index++;
                     }
@@ -658,7 +649,7 @@ namespace Plugin {
 
     Exchange::IComposition::Rectangle Compositor::Geometry(const string& callsign) const
     {
-        Exchange::IComposition::Rectangle result{ 0, 0, 0, 0 };
+        Exchange::IComposition::Rectangle result { 0, 0, 0, 0 };
         Exchange::IComposition::IClient* client(InterfaceByCallsign(callsign));
 
         if (client != nullptr) {
@@ -736,8 +727,7 @@ namespace Plugin {
                 Rearrange(list, startIndex, relativeIndex - startIndex, 0, callsignEndIndex - callsignStartIndex + 1);
             }
             TRACE(Trace::Information, (_T("Client surface %s is put below surface %s"), callsign.c_str(), relative.c_str()));
-        }
-        else {
+        } else {
             // It might be an error if a surface was requested that did not exist, or it was a service that is already on top
             // not a real issue but a bit strage to ask. Maybe for the first one we could define an error..
         }

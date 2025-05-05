@@ -76,8 +76,6 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
 if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
     configuration.add("height", "@PLUGIN_COMPOSITOR_CANVAS_HEIGHT@")
     configuration.add("width", "@PLUGIN_COMPOSITOR_CANVAS_WIDTH@")
-    configuration.add("bufferconnector", "@PLUGIN_COMPOSITOR_BUFFER_CONNECTOR@")
-    configuration.add("displayconnector", "@PLUGIN_COMPOSITOR_DISPLAY_CONNECTOR@")
     
     if "@PLUGIN_COMPOSITOR_RENDER_NODE@":
         configuration.add("render", "@PLUGIN_COMPOSITOR_RENDER_NODE@")

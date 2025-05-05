@@ -94,7 +94,7 @@ namespace RPCLink {
             uint32_t errorCode = Core::ERROR_UNAVAILABLE;
 
             if (_power != nullptr) {
-                outState = _power->GetState();
+                _power->GetState(outState);
                 errorCode = Core::ERROR_NONE;
             }
 

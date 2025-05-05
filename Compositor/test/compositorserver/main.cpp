@@ -27,7 +27,7 @@
 #include <plugins/plugins.h>
 
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 #include <compositorbuffer/CompositorBufferType.h>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)

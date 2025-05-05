@@ -181,7 +181,7 @@ namespace Plugin {
                 _job.Reschedule(Core::Time::Now().Add(_interval * 1000));
             }
 
-            void GetTotalTime(Core::process_t pid)
+            void GetTotalTime(pid_t pid)
             {
                 std::ifstream stat("/proc/stat");
                 if (!stat.is_open()) {
@@ -202,7 +202,7 @@ namespace Plugin {
                 _processTimeInfo[pid].totalTime = user + nice + system + idle + iowait + irq + softirq + steal + guest;
             }
 
-            void GetProcessTimes(Core::process_t pid)
+            void GetProcessTimes(pid_t pid)
             {
                 std::ostringstream pathToSmaps;
                 pathToSmaps << "/proc/" << pid << "/stat";
@@ -223,7 +223,7 @@ namespace Plugin {
                 stat >> _processTimeInfo[pid].uTime >> _processTimeInfo[pid].sTime;
             }
 
-            void CalculateCpuUsage(Core::process_t pid)
+            void CalculateCpuUsage(pid_t pid)
             {
                 GetTotalTime(pid);
                 GetProcessTimes(pid);
@@ -270,7 +270,7 @@ namespace Plugin {
             double _userCpuTime;
             double _systemCpuTime;
 
-            std::map<Core::process_t, Time> _processTimeInfo;
+            std::map<pid_t, Time> _processTimeInfo;
 
             CSVFile _logfile;
             uint32_t _interval;

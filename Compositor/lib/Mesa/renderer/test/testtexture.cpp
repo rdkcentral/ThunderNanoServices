@@ -121,7 +121,7 @@ public:
 
         ASSERT(_connector.IsValid());
 
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(textureTv));
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
 
         NewFrame();
     }
@@ -211,11 +211,11 @@ private:
 
         _renderer->End(false);
 
+        _renderer->Unbind(frameBuffer);
+
         _connector->Commit();
 
         WaitForVSync(100);
-
-        _renderer->Unbind(frameBuffer);
 
         rotation += _period.count() * (2. * M_PI) / (_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 

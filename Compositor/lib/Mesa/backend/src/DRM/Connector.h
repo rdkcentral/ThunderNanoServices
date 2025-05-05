@@ -42,8 +42,8 @@ namespace Compositor {
                     , _fd(-1)
                     , _activePlane(~0)
                 {
-                    _buffer[0] = Core::ProxyType<Exchange::ICompositionBuffer>();
-                    _buffer[1] = Core::ProxyType<Exchange::ICompositionBuffer>();
+                    _buffer[0] = Core::ProxyType<Exchange::IGraphicsBuffer>();
+                    _buffer[1] = Core::ProxyType<Exchange::IGraphicsBuffer>();
                 }
                 ~FrameBufferImplementation()
                 {
@@ -117,7 +117,7 @@ namespace Compositor {
                 {
                     return (_buffer[0]->Modifier());
                 }
-                Exchange::ICompositionBuffer::DataType Type() const
+                Exchange::IGraphicsBuffer::DataType Type() const
                 {
                     return (_buffer[0]->Type());
                 }
@@ -125,7 +125,7 @@ namespace Compositor {
                 {
                     return _frameId[_activePlane];
                 }
-                Core::ProxyType<Exchange::ICompositionBuffer> Buffer() const
+                Core::ProxyType<Exchange::IGraphicsBuffer> Buffer() const
                 {
                     return _buffer[_activePlane];
                 }
@@ -145,7 +145,7 @@ namespace Compositor {
                 Core::CriticalSection _swap;
                 int _fd;
                 uint8_t _activePlane;
-                Core::ProxyType<Exchange::ICompositionBuffer> _buffer[2];
+                Core::ProxyType<Exchange::IGraphicsBuffer> _buffer[2];
                 Compositor::DRM::Identifier _frameId[2];
                 Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer[2];
             };
@@ -202,7 +202,7 @@ namespace Compositor {
             }
 
             /**
-             * Exchange::ICompositionBuffer implementation
+             * Exchange::IGraphicsBuffer implementation
              *
              * Returning the info of the back buffer because its used to
              * draw a new frame.
@@ -231,7 +231,7 @@ namespace Compositor {
             {
                 return (_frameBuffer.Modifier());
             }
-            Exchange::ICompositionBuffer::DataType Type() const
+            Exchange::IGraphicsBuffer::DataType Type() const
             {
                 return (_frameBuffer.Type());
             }
