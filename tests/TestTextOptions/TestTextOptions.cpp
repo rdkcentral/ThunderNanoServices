@@ -17,14 +17,14 @@
 * limitations under the License.
 */
 
-#include "TestPlugin.h"
+#include "TestTextOptions.h"
 
 namespace Thunder {
 namespace Plugin {
     
     namespace {
         
-        static Metadata<TestPlugin>metadata(
+        static Metadata<TestTextOptions>metadata(
             // Version
             1, 0, 0,
             // Preconditions
@@ -36,7 +36,7 @@ namespace Plugin {
         );
     }
     
-    const string TestPlugin::Initialize(PluginHost::IShell* service) {
+    const string TestTextOptions::Initialize(PluginHost::IShell* service) {
         string message;
         
         ASSERT(_service == nullptr);
@@ -51,7 +51,7 @@ namespace Plugin {
         _service->AddRef();
         _service->Register(&_notification);
         
-        _implTestTextOptions = service->Root<QualityAssurance::ITestTextOptions>(_connectionId, timeout, _T("TestPluginImplementation"));
+        _implTestTextOptions = service->Root<QualityAssurance::ITestTextOptions>(_connectionId, timeout, _T("TestTextOptionsImplementation"));
         if (_implTestTextOptions == nullptr) {
             message = _T("Couldn't create instance of implTestTextOptions");
         } else {
@@ -79,7 +79,7 @@ namespace Plugin {
         return (message);
     }
     
-    void TestPlugin::Deinitialize(PluginHost::IShell* service) {
+    void TestTextOptions::Deinitialize(PluginHost::IShell* service) {
         
         ASSERT(_service == service);
         
@@ -124,17 +124,16 @@ namespace Plugin {
         _connectionId = 0;
     }
     
-    string TestPlugin::Information() const {
+    string TestTextOptions::Information() const {
         return (string());
     }
 
     
-    void TestPlugin::Deactivated(RPC::IRemoteConnection* connection) {
+    void TestTextOptions::Deactivated(RPC::IRemoteConnection* connection) {
         if (connection->Id() == _connectionId) {
             ASSERT(_service != nullptr);
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
-    }
-    
+    }   
 } // Plugin
 } // Thunder

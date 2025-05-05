@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(TestPlugin)
+project(TestTextOptions)
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -27,8 +27,8 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-set(PLUGIN_TESTPLUGIN_STARTMODE "Activated" CACHE STRING "Automatically start TestPlugin plugin")
-set(PLUGIN_TESTPLUGIN_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process, container or remote.")
+set(PLUGIN_TESTTEXTOPTIONS_STARTMODE "Activated" CACHE STRING "Automatically start TestTextOptions plugin")
+set(PLUGIN_TESTTEXTOPTIONS_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process, container or remote.")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -40,8 +40,8 @@ find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
-    TestPlugin.cpp
-    TestPluginImplementation.cpp
+    TestTextOptions.cpp
+    TestTextOptionsImplementation.cpp
     Module.cpp
 )
 

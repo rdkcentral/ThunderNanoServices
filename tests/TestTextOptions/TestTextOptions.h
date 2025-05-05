@@ -21,22 +21,22 @@
 
 #include "Module.h"
 #include <qa_interfaces/ITestAutomation.h>
-#include <qa_generated/JTestTextOptions.h>
-#include <qa_generated/JTestTextOptionsTestCustom.h>
-#include <qa_generated/JTestTextOptionsTestKeep.h>
-#include <qa_generated/JTestTextOptionsTestLegacy.h>
+#include <qa_interfaces/json/JTestTextOptions.h>
+#include <qa_interfaces/json/JTestTextOptionsTestCustom.h>
+#include <qa_interfaces/json/JTestTextOptionsTestKeep.h>
+#include <qa_interfaces/json/JTestTextOptionsTestLegacy.h>
 
 namespace Thunder {
 namespace Plugin {
     
-    class TestPlugin : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class TestTextOptions : public PluginHost::IPlugin, public PluginHost::JSONRPC {
     public:
-        TestPlugin(const TestPlugin&) = delete;
-        TestPlugin& operator=(const TestPlugin&) = delete;
-        TestPlugin(TestPlugin&&) = delete;
-        TestPlugin& operator=(TestPlugin&&) = delete;
+        TestTextOptions(const TestTextOptions&) = delete;
+        TestTextOptions& operator=(const TestTextOptions&) = delete;
+        TestTextOptions(TestTextOptions&&) = delete;
+        TestTextOptions& operator=(TestTextOptions&&) = delete;
         
-        TestPlugin()
+        TestTextOptions()
             : PluginHost::IPlugin()
             , PluginHost::JSONRPC()
             , _service(nullptr)
@@ -49,61 +49,99 @@ namespace Plugin {
         {
         }
 
-        ~TestPlugin() override = default;
+        ~TestTextOptions() override = default;
     private:
-        class Notification : public RPC::IRemoteConnection::INotification, 
-                             public QualityAssurance::ITestTextOptions::INotification, 
-                             public QualityAssurance::ITestTextOptions::ITestLegacy::INotification, 
-                             public QualityAssurance::ITestTextOptions::ITestKeep::INotification, 
-                             public QualityAssurance::ITestTextOptions::ITestCustom::INotification {
+        class Notification;
+
+        class NotificationTestTextOptions : public QualityAssurance::ITestTextOptions::INotification {
+        public:
+            explicit NotificationTestTextOptions(Notification& parent)
+                : _parent(parent)
+                {
+                }
+
+            void TestEvent() override {
+                QualityAssurance::JTestTextOptions::Event::TestEvent(_parent.Parent());
+            }
+        private:
+            Notification& _parent;
+        };
+
+        class NotificationTestLegacy : public QualityAssurance::ITestTextOptions::ITestLegacy::INotification {
+        public:
+            explicit NotificationTestLegacy(Notification& parent)
+                : _parent(parent)
+                {
+                }
+
+            void TestEvent() override {
+                QualityAssurance::TestTextOptions::JTestLegacy::Event::TestEvent(_parent.Parent());
+            }
+        private:
+            Notification& _parent;
+        };
+
+        class NotificationTestKeep : public QualityAssurance::ITestTextOptions::ITestKeep::INotification {
+        public:
+            explicit NotificationTestKeep(Notification& parent)
+                : _parent(parent)
+                {
+                }
+
+            void TestEvent() override {
+                QualityAssurance::TestTextOptions::JTestKeep::Event::TestEvent(_parent.Parent());
+            }
+        private:
+            Notification& _parent;
+        };
+
+        class NotificationTestCustom : public QualityAssurance::ITestTextOptions::ITestCustom::INotification {
+        public:
+            explicit NotificationTestCustom(Notification& parent)
+                : _parent(parent)
+                {
+                }
+
+            void TestEvent() override {
+                QualityAssurance::TestTextOptions::JTestCustom::Event::TestEvent(_parent.Parent());
+            }
+        private:
+            Notification& _parent;
+        };
+
+        class Notification : public RPC::IRemoteConnection::INotification,
+                            public NotificationTestTextOptions,
+                            public NotificationTestLegacy,
+                            public NotificationTestKeep,
+                            public NotificationTestCustom {
         public:
             Notification(const Notification&) = delete;
             Notification& operator=(const Notification&) = delete;
             Notification(Notification&&) = delete;
             Notification& operator=(Notification&&) = delete;
             Notification() = delete;
-            
-            explicit Notification(TestPlugin& parent)
+
+            explicit Notification(TestTextOptions& parent)
                 : RPC::IRemoteConnection::INotification()
-                , QualityAssurance::ITestTextOptions::INotification()
-                , QualityAssurance::ITestTextOptions::ITestLegacy::INotification()
-                , QualityAssurance::ITestTextOptions::ITestKeep::INotification()
-                , QualityAssurance::ITestTextOptions::ITestCustom::INotification()
+                , NotificationTestTextOptions(*this)
+                , NotificationTestLegacy(*this)
+                , NotificationTestKeep(*this)
+                , NotificationTestCustom(*this)
                 , _parent(parent)
-            {
+            { 
             }
-            
+
             ~Notification() override = default;
-            
-            void Activated(RPC::IRemoteConnection*) override
-            {
-            }
-            
-            void Deactivated(RPC::IRemoteConnection* connection) override
-            {
+
+            void Activated(RPC::IRemoteConnection*) override {}
+            void Deactivated(RPC::IRemoteConnection* connection) override {
                 _parent.Deactivated(connection);
             }
-            
-            // TestEvent for ITestTextOptions::INotification
-            void TestEvent() override {
-                QualityAssurance::JTestTextOptions::Event::TestEvent(_parent);
+
+            TestTextOptions& Parent() {
+                return _parent;
             }
 
-            // TestEvent for ITestTextOptions::ITestLegacy::INotification
-            void TestEvent() override {
-                QualityAssurance::TestTextOptions::JTestLegacy::Event::TestEvent(_parent);
-            }
-
-            // TestEvent for ITestTextOptions::ITestKeep::INotification
-            void TestEvent() override {
-                QualityAssurance::TestTextOptions::JTestKeep::Event::TestEvent(_parent);
-            }
-
-            // TestEvent for ITestTextOptions::ITestCustom::INotification
-            void TestEvent() override {
-                QualityAssurance::TestTextOptions::JTestCustom::Event::TestEvent(_parent);
-            }
-            
             BEGIN_INTERFACE_MAP(Notification)
                 INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
                 INTERFACE_ENTRY(QualityAssurance::ITestTextOptions::INotification)
@@ -111,8 +149,9 @@ namespace Plugin {
                 INTERFACE_ENTRY(QualityAssurance::ITestTextOptions::ITestKeep::INotification)
                 INTERFACE_ENTRY(QualityAssurance::ITestTextOptions::ITestCustom::INotification)
             END_INTERFACE_MAP
+
         private:
-            TestPlugin& _parent;
+            TestTextOptions& _parent;
         };
     public:
         // IPlugin Methods
@@ -122,7 +161,7 @@ namespace Plugin {
         
         void Deactivated(RPC::IRemoteConnection* connection);
         
-        BEGIN_INTERFACE_MAP(TestPlugin)
+        BEGIN_INTERFACE_MAP(TestTextOptions)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
             INTERFACE_AGGREGATE(QualityAssurance::ITestTextOptions, _implTestTextOptions)

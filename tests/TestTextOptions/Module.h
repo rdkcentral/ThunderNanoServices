@@ -20,7 +20,7 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_TestPlugin
+#define MODULE_NAME Plugin_TestTextOptions
 #endif
 
 #include <core/core.h>

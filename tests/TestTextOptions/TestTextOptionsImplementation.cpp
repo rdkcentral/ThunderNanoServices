@@ -23,28 +23,28 @@
 namespace Thunder {
 namespace Plugin {
     
-    class TestPluginImplementation : public QualityAssurance::ITestTextOptions, 
+    class TestTextOptionsImplementation : public QualityAssurance::ITestTextOptions, 
                                      public QualityAssurance::ITestTextOptions::ITestLegacy, 
                                      public QualityAssurance::ITestTextOptions::ITestKeep, 
                                      public QualityAssurance::ITestTextOptions::ITestCustom {
     public:
-        TestPluginImplementation(const TestPluginImplementation&) = delete;
-        TestPluginImplementation& operator=(const TestPluginImplementation&) = delete;
-        TestPluginImplementation(TestPluginImplementation&&) = delete;
-        TestPluginImplementation& operator=(TestPluginImplementation&&) = delete;
+        TestTextOptionsImplementation(const TestTextOptionsImplementation&) = delete;
+        TestTextOptionsImplementation& operator=(const TestTextOptionsImplementation&) = delete;
+        TestTextOptionsImplementation(TestTextOptionsImplementation&&) = delete;
+        TestTextOptionsImplementation& operator=(TestTextOptionsImplementation&&) = delete;
         
-        TestPluginImplementation()
+        TestTextOptionsImplementation()
             : QualityAssurance::ITestTextOptions()
             , QualityAssurance::ITestTextOptions::ITestLegacy()
             , QualityAssurance::ITestTextOptions::ITestKeep()
             , QualityAssurance::ITestTextOptions::ITestCustom()
         {
         }
-        ~TestPluginImplementation() override = default;
+        ~TestTextOptionsImplementation() override = default;
         
     public:
         
-        BEGIN_INTERFACE_MAP(TestPluginImplementation)
+        BEGIN_INTERFACE_MAP(TestTextOptionsImplementation)
             INTERFACE_ENTRY(QualityAssurance::ITestTextOptions)
             INTERFACE_ENTRY(QualityAssurance::ITestTextOptions::ITestLegacy)
             INTERFACE_ENTRY(QualityAssurance::ITestTextOptions::ITestKeep)
@@ -52,25 +52,29 @@ namespace Plugin {
         END_INTERFACE_MAP
         
         // ITestTextOptions methods
-        Core::hresult TestStandart(const uint32_t firstTestParam, const uint32_t secondTestParam, const ITestTextOptions::TestDetails& thirdTestParam, const ITestTextOptions::EnumTextOptions fourthTestParam) override {
+        Core::hresult TestStandart(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED, 
+        const QualityAssurance::ITestTextOptions::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
             return Core::ERROR_NONE;
         }
        
         // ITestLegacy methods
-        Core::hresult TestLegacy(const uint32_t firstTestParam, const uint32_t secondTestParam, const ITestLegacy::TestDetails& thirdTestParam, const ITestLegacy::EnumTextOptions fourthTestParam) override {
+        Core::hresult TestLegacy(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
+        const QualityAssurance::ITestTextOptions::ITestLegacy::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestLegacy::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
             return Core::ERROR_NONE;
         }
         
         // ITestKeep methods
-        Core::hresult TestKeeP(const uint32_t firstTestParaM, const uint32_t secondTestParaM, const ITestKeep::TestDetails& thirdTestParaM, const ITestKeep::EnumTextOptions fourthTestParaM) override {
+        Core::hresult TestKeeP(const uint32_t firstTestParaM VARIABLE_IS_NOT_USED, const uint32_t secondTestParaM VARIABLE_IS_NOT_USED,
+        const QualityAssurance::ITestTextOptions::ITestKeep::TestDetails& thirdTestParaM VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestKeep::EnumTextOptions fourthTestParaM VARIABLE_IS_NOT_USED) override {
             return Core::ERROR_NONE;
         }        
         // ITestCustom methods
-        Core::hresult TestCustom(const uint32_t firstTestParam, const uint32_t secondTestParam, const ITestCustom::TestDetails& thirdTestParam, const ITestCustom::EnumTextOptions fourthTestParam) override {
+        Core::hresult TestCustom(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
+        const QualityAssurance::ITestTextOptions::ITestCustom::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestCustom::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
             return Core::ERROR_NONE;
         }
     };
     
-    SERVICE_REGISTRATION(TestPluginImplementation, 1, 0)
+    SERVICE_REGISTRATION(TestTextOptionsImplementation, 1, 0)
 } // Plugin
 } // Thunder
