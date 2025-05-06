@@ -115,7 +115,7 @@ namespace Plugin {
                 // It should have been the last reference we are releasing,
                 // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
                 // are leaking...
-                ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
+                ASSERT( (result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
                 // The process can disappear in the meantime...
                 if (connection != nullptr) {

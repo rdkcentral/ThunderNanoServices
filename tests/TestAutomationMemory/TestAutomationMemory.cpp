@@ -152,7 +152,7 @@ namespace Plugin {
 
             VARIABLE_IS_NOT_USED uint32_t result =  _memoryTestInterface->Release();
         
-            ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
+            ASSERT( (result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
             if(connection != nullptr){
                 connection->Terminate();
