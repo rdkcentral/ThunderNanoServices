@@ -122,7 +122,7 @@ namespace Plugin
             _wifiControl->Unregister(&_wifiNotification);
 
             VARIABLE_IS_NOT_USED uint32_t result = _wifiControl->Release();
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            ASSERT( (result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
             _wifiControl = nullptr;
         }
 
