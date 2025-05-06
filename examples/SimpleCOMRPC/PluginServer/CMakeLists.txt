@@ -40,6 +40,12 @@ set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_STANDARD 11
     CXX_STANDARD_REQUIRED YES)
 
+target_include_directories(
+    ${MODULE_NAME}
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../SimpleCOMRPCInterface/
+)
+
 target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug

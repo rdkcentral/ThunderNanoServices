@@ -314,7 +314,6 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, string& psPat
     return (showHelp);
 }
 
-
 int main(int argc, char* argv[])
 {
     // The core::NodeId can hold an IPv4, IPv6, domain, HCI, L2CAP or netlink address

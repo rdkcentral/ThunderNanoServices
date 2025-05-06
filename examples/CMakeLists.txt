@@ -89,6 +89,10 @@ if (EXAMPLE_SIMPLECOMRPC_TEST)
     add_subdirectory(SimpleCOMRPC/Client)
 endif()
 
+if (EXAMPLE_SIMPLECOMRPC_TEST)
+        add_subdirectory(SimpleCOMRPCServer)
+endif()
+
 if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)
     add_subdirectory(DynamicJSONRPCErrorMessage)
 endif()
