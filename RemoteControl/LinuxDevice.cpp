@@ -637,7 +637,62 @@ namespace Plugin {
         }
 
     private:
-        void Refresh()
+        void FindDevicesFromProperties()
+        {
+            struct udev *udev;
+            struct udev_enumerate *enumerate;
+            struct udev_list_entry *devices, *devListEntry;
+
+            udev = udev_new();
+            if (udev) {
+                enumerate = udev_enumerate_new(udev);
+                udev_enumerate_add_match_subsystem(enumerate, "input");
+                udev_enumerate_scan_devices(enumerate);
+                devices = udev_enumerate_get_list_entry(enumerate);
+
+                udev_list_entry_foreach(devListEntry, devices) {
+                    const char *path;
+                    struct udev_device *dev;
+                    const char *devnode, *isKeyboard, *isMouse;
+
+                    path = udev_list_entry_get_name(devListEntry);
+                    dev = udev_device_new_from_syspath(udev, path);
+
+                    devnode = udev_device_get_devnode(dev);
+                    if (devnode && strstr(devnode, "/event")) {
+                        Core::File entry(devnode);
+                        if (!entry.Open(true))
+                            TRACE(Trace::Information, (_T("Failed to open input device: %s"), entry.Name().c_str()));
+                        else {
+                            int fd = entry.DuplicateHandle();
+                            std::map<string, std::pair<int, IDevInputDevice*>>::iterator itDevices(_devices.find(entry.Name()));
+                            if (itDevices == _devices.end()) {
+                                isKeyboard = udev_device_get_property_value(dev, "ID_INPUT_KEYBOARD");
+                                isMouse = udev_device_get_property_value(dev, "ID_INPUT_MOUSE");
+                                if (isKeyboard && strcmp(isKeyboard, "1") == 0) {
+                                    ASSERT(_inputDevices.size() >= 1);
+                                    ASSERT(_inputDevices[0] != nullptr);
+                                    TRACE(Trace::Information, (_T("Opening keyboard input device: %s"), entry.Name().c_str()));
+                                    _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, _inputDevices[0])));
+                                } else if (isMouse && strcmp(isMouse, "1") == 0) {
+                                    ASSERT(_inputDevices.size() >= 3);
+                                    ASSERT(_inputDevices[2] != nullptr);
+                                    TRACE(Trace::Information, (_T("Opening mouse input device: %s"), entry.Name().c_str()));
+                                    _devices.insert(std::make_pair(entry.Name(), std::make_pair(fd, _inputDevices[2])));
+                                }
+                            }
+                        }
+                    }
+
+                    udev_device_unref(dev);
+                }
+
+                udev_enumerate_unref(enumerate);
+                udev_unref(udev);
+            }
+        }
+
+        void FindDevicesFromNames()
         {
             // find devices in /dev/input/
             Core::Directory dir(Locator);
@@ -679,7 +734,12 @@ namespace Plugin {
                     }
                 }
             }
+        }
 
+        void Refresh()
+        {
+            FindDevicesFromProperties();
+            FindDevicesFromNames();
             for (auto& device : _inputDevices) {
                 device->Setup();
             }

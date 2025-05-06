@@ -106,7 +106,7 @@ namespace Compositor {
                 GLESFrameBuffer(const GLESFrameBuffer&) = delete;
                 GLESFrameBuffer& operator=(const GLESFrameBuffer&) = delete;
 
-                GLESFrameBuffer(const GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                GLESFrameBuffer(const GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : _parent(parent)
                     , _external(false)
                     , _eglImage()
@@ -662,7 +662,7 @@ namespace Compositor {
                 GLESTexture& operator=(GLESTexture&&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
-                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::ICompositionBuffer>& buffer)
+                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : _parent(parent)
                     , _target(GL_TEXTURE_2D)
                     , _textureId(0)
@@ -673,11 +673,11 @@ namespace Compositor {
 
                     _parent.Add(this);
 
-                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_DMA) {
+                    if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
                         ImportDMABuffer();
                     }
 
-                    if (buffer->Type() == Exchange::ICompositionBuffer::TYPE_RAW) {
+                    if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
                         ImportPixelBuffer();
                     }
 
@@ -711,7 +711,7 @@ namespace Compositor {
                 bool Invalidate()
                 {
                     bool result(
-                        (_buffer->Type() != Exchange::ICompositionBuffer::TYPE_DMA)
+                        (_buffer->Type() != Exchange::IGraphicsBuffer::TYPE_DMA)
                         || ((_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES)));
 
                     if ((_image != EGL_NO_IMAGE) && (_target != GL_TEXTURE_EXTERNAL_OES)) {
@@ -804,7 +804,7 @@ namespace Compositor {
 
                 void ImportPixelBuffer()
                 {
-                    Exchange::ICompositionBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
+                    Exchange::IGraphicsBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
 
                     // uint8_t index(0);
 
@@ -844,7 +844,7 @@ namespace Compositor {
                 GLenum _target;
                 GLuint _textureId;
                 EGLImageKHR _image;
-                Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+                Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
             }; //  class GLESTexture
 
         public:
@@ -1024,12 +1024,12 @@ namespace Compositor {
                 PopDebug();
             }
 
-            Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
+            Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
                 return (Core::ProxyType<IFrameBuffer>(Core::ProxyType<GLESFrameBuffer>::Create(*this, buffer)));
             };
 
-            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) override
+            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
                 return (Core::ProxyType<ITexture>(Core::ProxyType<GLESTexture>::Create(*this, buffer)));
             };
@@ -1093,9 +1093,9 @@ namespace Compositor {
             {
                 return _egl.Formats();
             }
-            Core::ProxyType<Exchange::ICompositionBuffer> Bound() const override
+            Core::ProxyType<Exchange::IGraphicsBuffer> Bound() const override
             {
-                return (Core::ProxyType<Exchange::ICompositionBuffer>());
+                return (Core::ProxyType<Exchange::IGraphicsBuffer>());
             }
 
             const Matrix& Projection() const

@@ -79,12 +79,16 @@ namespace Plugin {
 
         power_initialize(PowerStateChange, this, service->ConfigLine().c_str(), persistedState);
 
+        Exchange::JPower::Register(*this, this);
+
         return message;
     }
 
     /* virtual */ void Power::Deinitialize(PluginHost::IShell* service)
     {
         if (service != nullptr) {
+
+            Exchange::JPower::Unregister(*this);
 
             // No need to monitor the Process::Notification anymore, we will kill it anyway.
             if (_controlClients)
@@ -166,8 +170,10 @@ namespace Plugin {
         return result;
     }
 
-    void Power::Register(Exchange::IPower::INotification* sink)
+    Core::hresult Power::Register(Exchange::IPower::INotification* const sink)
     {
+        Core::hresult result = Core::ERROR_ALREADY_CONNECTED;
+
         ASSERT(sink != nullptr);
 
         _adminLock.Lock();
@@ -180,13 +186,19 @@ namespace Plugin {
             _notificationClients.push_back(sink);
             sink->AddRef();
             TRACE(Trace::Information, (_T("Registered a sink on the power")));
+
+            result = Core::ERROR_NONE;
         }
 
         _adminLock.Unlock();
+
+        return (result);
     }
 
-    void Power::Unregister(Exchange::IPower::INotification* sink)
+    Core::hresult Power::Unregister(const Exchange::IPower::INotification* const sink)
     {
+        Core::hresult result = Core::ERROR_ALREADY_RELEASED;
+
         ASSERT(sink != nullptr);
 
         _adminLock.Lock();
@@ -200,17 +212,24 @@ namespace Plugin {
             (*index)->Release();
             _notificationClients.erase(index);
             TRACE(Trace::Information, (_T("Unregistered a sink on the power")));
+
+            result = Core::ERROR_NONE;
         }
 
         _adminLock.Unlock();
+
+        return (result);
     }
 
-    Exchange::IPower::PCState Power::GetState() const /* override */ {
-        return (power_get_state());
+    Core::hresult Power::GetState(Exchange::IPower::PCState& state) const
+    {
+        state = power_get_state();
+
+        return (Core::ERROR_NONE);
     }
 
-    uint32_t Power::SetState(const Exchange::IPower::PCState state, const uint32_t waitTime) /* override */ {
-        uint32_t result = Core::ERROR_ILLEGAL_STATE;
+    Core::hresult Power::SetState(const Exchange::IPower::PCState& state, const uint32_t waitTime) /* override */ {
+        Core::hresult result = Core::ERROR_ILLEGAL_STATE;
 
         if (power_get_state() == state) {
             result = Core::ERROR_DUPLICATE_KEY;
@@ -230,6 +249,7 @@ namespace Plugin {
 
         return (result);
     }
+
     void Power::PowerChange(const Exchange::IPower::PCState state, const Exchange::IPower::PCPhase phase) {
 
         if ((state == Exchange::IPower::PCState::On) && (Exchange::IPower::After == phase)) {
@@ -246,6 +266,8 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+
+        Exchange::JPower::Event::StateChange(*this, _currentState, state, phase);
 
         if (Exchange::IPower::After == phase) {
             /* May be resuming from another power state; lets update persisted state. */

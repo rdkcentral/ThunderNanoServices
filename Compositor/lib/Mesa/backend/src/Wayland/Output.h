@@ -22,7 +22,7 @@
 #include <CompositorTypes.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 #include <DRM.h>
 
 #include "IOutput.h"
@@ -81,15 +81,15 @@ namespace Compositor {
 
             virtual ~WaylandOutput();
 
-            // ICompositionBuffer methods
-            Exchange::ICompositionBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
+            // IGraphicsBuffer methods
+            Exchange::IGraphicsBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
             void Relinquish() override;
 
             uint32_t Width() const override;
             uint32_t Height() const override;
             uint32_t Format() const override;
             uint64_t Modifier() const override;
-            Exchange::ICompositionBuffer::DataType Type() const override;
+            Exchange::IGraphicsBuffer::DataType Type() const override;
 
             // IOutput methods
             uint32_t Commit() override;
@@ -130,7 +130,7 @@ namespace Compositor {
             uint32_t _format;
             uint64_t _modifier;
             Compositor::Matrix _matrix;
-            Core::ProxyType<Exchange::ICompositionBuffer> _buffer;
+            Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
             Core::Event _signal;
             uint64_t _commitSequence;
             const Core::ProxyType<Compositor::IRenderer>& _renderer;

@@ -30,7 +30,7 @@
 #include <EGL/eglext.h>
 
 #include <CompositorTypes.h>
-#include <interfaces/ICompositionBuffer.h>
+#include <interfaces/IGraphicsBuffer.h>
 
 #include "RenderAPI.h"
 
@@ -77,7 +77,7 @@ namespace Compositor {
 
             const std::vector<PixelFormat>& Formats() const;
 
-            EGLImage CreateImage(/*const*/ Exchange::ICompositionBuffer* buffer, bool&) const;
+            EGLImage CreateImage(/*const*/ Exchange::IGraphicsBuffer* buffer, bool&) const;
 
             bool DestroyImage(EGLImage image) const;
 

@@ -209,10 +209,9 @@ private:
         _renderer->Begin(_connector->Width(), _connector->Height());
         _renderer->Clear(_color);
         _renderer->End();
+        _renderer->Unbind(frameBuffer);
 
         _connector->Commit();
-
-        _renderer->Unbind(frameBuffer);
 
         _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / _period.count()));
 

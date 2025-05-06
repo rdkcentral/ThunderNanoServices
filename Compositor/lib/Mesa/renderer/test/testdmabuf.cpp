@@ -119,7 +119,7 @@ public:
         TRACE_GLOBAL(Thunder::Trace::Information, ("created renderer: %p", _renderer.operator->()));
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(_renderFd, Texture::TvTexture);
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::ICompositionBuffer>(_textureBuffer));
+        _texture = _renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(_textureBuffer));
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
@@ -215,6 +215,8 @@ private:
 
         _renderer->End(false);
 
+        _renderer->Unbind(frameBuffer);
+
         uint32_t commit;
 
         if ((commit = _connector->Commit()) == Core::ERROR_NONE) {
@@ -223,8 +225,6 @@ private:
             TRACE(Trace::Error, ("Commit failed: %d", commit));
             std::this_thread::sleep_for(std::chrono::milliseconds(10)); // just throttle the render thread a bit.
         }
-
-        _renderer->Unbind(frameBuffer);
 
         rotation += _radPerFrame;
     }

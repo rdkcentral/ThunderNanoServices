@@ -117,20 +117,20 @@ namespace Compositor {
          *               for rendering.
          * @return A proxy to the created framebuffer object.
          */
-        virtual Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
+        virtual Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) = 0;
 
         /**
          * @brief Retrieves a texture representation from a composition buffer.
          *
-         * This method takes a proxy to an ICompositionBuffer and returns a proxy
+         * This method takes a proxy to an IGraphicsBuffer and returns a proxy
          * to an ITexture that represents the texture derived from the buffer.
          *
-         * @param buffer A proxy to the ICompositionBuffer from which the texture
+         * @param buffer A proxy to the IGraphicsBuffer from which the texture
          *               will be created.
          * @return A proxy to the ITexture representing the texture derived from
          *         the provided composition buffer.
          */
-        virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::ICompositionBuffer>& buffer) = 0;
+        virtual Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) = 0;
 
         /**
          * @brief   Renders a texture on the bound buffer at the given region with
@@ -163,10 +163,10 @@ namespace Compositor {
         /**
          * @brief  Returns the buffer currently bound to the renderer
          *
-         * @return ICompositionBuffer* or nullptr if no buffer is bound.
+         * @return IGraphicsBuffer* or nullptr if no buffer is bound.
          *
          */
-        virtual Core::ProxyType<Exchange::ICompositionBuffer> Bound() const = 0;
+        virtual Core::ProxyType<Exchange::IGraphicsBuffer> Bound() const = 0;
 
         /**
          * TODO: We probably want this so we can do screen dumps
@@ -174,7 +174,7 @@ namespace Compositor {
          * @brief Reads out of pixels of the currently bound buffer into data.
          *        `stride` is in bytes.
          */
-        // virtual uint32_t DumpPixels(uint32_t sourceX, uint32_t sourceY, uint32_t destinationX, uint32_t destinationY, Exchange::ICompositionBuffer* data) = 0;
+        // virtual uint32_t DumpPixels(uint32_t sourceX, uint32_t sourceY, uint32_t destinationX, uint32_t destinationY, Exchange::IGraphicsBuffer* data) = 0;
 
         /**
          * @brief Returns a list of pixel @PixelFormat valid for rendering.

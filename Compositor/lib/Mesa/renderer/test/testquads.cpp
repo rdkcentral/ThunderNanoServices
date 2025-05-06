@@ -207,11 +207,11 @@ private:
 
         _renderer->End();
 
+        _renderer->Unbind(frameBuffer);
+
         _connector->Commit();
 
         WaitForVSync(100);
-
-        _renderer->Unbind(frameBuffer);
 
         rotation += _period.count() * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
 
