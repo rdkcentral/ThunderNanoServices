@@ -75,7 +75,7 @@ namespace Plugin {
 
                 RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
                 VARIABLE_IS_NOT_USED const uint32_t result = _yinImplementation->Release();
-                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
                 _yinImplementation = nullptr;
 

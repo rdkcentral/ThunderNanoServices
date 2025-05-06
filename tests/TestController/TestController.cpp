@@ -122,7 +122,7 @@ namespace Plugin {
                 RPC::IRemoteConnection* connection(_service->RemoteConnection(_connection));
                 VARIABLE_IS_NOT_USED uint32_t result = _testControllerImp->Release();
                 _testControllerImp = nullptr;
-                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
                 // The connection can disappear in the meantime...
                 if (connection != nullptr) {

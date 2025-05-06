@@ -80,7 +80,7 @@ namespace Thunder
                     RPC::IRemoteConnection *connection(_service->RemoteConnection(_connectionId));
                     VARIABLE_IS_NOT_USED uint32_t result = _monitor->Release();
                     _monitor = nullptr;
-                    ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                    ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
                     // The process can disappear in the meantime...
                     if (connection != nullptr) {

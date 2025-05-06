@@ -198,7 +198,7 @@ void Cobalt::Deinitialize(PluginHost::IShell *service VARIABLE_IS_NOT_USED)
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
             VARIABLE_IS_NOT_USED uint32_t result = _cobalt->Release();
             _cobalt = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
             // The connection can disappear in the meantime...
             if (connection != nullptr) {

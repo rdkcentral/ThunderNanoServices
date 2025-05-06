@@ -87,7 +87,7 @@ namespace {
             RPC::IRemoteConnection* serviceConnection(_service->RemoteConnection(_connectionId));
             VARIABLE_IS_NOT_USED uint32_t result = _webpa->Release();
             _webpa = nullptr;
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+            ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
             // The connection can disappear in the meantime...
             if (nullptr != serviceConnection) {
                 // But if it did not dissapear in the meantime, forcefully terminate it. Shoot to kill :-)

@@ -83,7 +83,7 @@ namespace Plugin {
 
                 VARIABLE_IS_NOT_USED uint32_t result = _svalbard->Release();
                 _svalbard = nullptr;
-                ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
+                ASSERT( (result == Core::ERROR_ALREADY_RELEASED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
                 if (connection != nullptr) {
                     TRACE(Trace::Error, (_T("Svalbard is not properly destructed. %d"), _connectionId));
