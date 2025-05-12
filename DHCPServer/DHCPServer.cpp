@@ -18,7 +18,6 @@
  */
 
 #include "DHCPServer.h"
-#include <interfaces/json/JsonData_DHCPServer.h>
 
 namespace Thunder {
 namespace Plugin {
@@ -45,14 +44,14 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     DHCPServer::DHCPServer()
         : _skipURL(0)
         , _servers()
+        , _persistentPath()
+        , _adminLock()
     {
-        RegisterAll();
     }
 POP_WARNING()
 
     /* virtual */ DHCPServer::~DHCPServer()
     {
-        UnregisterAll();
     }
 
     /* virtual */ const string DHCPServer::Initialize(PluginHost::IShell* service)
@@ -93,12 +92,16 @@ POP_WARNING()
             }
         }
 
+        Exchange::JDHCPServer::Register(*this, this);
+
         // On success return empty, to indicate there is no error text.
         return (result);
     }
 
     /* virtual */ void DHCPServer::Deinitialize(PluginHost::IShell*)
     {
+        Exchange::JDHCPServer::Unregister(*this);
+
         std::map<const string, DHCPServerImplementation>::iterator index(_servers.begin());
 
         while (index != _servers.end()) {
@@ -253,6 +256,121 @@ POP_WARNING()
         if (dhcpServer != _servers.end()) {
             SaveLeases(interface, dhcpServer->second);
         }
+    }
+
+    Core::hresult DHCPServer::Activate(const string& interface)
+    {
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+
+        if (interface.empty() == false) {
+            _adminLock.Lock();
+            auto server(_servers.find(interface));
+
+            if (server != _servers.end()) {
+
+                if (server->second.IsActive() == false) {
+                    result = server->second.Open();
+                }
+                else {
+                    result = Core::ERROR_ILLEGAL_STATE;
+                }
+            }
+            _adminLock.Unlock();
+        }
+
+        return (result);
+    }
+
+    Core::hresult DHCPServer::Deactivate(const string& interface)
+    {
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+
+        if (interface.empty() == false) {
+            _adminLock.Lock();
+            auto server(_servers.find(interface));
+
+            if (server != _servers.end()) {
+
+                if (server->second.IsActive() == true) {
+                    result = server->second.Close();
+                } else {
+                    result = Core::ERROR_ILLEGAL_STATE;
+                }
+            }
+            _adminLock.Unlock();
+        }
+
+        return (result);
+    }
+
+    void DHCPServer::Fill(Exchange::IDHCPServer::Server& data, const DHCPServerImplementation& server) const
+    {
+        data.interface = server.Interface();
+        data.active = server.IsActive();
+
+        if (server.IsActive()) {
+            data.begin = server.BeginPool().HostAddress();
+            data.end = server.EndPool().HostAddress();
+            data.router = server.Router().HostAddress();
+
+            data.leases.Value() = std::vector<Exchange::IDHCPServer::Lease>();
+            auto it(server.Leases());
+
+            while (it.Next() == true) {
+                Exchange::IDHCPServer::Lease lease;
+                lease.name = it.Current().Id().Text();
+                lease.ip = it.Current().Address().HostAddress();
+
+                if (it.Current().Expiration() != 0) {
+                    lease.expires.Value() = Core::Time(it.Current().Expiration()).ToISO8601(true);
+                }
+                data.leases.Value().push_back(lease);
+            }
+        }
+    }
+
+    Core::hresult DHCPServer::Status(const Core::OptionalType<string>& interface, Exchange::IDHCPServer::IServerIterator*& servers) const
+    {
+        Core::hresult result = Core::ERROR_NONE;
+        std::list<Exchange::IDHCPServer::Server> serverList;
+
+        _adminLock.Lock();
+
+        if (interface.IsSet() == false) {
+            
+            DHCPServerMap::const_iterator index = _servers.begin();
+
+            while (index != _servers.end()) {
+                Exchange::IDHCPServer::Server server;
+                Fill(server, index->second);
+                serverList.push_back(server);
+                index++;
+            }
+        }
+        else {
+            DHCPServerMap::const_iterator index = _servers.find(interface);
+
+            if (index != _servers.end()) {
+                Exchange::IDHCPServer::Server server;
+                Fill(server, index->second);
+                serverList.push_back(server);
+            }
+            else {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+        }
+        _adminLock.Unlock();
+
+        if (serverList.empty() == false) {
+            using Iterator = Exchange::IDHCPServer::IServerIterator;
+            servers = Core::ServiceType<RPC::IteratorType<Iterator>>::Create<Iterator>(serverList);
+            ASSERT(servers != nullptr);
+        }
+        else {
+            servers = nullptr;
+        }
+
+        return (result);
     }
 
 } // namespace Plugin

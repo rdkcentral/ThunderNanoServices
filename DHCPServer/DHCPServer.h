@@ -20,13 +20,17 @@
 #pragma once
 
 #include "DHCPServerImplementation.h"
-#include <interfaces/json/JsonData_DHCPServer.h>
+#include <interfaces/IDHCPServer.h>
+#include <interfaces/json/JDHCPServer.h>
 #include "Module.h"
 
 namespace Thunder {
 namespace Plugin {
 
-    class DHCPServer : public PluginHost::IPlugin, public PluginHost::IWeb, public PluginHost::JSONRPC {
+    class DHCPServer : public Exchange::IDHCPServer
+                     , public PluginHost::IPlugin
+                     , public PluginHost::IWeb
+                     , public PluginHost::JSONRPC {
     public:
         class Data : public Core::JSON::Container {
         private:
@@ -253,6 +257,7 @@ namespace Plugin {
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
+        INTERFACE_ENTRY(Exchange::IDHCPServer)
         END_INTERFACE_MAP
 
     public:
@@ -267,12 +272,10 @@ namespace Plugin {
         void Inbound(Web::Request& request) override;
         Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
 
-        // JsonRpc
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_activate(const JsonData::DHCPServer::ActivateParamsInfo& params);
-        uint32_t endpoint_deactivate(const JsonData::DHCPServer::ActivateParamsInfo& params);
-        uint32_t get_status(const string& index, Core::JSON::ArrayType<JsonData::DHCPServer::ServerData>& response) const;
+        Core::hresult Activate(const string& interface) override;
+        Core::hresult Deactivate(const string& interface) override;
+        void Fill(Exchange::IDHCPServer::Server& data, const DHCPServerImplementation& server) const;
+        Core::hresult Status(const Core::OptionalType<string>& interface /* @index */, Exchange::IDHCPServer::IServerIterator*& servers /* @out */) const override;
 
         // Lease permanent storage
         // -------------------------------------------------------------------------------------------------------
@@ -282,9 +285,12 @@ namespace Plugin {
         // Callbacks
         void OnNewIPRequest(const string& interface, const DHCPServerImplementation::Lease* lease);
     private:
+        using DHCPServerMap = std::map<const string, DHCPServerImplementation>;
+
         uint16_t _skipURL;
-        std::map<const string, DHCPServerImplementation> _servers;
+        DHCPServerMap _servers;
         std::string _persistentPath;
+        mutable Core::CriticalSection _adminLock;
     };
 
 } // namespace Plugin
