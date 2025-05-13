@@ -49,16 +49,6 @@ add_library(${MODULE_NAME} SHARED
         Module.cpp
         )
 
-target_link_libraries(${MODULE_NAME}
-        PRIVATE
-                ${NAMESPACE}COM::${NAMESPACE}COM
-        )
-
-target_link_libraries(${MODULE_NAME}
-        PRIVATE
-          CompileSettingsDebug::CompileSettingsDebug
-        )
-
 set_target_properties(${TargetMarshalling} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
@@ -67,14 +57,16 @@ set_target_properties(${TargetMarshalling} PROPERTIES
         SOVERSION ${PROJECT_VERSION_MAJOR}
         )
 
-install(
-        MODULE_NAMES ${MODULE_NAME}  EXPORT ${MODULE_NAME}Targets
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/${NAMESPACE_LIB}/proxystubs COMPONENT ${NAMESPACE}_Development
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/${NAMESPACE_LIB}/proxystubs COMPONENT ${NAMESPACE}_Runtime
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime
-        FRAMEWORK DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE_LIB}/proxystubs COMPONENT ${NAMESPACE}_Runtime
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE}/proxystubs COMPONENT ${NAMESPACE}_Development
-        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE}/proxystubs  
+target_include_directories(
+    ${MODULE_NAME}
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/
 )
 
-InstallCMakeConfig(MODULE_NAMES ${MODULE_NAME})
+target_link_libraries(${MODULE_NAME}
+    PRIVATE
+    ${NAMESPACE}COM::${NAMESPACE}COM
+    CompileSettingsDebug::CompileSettingsDebug
+)
+
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/proxystubs COMPONENT ${NAMESPACE}_Runtime)
