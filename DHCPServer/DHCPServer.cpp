@@ -322,7 +322,7 @@ POP_WARNING()
                 lease.ip = it.Current().Address().HostAddress();
 
                 if (it.Current().Expiration() != 0) {
-                    lease.expires.Value() = Core::Time(it.Current().Expiration()).ToISO8601(true);
+                    lease.expires.Value() = Core::Time(it.Current().Expiration());
                 }
                 data.leases.Value().push_back(lease);
             }
