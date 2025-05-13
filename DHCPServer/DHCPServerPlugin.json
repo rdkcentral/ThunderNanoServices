@@ -72,6 +72,6 @@
     ]
   },
   "interface": {
-    "$ref": "{interfacedir}/DHCPServer.json#"
+    "$ref": "{cppinterfacedir}/IDHCPServer.h"
   }
 }
