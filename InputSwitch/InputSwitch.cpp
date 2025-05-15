@@ -18,7 +18,6 @@
  */
  
 #include "InputSwitch.h"
-#include <interfaces/json/JsonData_InputSwitch.h>
 
 namespace Thunder {
 namespace Plugin {
@@ -54,12 +53,16 @@ namespace Plugin {
             message = _T("This plugin requires the VirtualInput (IPC Relay) to be instantiated");
         }
 
+        Exchange::JInputSwitchChannel::Register(*this, this);
+
         // On success return empty, to indicate there is no error text.
         return (EMPTY_STRING);
     }
 
     /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
+        Exchange::JInputSwitchChannel::Unregister(*this);
+
         _handler = nullptr;
     }
 
@@ -215,14 +218,30 @@ namespace Plugin {
         return (Core::ERROR_NONE);
     }
 
-    uint32_t InputSwitch::Select(const string& name) /* override */ {
-        uint32_t result = Core::ERROR_UNAVAILABLE;
+    Core::hresult InputSwitch::Channel(const string& name, const bool enabled)
+    {
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+        Exchange::IInputSwitch::mode enabled = (enabled ? Exchange::IInputSwitch::ENABLED : Exchange::IInputSwitch::DISABLED);
 
-        PluginHost::VirtualInput::Iterator index (_handler->Consumers());
+        if (ChannelExists(name) == true) {
+            Consumer(name, enabled);
+            result = Core::ERROR_NONE;
+        }
+
+        return (result);
+    }
+
+    Core::hresult InputSwitch::Select(const string& name)
+    {
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+        PluginHost::VirtualInput::Iterator index(_handler->Consumers());
+
         while (index.Next() == true) {
             const string& current(index.Name());
-            ImunityList::iterator index (std::find(_imunityList.begin(), _imunityList.end(), current));
+            ImunityList::iterator index(std::find(_imunityList.begin(), _imunityList.end(), current));
+
             if (name == current) {
+
                 if (index != _imunityList.end()) {
                     _imunityList.erase(index);
                 }
@@ -233,6 +252,46 @@ namespace Plugin {
                 // Seems the consumer has no imunity :-)
                 _handler->Consumer(current, false);
             }
+        }
+
+        return (result);
+    }
+
+    Core::hresult InputSwitch::Status(const Core::OptionalType<string>& name, Exchange::IInputSwitch::IChannelIterator*& channels) const
+    {
+        Core::hresult result = Core::ERROR_NONE;
+        std::list<Exchange::IInputSwitch::Channel> channelList;
+
+        if (name.IsSet() == true) {
+
+            if (ChannelExists(name.Value()) == false) {
+                result = Core::ERROR_UNKNOWN_KEY;
+            }
+            else {
+                Exchange::IInputSwitch::ChannelData channel;
+                channel.name = name.Value();
+                channel.enabled = Consumer(name.Value());
+                channelList.push_back(channel);
+            }
+        }
+        else {
+            PluginHost::VirtualInput::Iterator index(_handler->Consumers());
+
+            while (index.Next() == true) {
+                Exchange::IInputSwitch::ChannelData channel;
+                channel.name = index.Value();
+                channel.enabled = Consumer(index.Value());
+                channelList.push_back(channel);
+            }
+        }
+
+        if (channelList.empty() == false) {
+            using Iterator = Exchange::IInputSwitch::IChannelIterator;
+            channels = Core::ServiceType<RPC::IteratorType<Iterator>>::Create<Iterator>(channelList);
+            ASSERT(channels != nullptr);
+        }
+        else {
+            channels = nullptr;
         }
 
         return (result);
