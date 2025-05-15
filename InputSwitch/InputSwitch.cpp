@@ -53,7 +53,7 @@ namespace Plugin {
             message = _T("This plugin requires the VirtualInput (IPC Relay) to be instantiated");
         }
 
-        Exchange::JInputSwitchChannel::Register(*this, this);
+        Exchange::JInputSwitch::Register(*this, this);
 
         // On success return empty, to indicate there is no error text.
         return (EMPTY_STRING);
@@ -61,7 +61,7 @@ namespace Plugin {
 
     /* virtual */ void InputSwitch::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        Exchange::JInputSwitchChannel::Unregister(*this);
+        Exchange::JInputSwitch::Unregister(*this);
 
         _handler = nullptr;
     }
@@ -221,10 +221,10 @@ namespace Plugin {
     Core::hresult InputSwitch::Channel(const string& name, const bool enabled)
     {
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
-        Exchange::IInputSwitch::mode enabled = (enabled ? Exchange::IInputSwitch::ENABLED : Exchange::IInputSwitch::DISABLED);
+        Exchange::IInputSwitch::mode mode = (enabled ? Exchange::IInputSwitch::ENABLED : Exchange::IInputSwitch::DISABLED);
 
         if (ChannelExists(name) == true) {
-            Consumer(name, enabled);
+            Consumer(name, mode);
             result = Core::ERROR_NONE;
         }
 
@@ -260,7 +260,7 @@ namespace Plugin {
     Core::hresult InputSwitch::Status(const Core::OptionalType<string>& name, Exchange::IInputSwitch::IChannelIterator*& channels) const
     {
         Core::hresult result = Core::ERROR_NONE;
-        std::list<Exchange::IInputSwitch::Channel> channelList;
+        std::list<Exchange::IInputSwitch::ChannelData> channelList;
 
         if (name.IsSet() == true) {
 
@@ -279,8 +279,8 @@ namespace Plugin {
 
             while (index.Next() == true) {
                 Exchange::IInputSwitch::ChannelData channel;
-                channel.name = index.Value();
-                channel.enabled = Consumer(index.Value());
+                channel.name = index.Name();
+                channel.enabled = Consumer(index.Name());
                 channelList.push_back(channel);
             }
         }
