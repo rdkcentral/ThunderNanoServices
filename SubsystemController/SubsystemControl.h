@@ -21,37 +21,16 @@
 
 #include "Module.h"
 
-#include <interfaces/json/JsonData_SubsystemControl.h>
+#include <interfaces/ISubsystemControl.h>
+#include <interfaces/json/JSubsystemControl.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class SubsystemControl : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class SubsystemControl : public PluginHost::IPlugin
+                           , public PluginHost::JSONRPC
+                           , public Exchange::ISubsystemControl {
     private:
-        class Notification : public PluginHost::ISubSystem::INotification {
-        public:
-            Notification() = delete;
-            Notification(const Notification&) = delete;
-            Notification& operator=(const Notification&) = delete;
-
-            explicit Notification(SubsystemControl& parent)
-                : _parent(parent) {
-            }
-            ~Notification() override = default;
-
-        public:
-            // Some change happened with respect to the Network..
-            void Updated() override {
-                _parent.event_activity();
-            }
-
-            BEGIN_INTERFACE_MAP(Notification)
-                INTERFACE_ENTRY(PluginHost::ISubSystem::INotification)
-            END_INTERFACE_MAP
-
-        private:
-            SubsystemControl& _parent;
-        };
         class Administrator {
         private:
             struct IFactory {
@@ -72,23 +51,24 @@ namespace Plugin {
                 ~FactoryType() override = default;
 
             public:
-                Core::IUnknown* Metadata(const string& metadata) override {
+                Core::IUnknown* Metadata(const string& metadata) override
+                {
                     METADATA* object = Service::template Create<METADATA>();
                     object->FromString(metadata);
                     return (object);
                 }
             };
 
-            using SubsystemMap = std::unordered_map<JsonData::SubsystemControl::SubsystemType, IFactory*>;
-            using IdentifierMap = std::unordered_map< JsonData::SubsystemControl::SubsystemType, PluginHost::ISubSystem::subsystem>;
+            using SubsystemMap = std::unordered_map<PluginHost::ISubSystem::subsystem, IFactory*>;
 
         public:
             Administrator() = default;
             Administrator(const Administrator&) = delete;
             Administrator& operator= (const Administrator&) = delete;
 
-            ~Administrator() {
-                for (const std::pair< JsonData::SubsystemControl::SubsystemType, IFactory* >& entry : _factoryMap) {
+            ~Administrator()
+            {
+                for (const std::pair<const PluginHost::ISubSystem::subsystem, IFactory*>& entry : _factoryMap) {
                     delete entry.second;
                 }
                 _factoryMap.clear();
@@ -96,36 +76,20 @@ namespace Plugin {
 
         public:
             template<typename METADATA>
-            void Announce(const JsonData::SubsystemControl::SubsystemType type) {
-                ASSERT(_identifierMap.find(type) == _identifierMap.end());
-
+            void Announce(const PluginHost::ISubSystem::subsystem type)
+            {
                 _factoryMap.emplace(std::piecewise_construct,
                     std::forward_as_tuple(type),
                     std::forward_as_tuple(new FactoryType<METADATA>()));
- 
-                Announce(type, static_cast<PluginHost::ISubSystem::subsystem>(METADATA::SUBSYSTEM));
             }
-            void Announce(const JsonData::SubsystemControl::SubsystemType type, const PluginHost::ISubSystem::subsystem other) {
-                _identifierMap.emplace(std::piecewise_construct,
-                    std::forward_as_tuple(type),
-                    std::forward_as_tuple(other));
-            }
-            Core::IUnknown* Metadata(const JsonData::SubsystemControl::SubsystemType type, const string& metadata) {
-                SubsystemMap::iterator index = (_factoryMap.find(type));
+            Core::IUnknown* Metadata(const PluginHost::ISubSystem::subsystem type, const string& metadata)
+            {
+                SubsystemMap::iterator index = _factoryMap.find(type);
                 return (index != _factoryMap.end() ? index->second->Metadata(metadata) : nullptr);
-            }
-            bool Lookup(const JsonData::SubsystemControl::SubsystemType type, PluginHost::ISubSystem::subsystem& outcome) const {
-                IdentifierMap::const_iterator index = (_identifierMap.find(type));
-                if (index != _identifierMap.end()) {
-                    outcome = index->second;
-                    return(true);
-                }
-                return(false);
             }
 
         private:
             SubsystemMap _factoryMap;
-            IdentifierMap _identifierMap;
         };
 
     public:
@@ -145,20 +109,15 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(SubsystemControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
+            INTERFACE_ENTRY(Exchange::ISubsystemControl)
         END_INTERFACE_MAP
 
     private:
-        void RegisterAll();
-        void UnregisterAll();
-
-        void event_activity();
-        uint32_t activate(const JsonData::SubsystemControl::ActivateParamsData& parameter, Core::JSON::DecUInt32& response);
-        uint32_t deactivate(const Core::JSON::EnumType<JsonData::SubsystemControl::SubsystemType>& parameter);
+        Core::hresult Activate(const PluginHost::ISubSystem::subsystem subsystem, const Core::OptionalType<string>& configuration) override;
 
     private:
         Administrator _subsystemFactory;
         PluginHost::ISubSystem* _service;
-        Core::SinkType<Notification> _notification;
     };
 
 } // Namespace Plugin.
