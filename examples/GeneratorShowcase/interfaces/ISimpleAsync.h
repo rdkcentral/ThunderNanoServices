@@ -44,14 +44,14 @@ namespace Exchange {
             enum { ID = ISimpleAsync::ID + 1 };
 
             // Generator will create its implementation of this interface
-            // and supply the object to the called async method. The 
-            // implementation of the completion method will issue a JSON-RPC 
+            // and supply the object to the called async method. The
+            // implementation of the completion method will issue a JSON-RPC
             // event.
             //
             // @brief Signals completion of the Connect method
-            // @param address Device address (e.g. 192.158.1.38)
+            // @param address Device address (e.g. aa:bb:cc:dd:ee:ff)
             // @param state Result of pairing operation (e.g. CONNECTING_ABORTED)
-            virtual void Complete(const string& address, const state state)  = 0;
+            virtual void Complete(const Core::OptionalType<std::vector<uint8_t>>& address /* @encode:mac @restrict:6..6  */, const state state)  = 0;
         };
 
         // @async
@@ -66,11 +66,11 @@ namespace Exchange {
         // always called, whether it's success, failure or timeout.
         //
         // @brief Connects to a server
-        // @param address Server address (e.g. 192.158.1.38)
+        // @param address Device address (e.g. aa:bb:cc:dd:ee:ff)
         // @param timeout Maximum time allowed for connecting in milliseconds
         // @retval ERROR_INPROGRESS Currently connecting
         // @retval ERROR_ALREADY_CONNECTED Already connected to server
-        virtual Core::hresult Connect(const string& address, const Core::OptionalType<uint16_t>& timeout /* @default:1000 */, ICallback* const cb) = 0;
+        virtual Core::hresult Connect(const Core::OptionalType<std::vector<uint8_t>>& address /* @encode:mac @restrict:6..6 */, const Core::OptionalType<uint16_t>& timeout /* @default:1000 */, ICallback* const cb) = 0;
 
         // @brief Aborts connecting to a server
         // @retval ERROR_ILLEGAL_STATE There is no ongoing connection
@@ -80,6 +80,81 @@ namespace Exchange {
         // @retval ERROR_INPROGRESS Connecting in progress, abort first
         // @retval ERROR_ALREADY_RELEASED Not connected to server
         virtual Core::hresult Disconnect() = 0;
+
+        // @property
+        // @brief Connection status
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult Connected(const std::vector<uint8_t>& address /* @index @encode:mac @restrict:6..6 */, bool& result /* @out */) const = 0;
+
+
+        // BY ARRAY -----------
+
+        // @brief Links a device
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult Link(const uint8_t address[6] /* @encode:base64 */) = 0;
+
+        // @brief Unlinks a device
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult Unlink(const uint8_t address[6] /* @encode:base64 */) = 0;
+
+        // @property
+        // @brief Linked device
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult LinkedDevice(uint8_t address[6] /* @encode:base64 @out */) const = 0;
+
+        // @event
+        struct INotification : public virtual Core::IUnknown {
+
+            enum { ID = ISimpleAsync::ID + 2 };
+
+            // @brief Signals completion of the Connect method
+            // @param address Device address (e.g. [11,22] )
+            // @param linked Denotes if device is linked
+            virtual void StatusChanged(const uint8_t address[6], const bool linked)  = 0;
+        };
+
+        virtual Core::hresult Register(INotification* const notification) = 0;
+        virtual Core::hresult Unregister(const INotification* const notification) = 0;
+
+        // @property
+        // @brief Device metadata
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult Metadata(const uint8_t address[6] /* @index @encode:base64 */, const string& metadata) = 0;
+        virtual Core::hresult Metadata(const uint8_t address[6] /* @index @encode:base64 */, string& metadata /* @out */) const = 0;
+
+        // BY MACADDRESS -------------------------
+
+        // @brief Binds a device
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult Bind(const Core::MACAddress& address) = 0;
+
+        // @brief Unlinks a device
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult Unbind(const Core::MACAddress& address) = 0;
+
+        // @property
+        virtual Core::hresult BoundDevice(Core::MACAddress& address /* @out */) const = 0;
+
+        // @property
+        // @brief Device metadata
+        // @param address Device address (e.g. 11:22:33:44:55:66)
+        virtual Core::hresult Type(const Core::MACAddress& address /* @index */, const string& value) = 0;
+        virtual Core::hresult Type(const Core::MACAddress& address /* @index */, string& value /* @out */) const = 0;
+
+        // @event
+        struct IBindNotification : public virtual Core::IUnknown {
+
+            enum { ID = ISimpleAsync::ID + 3 };
+
+            // @brief Signals completion of the Connect method
+            // @param address Device address (e.g. [11,22] )
+            // @param linked Denotes if device is linked
+            virtual void BindingChanged(const Core::MACAddress& address/* @index */, const bool bound)  = 0;
+        };
+
+        virtual Core::hresult Register(IBindNotification* const notification) = 0;
+        virtual Core::hresult Unregister(const IBindNotification* const notification) = 0;
+
     };
 
 } // namespace Exchange

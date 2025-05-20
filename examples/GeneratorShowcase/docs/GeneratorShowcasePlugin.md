@@ -77,6 +77,7 @@ This plugin implements the following interfaces:
 
 - ISimpleAsync ([ISimpleAsync.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/ISimpleAsync.h)) (version 1.0.0) (compliant format)
 - ISimpleInstanceObjects ([ISimpleInstanceObjects.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/ISimpleInstanceObjects.h)) (version 1.0.0) (compliant format)
+- ISimpleCustomObjects ([ISimpleCustomObjects.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/ISimpleCustomObjects.h)) (version 1.0.0) (compliant format)
 
 <a id="head_Methods"></a>
 # Methods
@@ -90,6 +91,10 @@ SimpleAsync interface methods:
 | [connect](#method_connect) | Connects to a server |
 | [abort](#method_abort) | Aborts connecting to a server |
 | [disconnect](#method_disconnect) | Disconnects from the server |
+| [link](#method_link) | Links a device |
+| [unlink](#method_unlink) | Unlinks a device |
+| [bind](#method_bind) | Binds a device |
+| [unbind](#method_unbind) | Unlinks a device |
 
 SimpleInstanceObjects interface methods:
 
@@ -112,9 +117,15 @@ Connects to a server.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.address | string | mandatory | Server address |
+| params?.address | string (mac) | optional | Device address<br>*Decoded data length must be equal to 6 bytes.* |
 | params?.timeout | integer | optional | Maximum time allowed for connecting in milliseconds (default: *1000*) |
 | params.id | string (async ID) | mandatory |  |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
@@ -128,7 +139,7 @@ Connects to a server.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | result | object | mandatory | *...* |
-| result.address | string | mandatory | Device address |
+| result?.address | string (mac) | optional | Device address<br>*Decoded data length must be equal to 6 bytes.* |
 | result.state | string | mandatory | Result of pairing operation (must be one of the following: *CONNECTED, CONNECTING, CONNECTING_ABORTED, CONNECTING_FAILED, CONNECTING_TIMED_OUT, DISCONNECTED*) |
 
 ### Example
@@ -141,9 +152,9 @@ Connects to a server.
   "id": 42,
   "method": "GeneratorShowcase.1.connect",
   "params": {
-    "address": "192.158.1.38",
+    "address": "aa:bb:cc:dd:ee:ff",
     "timeout": 1000,
-    "id": "myid-completed"
+    "id": "myid-complete"
   }
 }
 ```
@@ -165,13 +176,13 @@ Connects to a server.
   "jsonrpc": "2.0",
   "method": "myid-complete.connect",
   "params": {
-    "address": "192.158.1.38",
+    "address": "aa:bb:cc:dd:ee:ff",
     "state": "CONNECTING_ABORTED"
   }
 }
 ```
 
-> The *async ID* parameter is passed within the notification designator, e.g. ``myid-complete.connect``.
+> The *async ID* parameter is passed within the notification designator, i.e. ``<async-id>.connect``.
 
 <a id="method_abort"></a>
 ## *abort [<sup>method</sup>](#head_Methods)*
@@ -181,6 +192,12 @@ Aborts connecting to a server.
 ### Parameters
 
 This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
@@ -219,6 +236,12 @@ Disconnects from the server.
 
 This method takes no parameters.
 
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
 ### Errors
 
 | Message | Description |
@@ -248,6 +271,178 @@ This method takes no parameters.
 }
 ```
 
+<a id="method_link"></a>
+## *link [<sup>method</sup>](#head_Methods)*
+
+Links a device.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string (base64) | mandatory | Device address<br>*Decoded data length must be equal to 6 bytes.* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.link",
+  "params": {
+    "address": "11:22:33:44:55:66"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unlink"></a>
+## *unlink [<sup>method</sup>](#head_Methods)*
+
+Unlinks a device.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string (base64) | mandatory | Device address<br>*Decoded data length must be equal to 6 bytes.* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.unlink",
+  "params": {
+    "address": "11:22:33:44:55:66"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_bind"></a>
+## *bind [<sup>method</sup>](#head_Methods)*
+
+Binds a device.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string | mandatory | Device address<br>*String length must be equal to 6 chars.* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.bind",
+  "params": {
+    "address": "11:22:33:44:55:66"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unbind"></a>
+## *unbind [<sup>method</sup>](#head_Methods)*
+
+Unlinks a device.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string | mandatory | Device address<br>*String length must be equal to 6 chars.* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.unbind",
+  "params": {
+    "address": "11:22:33:44:55:66"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
 <a id="method_acquire"></a>
 ## *acquire [<sup>method</sup>](#head_Methods)*
 
@@ -261,6 +456,12 @@ Acquires a device.
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
 | params.name | string | mandatory | Name of the device to acquire |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer (instance ID) | mandatory | Instance of the acquired device<br> |
 
 ### Errors
 
@@ -289,7 +490,7 @@ Acquires a device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": 1
+  "result": 0
 }
 ```
 
@@ -304,6 +505,12 @@ Relinquishes a device.
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
 | params.device | integer (instance ID) | mandatory | Device instance to relinquish<br> |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
@@ -321,7 +528,7 @@ Relinquishes a device.
   "id": 42,
   "method": "GeneratorShowcase.1.relinquish",
   "params": {
-    "device": 1
+    "device": 0
   }
 }
 ```
@@ -345,13 +552,19 @@ Enable the device.
 
 This method takes no parameters.
 
-> The *device* instance ID shall be passed within the registration designator, e.g. ``GeneratorShowcase.1.device#<device-id>::enable``.
+> The *device instance ID* shall be passed within the method designator, i.e. ``device#<device-id>::enable``.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
 | Message | Description |
 | :-------- | :-------- |
-| ```ERROR_ALREADY_CONNECT``` | The device is already enabled |
+| ```ERROR_ALREADY_CONNECTED``` | The device is already enabled |
 
 ### Example
 
@@ -384,7 +597,13 @@ Disable the device.
 
 This method takes no parameters.
 
-> The *device* instance ID shall be passed within the registration designator, e.g. ``GeneratorShowcase.1.device#<device-id>::disable``.
+> The *device instance ID* shall be passed within the method designator, i.e. ``device#<device-id>::disable``.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
@@ -419,16 +638,78 @@ This method takes no parameters.
 
 The following properties are provided by the GeneratorShowcase plugin:
 
+SimpleAsync interface properties:
+
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [connected](#property_connected) | read-only | Connection status |
+| [linkedDevice](#property_linkedDevice) | read-only | Linked device |
+| [metadata](#property_metadata) | read/write | Device metadata |
+| [boundDevice](#property_boundDevice) | read-only |  |
+| [type](#property_type) | read/write | Device metadata |
+
 SimpleInstanceObjects interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [device::name](#property_device__name) | read-only | Name of the device |
+| [device::name](#property_device__name) | read/write | Name of the device |
+| [device::pin](#property_device__pin) | read/write | A pin |
 
-<a id="property_device__name"></a>
-## *device::name [<sup>property</sup>](#head_Properties)*
+SimpleCustomObjects interface properties:
 
-Provides access to the name of the device.
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [accessory](#property_accessory) | read-only | Accessory by name |
+| [accessory::name](#property_accessory__name) | read/write | Name of the accessory |
+| [accessory::pin](#property_accessory__pin) | read/write | Pin state |
+
+<a id="property_connected"></a>
+## *connected [<sup>property</sup>](#head_Properties)*
+
+Provides access to the connection status.
+
+> This property is **read-only**.
+
+> The *address* parameter shall be passed as the index to the property, i.e. ``connected@<address>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| address | string (mac) | mandatory | Device address<br>*Decoded data length must be equal to 6 bytes.* |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | boolean | mandatory | Connection status |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.connected@11:22:33:44:55:66"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="property_linkedDevice"></a>
+## *linkedDevice [<sup>property</sup>](#head_Properties)*
+
+Provides access to the linked device.
 
 > This property is **read-only**.
 
@@ -436,9 +717,218 @@ Provides access to the name of the device.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
+| (property) | string (base64) | mandatory | Device address<br>*Decoded data length must be equal to 6 bytes.* |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.linkedDevice"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "11:22:33:44:55:66"
+}
+```
+
+<a id="property_metadata"></a>
+## *metadata [<sup>property</sup>](#head_Properties)*
+
+Provides access to the device metadata.
+
+> The *address* parameter shall be passed as the index to the property, i.e. ``metadata@<address>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| address | string (base64) | mandatory | Device address<br>*Decoded data length must be equal to 6 bytes.* |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Device metadata |
+| (property).value | string | mandatory | *...* |
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Device metadata |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.metadata@11:22:33:44:55:66"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "..."
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.metadata@11:22:33:44:55:66",
+  "params": {
+    "value": "..."
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
+<a id="property_boundDevice"></a>
+## *boundDevice [<sup>property</sup>](#head_Properties)*
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | *...*<br>*String length must be equal to 6 chars.* |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.boundDevice"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "..."
+}
+```
+
+<a id="property_type"></a>
+## *type [<sup>property</sup>](#head_Properties)*
+
+Provides access to the device metadata.
+
+> The *address* parameter shall be passed as the index to the property, i.e. ``type@<address>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| address | string | mandatory | Device address<br>*String length must be equal to 6 chars.* |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Device metadata |
+| (property).value | string | mandatory | *...* |
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Device metadata |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.type@11:22:33:44:55:66"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "..."
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.type@11:22:33:44:55:66",
+  "params": {
+    "value": "..."
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
+<a id="property_device__name"></a>
+## *device::name [<sup>property</sup>](#head_Properties)*
+
+Provides access to the name of the device.
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Name of the device |
+| (property).value | string | mandatory | *...* |
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
 | (property) | string | mandatory | Name of the device |
 
-> The *device instance ID* shall be passed within the designator, e.g. ``GeneratorShowcase.1.device#<device-id>::name``.
+> The *device instance ID* shall be passed within the method designator, i.e. ``device#<device-id>::name``.
 
 ### Example
 
@@ -462,6 +952,283 @@ Provides access to the name of the device.
 }
 ```
 
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.device#1::name",
+  "params": {
+    "value": "..."
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
+<a id="property_device__pin"></a>
+## *device::pin [<sup>property</sup>](#head_Properties)*
+
+Provides access to the A pin.
+
+> The *pin* parameter shall be passed as the index to the property, i.e. ``device::pin@<pin>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| pin | integer | mandatory | Pin number |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | A pin |
+| (property).value | boolean | mandatory | *...* |
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | boolean | mandatory | A pin |
+
+> The *device instance ID* shall be passed within the method designator, i.e. ``device#<device-id>::pin``.
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | Unknown pin number |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.device#1::pin@0"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.device#1::pin@0",
+  "params": {
+    "value": false
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
+<a id="property_accessory"></a>
+## *accessory [<sup>property</sup>](#head_Properties)*
+
+Provides access to the accessory by name.
+
+> This property is **read-only**.
+
+> The *name* parameter shall be passed as the index to the property, i.e. ``accessory@<name>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| name | string | mandatory | Name of the accessory to look for |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string (instance ID) | mandatory | Accessory instance<br> |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.accessory@mouse"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "id1"
+}
+```
+
+<a id="property_accessory__name"></a>
+## *accessory::name [<sup>property</sup>](#head_Properties)*
+
+Provides access to the name of the accessory.
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Name of the accessory |
+| (property).value | string | mandatory | *...* |
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Name of the accessory |
+
+> The *accessory instance ID* shall be passed within the method designator, i.e. ``accessory#<accessory-id>::name``.
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.accessory#id1::name"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "mouse"
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.accessory#id1::name",
+  "params": {
+    "value": "..."
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
+<a id="property_accessory__pin"></a>
+## *accessory::pin [<sup>property</sup>](#head_Properties)*
+
+Provides access to the pin state.
+
+> The *pin* parameter shall be passed as the index to the property, i.e. ``accessory::pin@<pin>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| pin | integer | mandatory | *...* |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Pin state |
+| (property).value | boolean | mandatory | *...* |
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | boolean | mandatory | Pin state |
+
+> The *accessory instance ID* shall be passed within the method designator, i.e. ``accessory#<accessory-id>::pin``.
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.accessory#id1::pin@0"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.accessory#id1::pin@0",
+  "params": {
+    "value": false
+  }
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
+}
+```
+
 <a id="head_Notifications"></a>
 # Notifications
 
@@ -469,16 +1236,175 @@ Notifications are autonomous events triggered by the internals of the implementa
 
 The following events are provided by the GeneratorShowcase plugin:
 
+SimpleAsync interface events:
+
+| Notification | Description |
+| :-------- | :-------- |
+| [statusChanged](#notification_statusChanged) | Signals completion of the Connect method |
+| [bindingChanged](#notification_bindingChanged) | Signals completion of the Connect method |
+
 SimpleInstanceObjects interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
+| [device::nameChanged](#notification_device__nameChanged) | Signals device name changes |
 | [device::stateChanged](#notification_device__stateChanged) | Signals device state changes |
+| [device::pinChanged](#notification_device__pinChanged) | Signals pin state changes |
+
+SimpleCustomObjects interface events:
+
+| Notification | Description |
+| :-------- | :-------- |
+| [added](#notification_added) | Signals addition of a accessory |
+| [removed](#notification_removed) | Signals removal of a accessory |
+| [accessory::nameChanged](#notification_accessory__nameChanged) | Signals addition of a accessory |
+
+<a id="notification_statusChanged"></a>
+## *statusChanged [<sup>notification</sup>](#head_Notifications)*
+
+Signals completion of the Connect method.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | array | mandatory | Device address |
+| params.address[#] | integer | mandatory | Device address |
+| params.linked | boolean | mandatory | Denotes if device is linked |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.register",
+  "params": {
+    "event": "statusChanged",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.statusChanged",
+  "params": {
+    "address": [
+      11,
+      22
+    ],
+    "linked": false
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.statusChanged``.
+
+<a id="notification_bindingChanged"></a>
+## *bindingChanged [<sup>notification</sup>](#head_Notifications)*
+
+Signals completion of the Connect method.
+
+### Parameters
+
+> The *address* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<address>.<client-id>``.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.bound | boolean | mandatory | *...* |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.register",
+  "params": {
+    "event": "bindingChanged",
+    "id": "[11,22].myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "[11,22].myid.bindingChanged",
+  "params": {
+    "bound": false
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<address>.<client-id>.bindingChanged``.
+
+> The *address* parameter is passed within the notification designator, i.e. ``<address>.<client-id>.bindingChanged``.
+
+<a id="notification_device__nameChanged"></a>
+## *device::nameChanged [<sup>notification</sup>](#head_Notifications)*
+
+Signals device name changes.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.state | string | mandatory | New name of the device |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.device#1::register",
+  "params": {
+    "event": "nameChanged",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.device#1::nameChanged",
+  "params": {
+    "state": "..."
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::nameChanged``.
+
+> The *device instance id* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::nameChanged``.
 
 <a id="notification_device__stateChanged"></a>
 ## *device::stateChanged [<sup>notification</sup>](#head_Notifications)*
 
 Signals device state changes.
+
+> This notification may also be triggered by client registration.
 
 ### Notification Parameters
 
@@ -486,8 +1412,6 @@ Signals device state changes.
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
 | params.state | string | mandatory | New state of the device (must be one of the following: *DISABLED, ENABLED*) |
-
-> The *device* instance ID shall be passed within the registration designator, e.g. ``GeneratorShowcase.1.device#<device-id>::register``.
 
 ### Example
 
@@ -517,5 +1441,191 @@ Signals device state changes.
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, e.g. ``myid.device#1::stateChanged``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::stateChanged``.
+
+> The *device instance id* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::stateChanged``.
+
+<a id="notification_device__pinChanged"></a>
+## *device::pinChanged [<sup>notification</sup>](#head_Notifications)*
+
+Signals pin state changes.
+
+> This notification may also be triggered by client registration.
+
+### Parameters
+
+> The *pin* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<pin>.<client-id>``.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.high | boolean | mandatory | *...* |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.device#1::register",
+  "params": {
+    "event": "pinChanged",
+    "id": "0.myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "0.myid.device#1::pinChanged",
+  "params": {
+    "high": false
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<pin>.<client-id>.device#<device-id>::pinChanged``.
+
+> The *pin* parameter is passed within the notification designator, i.e. ``<pin>.<client-id>.device#<device-id>::pinChanged``.
+
+> The *device instance id* parameter is passed within the notification designator, i.e. ``<pin>.<client-id>.device#<device-id>::pinChanged``.
+
+<a id="notification_added"></a>
+## *added [<sup>notification</sup>](#head_Notifications)*
+
+Signals addition of a accessory.
+
+> This notification may also be triggered by client registration.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.accessory | string (instance ID) | mandatory | Accessory instance<br> |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.register",
+  "params": {
+    "event": "added",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.added",
+  "params": {
+    "accessory": "id1"
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.added``.
+
+<a id="notification_removed"></a>
+## *removed [<sup>notification</sup>](#head_Notifications)*
+
+Signals removal of a accessory.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.accessory | string (instance ID) | mandatory | Accessory instance<br> |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.register",
+  "params": {
+    "event": "removed",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.removed",
+  "params": {
+    "accessory": "id1"
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.removed``.
+
+<a id="notification_accessory__nameChanged"></a>
+## *accessory::nameChanged [<sup>notification</sup>](#head_Notifications)*
+
+Signals addition of a accessory.
+
+> This notification may also be triggered by client registration.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.name | string | mandatory | Name of the accessory |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.accessory#id1::register",
+  "params": {
+    "event": "nameChanged",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.accessory#id1::nameChanged",
+  "params": {
+    "name": "mouse"
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.accessory#<accessory-id>::nameChanged``.
+
+> The *accessory instance id* parameter is passed within the notification designator, i.e. ``<client-id>.accessory#<accessory-id>::nameChanged``.
 

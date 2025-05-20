@@ -9,6 +9,7 @@
   },
   "interface": [
     { "$ref": "interfaces/ISimpleAsync.h" },
-    { "$ref": "interfaces/ISimpleInstanceObjects.h" }
+    { "$ref": "interfaces/ISimpleInstanceObjects.h" },
+    { "$ref": "interfaces/ISimpleCustomObjects.h" }
   ]
 }
