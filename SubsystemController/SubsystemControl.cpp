@@ -396,22 +396,14 @@ namespace Plugin {
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
     SubsystemControl::SubsystemControl()
         : _subsystemFactory()
-        , _service(nullptr)
-        , _notification(*this) {
-        _subsystemFactory.Announce<JSecurity>    (JsonData::SubsystemControl::SubsystemType::SECURITY);
-        _subsystemFactory.Announce<JInternet>    (JsonData::SubsystemControl::SubsystemType::INTERNET);
-        _subsystemFactory.Announce<JLocation>    (JsonData::SubsystemControl::SubsystemType::LOCATION);
-        _subsystemFactory.Announce<JIdentifier>  (JsonData::SubsystemControl::SubsystemType::IDENTIFIER);
-        _subsystemFactory.Announce<JTime>        (JsonData::SubsystemControl::SubsystemType::TIME);
-        _subsystemFactory.Announce<JProvisioning>(JsonData::SubsystemControl::SubsystemType::PROVISIONING);
-        _subsystemFactory.Announce<JDecryption>  (JsonData::SubsystemControl::SubsystemType::DECRYPTION);
-        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::BLUETOOTH, PluginHost::ISubSystem::subsystem::BLUETOOTH);
-        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::GRAPHICS,  PluginHost::ISubSystem::subsystem::GRAPHICS);
-        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::NETWORK,   PluginHost::ISubSystem::subsystem::NETWORK);
-        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::PLATFORM,  PluginHost::ISubSystem::subsystem::PLATFORM);
-        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::STREAMING, PluginHost::ISubSystem::subsystem::STREAMING);
-        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::WEBSOURCE, PluginHost::ISubSystem::subsystem::WEBSOURCE);
-        _subsystemFactory.Announce(JsonData::SubsystemControl::SubsystemType::INSTALLATION, PluginHost::ISubSystem::subsystem::INSTALLATION);
+        , _service(nullptr) {
+        _subsystemFactory.Announce<JSecurity>    (PluginHost::ISubSystem::subsystem::SECURITY);
+        _subsystemFactory.Announce<JInternet>    (PluginHost::ISubSystem::subsystem::INTERNET);
+        _subsystemFactory.Announce<JLocation>    (PluginHost::ISubSystem::subsystem::LOCATION);
+        _subsystemFactory.Announce<JIdentifier>  (PluginHost::ISubSystem::subsystem::IDENTIFIER);
+        _subsystemFactory.Announce<JTime>        (PluginHost::ISubSystem::subsystem::TIME);
+        _subsystemFactory.Announce<JProvisioning>(PluginHost::ISubSystem::subsystem::PROVISIONING);
+        _subsystemFactory.Announce<JDecryption>  (PluginHost::ISubSystem::subsystem::DECRYPTION);
     }
 POP_WARNING()
 
@@ -424,7 +416,7 @@ POP_WARNING()
         ASSERT(_service != nullptr);
 
         if (_service != nullptr) {
-            _service->Register(&_notification);
+            Exchange::JSubsystemControl::Register(*this, this);
         }
 
         return (_service == nullptr ? _T("SubsystemControl could not retrieve the ISubSystem interface.") : EMPTY_STRING);
@@ -433,8 +425,7 @@ POP_WARNING()
     void SubsystemControl::Deinitialize(PluginHost::IShell* /* service */)  /* override */
     {
         if (_service != nullptr) {
-
-            _service->Unregister(&_notification);
+            Exchange::JSubsystemControl::Unregister(*this);
             _service->Release();
             _service = nullptr;
         }
@@ -443,6 +434,17 @@ POP_WARNING()
     string SubsystemControl::Information() const /* override */
     {
         return string();
+    }
+
+    Core::hresult SubsystemControl::Activate(const PluginHost::ISubSystem::subsystem subsystem, const Core::OptionalType<string>& configuration)
+    {
+        Core::IUnknown* metadata = _subsystemFactory.Metadata(subsystem, configuration.Value());
+        Core::hresult result = _service->Set(subsystem, metadata);
+
+        if (metadata != nullptr) {
+            metadata->Release();
+        }
+        return (result);
     }
 
 } // namespace Plugin
