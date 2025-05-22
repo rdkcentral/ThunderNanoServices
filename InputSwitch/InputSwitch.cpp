@@ -263,7 +263,6 @@ namespace Plugin {
         std::list<Exchange::IInputSwitch::ChannelData> channelList;
 
         if (name.IsSet() == true) {
-
             if (ChannelExists(name.Value()) == false) {
                 result = Core::ERROR_UNKNOWN_KEY;
             }
@@ -271,7 +270,7 @@ namespace Plugin {
                 Exchange::IInputSwitch::ChannelData channel;
                 channel.name = name.Value();
                 channel.enabled = Consumer(name.Value());
-                channelList.push_back(channel);
+                channelList.push_back(std::move(channel));
             }
         }
         else {
@@ -281,13 +280,13 @@ namespace Plugin {
                 Exchange::IInputSwitch::ChannelData channel;
                 channel.name = index.Name();
                 channel.enabled = Consumer(index.Name());
-                channelList.push_back(channel);
+                channelList.push_back(std::move(channel));
             }
         }
 
         if (channelList.empty() == false) {
             using Iterator = Exchange::IInputSwitch::IChannelIterator;
-            channels = Core::ServiceType<RPC::IteratorType<Iterator>>::Create<Iterator>(channelList);
+            channels = Core::ServiceType<RPC::IteratorType<Iterator>>::Create<Iterator>(std::move(channelList));
             ASSERT(channels != nullptr);
         }
         else {
