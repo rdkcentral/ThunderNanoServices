@@ -28,11 +28,13 @@ set(MODULE_NAME ${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}COM REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_executable(${MODULE_NAME} SimpleCOMRPCServer.cpp)
 
-set_target_properties(COMRPCClient PROPERTIES
+set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
         CXX_STANDARD_REQUIRED YES
         )     
@@ -40,6 +42,8 @@ set_target_properties(COMRPCClient PROPERTIES
 target_link_libraries(${MODULE_NAME}
         PRIVATE
         ${NAMESPACE}COM::${NAMESPACE}COM
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         CompileSettingsDebug::CompileSettingsDebug
     )
 

@@ -133,8 +133,8 @@ public:
     }
 
 public:
-    bool Get(const string& nameSpace, const string& key, string& value ) const {
-        bool result = false;
+    Core::hresult Get(const string& nameSpace, const string& key, string& value ) const {
+        Core::hresult result = Core::ERROR_NONE;
         const Exchange::IDictionary* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
@@ -144,8 +144,8 @@ public:
 
         return (result);
     }
-    bool Set(const string& nameSpace, const string& key, const string& value) {
-        bool result = false;
+    Core::hresult Set(const string& nameSpace, const string& key, const string& value) {
+        Core::hresult result = Core::ERROR_NONE;
         Exchange::IDictionary* impl = BaseClass::Interface();
 
         if (impl != nullptr) {
@@ -208,7 +208,7 @@ private:
 
 int main(int /* argc */, char** /* argv */)
 {
-    bool directLink = true;
+    bool directLink = false;
 
     // Create an engine that can deserialize the invoke COMRPC messages that have been 
     // received. The parameters her <4,1> stand for the queue length, 4 which means that
@@ -293,12 +293,12 @@ int main(int /* argc */, char** /* argv */)
         #ifdef __WINDOWS__
         Core::NodeId nodeId("127.0.0.1:5522");
         #else
-        Core::NodeId nodeId("/tmp/Dictionary/communicator");
+        Core::NodeId nodeId("/tmp/communicator");
         #endif
         Core::ProxyObject<RPC::CommunicatorClient> client(nodeId);
         client.AddRef();
 
-        Exchange::IDictionary* pluginOnly = client.Open<Exchange::IDictionary>(_T(""));
+        Exchange::IDictionary* pluginOnly = client.Open<Exchange::IDictionary>(_T("Dictionary"));
 
         if (pluginOnly != nullptr) {
             Core::SinkType<Sink> sink(pluginOnly);
@@ -364,14 +364,14 @@ int main(int /* argc */, char** /* argv */)
             case 'S': {
 
                 string value = Core::NumberType<int32_t>(counter++).Text();
-                if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
+                if (dictionary.Set(_T("/name"), _T("key"), value) == Core::ERROR_NONE) {
                     printf("Set value: %s\n", value.c_str());
                 }
                 break;
             }
             case 'G': {
                 string value;
-                if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
+                if (dictionary.Get(_T("/name"), _T("key"), value) == Core::ERROR_NONE) {
                     printf("Get value: %s\n", value.c_str());
                 }
                 break;
@@ -381,8 +381,8 @@ int main(int /* argc */, char** /* argv */)
                 uint32_t count = 0;
                 while (count++ != 500000) {
                     string value = Core::NumberType<int32_t>(counter++).Text();
-                    if (dictionary.Set(_T("/name"), _T("key"), value) == true) {
-                        if (dictionary.Get(_T("/name"), _T("key"), value) == true) {
+                    if (dictionary.Set(_T("/name"), _T("key"), value) == Core::ERROR_NONE) {
+                        if (dictionary.Get(_T("/name"), _T("key"), value) == Core::ERROR_NONE) {
                             printf("Iteration %6i: Set/Get value: %s\n", count, value.c_str());
                         }
                     }

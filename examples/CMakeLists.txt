@@ -87,6 +87,8 @@ endif()
 if (EXAMPLE_SIMPLECOMRPC_TEST)
     add_subdirectory(SimpleCOMRPC/PluginServer)
     add_subdirectory(SimpleCOMRPC/Client)
+    add_subdirectory(SimpleCOMRPCServer)
+    add_subdirectory(SimpleCOMRPCInterface)
 endif()
 
 if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)

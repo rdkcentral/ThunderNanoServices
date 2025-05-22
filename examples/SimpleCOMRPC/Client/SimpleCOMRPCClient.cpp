@@ -22,7 +22,7 @@
 #include <core/core.h>
 #include <com/com.h>
 #include <plugins/plugins.h>
-#include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+#include "../../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 

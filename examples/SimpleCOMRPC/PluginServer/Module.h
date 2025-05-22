@@ -24,7 +24,7 @@
 #endif
 
 #include <plugins/plugins.h>
-#include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+#include "../../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
 
 #undef EXTERNAL
 #define EXTERNAL
