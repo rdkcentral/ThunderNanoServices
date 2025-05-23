@@ -36,8 +36,6 @@ namespace Plugin {
         );
     }
 
-    static Core::ProxyPoolType<Web::JSONBodyType<SecureShellServer::Data>> jsonBodyDataFactory(2);
-
     const string SecureShellServer::Initialize(PluginHost::IShell* service)
     {
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
@@ -49,12 +47,15 @@ namespace Plugin {
         // TODO: Check the return value and based on that change result
         activate_dropbear(const_cast<char*>(_InputParameters.c_str()));
 
+        Exchange::JSecureShellServer::Register(*this, this);
+
         return string();
     }
 
     void SecureShellServer::Deinitialize(PluginHost::IShell* service)
     {
         // Deinitialize what we initialized..
+        Exchange::JSecureShellServer::Unregister(*this);
         TRACE(Trace::Information, (_T("Stoping Dropbear Service")));
         deactivate_dropbear(); //TODO: Check the return value and based on that change result
     }
@@ -65,92 +66,15 @@ namespace Plugin {
         return string();
     }
 
-    void SecureShellServer::Inbound(Web::Request& request)
-    {
-    }
-
-    // GET      <- GetSessionsInfo
-    // GET      <- GetSessionsCount
-    // DELETE   <-CloseClientSession
-    Core::ProxyType<Web::Response> SecureShellServer::Process(const Web::Request& request)
-    {
-        ASSERT(_skipURL <= request.Path.length());
-
-        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
-        Core::ProxyType<Web::JSONBodyType<SecureShellServer::Data>> response(jsonBodyDataFactory.Element());
-
-        Core::TextSegmentIterator index(Core::TextFragment(request.Path, _skipURL, request.Path.length() - _skipURL), false, '/');
-
-        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-        result->Message = _T("Unsupported request for the [SecureShellServer] service.");
-
-        if ((request.Verb == Web::Request::HTTP_GET && index.Next())) {
-
-                if (index.Current().Text() == "GetSessionsCount") {
-                        // GET  <- GetSessionsCount
-			Exchange::ISecureShellServer::IClient::IIterator* client_iter = SessionsInfo();
-                        response->ActiveCount = SecureShellServer::GetSessionsCount(client_iter);
-                        result->ErrorCode = Web::STATUS_OK;
-                        result->ContentType = Web::MIMETypes::MIME_JSON;
-                        result->Message = _T("Success");
-                        result->Body(response);
-                } else if (index.Current().Text() == "GetSessionsInfo") {
-                        // GET  <- GetSessionsInfo
-			uint32_t status = SecureShellServer::GetSessionsInfo(response->SessionInfo);
-                        if (status != Core::ERROR_NONE) {
-                            result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                            result->Message = _T("Dropbear GetSessionsInfo failed for ");
-                        } else {
-                                result->ErrorCode = Web::STATUS_OK;
-                                result->ContentType = Web::MIMETypes::MIME_JSON;
-                                result->Message = _T("Success");
-                                result->Body(response);
-                        }
-                } else {
-                        result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                        result->Message = _T("Unavailable method");
-                }
-
-        } else if ((request.Verb == Web::Request::HTTP_DELETE && index.Next())) {
-
-                if (index.Current().Text() == "CloseClientSession") {
-                        // DELETE       <-CloseClientSession
-		        ISecureShellServer::IClient* client = Core::ServiceType<ClientImpl>::Create<ISecureShellServer::IClient>(
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->IpAddress.Value(),
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->TimeStamp.Value(),
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->Pid.Value());
-                        uint32_t status = SecureShellServer::CloseClientSession(client);
-                        if (status != Core::ERROR_NONE) {
-                               result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                               result->Message = _T("Dropbear CloseClientSession failed for ");
-                        } else {
-                               result->ErrorCode = Web::STATUS_OK;
-                               result->ContentType = Web::MIMETypes::MIME_JSON;
-                               result->Message = _T("Success");
-                               result->Body(response);
-                        }
-                } else {
-                        result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                        result->Message = _T("Unavailable method");
-                }
-        } else {
-                // Not supported HTTP Method
-                result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
-                result->Message = _T("Unavailable method");
-        }
-
-        return result;
-    }
-
     Exchange::ISecureShellServer::IClient::IIterator* SecureShellServer::SessionsInfo()
     {
         std::list<ClientImpl*> local_clients;
-	Exchange::ISecureShellServer::IClient::IIterator* iter=nullptr;
+	    Exchange::ISecureShellServer::IClient::IIterator* iter = nullptr;
 
         int32_t count = get_active_sessions_count();
         TRACE(Trace::Information, (_T("Get details of (%d)active SSH client sessions managed by Dropbear service"), count));
 
-	if (count > 0) {
+	    if (count > 0) {
             struct client_info *info = static_cast<struct client_info*>(::malloc(sizeof(struct client_info) * count));
 
             get_active_sessions_info(info, count);
@@ -164,60 +88,77 @@ namespace Plugin {
             }
             ::free(info);
 
-	    if (local_clients.empty() == false) {
-                iter = Core::ServiceType<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(local_clients);
-                TRACE(Trace::Information, (_T("Currently total %d sessions are active"), iter->Count()));
-	    }
-            local_clients.clear(); // Clear all elements before we re-populate it with new elements
-	}
-
-	return iter;
-     }
-
-    uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo)
-    {
-        uint32_t result = Core::ERROR_NONE;
-	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
-
-	if (iter != nullptr) {
-	    uint32_t index = 0;
-
-	    iter->Reset();
-            while(iter->Next()) {
-                TRACE(Trace::Information, (_T("Count: %d index:%d pid: %s IP: %s Timestamp: %s"),
-                                         iter->Count(), index++, iter->Current()->RemoteId().c_str(), iter->Current()->IpAddress().c_str(),
-					 iter->Current()->TimeStamp().c_str()));
-
-                JsonData::SecureShellServer::SessioninfoResultData newElement;
-
-                newElement.IpAddress = iter->Current()->IpAddress();
-                newElement.Pid = iter->Current()->RemoteId();
-                newElement.TimeStamp = iter->Current()->TimeStamp();
-
-                JsonData::SecureShellServer::SessioninfoResultData& element(sessioninfo.Add(newElement));
+            if (local_clients.empty() == false) {
+                    iter = Core::ServiceType<ClientImpl::IteratorImpl>::Create<ISecureShellServer::IClient::IIterator>(local_clients);
+                    TRACE(Trace::Information, (_T("Currently total %d sessions are active"), iter->Count()));
             }
-	    iter->Release();
-	}
-        return result;
+            local_clients.clear(); // Clear all elements before we re-populate it with new elements
+	    }
+
+	    return iter;
     }
 
-    uint32_t SecureShellServer::GetSessionsCount(Exchange::ISecureShellServer::IClient::IIterator* iter)
+    Core::hresult SecureShellServer::ActiveSessionsCount(uint32_t& count) const
     {
-        uint32_t count = iter->Count();
-        TRACE(Trace::Information, (_T("Get total number of active SSH client sessions managed by Dropbear service: %d"), count));
+        Exchange::ISecureShellServer::IClient::IIterator* it = SessionsInfo();
 
-        return count;
+        if (it != nullptr) {
+            count = it->Count();
+            it->Release();
+        }
+        else {
+            count = 0;
+        }
+
+        TRACE(Trace::Information, (_T("Total number of active SSH client sessions managed by Dropbear service: %d"), count));
+
+        return (Core::ERROR_NONE);
     }
 
-    uint32_t SecureShellServer::CloseClientSession(Exchange::ISecureShellServer::IClient* client)
+    Core::hresult SecureShellServer::ActiveSessionsInfo(Exchange::ISSHSessions::IClientIterator*& clients) const
     {
-        uint32_t result = Core::ERROR_NONE;
+        Core::hresult result = Core::ERROR_GENERAL;
+        std::list<Exchange::ISSHSessions::Client> clientList;
+	    Exchange::ISecureShellServer::IClient::IIterator* it = SessionsInfo();
 
-        TRACE(Trace::Information, (_T("closing client session with PID1: %s"), client->RemoteId().c_str()));
+        if (it != nullptr) {
+            uint32_t index = 0;
+            it->Reset();
 
-	client->Close();
+            while(it->Next()) {
+                TRACE(Trace::Information, (_T("Count: %d index:%d pid: %s IP: %s Timestamp: %s"),
+                                           it->Count(), index++,
+                                           it->Current()->RemoteId().c_str(),
+                                           it->Current()->IpAddress().c_str(),
+                                           it->Current()->TimeStamp().c_str()));
 
-        return result;
+                Exchange::ISSHSessions::Client client;
+                client.pid = it->Current()->RemoteId();
+                client.ipAddress = it->Current()->IpAddress();
+                client.timeStamp = it->Current()->TimeStamp();
+                clientList.push_back(std::move(client));
+            }
+            it->Release();
+        }
+
+        if (clientList.empty() == false) {
+            using Iterator = Exchange::ISSHSessions::IClientIterator;
+            clients = Core::ServiceType<RPC::IteratorType<Iterator>>::Create<Iterator>(std::move(clientList));
+            result = Core::ERROR_NONE;
+        }
+        else {
+            clients = nullptr;
+        }
+
+        return (result);
+    }
+
+    Core::hresult SecureShellServer::CloseSession(uint32_t& pid) const
+    {
+        ClientImpl* client = Core::ServiceType<SecureShellServer::ClientImpl>::Create<ClientImpl>(std::to_string(pid));
+        client->Close();
+
+        return (Core::ERROR_NONE);
     }
 
     /*virtual*/ Exchange::ISecureShellServer::IClient::IIterator* SecureShellServer::Clients()

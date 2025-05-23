@@ -20,55 +20,18 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/ISecureShellServer.h>
-#include <interfaces/json/JsonData_SecureShellServer.h>
-
 #include <libdropbear.h>
-
+#include <interfaces/ISecureShellServer.h>
+#include <interfaces/json/JSecureShellServer.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class SecureShellServer : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::ISecureShellServer, public PluginHost::JSONRPC {
+    class SecureShellServer : public PluginHost::IPlugin
+                            , public Exchange::ISecureShellServer
+                            , public Exchange::ISSHSessions
+                            , public PluginHost::JSONRPC {
     public:
-        class Data : public Core::JSON::Container {
-        public:
-            Data()
-                : Core::JSON::Container()
-                , SessionInfo()
-                , ActiveCount()
-            {
-                Add(_T("sessioninfo"), &SessionInfo);
-                Add(_T("activecount"), &ActiveCount);
-            }
-
-            ~Data() override = default;
-
-        public:
-            Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData> SessionInfo;
-            Core::JSON::DecUInt32 ActiveCount;
-        };
-
-        class Config : public Core::JSON::Container {
-        private:
-            Config(const Config&);
-            Config& operator=(const Config&);
-
-        public:
-            Config()
-                : Core::JSON::Container()
-                , InputParameters()
-            {
-                Add(_T("inputparameters"), &InputParameters);
-            }
-            ~Config()
-            {
-            }
-
-        public:
-            Core::JSON::String InputParameters;
-        };
-
         class ClientImpl : public ISecureShellServer::IClient {
         private:
             ClientImpl() = delete;
@@ -152,6 +115,12 @@ namespace Plugin {
                 , _remoteid(remoteid)
             {
             }
+            ClientImpl(const string& remoteid)
+                : _ipaddress()
+                , _timestamp()
+                , _remoteid(remoteid)
+            {
+            }
             ~ClientImpl()
             {
             }
@@ -190,18 +159,16 @@ namespace Plugin {
         : _skipURL(0)
         , _InputParameters()
         {
-            RegisterAll();
         }
 
         ~SecureShellServer() override
         {
-            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(SecureShellServer)
         INTERFACE_ENTRY(PluginHost::IPlugin)
-        INTERFACE_ENTRY(PluginHost::IWeb)
         INTERFACE_ENTRY(Exchange::ISecureShellServer)
+        INTERFACE_ENTRY(Exchange::ISSHSessions)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
@@ -210,17 +177,8 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-        //   IWeb methods
-        void Inbound(Web::Request& request) override;
-        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
-
         //  ISecureShellServer methods
         ISecureShellServer::IClient::IIterator* Clients() override;
-
-        // SecureShellServer methods
-        uint32_t GetSessionsCount(ISecureShellServer::IClient::IIterator* iter);
-        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo);
-        uint32_t CloseClientSession(ISecureShellServer::IClient* client);
 
     private:
         SecureShellServer(const SecureShellServer&) = delete;
@@ -228,12 +186,9 @@ namespace Plugin {
 
         ISecureShellServer::IClient::IIterator* SessionsInfo();
 
-        void RegisterAll();
-        void UnregisterAll();
-        
-        uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
-        uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
-        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoResultData& params);
+        Core::hresult ActiveSessionsCount(uint32_t& count) const override;
+        Core::hresult ActiveSessionsInfo(Exchange::ISSHSessions::IClientIterator*& clients) const override;
+        Core::hresult CloseSession(uint32_t& pid) const override;
 
         uint8_t _skipURL;
         std::string _InputParameters;

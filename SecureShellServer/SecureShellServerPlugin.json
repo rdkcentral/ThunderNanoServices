@@ -1,0 +1,14 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "Secure Shell Server",
+      "callsign": "SecureShellServer",
+      "locator": "libWPESecureShellServer.so",
+      "status": "production",
+      "description": "Secure Shell Server plugins allows to get information about active SSH connections.",
+      "version": "1.0"
+    },
+    "interface": [
+      { "$ref": "{cppinterfacedir}/ISecureShellServer.h" }
+    ]
+  }

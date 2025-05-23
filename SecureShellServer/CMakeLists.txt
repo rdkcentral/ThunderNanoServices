@@ -42,7 +42,6 @@ endif( NOT LIBDROPBEAR_FOUND)
 
 add_library(${MODULE_NAME} SHARED
     SecureShellServer.cpp
-    SecureShellServerJsonRpc.cpp
     Module.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
