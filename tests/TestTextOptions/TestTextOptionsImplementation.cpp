@@ -54,23 +54,31 @@ namespace Plugin {
         // ITestTextOptions methods
         Core::hresult TestStandart(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED, 
         const QualityAssurance::ITestTextOptions::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+            TRACE(Trace::Information, (_T("firstTestParam: %d, secondTestParam: %d, thirdTestParam: %s %s, fourthTestParam: %s"), 
+            firstTestParam, secondTestParam, thirdTestParam.testDetailsFirst.c_str(), thirdTestParam.testDetailsSecond.c_str(), Core::EnumerateType<QualityAssurance::ITestTextOptions::EnumTextOptions>(fourthTestParam).Data()));
             return Core::ERROR_NONE;
         }
        
         // ITestLegacy methods
         Core::hresult TestLegacy(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
         const QualityAssurance::ITestTextOptions::ITestLegacy::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestLegacy::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+            TRACE(Trace::Information, (_T("firstTestParam: %d, secondTestParam: %d, thirdTestParam: %s %s, fourthTestParam: %s"), 
+            firstTestParam, secondTestParam, thirdTestParam.testDetailsFirst.c_str(), thirdTestParam.testDetailsSecond.c_str(), Core::EnumerateType<QualityAssurance::ITestTextOptions::EnumTextOptions>(fourthTestParam).Data()));
             return Core::ERROR_NONE;
         }
         
         // ITestKeep methods
-        Core::hresult TestKeeP(const uint32_t firstTestParaM VARIABLE_IS_NOT_USED, const uint32_t secondTestParaM VARIABLE_IS_NOT_USED,
-        const QualityAssurance::ITestTextOptions::ITestKeep::TestDetails& thirdTestParaM VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestKeep::EnumTextOptions fourthTestParaM VARIABLE_IS_NOT_USED) override {
+        Core::hresult TestKeeP(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
+        const QualityAssurance::ITestTextOptions::ITestKeep::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestKeep::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+            TRACE(Trace::Information, (_T("firstTestParam: %d, secondTestParam: %d, thirdTestParam: %s %s, fourthTestParam: %s"), 
+            firstTestParam, secondTestParam, thirdTestParam.testDetailsFirst.c_str(), thirdTestParam.testDetailsSecond.c_str(), Core::EnumerateType<QualityAssurance::ITestTextOptions::EnumTextOptions>(fourthTestParam).Data()));
             return Core::ERROR_NONE;
         }        
         // ITestCustom methods
         Core::hresult TestCustom(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
         const QualityAssurance::ITestTextOptions::ITestCustom::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestCustom::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+            TRACE(Trace::Information, (_T("firstTestParam: %d, secondTestParam: %d, thirdTestParam: %s %s, fourthTestParam: %s"), 
+            firstTestParam, secondTestParam, thirdTestParam.testDetailsFirst.c_str(), thirdTestParam.testDetailsSecond.c_str(), Core::EnumerateType<QualityAssurance::ITestTextOptions::EnumTextOptions>(fourthTestParam).Data()));
             return Core::ERROR_NONE;
         }
     };

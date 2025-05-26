@@ -60,8 +60,9 @@ namespace Plugin {
                 {
                 }
 
-            void TestEvent() override {
-                QualityAssurance::JTestTextOptions::Event::TestEvent(_parent.Parent());
+            void TestEvent(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
+                const QualityAssurance::ITestTextOptions::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+                QualityAssurance::JTestTextOptions::Event::TestEvent(_parent.Parent(), firstTestParam, secondTestParam, thirdTestParam, fourthTestParam);
             }
         private:
             Notification& _parent;
@@ -74,8 +75,9 @@ namespace Plugin {
                 {
                 }
 
-            void TestEvent() override {
-                QualityAssurance::TestTextOptions::JTestLegacy::Event::TestEvent(_parent.Parent());
+            void TestEvent(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
+                const QualityAssurance::ITestTextOptions::ITestLegacy::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestLegacy::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+                QualityAssurance::TestTextOptions::JTestLegacy::Event::TestEvent(_parent.Parent(), firstTestParam, secondTestParam, thirdTestParam, fourthTestParam);
             }
         private:
             Notification& _parent;
@@ -88,8 +90,9 @@ namespace Plugin {
                 {
                 }
 
-            void TestEvent() override {
-                QualityAssurance::TestTextOptions::JTestKeep::Event::TestEvent(_parent.Parent());
+            void TestEvent(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
+                const QualityAssurance::ITestTextOptions::ITestKeep::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestKeep::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+                QualityAssurance::TestTextOptions::JTestKeep::Event::TestEvent(_parent.Parent(), firstTestParam, secondTestParam, thirdTestParam, fourthTestParam);
             }
         private:
             Notification& _parent;
@@ -102,8 +105,9 @@ namespace Plugin {
                 {
                 }
 
-            void TestEvent() override {
-                QualityAssurance::TestTextOptions::JTestCustom::Event::TestEvent(_parent.Parent());
+            void TestEvent(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
+                const QualityAssurance::ITestTextOptions::ITestCustom::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestCustom::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
+                QualityAssurance::TestTextOptions::JTestCustom::Event::TestEvent(_parent.Parent(), firstTestParam, secondTestParam, thirdTestParam, fourthTestParam);
             }
         private:
             Notification& _parent;
