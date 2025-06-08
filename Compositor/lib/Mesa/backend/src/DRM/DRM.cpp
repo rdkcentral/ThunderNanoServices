@@ -61,6 +61,12 @@ namespace Compositor {
     namespace Backend {
         class DRM : public Compositor::IBackend {
         public:
+            enum class State : uint8_t {
+                IDLE = 0x00,
+                FLIPPING = 0x01,
+                PENDING = 0x02,
+            };
+
             DRM() = delete;
             DRM(DRM&&) = delete;
             DRM(const DRM&) = delete;
@@ -68,9 +74,8 @@ namespace Compositor {
             DRM& operator=(const DRM&) = delete;
 
             explicit DRM(const string& gpuNode)
-                : _flip()
+                : _state(State::IDLE)
                 , _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
-                , _pendingFlips(0)
             {
                 ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
 
@@ -168,39 +173,43 @@ namespace Compositor {
             {
                 uint32_t result(Core::ERROR_GENERAL);
 
-                if (_flip.try_lock()) {
+                State expected(State::IDLE);
+
+                if (_state.compare_exchange_strong(expected, State::FLIPPING) == true) {
                     result = Core::ERROR_NONE;
 
                     static bool doModeSet(true);
-                    bool added = false;
 
                     Backend::Transaction transaction(_gpuFd, doModeSet, this);
 
-                    _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
-                        if (connector->IsEnabled() == true) {
-                            uint32_t outcome;
-                            connector->Swap();
-                            if ((outcome = transaction.Add(*(connector.operator->()))) != Core::ERROR_NONE) {
-                                result = outcome;
-                            } else {
-                                _pendingFlips++;
-                                added = true;
-                            }
+                    _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
+                        connector->Swap();
+
+                        uint32_t outcome;
+
+                        if ((outcome = transaction.Add(*(connector.operator->())) != Core::ERROR_NONE)) {
+                            TRACE_GLOBAL(Trace::Error, ("Failed to add connector %s to transaction, error: %d", name.c_str(), outcome));
                         }
                     });
 
-                    if ((result != Core::ERROR_NONE) || ((added == true) && (transaction.Commit() != Core::ERROR_NONE))) {
+                    if ((result = transaction.Commit()) != Core::ERROR_NONE) {
                         _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
                             connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
                         });
+
+                        TRACE_GLOBAL(Trace::Error, ("Failed to commit connectors, no buffers will be displayed"));
                     }
 
                     doModeSet = transaction.ModeSet();
 
-                    TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
+                    TRACE_GLOBAL(Trace::Information, ("Committed connectors: %u", result));
                 } else {
-                    TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
-                    result = Core::ERROR_INPROGRESS;
+                    State expected(State::FLIPPING);
+
+                    if (_state.compare_exchange_strong(expected, State::PENDING) == true) {
+                        TRACE_GLOBAL(Trace::Error, ("Page flip still in progress, handle this request later to grantee the new content will be displayed"));
+                        result = Core::ERROR_INPROGRESS;
+                    }
                 }
 
                 return result;
@@ -218,19 +227,21 @@ namespace Compositor {
                         // TODO: Check with Bram the intention of the Release()
                         // connector->Release();
 
-                        --_pendingFlips;
-
-                        TRACE(Trace::Backend, ("Pageflip finished for %s, pending flips: %u", name.c_str(), _pendingFlips));
+                        TRACE(Trace::Backend, ("Pageflip finished for %s", name.c_str()));
                     }
                 });
 
-                if (_pendingFlips == 0) {
-                    // all connectors are flipped... ready for the next round.
-                    TRACE(Trace::Backend, ("all connectors are flipped... ready for the next round."));
-                    _flip.unlock();
+                State expected = State::FLIPPING;
+
+                if (_state.compare_exchange_strong(expected, State::IDLE) == false) {
+                    expected = State::PENDING;
+
+                    if (_state.compare_exchange_strong(expected, State::FLIPPING) == true) {
+                        Commit(Compositor::DRM::InvalidIdentifier); // re-commit if there was a pending request.
+                    }
                 }
             }
-            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
+            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
             {
                 ASSERT(userData != nullptr);
 
@@ -240,17 +251,16 @@ namespace Compositor {
             }
 
         private:
-            std::mutex _flip;
+            std::atomic<State> _state;
             int _gpuFd; // GPU opened as master or lease...
             Core::ProxyMapType<string, Connector> _connectors;
-            uint8_t _pendingFlips;
         }; // class DRM
 
         static Core::ProxyMapType<string, Backend::DRM> _backends;
 
     } // namespace Backend
 
-    Core::ProxyType<IOutput> CreateBuffer(const string& connectorName, 
+    Core::ProxyType<IOutput> CreateBuffer(const string& connectorName,
         const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format,
         const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
     {
