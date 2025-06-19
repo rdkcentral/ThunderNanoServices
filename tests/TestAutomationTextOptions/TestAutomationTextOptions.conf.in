@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_TESTAUTOMATIONTEXTOPTIONS_STARTMODE@"
+resumed = "@PLUGIN_TESTAUTOMATIONTEXTOPTIONS_RESUMED@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTAUTOMATIONTEXTOPTIONS_MODE@")
+configuration.add("root", root)
