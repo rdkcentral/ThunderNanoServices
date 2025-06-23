@@ -36,7 +36,7 @@ namespace Plugin {
 
     class GeneratorShowcase : public PluginHost::IPlugin
                             , public PluginHost::JSONRPCSupportsEventStatus
-                            , public PluginHost::JSONRPCSupportsObjectLookup<Core::JSONRPC::Context>
+                            , public PluginHost::JSONRPCSupportsObjectLookup
                             , public Exchange::JSimpleInstanceObjects::IHandler
                             , public Exchange::JSimpleCustomObjects::IHandler {
     public:
@@ -1404,7 +1404,7 @@ namespace Plugin {
             Add<Exchange::ISimpleCustomObjects::IAccessory>(
                 // Handler for obj to id translation.
                 // (Context can be omitted from the lambda altogheter if not needed.)
-                [this](const Core::IUnknown* object, const Core::JSONRPC::Context& context) -> string {
+                [this](const Core::JSONRPC::Context& context, const Core::IUnknown* object) -> string {
                     const string id = _imaginaryCustomHost->LookUp(object, context);
 
                     // It's impossible for the id to be empty.
@@ -1413,7 +1413,7 @@ namespace Plugin {
                     return (id);
                 },
                 // Handler for id to obj translation.
-                [this](const string& id, const Core::JSONRPC::Context& context) -> Core::IUnknown* {
+                [this](const Core::JSONRPC::Context& context, const string& id) -> Core::IUnknown* {
                     Core::IUnknown* const object = _imaginaryCustomHost->LookUp(id, context);
 
                     // It's okay to return nullptr if the id is not known.
