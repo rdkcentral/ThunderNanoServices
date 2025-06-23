@@ -228,6 +228,7 @@ namespace Compositor {
             }       
         }
 
+        PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
         Exchange::IGraphicsBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
         {
             return (_buffer.IsValid() == true) ? _buffer->Acquire(timeoutMs) : nullptr;
@@ -239,6 +240,7 @@ namespace Compositor {
                 _buffer->Relinquish();
             }
         }
+        POP_WARNING()
 
         uint32_t WaylandOutput::Width() const
         {
