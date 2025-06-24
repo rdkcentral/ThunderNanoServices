@@ -91,6 +91,8 @@ namespace Compositor {
                         }
                     }
                 }
+
+                PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
                 IIterator* Acquire(const uint32_t timeoutMs)
                 {
                     _swap.Lock();
@@ -101,6 +103,8 @@ namespace Compositor {
                     _swap.Unlock();
                     _buffer[_activePlane ^ 1]->Relinquish();
                 }
+                POP_WARNING()
+
                 uint32_t Width() const
                 {
                     return (_buffer[0]->Width());
@@ -207,6 +211,8 @@ namespace Compositor {
              * Returning the info of the back buffer because its used to
              * draw a new frame.
              */
+
+            PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
             IIterator* Acquire(const uint32_t timeoutMs) override
             {
                 return (_frameBuffer.Acquire(timeoutMs));
@@ -215,6 +221,8 @@ namespace Compositor {
             {
                 _frameBuffer.Relinquish();
             }
+            POP_WARNING()
+
             uint32_t Width() const override
             {
                 return (_frameBuffer.Width());
