@@ -32,8 +32,8 @@ namespace Plugin {
     void SecureShellServer::RegisterAll()
     {
 	Register<void, Core::JSON::DecUInt32>(_T("getactivesessionscount"), &SecureShellServer::endpoint_getactivesessionscount, this);
-	Register<void, Core::JSON::ArrayType<SessioninfoResultData>>(_T("getactivesessionsinfo"), &SecureShellServer::endpoint_getactivesessionsinfo, this);
-	Register<SessioninfoResultData,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
+	Register<void, Core::JSON::ArrayType<GetactivesessionsinfoResultDataElem>>(_T("getactivesessionsinfo"), &SecureShellServer::endpoint_getactivesessionsinfo, this);
+	Register<GetactivesessionsinfoResultDataElem,void>(_T("closeclientsession"), &SecureShellServer::endpoint_closeclientsession, this);
     }
 
     void SecureShellServer::UnregisterAll()
@@ -72,7 +72,7 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Get details of each active SSH client sessions managed by Dropbear Service.
-    uint32_t SecureShellServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<SessioninfoResultData>& response)
+    uint32_t SecureShellServer::endpoint_getactivesessionsinfo(Core::JSON::ArrayType<GetactivesessionsinfoResultDataElem>& response)
     {
         uint32_t result = Core::ERROR_NONE;
 
@@ -86,11 +86,11 @@ namespace Plugin {
     //  - ERROR_NONE: Success
     //  - ERROR_INCORRECT_URL: Incorrect URL given
     // Close a SSH client session.
-    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoResultData& params)
+    uint32_t SecureShellServer::endpoint_closeclientsession(const JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem& params)
     {
         uint32_t result = Core::ERROR_NONE;
 	ClientImpl* client =
-		Core::ServiceType<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.IpAddress.Value(), params.TimeStamp.Value(), params.Pid.Value());
+		Core::ServiceType<SecureShellServer::ClientImpl>::Create<ClientImpl>(params.Ipaddress.Value(), params.Timestamp.Value(), std::to_string(params.Pid.Value()));
 
         if(params.Pid.IsSet() == true) {
             TRACE(Trace::Information, (_T("closing client session with pid: %s"), params.Pid.Value()));
