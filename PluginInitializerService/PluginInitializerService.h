@@ -557,14 +557,15 @@ POP_WARNING()
         {
             _adminLock.Lock();
 
-            PluginStarterContainer::iterator it = _pluginInitList.begin();
-            if (it != _pluginInitList.end()) {
-                PluginStarter toAbort(std::move(*it));
-                it = _pluginInitList.erase(it);
-                if (_pluginInitList.size() == 0) {
-                    DeactivateNotifications();
+            TRACE(Trace::Information, (_T("Cancelling all plugin activation requests (plugin deactivate)")));
+
+            if (_pluginInitList.size() != 0) {
+
+                for (PluginStarter& starter : _pluginInitList) {
+                    starter.Abort();
                 }
-                toAbort.Abort();
+                _pluginInitList.clear();
+                DeactivateNotifications();
             }
 
              _adminLock.Unlock();
