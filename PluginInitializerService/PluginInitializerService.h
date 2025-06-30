@@ -23,6 +23,43 @@
 #include <interfaces/IPluginAsyncStateControl.h>
 
 namespace Thunder {
+
+namespace Trace {
+    class ActivationQueueInfo {
+    public:
+        ActivationQueueInfo(const TCHAR formatter[], ...)
+        {
+            va_list ap;
+            va_start(ap, formatter);
+            Core::Format(_text, formatter, ap);
+            va_end(ap);
+        }
+        explicit ActivationQueueInfo(const string& text)
+            : _text(Core::ToString(text))
+        {
+        }
+        ~ActivationQueueInfo() = default;
+
+        ActivationQueueInfo(const ActivationQueueInfo&) = delete;
+        ActivationQueueInfo& operator=(const ActivationQueueInfo&) = delete;
+        ActivationQueueInfo(ActivationQueueInfo&&) = delete;
+        ActivationQueueInfo& operator=(ActivationQueueInfo&&) = delete;
+
+    public:
+        const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        std::string _text;
+    };
+}
+
 namespace Plugin {
     
     class PluginInitializerService : public PluginHost::IPlugin, public Exchange::IPluginAsyncStateControl {
@@ -322,7 +359,6 @@ POP_WARNING()
             Core::ProxyType<Core::WorkerPool::JobType<DelayJob>> _delayJob;
         };
 
-
         class Notifications : public PluginHost::IPlugin::INotification, public PluginHost::IPlugin::ILifeTime {
         public:
             explicit Notifications(PluginInitializerService& initservice)
@@ -415,6 +451,8 @@ POP_WARNING()
 
             //see if this callsign is not yet in the list
             if (std::find(_pluginInitList.cbegin(), _pluginInitList.cend(), starter) == _pluginInitList.cend()) {
+                ASSERT(_pluginInitList.size() < std::numeric_limits<uint16_t>::max()); // I'll bet this will fire at some point :)
+
                 _pluginInitList.emplace_back(std::move(starter));
                 if (_pluginInitList.size() == 1) {
                     ActivateNotifications();
@@ -430,27 +468,25 @@ POP_WARNING()
             return result;
         }
 
+        // must be called from inside the lock
         void ActivateAnotherPlugin() 
         {
             TRACE(Trace::Information, (_T("Going to try to activate another plugin")));
             PluginStarterContainer::iterator it = _pluginInitList.begin(); // we just start activating from the top, so we try to do it more or less in the order of incoming requests
-            uint16_t currentlyActive = 0;
-            uint16_t currentlyPrecondition = 0;
-            while (it != _pluginInitList.end() && currentlyActive < _maxparallel) {
+            uint16_t currentlyActiveCounted = 0;
+            while ((it != _pluginInitList.end()) && (currentlyActiveCounted < _maxparallel)) {
                 PluginStarter::ActiveState state = it->Active();
                 if (state == PluginStarter::ActiveState::NotActive) {
-                    ++currentlyActive;
+                    ++currentlyActiveCounted;
                     it->Activate();
                     TRACE(Trace::Information, (_T("Activating another plugin")));
-//                    break; // we activated another we can stop looking... (as this method is only called when added another request or one was handled)
-                } else if (state == PluginStarter::ActiveState::WaitingForPrecondition) {
-                    ++currentlyPrecondition;
-                } else {
-                    ++currentlyActive;
-                }
-                ASSERT(currentlyActive < std::numeric_limits<uint16_t>::max()); // I'll bet this will fire at some point :)
+                    break; // we activated another we can stop looking... (as this method is only called when added another request or one was handled)
+                } else if (state == PluginStarter::ActiveState::Active) {
+                    ++currentlyActiveCounted;
+                } // so if the state is waiting for preconditions we do not count it as active and try to start another...
+                ++it;
             };
-            TRACE(Trace::Information, (_T("Currently %u activation requests active, %u waiting for preconditions, %u still waiting to be activated"), currentlyActive, currentlyPrecondition, _pluginInitList.size() - currentlyActive - currentlyPrecondition));
+            TRACE(Trace::ActivationQueueInfo, (_T("Request queue info: %s"), GetStarterQueueInfo().ToString().c_str()));
         }
 
         bool CancelPluginStarter(const string& callsign)
@@ -532,6 +568,40 @@ POP_WARNING()
             }
 
              _adminLock.Unlock();
+        }
+
+        struct StarterQueueInfo {
+            uint16_t Activating;
+            uint16_t WaitingPreconditions;
+            uint16_t TotalStarters;
+
+            string ToString() const
+            {
+                const TCHAR text[] = _T("Requests being activated: %u, Request waiting for preconditions %u, Total number of requests: %u");
+                return Core::Format(text, Activating, WaitingPreconditions, TotalStarters);
+            }
+        };
+
+        // note must be done inside lock
+        StarterQueueInfo GetStarterQueueInfo() const
+        {
+            StarterQueueInfo info{};
+            for (const PluginStarter& starter : _pluginInitList) {
+                PluginStarter::ActiveState state = starter.Active();
+                switch (state) {
+                    case PluginStarter::ActiveState::Active : 
+                        ++info.Activating;
+                        break;
+                    case PluginStarter::ActiveState::WaitingForPrecondition : 
+                        ++info.WaitingPreconditions;
+                        break;
+                    case PluginStarter::ActiveState::NotActive:
+                    default:
+                        break;
+                }
+            }
+            info.TotalStarters = static_cast<uint16_t>(_pluginInitList.size());
+            return info;
         }
 
     private:
