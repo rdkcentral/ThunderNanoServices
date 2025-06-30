@@ -78,6 +78,13 @@ POP_WARNING()
 
         class PluginStarter {
         public:
+            enum class ActiveState {
+                NotActive,
+                Active,
+                WaitingForPrecondition
+            };
+
+
             PluginStarter(PluginHost::IShell* requestedPluginShell
                          , uint8_t maxnumberretries
                          , uint16_t delay
@@ -202,11 +209,21 @@ POP_WARNING()
             {
                 return _callsign;
             }
-            bool Active() const
+            ActiveState Active() const
             {
+                ActiveState state = ActiveState::NotActive;
+
                 ASSERT(_requestedPluginShell != nullptr);
+                
                 // if the plugin is waiting for preconditions it is not eating bread here, so we can add another in parallel (risk is that if it fails to Initialize after the subsystems become avialable there might more parallel activations than max allowed, for now we just accept this small chance )
-                return ((_delayJob.IsValid() == true) && (_requestedPluginShell->State() != PluginHost::IShell::PRECONDITION));
+                if (_delayJob.IsValid() == true) {
+                    if (_requestedPluginShell->State() != PluginHost::IShell::PRECONDITION) {
+                        state = ActiveState::Active;
+                    } else {
+                        state = ActiveState::WaitingForPrecondition;
+                    }
+                }
+                return state;
             }
             void Activated()
             {
@@ -222,7 +239,7 @@ POP_WARNING()
                 }
                 // we will be removed and destroyed from the caller
             }
-            void Deinitialized()
+            bool Deinitialized() // returns true when fully failed and we should stop retrying
             {
                 // we can get here if:
                 // 1) state was DEACTIVATION and now plugin is fully deactivated -> let's try to startup now if this one was actually Activated (this notification can of course also happen in this situation in case it was not yest Activated)
@@ -230,7 +247,9 @@ POP_WARNING()
                 // 3) initial state was ACTIVATION -> although activate was not triggered by this service let's try to restart anyway as that is now requested
                 // 3) at Activation the activation failed -> let's try to restart, next attempt
 
-                if (_delayJob.IsValid() == true) { // we were already activated
+                bool fullyfailed = false;
+
+                if (_delayJob.IsValid() == true) { // Correct case, we are indeed trying to activate this PluginStarter
 
                     TRACE(Trace::Warning, (_T("Plugin [%s] was deinitialzed"), Callsign().c_str()));
                     if (_attempt <= _maxnumberretries) { // first attempt not included, that is not a retry...
@@ -250,12 +269,14 @@ POP_WARNING()
                             // for now let's not decouple. In the future if users prove to be unreliable we might however to not block Thunder internally
                             TRACE(Trace::Information, (_T("Result callback failed called for plugin [%s]"), Callsign().c_str()));
                             _callback->Finished(Callsign(), Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE, Retries());
-                            _initializerservice.PluginStarterFinished(*this); // note after this we are dead...
+                            fullyfailed = true;
                         }
                     }
                 } else {
-                    TRACE(Trace::Information, (_T("Plugin [%s] Deinitialzed notification received but not yet activated, will be ignored..."), Callsign().c_str()));
+                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialzed notification received but not yet activated, will be ignored..."), Callsign().c_str())); // apperently this plugin failed to start or was deactivated without us being involved, we just ignore and when there isn a slot available we will try to start it anyway
                 }
+
+                return fullyfailed;
             }
 
         private:
@@ -411,18 +432,25 @@ POP_WARNING()
 
         void ActivateAnotherPlugin() 
         {
-
-            PluginStarterContainer::iterator it = _pluginInitList.begin();
+            TRACE(Trace::Information, (_T("Going to try to activate another plugin")));
+            PluginStarterContainer::iterator it = _pluginInitList.begin(); // we just start activating from the top, so we try to do it more or less in the order of incoming requests
             uint16_t currentlyActive = 0;
+            uint16_t currentlyPrecondition = 0;
             while (it != _pluginInitList.end() && currentlyActive < _maxparallel) {
-                if (it->Active() == false) {
+                PluginStarter::ActiveState state = it->Active();
+                if (state == PluginStarter::ActiveState::NotActive) {
+                    ++currentlyActive;
                     it->Activate();
-                    break; // we activated another we can stop looking...
+                    TRACE(Trace::Information, (_T("Activating another plugin")));
+//                    break; // we activated another we can stop looking... (as this method is only called when added another request or one was handled)
+                } else if (state == PluginStarter::ActiveState::WaitingForPrecondition) {
+                    ++currentlyPrecondition;
+                } else {
+                    ++currentlyActive;
                 }
-                ++currentlyActive;
                 ASSERT(currentlyActive < std::numeric_limits<uint16_t>::max()); // I'll bet this will fire at some point :)
             };
-
+            TRACE(Trace::Information, (_T("Currently %u activation requests active, %u waiting for preconditions, %u still waiting to be activated"), currentlyActive, currentlyPrecondition, _pluginInitList.size() - currentlyActive - currentlyPrecondition));
         }
 
         bool CancelPluginStarter(const string& callsign)
@@ -437,7 +465,9 @@ POP_WARNING()
                 _pluginInitList.erase(it);
                 if (_pluginInitList.size() == 0) {
                     DeactivateNotifications();
-                } 
+                } else {
+                    ActivateAnotherPlugin();
+                }
                 _adminLock.Unlock();
                 result = true;
                 toAbort.Abort();
@@ -459,6 +489,8 @@ POP_WARNING()
                 _pluginInitList.erase(it);
                 if (_pluginInitList.size() == 0) {
                     DeactivateNotifications(false);
+                } else {
+                    ActivateAnotherPlugin();
                 }
                 _adminLock.Unlock();
                 activated.Activated();
@@ -473,7 +505,14 @@ POP_WARNING()
 
             PluginStarterContainer::iterator it = std::find(_pluginInitList.begin(), _pluginInitList.end(), callsign);
             if (it != _pluginInitList.end()) {
-                it->Deinitialized(); // note must be inside the lock as it could be in parallel with an abort request. Also note after this call the iterator might be invalid as the PluginStarter might remove itself from the list
+                if (it->Deinitialized() == true) { // note must be inside the lock as it could be in parallel with an abort request. 
+                    _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
+                    if (_pluginInitList.size() == 0) {
+                        DeactivateNotifications(false);
+                    } else {
+                        ActivateAnotherPlugin();
+                    }
+                }
             }
             _adminLock.Unlock();
         }
@@ -493,19 +532,6 @@ POP_WARNING()
             }
 
              _adminLock.Unlock();
-        }
-
-        void PluginStarterFinished(const PluginStarter& pluginstarter)
-        {
-            // note lock must already be taken
-
-            PluginStarterContainer::iterator it = std::find(_pluginInitList.begin(), _pluginInitList.end(), pluginstarter);
-            if (it != _pluginInitList.end()) {
-                _pluginInitList.erase(it);
-                if (_pluginInitList.size() == 0) {
-                    DeactivateNotifications(false);
-                }
-            } 
         }
 
     private:
