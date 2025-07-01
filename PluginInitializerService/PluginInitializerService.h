@@ -609,7 +609,7 @@ POP_WARNING()
     private:
         class DeactivateNotificationsJob {
         public:
-            DeactivateNotificationsJob(PluginInitializerService& parent)
+            explicit DeactivateNotificationsJob(PluginInitializerService& parent)
                 : _parent(parent)
             {
             }
