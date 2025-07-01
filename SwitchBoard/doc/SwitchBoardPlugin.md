@@ -209,7 +209,88 @@ SwitchBoard interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
+| [switches](#property_switches) | read-only | Get the list of switches available in the switchboard |
+| [default](#property_default) | read-only | Get a callsign of the default switch |
 | [isactive](#property_isactive) | read-only | Check if a plugin is active |
+
+<a id="property_switches"></a>
+## *switches [<sup>property</sup>](#head_Properties)*
+
+Provides access to the get the list of switches available in the switchboard.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | array | mandatory | An iterator to the list of switches |
+| (property)[#] | string | mandatory | *...* |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "SwitchBoard.1.switches"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "..."
+  ]
+}
+```
+
+<a id="property_default"></a>
+## *default [<sup>property</sup>](#head_Properties)*
+
+Provides access to the get a callsign of the default switch.
+
+> This property is **read-only**.
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | The callsign of the default switch |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNAVAILABLE``` | No default switch available |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "SwitchBoard.1.default"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "WebKitBrowser"
+}
+```
 
 <a id="property_isactive"></a>
 ## *isactive [<sup>property</sup>](#head_Properties)*
