@@ -266,7 +266,7 @@ POP_WARNING()
                 if (_delayJob.IsValid() == true) {
                     TRACE(Trace::Information, (_T("Plugin [%s] was activated"), Callsign().c_str()));
                 } else {
-                    TRACE(Trace::Warning, (_T("Plugin [%s] was activated but this was initiated from the PluginInitializerService!!"), Callsign().c_str()));
+                    TRACE(Trace::Warning, (_T("Plugin [%s] was activated but this was not initiated from the PluginInitializerService!!"), Callsign().c_str()));
                 }
                 if (_callback != nullptr) {
                     // for now let's not decouple. In the future if users prove to be unreliable we might however to not block Thunder internally
@@ -309,7 +309,7 @@ POP_WARNING()
                         }
                     }
                 } else {
-                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialzed notification received but not yet activated, will be ignored..."), Callsign().c_str())); // apperently this plugin failed to start or was deactivated without us being involved, we just ignore and when there isn a slot available we will try to start it anyway
+                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received but not yet activated, will be ignored..."), Callsign().c_str())); // apparently this plugin failed to start or was deactivated without us being involved, we just ignore and when there is a slot available we will try to start it anyway
                 }
 
                 return fullyfailed;
