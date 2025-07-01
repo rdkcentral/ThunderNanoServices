@@ -402,6 +402,10 @@ namespace Plugin {
         // ISwitchBoard interface
         Core::hresult Register(Exchange::ISwitchBoard::INotification* const notification) override;
         Core::hresult Unregister(const Exchange::ISwitchBoard::INotification* const notification) override;
+
+        Core::hresult Switches(Exchange::ISwitchBoard::IStringIterator*& switches) const override;
+        Core::hresult Default(string& callsign) const override;
+
         Core::hresult IsActive(const string& callsign, bool& active) const override;
         Core::hresult Activate(const string& callsign) override;
         Core::hresult Deactivate(const string& callsign) override;
@@ -429,7 +433,7 @@ namespace Plugin {
         }
 
     private:
-        Core::CriticalSection _adminLock;
+        mutable Core::CriticalSection _adminLock;
         uint8_t _skipURL;
         Entry* _defaultCallsign;
         Entry* _activeCallsign;
