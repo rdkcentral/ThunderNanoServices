@@ -930,7 +930,7 @@ namespace Compositor {
 
                 _egl.ResetCurrent();
 
-                return  (eglGetError() == EGL_SUCCESS ) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+                return (eglGetError() == EGL_SUCCESS) ? Core::ERROR_NONE : Core::ERROR_GENERAL;
             }
 
             uint32_t Bind(const Core::ProxyType<IFrameBuffer>& frameBuffer) override
@@ -938,7 +938,7 @@ namespace Compositor {
                 ASSERT(_rendering == false);
 
                 _egl.SetCurrent();
-                
+
                 if (frameBuffer.IsValid() == true) {
                     frameBuffer->Bind();
                 } else {
@@ -1000,6 +1000,7 @@ namespace Compositor {
                 _rendering = false;
             }
 
+            PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
             void Clear(const Color color) override
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
@@ -1009,6 +1010,7 @@ namespace Compositor {
                 glClear(GL_COLOR_BUFFER_BIT);
                 PopDebug();
             }
+            POP_WARNING()
 
             void Scissor(const Exchange::IComposition::Rectangle* box) override
             {
