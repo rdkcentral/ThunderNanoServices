@@ -378,7 +378,7 @@ POP_WARNING()
             {
                 _initservice.ActivatedNotification(callsign);
             }
-            void Deactivated(const string& callsign, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
+            void Deactivated(const string& callsign VARIABLE_IS_NOT_USED, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
             {
                 // this event doesn't add much value to use for this use case, it means deactivation has started but is not finihed.
             }

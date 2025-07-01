@@ -50,7 +50,7 @@ namespace Plugin {
         ASSERT(metadata != nullptr);
 
         Exchange::Controller::IMetadata::Data::BuildInfo buildinfo{};
-        Core::hresult result = metadata->BuildInfo(buildinfo);
+        VARIABLE_IS_NOT_USED Core::hresult result = metadata->BuildInfo(buildinfo);
         metadata->Release();
         metadata = nullptr;
         ASSERT(result == Core::ERROR_NONE);
@@ -74,8 +74,10 @@ namespace Plugin {
         return (message);
     }
     
-    void PluginInitializerService::Deinitialize(PluginHost::IShell* service) 
+    void PluginInitializerService::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED) 
     {
+        ASSERT((_service == nullptr) || (_service == service));
+
         CancelAll();
 
         if (_service != nullptr) {
