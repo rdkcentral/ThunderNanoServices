@@ -192,13 +192,9 @@ POP_WARNING()
     {
         std::vector<string> list;
 
-        _adminLock.Lock();
-
         for (const auto& entry : _switches) {
             list.push_back(entry.first);
         }
-
-        _adminLock.Unlock();
 
         using Implementation = RPC::IteratorType<RPC::IStringIterator>;
         switches = Core::ServiceType<Implementation>::Create<RPC::IStringIterator>(list);
@@ -210,16 +206,12 @@ POP_WARNING()
     {
         Core::hresult result = Core::ERROR_NONE;
 
-        _adminLock.Lock();
-
         if (_defaultCallsign != nullptr) {
             callsign = _defaultCallsign->Callsign();
         }
         else {
             result = Core::ERROR_UNAVAILABLE;
         }
-
-        _adminLock.Unlock();
 
         return (result);
     }

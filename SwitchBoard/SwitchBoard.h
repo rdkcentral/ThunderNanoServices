@@ -433,7 +433,7 @@ namespace Plugin {
         }
 
     private:
-        mutable Core::CriticalSection _adminLock;
+        Core::CriticalSection _adminLock;
         uint8_t _skipURL;
         Entry* _defaultCallsign;
         Entry* _activeCallsign;
