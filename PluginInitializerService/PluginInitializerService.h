@@ -226,11 +226,10 @@ POP_WARNING()
                     Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_requestedPluginShell, PluginHost::IShell::ACTIVATED, PluginHost::IShell::REQUESTED));
                 }
             }
-            void Abort()
+            void Abort() 
             {
-                ASSERT(_delayJob.IsValid() == true);
                 TRACE(Trace::Information, (_T("Aborting activating plugin [%s]"), Callsign().c_str()));
-                if (_delayJob->IsIdle() == false) {
+                if ((_delayJob.IsValid() == true) && (_delayJob->IsIdle() == false)) {
                     _delayJob->Revoke();
                 }
                 if (_callback != nullptr) {
@@ -471,6 +470,8 @@ POP_WARNING()
         // must be called from inside the lock
         void ActivateAnotherPlugin() 
         {
+            ASSERT(_pluginInitList.size() > 0);
+
             TRACE(Trace::Information, (_T("Going to try to activate another plugin")));
             PluginStarterContainer::iterator it = _pluginInitList.begin(); // we just start activating from the top, so we try to do it more or less in the order of incoming requests
             uint16_t currentlyActiveCounted = 0;
