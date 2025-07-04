@@ -1,0 +1,39 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "PluginInitializerService Plugin",
+    "callsign": "PluginInitializerService",
+    "locator": "libThunderPluginInitializerService.so",
+    "status": "development",
+    "description": [
+    "Service that can be used to activate plugin(s) asynchronously"
+    ],
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+            "maxparallel": {
+                "type": "number",
+                "description": "Maximum number of plugins that can be started in parallel"
+            },
+            "maxretries": {
+                "type": "number",
+                "description": "Default maximum number of retries used starting a plugin"
+            },
+            "delay": {
+                "type": "number",
+                "description": "Default delay between retries starting a plugin (ms)"
+            }
+        }
+      }
+    }
+  },
+  "interface": {
+    "$cppref": "{cppinterfacedir}/IPluginAsyncStateControl.h"
+  }
+}
