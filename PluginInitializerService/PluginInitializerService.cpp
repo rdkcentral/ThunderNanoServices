@@ -71,6 +71,9 @@ namespace Plugin {
             _service->AddRef();
         }
 
+        // note we will not register for the plugin state notifications here but only do that when it actually needed later on, and more importantly also stop listening when there are no more plugins to start 
+        // (this to make sure hat even if this plugin is not deactivated when there are no more plugins to start it will not give any unnecesary overhead like constantly being notified on plugin state transitions)
+
         return (message);
     }
     
