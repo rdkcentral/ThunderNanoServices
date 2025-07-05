@@ -122,6 +122,12 @@ POP_WARNING()
 
     private:
 
+        // class that actualy handles Activating the plugin taking into account all the possible Plugin states and Activation call return codes 
+        // and at the same time tries to cope as best as possible with plugin state changes triggred externally to the PluginStarter, e.g. Activation and Deactivation requests.
+        // One special case is the state PRECONDITION, when the plugin is in this state the PluginStarter is not considered Active and will not be included in the maximum allowed parallel startup activactions.
+        // This as it is waiting for the preconditions to be met and up to that moment it is not actualy Initializing so we could maximize parallism and activate another plugin. Subsequent advantage: now we can try to start 
+        // other plugins that might actually trigger a subsystem the plugin in state PRECONDITION is waiting on and unblock this plugin (this in principle would of course be considered incorrect usage of the PluginInitializerService 
+        // because we try to activate plugins in order received but now this will not lead to the plugin startup becoming stul because of incorrect order of reaquests icw subsystem dependencies)
         class PluginStarter {
         public:
             enum class ActiveState {
@@ -132,9 +138,9 @@ POP_WARNING()
 
 
             PluginStarter(PluginHost::IShell* requestedPluginShell
-                         , uint8_t maxnumberretries
-                         , uint16_t delay
-                         , IPluginAsyncStateControl::IActivationCallback* callback
+                         , const uint8_t maxnumberretries
+                         , const uint16_t delay
+                         , IPluginAsyncStateControl::IActivationCallback* const callback
                          , PluginInitializerService& initservice)
                 : _callsign()
                 , _requestedPluginShell(requestedPluginShell)
@@ -370,36 +376,56 @@ POP_WARNING()
                 }
             }
 
-        private:
-            class DelayJob {
-            public:
-                explicit DelayJob(PluginHost::IShell* pluginShell)
-                    : _pluginShell(pluginShell)
-                {
-                    ASSERT(_pluginShell != nullptr);
-                    _pluginShell->AddRef();
-                }
-                ~DelayJob()
-                {
-                    ASSERT(_pluginShell != nullptr);
-                    _pluginShell->Release();
-                }
+            void HandleActivationResult(const Core::hresult result)
+            {
+                if (result == Core::ERROR_PENDING_CONDITIONS) {
+                    // set starter to not activated, but keep it in the list as it will start activating at some point and my fail (then we'll activate ourselves as we will start retrying or reach actiovated state)
+                
+                } else if (result == Core::ERROR_ILLEGAL_STATE) {
+                    ERROR_UNAVAILABLE
+                    // set starter to not activated, consider startup failed and remove from list
 
-                DelayJob(const DelayJob&) = delete;
-                DelayJob& operator=(const DelayJob&) = delete;
-                DelayJob(DelayJob&&) = delete;
-                DelayJob& operator=(DelayJob&&) = delete;
+
+                else ERROR_BAD_REQUEST // there is a problem to wakeup from hybernation, external to the PluginStarter the plugin must have been set to hybernate (as we would not try to activate it out of hybernation) -> we cannot do anything more, we'll consider it activated (as hynbernate is a substate of Activation and repport success to unbloack the caller here, Activated notifcation will not be called)
+
+
+                else ERROR_GENERAL // -> Initialize failed -> do nothing handled in Deinitiaze notification
+
+
+                else ERROR_INPROGRESS // startup was already going on, triggered exterannly, do nothing that wil succeed or fail and terigger callback
+                
+                } else {
+                    ASSERT(result == Core::ERROR_NONE);
+                    TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to unexpected reaon [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result)); 
+                    // if error here is not expected, we cannot do anything except hoping it was 
+                }
+            }
+
+        private:
+            class ActivateJob {
+            public:
+                explicit ActivateJob(PluginStarter& starter)
+                    : _starter(starter)
+                {
+                }
+                ~ActivateJob() = default;
+
+                ActivateJob(const ActivateJob&) = delete;
+                ActivateJob& operator=(const ActivateJob&) = delete;
+                ActivateJob(ActivateJob&&) = delete;
+                ActivateJob& operator=(ActivateJob&&) = delete;
 
             private:
-                friend Core::ThreadPool::JobType<DelayJob>;
+                friend Core::ThreadPool::JobType<ActivateJob>;
                 void Dispatch()
                 {
-                    TRACE(Trace::Information, (_T("Retrying to re-activate Plugin [%s] after delay"), _pluginShell->Callsign().c_str()));
-                    Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_pluginShell, PluginHost::IShell::ACTIVATED, PluginHost::IShell::REQUESTED));
+                    TRACE(Trace::Information, (_T("Actually activating plugin [%s]"), _starter.Callsign().c_str()));
+                    Core::hresult result = _starter._requestedPluginShell->Activate(PluginHost::IShell::REQUESTED);
+                    TRACE(Trace::Information, (_T("Activating plugin [%s] result [%s](%u)"), _starter.Callsign().c_str(), Core::ErrorToString(result), result));
                 }
 
             private:
-                PluginHost::IShell* _pluginShell;
+                PluginStarter& _starter;
             };
 
         private:
@@ -491,7 +517,7 @@ POP_WARNING()
         }
 
         // must be called from inside the lock
-        void DeactivateNotificationsIfPossible(bool synchronous = true)
+        void DeactivateNotificationsIfPossible(const bool synchronous = true)
         {
             ASSERT(_service != nullptr);
 
@@ -506,7 +532,7 @@ POP_WARNING()
             }
         }
 
-        bool NewPluginStarter(PluginHost::IShell* requestedPluginShell, uint8_t maxnumberretries, uint16_t delay, IPluginAsyncStateControl::IActivationCallback* callback)
+        bool NewPluginStarter(PluginHost::IShell* const requestedPluginShell, const uint8_t maxnumberretries, uint16_t const delay, IPluginAsyncStateControl::IActivationCallback* const callback)
         {
             bool result = true;
             PluginStarter starter(requestedPluginShell, maxnumberretries, delay, callback, *this);
