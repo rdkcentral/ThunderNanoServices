@@ -36,7 +36,8 @@ namespace Plugin {
 
     class GeneratorShowcase : public PluginHost::IPlugin
                             , public PluginHost::JSONRPCSupportsEventStatus
-                            , public PluginHost::JSONRPCSupportsObjectLookup
+                            , virtual public PluginHost::JSONRPCSupportsAutoObjectLookup
+                            , virtual public PluginHost::JSONRPCSupportsObjectLookup
                             , public Exchange::JSimpleInstanceObjects::IHandler
                             , public Exchange::JSimpleCustomObjects::IHandler {
     public:
@@ -49,7 +50,6 @@ namespace Plugin {
             , _imaginaryServer(nullptr)
             , _imaginaryHost(nullptr)
             , _imaginaryCustomHost(nullptr)
-            , _storage(nullptr)
             , _deviceNotificationSinks()
         {
         }
@@ -1324,9 +1324,9 @@ namespace Plugin {
                     else {
                         TRACE(Trace::Error, (_T("Failed to look up id '%s'"), id.c_str()));
                     }
-                }
 
-                _lock.Unlock();
+                    _lock.Unlock();
+                }
 
                 return (accessory);
             }
@@ -1375,7 +1375,7 @@ namespace Plugin {
         }; // class ImaginaryCustomHost
 
     public:
-        const string Initialize(PluginHost::IShell *service) override
+        const string Initialize(PluginHost::IShell* service) override
         {
             string message{};
 
@@ -1397,11 +1397,11 @@ namespace Plugin {
             Exchange::JSimpleAsync::Register(*this, _imaginaryServer);
 
             // The example lookup object interface
-            Exchange::JSimpleInstanceObjects::Register(*this, _imaginaryHost, this, _storage);
+            Exchange::JSimpleInstanceObjects::Register(*this, _imaginaryHost, this);
 
             // The example custom lookup object interface
             // Before registering with a custom lookup interface, handlers for each looked up interface need to be installed!
-            Add<Exchange::ISimpleCustomObjects::IAccessory>(
+            PluginHost::JSONRPCSupportsObjectLookup::template Add<Exchange::ISimpleCustomObjects::IAccessory>(
                 // Handler for obj to id translation.
                 // (Context can be omitted from the lambda altogheter if not needed.)
                 [this](const Core::JSONRPC::Context& context, const Core::IUnknown* object) -> string {
@@ -1432,48 +1432,54 @@ namespace Plugin {
             // If needed, it's possible to install callbacks when devices are acquired/relinquished.
             // The relinquish callback also fires on channel closure.
             // Here it's used to store device notifcation sinks.
-            Exchange::JSimpleInstanceObjects::Lifetime::Callback<Exchange::ISimpleInstanceObjects::IDevice>(_storage, [this](const bool acquired, Exchange::ISimpleInstanceObjects::IDevice* device) {
-                ASSERT(device != nullptr);
+            Callback([this](const bool acquired, const uint32_t, Exchange::ISimpleInstanceObjects::IUnknown* obj) {
+                ASSERT(obj != nullptr);
 
-                if (acquired == true) {
-                    // device was acquired
-                    string name;
-                    static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
-                    TRACE(Trace::Information, (_T("Device '%s' acquired"), name.c_str()));
+                Exchange::ISimpleInstanceObjects::IDevice* device = obj->QueryInterface<Exchange::ISimpleInstanceObjects::IDevice>();
+                if (device != nullptr) {
+                    if (acquired == true) {
+                        // device was acquired
+                        string name;
+                        static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
+                        TRACE(Trace::Information, (_T("Device '%s' acquired"), name.c_str()));
 
-                    DeviceNotificationImpl* const impl = Core::ServiceType<DeviceNotificationImpl>::Create<DeviceNotificationImpl>(*this, device);
-                    ASSERT(impl != nullptr);
+                        DeviceNotificationImpl* const impl = Core::ServiceType<DeviceNotificationImpl>::Create<DeviceNotificationImpl>(*this, device);
+                        ASSERT(impl != nullptr);
 
-                    device->AddRef();
-                    device->Register(impl);
+                        device->AddRef();
 
-                    _lock.Lock();
+                        _lock.Lock();
 
-                    ASSERT(_deviceNotificationSinks.find(device) == _deviceNotificationSinks.end());
-                    _deviceNotificationSinks.emplace(device, impl);
+                        ASSERT(_deviceNotificationSinks.find(device) == _deviceNotificationSinks.end());
+                        _deviceNotificationSinks.emplace(device, impl);
 
-                    _lock.Unlock();
-                }
-                else {
-                    // device is about to be relinquished
-                    string name;
-                    static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
-                    TRACE(Trace::Information, (_T("Device '%s' released"), name.c_str()));
+                        device->Register(impl);
+                        _lock.Unlock();
+                    }
+                    else {
+                        // device is about to be relinquished
+                        string name;
+                        static_cast<const Exchange::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
+                        TRACE(Trace::Information, (_T("Device '%s' released"), name.c_str()));
 
-                    _lock.Lock();
+                        _lock.Lock();
 
-                    auto it = _deviceNotificationSinks.find(device);
-                    ASSERT(_deviceNotificationSinks.find(device) != _deviceNotificationSinks.end());
+                        auto it = _deviceNotificationSinks.find(device);
+                        ASSERT(_deviceNotificationSinks.find(device) != _deviceNotificationSinks.end());
 
-                    if (it != _deviceNotificationSinks.end()) {
-                        DeviceNotificationImpl* const impl = (*it).second;
-                        device->Unregister(impl);
-                        impl->Release();
-                        device->Release();
-                        _deviceNotificationSinks.erase(it);
+                        if (it != _deviceNotificationSinks.end()) {
+                            DeviceNotificationImpl* const impl = (*it).second;
+                            ASSERT(impl != nullptr);
+                            device->Unregister(impl);
+                            impl->Release();
+                            device->Release();
+                            _deviceNotificationSinks.erase(it);
+                        }
+
+                        _lock.Unlock();
                     }
 
-                    _lock.Unlock();
+                    device->Release();
                 }
             });
 
@@ -1499,14 +1505,14 @@ namespace Plugin {
             }
 
             if (_imaginaryHost != nullptr) {
-                Exchange::JSimpleInstanceObjects::Lifetime::Callback<Exchange::ISimpleInstanceObjects::IDevice>(_storage, nullptr);
-                Exchange::JSimpleInstanceObjects::Unregister(*this, _storage);
+                Callback(nullptr);
+                Exchange::JSimpleInstanceObjects::Unregister(*this);
                 _imaginaryHost->Release();
                 _imaginaryHost = nullptr;
             }
 
             // Uninstall the handler first!
-            Remove<Exchange::ISimpleCustomObjects::IAccessory>();
+            PluginHost::JSONRPCSupportsObjectLookup::Remove<Exchange::ISimpleCustomObjects::IAccessory>();
 
             if (_imaginaryCustomHost != nullptr) {
                 _imaginaryCustomHost->Unregister(&_customNotificationSink);
@@ -1541,8 +1547,6 @@ namespace Plugin {
                 , _device(device)
             {
                 ASSERT(device != nullptr);
-                ASSERT(parent.Storage() != nullptr);
-
                 _device->AddRef();
             }
             ~DeviceNotificationImpl()
@@ -1559,17 +1563,16 @@ namespace Plugin {
         public:
             void NameChanged(const string& name) override
             {
-                Exchange::JSimpleInstanceObjects::Event::NameChanged(_parent, _parent.Storage(), _device, name);
+                Exchange::JSimpleInstanceObjects::Event::NameChanged(_parent, _device, name);
             }
             void StateChanged(const Exchange::ISimpleInstanceObjects::state state) override
             {
-                Exchange::JSimpleInstanceObjects::Event::StateChanged(_parent, _parent.Storage(), _device, state);
+                Exchange::JSimpleInstanceObjects::Event::StateChanged(_parent, _device, state);
             }
             void PinChanged(const uint8_t pin, const bool high) override
             {
-                Exchange::JSimpleInstanceObjects::Event::PinChanged(_parent, _parent.Storage(), _device, pin, high);
+                Exchange::JSimpleInstanceObjects::Event::PinChanged(_parent, _device, pin, high);
             }
-
 
         public:
             BEGIN_INTERFACE_MAP(DeviceNotificationImpl)
@@ -1736,13 +1739,6 @@ namespace Plugin {
         }; // class ImaginaryCustomHostNotificationImpl
 
     private:
-        void Closed(const uint32_t channel)
-        {
-            // A websocket channel was closed, we may need to release some resources!
-            Exchange::JSimpleInstanceObjects::Link::Closed(_storage, channel);
-        }
-
-    private:
         // ISimpleInstanceObjects statuslistener callbacks
         void OnStateChangedEventRegistration(Exchange::ISimpleInstanceObjects::IDevice* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
         {
@@ -1757,7 +1753,7 @@ namespace Plugin {
             if (status == PluginHost::JSONRPCSupportsEventStatus::Status::registered) {
                 ImaginaryHost::DeviceImpl* device = static_cast<ImaginaryHost::DeviceImpl*>(object);
 
-                Exchange::JSimpleInstanceObjects::Event::StateChanged(*this, _storage, object, device->State(), client);
+                Exchange::JSimpleInstanceObjects::Event::StateChanged(*this, object, device->State(), client);
             }
         }
         void OnPinChangedEventRegistration(Exchange::ISimpleInstanceObjects::IDevice* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
@@ -1777,7 +1773,7 @@ namespace Plugin {
                 device->IteratePins([this, object, client](const uint8_t index, const bool high) {
 
                     if (high == true) {
-                        Exchange::JSimpleInstanceObjects::Event::PinChanged(*this, _storage, object, index, true, client);
+                        Exchange::JSimpleInstanceObjects::Event::PinChanged(*this, object, index, true, client);
                     }
                 });
             }
@@ -1815,14 +1811,6 @@ namespace Plugin {
         }
 
     private:
-        const Exchange::JSimpleInstanceObjects::LookupStorage* Storage() const {
-            return (_storage);
-        }
-        Exchange::JSimpleInstanceObjects::LookupStorage* Storage() {
-            return (_storage);
-        }
-
-    private:
         PluginHost::IShell *_service;
         Core::CriticalSection _lock;
         Core::SinkType<Notification> _connectionNotificationSink;
@@ -1831,7 +1819,6 @@ namespace Plugin {
         ImaginaryServer* _imaginaryServer;
         ImaginaryHost* _imaginaryHost;
         ImaginaryCustomHost* _imaginaryCustomHost;
-        Exchange::JSimpleInstanceObjects::LookupStorage* _storage;
         std::map<Exchange::ISimpleInstanceObjects::IDevice*, DeviceNotificationImpl*> _deviceNotificationSinks;
 
     }; // class GeneratorShowcase

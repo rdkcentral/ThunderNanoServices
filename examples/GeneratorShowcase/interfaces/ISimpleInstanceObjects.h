@@ -38,11 +38,13 @@ namespace Exchange {
         // @json
         struct IDevice : virtual public Core::IUnknown {
 
+            enum { ID = ISimpleInstanceObjects::ID + 1 };
+
             // @event
             // A notification per instance of device
             struct INotification : virtual public Core::IUnknown {
 
-                enum { ID = ISimpleInstanceObjects::ID + 1 };
+                enum { ID = ISimpleInstanceObjects::ID + 2 };
 
                 // @brief Signals device name changes
                 // @param state New name of the device
