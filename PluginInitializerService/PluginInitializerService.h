@@ -127,17 +127,15 @@ POP_WARNING()
         // One special case is the state PRECONDITION, when the plugin is in this state the PluginStarter is not considered Active and will not be included in the maximum allowed parallel startup activactions.
         // This as it is waiting for the preconditions to be met and up to that moment it is not actualy Initializing so we could maximize parallism and activate another plugin. Subsequent advantage: now we can try to start 
         // other plugins that might actually trigger a subsystem the plugin in state PRECONDITION is waiting on and unblock this plugin (this in principle would of course be considered incorrect usage of the PluginInitializerService 
-        // because we try to activate plugins in order received but now this will not lead to the plugin startup becoming stul because of incorrect order of reaquests icw subsystem dependencies)
+        // because we try to activate plugins in order received but now this will not lead to the plugin startup becoming stuck because of incorrect order of requests icw subsystem dependencies)
         // As we get an Initialize() notification when a plugin waiting for preconditions is starting to actual activate we will use that to set the PluginStarter to actually active state to prevent from that moment on to activate 
-        // new PluginStarters beyond the allowed maximum, but of course if there were already activations up to the maximum we will now remporarely exceed the maximum (but as explained above that is accpeted behaviour)
+        // new PluginStarters beyond the allowed maximum, but of course if there were already activations up to the maximum we will now temporarely exceed the maximum (but as explained above that is accpeted behaviour)
+        // The ActivateJob will indicate if at the moment the PluginStarter is trying to actively start a plugin, then it will be valid (so will also not be valid if the plugin is waiting for the Initialize to start in case of pending preconditions)
+        // a boolean will indicate if the plugin started from this PluginStarter is waiting for preconditions. This is needed so that when in that case the Initialization fails (Deinituialized callback called) we will not automatically retry
+        // the activation, this will only be done when there is slot available for this
         class PluginStarter {
-        public:
-            enum class ActiveState {
-                NotActive,
-                Active,
-                WaitingForPrecondition
-            };
 
+        public:
 
             PluginStarter(PluginHost::IShell* requestedPluginShell
                          , const uint8_t maxnumberretries
@@ -152,6 +150,7 @@ POP_WARNING()
                 , _callback(callback)
                 , _initializerservice(initservice)
                 , _activateJob()
+                , _waitingPrecondition(false)
             {
                 ASSERT(_requestedPluginShell != nullptr);
                 _callsign = _requestedPluginShell->Callsign();
@@ -171,7 +170,7 @@ POP_WARNING()
                     _callback = nullptr;
                 }
 
-                ASSERT((_delayJob.IsValid() == false) || (_delayJob->IsIdle() == true));
+                ASSERT((_activateJob.IsValid() == false) || (_activateJob->IsIdle() == true));
             }
 
             PluginStarter(const PluginStarter&) = delete;
@@ -185,6 +184,7 @@ POP_WARNING()
                 , _callback(other._callback)
                 , _initializerservice(other._initializerservice)
                 , _activateJob(std::move(other._activateJob))
+                , _waitingPrecondition(other._waitingPrecondition)
             {
                 other._requestedPluginShell = nullptr;
                 other._callback = nullptr;
@@ -199,6 +199,7 @@ POP_WARNING()
                     _delay = other._delay;
                     _callback = other._callback;
                     _activateJob = std::move(other._activateJob);
+                    _waitingPrecondition = other._waitingPrecondition;
                     other._requestedPluginShell = nullptr;
                     other._callback = nullptr;
                     ASSERT(&_initializerservice == &other._initializerservice); // there should only be one...
@@ -235,8 +236,9 @@ POP_WARNING()
             bool Activate()
             {
                 bool done = false;
-                ASSERT(_delayJob.IsValid() == false);
+                ASSERT(_activateJob.IsValid() == false);
                 ASSERT(_requestedPluginShell != nullptr);
+                ASSERT(_waitingPrecondition == false);
 
                 PluginHost::IShell::state state = _requestedPluginShell->State(); // let's get the state again, potentialy it could have been changed between state check in the IPluginAsyncStateControl::Activate and the additionin the crew and also the lazy registration to the notification plays a role here (if it is the first request in the queue the registartion for the notificaion will only happen after it was added to the queue). Here wa are gueranteed to be in the list and notifcaions active so we can safely assum we will not miss any state transition)
 
@@ -258,7 +260,8 @@ POP_WARNING()
                     ++_attempt; // indicate we have attempted to start this plugin
                     Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_requestedPluginShell, PluginHost::IShell::ACTIVATED, PluginHost::IShell::REQUESTED));
                     TRACE(Trace::Information, (_T("Activation job posted for plugin [%s] from Activate call"), Callsign().c_str()));
-                    _delayJob = Core::ProxyType<Core::WorkerPool::JobType<DelayJob>>::Create(_requestedPluginShell); // indicate have activated this PluginStarter
+                    _activateJob = Core::ProxyType<Core::WorkerPool::JobType<ActivateJob>>::Create(*this); // indicate have activated this PluginStarter
+                    _activateJob->Submit(); // let's start this plugin (and from a job, the start call might take long as when the Initialize is badly written, we know they are out there)
                     break;
                  case PluginHost::IShell::ACTIVATED: 
                  case PluginHost::IShell::HIBERNATED:
@@ -275,27 +278,29 @@ POP_WARNING()
                     break;
                 case PluginHost::IShell::DEACTIVATION:
                 case PluginHost::IShell::ACTIVATION:
-                    _delayJob = Core::ProxyType<Core::WorkerPool::JobType<DelayJob>>::Create(_requestedPluginShell); // although not started by us let's consider it is active as we will not monitor and handle full startup in this plugin activator
+                    _activateJob = Core::ProxyType<Core::WorkerPool::JobType<ActivateJob>>::Create(*this); // although not started by us let's consider it is active as we will now monitor and handle full startup in this plugin activator
                     TRACE(Trace::Warning, (_T("Activation started for plugin [%s] that is already in a state that will lead to either a successful Activation or failure to Activate (so not started by the PluginInitializerService), waiting for that state to be reached"), Callsign().c_str()));
                     break;
                 case PluginHost::IShell::PRECONDITION:
-                    // this state is not considered active
+                    // this state is not considered active (bit strange we get here, the plugin was activated externally or reached this state because a subsystem fell away in case the plugin will be restarted automativcally, also in that case we want to keep it in the list of plugins to activate so we can call the callback at the right moment and retry in case the automatic Initialization fails when all subsystems become set)
                     TRACE(Trace::Warning, (_T("Activation started for plugin [%s] that is in state PRECONDITION (so not started by the PluginInitializerService), we'll wait for either a successful start or failure to do sao"), Callsign().c_str()));
+                    _waitingPrecondition = true;
                     break;
                 default:
                     ASSERT(false);
+                    TRACE(Trace::Error, (_T("Activating started for plugin [%s] but it is in an unexpected state"), Callsign().c_str()));
+                    done = true; // best we can do when the assert does not abort is to remove it from the list
                 }
 
                 return done;
 
             }
 
+            // note must not be called within a lock that is also used in the ActivationResultNotification call from the ActivationJob (as it needs to revoke the job)
             void Abort() 
             {
                 TRACE(Trace::Information, (_T("Aborting activating plugin [%s]"), Callsign().c_str()));
-                if ((_delayJob.IsValid() == true) && (_delayJob->IsIdle() == false)) {
-                    _delayJob->Revoke();
-                }
+                SetInactive();
                 NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::ABORTED);
             }
 
@@ -309,34 +314,38 @@ POP_WARNING()
                 return _callsign;
             }
 
-            ActiveState Active() const
+            bool Active() const
             {
-                ActiveState state = ActiveState::NotActive;
-
                 ASSERT(_requestedPluginShell != nullptr);
                 
-                // if the plugin is waiting for preconditions it is not eating bread here at the moment (until it would fail to start and we would begin restarting it for thatv reaon), so we can add another in parallel.
-                if (_delayJob.IsValid() == true) {
-                    if (_requestedPluginShell->State() != PluginHost::IShell::PRECONDITION) {
-                        state = ActiveState::Active;
-                    } else {
-                        state = ActiveState::WaitingForPrecondition;
-                    }
-                }
-                return state;
+                return _activateJob.IsValid();
             }
 
+            // note must not be called within a lock that is also used in the ActivationResultNotification call from the ActivationJob (as it needs to revoke the job)
             void Activated()
             {
 
-//                delay job ook revoken
-                if (_delayJob.IsValid() == true) {
+                //also reovoke the activation job (there could be an external activate call leading to the activate notification, so the job could be active)
+                if (_activateJob.IsValid() == true) {
                     TRACE(Trace::Information, (_T("Plugin [%s] was activated"), Callsign().c_str()));
                 } else {
                     TRACE(Trace::Warning, (_T("Plugin [%s] was activated but this was not initiated from the PluginInitializerService!!"), Callsign().c_str()));
                 }
+                SetInactive();
                 NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS);
                 // we will be removed and destroyed from the caller
+            }
+
+            void Initialized()
+            {
+                // plugin Initialize called
+                if (_waitingPrecondition == true) {
+                    ASSERT(_requestedPluginShell->State() == PluginHost::IShell::PRECONDITION); // if this fires there is a bug in this code or more likely sombody changed the order of the callback and setting the state to Activation :) 
+                    TRACE(Trace::Information, (_T("Activation job posted for plugin [%s] from Activate call"), Callsign().c_str()));
+                    _activateJob = Core::ProxyType<Core::WorkerPool::JobType<ActivateJob>>::Create(*this); // the subsystem conditiions for this plugin are met so Initialization started... (this can temporarely lead to too many plugins being activated, see explanation at class definition for detiled information on this)
+                }
+
+                // note we cannot assert if the job is actually valid if _waitingPrecondition is false as the activation could be triggered externally... This will all be reported/handled when the Deinitialization or Activation notificaion are called
             }
 
             bool Deinitialized() // returns true when fully failed and we should stop retrying
@@ -349,6 +358,8 @@ POP_WARNING()
 
 
 //                precondition -> fial -> pasnherstarten bij nieuw slot
+
+                // note take into account this can also nbe the result from an external activation failre, check if that is handled correctly!!!!
 
                 bool fullyfailed = false;
 
@@ -394,7 +405,7 @@ POP_WARNING()
                     break;
                 case Core::ERROR_PENDING_CONDITIONS:
                     // set starter to not activated, but keep it in the list as it will start activating at some point and may fail (then we'll activate ourselves as we will start retrying or reach actiovated state)
-                    _activateJob = std::move(AbortJobProxyType()); // reset the job to indicate this PluginStarter is not considered active anymore (let's not use Release() on the proxy as that look a little confusing)
+                    // we should now see if we can start more activations
                     break;
                 case Core::ERROR_ILLEGAL_STATE: // quite unexpected as now between posting the Activation job and calling Activate on the plugin it moved to some illegal state, must have been triggered externally...
                 case Core::ERROR_UNAVAILABLE:
@@ -417,7 +428,26 @@ POP_WARNING()
                 return done;
             }
 
+            enum class State {
+                NotActive,
+                Activating,
+                WaitingForPrecondition
+            };
+
+            State State() const
+            {
+            }
+
         private:
+            void SetInactive()
+            {
+                if (_activateJob.IsValid() == true) {
+                    if (_activateJob->IsIdle() == false) {
+                        _activateJob->Revoke(); // safe to do as we are not in the lock used inside the job
+                    }
+                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                }
+                }
+            }
 
             void NotifyInitiator(const Exchange::IPluginAsyncStateControl::IActivationCallback::state state)
             {
@@ -459,7 +489,7 @@ POP_WARNING()
             };
 
         private:
-            using AbortJobProxyType = Core::ProxyType<Core::WorkerPool::JobType<ActivateJob>>;
+            using AbortJobProxyType = Core::ProxyType<Core::WorkerPool::JobType<ActivateJob>>; // to make it movable
 
             string _callsign; //as _requestedPluginShell->Callsign(); returns a temp and we need this lots of times so let's keep a copy
             PluginHost::IShell* _requestedPluginShell;
@@ -469,6 +499,7 @@ POP_WARNING()
             IPluginAsyncStateControl::IActivationCallback* _callback;
             PluginInitializerService& _initializerservice;
             AbortJobProxyType _activateJob;
+            bool _waitingPrecondition;
         };
 
         class Notifications : public PluginHost::IPlugin::INotification, public PluginHost::IPlugin::ILifeTime {
@@ -502,7 +533,7 @@ POP_WARNING()
             // IPlugin::ILifeTime overrides
             void Initialize(const string& callsign VARIABLE_IS_NOT_USED, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
             {
-
+                _initservice.InitializedNotification(callsign);
             }
             void Deinitialized(const string& callsign VARIABLE_IS_NOT_USED, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
             {
@@ -632,7 +663,7 @@ POP_WARNING()
                 DeactivateNotificationsIfPossible(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 result = true;
-                toAbort.Abort();
+                toAbort.Abort(); // note it is essential this is called outside the lock
             } else {
                 _adminLock.Unlock();
             }
@@ -654,7 +685,7 @@ POP_WARNING()
                 }
                 DeactivateNotificationsIfPossible(false); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
-                activated.Activated();
+                activated.Activated(); // note it is essential this is called outside the lock
             } else {
                 _adminLock.Unlock();
             }
@@ -673,6 +704,17 @@ POP_WARNING()
                     }
                     DeactivateNotificationsIfPossible(false); // we need to do this whether or not we called ActivateAnotherPlugin here
                 }
+            }
+            _adminLock.Unlock();
+        }
+
+        void InitializedNotification(const string& callsign)
+        {
+            _adminLock.Lock();
+
+            PluginStarterContainer::iterator it = std::find(_pluginInitList.begin(), _pluginInitList.end(), callsign);
+            if (it != _pluginInitList.end()) {
+                it->Initialized();  { // note must be inside the lock as it could be in parallel with an abort request.
             }
             _adminLock.Unlock();
         }
