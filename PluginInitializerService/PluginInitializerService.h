@@ -258,7 +258,6 @@ POP_WARNING()
                 case PluginHost::IShell::DEACTIVATED: 
                     // we'll not keep a reference to the job, that would be just overhead, when activation is actualy started, aborting after that might not always abort the plugin activation (does not make sense, could always cross eachother anyway, and otherwisse we need to keep the job)
                     ++_attempt; // indicate we have attempted to start this plugin
-                    Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_requestedPluginShell, PluginHost::IShell::ACTIVATED, PluginHost::IShell::REQUESTED));
                     TRACE(Trace::Information, (_T("Activation job posted for plugin [%s] from Activate call"), Callsign().c_str()));
                     _activateJob = Core::ProxyType<Core::WorkerPool::JobType<ActivateJob>>::Create(*this); // indicate have activated this PluginStarter
                     _activateJob->Submit(); // let's start this plugin (and from a job, the start call might take long as when the Initialize is badly written, we know they are out there)
@@ -357,33 +356,32 @@ POP_WARNING()
                 // 3) at Activation the activation failed -> let's try to restart, next attempt
 
 
-//                precondition -> fial -> pasnherstarten bij nieuw slot
+//                huppel precondition -> fial -> pasnherstarten bij nieuw slot
 
-                // note take into account this can also nbe the result from an external activation failre, check if that is handled correctly!!!!
 
                 bool fullyfailed = false;
 
-                if (_delayJob.IsValid() == true) { // Correct case, we are indeed trying to activate this PluginStarter
+                if (_activateJob.IsValid() == true) { // Correct case, we are indeed trying to activate this PluginStarter
 
                     TRACE(Trace::Warning, (_T("Plugin [%s] was deinitialzed"), Callsign().c_str()));
                     if (_attempt <= _maxnumberretries) { // first attempt not included, that is not a retry...
                         if ((_attempt == 0) || (_delay == 0)) { // _attempt == 0 means we could not yet activate the plugin when Activate was called so we can start without delay (or of course delay is just 0)
                             ++_attempt;
                             TRACE(Trace::Information, (_T("Retrying to re-activate Plugin [%s] now (retries %u)"), Callsign().c_str(), Retries()));
-                            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_requestedPluginShell, PluginHost::IShell::ACTIVATED, PluginHost::IShell::REQUESTED));
+                            _activateJob->Submit(); // let's start this plugin (and from a job, the start call might take long as when the Initialize is badly written, we know they are out there)
                         } else {
                             // okay we might need to delay now
                             TRACE(Trace::Information, (_T("Delaying re-activating Plugin [%s] (retries %u)"), Callsign().c_str(), Retries()));
                             ++_attempt;
-                            _delayJob->Reschedule(Core::Time::Now().Add(_delay));
+                            _activateJob->Reschedule(Core::Time::Now().Add(_delay));
                         }
                     } else {
                         TRACE(Trace::Error, (_T("Plugin [%s] could not be restarted within the allowed number of retries (retries %u)"), Callsign().c_str(), Retries()));
                         NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
-                        fullyfailed = true;
+                        fullyfailed = true; // will be removed and destroyed by aller
                     }
                 } else {
-                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received but not yet activated, will be ignored..."), Callsign().c_str())); // apparently this plugin failed to start or was deactivated without us being involved, we just ignore and when there is a slot available we will try to start it anyway
+                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received but not yet activated (activation triggered externally), will be ignored..."), Callsign().c_str())); // apparently this plugin failed to start or was deactivated without us being involved, we just ignore and when there is a slot available we will try to start it anyway
                 }
 
                 return fullyfailed;
@@ -481,7 +479,7 @@ POP_WARNING()
                     TRACE(Trace::Information, (_T("Actually activating plugin [%s]"), _starter.Callsign().c_str()));
                     Core::hresult result = _starter._requestedPluginShell->Activate(PluginHost::IShell::REQUESTED);
                     TRACE(Trace::Information, (_T("Activating plugin [%s] result [%s](%u)"), _starter.Callsign().c_str(), Core::ErrorToString(result), result));
-                    _starter._initializerservice.ActivationResultNotification(_starter.Callsign(), result);
+                    _starter._initializerservice.ActivationResultNotification(_starter.Callsign(), result); 
                 }
 
             private:
