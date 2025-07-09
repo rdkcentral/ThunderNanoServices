@@ -21,9 +21,10 @@
 - what to do
   - 530 ActivateAnotherPlugin -> unregister notifcauions asyn, sync or both
   - 677 solve race condition with unregister async job and activate and sync deactivae (keepo state beweeon job and plkugin)
-  - 515 plugin die op preconditie wacht maken we tijdelijk niet active wanneer deze dus door activate zelf in precodition schiet zodat deze ook echt niet meedoet met de telling (denk dat dit all klopt eigenlijk)
+  & 515 plugin die op preconditie wacht maken we tijdelijk niet active wanneer deze dus door activate zelf in precodition schiet zodat deze ook echt niet meedoet met de telling (denk dat dit all klopt eigenlijk)
   - 303 in the activated ook delay job deleten (als de activate door een externe oorzaak komt en hij liep) (en checken of het in de activate, abort., deinitialized ook altijd gebeurd)
  - 257 als 'ie hier preocndition is moeten we hem dan ook niet active maken... zie gewenste aanpssing hierboven -> of id dat precondite gedoe alleen als 'ie vanuit actieve start naar precondie schiet, dan is eigenlij niet meer actief en zouden we bij failure to start niet opniew moeten proberen (dat is er dan een teveel)
+ - make plugionactivator resiliant to connectioin gone after starting to wait for callback
  */
 
 #pragma once
@@ -321,13 +322,6 @@ POP_WARNING()
                 return _callsign;
             }
 
-            bool Active() const
-            {
-                ASSERT(_requestedPluginShell != nullptr);
-                
-                return _activateJob.IsValid();
-            }
-
             // note must not be called within a lock that is also used in the ActivationResultNotification call from the ActivationJob (as it needs to revoke the job)
             void Activated()
             {
@@ -457,11 +451,26 @@ POP_WARNING()
                 return resultcode;
             }
 
+            // (simplified) State diagram for plugin activation (reported state between brackets and values of _activateJob and _waitingPrecondition to identify a state)
+            // * in front of state means only relevant for plugin that reported waiting for preconditions when activated
+            //
+            // not active -> _activateJob invalid, _waitingPrecondition false (NotActive) -> should be started, not counted as active
+            // Activate called -> _activateJob valid, _waitingPrecondition false (Activating) -> should not be started, counted as active
+            // * waiting for preconditions reported -> _activateJob invalid, _waitingPrecondition true (WaitingForPreconditionNotActive) -> should not be started, not counted as active
+            // * initialize notification after waiting for precondition reported -> _activateJob valid, _waitingPrecondition true (WaitingForPreconditionActive) -> should not be started, counted as active
+            // 
+            // - plugin activated notification -> end state (will be removed from queue)
+            // OR
+            // - deinitialize notification, so failed (no preconditoions), wil be restarted automatically ->  _activateJob valid, _waitingPrecondition false (Active) -> should not be started, counted as active
+            // - * deinitialize notification, so failed (as this might be overallocated it should not be automatically restarted) -> _activateJob invalid, _waitingPrecondition false (NotActive) -> should be started again, not counted as active 
+            //     so this state will move back to not active and start from there again
+            // - deinitialize notification, so failed but failed too many times -> end state (will be removed from queue)
+
             enum class State {
-                NotActive, // PluginStarter isn not trying to activate this pliugin
-                Activating, // PluginStarter is trying to Activate this plugin OR After a Failure to activate after preconditions were met pliugin is being activated again because a slot became available 
-                WaitingForPreconditionNotActive, //  Plugin being activated is waiting for the preconditions to be met OR 
-                WaitingForPreconditionActive // 
+                NotActive, 
+                Activating, 
+                WaitingForPreconditionNotActive, 
+                WaitingForPreconditionActive 
             };
 
             State State() const
@@ -476,7 +485,7 @@ POP_WARNING()
                     if (_waitingPrecondition == true) {
                         state = State::WaitingForPreconditionNotActive;
                     } else {
-                        state = State::WaitingForPreconditionNotActive;
+                        state = State::NotActive;
                     }
                 }
 
@@ -677,8 +686,8 @@ POP_WARNING()
             PluginStarterContainer::iterator it = _pluginInitList.begin(); // we just start activating from the top, so we try to do it more or less in the order of incoming requests
             uint16_t currentlyActiveCounted = 0;
             while ((it != _pluginInitList.end()) && (currentlyActiveCounted < _maxparallel)) {
-                PluginStarter::ActiveState state = it->Active();
-                if (state == PluginStarter::ActiveState::NotActive) {
+                PluginStarter::State state = it->State();
+                if (state == PluginStarter::State::NotActive) {
                     TRACE(Trace::Information, (_T("Activating another plugin")));
                     if (it->Activate() == true) {
                         // oops this plugin could not be started, end state reached we can remove it
@@ -687,7 +696,7 @@ POP_WARNING()
                     } else {
                         break; // we activated another we can stop looking... (as this method is only called when added another request or one was handled)
                     }
-                } else if (state == PluginStarter::ActiveState::Active) {
+                } else if ((state == PluginStarter::State::Activating) || (state == PluginStarter::State::WaitingForPreconditionActive)) {
                     ++currentlyActiveCounted;
                 } // so if the state is waiting for preconditions we do not count it as active and try to start another...
                 ++it;
@@ -822,14 +831,14 @@ POP_WARNING()
 
         struct StarterQueueInfo {
             uint16_t Activating;
-            uint16_t WaitingPreconditionsActivating;
-            uint16_t WaitingPreconditionsNotActive;
+            uint16_t WaitingForPreconditionNotActive;
+            uint16_t WaitingForPreconditionActive;
             uint16_t TotalStarters;
 
             string ToString() const
             {
-                const TCHAR text[] = _T("Requests being activated: %u, Request waiting for preconditions %u, , Total number of requests: %u");
-                return Core::Format(text, Activating, WaitingPreconditions, TotalStarters);
+                const TCHAR text[] = _T("Requests being activated: %u, Request waiting for preconditions %u, Request starting after preconditions are met %u, Total number of requests: %u");
+                return Core::Format(text, Activating, WaitingForPreconditionNotActive, WaitingForPreconditionActive, TotalStarters);
             }
         };
 
@@ -840,11 +849,14 @@ POP_WARNING()
             for (const PluginStarter& starter : _pluginInitList) {
                 PluginStarter::State state = starter.State();
                 switch (state) {
-                    case PluginStarter::ActiveState::Active : 
+                    case PluginStarter::State::Activating : 
                         ++info.Activating;
                         break;
-                    case PluginStarter::ActiveState::WaitingForPrecondition : 
-                        ++info.WaitingPreconditions;
+                    case PluginStarter::State::WaitingForPreconditionNotActive: 
+                        ++info.WaitingForPreconditionNotActive;
+                        break;
+                    case PluginStarter::State::WaitingForPreconditionActive:
+                        ++info.WaitingForPreconditionActive;
                         break;
                     case PluginStarter::ActiveState::NotActive:
                     default:
