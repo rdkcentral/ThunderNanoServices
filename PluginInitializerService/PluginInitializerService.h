@@ -390,7 +390,7 @@ POP_WARNING()
                     } else {
                         // okay we failed from a situation where we were activated because the preconditions were not satisfied yet, we should restart but now as there could be a chance there are already too many activations so we need to postpone that until there is a slot available
                         // we should cancel the job to idicate we are not active anymore and indicate if possible we could start ourselves again (we cannot revoke the job as we are in the lock that also is needed in the job, should not be a problem coming from preconditions there is hardly another wayy to get to deinitalized other then subsystems being met and even if so it would be no problem the job would fire) 
-                        _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                }
+                        _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                
                         _waitingPrecondition = false; // indicate we are no longer waiting and this starter can be started again...
                         result = ResultCode::Paused; 
                     }
@@ -425,7 +425,7 @@ POP_WARNING()
                     // set starter to not activated, but keep it in the list as it will start activating at some point and may fail (then we'll activate ourselves as we will start retrying or reach actiovated state)
                     // we should now see if we can start more activations
                     _waitingPrecondition = true;
-                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                }
+                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                
                     resultcode = ResultCode::Paused;
                     break;
                 case Core::ERROR_ILLEGAL_STATE: // quite unexpected as now between posting the Activation job and calling Activate on the plugin it moved to some illegal state, must have been triggered externally...
@@ -434,13 +434,13 @@ POP_WARNING()
                     TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to plugin being in state in which it cannot be started [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result));
                     NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
                     resultcode = ResultCode::Failed;
-                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                }
+                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                
                     break;
                 case Core::ERROR_BAD_REQUEST:
-                    // there is a problem to wakeup from hybernation, external to the PluginStarter the plugin must have been set to hybernate (as we would not try to activate it out of hybernation) -> we cannot do anything more, we'll consider it activated (as hynbernate is a substate of Activation and repport success to unbloack the caller here, Activated notifcation will not be called)                }
+                    // there is a problem to wakeup from hybernation, external to the PluginStarter the plugin must have been set to hybernate (as we would not try to activate it out of hybernation) -> we cannot do anything more, we'll consider it activated (as hynbernate is a substate of Activation and repport success to unbloack the caller here, Activated notifcation will not be called) 
                     TRACE(Trace::Error, (_T("Plugin [%s] Activation failed because Pugin moved to Hubernate state in the mean time (triggered externally) and could not be awaken"), Callsign().c_str()));
                     NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS);
-                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                }
+                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                
                     resultcode = ResultCode::Failed;
                     break;
                 default:
@@ -449,7 +449,7 @@ POP_WARNING()
                     TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to unexpected reaon [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result));
                     NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
                     resultcode = ResultCode::Failed;
-                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                }
+                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                
                 }
 
                 return resultcode;
@@ -477,9 +477,9 @@ POP_WARNING()
                 WaitingForPreconditionActive 
             };
 
-            State State() const
+            State GetState() const
             {
-                State state = State::Active;
+                State state = State::Activating;
 
                 if (_activateJob.IsValid()) {
                     if (_waitingPrecondition == true) {
@@ -503,7 +503,7 @@ POP_WARNING()
                     if (_activateJob->IsIdle() == false) {
                         _activateJob->Revoke(); // safe to do as we are not in the lock used inside the job
                     }
-                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                }
+                    _activateJob = std::move(AbortJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing) 
                 }
             }
 
@@ -690,7 +690,7 @@ POP_WARNING()
             PluginStarterContainer::iterator it = _pluginInitList.begin(); // we just start activating from the top, so we try to do it more or less in the order of incoming requests
             uint16_t currentlyActiveCounted = 0;
             while ((it != _pluginInitList.end()) && (currentlyActiveCounted < _maxparallel)) {
-                PluginStarter::State state = it->State();
+                PluginStarter::State state = it->GetState();
                 if (state == PluginStarter::State::NotActive) {
                     TRACE(Trace::Information, (_T("Activating another plugin")));
                     if (it->Activate() == true) {
@@ -783,7 +783,7 @@ POP_WARNING()
 
             PluginStarterContainer::iterator it = std::find(_pluginInitList.begin(), _pluginInitList.end(), callsign);
             if (it != _pluginInitList.end()) {
-                it->Initialized();  { // note must be inside the lock as it could be in parallel with an abort request.
+                it->Initialized();  // note must be inside the lock as it could be in parallel with an abort request.
             }
             _adminLock.Unlock();
         }
@@ -806,7 +806,7 @@ POP_WARNING()
                     DeactivateNotificationsIfPossible(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
                     failed.Failed(); // not strictly necesasary but for consistency
-                } else if (result == PluginStarter::ResultCode::Paused) {
+                } else if (resultcode == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
                     _adminLock.Unlock();
                 }
@@ -851,7 +851,7 @@ POP_WARNING()
         {
             StarterQueueInfo info{};
             for (const PluginStarter& starter : _pluginInitList) {
-                PluginStarter::State state = starter.State();
+                PluginStarter::State state = starter.GetState();
                 switch (state) {
                     case PluginStarter::State::Activating : 
                         ++info.Activating;
@@ -862,7 +862,7 @@ POP_WARNING()
                     case PluginStarter::State::WaitingForPreconditionActive:
                         ++info.WaitingForPreconditionActive;
                         break;
-                    case PluginStarter::ActiveState::NotActive:
+                    case PluginStarter::State::NotActive:
                     default:
                         break;
                 }
