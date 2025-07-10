@@ -35,6 +35,7 @@
 namespace Thunder {
 
 namespace Trace {
+
     class ActivationQueueInfo {
     public:
         ActivationQueueInfo(const TCHAR formatter[], ...)
@@ -74,10 +75,6 @@ namespace Plugin {
     
     class PluginInitializerService : public PluginHost::IPlugin, public Exchange::IPluginAsyncStateControl {
     public:
-        PluginInitializerService(const PluginInitializerService&) = delete;
-        PluginInitializerService& operator=(const PluginInitializerService&) = delete;
-        PluginInitializerService(PluginInitializerService&&) = delete;
-        PluginInitializerService& operator=(PluginInitializerService&&) = delete;
 
 PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
         PluginInitializerService()
@@ -96,6 +93,12 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
 POP_WARNING()
 
         ~PluginInitializerService() override = default;
+
+        PluginInitializerService(const PluginInitializerService&) = delete;
+        PluginInitializerService& operator=(const PluginInitializerService&) = delete;
+        PluginInitializerService(PluginInitializerService&&) = delete;
+        PluginInitializerService& operator=(PluginInitializerService&&) = delete;
+
     private:
         class Config : public Core::JSON::Container {
         public:
@@ -198,6 +201,7 @@ POP_WARNING()
                 other._requestedPluginShell = nullptr;
                 other._callback = nullptr;
             }
+
             PluginStarter& operator=(PluginStarter&& other)
             {
                 if (this != &other) {
@@ -907,5 +911,6 @@ POP_WARNING()
         Core::WorkerPool::JobType<DeactivateNotificationsJob>   _deactivateNotificationsJob;
 
     };
+
 } // Plugin
 } // Thunder
