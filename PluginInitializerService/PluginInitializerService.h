@@ -24,14 +24,15 @@
   & 515 plugin die op preconditie wacht maken we tijdelijk niet active wanneer deze dus door activate zelf in precodition schiet zodat deze ook echt niet meedoet met de telling (denk dat dit all klopt eigenlijk)
   & 303 in the activated ook delay job deleten (als de activate door een externe oorzaak komt en hij liep) (en checken of het in de activate, abort., deinitialized ook altijd gebeurd)
   & 257 als 'ie hier preocndition is moeten we hem dan ook niet active maken... zie gewenste aanpssing hierboven -> of id dat precondite gedoe alleen als 'ie vanuit actieve start naar precondie schiet, dan is eigenlij niet meer actief en zouden we bij failure to start niet opniew moeten proberen (dat is er dan een teveel)
-  - make plugionactivator resiliant to connectioin gone after starting to wait for callback (en ook plugin to client disconnect -> denk dat hetb niet edht nidig is)
-  - see if ActivateAnotherPlugin needs to look for more than one activate (during review)
-  - check if we need to do more "see if we can stopo listening for notifcations" is done always after possible start (as the start could immedidaley succed/abort)
+  & see if ActivateAnotherPlugin needs to look for more than one activate (during review)
+  & check if we need to do more "see if we can stop listening for notifcations" is done always after possible start (as the start could immedidaley succed/abort)
     anyway check startting and stopping notications (if not stopped too sson)
 
   pierre:
   - revoke voor timer in state executing (was handig geweest als je wist of een revoke gelukt was)
   - iets met isidle in job and revoke 
+  - make plugionactivator resiliant to connectioin gone after starting to wait for callback (en ook plugin to client disconnect -> denk dat hetb niet edht nidig is)
+    voor PluginActivator nu ook niet mogeluijk, we zouden de opoerational van de ConnectorType ook moeten koppelen (timout zetten is in deze teopassing ook niet handuig, timout icm met pollen als poor mans solution maar heeft ppok smartinterfacetuype aanpassing nodifg?)
  */
 
 #pragma once
@@ -336,7 +337,6 @@ POP_WARNING()
             // note must not be called within a lock that is also used in the ActivationResultNotification call from the ActivationJob (as it needs to revoke the job)
             void Activated()
             {
-
                 //also reovoke the activation job (there could be an external activate call leading to the activate notification, so the job could be active)
                 if (_activateJob.IsValid() == true) {
                     TRACE(Trace::Information, (_T("Plugin [%s] was activated"), Callsign().c_str()));
@@ -696,9 +696,6 @@ POP_WARNING()
         }
 
         // must be called from inside the lock
-
-        // huppel: make sure not to start a plugin that is waiuting foir the precondiitns to be activated
-
         void ActivateAnotherPlugin() 
         {
             ASSERT(_pluginInitList.size() > 0);
@@ -719,8 +716,8 @@ POP_WARNING()
                     }
                 } else if ((state == PluginStarter::State::Activating) || (state == PluginStarter::State::WaitingForPreconditionActive)) {
                     ++currentlyActiveCounted;
+                    ++it;
                 } // so if the state is waiting for preconditions we do not count it as active and try to start another...
-                ++it;
             };
             TRACE(Trace::ActivationQueueInfo, (_T("Request queue info: %s"), GetStarterQueueInfo().ToString().c_str()));
         }
@@ -787,6 +784,7 @@ POP_WARNING()
                     failed.Failed();
                 } else if (result == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
+                    // no need to check if we need to DeactivateNotificationsIfPossible as the paused one must be there
                     _adminLock.Unlock();
                 }
             } else {
@@ -825,6 +823,7 @@ POP_WARNING()
                     failed.Failed(); // not strictly necesasary but for consistency
                 } else if (resultcode == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
+                    // no need to check if we need to DeactivateNotificationsIfPossible as the paused one must be there
                     _adminLock.Unlock();
                 }
             } else {

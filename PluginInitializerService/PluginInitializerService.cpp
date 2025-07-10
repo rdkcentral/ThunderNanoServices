@@ -36,8 +36,6 @@ namespace Plugin {
         );
     }
     
-    // Implement all methods from PluginInitializerService.h
-    
     const string PluginInitializerService::Initialize(PluginHost::IShell* service) {
         string message;
         
@@ -93,6 +91,9 @@ namespace Plugin {
         return (string());
     }
 
+    // note we will not specifically handle the connection from the client and the plugin being closed after we stored the callback.
+    // worst case: the connection being closed wihtout abort called but in that case we will call the callback on a dead proxy and then 
+    // release it, so no leaks (no need to go through the trouble to handle the dangling proxies here)
     Core::hresult PluginInitializerService::Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IPluginAsyncStateControl::IActivationCallback* const cb)
     {
         TRACE(Trace::Information, (_T("Plugin Activate request received for plugin [%s]"), callsign.c_str()));
@@ -142,6 +143,7 @@ namespace Plugin {
 
         return result;
     }
+
     Core::hresult PluginInitializerService::AbortActivate(const string& callsign)
     {
         TRACE(Trace::Information, (_T("Plugin Abort Activate request received for plugin [%s]"), callsign.c_str()));
