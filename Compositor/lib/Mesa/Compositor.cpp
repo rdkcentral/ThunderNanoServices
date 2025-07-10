@@ -240,7 +240,6 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _remoteClient(*this)
-                , _state(State::IDLE)
                 , _geometryChanged(false)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
@@ -284,34 +283,17 @@ namespace Plugin {
              */
             void Request() override
             {
-                State expected(State::IDLE);
-
-                if (_state.compare_exchange_strong(expected, State::RENDERING) == true) {
-                    _parent.Render(); // Trigger rendering operations
-                } else {
-                    TRACE(Trace::Error, (_T("Surface %s[%d] is not idle, but received a Request event  while in %d"), _callsign.c_str(), _id, _state.load()));
-                    ASSERT(false);
-                }
+                _parent.Render();
             }
 
             void Pending()
             {
-                State expected(State::RENDERING);
-
-                if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
-                    Rendered();
-                } else {
-                    TRACE(Trace::Error, (_T("Surface %s[%d] is not rendering, but received a Pending event while in %d"), _callsign.c_str(), _id, _state.load()));
-                }
+                Rendered();
             }
 
             void Completed()
             {
-                State expected(State::PRESENTING);
-
-                if (_state.compare_exchange_strong(expected, State::IDLE) == true) {
-                    Published();
-                }
+                Published();
             }
 
             /**
@@ -390,8 +372,7 @@ namespace Plugin {
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
-            std::atomic<State> _state;
-            bool _geometryChanged = false;
+            bool _geometryChanged;
 
             static uint32_t _sequence;
         }; // class Client
