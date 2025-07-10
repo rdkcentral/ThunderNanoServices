@@ -19,12 +19,19 @@
 
 /*
 - what to do
-  - 530 ActivateAnotherPlugin -> unregister notifcauions asyn, sync or both
-  - 677 solve race condition with unregister async job and activate and sync deactivae (keepo state beweeon job and plkugin)
+  & 530 ActivateAnotherPlugin -> unregister notifcauions asyn, sync or both
+  & 677 solve race condition with unregister async job and activate and sync deactivae (keepo state beweeon job and plkugin)
   & 515 plugin die op preconditie wacht maken we tijdelijk niet active wanneer deze dus door activate zelf in precodition schiet zodat deze ook echt niet meedoet met de telling (denk dat dit all klopt eigenlijk)
-  - 303 in the activated ook delay job deleten (als de activate door een externe oorzaak komt en hij liep) (en checken of het in de activate, abort., deinitialized ook altijd gebeurd)
- - 257 als 'ie hier preocndition is moeten we hem dan ook niet active maken... zie gewenste aanpssing hierboven -> of id dat precondite gedoe alleen als 'ie vanuit actieve start naar precondie schiet, dan is eigenlij niet meer actief en zouden we bij failure to start niet opniew moeten proberen (dat is er dan een teveel)
- - make plugionactivator resiliant to connectioin gone after starting to wait for callback
+  & 303 in the activated ook delay job deleten (als de activate door een externe oorzaak komt en hij liep) (en checken of het in de activate, abort., deinitialized ook altijd gebeurd)
+  & 257 als 'ie hier preocndition is moeten we hem dan ook niet active maken... zie gewenste aanpssing hierboven -> of id dat precondite gedoe alleen als 'ie vanuit actieve start naar precondie schiet, dan is eigenlij niet meer actief en zouden we bij failure to start niet opniew moeten proberen (dat is er dan een teveel)
+  - make plugionactivator resiliant to connectioin gone after starting to wait for callback (en ook plugin to client disconnect -> denk dat hetb niet edht nidig is)
+  - see if ActivateAnotherPlugin needs to look for more than one activate (during review)
+  - check if we need to do more "see if we can stopo listening for notifcations" is done always after possible start (as the start could immedidaley succed/abort)
+    anyway check startting and stopping notications (if not stopped too sson)
+
+  pierre:
+  - revoke voor timer in state executing (was handig geweest als je wist of een revoke gelukt was)
+  - iets met isidle in job and revoke 
  */
 
 #pragma once
@@ -630,8 +637,7 @@ POP_WARNING()
         {
             ASSERT(_service != nullptr);
 
-            if (_pluginInitList.size() > 0) { // note size() is constant time (so fast, c++11)
-                _deactivateNotificationsJob.Revoke(); // no need to check if it is actually posted
+            if ((_pluginInitList.size() == 1) && (RevokeDeactivationJob() == false)) { // note size() is constant time (so fast, c++11)
                 _service->Register(&_sink);
                 TRACE(Trace::Information, (_T("Started listening for plugin state notifications")));
             }
@@ -643,14 +649,25 @@ POP_WARNING()
             ASSERT(_service != nullptr);
 
             if (_pluginInitList.size() == 0) { // note size() is constant time (so fast, c++11)
-                if (synchronous == true) {
-                    _deactivateNotificationsJob.Revoke(); // no need to check if it is actually posted
+                if ((synchronous == true) && (RevokeDeactivationJob() == true)) {
                     _service->Unregister(&_sink);
                     TRACE(Trace::Information, (_T("Stopped listening for plugin state notifications")));
                 } else {
-                    _deactivateNotificationsJob.Submit();
+                    SubmitDeactivationJob();
                 }
             }
+        }
+
+        void SubmitDeactivationJob()
+        {
+            DeactivateNotificationsJob& job = _deactivateNotificationsJob;
+            job.Submit();
+        }
+
+        bool RevokeDeactivationJob()  // returns true when unregister was planned but did not happen yet
+        {
+            DeactivateNotificationsJob& job = _deactivateNotificationsJob;
+            return job.Revoke();
         }
 
         bool NewPluginStarter(PluginHost::IShell* const requestedPluginShell, const uint8_t maxnumberretries, uint16_t const delay, IPluginAsyncStateControl::IActivationCallback* const callback)
@@ -876,6 +893,7 @@ POP_WARNING()
         public:
             explicit DeactivateNotificationsJob(PluginInitializerService& parent)
                 : _parent(parent)
+                , _waitingAsyncDeactivation(false)
             {
             }
             ~DeactivateNotificationsJob() = default;
@@ -885,17 +903,38 @@ POP_WARNING()
             DeactivateNotificationsJob(DeactivateNotificationsJob&&) = delete;
             DeactivateNotificationsJob& operator=(DeactivateNotificationsJob&&) = delete;
 
+        public:
+            void Submit()
+            {
+                _waitingAsyncDeactivation.store(true);
+                _parent._deactivateNotificationsJob.Submit();
+            }
+
+            bool Revoke() //  returns truw when not run but was sunmitted
+            {
+                bool revoked = false;
+                if (_waitingAsyncDeactivation.load() == true) { // if not true the job was not posted or was already finished
+                    _parent._deactivateNotificationsJob.Revoke();
+
+                    revoked = (_waitingAsyncDeactivation.load() == true); // still true, job did not run before revoke
+                    _waitingAsyncDeactivation.store(false); // just in case somebody would call revoke again
+                }
+                return revoked;
+            }
+
         private:
             friend Core::ThreadPool::JobType<DeactivateNotificationsJob>;
+
             void Dispatch()
             {
-//                need atomic to prevent double register/unregister
                 TRACE(Trace::Information, (_T("Stopped listening for plugin state notifications (from job)")));
                 _parent._service->Unregister(&_parent._sink);
+                _waitingAsyncDeactivation.store(false);
             }
 
         private:
             PluginInitializerService& _parent;
+            std::atomic_bool _waitingAsyncDeactivation;
         };
 
     private:
@@ -909,7 +948,6 @@ POP_WARNING()
         PluginHost::IShell*                                     _service;
         Core::CriticalSection                                   _adminLock;
         Core::WorkerPool::JobType<DeactivateNotificationsJob>   _deactivateNotificationsJob;
-
     };
 
 } // Plugin
