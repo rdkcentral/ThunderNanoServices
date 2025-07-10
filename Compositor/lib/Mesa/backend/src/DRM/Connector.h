@@ -283,12 +283,10 @@ namespace Compositor {
             // IOutput methods
             uint32_t Commit()
             {
-                uint32_t result(Core::ERROR_NONE);
+                uint32_t result(Core::ERROR_ILLEGAL_STATE);
 
                 if (IsEnabled() == true) {
-                    _backend->Commit(_connector.Id());
-                } else {
-                    result = Core::ERROR_ILLEGAL_STATE;
+                    result = _backend->Commit(_connector.Id());
                 }
 
                 return result;
