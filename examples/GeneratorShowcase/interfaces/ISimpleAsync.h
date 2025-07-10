@@ -21,6 +21,8 @@
 
 #include "Module.h"
 
+// @insert <com/ICOM.h>
+
 namespace Thunder {
 
 namespace Exchange {
@@ -154,6 +156,41 @@ namespace Exchange {
 
         virtual Core::hresult Register(IBindNotification* const notification) = 0;
         virtual Core::hresult Unregister(const IBindNotification* const notification) = 0;
+
+
+        // Vector, iterator
+
+        struct SmallRecord {
+            string param0;
+            bool param1;
+        };
+
+        struct Record {
+            string param0;
+            std::vector<string> param1 /* @restrict:10 */;
+            std::vector<string> param2 /* @restrict:10 */;
+            Core::OptionalType<std::vector<string>> param3 /* @restrict:10 */;
+            Core::OptionalType<std::vector<string>> param4 /* @restrict:10 */;
+            SmallRecord param5;
+            Core::OptionalType<SmallRecord> param6;
+        };
+
+        struct Record2 {
+            Core::OptionalType<std::vector<string>> param3 /* @restrict:10 */;
+            Core::OptionalType<std::vector<string>> param4 /* @restrict:10 */;
+        };
+
+        virtual Core::hresult Tables(const bool fill, std::vector<string>& stringTables /* @out @restrict:10 */) = 0;
+        virtual Core::hresult Tables2(const bool fill, std::vector<string>& stringTables /* @out @restrict:10 */, std::vector<uint8_t>& intTables /* @out */) = 0;
+        virtual Core::hresult Tables3(const bool fill, Core::OptionalType<std::vector<string>>& stringTables /* @out @restrict:10 */) = 0;
+        virtual Core::hresult Tables4(const bool fill, RPC::IStringIterator*& stringTables /* @out */) = 0;
+        virtual Core::hresult Tables5(const bool fill, RPC::IStringIterator*& stringTables /* @out */, RPC::IValueIterator*& intTables /* @out */) = 0;
+        virtual Core::hresult Tables6(const bool fill, Record& pod /* @out */) = 0;
+        virtual Core::hresult Tables7(const bool fill, Core::OptionalType<Record>& pod /* @out */) = 0;
+        virtual Core::hresult Tables8(const bool fill, Core::OptionalType<Record2>& pod /* @out */) = 0;
+        virtual Core::hresult Tables9(const bool fill, Record2& pod /* @out */) = 0;
+
+        virtual Core::hresult OptionalResult(const bool fill, Core::OptionalType<string>& result /* @out */) = 0;
 
     };
 

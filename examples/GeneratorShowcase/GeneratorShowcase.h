@@ -190,6 +190,108 @@ namespace Plugin {
             ImaginaryServer& operator=(ImaginaryServer&&) = delete;
 
         public:
+            Core::hresult Tables(const bool fill, std::vector<string>& stringTables) override
+            {
+                if (fill == true) {
+                    stringTables.push_back("garply");
+                    stringTables.push_back("waldo");
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables2(const bool fill, std::vector<string>& stringTables, std::vector<uint8_t>& intTables) override
+            {
+                if (fill == true) {
+                    stringTables.push_back("garply");
+                    stringTables.push_back("waldo");
+                    intTables.push_back(1);
+                    intTables.push_back(2);
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables3(const bool fill, Core::OptionalType<std::vector<string>>& stringTables) override
+            {
+                if (fill == true) {
+                    std::vector<string> t{"garply", "waldo"};
+                    stringTables = std::move(t);
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables4(const bool fill, RPC::IStringIterator*& stringTables) override
+            {
+                if (fill == true) {
+                    std::vector<string> t{"garply", "waldo"};
+                    stringTables = Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(std::move(t));
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables5(const bool fill, RPC::IStringIterator*& stringTables, RPC::IValueIterator*& intTables) override
+            {
+                if (fill == true) {
+                    std::vector<string> t{"garply", "waldo"};
+                    stringTables = Core::ServiceType<RPC::StringIterator>::Create<RPC::IStringIterator>(std::move(t));
+                    std::vector<uint32_t> t2{1, 2};
+                    intTables = Core::ServiceType<RPC::ValueIterator>::Create<RPC::IValueIterator>(std::move(t2));
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables6(const bool fill, Exchange::ISimpleAsync::Record& pod) override
+            {
+                if (fill == true) {
+                    pod.param5.param0 = "fred";
+                    pod.param5.param1 = true;
+                    pod.param1 = { "garply", "waldo" };
+                    pod.param3 = { "garply", "waldo", "fred" };
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables7(const bool fill, Core::OptionalType<Exchange::ISimpleAsync::Record>& pod) override
+            {
+                if (fill == true) {
+                    Exchange::ISimpleAsync::Record p;
+                    p.param5.param0 = "fred";
+                    p.param5.param1 = true;
+                    p.param1 = { "garply", "waldo" };
+                    p.param3 = { "garply", "waldo", "fred" };
+                    pod = std::move(p);
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables8(const bool fill, Core::OptionalType<Exchange::ISimpleAsync::Record2>& pod) override
+            {
+                if (fill == true) {
+                    Exchange::ISimpleAsync::Record2 p;
+                    p.param3 = { "garply", "waldo", "fred" };
+                    pod = std::move(p);
+                }
+                return Core::ERROR_NONE;
+            }
+            Core::hresult Tables9(const bool fill, Exchange::ISimpleAsync::Record2& pod) override
+            {
+                if (fill == true) {
+                    Exchange::ISimpleAsync::Record2 p;
+                    p.param3 = { "garply", "waldo", "fred" };
+                    pod = std::move(p);
+                }
+
+                return Core::ERROR_NONE;
+            }
+            Core::hresult OptionalResult(const bool fill, Core::OptionalType<string>& result) override
+            {
+                if (fill == true) {
+                    result = "value";
+                }
+
+                return Core::ERROR_NONE;
+            }
+
+        public:
             Core::hresult Connect(const Core::OptionalType<std::vector<uint8_t>>& address, const Core::OptionalType<uint16_t>& timeout, Exchange::ISimpleAsync::ICallback* const cb) override
             {
                 Core::hresult result = Core::ERROR_NONE;
