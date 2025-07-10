@@ -932,35 +932,25 @@ namespace Plugin {
             Presenter(CompositorImplementation& parent)
                 : Core::Thread(Thread::DefaultStackSize(), PresenterThreadName)
                 , _parent(parent)
-                , _continue(false)
             {
             }
 
             ~Presenter() override
             {
                 Core::Thread::Stop();
-
                 Core::Thread::Wait(Core::Thread::STOPPED, 100);
-            }
-
-            void Trigger()
-            {
-                Thread::Run();
             }
 
         private:
             uint32_t Worker() override
             {
                 Core::Thread::Block();
-
                 _parent.RenderOutput(); // 3000us
-
                 return Core::infinite;
             }
 
         private:
             CompositorImplementation& _parent;
-            std::atomic<bool> _continue;
         };
 
     private:
