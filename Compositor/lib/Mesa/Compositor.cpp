@@ -138,12 +138,6 @@ namespace Plugin {
         private:
             using BaseClass = Graphics::ServerBufferType<1>;
 
-            enum class State : uint8_t {
-                IDLE = 0x00,
-                RENDERING = 0x01,
-                PRESENTING = 0x02,
-            };
-
             class Remote : public Exchange::IComposition::IClient {
             public:
                 Remote() = delete;
@@ -796,12 +790,6 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        enum class State : uint8_t {
-            IDLE = 0x00,
-            PRESENTING = 0x01,
-            PENDING = 0x02,
-        };
-
         void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
         {
             {
