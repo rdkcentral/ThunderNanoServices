@@ -22,16 +22,13 @@
 #include <DRMTypes.h>
 
 namespace Thunder {
+namespace Compositor {
+    struct IBackend
+        : public Core::IResource,
+          public Core::IReferenceCounted {
+        ~IBackend() override = default;
 
-    namespace Compositor {
-
-        struct IBackend 
-            : public Core::IResource
-            , public Core::IReferenceCounted {
-            ~IBackend() override = default;
-
-            virtual uint32_t Commit(Compositor::DRM::Identifier connectorId) = 0;
-        };
-
-    } // namespace Compositor
+        virtual uint32_t Commit(Compositor::DRM::Identifier connectorId) = 0;
+    };
+} // namespace Compositor
 } // namespace Thunder

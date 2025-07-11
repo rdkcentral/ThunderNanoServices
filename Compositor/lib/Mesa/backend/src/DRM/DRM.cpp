@@ -18,8 +18,8 @@
  */
 
 #include "../Module.h"
-#include "IGpu.h"
 #include "Connector.h"
+#include "IGpu.h"
 
 #ifdef USE_ATOMIC
 #include "Atomic.h"
@@ -61,12 +61,6 @@ namespace Compositor {
     namespace Backend {
         class DRM : public Compositor::IBackend {
         public:
-            enum class State : uint8_t {
-                IDLE = 0x00,
-                FLIPPING = 0x01,
-                PENDING = 0x02,
-            };
-
             DRM() = delete;
             DRM(DRM&&) = delete;
             DRM(const DRM&) = delete;
