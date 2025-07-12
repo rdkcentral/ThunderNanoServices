@@ -443,7 +443,7 @@ POP_WARNING()
                 SetInactive();
             }
 
-            // note most likely some states will never be handled here as these states are handled in the notification that are triggered from the Activate call itself and will happen before the activate call returns removing the PluginStarter from the queue before the activation results are handled, so this is fully correct and these states are here only for completeness
+            // note most likely some states will never be handled here as these states are handled in the notification that are triggered from the Activate call itself and will happen before the activate call returns removing the PluginStarter from the queue before the activation results are handled, so this is fully correct and these states are here only for completeness (or might sometimes happen and sometimes not, like the ERROR_GENERAL when the retry is done from the job again)
             ResultCode HandleActivationResult(const Core::hresult result) // returns true when fully failed and we should stop retrying
             {
                 ResultCode resultcode = ResultCode::Continue;
