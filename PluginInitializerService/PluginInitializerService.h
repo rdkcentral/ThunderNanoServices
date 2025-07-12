@@ -112,7 +112,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _sink(*this)
             , _service(nullptr)
             , _adminLock()
-            , _deactivateNotificationsJob(*this)
+            , _notificationsJob(*this)
         {
         }
 POP_WARNING()
@@ -430,7 +430,9 @@ POP_WARNING()
                         _waitingPrecondition = false; // indicate we are no longer waiting and this starter can be started again...
                         result = ResultCode::Paused; 
                     }
-                } else {
+                } else if (_waitingPrecondition == true)
+                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received for plugin that was waiting for preconditions, most likely the Activation is being canceled"), Callsign().c_str())); // apparently this plugin failed to start or was deactivated without us being involved, we just ignore and when there is a slot available we will try to start it anyway
+                else {
                     TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received but PluginStarter Activate was not called (activation triggered externally), we'll try to restart anyway..."), Callsign().c_str())); // apparently this plugin failed to start or was deactivated without us being involved, we just ignore and when there is a slot available we will try to start it anyway
                 }
 
@@ -789,13 +791,135 @@ POP_WARNING()
         END_INTERFACE_MAP
 
     private:
+        // note Submit and Revoke will always be called within the same lock
+        class NotificationsJob {
+        public:
+            enum class Mode {
+                Register,
+                Unregister
+            };
+
+        public:
+            PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+            NotificationsJob(PluginInitializerService& parent, const Mode initialMode)
+                : _notificationsJob(*this)
+                , _waitingAsyncDispatch(false)
+                , _mode(initialMode)
+                , _parent(parent)
+            {
+            }
+            POP_WARNING()
+
+            ~NotificationsJob() = default;
+
+            NotificationsJob(const NotificationsJob&) = delete;
+            NotificationsJob& operator=(const NotificationsJob&) = delete;
+            NotificationsJob(NotificationsJob&&) = delete;
+            NotificationsJob& operator=(NotificationsJob&&) = delete;
+
+        public:
+
+            void SetMode(const Mode mode)
+            {
+                if (CurrentMode() != mode) {
+                    if (Revoke() == false) {
+                        _mode = mode;
+                        Submit();
+                    }
+                }
+            }
+
+            Mode CurrentMode() const
+            {
+
+                return _mode;
+            }
+
+        private:
+
+            Mode ToSetMode() const
+            {
+                return _mode;
+            }
+
+            void Submit()
+            {
+                _waitingAsyncDispatch.store(true);
+                _notificationsJob.Submit();
+            }
+
+            bool Revoke() //  returns true when not run but was submitted (will not run anymore)
+            {
+                bool revoked = false;
+                if (_waitingAsyncDispatch.load() == true) { // if not true the job was not posted or was already finished
+                    _notificationsJob.Revoke();
+
+                    revoked = (_waitingAsyncDispatch.load() == true); // still true, job did not run before revoke
+                    _waitingAsyncDispatch.store(false); // just in case somebody would call revoke again
+                }
+                return revoked;
+            }
+
+            class InternalNotificationsJob {
+            public:
+                explicit InternalNotificationsJob(NotificationsJob& parent)
+                    : _parent(parent)
+                {
+                }
+                ~InternalNotificationsJob() = default;
+
+                InternalNotificationsJob(const InternalNotificationsJob&) = delete;
+                InternalNotificationsJob& operator=(const InternalNotificationsJob&) = delete;
+                InternalNotificationsJob(InternalNotificationsJob&&) = delete;
+                InternalNotificationsJob& operator=(InternalNotificationsJob&&) = delete;
+
+            private:
+                friend Core::ThreadPool::JobType<InternalNotificationsJob>;
+
+                void Dispatch()
+                {
+                    if (_parent.ToSetMode() == Mode::Register) {
+                        TRACE(Trace::DetailedInfo, (_T("Starting to listen for plugin state notifications")));
+                        _parent._parent._service->Register(&_parent._parent._sink);
+                    } else {
+                        _parent._parent._service->Unregister(&_parent._parent._sink);
+                        TRACE(Trace::DetailedInfo, (_T("Stopped listening for plugin state notifications")));
+                    }
+
+                    _parent._waitingAsyncDispatch.store(false);
+                }
+
+            private:
+                NotificationsJob& _parent;
+            };
+
+        private:
+            Core::WorkerPool::JobType<InternalNotificationsJob> _notificationsJob;
+            std::atomic_bool _waitingAsyncDispatch;
+            Mode _mode;
+            PluginInitializerService& _parent;
+        };
+
+    private:
 
         // must be called from inside the lock
         void ActivateNotificationsIfNeeded()
         {
             ASSERT(_service != nullptr);
 
-            if ((_pluginInitList.size() == 1) && (RevokeDeactivationJob() == false)) { // note size() is constant time (so fast, c++11)
+            if (_pluginInitList.size() == 1) {
+                if (RevokeDeactivationJob() == false) { // if this returns true 
+                    if (_notificationsJob.ActiveMode() == NotificationsJob::Mode::Register) {
+                    
+                    }
+                } else {
+                
+                }
+            }
+            
+            
+            
+            && (RevokeDeactivationJob() == false)) { // note size() is constant time (so fast, c++11)
                 _service->Register(&_sink);
                 TRACE(Trace::Information, (_T("Started listening for plugin state notifications")));
             }
@@ -806,8 +930,12 @@ POP_WARNING()
         {
             ASSERT(_service != nullptr);
 
-            if (_pluginInitList.size() == 0) { // note size() is constant time (so fast, c++11)
-                if ((synchronous == true) && (RevokeDeactivationJob() == true)) {
+            if (_pluginInitList.size() == 0) { // note size() is constant time (so fast, c++11) 
+                ASSERT(RevokeDeactivationJob() == false); // that job should not have been active as it must have moved to registered first and there previous job will always have been either run or revoked
+                if (synchronous == true) { 
+                    TRACE(Trace::Information, (_T("Huppel1")));
+                    SleepMs(10000);
+                    TRACE(Trace::Information, (_T("Huppel2")));
                     _service->Unregister(&_sink);
                     TRACE(Trace::Information, (_T("Stopped listening for plugin state notifications")));
                 } else {
@@ -816,16 +944,14 @@ POP_WARNING()
             }
         }
 
-        void SubmitDeactivationJob()
+        void SubmitDeactivationJob(const NotificationsJob::Mode mode)
         {
-            DeactivateNotificationsJob& job = _deactivateNotificationsJob;
-            job.Submit();
+            _notificationsJob.Submit(mode);
         }
 
-        bool RevokeDeactivationJob()  // returns true when unregister was planned but did not happen yet
+        bool RevokeDeactivationJob()  // returns true when unregister was planned but did not happen yet (and will not happen anymore)
         {
-            DeactivateNotificationsJob& job = _deactivateNotificationsJob;
-            return job.Revoke();
+            return _notificationsJob.Revoke();
         }
 
         bool NewPluginStarter(PluginHost::IShell* const requestedPluginShell, const uint8_t maxnumberretries, uint16_t const delay, IPluginAsyncStateControl::IActivationCallback* const callback)
@@ -990,22 +1116,40 @@ POP_WARNING()
             }
         }
 
+        // make sure no new Activate and Abort calls are handled during this call (we will consider the plugin notifications unregistered at the end of this method)
         void CancelAll()
         {
-            _adminLock.Lock();
+
+            // huppel: this needs fixing!!!!!!!!!!!!!!!
 
             TRACE(Trace::Information, (_T("Cancelling all plugin activation requests (plugin deactivate)")));
 
+            _adminLock.Lock();
+
             if (_pluginInitList.size() != 0) {
 
-                for (PluginStarter& starter : _pluginInitList) {
-                    starter.Abort();
+                PluginStarterContainer::iterator it = _pluginInitList.begin();
+                while (it != _pluginInitList.end()) {
+                    PluginStarter toabort(std::move(*it));
+                    _pluginInitList.erase(it);
+                    DeactivateNotificationsIfPossible();
+                    _adminLock.Unlock();
+                    toabort.Abort(); // cannot do this in the lock, the job revoke might deadlock
+                    _adminLock.Lock();
+                    it = _pluginInitList.begin(); // we cannot use the one from the iterator, when we released the lock a notifications might have altered the queue
+                };
+
+            } else {
+                // there is a small change the queue size just went to 0 but the notifications were not yet unregistered as the job was posted but had not run yet.. we must make sure it is unregistered before we leave this method
+                _adminLock.Unlock();
+                if (RevokeDeactivationJob() == true) { 
+                    _service->Unregister(&_sink);
+                    TRACE(Trace::Information, (_T("Stopped listening for plugin state notifications")));
                 }
-                _pluginInitList.clear();
-                DeactivateNotificationsIfPossible();
             }
 
-             _adminLock.Unlock();
+            TRACE(Trace::DetailedInfo, (_T("All plugin activation requests canceeld")));
+
         }
 
         struct StarterQueueInfo {
@@ -1047,55 +1191,6 @@ POP_WARNING()
         }
 
     private:
-        class DeactivateNotificationsJob {
-        public:
-            explicit DeactivateNotificationsJob(PluginInitializerService& parent)
-                : _parent(parent)
-                , _waitingAsyncDeactivation(false)
-            {
-            }
-            ~DeactivateNotificationsJob() = default;
-
-            DeactivateNotificationsJob(const DeactivateNotificationsJob&) = delete;
-            DeactivateNotificationsJob& operator=(const DeactivateNotificationsJob&) = delete;
-            DeactivateNotificationsJob(DeactivateNotificationsJob&&) = delete;
-            DeactivateNotificationsJob& operator=(DeactivateNotificationsJob&&) = delete;
-
-        public:
-            void Submit()
-            {
-                _waitingAsyncDeactivation.store(true);
-                _parent._deactivateNotificationsJob.Submit();
-            }
-
-            bool Revoke() //  returns true when not run but was submitted
-            {
-                bool revoked = false;
-                if (_waitingAsyncDeactivation.load() == true) { // if not true the job was not posted or was already finished
-                    _parent._deactivateNotificationsJob.Revoke();
-
-                    revoked = (_waitingAsyncDeactivation.load() == true); // still true, job did not run before revoke
-                    _waitingAsyncDeactivation.store(false); // just in case somebody would call revoke again
-                }
-                return revoked;
-            }
-
-        private:
-            friend Core::ThreadPool::JobType<DeactivateNotificationsJob>;
-
-            void Dispatch()
-            {
-                TRACE(Trace::DetailedInfo, (_T("Stopped listening for plugin state notifications (from job)")));
-                _parent._service->Unregister(&_parent._sink);
-                _waitingAsyncDeactivation.store(false);
-            }
-
-        private:
-            PluginInitializerService& _parent;
-            std::atomic_bool _waitingAsyncDeactivation;
-        };
-
-    private:
         using PluginStarterContainer = std::list<PluginStarter>; // for now we keep them in a list as we more or less agreed to activate plugins in order of requests receieved (and not a vector as we will constanlty add/remove items) (if needed we can add a shadow unordered map for quick lookup but we do not expect that many parallel activation requests, at least I hope...)
 
         uint8_t                                                 _maxparallel;
@@ -1105,7 +1200,7 @@ POP_WARNING()
         Core::SinkType<Notifications>                           _sink;
         PluginHost::IShell*                                     _service;
         Core::CriticalSection                                   _adminLock;
-        Core::WorkerPool::JobType<DeactivateNotificationsJob>   _deactivateNotificationsJob;
+        NotificationsJob                                        _notificationsJob;
     };
 
 } // Plugin
