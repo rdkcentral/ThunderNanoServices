@@ -856,29 +856,31 @@ POP_WARNING()
         // must be called from inside the lock
         void ActivateAnotherPlugin() 
         {
-            ASSERT(_pluginInitList.size() > 0);
-
             TRACE(Trace::DetailedInfo, (_T("Going to try to activate another plugin")));
-            PluginStarterContainer::iterator it = _pluginInitList.begin(); // we just start activating from the top, so we try to do it more or less in the order of incoming requests
-            uint16_t currentlyActiveCounted = 0;
-            while ((it != _pluginInitList.end()) && (currentlyActiveCounted < _maxparallel)) {
-                PluginStarter::State state = it->GetState();
-                if (state == PluginStarter::State::NotActive) {
-                    TRACE(Trace::DetailedInfo, (_T("Activating another plugin")));
-                    if (it->Activate() == true) {
-                        // oops this plugin could not be started, end state reached we can remove it
-                        TRACE(Trace::DetailedInfo, (_T("Activating handled in Activate call, removing")));
-                        it = _pluginInitList.erase(it);
+
+            if (_pluginInitList.size() > 0) {
+
+                PluginStarterContainer::iterator it = _pluginInitList.begin(); // we just start activating from the top, so we try to do it more or less in the order of incoming requests
+                uint16_t currentlyActiveCounted = 0;
+                while ((it != _pluginInitList.end()) && (currentlyActiveCounted < _maxparallel)) {
+                    PluginStarter::State state = it->GetState();
+                    if (state == PluginStarter::State::NotActive) {
+                        TRACE(Trace::DetailedInfo, (_T("Activating another plugin")));
+                        if (it->Activate() == true) {
+                            // oops this plugin could not be started, end state reached we can remove it
+                            TRACE(Trace::DetailedInfo, (_T("Activating handled in Activate call, removing")));
+                            it = _pluginInitList.erase(it);
+                        } else {
+                            break; // we activated another we can stop looking... (as this method is only called when added another request or one was handled)
+                        }
+                    } else if ((state == PluginStarter::State::Activating) || (state == PluginStarter::State::WaitingForPreconditionActive)) {
+                        ++currentlyActiveCounted;
+                        ++it;
                     } else {
-                        break; // we activated another we can stop looking... (as this method is only called when added another request or one was handled)
-                    }
-                } else if ((state == PluginStarter::State::Activating) || (state == PluginStarter::State::WaitingForPreconditionActive)) {
-                    ++currentlyActiveCounted;
-                    ++it;
-                } else {
-                    ++it;
-                } // so if the state is waiting for preconditions we do not count it as active and try to start another...
-            };
+                        ++it;
+                    } // so if the state is waiting for preconditions we do not count it as active and try to start another...
+                };
+            }
             TRACE(Trace::ActivationQueueInfo, (_T("Request queue info: %s"), GetStarterQueueInfo().ToString().c_str()));
         }
 
@@ -892,9 +894,7 @@ POP_WARNING()
             if (it != _pluginInitList.end()) {
                 PluginStarter toAbort(std::move(*it));
                 _pluginInitList.erase(it);
-                if (_pluginInitList.size() != 0) {
-                    ActivateAnotherPlugin();
-                }
+                ActivateAnotherPlugin();
                 DeactivateNotificationsIfPossible(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 result = true;
@@ -915,9 +915,7 @@ POP_WARNING()
                 // okay this plugin is activated were done for this one!
                 PluginStarter activated(std::move(*it));
                 _pluginInitList.erase(it);
-                if (_pluginInitList.size() != 0) {
-                    ActivateAnotherPlugin();
-                }
+                ActivateAnotherPlugin();
                 DeactivateNotificationsIfPossible(false); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 activated.Activated(); // note it is essential this is called outside the lock
@@ -936,9 +934,7 @@ POP_WARNING()
                 if (result == PluginStarter::ResultCode::Failed) {
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
-                    if (_pluginInitList.size() != 0) {
-                        ActivateAnotherPlugin();
-                    }
+                    ActivateAnotherPlugin();
                     DeactivateNotificationsIfPossible(false); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
                     failed.Failed();
@@ -978,9 +974,7 @@ POP_WARNING()
                 if (resultcode == PluginStarter::ResultCode::Failed) { 
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
-                    if (_pluginInitList.size() != 0) {
-                        ActivateAnotherPlugin();
-                    }
+                    ActivateAnotherPlugin();
                     DeactivateNotificationsIfPossible(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
                     failed.Failed(); // not strictly necessary but for consistency
