@@ -114,7 +114,7 @@ namespace Plugin {
                                     , (maxnumberretries.IsSet() == true ? maxnumberretries.Value() : _maxretries)
                                     , (delay.IsSet() == true ? delay.Value() : _delay)
                                     , cb) == true) {
-                    TRACE(Trace::Information, (_T("Plugin start entry created for plugin [%s]"), callsign.c_str()));
+                    TRACE(Trace::DetailedInfo, (_T("Plugin start entry created for plugin [%s]"), callsign.c_str()));
                 } else {
                     TRACE(Trace::Warning, (_T("Plugin start entry not created for plugin [%s], there was already a pending request for this plugin"), callsign.c_str()));
                     result = Core::ERROR_INPROGRESS;
@@ -125,7 +125,7 @@ namespace Plugin {
 
                 if (cb != nullptr)
                 {
-                    TRACE(Trace::Information, (_T("Result callback success called for plugin [%s]"), callsign.c_str()));
+                    TRACE(Trace::DetailedInfo, (_T("Result callback success called for plugin [%s]"), callsign.c_str()));
                     cb->Finished(callsign, Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS, 0);
                 }
             } else { // DESTROYED || UNAVAILABLE
@@ -151,7 +151,7 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_NONE;
 
         if (CancelPluginStarter(callsign) == true) {
-            TRACE(Trace::Information, (_T("Plugin Activate request was canceled for plugin [%s]"), callsign.c_str()));
+            TRACE(Trace::DetailedInfo, (_T("Plugin Activate request was canceled for plugin [%s]"), callsign.c_str()));
         } else {
             // note this is not necesarely an error, the abort reuquest could just have crossed the succesful activation (or failure to do so for that matter) so it was just removed from the list
             TRACE(Trace::Warning, (_T("Plugin Abort Activate request: plugin was not in activation list [%s]"), callsign.c_str()));
