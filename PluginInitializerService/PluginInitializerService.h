@@ -380,7 +380,7 @@ POP_WARNING()
             {
                 // plugin Initialize called
                 if (_waitingPrecondition == true) {
-                    ASSERT(_requestedPluginShell->State() == PluginHost::IShell::PRECONDITION); // if this fires there is a bug in this code or more likely somebody changed the order of the callback and setting the state to Activation :) 
+                    ASSERT(_requestedPluginShell->State() == PluginHost::IShell::PRECONDITION); // if this fires there is a bug in this code or more likely somebody changed the order of the notification and setting the state to Activation :) 
                     ASSERT(_activateJob.IsValid() == false);
                     TRACE(Trace::Information, (_T("Initialize received for plugin [%s] while it was waiting for preconditions, activations started"), Callsign().c_str()));
                     _activateJob = ActivateJobProxyType::Create(_requestedPluginShell, _activateResultJob); // the subsystem conditions for this plugin are met so Initialization started... (this can temporarily lead to too many plugins being activated, see explanation at class definition for detailed information on this)
@@ -697,11 +697,11 @@ POP_WARNING()
                 ASSERT(_resultjob.IsValid() == true);
 
                 // so we cannot handle the result in this job as we can never guarantee it is running after the PluginStarter has been destructed and removed from the PluginInitializerService queue. Now in itself that is not a problem as we will access the
-                // PluginStarter from the PluginInitializerService in a lock and if it was gone it will not be found but the real problem is it could be that we are just shutting down the plugin and the PluginInitializerService itself is no longer available...
+                // PluginStarter from the PluginInitializerService in a lock and if it was gone it will not be found but the real problem is it could be that we are just shutting down the PluginInitializerService plugin and the PluginInitializerService itself is no longer available...
                 // therefore we do it from a second job from which we can guarantee it will not run at all (either not submitted here after the PluginStarter has been destroyed or fully revoked before it can run)
                 ActivateResultJob& resultjob = *(_resultjob);
                 resultjob.Result(result);
-                _resultjob->Submit();  // note this is not your avarage job submit...
+                _resultjob->Submit();  // note this is not your average job submit...
             }
 
         private:
