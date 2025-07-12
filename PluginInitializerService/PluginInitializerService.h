@@ -112,7 +112,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _sink(*this)
             , _service(nullptr)
             , _adminLock()
-            , _notificationsJob(*this)
+            , _notificationsJob(*this, NotificationsJob::Mode::Unregister) // initialy we are not registered to notifications
         {
         }
 POP_WARNING()
@@ -791,7 +791,7 @@ POP_WARNING()
         END_INTERFACE_MAP
 
     private:
-        // note Submit and Revoke will always be called within the same lock
+        // note SetMode will always be called within the same lock
         class NotificationsJob {
         public:
             enum class Mode {
@@ -821,18 +821,19 @@ POP_WARNING()
 
             void SetMode(const Mode mode)
             {
-                if (CurrentMode() != mode) {
-                    if (Revoke() == false) {
+                if (_mode != mode) { // if _mode is mode then either it is already set or will be set when the job runs
+                    if (_waitingAsyncDispatch.load() == false) {
                         _mode = mode;
                         Submit();
+                    } else {
+                        if (Revoke() == false) {
+                            _mode = mode;
+                            Submit();
+                        } else {
+                            _mode = mode;
+                        }
                     }
                 }
-            }
-
-            Mode CurrentMode() const
-            {
-
-                return _mode;
             }
 
         private:
@@ -903,55 +904,27 @@ POP_WARNING()
     private:
 
         // must be called from inside the lock
-        void ActivateNotificationsIfNeeded()
+        void ActivateNotifications()
         {
-            ASSERT(_service != nullptr);
-
-            if (_pluginInitList.size() == 1) {
-                if (RevokeDeactivationJob() == false) { // if this returns true 
-                    if (_notificationsJob.ActiveMode() == NotificationsJob::Mode::Register) {
-                    
-                    }
-                } else {
-                
-                }
-            }
-            
-            
-            
-            && (RevokeDeactivationJob() == false)) { // note size() is constant time (so fast, c++11)
-                _service->Register(&_sink);
-                TRACE(Trace::Information, (_T("Started listening for plugin state notifications")));
+            if (_pluginInitList.size() == 1) { // note size() is constant time (so fast, c++11)
+                ChangeNotificationRegistration(NotificationsJob::Mode::Register);
             }
         }
 
         // must be called from inside the lock
-        void DeactivateNotificationsIfPossible(const bool synchronous = true)
+        void DeactivateNotifications()
         {
-            ASSERT(_service != nullptr);
-
             if (_pluginInitList.size() == 0) { // note size() is constant time (so fast, c++11) 
-                ASSERT(RevokeDeactivationJob() == false); // that job should not have been active as it must have moved to registered first and there previous job will always have been either run or revoked
-                if (synchronous == true) { 
-                    TRACE(Trace::Information, (_T("Huppel1")));
-                    SleepMs(10000);
-                    TRACE(Trace::Information, (_T("Huppel2")));
-                    _service->Unregister(&_sink);
-                    TRACE(Trace::Information, (_T("Stopped listening for plugin state notifications")));
-                } else {
-                    SubmitDeactivationJob();
-                }
+                TRACE(Trace::Information, (_T("Huppel1")));
+                SleepMs(10000);
+                TRACE(Trace::Information, (_T("Huppel2")));
+                ChangeNotificationRegistration(NotificationsJob::Mode::Unregister);
             }
         }
 
-        void SubmitDeactivationJob(const NotificationsJob::Mode mode)
+        void ChangeNotificationRegistration(const NotificationsJob::Mode mode)
         {
-            _notificationsJob.Submit(mode);
-        }
-
-        bool RevokeDeactivationJob()  // returns true when unregister was planned but did not happen yet (and will not happen anymore)
-        {
-            return _notificationsJob.Revoke();
+            _notificationsJob.SetMode(mode);
         }
 
         bool NewPluginStarter(PluginHost::IShell* const requestedPluginShell, const uint8_t maxnumberretries, uint16_t const delay, IPluginAsyncStateControl::IActivationCallback* const callback)
@@ -966,9 +939,9 @@ POP_WARNING()
                 ASSERT(_pluginInitList.size() < std::numeric_limits<uint16_t>::max()); // I'll bet this will fire at some point :)
 
                 _pluginInitList.emplace_back(std::move(starter));
-                ActivateNotificationsIfNeeded();
+                ActivateNotifications();
                 ActivateAnotherPlugin();
-                DeactivateNotificationsIfPossible(); // could be that the Activation failed/succeeded immediately and the list is again empty here so check if notifications no longer needed
+                DeactivateNotifications(); // could be that the Activation failed/succeeded immediately and the list is again empty here so check if notifications no longer needed
             }
             else {
                 //oops this callsign was already requested...
@@ -1021,7 +994,7 @@ POP_WARNING()
                 PluginStarter toAbort(std::move(*it));
                 _pluginInitList.erase(it);
                 ActivateAnotherPlugin();
-                DeactivateNotificationsIfPossible(); // we need to do this whether or not we called ActivateAnotherPlugin here
+                DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 result = true;
                 toAbort.Abort(); // note it is essential this is called outside the lock
@@ -1042,7 +1015,7 @@ POP_WARNING()
                 PluginStarter activated(std::move(*it));
                 _pluginInitList.erase(it);
                 ActivateAnotherPlugin();
-                DeactivateNotificationsIfPossible(false); // we need to do this whether or not we called ActivateAnotherPlugin here
+                DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 activated.Activated(); // note it is essential this is called outside the lock
             } else {
@@ -1061,7 +1034,7 @@ POP_WARNING()
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
                     ActivateAnotherPlugin();
-                    DeactivateNotificationsIfPossible(false); // we need to do this whether or not we called ActivateAnotherPlugin here
+                    DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
                     failed.Failed();
                 } else if (result == PluginStarter::ResultCode::Paused) {
@@ -1101,7 +1074,7 @@ POP_WARNING()
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
                     ActivateAnotherPlugin();
-                    DeactivateNotificationsIfPossible(); // we need to do this whether or not we called ActivateAnotherPlugin here
+                    DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
                     failed.Failed(); // not strictly necessary but for consistency
                 } else if (resultcode == PluginStarter::ResultCode::Paused) {
@@ -1123,7 +1096,7 @@ POP_WARNING()
             // huppel: this needs fixing!!!!!!!!!!!!!!!
 
             TRACE(Trace::Information, (_T("Cancelling all plugin activation requests (plugin deactivate)")));
-
+#if 0
             _adminLock.Lock();
 
             if (_pluginInitList.size() != 0) {
@@ -1132,7 +1105,7 @@ POP_WARNING()
                 while (it != _pluginInitList.end()) {
                     PluginStarter toabort(std::move(*it));
                     _pluginInitList.erase(it);
-                    DeactivateNotificationsIfPossible();
+                    DeactivateNotifications();
                     _adminLock.Unlock();
                     toabort.Abort(); // cannot do this in the lock, the job revoke might deadlock
                     _adminLock.Lock();
@@ -1147,7 +1120,7 @@ POP_WARNING()
                     TRACE(Trace::Information, (_T("Stopped listening for plugin state notifications")));
                 }
             }
-
+#endif
             TRACE(Trace::DetailedInfo, (_T("All plugin activation requests canceeld")));
 
         }
