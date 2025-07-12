@@ -620,7 +620,7 @@ POP_WARNING()
 
             private:
                 Core::WorkerPool::JobType<IMPLEMENTATION> _workerjob;
-                std::atomic_bool _blocked;
+                bool _blocked;
                 Core::CriticalSection _adminLock;
             };
 
