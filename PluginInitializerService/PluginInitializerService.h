@@ -278,9 +278,10 @@ POP_WARNING()
             // returns true when we're done with this PluginStarter, no need to retry again
             bool Activate()
             {
+                // note we can come here mulitple times... (most likely (only) situation is if we tried first but need to wait for preconditions and after that the activation failed)
+
                 bool done = false;
                 ASSERT(_activateJob.IsValid() == false);
-                ASSERT(_activateResultJob.IsValid() == false);
                 ASSERT(_requestedPluginShell != nullptr);
                 ASSERT(_waitingPrecondition == false);
 
