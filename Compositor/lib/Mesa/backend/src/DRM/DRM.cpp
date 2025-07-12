@@ -18,8 +18,8 @@
  */
 
 #include "../Module.h"
-#include "IGpu.h"
 #include "Connector.h"
+#include "IGpu.h"
 
 #ifdef USE_ATOMIC
 #include "Atomic.h"
@@ -61,12 +61,6 @@ namespace Compositor {
     namespace Backend {
         class DRM : public Compositor::IBackend {
         public:
-            enum class State : uint8_t {
-                IDLE = 0x00,
-                FLIPPING = 0x01,
-                PENDING = 0x02,
-            };
-
             DRM() = delete;
             DRM(DRM&&) = delete;
             DRM(const DRM&) = delete;
@@ -74,8 +68,9 @@ namespace Compositor {
             DRM& operator=(const DRM&) = delete;
 
             explicit DRM(const string& gpuNode)
-                : _state(State::IDLE)
-                , _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
+                : _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
+                , _connectors()
+                , _idle(true)
             {
                 ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
 
@@ -173,12 +168,12 @@ namespace Compositor {
             {
                 uint32_t result(Core::ERROR_GENERAL);
 
-                State expected(State::IDLE);
+                static bool doModeSet(true);
 
-                if (_state.compare_exchange_strong(expected, State::FLIPPING) == true) {
+                bool idle(true);
+
+                if (_idle.compare_exchange_strong(idle, false) == true) {
                     result = Core::ERROR_NONE;
-
-                    static bool doModeSet(true);
 
                     Backend::Transaction transaction(_gpuFd, doModeSet, this);
 
@@ -193,67 +188,54 @@ namespace Compositor {
                     });
 
                     if ((result = transaction.Commit()) != Core::ERROR_NONE) {
+                        TRACE_GLOBAL(Trace::Error, ("Failed to commit connectors, no buffers will be displayed"));
                         _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
                             connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
                         });
-
-                        TRACE_GLOBAL(Trace::Error, ("Failed to commit connectors, no buffers will be displayed"));
                     }
 
                     doModeSet = transaction.ModeSet();
 
                     TRACE_GLOBAL(Trace::Information, ("Committed connectors: %u", result));
                 } else {
-                    State expected(State::FLIPPING);
-
-                    if (_state.compare_exchange_strong(expected, State::PENDING) == true) {
-                        TRACE_GLOBAL(Trace::Error, ("Page flip still in progress, handle this request later to grantee the new content will be displayed"));
-                        result = Core::ERROR_INPROGRESS;
-                    }
+                    TRACE_GLOBAL(Trace::Information, ("Commit in progress, skipping commit request"));
+                    result = Core::ERROR_INPROGRESS;
                 }
 
                 return result;
             }
             void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
             {
-                _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
-                    if (connector->CrtController().Id() == crtc) {
-                        struct timespec presentationTimestamp;
+                bool idle = false;
 
-                        presentationTimestamp.tv_sec = seconds;
-                        presentationTimestamp.tv_nsec = useconds * 1000;
+                if (_idle.compare_exchange_strong(idle, true) == true) {
+                    _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
+                        if (connector->CrtController().Id() == crtc) {
+                            struct timespec presentationTimestamp;
 
-                        connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
-                        // TODO: Check with Bram the intention of the Release()
-                        // connector->Release();
+                            presentationTimestamp.tv_sec = seconds;
+                            presentationTimestamp.tv_nsec = useconds * 1000;
 
-                        TRACE(Trace::Backend, ("Pageflip finished for %s", name.c_str()));
-                    }
-                });
+                            connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
+                            // TODO: Check with Bram the intention of the Release()
+                            // connector->Release();
 
-                State expected = State::FLIPPING;
-
-                if (_state.compare_exchange_strong(expected, State::IDLE) == false) {
-                    expected = State::PENDING;
-
-                    if (_state.compare_exchange_strong(expected, State::FLIPPING) == true) {
-                        Commit(Compositor::DRM::InvalidIdentifier); // re-commit if there was a pending request.
-                    }
+                            TRACE(Trace::Backend, ("Pageflip finished for %s", name.c_str()));
+                        }
+                    });
                 }
             }
             static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
             {
                 ASSERT(userData != nullptr);
-
                 DRM* backend = reinterpret_cast<DRM*>(userData);
-
                 backend->FinishPageFlip(crtc_id, seq, sec, usec);
             }
 
         private:
-            std::atomic<State> _state;
             int _gpuFd; // GPU opened as master or lease...
             Core::ProxyMapType<string, Connector> _connectors;
+            std::atomic<bool> _idle;
         }; // class DRM
 
         static Core::ProxyMapType<string, Backend::DRM> _backends;
