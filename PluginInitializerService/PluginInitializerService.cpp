@@ -56,7 +56,7 @@ namespace Plugin {
         if (config.MaxParallel.IsSet() == true) {
             _maxparallel = config.MaxParallel.Value();
             if ((_maxparallel == 0) || (_maxparallel > (buildinfo.ThreadPoolCount-1))) {
-                message = _T("maxparallel configured incorreclty");
+                message = _T("maxparallel configured incorrectly");
             }
         } else {
             _maxparallel = ((buildinfo.ThreadPoolCount / 2) > 0 ? (buildinfo.ThreadPoolCount / 2) : 1 );
@@ -70,7 +70,7 @@ namespace Plugin {
         }
 
         // note we will not register for the plugin state notifications here but only do that when it actually needed later on, and more importantly also stop listening when there are no more plugins to start 
-        // (this to make sure hat even if this plugin is not deactivated when there are no more plugins to start it will not give any unnecesary overhead like constantly being notified on plugin state transitions)
+        // (this to make sure hat even if this plugin is not deactivated when there are no more plugins to start it will not give any unnecessary overhead like constantly being notified on plugin state transitions)
 
         return (message);
     }
@@ -92,7 +92,7 @@ namespace Plugin {
     }
 
     // note we will not specifically handle the connection from the client and the plugin being closed after we stored the callback.
-    // worst case: the connection being closed wihtout abort called but in that case we will call the callback on a dead proxy and then 
+    // worst case: the connection being closed without abort called but in that case we will call the callback on a dead proxy and then 
     // release it, so no leaks (no need to go through the trouble to handle the dangling proxies here)
     Core::hresult PluginInitializerService::Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IPluginAsyncStateControl::IActivationCallback* const cb)
     {
@@ -153,7 +153,7 @@ namespace Plugin {
         if (CancelPluginStarter(callsign) == true) {
             TRACE(Trace::DetailedInfo, (_T("Plugin Activate request was canceled for plugin [%s]"), callsign.c_str()));
         } else {
-            // note this is not necesarely an error, the abort reuquest could just have crossed the succesful activation (or failure to do so for that matter) so it was just removed from the list
+            // note this is not necessarily an error, the abort request could just have crossed the successful activation (or failure to do so for that matter) so it was just removed from the list
             TRACE(Trace::Warning, (_T("Plugin Abort Activate request: plugin was not in activation list [%s]"), callsign.c_str()));
             result = Core::ERROR_NOT_EXIST;
         }

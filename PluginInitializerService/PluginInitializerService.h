@@ -17,23 +17,6 @@
 * limitations under the License.
 */
 
-/*
-- what to do
-  & 530 ActivateAnotherPlugin -> unregister notifcauions asyn, sync or both
-  & 677 solve race condition with unregister async job and activate and sync deactivae (keepo state beweeon job and plkugin)
-  & 515 plugin die op preconditie wacht maken we tijdelijk niet active wanneer deze dus door activate zelf in precodition schiet zodat deze ook echt niet meedoet met de telling (denk dat dit all klopt eigenlijk)
-  & 303 in the activated ook delay job deleten (als de activate door een externe oorzaak komt en hij liep) (en checken of het in de activate, abort., deinitialized ook altijd gebeurd)
-  & 257 als 'ie hier preocndition is moeten we hem dan ook niet active maken... zie gewenste aanpssing hierboven -> of id dat precondite gedoe alleen als 'ie vanuit actieve start naar precondie schiet, dan is eigenlij niet meer actief en zouden we bij failure to start niet opniew moeten proberen (dat is er dan een teveel)
-  & see if ActivateAnotherPlugin needs to look for more than one activate (during review)
-  & check if we need to do more "see if we can stop listening for notifcations" is done always after possible start (as the start could immedidaley succed/abort)
-    anyway check startting and stopping notications (if not stopped too sson)
-
-  pierre:
-  - revoke voor timer in state executing (was handig geweest als je wist of een revoke gelukt was)
-  - iets met isidle in job and revoke 
-  - make plugionactivator resiliant to connectioin gone after starting to wait for callback (en ook plugin to client disconnect -> denk dat hetb niet edht nidig is)
-    voor PluginActivator nu ook niet mogeluijk, we zouden de opoerational van de ConnectorType ook moeten koppelen (timout zetten is in deze teopassing ook niet handuig, timout icm met pollen als poor mans solution maar heeft ppok smartinterfacetuype aanpassing nodifg?)
- */
 
 #pragma once
 
@@ -168,16 +151,16 @@ POP_WARNING()
 
     private:
 
-        // class that actualy handles Activating the plugin taking into account all the possible Plugin states and Activation call return codes 
-        // and at the same time tries to cope as best as possible with plugin state changes triggred externally to the PluginStarter, e.g. Activation and Deactivation requests.
-        // One special case is the state PRECONDITION, when the plugin is in this state the PluginStarter is not considered Active and will not be included in the maximum allowed parallel startup activactions.
-        // This as it is waiting for the preconditions to be met and up to that moment it is not actualy Initializing so we could maximize parallism and activate another plugin. Subsequent advantage: now we can try to start 
+        // class that actually handles Activating the plugin taking into account all the possible Plugin states and Activation call return codes 
+        // and at the same time tries to cope as best as possible with plugin state changes triggered externally to the PluginStarter, e.g. Activation and Deactivation requests.
+        // One special case is the state PRECONDITION, when the plugin is in this state the PluginStarter is not considered Active and will not be included in the maximum allowed parallel startup activations.
+        // This as it is waiting for the preconditions to be met and up to that moment it is not actually Initializing so we could maximize parallelism and activate another plugin. Subsequent advantage: now we can try to start 
         // other plugins that might actually trigger a subsystem the plugin in state PRECONDITION is waiting on and unblock this plugin (this in principle would of course be considered incorrect usage of the PluginInitializerService 
         // because we try to activate plugins in order received but now this will not lead to the plugin startup becoming stuck because of incorrect order of requests icw subsystem dependencies)
         // As we get an Initialize() notification when a plugin waiting for preconditions is starting to actual activate we will use that to set the PluginStarter to actually active state to prevent from that moment on to activate 
-        // new PluginStarters beyond the allowed maximum, but of course if there were already activations up to the maximum we will now temporarely exceed the maximum (but as explained above that is accpeted behaviour)
+        // new PluginStarters beyond the allowed maximum, but of course if there were already activations up to the maximum we will now temporarily exceed the maximum (but as explained above that is accepted behaviour)
         // The ActivateJob will indicate if at the moment the PluginStarter is trying to actively start a plugin, then it will be valid (so will also not be valid if the plugin is waiting for the Initialize to start in case of pending preconditions)
-        // a boolean will indicate if the plugin started from this PluginStarter is waiting for preconditions. This is needed so that when in that case the Initialization fails (Deinituialized callback called) we will not automatically retry
+        // a boolean will indicate if the plugin started from this PluginStarter is waiting for preconditions. This is needed so that when in that case the Initialization fails (Deinitialized callback called) we will not automatically retry 
         // the activation, this will only be done when there is slot available for this
         class PluginStarter {
 
@@ -301,23 +284,23 @@ POP_WARNING()
                 ASSERT(_requestedPluginShell != nullptr);
                 ASSERT(_waitingPrecondition == false);
 
-                PluginHost::IShell::state state = _requestedPluginShell->State(); // let's get the state again, potentialy it could have been changed between state check in the IPluginAsyncStateControl::Activate and the additionin the crew and also the lazy registration to the notification plays a role here (if it is the first request in the queue the registartion for the notificaion will only happen after it was added to the queue). Here wa are gueranteed to be in the list and notifcaions active so we can safely assum we will not miss any state transition)
+                PluginHost::IShell::state state = _requestedPluginShell->State(); // let's get the state again, potentially it could have been changed between state check in the IPluginAsyncStateControl::Activate and the addition the crew and also the lazy registration to the notification plays a role here (if it is the first request in the queue the registration for the notificaion will only happen after it was added to the queue). Here we are guaranteed to be in the list and notifications active so we can safely assume we will not miss any state transition)
 
                 TRACE(Trace::Information, (_T("Start activating plugin [%s] current state [%s]"), Callsign().c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
 
                 // DEACTIVATED -> we can activate this request
                 // DEACTIVATION -> Deinitialize will always follow and we do not need to do anything but await for it to happen and then activate the plugin
-                // ACTIVATION -> We will still either get the Activated or Deinitialzed callback, again nothing to do here just await these
-                // PRECONDITION -> again we will either get the Actiavted or Deinitialzed callback, again nothing to do here just await these
+                // ACTIVATION -> We will still either get the Activated or Deinitialized callback, again nothing to do here just await these
+                // PRECONDITION -> again we will either get the Activated or Deinitialized callback, again nothing to do here just await these
                 // ACTIVATED -> we did miss the Activation notification -> report the plugin as activated and we're done!
-                // HIBERNATED -> quite unlikely, plugin must have been Activated by another means for which we missed the notifcation and after that have been Hibernated before we now try to activate the plug. But it means the plugin is activated so -> report the plugin as activated and we're done!
-                // DESTROYED -> hmm this would be a very unexpected use case, more a system architecture issue, why would the plugin be rquested to be started by this service and then even after that be transitioned into DESTROYED?. We'll report it "failed to activate"
+                // HIBERNATED -> quite unlikely, plugin must have been Activated by another means for which we missed the notification and after that have been Hibernated before we now try to activate the plug. But it means the plugin is activated so -> report the plugin as activated and we're done!
+                // DESTROYED -> hmm this would be a very unexpected use case, more a system architecture issue, why would the plugin be requested to be started by this service and then even after that be transitioned into DESTROYED?. We'll report it "failed to activate"
                 // UNAVAILABLE -> same reasoning as DESTROYED -> We'll report it "failed to activate"
 
 
-                switch (state) { // note fallthoughs on purpose
+                switch (state) { // note fall throughs on purpose
                 case PluginHost::IShell::DEACTIVATED: 
-                    // we'll not keep a reference to the job, that would be just overhead, when activation is actualy started, aborting after that might not always abort the plugin activation (does not make sense, could always cross eachother anyway, and otherwisse we need to keep the job)
+                    // we'll not keep a reference to the job, that would be just overhead, when activation is actually started, aborting after that might not always abort the plugin activation (does not make sense, could always cross each other anyway, and otherwise we need to keep the job)
                     ++_attempt; // indicate we have attempted to start this plugin
                     TRACE(Trace::DetailedInfo, (_T("Activation job posted for plugin [%s] from Activate call"), Callsign().c_str()));
                     _activateResultJob = ActivateResultJobProxyType::Create(_initializerservice, Callsign()); 
@@ -332,7 +315,7 @@ POP_WARNING()
                     break;
                 case PluginHost::IShell::DESTROYED:
                 case PluginHost::IShell::UNAVAILABLE:
-                    ASSERT(false); // this would be so unexpected, lets assert... (but in case ASSERT is not executed or does not lead to abort we must notify the initiater to unblock him)
+                    ASSERT(false); // this would be so unexpected, lets assert... (but in case ASSERT is not executed or does not lead to abort we must notify the initiator to unblock him)
                     TRACE(Trace::Error, (_T("Activation started for plugin [%s] that is in an invalid state!"), Callsign().c_str()));
                     NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
                     done = true;
@@ -345,8 +328,8 @@ POP_WARNING()
                     _activateJob = ActivateJobProxyType::Create(_requestedPluginShell, _activateResultJob); // indicate have activated this PluginStarter
                     break;
                 case PluginHost::IShell::PRECONDITION:
-                    // this state is not considered active (bit strange we get here, the plugin was activated externally or reached this state because a subsystem fell away in case the plugin will be restarted automativcally, also in that case we want to keep it in the list of plugins to activate so we can call the callback at the right moment and retry in case the automatic Initialization fails when all subsystems become set)
-                    TRACE(Trace::Warning, (_T("Activation started for plugin [%s] that is in state PRECONDITION (so not started by the PluginInitializerService), we'll wait for either a successful start or failure to do sao"), Callsign().c_str()));
+                    // this state is not considered active (bit strange we get here, the plugin was activated externally or reached this state because a subsystem fell away in case the plugin will be restarted automatically, also in that case we want to keep it in the list of plugins to activate so we can call the callback at the right moment and retry in case the automatic Initialization fails when all subsystems become set)
+                    TRACE(Trace::Warning, (_T("Activation started for plugin [%s] that is in state PRECONDITION (so not started by the PluginInitializerService), we'll wait for either a successful start or failure to do so"), Callsign().c_str()));
                     _activateResultJob = ActivateResultJobProxyType::Create(_initializerservice, Callsign()); 
                     _waitingPrecondition = true;
                     break;
@@ -381,7 +364,7 @@ POP_WARNING()
             // note must not be called within a lock that is also used in the ActivationResultNotification call from the ActivationJob (as it needs to revoke the job)
             void Activated()
             {
-                //also reovoke the activation job (there could be an external activate call leading to the activate notification, so the job could be active)
+                //also revoke the activation job (there could be an external activate call leading to the activate notification, so the job could be active)
                 if (_activateJob.IsValid() == true) {
                     TRACE(Trace::Information, (_T("Plugin [%s] was activated"), Callsign().c_str()));
                 } else {
@@ -396,19 +379,19 @@ POP_WARNING()
             {
                 // plugin Initialize called
                 if (_waitingPrecondition == true) {
-                    ASSERT(_requestedPluginShell->State() == PluginHost::IShell::PRECONDITION); // if this fires there is a bug in this code or more likely sombody changed the order of the callback and setting the state to Activation :) 
+                    ASSERT(_requestedPluginShell->State() == PluginHost::IShell::PRECONDITION); // if this fires there is a bug in this code or more likely somebody changed the order of the callback and setting the state to Activation :) 
                     ASSERT(_activateJob.IsValid() == false);
-                    TRACE(Trace::Information, (_T("Initialize received for plugin [%s] while it was waiting for precondions, activations started"), Callsign().c_str()));
-                    _activateJob = ActivateJobProxyType::Create(_requestedPluginShell, _activateResultJob); // the subsystem conditiions for this plugin are met so Initialization started... (this can temporarely lead to too many plugins being activated, see explanation at class definition for detiled information on this)
+                    TRACE(Trace::Information, (_T("Initialize received for plugin [%s] while it was waiting for preconditions, activations started"), Callsign().c_str()));
+                    _activateJob = ActivateJobProxyType::Create(_requestedPluginShell, _activateResultJob); // the subsystem conditions for this plugin are met so Initialization started... (this can temporarily lead to too many plugins being activated, see explanation at class definition for detailed information on this)
                 }
 
-                // note we cannot assert if the job is actually valid if _waitingPrecondition is false as the activation could be triggered externally... This will all be reported/handled when the Deinitialization or Activation notificaion are called
+                // note we cannot assert if the job is actually valid if _waitingPrecondition is false as the activation could be triggered externally... This will all be reported/handled when the Deinitialization or Activation notification are called
             }
 
             ResultCode Deinitialized() // returns true when fully failed and we should stop retrying
             {
                 // we can get here if:
-                // 1) state was DEACTIVATION and now plugin is fully deactivated -> let's try to startup now if this one was actually Activated (this notification can of course also happen in this situation in case it was not yest Activated)
+                // 1) state was DEACTIVATION and now plugin is fully deactivated -> let's try to startup now if this one was actually Activated (this notification can of course also happen in this situation in case it was not yet Activated)
                 // 2) state was PRECONDITION (triggered by ourselves or in that state when request came in) and when preconditions were met startup failed -> let's try to restart, next attempt
                 // 3) initial state was ACTIVATION -> although activate was not triggered by this service let's try to restart anyway as that is now requested
                 // 3) at first Activation the activation failed -> let's try to restart, next attempt
@@ -417,7 +400,7 @@ POP_WARNING()
 
                 if (_activateJob.IsValid() == true) { // Correct case, we are indeed trying to activate this PluginStarter
 
-                    TRACE(Trace::Warning, (_T("Plugin [%s] was deinitialzed"), Callsign().c_str()));
+                    TRACE(Trace::Warning, (_T("Plugin [%s] was deinitialized"), Callsign().c_str()));
 
 
                     if (_attempt > _maxnumberretries) { // first attempt not included, that is not a retry...
@@ -436,11 +419,11 @@ POP_WARNING()
                             TRACE(Trace::DetailedInfo, (_T("Delaying re-activating Plugin [%s] (retries %u)"), Callsign().c_str(), Retries()));
                             ++_attempt;
                             Core::IWorkerPool::Instance().Reschedule(Core::Time::Now().Add(_delay), Core::ProxyType<Core::IDispatch>(_activateJob));
-                            // note there is very small chance this Deinitialized notification is triggered because there was an external Activation in parallel to out attemopt that failed... (Nice thing is the Resubmit will try to Revoke anyway)
+                            // note there is very small chance this Deinitialized notification is triggered because there was an external Activation in parallel to out attempt that failed... (Nice thing is the Resubmit will try to Revoke anyway)
                         }
                     } else {
                         // okay we failed from a situation where we were activated because the preconditions were not satisfied yet, we should restart but now as there could be a chance there are already too many activations so we need to postpone that until there is a slot available
-                        // we should cancel the job to idicate we are not active anymore and indicate if possible we could start ourselves again (we cannot revoke the job as we are in the lock that also is needed in the job, should not be a problem coming from preconditions there is hardly another wayy to get to deinitalized other then subsystems being met and even if so it would be no problem the job would fire) 
+                        // we should cancel the job to indicate we are not active anymore and indicate if possible we could start ourselves again (we cannot revoke the job as we are in the lock that also is needed in the job, should not be a problem coming from preconditions there is hardly another way to get to deinitialized other then subsystems being met and even if so it would be no problem the job would fire) 
                         TRACE(Trace::Warning, (_T("Plugin [%s] failed to initialize after waiting for preconditions to be met, attempt to activate again will be made when a slot becomes available"), Callsign().c_str() ));
                         _activateJob = std::move(ActivateJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)                
                         _waitingPrecondition = false; // indicate we are no longer waiting and this starter can be started again...
@@ -459,14 +442,14 @@ POP_WARNING()
                 SetInactive();
             }
 
-            // note most likely some states will never be hanlded here as these states are handled in the notification that are triggered from the Activate call itself and will happen before the activat call returns removing the PluginSatrter from the queue before the activatuion bresuklts are handled, so this is fully correct and these states are here only for completeness
+            // note most likely some states will never be handled here as these states are handled in the notification that are triggered from the Activate call itself and will happen before the activate call returns removing the PluginStarter from the queue before the activation results are handled, so this is fully correct and these states are here only for completeness
             ResultCode HandleActivationResult(const Core::hresult result) // returns true when fully failed and we should stop retrying
             {
                 ResultCode resultcode = ResultCode::Continue;
 
                 switch (result)  {  
                 case Core::ERROR_GENERAL:
-                    // -> Initialize failed -> do nothing (already) handled in Deinitiaze notification
+                    // -> Initialize failed -> do nothing (already) handled in Deinitialized notification
                     TRACE(Trace::Warning, (_T("Plugin [%s] Activate call returned: failed to start"), Callsign().c_str()));
                     break;
                 case Core::ERROR_NONE: 
@@ -475,11 +458,11 @@ POP_WARNING()
                     break;
                 case Core::ERROR_INPROGRESS:
                     // startup was already going on, triggered externally, do nothing as it wil succeed or fail and handled via the notifications (so this result might be reported as the notification will be triggered from another Activate and be after we handle the result from ours)
-                    // we keep it in our list to restart it if necessary might the externaly triggered activation fail (will be removed from the activated or Deinitialized notification in the end)
+                    // we keep it in our list to restart it if necessary might the externally triggered activation fail (will be removed from the activated or Deinitialized notification in the end)
                     TRACE(Trace::Warning, (_T("Plugin [%s] Activation reported plugin is already being activated (triggered externally)"), Callsign().c_str()));
                     break;
                 case Core::ERROR_PENDING_CONDITIONS:
-                    // set starter to not activated, but keep it in the list as it will start activating at some point and may fail (then we'll activate ourselves as we will start retrying or reach actiovated state)
+                    // set starter to not activated, but keep it in the list as it will start activating at some point and may fail (then we'll activate ourselves as we will start retrying or reach activated state)
                     // we should now see if we can start more activations
                     TRACE(Trace::Information, (_T("Plugin [%s] Activate call returned: preconditions pending"), Callsign().c_str()));
                     _waitingPrecondition = true;
@@ -494,15 +477,15 @@ POP_WARNING()
                     resultcode = ResultCode::Failed; // will result in Failed being called to deactivate the jobs
                     break;
                 case Core::ERROR_BAD_REQUEST:
-                    // there is a problem to wakeup from hybernation, external to the PluginStarter the plugin must have been set to hybernate (as we would not try to activate it out of hybernation) -> we cannot do anything more, we'll consider it activated (as hynbernate is a substate of Activation and repport success to unbloack the caller here, Activated notifcation will not be called) 
-                    TRACE(Trace::Error, (_T("Plugin [%s] Activation failed because Pugin moved to Hubernate state in the mean time (triggered externally) and could not be awaken"), Callsign().c_str()));
+                    // there is a problem to wakeup from hibernation, external to the PluginStarter the plugin must have been set to hibernate (as we would not try to activate it out of hibernation) -> we cannot do anything more, we'll consider it activated (as hibernate is a substate of Activation and report success to unblock the caller here, Activated notification will not be called) 
+                    TRACE(Trace::Error, (_T("Plugin [%s] Activation failed because Plugin moved to Hibernate state in the mean time (triggered externally) and could not be awaken"), Callsign().c_str()));
                     NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS);
                     resultcode = ResultCode::Failed; // will result in Failed being called to deactivate the jobs
                     break;
                 default:
-                    // result code not expected, nothing else to do then assert (and consider ourselves failed to not block other startes and unblock the user of the IPluginAsyncStateControl interface
+                    // result code not expected, nothing else to do then assert (and consider ourselves failed to not block other starters and unblock the user of the IPluginAsyncStateControl interface
                     ASSERT(false);
-                    TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to unexpected reaon [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result));
+                    TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to unexpected reason [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result));
                     NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
                     resultcode = ResultCode::Failed;  // will result in Failed being called to deactivate the jobs
                 }
@@ -520,7 +503,7 @@ POP_WARNING()
             // 
             // - plugin activated notification -> end state (will be removed from queue)
             // OR
-            // - deinitialize notification, so failed (no preconditoions), wil be restarted automatically ->  _activateJob valid, _waitingPrecondition false (Active) -> should not be started, counted as active
+            // - deinitialize notification, so failed (no preconditions), wil be restarted automatically ->  _activateJob valid, _waitingPrecondition false (Active) -> should not be started, counted as active
             // - * deinitialize notification, so failed (as this might be overallocated it should not be automatically restarted) -> _activateJob invalid, _waitingPrecondition false (NotActive) -> should be started again, not counted as active 
             //     so this state will move back to not active and start from there again
             // - deinitialize notification, so failed but failed too many times -> end state (will be removed from queue)
@@ -560,7 +543,7 @@ POP_WARNING()
                 }
                 // note now awe are sure the _activateResultJob will not longer run at all, even if the _activateJob is running or will run... (so note order of revoking the _activateResultJob and _activateJob is important)
                 if (_activateJob.IsValid() == true) {
-                    Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activateJob)); // note this revoke could be while running the ActivationJob itself this is allowed, We can also not skip the revokation as the activation might also be the result of an externlly triggered activation
+                    Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activateJob)); // note this revoke could be while running the ActivationJob itself this is allowed, We can also not skip the revocation as the activation might also be the result of an externally triggered activation
                     _activateJob = std::move(ActivateJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)
                 }
             }
@@ -707,14 +690,14 @@ POP_WARNING()
             {
                 TRACE(Trace::Information, (_T("Activating plugin form ActivateJob [%s]"), _requestedPluginShell->Callsign().c_str()));
                 Core::hresult result = _requestedPluginShell->Activate(PluginHost::IShell::REQUESTED);
-                // after the previous call the plugin could reached state Startet or fully deactivated (due to the notifications triggered from it) and not be available anymore in the PluginInitializerService queue...
+                // after the previous call the plugin could reached state Started or fully deactivated (due to the notifications triggered from it) and not be available anymore in the PluginInitializerService queue...
                 TRACE(Trace::Information, (_T("Activating plugin job [%s] result [%s](%u)"), _requestedPluginShell->Callsign().c_str(), Core::ErrorToString(result), result));
 
                 ASSERT(_resultjob.IsValid() == true);
 
-                // so we cannot handle the result in this job as we can never guarentee it is running after the PluginStarter has been destructed and removed from the PluginInitializerService queue. Now in itself that is not a problem as we will access the
-                // PluginSatrter from the PluginInitializerService in a lock and if it was gone it will not be found but the real problem is it could be that we are just shutting down the plugin and the PluginInitializerService istself is no longer available...
-                // therefore we do it from a second job from which we can guerantee it will not run at all (either not submitted here after the PluginStarter has been destroyed or fully revoked before it can run)
+                // so we cannot handle the result in this job as we can never guarantee it is running after the PluginStarter has been destructed and removed from the PluginInitializerService queue. Now in itself that is not a problem as we will access the
+                // PluginStarter from the PluginInitializerService in a lock and if it was gone it will not be found but the real problem is it could be that we are just shutting down the plugin and the PluginInitializerService itself is no longer available...
+                // therefore we do it from a second job from which we can guarantee it will not run at all (either not submitted here after the PluginStarter has been destroyed or fully revoked before it can run)
                 ActivateResultJob& resultjob = *(_resultjob);
                 resultjob.Result(result);
                 _resultjob->Submit();  // note this is not your avarage job submit...
@@ -763,7 +746,7 @@ POP_WARNING()
             }
             void Deactivated(const string& callsign VARIABLE_IS_NOT_USED, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
             {
-                // this event doesn't add much value to use for this use case, it means deactivation has started but is not finihed.
+                // this event doesn't add much value to use for this use case, it means deactivation has started but is not finished.
             }
             void Unavailable(const string& callsign VARIABLE_IS_NOT_USED, PluginHost::IShell* plugin VARIABLE_IS_NOT_USED) override
             {
@@ -858,7 +841,7 @@ POP_WARNING()
                 _pluginInitList.emplace_back(std::move(starter));
                 ActivateNotificationsIfNeeded();
                 ActivateAnotherPlugin();
-                DeactivateNotificationsIfPossible(); // could be that the Activation failed/succeeded immedialy and the list is again empry here so check if notifications no longer needed
+                DeactivateNotificationsIfPossible(); // could be that the Activation failed/succeeded immediately and the list is again empty here so check if notifications no longer needed
             }
             else {
                 //oops this callsign was already requested...
@@ -962,7 +945,7 @@ POP_WARNING()
                     ActivateAnotherPlugin();
                     // no need to check if we need to DeactivateNotificationsIfPossible as the paused one must be there
                     _adminLock.Unlock();
-                } else { // contue will be handled in the follow up notification
+                } else { // continue will be handled in the follow up notification
                     _adminLock.Unlock();
                 }
             } else {
@@ -987,7 +970,7 @@ POP_WARNING()
 
             PluginStarterContainer::iterator it = std::find(_pluginInitList.begin(), _pluginInitList.end(), callsign);
 
-            ASSERT(it != _pluginInitList.end()); // as this is triggered when the activation call has been done we expect the callsign to always be availbe (it was probablu forgotton to revoke the PluginStarter::ActivateJob job)
+            ASSERT(it != _pluginInitList.end()); // as this is triggered when the activation call has been done we expect the callsign to always be available (it was probably forgotten to revoke the PluginStarter::ActivateJob job)
 
             if (it != _pluginInitList.end()) {
                 PluginStarter::ResultCode resultcode = it->HandleActivationResult(result); // note must be inside the lock as it could be in parallel with an abort request.
@@ -999,7 +982,7 @@ POP_WARNING()
                     }
                     DeactivateNotificationsIfPossible(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
-                    failed.Failed(); // not strictly necesasary but for consistency
+                    failed.Failed(); // not strictly necessary but for consistency
                 } else if (resultcode == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
                     // no need to check if we need to DeactivateNotificationsIfPossible as the paused one must be there
@@ -1090,7 +1073,7 @@ POP_WARNING()
                 _parent._deactivateNotificationsJob.Submit();
             }
 
-            bool Revoke() //  returns truw when not run but was sunmitted
+            bool Revoke() //  returns true when not run but was submitted
             {
                 bool revoked = false;
                 if (_waitingAsyncDeactivation.load() == true) { // if not true the job was not posted or was already finished
