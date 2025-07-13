@@ -23,6 +23,8 @@
 #include "Module.h"
 #include <interfaces/IPluginAsyncStateControl.h>
 
+#include <future>
+
 namespace Thunder {
 
 namespace Trace {
@@ -112,7 +114,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _sink(*this)
             , _service(nullptr)
             , _adminLock()
-            , _notificationsJob(*this, NotificationsJob::Mode::Unregister) // initialy we are not registered to notifications
+            , _notificationsJob(*this, NotificationsJob::Mode::Unregister) // initially we are not registered to notifications
         {
         }
 POP_WARNING()
@@ -791,7 +793,7 @@ POP_WARNING()
         END_INTERFACE_MAP
 
     private:
-        // note SetMode will always be called within the same lock
+        // Purpose of this job: it is not allowed to call revoke from a lock that is also used for the notification, that might deadlock. And outside the lock the order might change). Also it must be sure at some point (PluginInitializerService Deactivation) no job can tun anymore as they access PluginInitializerService
         class NotificationsJob {
         public:
             enum class Mode {
@@ -803,8 +805,10 @@ POP_WARNING()
             PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             NotificationsJob(PluginInitializerService& parent, const Mode initialMode)
                 : _notificationsJob(*this)
-                , _waitingAsyncDispatch(false)
-                , _mode(initialMode)
+                , _desiredMode(initialMode)
+                , _currentMode(initialMode)
+                , _blocked(false)
+                , _lock()
                 , _parent(parent)
             {
             }
@@ -821,45 +825,53 @@ POP_WARNING()
 
             void SetMode(const Mode mode)
             {
-                if (_mode != mode) { // if _mode is mode then either it is already set or will be set when the job runs
-                    if (_waitingAsyncDispatch.load() == false) {
-                        _mode = mode;
-                        Submit();
-                    } else {
-                        if (Revoke() == false) {
-                            _mode = mode;
-                            Submit();
-                        } else {
-                            _mode = mode;
-                        }
+                Core::SafeSyncType<Core::CriticalSection> guard(_lock);
+                if ((_desiredMode != mode) && (_blocked == false)) {
+                    _desiredMode = mode; 
+                    if (_notificationsJob.IsIdle() == true) { // could be there there is already someone trying to achieve the reverse, we cannot revoke it here, might deadlock
+                        _notificationsJob.Submit();
                     }
                 }
             }
 
-        private:
-
-            Mode ToSetMode() const
+            // note should only be called from one thread at a time 
+            void ForceState(const Mode mode)
             {
-                return _mode;
-            }
-
-            void Submit()
-            {
-                _waitingAsyncDispatch.store(true);
-                _notificationsJob.Submit();
-            }
-
-            bool Revoke() //  returns true when not run but was submitted (will not run anymore)
-            {
-                bool revoked = false;
-                if (_waitingAsyncDispatch.load() == true) { // if not true the job was not posted or was already finished
-                    _notificationsJob.Revoke();
-
-                    revoked = (_waitingAsyncDispatch.load() == true); // still true, job did not run before revoke
-                    _waitingAsyncDispatch.store(false); // just in case somebody would call revoke again
+                _lock.Lock();
+                _blocked = true;
+                if (_notificationsJob.IsIdle() == false) {
+                    _lock.Unlock(); // cannot Revoke from the lock that might deadlock
+                    _notificationsJob.Revoke(); // this will either revoke or wait until the job is finished (and no new ones will be created as we are in a blocked state)
+                } else {
+                    _lock.Unlock(); 
                 }
-                return revoked;
+                // we are sure now no job is submitted or running at all as we are in blocked mode
+                ExecuteModeChange(mode); // we can safely do this outside the lock (no running job and SetMode blocked)
+                _desiredMode = mode;
             }
+
+            void AllowStateChange() {
+                Core::SafeSyncType<Core::CriticalSection> guard(_lock);
+                _blocked = false;
+            }
+
+        private:
+            void ExecuteModeChange(const Mode desiredMode)
+            {
+                if (desiredMode != _currentMode) {
+                    if (_currentMode == Mode::Register) {
+                        _parent._service->Unregister(&_parent._sink);
+                        TRACE(Trace::DetailedInfo, (_T("Stopped listening for plugin state notifications")));
+                    } else {
+                        _parent._service->Register(&_parent._sink);
+                        TRACE(Trace::DetailedInfo, (_T("Starting to listen for plugin state notifications")));
+                    }
+                }
+
+                _currentMode = desiredMode;
+            }
+
+        private:
 
             class InternalNotificationsJob {
             public:
@@ -879,15 +891,8 @@ POP_WARNING()
 
                 void Dispatch()
                 {
-                    if (_parent.ToSetMode() == Mode::Register) {
-                        TRACE(Trace::DetailedInfo, (_T("Starting to listen for plugin state notifications")));
-                        _parent._parent._service->Register(&_parent._parent._sink);
-                    } else {
-                        _parent._parent._service->Unregister(&_parent._parent._sink);
-                        TRACE(Trace::DetailedInfo, (_T("Stopped listening for plugin state notifications")));
-                    }
-
-                    _parent._waitingAsyncDispatch.store(false);
+                    Core::SafeSyncType<Core::CriticalSection> guard(_parent._lock);
+                    _parent.ExecuteModeChange(_parent._desiredMode);
                 }
 
             private:
@@ -896,8 +901,10 @@ POP_WARNING()
 
         private:
             Core::WorkerPool::JobType<InternalNotificationsJob> _notificationsJob;
-            std::atomic_bool _waitingAsyncDispatch;
-            Mode _mode;
+            Mode _desiredMode;
+            Mode _currentMode;
+            bool _blocked;
+            Core::CriticalSection _lock;
             PluginInitializerService& _parent;
         };
 
@@ -915,9 +922,6 @@ POP_WARNING()
         void DeactivateNotifications()
         {
             if (_pluginInitList.size() == 0) { // note size() is constant time (so fast, c++11) 
-                TRACE(Trace::Information, (_T("Huppel1")));
-                SleepMs(10000);
-                TRACE(Trace::Information, (_T("Huppel2")));
                 ChangeNotificationRegistration(NotificationsJob::Mode::Unregister);
             }
         }
@@ -1089,14 +1093,15 @@ POP_WARNING()
             }
         }
 
-        // make sure no new Activate and Abort calls are handled during this call (we will consider the plugin notifications unregistered at the end of this method)
+        // while canceling no new Activate or AbortActivate should be executed (as we need let go of the lock)
         void CancelAll()
         {
-
-            // huppel: this needs fixing!!!!!!!!!!!!!!!
-
             TRACE(Trace::Information, (_T("Cancelling all plugin activation requests (plugin deactivate)")));
-#if 0
+
+            _notificationsJob.ForceState(NotificationsJob::Mode::Unregister);
+
+            // notifications can no longer happen... but we cannot abort the PluginStarter from within the lock as the Revoke of the HandleActivation results job cannot be done within the lock (so these could be waiting for the lock to become available and therefore we also cannot cancel without the lock)
+
             _adminLock.Lock();
 
             if (_pluginInitList.size() != 0) {
@@ -1105,24 +1110,19 @@ POP_WARNING()
                 while (it != _pluginInitList.end()) {
                     PluginStarter toabort(std::move(*it));
                     _pluginInitList.erase(it);
-                    DeactivateNotifications();
                     _adminLock.Unlock();
                     toabort.Abort(); // cannot do this in the lock, the job revoke might deadlock
                     _adminLock.Lock();
-                    it = _pluginInitList.begin(); // we cannot use the one from the iterator, when we released the lock a notifications might have altered the queue
+                    it = _pluginInitList.begin(); // we cannot use the one from returned the erase as when we released the lock as the HandleActivation results job might have altered the queue
                 };
 
-            } else {
-                // there is a small change the queue size just went to 0 but the notifications were not yet unregistered as the job was posted but had not run yet.. we must make sure it is unregistered before we leave this method
-                _adminLock.Unlock();
-                if (RevokeDeactivationJob() == true) { 
-                    _service->Unregister(&_sink);
-                    TRACE(Trace::Information, (_T("Stopped listening for plugin state notifications")));
-                }
-            }
-#endif
-            TRACE(Trace::DetailedInfo, (_T("All plugin activation requests canceeld")));
+            } 
 
+            _notificationsJob.AllowStateChange();
+
+            _adminLock.Unlock();
+
+            TRACE(Trace::DetailedInfo, (_T("All plugin activation requests canceeld")));
         }
 
         struct StarterQueueInfo {
