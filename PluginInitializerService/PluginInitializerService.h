@@ -160,15 +160,22 @@ POP_WARNING()
         // other plugins that might actually trigger a subsystem the plugin in state PRECONDITION is waiting on and unblock this plugin (this in principle would of course be considered incorrect usage of the PluginInitializerService 
         // because we try to activate plugins in order received but now this will not lead to the plugin startup becoming stuck because of incorrect order of requests icw subsystem dependencies)
         // As we get an Initialize() notification when a plugin waiting for preconditions is starting to actual activate we will use that to set the PluginStarter to actually active state to prevent from that moment on to activate 
-        // new PluginStarters beyond the allowed maximum, but of course if there were already activations up to the maximum we will now temporarily exceed the maximum (but as explained above that is accepted behaviour)
+        // new PluginStarters beyond the allowed maximum, but of course if there were already activations up to the maximum we will now temporarily exceed the maximum (but as explained above that is accepted behavior)
         // The ActivateJob will indicate if at the moment the PluginStarter is trying to actively start a plugin, then it will be valid (so will also not be valid if the plugin is waiting for the Initialize to start in case of pending preconditions)
         // a boolean will indicate if the plugin started from this PluginStarter is waiting for preconditions. This is needed so that when in that case the Initialization fails (Deinitialized callback called) we will not automatically retry 
         // the activation, this will only be done when there is slot available for this
+        //
+        // Note special care is taken as the job that calls Activate on the plugin IShell will therefore trigger state notifications that are also received by the PluginInitializerService and might require the same lock already taken in the end in the calls leading 
+        // up to methods called in the PluginStarter.
+        // Also it is worth noting that no revoke of a job can be done in methods if they are in the PluginInitializerService lock as the Revoke might be done while the job is executing and is waiting for that lock to become available and the Revoke will wait until 
+        // the job is finished, so all will wait until Sint-juttemis.
+        // And last the ActivateJob cannot be a WorkerPool::JobType as that job sometimes needs to be released from Dispatch code from the job itself. Therefore is needs to be a ProxyType so ownership can moe to the WorkerPool and you cannot do thst with the 
+        // WorkerPool::JobType (see for more details the comments at the ActivateJob itself.
         class PluginStarter {
 
         public:
 
-            enum class ResultCode {
+            enum class ResultCode : uint8_t {
                 Continue,
                 Failed,
                 Paused
@@ -226,7 +233,7 @@ POP_WARNING()
                 , _initializerservice(other._initializerservice)
                 , _activateJob(std::move(other._activateJob))
                 , _activateResultJob(std::move(other._activateResultJob))
-                , _waitingPrecondition(other._waitingPrecondition)
+                , _waitingPrecondition(other._waitingPrecondition.load())
             {
                 other._requestedPluginShell = nullptr;
                 other._callback = nullptr;
@@ -243,7 +250,7 @@ POP_WARNING()
                     _callback = other._callback;
                     _activateJob = std::move(other._activateJob);
                     _activateResultJob = std::move(other._activateResultJob);
-                    _waitingPrecondition = other._waitingPrecondition;
+                    _waitingPrecondition = other._waitingPrecondition.load();
 
                     other._requestedPluginShell = nullptr;
                     other._callback = nullptr;
@@ -308,7 +315,7 @@ POP_WARNING()
                     TRACE(Trace::DetailedInfo, (_T("Activation job posted for plugin [%s] from Activate call"), Callsign().c_str()));
                     _activateResultJob = ActivateResultJobProxyType::Create(_initializerservice, Callsign()); 
                     _activateJob = ActivateJobProxyType::Create(_requestedPluginShell, _activateResultJob); // indicate have activated this PluginStarter
-                    Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_activateJob)); // let's start this plugin (and from a job, the start call might take long as when the Initialize is badly written, we know they are out there)
+                    _activateJob->Submit(Core::ProxyType<Core::IDispatch>(_activateJob)); // let's start this plugin (and from a job, the start call might take long as when the Initialize is badly written, we know they are out there)
                     break;
                  case PluginHost::IShell::ACTIVATED: 
                  case PluginHost::IShell::HIBERNATED:
@@ -412,17 +419,18 @@ POP_WARNING()
                         // we should revoke the job as that might be necessary in case the PluginStarter did not cause this Deinitialized notification but it was because of an external Activation but we cannot do that here (as that might deadlock because we are in the same lock as the job is using)
                         result = ResultCode::Failed; // will be removed and destroyed by caller
                     } else if (_waitingPrecondition == false) {
-                        if ((_attempt == 0) || (_delay == 0)) { // _attempt == 0 means we could not yet activate the plugin when Activate was called so we can start without delay (or of course delay is just 0)
+                        if ((_attempt == 1) || (_delay == 0)) { // _attempt == 0 means we could not yet activate the plugin when Activate was called so we can start without delay (or of course delay is just 0)
                             ++_attempt;
                             TRACE(Trace::DetailedInfo, (_T("Retrying to re-activate Plugin [%s] now (retries %u)"), Callsign().c_str(), Retries()));
-                            Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activateJob)); // note there is very small chance this Deinitialized notification is triggered because there was an external Activation in parallel to out attempt that failed... (as the Submit will assert when the job is already posted we revoke it first, that will work even it is not submitted)
-                            Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(_activateJob)); // let's start this plugin (and from a job, the start call might take long as when the Initialize is badly written, we know they are out there)
+                            // note there is very small chance this Deinitialized notification is triggered because there was an external Activation in parallel to out attempt that failed... (as the Submit will assert when the job is already posted we only do this when the job is not waiting to be run, then the deiinitialze is either coming from that job (which is not a problem or we have started to run which will trigger a notification for follow up anyway)
+                            _activateJob->Submit(Core::ProxyType<Core::IDispatch>(_activateJob));
                         } else {
                             // okay we might need to delay now
                             TRACE(Trace::DetailedInfo, (_T("Delaying re-activating Plugin [%s] (retries %u)"), Callsign().c_str(), Retries()));
                             ++_attempt;
-                            Core::IWorkerPool::Instance().Reschedule(Core::Time::Now().Add(_delay), Core::ProxyType<Core::IDispatch>(_activateJob));
-                            // note there is very small chance this Deinitialized notification is triggered because there was an external Activation in parallel to out attempt that failed... (Nice thing is the Resubmit will try to Revoke anyway)
+                            // note there is very small chance this Deinitialized notification is triggered because there was an external Activation in parallel to out attempt that failed... (as the Schedule will assert when the job is already Scheduled we only do this when the job is not waiting to be run, then the deiinitialze is either coming from that job (which is not a problem or we have started to run which will trigger a notification for follow up anyway)
+                            _activateJob->Schedule(Core::Time::Now().Add(_delay), Core::ProxyType<Core::IDispatch>(_activateJob));
+                            // note there is very small chance this Deinitialized notification is triggered because there was an external Activation in parallel to out attempt that failed... (Nice thing is the Resubmit will try to Revoke anyway )
                         }
                     } else {
                         // okay we failed from a situation where we were activated because the preconditions were not satisfied yet, we should restart but now as there could be a chance there are already too many activations so we need to postpone that until there is a slot available
@@ -432,8 +440,10 @@ POP_WARNING()
                         _waitingPrecondition = false; // indicate we are no longer waiting and this starter can be started again...
                         result = ResultCode::Paused; 
                     }
-                } else if (_waitingPrecondition == true)
-                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received for plugin that was waiting for preconditions, most likely the Activation is being canceled"), Callsign().c_str())); // apparently this plugin failed to start or was deactivated without us being involved, we just ignore and when there is a slot available we will try to start it anyway
+                } else if (_waitingPrecondition == true) {
+                    TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received for plugin that was waiting for preconditions (most likely the Plugin was Deactivated externally, shutdown?)"), Callsign().c_str()));
+                    _waitingPrecondition = false; // let's try again...
+                }
                 else {
                     TRACE(Trace::Warning, (_T("Plugin [%s] Deinitialized notification received but PluginStarter Activate was not called (activation triggered externally), we'll try to restart anyway..."), Callsign().c_str())); // apparently this plugin failed to start or was deactivated without us being involved, we just ignore and when there is a slot available we will try to start it anyway
                 }
@@ -513,7 +523,7 @@ POP_WARNING()
             //     so this state will move back to not active and start from there again
             // - deinitialize notification, so failed but failed too many times -> end state (will be removed from queue)
 
-            enum class State {
+            enum class State : uint8_t {
                 NotActive, 
                 Activating, 
                 WaitingForPreconditionNotActive, 
@@ -548,7 +558,7 @@ POP_WARNING()
                 }
                 // note now awe are sure the _activateResultJob will not longer run at all, even if the _activateJob is running or will run... (so note order of revoking the _activateResultJob and _activateJob is important)
                 if (_activateJob.IsValid() == true) {
-                    Core::IWorkerPool::Instance().Revoke(Core::ProxyType<Core::IDispatch>(_activateJob)); // note this revoke could be while running the ActivationJob itself this is allowed, We can also not skip the revocation as the activation might also be the result of an externally triggered activation
+                     _activateJob->Revoke(Core::ProxyType<Core::IDispatch>(_activateJob)); // note this revoke could be while running the ActivationJob itself this is allowed, We can also not skip the revocation as the activation might also be the result of an externally triggered activation
                     _activateJob = std::move(ActivateJobProxyType()); // not active anymore (let's not use Release() on the proxy as that look a little confusing)
                 }
             }
@@ -667,13 +677,16 @@ POP_WARNING()
                 Core::hresult _result;
             };
 
-        // note we cannot make it a WorkerPool::JobType as we need it to work with a ProxyType that we can reset from the job itself (the WorkerPool::JobType then has an internal composite job)
+        // note we cannot make it a WorkerPool::JobType. This job needs to be a ProxyType as from the Dispatch function in the end the IPlugin Notification will be called that destructs the PluginStarter (so it is no locking problem but a lifetime problem). 
+        // so the job cannot be a composite from the PluginStarter. Even if you make the WorkerPool::JobType a ProxyType the Submit cannot work with a proxy (so when the proxy is deleted the internals of the WorkerPool::JobType as well (asserting in debug crashing in release)
+        // By handling the ownership ourselves we can let go of the job at destruction of the PluginStarter while the Job is then owned by the workerpool (via the ProxyType). of course making sure the job has no reference to the PluginStarter or its members
         class ActivateJob : public Core::IDispatch {
         public:
             explicit ActivateJob(PluginHost::IShell* requestedPluginShell, const Core::ProxyType<RevokeAndBlockJobType<ActivateResultJob>>& resultjob)
                 : Core::IDispatch()
                 , _requestedPluginShell(requestedPluginShell)
                 , _resultjob(resultjob)
+                , _active(false)
             {
                 ASSERT(requestedPluginShell != nullptr);
                 _requestedPluginShell->AddRef();
@@ -689,10 +702,34 @@ POP_WARNING()
             ActivateJob(ActivateJob&&) = delete;
             ActivateJob& operator=(ActivateJob&&) = delete;
 
+            void Submit(const Core::ProxyType<Core::IDispatch>& job) 
+            {
+                if (_active == false) {
+                    _active = true;
+                    Core::IWorkerPool::Instance().Submit(job);
+                }
+            }
+
+            void Schedule(const Core::Time& time, const Core::ProxyType<Core::IDispatch>& job)
+            {
+                if (_active == false) {
+                    _active = true;
+                    Core::IWorkerPool::Instance().Schedule(time, job);
+                }
+            }
+
+            uint32_t Revoke(const Core::ProxyType<IDispatch>& job, const uint32_t waitTime = Core::infinite)
+            {
+                uint32_t result = Core::IWorkerPool::Instance().Revoke(job, waitTime);
+                _active = true;
+                return result;
+            }
+
         private:
 
             void Dispatch() override
             {
+                _active = false;
                 TRACE(Trace::Information, (_T("Activating plugin form ActivateJob [%s]"), _requestedPluginShell->Callsign().c_str()));
                 Core::hresult result = _requestedPluginShell->Activate(PluginHost::IShell::REQUESTED);
                 // after the previous call the plugin could reached state Started or fully deactivated (due to the notifications triggered from it) and not be available anymore in the PluginInitializerService queue...
@@ -709,6 +746,7 @@ POP_WARNING()
             }
 
         private:
+            std::atomic_bool _active; // needed to make sure the Submit and Schedule will not be done twice once the job has not been starting to execute (see PluginStarter Deinitialzed)
             PluginHost::IShell* _requestedPluginShell;
             Core::ProxyType<RevokeAndBlockJobType<ActivateResultJob>> _resultjob;
         };
@@ -726,7 +764,7 @@ POP_WARNING()
             PluginInitializerService& _initializerservice;
             ActivateJobProxyType _activateJob;
             ActivateResultJobProxyType _activateResultJob;
-            bool _waitingPrecondition;
+            std::atomic_bool _waitingPrecondition;
         };
 
         class Notifications : public PluginHost::IPlugin::INotification, public PluginHost::IPlugin::ILifeTime {
@@ -796,7 +834,7 @@ POP_WARNING()
         // Purpose of this job: it is not allowed to call revoke from a lock that is also used for the notification, that might deadlock. And outside the lock the order might change). Also it must be sure at some point (PluginInitializerService Deactivation) no job can tun anymore as they access PluginInitializerService
         class NotificationsJob {
         public:
-            enum class Mode {
+            enum class Mode : uint8_t {
                 Register,
                 Unregister
             };
