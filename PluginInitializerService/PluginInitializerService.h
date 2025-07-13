@@ -684,9 +684,9 @@ POP_WARNING()
         public:
             explicit ActivateJob(PluginHost::IShell* requestedPluginShell, const Core::ProxyType<RevokeAndBlockJobType<ActivateResultJob>>& resultjob)
                 : Core::IDispatch()
+                , _active(false)
                 , _requestedPluginShell(requestedPluginShell)
                 , _resultjob(resultjob)
-                , _active(false)
             {
                 ASSERT(requestedPluginShell != nullptr);
                 _requestedPluginShell->AddRef();
