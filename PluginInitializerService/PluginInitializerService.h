@@ -476,7 +476,7 @@ POP_WARNING()
                     break;
                 case Core::ERROR_ILLEGAL_STATE: // quite unexpected as now between posting the Activation job and calling Activate on the plugin it moved to some illegal state, must have been triggered externally...
                 case Core::ERROR_UNAVAILABLE:
-                    // set starter to not activated, consider startup failed and remove from list
+                    // consider startup failed and remove from list
                     TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to plugin being in state in which it cannot be started [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result));
                     NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
                     resultcode = ResultCode::Failed; // will result in Failed being called to deactivate the jobs
@@ -1080,7 +1080,7 @@ POP_WARNING()
                     ActivateAnotherPlugin();
                     DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
-                    failed.Failed(); // not strictly necessary but for consistency
+                    failed.Failed(); // Very small chance we tried to activate and then for example detected in the mean time because of external reasons we moved to destroyed, so we need to cleanup now as we were coming from an activating state
                 } else if (resultcode == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
                     // no need to check if we need to DeactivateNotificationsIfPossible as the paused one must be there
