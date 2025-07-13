@@ -642,7 +642,7 @@ POP_WARNING()
 
             class ActivateResultJob {
             public:
-                explicit ActivateResultJob(PluginInitializerService& pluginInitService, const string& callsign)
+                ActivateResultJob(PluginInitializerService& pluginInitService, const string& callsign)
                     : _initservice(pluginInitService)
                     , _callsign(callsign)
                     , _result(Core::ERROR_NONE)
@@ -682,7 +682,7 @@ POP_WARNING()
         // By handling the ownership ourselves we can let go of the job at destruction of the PluginStarter while the Job is then owned by the workerpool (via the ProxyType). of course making sure the job has no reference to the PluginStarter or its members
         class ActivateJob : public Core::IDispatch {
         public:
-            explicit ActivateJob(PluginHost::IShell* requestedPluginShell, const Core::ProxyType<RevokeAndBlockJobType<ActivateResultJob>>& resultjob)
+            ActivateJob(PluginHost::IShell* requestedPluginShell, const Core::ProxyType<RevokeAndBlockJobType<ActivateResultJob>>& resultjob)
                 : Core::IDispatch()
                 , _active(false)
                 , _requestedPluginShell(requestedPluginShell)
