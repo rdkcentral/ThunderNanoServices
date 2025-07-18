@@ -42,6 +42,7 @@ find_package(BCM_HOST QUIET)
 find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
 find_package(libdrm QUIET)
+find_package(gbm QUIET)
 
 add_library(${MODULE_NAME} SHARED
         Module.cpp
@@ -80,6 +81,21 @@ if (NXCLIENT_FOUND AND NEXUS_FOUND)
         PRIVATE 
             NEXUS::NEXUS 
             NXCLIENT::NXCLIENT)
+elseif (gbm_FOUND)
+    find_package(egl REQUIRED)
+    find_package(glesv2 REQUIRED)
+    find_package(libdrm REQUIRED)
+
+    target_link_libraries(${MODULE_NAME} 
+        PRIVATE
+            egl::egl
+            glesv2::glesv2 
+            libdrm::libdrm
+            gbm::gbm)
+
+    target_sources(${MODULE_NAME} 
+        PRIVATE 
+            Device/GpuDrmCapture.cpp)
 elseif (libdrm_FOUND)
     target_link_libraries(${MODULE_NAME} 
         PRIVATE
