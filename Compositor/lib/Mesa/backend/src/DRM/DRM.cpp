@@ -18,8 +18,8 @@
  */
 
 #include "../Module.h"
-#include "IGpu.h"
 #include "Connector.h"
+#include "IGpu.h"
 
 #ifdef USE_ATOMIC
 #include "Atomic.h"
@@ -68,9 +68,9 @@ namespace Compositor {
             DRM& operator=(const DRM&) = delete;
 
             explicit DRM(const string& gpuNode)
-                : _flip()
-                , _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
-                , _pendingFlips(0)
+                : _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
+                , _connectors()
+                , _idle(true)
             {
                 ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
 
@@ -168,28 +168,27 @@ namespace Compositor {
             {
                 uint32_t result(Core::ERROR_GENERAL);
 
-                if (_flip.try_lock()) {
-                    result = Core::ERROR_NONE;
+                static bool doModeSet(true);
 
-                    static bool doModeSet(true);
-                    bool added = false;
+                bool idle(true);
+
+                if (_idle.compare_exchange_strong(idle, false) == true) {
+                    result = Core::ERROR_NONE;
 
                     Backend::Transaction transaction(_gpuFd, doModeSet, this);
 
-                    _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
-                        if (connector->IsEnabled() == true) {
-                            uint32_t outcome;
-                            connector->Swap();
-                            if ((outcome = transaction.Add(*(connector.operator->()))) != Core::ERROR_NONE) {
-                                result = outcome;
-                            } else {
-                                _pendingFlips++;
-                                added = true;
-                            }
+                    _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
+                        connector->Swap();
+
+                        uint32_t outcome;
+
+                        if ((outcome = transaction.Add(*(connector.operator->())) != Core::ERROR_NONE)) {
+                            TRACE_GLOBAL(Trace::Error, ("Failed to add connector %s to transaction, error: %d", name.c_str(), outcome));
                         }
                     });
 
-                    if ((result != Core::ERROR_NONE) || ((added == true) && (transaction.Commit() != Core::ERROR_NONE))) {
+                    if ((result = transaction.Commit()) != Core::ERROR_NONE) {
+                        TRACE_GLOBAL(Trace::Error, ("Failed to commit connectors, no buffers will be displayed"));
                         _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
                             connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
                         });
@@ -197,9 +196,9 @@ namespace Compositor {
 
                     doModeSet = transaction.ModeSet();
 
-                    TRACE_GLOBAL(Trace::Information, ("Committed %u connectors: %u", _pendingFlips, result));
+                    TRACE_GLOBAL(Trace::Information, ("Committed connectors: %u", result));
                 } else {
-                    TRACE_GLOBAL(Trace::Error, ("Page flip still in progress", _pendingFlips));
+                    TRACE_GLOBAL(Trace::Information, ("Commit in progress, skipping commit request"));
                     result = Core::ERROR_INPROGRESS;
                 }
 
@@ -207,50 +206,43 @@ namespace Compositor {
             }
             void FinishPageFlip(const Compositor::DRM::Identifier crtc, const unsigned sequence, unsigned seconds, const unsigned useconds)
             {
-                _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
-                    if (connector->CrtController().Id() == crtc) {
-                        struct timespec presentationTimestamp;
+                bool idle = false;
 
-                        presentationTimestamp.tv_sec = seconds;
-                        presentationTimestamp.tv_nsec = useconds * 1000;
+                if (_idle.compare_exchange_strong(idle, true) == true) {
+                    _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
+                        if (connector->CrtController().Id() == crtc) {
+                            struct timespec presentationTimestamp;
 
-                        connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
-                        // TODO: Check with Bram the intention of the Release()
-                        // connector->Release();
+                            presentationTimestamp.tv_sec = seconds;
+                            presentationTimestamp.tv_nsec = useconds * 1000;
 
-                        --_pendingFlips;
+                            connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
+                            // TODO: Check with Bram the intention of the Release()
+                            // connector->Release();
 
-                        TRACE(Trace::Backend, ("Pageflip finished for %s, pending flips: %u", name.c_str(), _pendingFlips));
-                    }
-                });
-
-                if (_pendingFlips == 0) {
-                    // all connectors are flipped... ready for the next round.
-                    TRACE(Trace::Backend, ("all connectors are flipped... ready for the next round."));
-                    _flip.unlock();
+                            TRACE(Trace::Backend, ("Pageflip finished for %s", name.c_str()));
+                        }
+                    });
                 }
             }
-            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id VARIABLE_IS_NOT_USED, void* userData)
+            static void PageFlipHandler(int cardFd VARIABLE_IS_NOT_USED, unsigned seq, unsigned sec, unsigned usec, unsigned crtc_id, void* userData)
             {
                 ASSERT(userData != nullptr);
-
                 DRM* backend = reinterpret_cast<DRM*>(userData);
-
                 backend->FinishPageFlip(crtc_id, seq, sec, usec);
             }
 
         private:
-            std::mutex _flip;
             int _gpuFd; // GPU opened as master or lease...
             Core::ProxyMapType<string, Connector> _connectors;
-            uint8_t _pendingFlips;
+            std::atomic<bool> _idle;
         }; // class DRM
 
         static Core::ProxyMapType<string, Backend::DRM> _backends;
 
     } // namespace Backend
 
-    Core::ProxyType<IOutput> CreateBuffer(const string& connectorName, 
+    Core::ProxyType<IOutput> CreateBuffer(const string& connectorName,
         const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format,
         const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
     {
