@@ -31,16 +31,32 @@ elseif(LibDropbear_FIND_REQUIRED)
 endif()
 
 find_package(PkgConfig)
-pkg_check_modules(PC_LIBDROPBEAR ${_LIBDROPBEAR_MODE} LibDropbear)
+pkg_check_modules(PC_LIBDROPBEAR ${_LIBDROPBEAR_MODE} libdropbear)
 
 
 if(PC_LIBDROPBEAR_FOUND)
-    set(LIBDROPBEAR_INCLUDE_DIRS ${PC_LIBDROPBEAR_INCLUDEDIR})
+    set(LIBDROPBEAR_INCLUDE_DIRS ${PC_LIBDROPBEAR_INCLUDE_DIRS})
     find_library(LIBDROPBEAR_LIBRARIES
-        NAMES libdropbear.so
+        NAMES libdropbear.a
         HINTS ${PC_LIBDROPBEAR_LIBRARY_DIRS} ${PC_LIBDROPBEAR_LIBDIR}
     )
     set(LIBDROPBEAR_LIBRARY_DIRS ${PC_LIBDROPBEAR_LIBRARY_DIRS})
+
+    find_library(LIBTOMCRYPT_LIBRARY
+        NAMES libtomcrypt.a
+        HINTS ${PC_LIBDROPBEAR_LIBRARY_DIRS} ${PC_LIBDROPBEAR_LIBDIR}
+    )
+    if(LIBTOMCRYPT_LIBRARY)
+        list(APPEND LIBDROPBEAR_LIBRARIES ${LIBTOMCRYPT_LIBRARY})
+    endif()
+
+    find_library(LIBTOMMATH_LIBRARY
+        NAMES libtommath.a
+        HINTS ${PC_LIBDROPBEAR_LIBRARY_DIRS} ${PC_LIBDROPBEAR_LIBDIR}
+    )
+    if(LIBTOMMATH_LIBRARY)
+        list(APPEND LIBDROPBEAR_LIBRARIES ${LIBTOMMATH_LIBRARY})
+    endif()
 endif()
 
 include(FindPackageHandleStandardArgs)
