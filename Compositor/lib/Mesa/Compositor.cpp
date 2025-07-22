@@ -138,12 +138,6 @@ namespace Plugin {
         private:
             using BaseClass = Graphics::ServerBufferType<1>;
 
-            enum class State : uint8_t {
-                IDLE = 0x00,
-                RENDERING = 0x01,
-                PRESENTING = 0x02,
-            };
-
             class Remote : public Exchange::IComposition::IClient {
             public:
                 Remote() = delete;
@@ -240,7 +234,6 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height })
                 , _texture()
                 , _remoteClient(*this)
-                , _state(State::IDLE)
                 , _geometryChanged(false)
             {
                 Core::ResourceMonitor::Instance().Register(*this);
@@ -284,34 +277,17 @@ namespace Plugin {
              */
             void Request() override
             {
-                State expected(State::IDLE);
-
-                if (_state.compare_exchange_strong(expected, State::RENDERING) == true) {
-                    _parent.Render(); // Trigger rendering operations
-                } else {
-                    TRACE(Trace::Error, (_T("Surface %s[%d] is not idle, but received a Request event  while in %d"), _callsign.c_str(), _id, _state.load()));
-                    ASSERT(false);
-                }
+                _parent.Render();
             }
 
             void Pending()
             {
-                State expected(State::RENDERING);
-
-                if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
-                    Rendered();
-                } else {
-                    TRACE(Trace::Error, (_T("Surface %s[%d] is not rendering, but received a Pending event while in %d"), _callsign.c_str(), _id, _state.load()));
-                }
+                Rendered();
             }
 
             void Completed()
             {
-                State expected(State::PRESENTING);
-
-                if (_state.compare_exchange_strong(expected, State::IDLE) == true) {
-                    Published();
-                }
+                Published();
             }
 
             /**
@@ -390,8 +366,7 @@ namespace Plugin {
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
-            std::atomic<State> _state;
-            bool _geometryChanged = false;
+            bool _geometryChanged;
 
             static uint32_t _sequence;
         }; // class Client
@@ -550,9 +525,9 @@ namespace Plugin {
                 return _connector;
             }
 
-            void Commit()
+            uint32_t Commit()
             {
-                _connector->Commit();
+                return _connector->Commit();
             }
 
         private:
@@ -586,8 +561,10 @@ namespace Plugin {
             , _renderDescriptor(Compositor::InvalidFileDescriptor)
             , _renderNode()
             , _present(*this)
-            , _state(State::IDLE)
             , _autoScale(true)
+            , _commitMutex()
+            , _commitCV()
+            , _canCommit(true)
         {
         }
         ~CompositorImplementation() override
@@ -643,10 +620,10 @@ namespace Plugin {
             _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
             ASSERT(_renderer.IsValid());
 
-            if(config.AutoScale.IsSet() == true) {
+            if (config.AutoScale.IsSet() == true) {
                 _autoScale = config.AutoScale.Value();
-            } 
-            
+            }
+
             if (config.Output.IsSet() == false) {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
@@ -813,12 +790,6 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        enum class State : uint8_t {
-            IDLE = 0x00,
-            PRESENTING = 0x01,
-            PENDING = 0x02,
-        };
-
         void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
         {
             {
@@ -828,28 +799,16 @@ namespace Plugin {
                 });
             }
 
-            State expected = State::PRESENTING;
-
-            if (_state.compare_exchange_strong(expected, State::IDLE) == false) {
-                expected = State::PENDING;
-
-                if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
-                    _present.Trigger();
-                }
+            {
+                std::lock_guard<std::mutex> lock(_commitMutex);
+                _canCommit.store(true, std::memory_order_release);
             }
+            _commitCV.notify_one();
         }
 
         void Render()
         {
-            State expected = State::PRESENTING;
-
-            if (_state.compare_exchange_strong(expected, State::PENDING) == false) {
-                expected = State::IDLE;
-
-                if (_state.compare_exchange_strong(expected, State::PRESENTING) == true) {
-                    _present.Trigger();
-                }
-            }
+            _present.Run();
         }
 
         IComposition::IClient* CreateClient(const string& name, const uint32_t width, const uint32_t height) override
@@ -890,6 +849,7 @@ namespace Plugin {
 
             {
                 std::lock_guard<std::mutex> lock(_clientLock);
+
                 _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
                     RenderClient(client); // ~500-900 uS rpi4
                 });
@@ -899,7 +859,24 @@ namespace Plugin {
 
             _renderer->Unbind(frameBuffer);
 
-            _output->Commit(); // Blit to screen
+            // Block until VSync allows commit
+            {
+                std::unique_lock<std::mutex> lock(_commitMutex);
+
+                if (_commitCV.wait_for(lock, std::chrono::milliseconds(100), [this] {
+                        return _canCommit.load(std::memory_order_acquire); // Wait for permission
+                    })) {
+                    // Got permission, reset it for next frame
+                    _canCommit.store(false, std::memory_order_release);
+                } else {
+                    TRACE(Trace::Error, (_T("Timeout waiting for VSync, forcing commit")));
+                    // Don't reset _canCommit on timeout - let VSync handle it
+                }
+            }
+
+            uint32_t commit = _output->Commit();
+
+            ASSERT(commit == Core::ERROR_NONE);
 
             return Core::Time::Now().Ticks();
         }
@@ -951,35 +928,25 @@ namespace Plugin {
             Presenter(CompositorImplementation& parent)
                 : Core::Thread(Thread::DefaultStackSize(), PresenterThreadName)
                 , _parent(parent)
-                , _continue(false)
             {
             }
 
             ~Presenter() override
             {
                 Core::Thread::Stop();
-
                 Core::Thread::Wait(Core::Thread::STOPPED, 100);
-            }
-
-            void Trigger()
-            {
-                Thread::Run();
             }
 
         private:
             uint32_t Worker() override
             {
                 Core::Thread::Block();
-
                 _parent.RenderOutput(); // 3000us
-
                 return Core::infinite;
             }
 
         private:
             CompositorImplementation& _parent;
-            std::atomic<bool> _continue;
         };
 
     private:
@@ -1014,8 +981,10 @@ namespace Plugin {
         int _renderDescriptor;
         std::string _renderNode;
         Presenter _present;
-        std::atomic<State> _state;
         bool _autoScale;
+        std::mutex _commitMutex;
+        std::condition_variable _commitCV;
+        std::atomic<bool> _canCommit; 
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
