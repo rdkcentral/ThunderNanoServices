@@ -617,6 +617,11 @@ namespace Plugin {
 
             ASSERT(_renderDescriptor != Compositor::InvalidFileDescriptor);
 
+            if (_renderDescriptor < 0) {
+                TRACE(Trace::Error, (_T("Failed to open render node %s, error %d"), config.Render.Value().c_str(), errno));
+                return Core::ERROR_OPENING_FAILED;
+            }
+
             _renderer = Compositor::IRenderer::Instance(_renderDescriptor);
             ASSERT(_renderer.IsValid());
 
@@ -629,6 +634,18 @@ namespace Plugin {
             } else {
                 _output = new Output(*this, config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
                 ASSERT((_output != nullptr) && (_output->IsValid()));
+
+                if (_output == nullptr) {
+                    TRACE(Trace::Error, (_T("Failed to create output surface %s"), config.Output.Value().c_str()));
+                    return Core::ERROR_SURFACE_UNAVAILABLE;
+                }
+
+                if (_output->IsValid() == false) {
+                    TRACE(Trace::Error, (_T("Output surface %s is not valid"), config.Output.Value().c_str()));
+                    delete _output;
+                    _output = nullptr;
+                    return Core::ERROR_ILLEGAL_STATE;
+                }
 
                 TRACE(Trace::Information, ("Initialzed connector %s", config.Output.Value().c_str()));
             }
@@ -979,7 +996,7 @@ namespace Plugin {
         bool _autoScale;
         std::mutex _commitMutex;
         std::condition_variable _commitCV;
-        std::atomic<bool> _canCommit; 
+        std::atomic<bool> _canCommit;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
