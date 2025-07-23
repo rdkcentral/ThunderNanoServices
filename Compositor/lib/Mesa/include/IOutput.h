@@ -1,4 +1,3 @@
-
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
@@ -43,7 +42,7 @@ namespace Compositor {
         /*
          * @brief  Get the framebuffer associated with this output where the render should end up.
          *
-         * @return Proxy to the framebuffer 
+         * @return Proxy to the framebuffer
          */
         virtual Core::ProxyType<IRenderer::IFrameBuffer> FrameBuffer() const = 0;
 
@@ -66,12 +65,18 @@ namespace Compositor {
      * @brief  Allocate a new output.
      *         When the callee is done with the output, they must release it.
      *
-     *
      * @param connector  Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
-     * @param rectangle  the area that this connector covers in the composition
-     * @param format Pixel layout for this buffer
+     * @param width      Requested width in pixels (0 = auto-detect preferred mode)
+     * @param height     Requested height in pixels (0 = auto-detect preferred mode)
+     * @param format     Pixel layout for this buffer
+     * @param renderer   Renderer instance for creating framebuffers
+     * @param callback   Callback for presentation events
      *
      * @return Core::ProxyType<IOutput> The allocated buffer
+     *
+     * @note When width and height are both 0, the backend will automatically select
+     *       the preferred display mode. If the requested dimensions are too large,
+     *       the backend will select the best fitting mode.
      */
 
     EXTERNAL Core::ProxyType<IOutput> CreateBuffer(
