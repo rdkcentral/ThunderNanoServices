@@ -145,9 +145,9 @@ namespace Compositor {
                 CASE_TO_STRING(DRM_FORMAT_P010)
                 CASE_TO_STRING(DRM_FORMAT_P012)
                 CASE_TO_STRING(DRM_FORMAT_P016)
-                #ifdef DRM_FORMAT_P030
+#ifdef DRM_FORMAT_P030
                 CASE_TO_STRING(DRM_FORMAT_P030)
-                #endif
+#endif
                 CASE_TO_STRING(DRM_FORMAT_Q410)
                 CASE_TO_STRING(DRM_FORMAT_Q401)
                 CASE_TO_STRING(DRM_FORMAT_YUV410)
@@ -187,7 +187,7 @@ namespace Compositor {
             }
         }
 
-        #undef CASE_TO_STRING
+#undef CASE_TO_STRING
 
         bool HasAlpha(const uint32_t drmFormat)
         {
@@ -261,9 +261,14 @@ namespace Compositor {
          */
         int ReopenNode(const int fd, const bool openRenderNode)
         {
-            if (drmGetDeviceNameFromFd2(fd) == nullptr) {
+            char* name = drmGetDeviceNameFromFd2(fd);
+
+            if (name == nullptr) {
                 TRACE_GLOBAL(Trace::Error, ("%d is not a descriptor to a DRM Node... =^..^= ", fd));
                 return InvalidFileDescriptor;
+            } else {
+                free(name);
+                name = nullptr;
             }
 
             if (drmIsMaster(fd)) {
@@ -281,8 +286,6 @@ namespace Compositor {
             } else {
                 TRACE_GLOBAL(Trace::Information, ("DRM is not in master mode"));
             }
-
-            char* name = nullptr;
 
             if (openRenderNode) {
                 name = drmGetRenderDeviceNameFromFd(fd);
@@ -309,9 +312,11 @@ namespace Compositor {
                 TRACE_GLOBAL(Trace::Error, ("Failed to open DRM node '%s'", name));
                 free(name);
                 return InvalidFileDescriptor;
-            } 
+            }
 
-            free(name);
+            if (name != nullptr) {
+                free(name);
+            }
 
             // If we're using a DRM primary node (e.g. because we're running under the
             // DRM backend, or because we're on split render/display machine), we need
