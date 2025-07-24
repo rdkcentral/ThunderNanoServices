@@ -26,10 +26,6 @@
 #include <core/core.h>
 #include <messaging/messaging.h>
 #include <interfaces/IGraphicsBuffer.h>
-#include <drm_fourcc.h>
-#include <xf86drm.h>
-#include <xf86drmMode.h>
-
 #include <CompositorTypes.h>
 
 MODULE_NAME_ARCHIVE_DECLARATION
@@ -641,6 +637,275 @@ namespace Compositor {
             }
 
             return file;
+        }
+
+        inline bool ModesEqual(const drmModeModeInfo* mode1, const drmModeModeInfo* mode2)
+        {
+            ASSERT(mode1 != nullptr);
+            ASSERT(mode2 != nullptr);
+
+            return (mode1->hdisplay == mode2->hdisplay && mode1->vdisplay == mode2->vdisplay && mode1->vrefresh == mode2->vrefresh);
+        }
+
+        bool SelectBestMode(const drmModeConnector* const connector, const uint32_t requestedWidth, const uint32_t requestedHeight,
+            bool& dimensionsAdjusted, drmModeModeInfo& selectedMode)
+        {
+            if (connector->count_modes == 0) {
+                TRACE_GLOBAL(Thunder::Trace::Error, ("No modes available for connector"));
+                return false;
+            }
+
+            drmModeModeInfoPtr bestMode = nullptr;
+            dimensionsAdjusted = false;
+
+            // Mode selection logic
+            if (requestedWidth == 0 && requestedHeight == 0) {
+                // Auto-detect: use preferred mode or first available
+                for (int i = 0; i < connector->count_modes; i++) {
+                    if (connector->modes[i].type & DRM_MODE_TYPE_PREFERRED) {
+                        bestMode = &connector->modes[i];
+                        break;
+                    }
+                }
+                if (bestMode == nullptr) {
+                    bestMode = &connector->modes[0]; // Use first mode if no preferred
+                }
+                TRACE_GLOBAL(Thunder::Trace::Information, ("Auto-detecting mode: selected %ux%u", bestMode->hdisplay, bestMode->vdisplay));
+            } else {
+                // Find best fitting mode for requested dimensions
+                drmModeModeInfoPtr exactMatch = nullptr;
+                drmModeModeInfoPtr bestLarger = nullptr;
+                drmModeModeInfoPtr bestSmaller = nullptr;
+
+                for (int i = 0; i < connector->count_modes; i++) {
+                    drmModeModeInfoPtr mode = &connector->modes[i];
+
+                    // Exact match
+                    if (mode->hdisplay == requestedWidth && mode->vdisplay == requestedHeight) {
+                        exactMatch = mode;
+                        break;
+                    }
+
+                    // Mode that can contain the requested dimensions
+                    if (mode->hdisplay >= requestedWidth && mode->vdisplay >= requestedHeight) {
+                        if (bestLarger == nullptr || (mode->hdisplay * mode->vdisplay) < (bestLarger->hdisplay * bestLarger->vdisplay)) {
+                            bestLarger = mode;
+                        }
+                    }
+
+                    // Largest mode smaller than requested (fallback)
+                    if (mode->hdisplay <= requestedWidth && mode->vdisplay <= requestedHeight) {
+                        if (bestSmaller == nullptr || (mode->hdisplay * mode->vdisplay) > (bestSmaller->hdisplay * bestSmaller->vdisplay)) {
+                            bestSmaller = mode;
+                        }
+                    }
+                }
+
+                // Priority: exact match > smallest larger > largest smaller
+                bestMode = exactMatch ? exactMatch : (bestLarger ? bestLarger : bestSmaller);
+
+                if (bestMode == nullptr) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("No suitable mode found for %ux%u", requestedWidth, requestedHeight));
+                    return false;
+                }
+
+                // Check if we had to adjust dimensions
+                if (bestMode->hdisplay != requestedWidth || bestMode->vdisplay != requestedHeight) {
+                    dimensionsAdjusted = true;
+
+                    if (bestMode->hdisplay < requestedWidth || bestMode->vdisplay < requestedHeight) {
+                        TRACE_GLOBAL(Thunder::Trace::Warning, ("Requested dimensions %ux%u too large, using %ux%u", requestedWidth, requestedHeight, bestMode->hdisplay, bestMode->vdisplay));
+                    }
+                }
+            }
+
+            TRACE_GLOBAL(Trace::Information, ("Selected mode: %ux%u@%uHz", bestMode->hdisplay, bestMode->vdisplay, bestMode->vrefresh));
+
+            selectedMode = *bestMode; // Copy the selected mode
+            return true;
+        }
+
+        ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId,
+            const uint32_t requestedWidth, const uint32_t requestedHeight)
+        {
+            ConnectorScanResult result;
+            char* node = nullptr; // Declare at the top to avoid goto crossing initialization
+
+            drmModeResPtr drmModeResources = drmModeGetResources(backendFd);
+            drmModePlaneResPtr drmModePlaneResources = drmModeGetPlaneResources(backendFd);
+
+            if (!drmModeResources || !drmModePlaneResources) {
+                TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to get DRM resources"));
+                goto cleanup;
+            }
+
+            TRACE_GLOBAL(Trace::Information, ("Found %d connectors", drmModeResources->count_connectors));
+            TRACE_GLOBAL(Trace::Information, ("Found %d encoders", drmModeResources->count_encoders));
+            TRACE_GLOBAL(Trace::Information, ("Found %d CRTCs", drmModeResources->count_crtcs));
+            TRACE_GLOBAL(Trace::Information, ("Found %d planes", drmModePlaneResources->count_planes));
+
+            for (int c = 0; c < drmModeResources->count_connectors; c++) {
+                drmModeConnectorPtr drmModeConnector = drmModeGetConnector(backendFd, drmModeResources->connectors[c]);
+
+                if (!drmModeConnector) {
+                    continue;
+                }
+
+                // Find our target connector if it's connected
+                if ((drmModeConnector->connector_id != targetConnectorId) || (drmModeConnector->connection != DRM_MODE_CONNECTED)) {
+                    drmModeFreeConnector(drmModeConnector);
+                    continue;
+                }
+
+                const char* name = drmModeGetConnectorTypeName(drmModeConnector->connector_type);
+                TRACE_GLOBAL(Trace::Information, ("Connector %s-%u connected", name, drmModeConnector->connector_type_id));
+
+                // Select the best mode based on requirements
+                if (!SelectBestMode(drmModeConnector, requestedWidth, requestedHeight, result.dimensionsAdjusted, result.selectedMode)) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to select a suitable mode for connector %u", targetConnectorId));
+                    drmModeFreeConnector(drmModeConnector);
+                    goto cleanup;
+                }
+
+                // Find the encoder (a deprecated KMS object) for this connector
+                if (drmModeConnector->encoder_id == Thunder::Compositor::InvalidIdentifier) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("No encoder for connector %u", targetConnectorId));
+                    drmModeFreeConnector(drmModeConnector);
+                    goto cleanup;
+                }
+
+                // Get a bitmask of CRTCs the connector is compatible with
+                uint32_t possibleCrtcs = drmModeConnectorGetPossibleCrtcs(backendFd, drmModeConnector);
+                if (possibleCrtcs == 0) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("No CRTC possible for connector %u", drmModeConnector->connector_id));
+                    drmModeFreeConnector(drmModeConnector);
+                    goto cleanup;
+                }
+
+                // Find the encoder for this connector
+                drmModeEncoderPtr encoder = nullptr;
+                for (uint8_t e = 0; e < drmModeResources->count_encoders; e++) {
+                    if (drmModeResources->encoders[e] == drmModeConnector->encoder_id) {
+                        encoder = drmModeGetEncoder(backendFd, drmModeResources->encoders[e]);
+                        break;
+                    }
+                }
+
+                if (!encoder) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to get encoder for connector %u", drmModeConnector->connector_id));
+                    drmModeFreeConnector(drmModeConnector);
+                    goto cleanup;
+                }
+
+                // Find the CRTC currently used by this connector
+                if (encoder->crtc_id == Thunder::Compositor::InvalidIdentifier) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("Invalid encoder CRTC ID for connector %u", targetConnectorId));
+                    drmModeFreeEncoder(encoder);
+                    drmModeFreeConnector(drmModeConnector);
+                    goto cleanup;
+                }
+
+                TRACE_GLOBAL(Thunder::Trace::Information, ("Start looking for crtc_id: %d", encoder->crtc_id));
+
+                drmModeCrtcPtr crtc = nullptr;
+
+                for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
+                    if (drmModeResources->crtcs[c] == encoder->crtc_id) {
+                        crtc = drmModeGetCrtc(backendFd, drmModeResources->crtcs[c]);
+                        break;
+                    }
+                }
+
+                if (!crtc || crtc->crtc_id == 0) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("Invalid CRTC for connector %u", drmModeConnector->connector_id));
+                    if (crtc)
+                        drmModeFreeCrtc(crtc);
+                    drmModeFreeEncoder(encoder);
+                    drmModeFreeConnector(drmModeConnector);
+                    goto cleanup;
+                }
+
+                /*
+                 * On the banana pi, the following ASSERT fired but, although the documentation
+                 * suggests that buffer_id means disconnected, the screen was not disconnected
+                 * Hence why the ASSERT is, until further investigation, commented out !!!
+                 * ASSERT(crtc->buffer_id != 0);
+                 */
+
+                /*
+                 * The kernel doesn't directly tell us what it considers to be the
+                 * single primary plane for this CRTC (i.e. what would be updated
+                 * by drmModeSetCrtc), but if it's already active then we can cheat
+                 * by looking for something displaying the same framebuffer ID,
+                 * since that information is duplicated.
+                 */
+                drmModePlanePtr plane = nullptr;
+                for (uint8_t p = 0; p < drmModePlaneResources->count_planes; p++) {
+                    plane = drmModeGetPlane(backendFd, drmModePlaneResources->planes[p]);
+
+                    TRACE_GLOBAL(Trace::Information, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB ID %" PRIu32, plane->plane_id, plane->crtc_id, plane->fb_id));
+
+                    if ((plane->crtc_id == crtc->crtc_id) && (plane->fb_id == crtc->buffer_id)) {
+                        break;
+                    }
+
+                    drmModeFreePlane(plane);
+                    plane = nullptr;
+                }
+
+                if (!plane) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("No primary plane found for CRTC %" PRIu32, crtc->crtc_id));
+                    drmModeFreeCrtc(crtc);
+                    drmModeFreeEncoder(encoder);
+                    drmModeFreeConnector(drmModeConnector);
+                    goto cleanup;
+                }
+
+                // Calculate refresh rate for logging
+                uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
+
+                TRACE_GLOBAL(Trace::Information, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
+
+                // Store the IDs for later initialization
+                result.ids.crtcId = crtc->crtc_id;
+                result.ids.planeId = plane->plane_id;
+                result.success = true;
+
+                // Check if we need to change modes
+                result.needsModeSet = !ModesEqual(&result.selectedMode, &crtc->mode);
+
+                if (!result.needsModeSet) {
+                    // Use current mode to ensure exact match (handles any minor differences)
+                    result.selectedMode = crtc->mode;
+                    TRACE_GLOBAL(Trace::Information, ("Using current mode: %ux%u@%uHz", crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh));
+                } else {
+                    TRACE_GLOBAL(Trace::Information, ("Mode change needed: %ux%u@%uHz -> %ux%u@%uHz", crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh, result.selectedMode.hdisplay, result.selectedMode.vdisplay, result.selectedMode.vrefresh));
+                }
+
+                // Cleanup for success case
+                drmModeFreePlane(plane);
+                drmModeFreeCrtc(crtc);
+                drmModeFreeEncoder(encoder);
+                drmModeFreeConnector(drmModeConnector);
+                break;
+            }
+
+            // Get GPU node name
+            node = drmGetDeviceNameFromFd2(backendFd); // Now assignment, not initialization
+            if (node) {
+                result.gpuNode = node;
+                free(node);
+            }
+
+        cleanup:
+            if (drmModeResources) {
+                drmModeFreeResources(drmModeResources);
+            }
+            if (drmModePlaneResources) {
+                drmModeFreePlaneResources(drmModePlaneResources);
+            }
+
+            return result;
         }
     } // namespace DRM
 } // namespace Compositor
