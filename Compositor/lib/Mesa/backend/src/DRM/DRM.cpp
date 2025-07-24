@@ -39,7 +39,6 @@
 #include <drm.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
-// #include <libudev.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -71,6 +70,7 @@ namespace Compositor {
                 : _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
                 , _connectors()
                 , _idle(true)
+                , _firstCommit(true)
             {
                 ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
 
@@ -121,8 +121,10 @@ namespace Compositor {
 
                     if (TRACE_ENABLED(Trace::Information)) {
                         drmVersion* version = drmGetVersion(_gpuFd);
-                        TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_gpuFd), version->name));
+                        char* node = drmGetDeviceNameFromFd2(_gpuFd);
+                        TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", node, version->name));
                         drmFreeVersion(version);
+                        free(node);
                     }
 
                     close(_gpuFd);
@@ -168,12 +170,19 @@ namespace Compositor {
             {
                 uint32_t result(Core::ERROR_GENERAL);
 
-                static bool doModeSet(true);
-
                 bool idle(true);
 
                 if (_idle.compare_exchange_strong(idle, false) == true) {
                     result = Core::ERROR_NONE;
+                    bool doModeSet(_firstCommit);
+
+                    // check if any connector needs mode setting
+                    _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
+                        if (connector->NeedsModeSet()) {
+                            doModeSet = true;
+                            TRACE(Trace::Information, ("Connector %s needs mode set", name.c_str()));
+                        }
+                    });
 
                     Backend::Transaction transaction(_gpuFd, doModeSet, this);
 
@@ -194,7 +203,9 @@ namespace Compositor {
                         });
                     }
 
-                    doModeSet = transaction.ModeSet();
+                    if (doModeSet) {
+                        _firstCommit = false;
+                    }
 
                     TRACE_GLOBAL(Trace::Information, ("Committed connectors: %u", result));
                 } else {
@@ -236,6 +247,7 @@ namespace Compositor {
             int _gpuFd; // GPU opened as master or lease...
             Core::ProxyMapType<string, Connector> _connectors;
             std::atomic<bool> _idle;
+            bool _firstCommit;
         }; // class DRM
 
         static Core::ProxyMapType<string, Backend::DRM> _backends;

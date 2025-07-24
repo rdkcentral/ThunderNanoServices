@@ -21,6 +21,7 @@
 
 #include <drm_fourcc.h>
 #include <xf86drm.h>
+#include <xf86drmMode.h>
 #include <string>
 #include <vector>
 
@@ -30,11 +31,25 @@ namespace Exchange {
     struct IGraphicsBuffer;
 }
 
-namespace Compositor {  
+namespace Compositor {
     namespace DRM {
 
         using Identifier = uint32_t;
         static constexpr uint32_t InvalidIdentifier = ~0;
+
+        struct ConnectorScanResult {
+            bool success = false;
+            bool needsModeSet = false;
+            bool dimensionsAdjusted = false;
+            drmModeModeInfo selectedMode = {};
+            std::string gpuNode;
+
+            // DRM object data for initialization
+            struct {
+                uint32_t crtcId = 0;
+                uint32_t planeId = 0;
+            } ids;
+        };
 
         extern void GetNodes(const uint32_t type, std::vector<std::string>& list);
         extern Identifier FindConnectorId(const int fd, const std::string& connectorName);
@@ -55,7 +70,9 @@ namespace Compositor {
         extern bool HasAlpha(const uint32_t drmFormat);
         extern const char* ModifierVendorString(const uint64_t modifier);
         extern const char* FormatToString(const uint32_t format);
-
+        extern bool ModesEqual(const drmModeModeInfo* mode1, const drmModeModeInfo* mode2);
+        extern bool SelectBestMode(const drmModeConnector* const connector, const uint32_t requestedWidth, const uint32_t requestedHeight, bool& dimensionsAdjusted, drmModeModeInfo& selectedMode);
+        extern ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId, const uint32_t requestedWidth, const uint32_t requestedHeigh);
     } // namespace DRM
 } // namespace Compositor
 } // namespace Thunder
