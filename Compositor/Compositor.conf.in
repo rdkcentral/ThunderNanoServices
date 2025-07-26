@@ -73,10 +73,7 @@ if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Wayland":
                     output_configs_list.append(output_config_dict)
             configuration.add("outputs", output_configs_list)
 
-if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":
-    configuration.add("height", "@PLUGIN_COMPOSITOR_CANVAS_HEIGHT@")
-    configuration.add("width", "@PLUGIN_COMPOSITOR_CANVAS_WIDTH@")
-    
+if "@PLUGIN_COMPOSITOR_IMPLEMENTATION@" == "Mesa":    
     if "@PLUGIN_COMPOSITOR_RENDER_NODE@":
         configuration.add("render", "@PLUGIN_COMPOSITOR_RENDER_NODE@")
 

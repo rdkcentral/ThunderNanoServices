@@ -162,10 +162,8 @@ namespace Compositor {
             Connector& operator=(Connector&&) = delete;
             Connector& operator=(const Connector&) = delete;
 
-            Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, const uint32_t width, const uint32_t height, const Compositor::PixelFormat format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
+            Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
                 : _backend(backend)
-                , _requestedWidth(width)
-                , _requestedHeight(height)
                 , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, connectorId)
                 , _crtc()
@@ -180,7 +178,7 @@ namespace Compositor {
 
                 int backendFd = _backend->Descriptor();
 
-                Compositor::DRM::ConnectorScanResult scanResult = Compositor::DRM::ScanConnector(backendFd, connectorId, width, height);
+                Compositor::DRM::ConnectorScanResult scanResult = Compositor::DRM::ScanConnector(backendFd, connectorId, width, height, refreshRate);
 
                 if (!scanResult.success) {
                     TRACE(Trace::Backend, ("Connector %d is not in a valid state", connectorId));
@@ -203,7 +201,9 @@ namespace Compositor {
                     TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, Resolution=%ux%u", this, _connector.Id(), _crtc.Id(), _selectedMode.hdisplay, _selectedMode.vdisplay));
 
                     if (_dimensionsAdjusted) {
-                        TRACE(Trace::Warning, ("Requested dimensions %ux%u adjusted to %ux%u for connector %u", _requestedWidth, _requestedHeight, _selectedMode.hdisplay, _selectedMode.vdisplay, connectorId));
+                        TRACE(Trace::Warning, ("Requested dimensions %ux%u@%u adjusted to %ux%u@%u for connector %u", 
+                            width, height, refreshRate ,
+                            _selectedMode.hdisplay, _selectedMode.vdisplay, _selectedMode.vrefresh, connectorId));
                     }
                 }
             }
@@ -327,8 +327,6 @@ namespace Compositor {
 
         private:
             Core::ProxyType<Compositor::IBackend> _backend;
-            uint32_t _requestedWidth;
-            uint32_t _requestedHeight;
             const Compositor::PixelFormat _format;
             Compositor::DRM::Properties _connector;
             Compositor::DRM::Properties _crtc;

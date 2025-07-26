@@ -59,16 +59,14 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , Render()
-                , Height(0)
-                , Width(0)
+                , Resolution(Exchange::IDeviceVideoCapabilities::ScreenResolution::ScreenResolution_Unknown) // Auto-detect
                 , Format(DRM_FORMAT_ARGB8888)
                 , Modifier(DRM_FORMAT_MOD_LINEAR)
                 , Output()
                 , AutoScale(true)
             {
                 Add(_T("render"), &Render);
-                Add(_T("height"), &Height);
-                Add(_T("width"), &Width);
+                Add(_T("resolution"), &Resolution);
                 Add(_T("format"), &Format);
                 Add(_T("modifier"), &Modifier);
                 Add(_T("output"), &Output);
@@ -78,8 +76,7 @@ namespace Plugin {
             ~Config() override = default;
 
             Core::JSON::String Render;
-            Core::JSON::DecUInt16 Height;
-            Core::JSON::DecUInt16 Width;
+            Core::JSON::EnumType<Exchange::IDeviceVideoCapabilities::ScreenResolution> Resolution;
             Core::JSON::HexUInt32 Format;
             Core::JSON::HexUInt64 Modifier;
             Core::JSON::String Output;
@@ -468,12 +465,12 @@ namespace Plugin {
             Output& operator=(Output&&) = delete;
             Output& operator=(const Output&) = delete;
 
-            Output(CompositorImplementation& parent, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<Compositor::IRenderer>& renderer)
+            Output(CompositorImplementation& parent, const string& name, const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<Compositor::IRenderer>& renderer)
                 : _sink(parent)
                 , _connector()
 
             {
-                _connector = Compositor::CreateBuffer(name, width, height, format, renderer, &_sink);
+                _connector = Compositor::CreateBuffer(name, width, height, refreshRate, format, renderer, &_sink);
                 TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
             }
 
@@ -632,7 +629,13 @@ namespace Plugin {
             if (config.Output.IsSet() == false) {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
-                _output = new Output(*this, config.Output.Value(), config.Width.Value(), config.Height.Value(), _format, _renderer);
+                const Exchange::IComposition::ScreenResolution resolution = config.Resolution.Value();
+
+                const uint32_t width(WidthFromResolution(resolution));
+                const uint32_t height(HeightFromResolution(resolution));
+                const uint32_t refreshRate(RefreshRateFromResolution(resolution));
+
+                _output = new Output(*this, config.Output.Value(), width, height, refreshRate, _format, _renderer);
                 ASSERT((_output != nullptr) && (_output->IsValid()));
 
                 if (_output == nullptr) {
