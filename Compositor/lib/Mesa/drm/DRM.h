@@ -71,8 +71,8 @@ namespace Compositor {
         extern const char* ModifierVendorString(const uint64_t modifier);
         extern const char* FormatToString(const uint32_t format);
         extern bool ModesEqual(const drmModeModeInfo* mode1, const drmModeModeInfo* mode2);
-        extern bool SelectBestMode(const drmModeConnector* const connector, const uint32_t requestedWidth, const uint32_t requestedHeight, bool& dimensionsAdjusted, drmModeModeInfo& selectedMode);
-        extern ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId, const uint32_t requestedWidth, const uint32_t requestedHeigh);
+        extern bool SelectBestMode(const drmModeConnector* const connector, const uint32_t requestedWidth, const uint32_t requestedHeight, const uint32_t requestedRefreshRate, bool& dimensionsAdjusted, drmModeModeInfo& selectedMode);
+        extern ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId, const uint32_t requestedWidth, const uint32_t requestedHeigh, const uint32_t requestedRefreshRate);
     } // namespace DRM
 } // namespace Compositor
 } // namespace Thunder
