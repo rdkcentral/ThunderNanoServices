@@ -597,11 +597,19 @@ namespace Plugin {
         uint32_t Configure(PluginHost::IShell* service) override
         {
             uint32_t result = Core::ERROR_NONE;
-
-            string configuration(service->ConfigLine());
             Config config;
 
-            config.FromString(service->ConfigLine());
+            Core::OptionalType<Core::JSON::Error> error;
+            bool parseSuccess = config.FromString(service->ConfigLine(), error);
+
+            if (!parseSuccess) {
+                if (error.IsSet()) {
+                    TRACE(Trace::Error, (_T("JSON parsing failed: %s"), Core::JSON::ErrorDisplayMessage(error.Value()).c_str()));
+                } else {
+                    TRACE(Trace::Error, (_T("JSON parsing failed - unknown error")));
+                }
+                return Core::ERROR_PARSE_FAILURE;
+            }
 
             _format = config.Format.Value();
             _modifier = config.Modifier.Value();
@@ -609,6 +617,7 @@ namespace Plugin {
             if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
                 _renderDescriptor = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
             } else {
+                TRACE(Trace::Error, (_T("Render node is not set in the configuration")));
                 return Core::ERROR_INCOMPLETE_CONFIG;
             }
 
@@ -627,6 +636,7 @@ namespace Plugin {
             }
 
             if (config.Output.IsSet() == false) {
+                TRACE(Trace::Error, (_T("Output is not set in the configuration")));
                 return Core::ERROR_INCOMPLETE_CONFIG;
             } else {
                 const Exchange::IComposition::ScreenResolution resolution = config.Resolution.Value();
