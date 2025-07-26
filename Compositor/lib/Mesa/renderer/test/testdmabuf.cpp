@@ -107,7 +107,7 @@ public:
         ASSERT(_renderer.IsValid());
 
         _connector = Compositor::CreateBuffer(
-            connectorId, 1920, 1080,
+            connectorId, 1920, 1080, 30000, // 60Hz
             Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
             _renderer, &_sink);
 
@@ -332,9 +332,9 @@ int main(int argc, char* argv[])
         const std::vector<string> modules = {
             "CompositorRenderTestOFF",
             "CompositorBufferOFF",
-            "CompositorBackendOFF",
+            "CompositorBackend",
             "CompositorRendererOFF",
-            "DRMCommonOFF"
+            "DRMCommon"
         };
 
         for (auto module : modules) {
