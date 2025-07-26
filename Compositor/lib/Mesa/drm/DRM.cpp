@@ -647,7 +647,9 @@ namespace Compositor {
             return (mode1->hdisplay == mode2->hdisplay && mode1->vdisplay == mode2->vdisplay && mode1->vrefresh == mode2->vrefresh);
         }
 
-        bool SelectBestMode(const drmModeConnector* const connector, const uint32_t requestedWidth, const uint32_t requestedHeight,
+        bool SelectBestMode(const drmModeConnector* const connector,
+            const uint32_t requestedWidth, const uint32_t requestedHeight,
+            const uint32_t requestedRefreshRate, // in mHz (60000 = 60Hz)
             bool& dimensionsAdjusted, drmModeModeInfo& selectedMode)
         {
             if (connector->count_modes == 0) {
@@ -657,76 +659,142 @@ namespace Compositor {
 
             drmModeModeInfoPtr bestMode = nullptr;
             dimensionsAdjusted = false;
+            uint32_t targetRefreshHz = requestedRefreshRate / 1000; // Convert mHz to Hz
 
-            // Mode selection logic
-            if (requestedWidth == 0 && requestedHeight == 0) {
-                // Auto-detect: use preferred mode or first available
+            // Case 1: H=0, W=0, rate=0 -> Use monitor preferred setting
+            if (requestedWidth == 0 && requestedHeight == 0 && requestedRefreshRate == 0) {
+                // Find preferred mode
                 for (int i = 0; i < connector->count_modes; i++) {
                     if (connector->modes[i].type & DRM_MODE_TYPE_PREFERRED) {
                         bestMode = &connector->modes[i];
                         break;
                     }
                 }
+                // Fallback to first mode if no preferred mode found
                 if (bestMode == nullptr) {
-                    bestMode = &connector->modes[0]; // Use first mode if no preferred
+                    bestMode = &connector->modes[0];
                 }
-                TRACE_GLOBAL(Thunder::Trace::Information, ("Auto-detecting mode: selected %ux%u", bestMode->hdisplay, bestMode->vdisplay));
-            } else {
-                // Find best fitting mode for requested dimensions
-                drmModeModeInfoPtr exactMatch = nullptr;
-                drmModeModeInfoPtr bestLarger = nullptr;
-                drmModeModeInfoPtr bestSmaller = nullptr;
+                TRACE_GLOBAL(Thunder::Trace::Information,
+                    ("Using preferred mode: %ux%u@%uHz",
+                        bestMode->hdisplay, bestMode->vdisplay, bestMode->vrefresh));
+            }
+            // Case 2: H=x, W=x, rate=0 -> Find exact resolution, best refresh rate
+            else if (requestedWidth > 0 && requestedHeight > 0 && requestedRefreshRate == 0) {
+                uint32_t bestRefreshRate = 0;
 
+                // Find all modes with exact resolution match
                 for (int i = 0; i < connector->count_modes; i++) {
                     drmModeModeInfoPtr mode = &connector->modes[i];
 
-                    // Exact match
                     if (mode->hdisplay == requestedWidth && mode->vdisplay == requestedHeight) {
+                        // Pick the highest refresh rate for this resolution
+                        if (mode->vrefresh > bestRefreshRate) {
+                            bestRefreshRate = mode->vrefresh;
+                            bestMode = mode;
+                        }
+                    }
+                }
+
+                if (bestMode != nullptr) {
+                    TRACE_GLOBAL(Thunder::Trace::Information,
+                        ("Found exact resolution %ux%u, selected best refresh rate %uHz",
+                            requestedWidth, requestedHeight, bestMode->vrefresh));
+                } else {
+                    TRACE_GLOBAL(Thunder::Trace::Warning,
+                        ("Exact resolution %ux%u not available, falling back",
+                            requestedWidth, requestedHeight));
+                }
+            }
+            // Case 3: H, W, rate all specified -> Find exact match or best possible
+            else if (requestedWidth > 0 && requestedHeight > 0 && requestedRefreshRate > 0) {
+                drmModeModeInfoPtr exactMatch = nullptr;
+                drmModeModeInfoPtr resolutionMatch = nullptr;
+                uint32_t closestRefreshDiff = UINT32_MAX;
+
+                // Look for exact match first
+                for (int i = 0; i < connector->count_modes; i++) {
+                    drmModeModeInfoPtr mode = &connector->modes[i];
+
+                    // Perfect match
+                    if (mode->hdisplay == requestedWidth && mode->vdisplay == requestedHeight && mode->vrefresh == targetRefreshHz) {
                         exactMatch = mode;
                         break;
                     }
 
-                    // Mode that can contain the requested dimensions
-                    if (mode->hdisplay >= requestedWidth && mode->vdisplay >= requestedHeight) {
-                        if (bestLarger == nullptr || (mode->hdisplay * mode->vdisplay) < (bestLarger->hdisplay * bestLarger->vdisplay)) {
-                            bestLarger = mode;
-                        }
-                    }
-
-                    // Largest mode smaller than requested (fallback)
-                    if (mode->hdisplay <= requestedWidth && mode->vdisplay <= requestedHeight) {
-                        if (bestSmaller == nullptr || (mode->hdisplay * mode->vdisplay) > (bestSmaller->hdisplay * bestSmaller->vdisplay)) {
-                            bestSmaller = mode;
+                    // Same resolution, different refresh rate
+                    if (mode->hdisplay == requestedWidth && mode->vdisplay == requestedHeight) {
+                        uint32_t refreshDiff = abs((int)mode->vrefresh - (int)targetRefreshHz);
+                        if (refreshDiff < closestRefreshDiff) {
+                            closestRefreshDiff = refreshDiff;
+                            resolutionMatch = mode;
                         }
                     }
                 }
 
-                // Priority: exact match > smallest larger > largest smaller
-                bestMode = exactMatch ? exactMatch : (bestLarger ? bestLarger : bestSmaller);
-
-                if (bestMode == nullptr) {
-                    TRACE_GLOBAL(Thunder::Trace::Error, ("No suitable mode found for %ux%u", requestedWidth, requestedHeight));
-                    return false;
-                }
-
-                // Check if we had to adjust dimensions
-                if (bestMode->hdisplay != requestedWidth || bestMode->vdisplay != requestedHeight) {
-                    dimensionsAdjusted = true;
-
-                    if (bestMode->hdisplay < requestedWidth || bestMode->vdisplay < requestedHeight) {
-                        TRACE_GLOBAL(Thunder::Trace::Warning, ("Requested dimensions %ux%u too large, using %ux%u", requestedWidth, requestedHeight, bestMode->hdisplay, bestMode->vdisplay));
-                    }
+                if (exactMatch != nullptr) {
+                    bestMode = exactMatch;
+                    TRACE_GLOBAL(Thunder::Trace::Information,
+                        ("Found exact match: %ux%u@%uHz",
+                            requestedWidth, requestedHeight, targetRefreshHz));
+                } else if (resolutionMatch != nullptr) {
+                    bestMode = resolutionMatch;
+                    TRACE_GLOBAL(Thunder::Trace::Information,
+                        ("Found resolution match %ux%u, closest refresh rate %uHz (requested %uHz)",
+                            requestedWidth, requestedHeight, bestMode->vrefresh, targetRefreshHz));
+                } else {
+                    TRACE_GLOBAL(Thunder::Trace::Warning,
+                        ("Exact resolution %ux%u not available, falling back",
+                            requestedWidth, requestedHeight));
                 }
             }
 
-            TRACE_GLOBAL(Trace::Information, ("Selected mode: %ux%u@%uHz", bestMode->hdisplay, bestMode->vdisplay, bestMode->vrefresh));
+            // Fallback: If no match found, find best possible mode
+            if (bestMode == nullptr) {
+                dimensionsAdjusted = true;
 
-            selectedMode = *bestMode; // Copy the selected mode
+                // Strategy: Find largest mode that fits, or smallest mode that's larger
+                drmModeModeInfoPtr bestFit = nullptr;
+                drmModeModeInfoPtr smallestLarger = nullptr;
+
+                for (int i = 0; i < connector->count_modes; i++) {
+                    drmModeModeInfoPtr mode = &connector->modes[i];
+
+                    // Mode that can contain requested dimensions
+                    if (mode->hdisplay >= requestedWidth && mode->vdisplay >= requestedHeight) {
+                        if (smallestLarger == nullptr || (mode->hdisplay * mode->vdisplay) < (smallestLarger->hdisplay * smallestLarger->vdisplay)) {
+                            smallestLarger = mode;
+                        }
+                    }
+
+                    // Track best overall mode (for worst-case fallback)
+                    if (bestFit == nullptr || (mode->type & DRM_MODE_TYPE_PREFERRED) || (mode->hdisplay * mode->vdisplay) > (bestFit->hdisplay * bestFit->vdisplay)) {
+                        bestFit = mode;
+                    }
+                }
+
+                // Use smallest mode that can contain request, or best available mode
+                bestMode = smallestLarger ? smallestLarger : bestFit;
+
+                if (bestMode == nullptr) {
+                    bestMode = &connector->modes[0]; // Last resort
+                }
+
+                TRACE_GLOBAL(Thunder::Trace::Warning,
+                    ("Using fallback mode: %ux%u@%uHz (requested %ux%u@%uHz)",
+                        bestMode->hdisplay, bestMode->vdisplay, bestMode->vrefresh,
+                        requestedWidth, requestedHeight, targetRefreshHz));
+            }
+
+            TRACE_GLOBAL(Trace::Information,
+                ("Final selected mode: %ux%u@%uHz",
+                    bestMode->hdisplay, bestMode->vdisplay, bestMode->vrefresh));
+
+            selectedMode = *bestMode;
             return true;
         }
 
         ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId,
-            const uint32_t requestedWidth, const uint32_t requestedHeight)
+            const uint32_t requestedWidth, const uint32_t requestedHeight, const uint32_t requestedRefreshRate)
         {
             ConnectorScanResult result;
             char* node = nullptr; // Declare at the top to avoid goto crossing initialization
@@ -761,7 +829,7 @@ namespace Compositor {
                 TRACE_GLOBAL(Trace::Information, ("Connector %s-%u connected", name, drmModeConnector->connector_type_id));
 
                 // Select the best mode based on requirements
-                if (!SelectBestMode(drmModeConnector, requestedWidth, requestedHeight, result.dimensionsAdjusted, result.selectedMode)) {
+                if (!SelectBestMode(drmModeConnector, requestedWidth, requestedHeight, requestedRefreshRate, result.dimensionsAdjusted, result.selectedMode)) {
                     TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to select a suitable mode for connector %u", targetConnectorId));
                     drmModeFreeConnector(drmModeConnector);
                     goto cleanup;
