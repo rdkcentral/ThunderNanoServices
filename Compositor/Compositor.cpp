@@ -208,13 +208,18 @@ namespace Plugin {
         } else {
             RegisterAll();
             _composition->Register(&_notification);
-            _composition->Configure(_service);
 
-            _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
-            _inputSwitchCallsign = config.InputSwitch.Value();
-            _newOnTop = config.NewOnTop.Value();
+            uint32_t result = _composition->Configure(_service);
 
-            _brightness = _composition->QueryInterface<Exchange::IBrightness>();
+            if (result != Core::ERROR_NONE) {
+                message = "Instantiating the compositor failed. Could not configure: CompositorImplementation Error: " + std::string(Core::ErrorToString(result));
+            } else {
+                _inputSwitch = _composition->QueryInterface<Exchange::IInputSwitch>();
+                _inputSwitchCallsign = config.InputSwitch.Value();
+                _newOnTop = config.NewOnTop.Value();
+
+                _brightness = _composition->QueryInterface<Exchange::IBrightness>();
+            }
         }
 
         // On success return empty, to indicate there is no error text.
@@ -247,7 +252,7 @@ namespace Plugin {
                 // It should have been the last reference we are releasing,
                 // so it should endup in a DESTRUCTION_SUCCEEDED, if not we
                 // are leaking...
-                ASSERT( (result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
+                ASSERT((result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
                 // If this was running in a (container) process...
                 if (connection != nullptr) {
                     // Lets trigger the cleanup sequence for
