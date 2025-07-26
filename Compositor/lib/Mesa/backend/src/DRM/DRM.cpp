@@ -136,9 +136,9 @@ namespace Compositor {
             {
                 return (_gpuFd > 0);
             }
-            Core::ProxyType<Connector> GetConnector(const string& connectorName, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
+            Core::ProxyType<Connector> GetConnector(const string& connectorName, const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
             {
-                return _connectors.Instance<Connector>(connectorName, Core::ProxyType<Compositor::IBackend>(*this, *this), Compositor::DRM::FindConnectorId(_gpuFd, connectorName), width, height, format, renderer, feedback);
+                return _connectors.Instance<Connector>(connectorName, Core::ProxyType<Compositor::IBackend>(*this, *this), Compositor::DRM::FindConnectorId(_gpuFd, connectorName), width, height, refreshRate, format, renderer, feedback);
             }
 
             //
@@ -255,7 +255,7 @@ namespace Compositor {
     } // namespace Backend
 
     Core::ProxyType<IOutput> CreateBuffer(const string& connectorName,
-        const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format,
+        const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat& format,
         const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
     {
         ASSERT(drmAvailable() == 1);
@@ -268,7 +268,7 @@ namespace Compositor {
         Core::ProxyType<IOutput> connector;
 
         if (backend.IsValid()) {
-            connector = backend->GetConnector(connectorName, width, height, format, renderer, feedback);
+            connector = backend->GetConnector(connectorName, width, height, refreshRate, format, renderer, feedback);
         }
 
         return connector;

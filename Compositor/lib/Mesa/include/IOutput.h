@@ -65,12 +65,13 @@ namespace Compositor {
      * @brief  Allocate a new output.
      *         When the callee is done with the output, they must release it.
      *
-     * @param connector  Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
-     * @param width      Requested width in pixels (0 = auto-detect preferred mode)
-     * @param height     Requested height in pixels (0 = auto-detect preferred mode)
-     * @param format     Pixel layout for this buffer
-     * @param renderer   Renderer instance for creating framebuffers
-     * @param callback   Callback for presentation events
+     * @param connector   Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
+     * @param width       Requested width in pixels (0 = auto-detect preferred mode)
+     * @param height      Requested height in pixels (0 = auto-detect preferred mode)
+     * @param refreshRate Refresh rate in mHz (0 = auto-detect preferred mode)
+     * @param format      Pixel layout for this buffer
+     * @param renderer    Renderer instance for creating framebuffers
+     * @param callback    Callback for presentation events
      *
      * @return Core::ProxyType<IOutput> The allocated buffer
      *
@@ -83,6 +84,7 @@ namespace Compositor {
         const string& connector,
         const uint32_t width,
         const uint32_t height,
+        const uint32_t refreshRate,
         const Compositor::PixelFormat& format,
         const Core::ProxyType<IRenderer>& renderer,
         IOutput::ICallback* callback);
