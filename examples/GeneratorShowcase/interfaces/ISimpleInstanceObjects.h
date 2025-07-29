@@ -35,7 +35,7 @@ namespace Exchange {
             DISABLED
         };
 
-        // @json
+        // @json @encode:autolookup
         struct IDevice : virtual public Core::IUnknown {
 
             enum { ID = ISimpleInstanceObjects::ID + 1 };
