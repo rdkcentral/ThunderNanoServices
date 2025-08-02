@@ -68,7 +68,7 @@ namespace Plugin {
             DISPMANX_DISPLAY_HANDLE_T display;
             DISPMANX_MODEINFO_T info;
             DISPMANX_RESOURCE_HANDLE_T resource;
-            VC_IMAGE_TYPE_T type = VC_IMAGE_ARGB8888;
+            VC_IMAGE_TYPE_T type = VC_IMAGE_RGBA32;
             DISPMANX_TRANSFORM_T transform = static_cast<DISPMANX_TRANSFORM_T>(0);
             VC_RECT_T rect;
             uint32_t vc_image_ptr;
