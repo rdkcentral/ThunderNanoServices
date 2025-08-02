@@ -76,7 +76,7 @@ namespace Plugin {
         while ((correctStructure == true) && (spaceIndex.Next() == true)) {
             string nameSpace(spaceIndex.Current().Name.Value());
             correctStructure = IsValidName(nameSpace);
-            correctStructure = correctStructure && CreateInternalDictionary(currentSpace + nameSpace, spaceIndex.Current());
+            correctStructure = correctStructure && CreateInternalDictionary((currentSpace == Delimiter())? currentSpace + nameSpace: currentSpace +   Delimiter() + nameSpace, spaceIndex.Current());
         }
 
         return (correctStructure);
@@ -90,20 +90,16 @@ namespace Plugin {
         while (index != _dictionary.end()) {
             // Vallidate if the given path does include this namespace..
             if ((currentSpace.empty() == true) || (requiredSpace.EqualText(index->first.c_str(), 0, requiredSpace.Length(), true) == true)) {
-                // Seems like we need to report this space, build it up
-                NameSpace& blockToFill(current[index->first]);
 
                 // No we got the namespace bloc, fill in the keys..
                 const std::list<RuntimeEntry>& keyList(index->second);
                 std::list<RuntimeEntry>::const_iterator keyIndex(keyList.begin());
 
                 while (keyIndex != keyList.end()) {
-                    NameSpace::Entry& entry(blockToFill.Dictionary.Add(NameSpace::Entry()));
-                    entry.Key = keyIndex->Key();
-                    entry.Value = keyIndex->Value();
-
-                    if (keyIndex->Type() != entry.Type.Default()) {
-                        entry.Type = keyIndex->Type();
+                    if(keyIndex->Type() == PERSISTENT) {
+                    // Seems like we need to report this space, build it up
+                    NameSpace& blockToFill(current[index->first]);
+                    NameSpace::Entry& entry(blockToFill.Dictionary.Add(NameSpace::Entry(keyIndex->Key(),keyIndex->Value(),keyIndex->Type())));
                     }
 
                     keyIndex++;
@@ -115,7 +111,6 @@ namespace Plugin {
 
     /* virtual */ const string Dictionary::Initialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED )
     {
-        /*
         _config.FromString(service->ConfigLine());
 
         Core::File dictionaryFile(service->PersistentPath() + _config.Storage.Value());
@@ -129,7 +124,6 @@ namespace Plugin {
             }
             CreateInternalDictionary(Delimiter(), dictionary);
         }
-        */
         Exchange::JDictionary::Register(*this, this);
 
         // On succes return a name as a Callsign to be used in the URL, after the "service"prefix
@@ -140,7 +134,7 @@ namespace Plugin {
     {
 
         Exchange::JDictionary::Unregister(*this);
-        /*
+
         Core::File dictionaryFile(service->PersistentPath() + _config.Storage.Value());
 
         if (dictionaryFile.Create() == true) {
@@ -150,7 +144,6 @@ namespace Plugin {
                 SYSLOG(Logging::Shutdown, (_T("Error occured while trying to save dictionary data to file!")));
             }
         }
-        */
     }
 
     /* virtual */ string Dictionary::Information() const
