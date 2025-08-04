@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "Snapshot.h"
 
 #include <png.h>
@@ -34,8 +34,7 @@ namespace Plugin {
             // Terminations
             {},
             // Controls
-            {}
-        );
+            {});
     }
 
     class StoreImpl : public Exchange::ICapture::IStore {
@@ -54,8 +53,9 @@ namespace Plugin {
 
         bool R8_G8_B8_A8(const unsigned char* buffer, const unsigned int width, const unsigned int height) override
         {
-
             png_structp pngPointer = nullptr;
+
+            TRACE(Trace::Information, (_T("Buffer: First pixel RGBA input: R=0x%02x G=0x%02x B=0x%02x A=0x%02x"), buffer[0], buffer[1], buffer[2], buffer[3]));
 
             pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
             if (pngPointer == nullptr) {
@@ -85,7 +85,7 @@ namespace Plugin {
                 width,
                 height,
                 depth,
-                PNG_COLOR_TYPE_RGB,
+                PNG_COLOR_TYPE_RGB_ALPHA,
                 PNG_INTERLACE_NONE,
                 PNG_COMPRESSION_TYPE_DEFAULT,
                 PNG_FILTER_TYPE_DEFAULT);
@@ -97,12 +97,13 @@ namespace Plugin {
 
                 png_byte* rowLine = static_cast<png_byte*>(png_malloc(pngPointer, sizeof(png_byte) * width * pixelSize));
                 const uint8_t* rowSource = buffer + (sizeof(png_byte) * i * width * pixelSize);
+
                 rowLines[i] = rowLine;
                 for (unsigned int j = 0; j < width * pixelSize; j += pixelSize) {
-                    *rowLine++ = rowSource[j + 2]; // Red
+                    *rowLine++ = rowSource[j + 0]; // Red
                     *rowLine++ = rowSource[j + 1]; // Green
-                    *rowLine++ = rowSource[j + 0]; // Blue
-                    // ignore alpha
+                    *rowLine++ = rowSource[j + 2]; // Blue
+                    *rowLine++ = rowSource[j + 3]; // Alpha
                 }
             }
 
