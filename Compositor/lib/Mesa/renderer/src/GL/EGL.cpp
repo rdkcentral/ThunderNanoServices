@@ -327,8 +327,7 @@ namespace Compositor {
                     TRACE(Trace::EGL, ("Using context robustness"));
                 }
 
-                ASSERT(API::HasExtension(displayExtensions, "EGL_KHR_no_config_context") == true);
-                ASSERT(API::HasExtension(displayExtensions, "EGL_MESA_configless_context") == true);
+                ASSERT((API::HasExtension(displayExtensions, "EGL_KHR_no_config_context") == true) || (API::HasExtension(displayExtensions, "EGL_MESA_configless_context") == true));
                 ASSERT(API::HasExtension(displayExtensions, "EGL_KHR_surfaceless_context") == true);
 
                 if ((_api.eglQueryDisplayAttribEXT != nullptr) && (_api.eglQueryDeviceStringEXT != nullptr)) {
