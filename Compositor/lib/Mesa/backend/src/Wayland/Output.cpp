@@ -308,7 +308,7 @@ namespace Compositor {
             return result;
         }
 
-        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> WaylandOutput::FrameBuffer() /* override */
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> WaylandOutput::FrameBuffer() const /* override */
         {
             return _frameBuffer;
         }

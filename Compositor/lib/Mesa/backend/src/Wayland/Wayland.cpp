@@ -130,7 +130,7 @@ namespace Compositor {
 
             int Dispatch(const uint32_t events) const;
 
-            Core::ProxyType<IOutput> Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback);
+            Core::ProxyType<IOutput> Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback);
 
         private:
             mutable uint32_t _refCount;
