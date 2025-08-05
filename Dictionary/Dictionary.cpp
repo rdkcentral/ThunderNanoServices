@@ -159,12 +159,8 @@ namespace Plugin {
         ASSERT(key.empty() == false);
         
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
-        
-        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            result = Core::ERROR_INVALID_PATH;
-            
-            
-        if(result != Core::ERROR_INVALID_PATH){
+                
+        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
         
            _adminLock.Lock();
 
@@ -186,18 +182,17 @@ namespace Plugin {
 
         _adminLock.Unlock();
         
+        } else {
+            result = Core::ERROR_INVALID_PATH;
         }
 
         return (result);
     }
 
     /* virtual */ Core::hresult Dictionary::PathEntries(const string& path, IDictionary::IPathIterator*& entries /* @out */) const
-    {
- 
-        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            result = Core::ERROR_INVALID_PATH;
+    { 
             
-        if(result != Core::ERROR_INVALID_PATH){
+        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
 
             std::list<Exchange::IDictionary::PathEntry> pathentries;
 
@@ -285,7 +280,10 @@ namespace Plugin {
             using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator>;
             entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(pathentries);
         
+            } else {
+                result = Core::ERROR_INVALID_PATH;
             }
+                
 
             return (result);
     }
@@ -309,12 +307,10 @@ namespace Plugin {
     // path and key MUST be filled.
     /* virtual */ Core::hresult Dictionary::Set(const string& path, const string& key, const string& value)
     {
-        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            result = Core::ERROR_INVALID_PATH;
-
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
-        if(result != Core::ERROR_INVALID_PATH){
-           ASSERT(key.empty() == false);
+        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
+        
+            ASSERT(key.empty() == false);
 
            _adminLock.Lock();
 
@@ -335,6 +331,8 @@ namespace Plugin {
 
             _adminLock.Unlock();
         
+        } else{
+            result = Core::ERROR_INVALID_PATH;
         }
 
         return (result);
@@ -347,7 +345,7 @@ namespace Plugin {
         if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
             result = Core::ERROR_INVALID_PATH;
 
-        if(result != Core::ERROR_INVALID_PATH){
+        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
         
             _adminLock.Lock();
 
@@ -376,10 +374,7 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
-        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            result = Core::ERROR_INVALID_PATH;
-
-	if(result != Core::ERROR_INVALID_PATH){
+	if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
 	
    	    bool found = false;
 
@@ -400,6 +395,8 @@ namespace Plugin {
             }
 
             _adminLock.Unlock();       
+        } else {
+            result = Core::ERROR_INVALID_PATH;
         }
 
         return (result);
