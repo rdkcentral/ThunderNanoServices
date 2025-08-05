@@ -52,6 +52,7 @@ namespace Plugin {
     bool Dictionary::CreateInternalDictionary(const string& currentSpace, const NameSpace& current)
     {
         bool correctStructure(true);
+        static string delimiter = Delimiter();
         Core::JSON::ArrayType<NameSpace::Entry>::ConstIterator keyIndex(current.Dictionary.Elements());
         Core::JSON::ArrayType<NameSpace>::ConstIterator spaceIndex(current.Spaces.Elements());
         std::list<RuntimeEntry>* currentList = NULL;
@@ -74,9 +75,10 @@ namespace Plugin {
         }
 
         while ((correctStructure == true) && (spaceIndex.Next() == true)) {
-            string nameSpace(spaceIndex.Current().Name.Value());
+            string nextnameSpace(spaceIndex.Current().Name.Value());
             correctStructure = IsValidName(nameSpace);
-            correctStructure = correctStructure && CreateInternalDictionary((currentSpace == Delimiter())? currentSpace + nameSpace: currentSpace +   Delimiter() + nameSpace, spaceIndex.Current());
+            string nameSpace = (currentSpace == delimiter) ? currentSpace + nextnameSpace : currentSpace + delimiter + nextnameSpace;
+            correctStructure = correctStructure && CreateInternalDictionary(nameSpace, spaceIndex.Current());
         }
 
         return (correctStructure);
@@ -155,8 +157,10 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::Get(const string& path, const string& key, string& value) const
     {
         ASSERT(key.empty() == false);
-        ASSERT((path.size() <= 1 ) || (path.back() != Exchange::IDictionary::namespaceDelimiter ));
-
+        
+        if((path.size() <= 1 ) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+            return (Core::ERROR_INVALID_PATH);
+            
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
         _adminLock.Lock();
@@ -185,7 +189,8 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::PathEntries(const string& path, IDictionary::IPathIterator*& entries /* @out */) const
     {
 
-        ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
+        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+            return (Core::ERROR_INVALID_PATH);
 
         std::list<Exchange::IDictionary::PathEntry> pathentries;
 
@@ -292,7 +297,8 @@ namespace Plugin {
     // path and key MUST be filled.
     /* virtual */ Core::hresult Dictionary::Set(const string& path, const string& key, const string& value)
     {
-        ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
+        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+            return (Core::ERROR_INVALID_PATH);
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
         ASSERT(key.empty() == false);
@@ -323,7 +329,8 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
-        ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
+        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+            return (Core::ERROR_INVALID_PATH);
 
 
         _adminLock.Lock();
@@ -351,7 +358,8 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
-        ASSERT((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter));
+        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+            return (Core::ERROR_INVALID_PATH);
 
         bool found = false;
 
