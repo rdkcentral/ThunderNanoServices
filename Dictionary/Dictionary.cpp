@@ -76,7 +76,7 @@ namespace Plugin {
 
         while ((correctStructure == true) && (spaceIndex.Next() == true)) {
             string nextnameSpace(spaceIndex.Current().Name.Value());
-            correctStructure = IsValidName(nameSpace);
+            correctStructure = IsValidName(nextnameSpace);
             string nameSpace = (currentSpace == delimiter) ? currentSpace + nextnameSpace : currentSpace + delimiter + nextnameSpace;
             correctStructure = correctStructure && CreateInternalDictionary(nameSpace, spaceIndex.Current());
         }
@@ -158,7 +158,7 @@ namespace Plugin {
     {
         ASSERT(key.empty() == false);
         
-        if((path.size() <= 1 ) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+        if((path.size() <= 1 ) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
             return (Core::ERROR_INVALID_PATH);
             
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
@@ -189,7 +189,7 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::PathEntries(const string& path, IDictionary::IPathIterator*& entries /* @out */) const
     {
 
-        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
             return (Core::ERROR_INVALID_PATH);
 
         std::list<Exchange::IDictionary::PathEntry> pathentries;
@@ -297,7 +297,7 @@ namespace Plugin {
     // path and key MUST be filled.
     /* virtual */ Core::hresult Dictionary::Set(const string& path, const string& key, const string& value)
     {
-        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
             return (Core::ERROR_INVALID_PATH);
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
@@ -329,7 +329,7 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
-        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
             return (Core::ERROR_INVALID_PATH);
 
 
@@ -358,7 +358,7 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
-        if((path.size() <= 1) || (path.back() != Exchange::IDictionary::namespaceDelimiter))
+        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
             return (Core::ERROR_INVALID_PATH);
 
         bool found = false;
