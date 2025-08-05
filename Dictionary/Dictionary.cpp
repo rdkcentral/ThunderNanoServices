@@ -158,18 +158,21 @@ namespace Plugin {
     {
         ASSERT(key.empty() == false);
         
-        if((path.size() <= 1 ) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            return (Core::ERROR_INVALID_PATH);
-            
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+        
+        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
+            result = Core::ERROR_INVALID_PATH;
+            
+            
+        if(result != Core::ERROR_INVALID_PATH){
+        
+           _adminLock.Lock();
 
-        _adminLock.Lock();
-
-        DictionaryMap::const_iterator index = _dictionary.find((path.empty() == true ? Delimiter() : path));
+           DictionaryMap::const_iterator index = _dictionary.find((path.empty() == true ? Delimiter() : path));
 
         if (index != _dictionary.end()) {
-            const KeyValueContainer& container(index->second);
-            KeyValueContainer::const_iterator listIndex(container.begin());
+           const KeyValueContainer& container(index->second);
+           KeyValueContainer::const_iterator listIndex(container.begin());
 
             while ((listIndex != container.end()) && (listIndex->Key() != key)) {
                 listIndex++;
@@ -182,100 +185,109 @@ namespace Plugin {
         }
 
         _adminLock.Unlock();
+        
+        }
 
         return (result);
     }
 
     /* virtual */ Core::hresult Dictionary::PathEntries(const string& path, IDictionary::IPathIterator*& entries /* @out */) const
     {
+ 
+        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
+            result = Core::ERROR_INVALID_PATH;
+            
+        if(result != Core::ERROR_INVALID_PATH){
 
-        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            return (Core::ERROR_INVALID_PATH);
+            std::list<Exchange::IDictionary::PathEntry> pathentries;
 
-        std::list<Exchange::IDictionary::PathEntry> pathentries;
-
-        if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
+            if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
         
-            _adminLock.Lock();
+                _adminLock.Lock();
 
-            DictionaryMap::const_iterator namespaces = _dictionary.cbegin();
+                DictionaryMap::const_iterator namespaces = _dictionary.cbegin();
 
-            while (namespaces != _dictionary.cend()) {
-                ASSERT(namespaces->first.size() >= 1);
-                if (namespaces->first == Delimiter()) {
-                    const KeyValueContainer& container(namespaces->second);
-                    KeyValueContainer::const_iterator listIndex(container.begin());
-
-                    while ((listIndex != container.end())) {
-                        pathentries.emplace_back(Exchange::IDictionary::PathEntry{ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
-                        listIndex++;
-                    }
-                } else {
-                    string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, 0);
-                    const string& name = (endpos == string::npos ? namespaces->first : namespaces->first.substr(0, endpos));
-                    if (std::find_if(pathentries.cbegin(), pathentries.cend(), [&name](const Exchange::IDictionary::PathEntry& x) { return x.name == name; }) == pathentries.cend()) {
-                        pathentries.emplace_back(Exchange::IDictionary::PathEntry{ name, Exchange::IDictionary::Type::NAMESPACE });
-                    }
-                }
-                ++namespaces;
-            };
-
-            _adminLock.Unlock();
-
-        } else {
-
-            _adminLock.Lock();
-
-            DictionaryMap::const_iterator namespaces = _dictionary.cbegin();
-
-            while (namespaces != _dictionary.cend()) {
-
-                string namespacepart = namespaces->first.substr(0, path.size());  // please note std::string start_with is only c++ 20 and upwards...
-
-                if (namespacepart == path) {
-                    if (path.size() == namespaces->first.size()) {
-                        // if the whole name matches we must get all the keys for this namespace path
+                while (namespaces != _dictionary.cend()) {
+                    ASSERT(namespaces->first.size() >= 1);
+                    if (namespaces->first == Delimiter()) {
                         const KeyValueContainer& container(namespaces->second);
                         KeyValueContainer::const_iterator listIndex(container.begin());
 
                         while ((listIndex != container.end())) {
-                            pathentries.push_back({ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
+                            pathentries.emplace_back(Exchange::IDictionary::PathEntry{ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
                             listIndex++;
-                        };
-                        // no break here to stop looping through the namespaces as next to the full namespace that has keys (what we found now) lets also support that there could be subnamespces as well at the same time (like for a disk folder structure 
-                        // were you could have files in a folder and subfolders at the same time) so we keep looping to also find these
-                    } else if ((namespaces->first.size() > path.size()) && (namespaces->first[path.size()] == Exchange::IDictionary::namespaceDelimiter)) {
-                        // if the namespace path found starts with what we are looking for and has a delimiter next (otherwise by accident the 
-                        // first part of the namespace is equal but different characters follow so it is not the one we are looking for) we must add the next namespace part to the result 
-                        // (and continue looking for more)
-                        ASSERT((namespaces->first.size() > path.size() + 1) && (namespaces->first[path.size() + 1] != Exchange::IDictionary::namespaceDelimiter)); // there must be at least one more character (as we do not allow the namespace stored to end with a delimiter) andn that character 
-
-                        //see if we find another delimiter (could of course be more than one nested namespace after the one we are looking for
-                        string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, path.size() + 1);
-                        string subnamespace;
-                        if (endpos == string::npos) {
-                            // no delimiter rest of string is the last nested namespace
-                            subnamespace = namespaces->first.substr(path.size() + 1); //note this means get all chars starting from this position
-                        } else {
-                            subnamespace = namespaces->first.substr(path.size() + 1, endpos - path.size() - 1);
                         }
-                        if (std::find_if(pathentries.cbegin(), pathentries.cend(), [&subnamespace](const Exchange::IDictionary::PathEntry& x) { return x.name == subnamespace; }) == pathentries.cend()) {
-                            pathentries.emplace_back(Exchange::IDictionary::PathEntry{ subnamespace, Exchange::IDictionary::Type::NAMESPACE });
+                    } 
+                    else {
+                        string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, 0);
+                        const string& name = (endpos == string::npos ? namespaces->first : namespaces->first.substr(0, endpos));
+                        if (std::find_if(pathentries.cbegin(), pathentries.cend(), [&name](const Exchange::IDictionary::PathEntry& x) { return x.name == name; }) == pathentries.cend()) {
+                            pathentries.emplace_back(Exchange::IDictionary::PathEntry{ name, Exchange::IDictionary::Type::NAMESPACE });
                         }
                     }
-                }
+                    ++namespaces;
+                };
 
-                ++namespaces;
-            };
+                _adminLock.Unlock();
 
-            _adminLock.Unlock();
+            } 
+            else {
+
+                _adminLock.Lock();
+
+                DictionaryMap::const_iterator namespaces = _dictionary.cbegin();
+
+                while (namespaces != _dictionary.cend()) {
+
+                    string namespacepart = namespaces->first.substr(0, path.size());  // please note std::string start_with is only c++ 20 and upwards...
+
+                    if (namespacepart == path) {
+                        if (path.size() == namespaces->first.size()) {
+                            // if the whole name matches we must get all the keys for this namespace path
+                            const KeyValueContainer& container(namespaces->second);
+                            KeyValueContainer::const_iterator listIndex(container.begin());
+
+                            while ((listIndex != container.end())) {
+                                pathentries.push_back({ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
+                                listIndex++;
+                            };
+                            // no break here to stop looping through the namespaces as next to the full namespace that has keys (what we found now) lets also support that there could be subnamespces as well at the same time (like for a disk folder structure 
+                            // were you could have files in a folder and subfolders at the same time) so we keep looping to also find these
+                        } 
+                        else if ((namespaces->first.size() >path.size()) && (namespaces->first[path.size()] == Exchange::IDictionary::namespaceDelimiter)){  
+                            // if the namespace path found starts with what we are looking for and has a delimiter next (otherwise by accident the 
+                            // first part of the namespace is equal but different characters follow so it is not the one we are looking for) we must add the next namespace part to the result 
+                            // (and continue looking for more)
+                            ASSERT((namespaces->first.size() > path.size() + 1) && (namespaces->first[path.size() + 1] != Exchange::IDictionary::namespaceDelimiter)); // there must be at least one more character (as we do not allow the namespace stored to end with a delimiter) andn that character 
+
+                        //see if we find another delimiter (could of course be more than one nested namespace after the one we are looking for
+                            string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, path.size() + 1);
+                            string subnamespace;
+                            if (endpos == string::npos) {
+                                // no delimiter rest of string is the last nested namespace
+                                subnamespace = namespaces->first.substr(path.size() + 1); //note this means get all chars starting from this position
+                            } else {
+                                subnamespace = namespaces->first.substr(path.size() + 1, endpos - path.size() - 1);
+                            }
+                            if (std::find_if(pathentries.cbegin(), pathentries.cend(), [&subnamespace](const Exchange::IDictionary::PathEntry& x) { return x.name == subnamespace; }) == pathentries.cend()) {
+                                pathentries.emplace_back(Exchange::IDictionary::PathEntry{ subnamespace, Exchange::IDictionary::Type::NAMESPACE });
+                            }
+                        }
+                    }
+
+                    ++namespaces;
+                };
+
+                _adminLock.Unlock();
         
-        }
+            }
 
-        using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator>;
-        entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(pathentries);
+            using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator>;
+            entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(pathentries);
+        
+            }
 
-        return (Core::ERROR_NONE);
+            return (result);
     }
 
 
@@ -297,91 +309,100 @@ namespace Plugin {
     // path and key MUST be filled.
     /* virtual */ Core::hresult Dictionary::Set(const string& path, const string& key, const string& value)
     {
-        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            return (Core::ERROR_INVALID_PATH);
+        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
+            result = Core::ERROR_INVALID_PATH;
 
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
-        ASSERT(key.empty() == false);
+        if(result != Core::ERROR_INVALID_PATH){
+           ASSERT(key.empty() == false);
 
-        _adminLock.Lock();
+           _adminLock.Lock();
 
-        KeyValueContainer& container(_dictionary[(path.empty() == true ? Delimiter() : path)]);
-        KeyValueContainer::iterator listIndex(container.begin());
+            KeyValueContainer& container(_dictionary[(path.empty() == true ? Delimiter() : path)]);
+            KeyValueContainer::iterator listIndex(container.begin());
 
-        while ((listIndex != container.end()) && (listIndex->Key() != key)) {
-            listIndex++;
+            while ((listIndex != container.end()) && (listIndex->Key() != key)) {
+               listIndex++;
+            }
+
+            if (listIndex == container.end()) {
+                container.push_back(RuntimeEntry(key, value, VOLATILE));
+                NotifyForUpdate(path, key, value);
+            } else if (listIndex->Value() != value) {
+                listIndex->Value(value);
+                NotifyForUpdate(path, key, value);
+            }
+
+            _adminLock.Unlock();
+        
         }
 
-        if (listIndex == container.end()) {
-            container.push_back(RuntimeEntry(key, value, VOLATILE));
-            NotifyForUpdate(path, key, value);
-        } else if (listIndex->Value() != value) {
-            listIndex->Value(value);
-            NotifyForUpdate(path, key, value);
-        }
-
-        _adminLock.Unlock();
-
-        return (Core::ERROR_NONE);
+        return (result);
     }
 
     /* virtual */ Core::hresult Dictionary::Register(const string& path, Exchange::IDictionary::INotification* sink)
     {
         ASSERT(sink != nullptr);
 
-        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            return (Core::ERROR_INVALID_PATH);
+        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
+            result = Core::ERROR_INVALID_PATH;
 
-
-        _adminLock.Lock();
+        if(result != Core::ERROR_INVALID_PATH){
+        
+            _adminLock.Lock();
 
 #ifdef __DEBUG__
-        ObserverMap::iterator index(_observers.begin());
+           ObserverMap::iterator index(_observers.begin());
 
         // DO NOT REGISTER THE SAME NOTIFICATION SINK ON THE SAME NAMESPACE MORE THAN ONCE. !!!!!!
-        while (index != _observers.end()) {
-            ASSERT((index->second != sink) || (path != index->first));
+           while (index != _observers.end()) {
+               ASSERT((index->second != sink) || (path != index->first));
 
-            index++;
-        }
+               index++;
+           }
 #endif
 
-        sink->AddRef();
-        _observers.push_back(std::pair<string, struct Exchange::IDictionary::INotification*>(path, sink));
+           sink->AddRef();
+           _observers.push_back(std::pair<string, struct Exchange::IDictionary::INotification*>(path, sink));
 
-        _adminLock.Unlock();
+           _adminLock.Unlock();
+           
+        }
 
-        return (Core::ERROR_NONE);
+        return (result);
     }
 
     /* virtual */ Core::hresult Dictionary::Unregister(const string& path, const Exchange::IDictionary::INotification* sink)
     {
         ASSERT(sink != nullptr);
 
-        if((path.size() <= 1) || (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            return (Core::ERROR_INVALID_PATH);
+        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
+            result = Core::ERROR_INVALID_PATH;
 
-        bool found = false;
+	if(result != Core::ERROR_INVALID_PATH){
+	
+   	    bool found = false;
 
-        _adminLock.Lock();
+           _adminLock.Lock();
 
-        ObserverMap::iterator index(_observers.begin());
+           ObserverMap::iterator index(_observers.begin());
 
-        while ((found == false) && (index != _observers.end())) {
-            found = ((index->second == sink) && (path == index->first));
-            if (found == false) {
-                index++;
+            while ((found == false) && (index != _observers.end())) {
+                found = ((index->second == sink) && (path == index->first));
+                if (found == false) {
+                    index++;
+                }
             }
+
+            if (index != _observers.end()) {
+               index->second->Release();
+               _observers.erase(index);
+            }
+
+            _adminLock.Unlock();       
         }
 
-        if (index != _observers.end()) {
-            index->second->Release();
-            _observers.erase(index);
-        }
-
-        _adminLock.Unlock();
-
-        return (Core::ERROR_NONE);
+        return (result);
     }
 }
 }
