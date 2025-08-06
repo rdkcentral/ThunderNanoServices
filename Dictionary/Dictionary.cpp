@@ -67,8 +67,7 @@ namespace Plugin {
                 if (currentList == NULL) {
                     currentList = &(_dictionary[currentSpace]);
                     
-                    if(currentList == NULL)
-                        TRACE(Trace::Information, (_T("Datamodel.json is empty")));
+                    ASSERT(currentList != NULL);
                 }
 
                 currentList->push_back(RuntimeEntry(key, keyIndex.Current().Value.Value(), keyIndex.Current().Type.Value()));
@@ -207,6 +206,7 @@ namespace Plugin {
                 DictionaryMap::const_iterator namespaces = _dictionary.cbegin();
 
                 while (namespaces != _dictionary.cend()) {
+                    ASSERT(namespaces->first.size() >= 1);
                     if (namespaces->first == Delimiter()) {
                         const KeyValueContainer& container(namespaces->second);
                         KeyValueContainer::const_iterator listIndex(container.begin());
@@ -249,10 +249,11 @@ namespace Plugin {
                             };
                             // no break here to stop looping through the namespaces as next to the full namespace that has keys (what we found now) lets also support that there could be subnamespces as well at the same time (like for a disk folder structure 
                             // were you could have files in a folder and subfolders at the same time) so we keep looping to also find these
-                        } else if ((namespaces->first.size() >path.size()) && (namespaces->first[path.size()] == Exchange::IDictionary::namespaceDelimiter)){  
+                        } else if ((namespaces->first.size() > path.size()) && (namespaces->first[path.size()] == Exchange::IDictionary::namespaceDelimiter)){  
                             // if the namespace path found starts with what we are looking for and has a delimiter next (otherwise by accident the 
                             // first part of the namespace is equal but different characters follow so it is not the one we are looking for) we must add the next namespace part to the result 
                             // (and continue looking for more)
+                            ASSERT((namespaces->first.size() > path.size() + 1) && (namespaces->first[path.size() + 1] != Exchange::IDictionary::namespaceDelimiter)); // there must be at least one more character (as we do not allow the namespace stored to end with a delimiter) andn that character 
                            //see if we find another delimiter (could of course be more than one nested namespace after the one we are looking for
                             string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, path.size() + 1);
                             string subnamespace;
