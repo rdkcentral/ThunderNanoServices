@@ -66,8 +66,9 @@ namespace Plugin {
             if (correctStructure == true) {
                 if (currentList == NULL) {
                     currentList = &(_dictionary[currentSpace]);
-
-                    ASSERT(currentList != NULL);
+                    
+                    if((currentList == NULL)
+                        TRACE(Trace::Information, (_T("Datamodel.json is empty")));
                 }
 
                 currentList->push_back(RuntimeEntry(key, keyIndex.Current().Value.Value(), keyIndex.Current().Type.Value()));
@@ -160,7 +161,7 @@ namespace Plugin {
         
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
                 
-        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
+        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
         
            _adminLock.Lock();
 
@@ -192,7 +193,7 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::PathEntries(const string& path, IDictionary::IPathIterator*& entries /* @out */) const
     { 
             
-        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
+        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
 
             std::list<Exchange::IDictionary::PathEntry> pathentries;
 
@@ -203,7 +204,6 @@ namespace Plugin {
                 DictionaryMap::const_iterator namespaces = _dictionary.cbegin();
 
                 while (namespaces != _dictionary.cend()) {
-                    ASSERT(namespaces->first.size() >= 1);
                     if (namespaces->first == Delimiter()) {
                         const KeyValueContainer& container(namespaces->second);
                         KeyValueContainer::const_iterator listIndex(container.begin());
@@ -212,8 +212,7 @@ namespace Plugin {
                             pathentries.emplace_back(Exchange::IDictionary::PathEntry{ listIndex->Key(), (listIndex->Type() == enumType::VOLATILE ? Exchange::IDictionary::Type::VOLATILE_KEY : Exchange::IDictionary::Type::PERSISTENT_KEY) });
                             listIndex++;
                         }
-                    } 
-                    else {
+                    } else {
                         string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, 0);
                         const string& name = (endpos == string::npos ? namespaces->first : namespaces->first.substr(0, endpos));
                         if (std::find_if(pathentries.cbegin(), pathentries.cend(), [&name](const Exchange::IDictionary::PathEntry& x) { return x.name == name; }) == pathentries.cend()) {
@@ -225,8 +224,7 @@ namespace Plugin {
 
                 _adminLock.Unlock();
 
-            } 
-            else {
+            } else {
 
                 _adminLock.Lock();
 
@@ -248,14 +246,11 @@ namespace Plugin {
                             };
                             // no break here to stop looping through the namespaces as next to the full namespace that has keys (what we found now) lets also support that there could be subnamespces as well at the same time (like for a disk folder structure 
                             // were you could have files in a folder and subfolders at the same time) so we keep looping to also find these
-                        } 
-                        else if ((namespaces->first.size() >path.size()) && (namespaces->first[path.size()] == Exchange::IDictionary::namespaceDelimiter)){  
+                        } else if ((namespaces->first.size() >path.size()) && (namespaces->first[path.size()] == Exchange::IDictionary::namespaceDelimiter)){  
                             // if the namespace path found starts with what we are looking for and has a delimiter next (otherwise by accident the 
                             // first part of the namespace is equal but different characters follow so it is not the one we are looking for) we must add the next namespace part to the result 
                             // (and continue looking for more)
-                            ASSERT((namespaces->first.size() > path.size() + 1) && (namespaces->first[path.size() + 1] != Exchange::IDictionary::namespaceDelimiter)); // there must be at least one more character (as we do not allow the namespace stored to end with a delimiter) andn that character 
-
-                        //see if we find another delimiter (could of course be more than one nested namespace after the one we are looking for
+                           //see if we find another delimiter (could of course be more than one nested namespace after the one we are looking for
                             string::size_type endpos = namespaces->first.find(Exchange::IDictionary::namespaceDelimiter, path.size() + 1);
                             string subnamespace;
                             if (endpos == string::npos) {
@@ -308,7 +303,7 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::Set(const string& path, const string& key, const string& value)
     {
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
-        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
+        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
         
             ASSERT(key.empty() == false);
 
@@ -342,10 +337,7 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
-        if((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))
-            result = Core::ERROR_INVALID_PATH;
-
-        if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
+        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
         
             _adminLock.Lock();
 
@@ -365,6 +357,8 @@ namespace Plugin {
 
            _adminLock.Unlock();
            
+        }else{
+            result = Core::ERROR_INVALID_PATH;
         }
 
         return (result);
@@ -374,7 +368,7 @@ namespace Plugin {
     {
         ASSERT(sink != nullptr);
 
-	if(!(path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter)){
+	if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
 	
    	    bool found = false;
 
