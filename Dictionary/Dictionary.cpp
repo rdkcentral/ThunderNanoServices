@@ -67,7 +67,7 @@ namespace Plugin {
                 if (currentList == NULL) {
                     currentList = &(_dictionary[currentSpace]);
                     
-                    if((currentList == NULL)
+                    if(currentList == NULL)
                         TRACE(Trace::Information, (_T("Datamodel.json is empty")));
                 }
 
@@ -161,7 +161,7 @@ namespace Plugin {
         
         Core::hresult result = Core::ERROR_UNKNOWN_KEY;
                 
-        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
+        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))) {
         
            _adminLock.Lock();
 
@@ -182,6 +182,8 @@ namespace Plugin {
             }
  
             _adminLock.Unlock();
+            
+            result = Core::ERROR_NONE;
         
         } else {
             result = Core::ERROR_INVALID_PATH;
@@ -192,8 +194,9 @@ namespace Plugin {
 
     /* virtual */ Core::hresult Dictionary::PathEntries(const string& path, IDictionary::IPathIterator*& entries /* @out */) const
     { 
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
             
-        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
+        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))) {
 
             std::list<Exchange::IDictionary::PathEntry> pathentries;
 
@@ -274,6 +277,8 @@ namespace Plugin {
 
             using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator>;
             entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(pathentries);
+            
+            result = Core::ERROR_NONE;
         
             } else {
                 result = Core::ERROR_INVALID_PATH;
@@ -303,6 +308,9 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::Set(const string& path, const string& key, const string& value)
     {
         // Direct method to Set a value for a key in a certain namespace from the dictionary.
+        
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
+        
         if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
         
             ASSERT(key.empty() == false);
@@ -325,6 +333,8 @@ namespace Plugin {
             }
 
             _adminLock.Unlock();
+            
+            result = Core::ERROR_NONE;
         
         } else{
             result = Core::ERROR_INVALID_PATH;
@@ -336,8 +346,10 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::Register(const string& path, Exchange::IDictionary::INotification* sink)
     {
         ASSERT(sink != nullptr);
+        
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
-        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
+        if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))) {
         
             _adminLock.Lock();
 
@@ -357,7 +369,9 @@ namespace Plugin {
 
            _adminLock.Unlock();
            
-        }else {
+           result = Core::ERROR_NONE;
+           
+        } else {
             result = Core::ERROR_INVALID_PATH;
         }
 
@@ -367,8 +381,10 @@ namespace Plugin {
     /* virtual */ Core::hresult Dictionary::Unregister(const string& path, const Exchange::IDictionary::INotification* sink)
     {
         ASSERT(sink != nullptr);
+        
+        Core::hresult result = Core::ERROR_UNKNOWN_KEY;
 
-	if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))){
+	if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))) {
 	
    	    bool found = false;
 
@@ -388,7 +404,10 @@ namespace Plugin {
                _observers.erase(index);
             }
 
-            _adminLock.Unlock();       
+            _adminLock.Unlock(); 
+            
+            result = Core::ERROR_NONE;
+                  
         } else {
             result = Core::ERROR_INVALID_PATH;
         }
