@@ -167,21 +167,21 @@ namespace Plugin {
 
            DictionaryMap::const_iterator index = _dictionary.find((path.empty() == true ? Delimiter() : path));
 
-        if (index != _dictionary.end()) {
-           const KeyValueContainer& container(index->second);
-           KeyValueContainer::const_iterator listIndex(container.begin());
+            if (index != _dictionary.end()) {
+               const KeyValueContainer& container(index->second);
+               KeyValueContainer::const_iterator listIndex(container.begin());
 
-            while ((listIndex != container.end()) && (listIndex->Key() != key)) {
-                listIndex++;
+               while ((listIndex != container.end()) && (listIndex->Key() != key)) {
+                    listIndex++;
+               }
+
+               if (listIndex != container.end()) {
+                   result = Core::ERROR_NONE;
+                   value = listIndex->Value();
+               }
             }
-
-            if (listIndex != container.end()) {
-                result = Core::ERROR_NONE;
-                value = listIndex->Value();
-            }
-        }
-
-        _adminLock.Unlock();
+ 
+            _adminLock.Unlock();
         
         } else {
             result = Core::ERROR_INVALID_PATH;
@@ -307,7 +307,7 @@ namespace Plugin {
         
             ASSERT(key.empty() == false);
 
-           _adminLock.Lock();
+            _adminLock.Lock();
 
             KeyValueContainer& container(_dictionary[(path.empty() == true ? Delimiter() : path)]);
             KeyValueContainer::iterator listIndex(container.begin());
@@ -357,7 +357,7 @@ namespace Plugin {
 
            _adminLock.Unlock();
            
-        }else{
+        }else {
             result = Core::ERROR_INVALID_PATH;
         }
 
