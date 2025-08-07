@@ -107,8 +107,8 @@ public:
         ASSERT(_renderer.IsValid());
 
         _connector = Compositor::CreateBuffer(
-            connectorId, 1920, 1080, 30000, // 60Hz
-            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
+            connectorId, 1920, 1080, 30000, // 30Hz
+            Compositor::PixelFormat::Default(),
             _renderer, &_sink);
 
         ASSERT(_connector.IsValid());
