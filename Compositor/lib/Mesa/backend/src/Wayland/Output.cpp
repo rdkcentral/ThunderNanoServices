@@ -128,6 +128,8 @@ namespace Compositor {
         {
             WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
 
+            implementation->PresentationFeedback(WaylandOutput::PresentationFeedbackEvent());
+
             if (feedback != nullptr) {
                 wp_presentation_feedback_destroy(feedback);
             }
