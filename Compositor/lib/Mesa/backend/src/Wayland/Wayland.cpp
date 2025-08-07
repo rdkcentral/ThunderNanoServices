@@ -20,6 +20,7 @@
 #include "../Module.h"
 
 #include <CompositorTypes.h>
+#include <CompositorUtils.h>
 #include <DRM.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
@@ -112,10 +113,13 @@ namespace Compositor {
             xdg_surface* WindowSurface(wl_surface* surface) const override;
             int RoundTrip() const override;
             int Flush() const override;
-            void Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const override;
             int RenderNode() const override;
 
-            wl_buffer* CreateBuffer(Exchange::IGraphicsBuffer* buffer) const override;
+            const std::vector<PixelFormat>& Formats() const override {
+                return _dmaFormats;
+            }
+
+            wl_buffer* Buffer(Exchange::IGraphicsBuffer* buffer) const override;
 
             struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const override;
             struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const override;
@@ -152,7 +156,7 @@ namespace Compositor {
             zwp_relative_pointer_manager_v1* _wlZwpRelativePointerManagerV1;
             xdg_activation_v1* _wlXdgActivationV1;
             zwp_linux_dmabuf_feedback_v1* _wlZwpLinuxDmabufFeedbackV1;
-            FormatRegister _dmaFormats;
+            std::vector<PixelFormat> _dmaFormats;
 
             Input _input;
             ServerMonitor _serverMonitor;
@@ -455,7 +459,8 @@ namespace Compositor {
             .global_remove = onRegistryGlobalRemove
         };
 
-        static const TCHAR* DisplayName() {
+        static const TCHAR* DisplayName()
+        {
             return ("");
         }
 
@@ -497,6 +502,8 @@ namespace Compositor {
             RoundTrip();
 
             ASSERT(_dmaFormats.size() > 0);
+
+            TRACE(Trace::Backend, ("DMA Formats: %s\n", Compositor::ToString(_dmaFormats).c_str()));
 
             if (const char* token = getenv("XDG_ACTIVATION_TOKEN")) {
                 _activationToken = token;
@@ -667,37 +674,33 @@ namespace Compositor {
                 const WaylandFormat* formats = reinterpret_cast<WaylandFormat*>(map);
                 const uint16_t nFormats(size / sizeof(WaylandFormat));
 
-                // std::string hexData;
-                // Core::ToHexString(static_cast<uint8_t*>(map), size, hexData);
-                // TRACE(Trace::Backend, ("RAW Data: %s", hexData.c_str()));
-
-                _dmaFormats.clear();
+                // Build a temporary map to collect modifiers per format
+                std::unordered_map<uint32_t, std::vector<uint64_t>> tempFormats;
 
                 for (int i = 0; i < nFormats; i++) {
                     const uint32_t format(formats[i].format);
+                    const uint64_t modifier(formats[i].modifier);
 
-                    // somehow Ubuntu is returning a format of 0, which is invalid
-                    // but linear modifier is always valid, so we will just ignore the format
-                    const uint64_t modifier((formats[i].modifier != DRM_FORMAT_MOD_INVALID) ? (formats[i].modifier) : DRM_FORMAT_MOD_LINEAR);
-
-                    TRACE(Trace::Backend, ("%d Found DMA format: %s modifier: 0x%" PRIX64, i, DRM::FormatToString(format), modifier));
-
-                    FormatRegister::iterator index = _dmaFormats.find(format);
-
-                    if (index == _dmaFormats.end()) {
-                        _dmaFormats.emplace(format, std::vector<uint64_t>({ modifier }));
+                    auto index = tempFormats.find(format);
+                    if (index == tempFormats.end()) {
+                        tempFormats.emplace(format, std::vector<uint64_t>({ modifier }));
                     } else {
                         std::vector<uint64_t>& modifiers = index->second;
-
                         if (std::find(modifiers.begin(), modifiers.end(), modifier) == modifiers.end()) {
                             modifiers.push_back(modifier);
                         }
                     }
                 }
 
-                TRACE(Trace::Backend, ("Found %d formats", _dmaFormats.size()));
-
                 ::munmap(map, size);
+
+                // Convert to PixelFormat objects
+                _dmaFormats.clear();
+                _dmaFormats.reserve(tempFormats.size());
+
+                for (const auto& entry : tempFormats) {
+                    _dmaFormats.emplace_back(entry.first, entry.second);
+                }
             }
         }
 
@@ -828,27 +831,6 @@ namespace Compositor {
         int WaylandImplementation::Flush() const
         {
             return wl_display_flush(_wlDisplay);
-        }
-
-        void WaylandImplementation::Format(const Compositor::PixelFormat& requested, uint32_t& format, uint64_t& modifier) const
-        {
-            format = DRM_FORMAT_INVALID;
-            modifier = DRM_FORMAT_MOD_INVALID;
-
-            for (const auto& localFormat : _dmaFormats) {
-                if (localFormat.first == requested.Type()) {
-                    format = requested.Type();
-                    for (const auto& localModifier : localFormat.second) {
-                        for (const auto& requestedModifier : requested.Modifiers()) {
-                            if (requestedModifier == localModifier) {
-                                modifier = requestedModifier;
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
         }
 
         int WaylandImplementation::RenderNode() const

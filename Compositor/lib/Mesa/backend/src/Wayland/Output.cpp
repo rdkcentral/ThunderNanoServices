@@ -20,6 +20,7 @@
 #include <Output.h>
 
 #include <drm_fourcc.h>
+#include <CompositorUtils.h>
 
 namespace Thunder {
 namespace Compositor {
@@ -148,8 +149,7 @@ namespace Compositor {
             , _topLevelSurface(nullptr)
             , _width(width)
             , _height(height)
-            , _format()
-            , _modifier()
+            , _format(format)
             , _buffer()
             , _signal(false, true)
             , _commitSequence(0)
@@ -159,11 +159,18 @@ namespace Compositor {
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
-            _backend.Format(format, _format, _modifier);
-            TRACE(Trace::Backend, ("Picked DMA format: %s modifier: 0x%" PRIX64, DRM::FormatToString(_format), _modifier));
+            if (format.IsValid() == false) {
+                TRACE(Trace::Information, (_T("Selecting format... ")));
 
-            ASSERT(_format != DRM_FORMAT_INVALID);
-            ASSERT(_modifier != DRM_FORMAT_MOD_INVALID);
+                TRACE(Trace::Backend, (_T("Renderer exposes %d render formats. "), renderer->RenderFormats().size()));
+                TRACE(Trace::Backend, (_T("Backend accepts %d formats."), backend.Formats().size()));
+
+                _format = Compositor::IntersectFormat(format, { &renderer->RenderFormats(), &backend.Formats() });
+
+                TRACE(Trace::Backend, ("Selected format: %s", Compositor::ToString(_format).c_str()));
+
+                ASSERT(_format.IsValid() == true);
+            }
 
             _surface = _backend.Surface();
 
@@ -225,7 +232,7 @@ namespace Compositor {
 
             if (_frameBuffer.IsValid() == true) {
                 _frameBuffer.Release();
-            }       
+            }
         }
 
         Exchange::IGraphicsBuffer::IIterator* WaylandOutput::Acquire(const uint32_t timeoutMs)
@@ -265,16 +272,18 @@ namespace Compositor {
             return (_buffer.IsValid() == true) ? _buffer->Type() : Exchange::IGraphicsBuffer::DataType::TYPE_INVALID;
         }
 
-        void WaylandOutput::SurfaceConfigure() {
+        void WaylandOutput::SurfaceConfigure()
+        {
 
             ASSERT(_surface != nullptr);
             ASSERT(_backend.RenderNode() > 0);
 
             if (_buffer.IsValid() == false) {
-                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, Compositor::PixelFormat(_format, { _modifier }));
+                TRACE(Trace::Information, ("Create buffer with format: %s", Compositor::ToString(_format).c_str()));
+                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, _format);
                 ASSERT(_buffer.IsValid() == true);
 
-                if(_renderer.IsValid() == true) {
+                if (_renderer.IsValid() == true) {
                     _frameBuffer = _renderer->FrameBuffer(_buffer);
                     ASSERT(_frameBuffer.IsValid() == true);
                 }
@@ -289,11 +298,10 @@ namespace Compositor {
             }
 
             Commit();
-
         }
         uint32_t WaylandOutput::Commit()
         {
-            ASSERT ((_surface != nullptr) && (_buffer.IsValid() == true));
+            ASSERT((_surface != nullptr) && (_buffer.IsValid() == true));
 
             wl_surface_commit(_surface);
 
