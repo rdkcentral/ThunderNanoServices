@@ -27,7 +27,10 @@
 #include <messaging/messaging.h>
 #include <interfaces/IGraphicsBuffer.h>
 #include <CompositorTypes.h>
+#include <CompositorUtils.h>
 
+#include "DRMTypes.h"
+#include <drm/drm_mode.h>
 MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace Thunder {
@@ -975,6 +978,54 @@ namespace Compositor {
 
             return result;
         }
+
+        std::vector<PixelFormat> ExtractFormats(const Properties& properties)
+        {
+            std::vector<PixelFormat> pixelFormats;
+
+            drmModePropertyBlobPtr blobPtr = properties.Blob(property::InFormats);
+
+            if (blobPtr != nullptr) {
+                const drm_format_modifier_blob* modifierBlob = static_cast<const drm_format_modifier_blob*>(blobPtr->data);
+
+                const uint32_t* formatArray = reinterpret_cast<const uint32_t*>(
+                    reinterpret_cast<const char*>(blobPtr->data) + modifierBlob->formats_offset);
+
+                const drm_format_modifier* modifierArray = reinterpret_cast<const drm_format_modifier*>(
+                    reinterpret_cast<const char*>(blobPtr->data) + modifierBlob->modifiers_offset);
+
+                TRACE_GLOBAL(Trace::Information, ("Found %d formats with %d modifiers", modifierBlob->count_formats, modifierBlob->count_modifiers));
+
+                std::unordered_map<uint32_t, std::vector<uint64_t>> formatToModifiers;
+
+                for (uint32_t modifierIndex = 0; modifierIndex < modifierBlob->count_modifiers; ++modifierIndex) {
+                    const drm_format_modifier& modifier = modifierArray[modifierIndex];
+
+                    for (uint32_t bitPosition = 0; bitPosition < 64; ++bitPosition) {
+                        if (modifier.formats & (1ULL << bitPosition)) {
+                            uint32_t formatIndex = modifier.offset + bitPosition;
+
+                            if (formatIndex < modifierBlob->count_formats) {
+                                uint32_t fourccFormat = formatArray[formatIndex];
+                                formatToModifiers[fourccFormat].push_back(modifier.modifier);
+                            }
+                        }
+                    }
+                }
+
+                for (std::unordered_map<uint32_t, std::vector<uint64_t>>::const_iterator it = formatToModifiers.begin();
+                    it != formatToModifiers.end(); ++it) {
+                    pixelFormats.emplace_back(it->first, it->second);
+                }
+
+                drmModeFreePropertyBlob(blobPtr);
+            } else {
+                TRACE_GLOBAL(Trace::Error, ("Failed to get the IN_FORMATS blob"));
+            }
+
+            return pixelFormats;
+        }
+
     } // namespace DRM
 } // namespace Compositor
 } // namespace Thunder
