@@ -31,6 +31,8 @@
 
 #include <graphicsbuffer/GraphicsBufferType.h>
 
+#include <CompositorUtils.h>
+
 #include <drm_fourcc.h>
 
 #include <condition_variable>
@@ -60,8 +62,8 @@ namespace Plugin {
                 : Core::JSON::Container()
                 , Render()
                 , Resolution(Exchange::IDeviceVideoCapabilities::ScreenResolution::ScreenResolution_Unknown) // Auto-detect
-                , Format(DRM_FORMAT_ARGB8888)
-                , Modifier(DRM_FORMAT_MOD_LINEAR)
+                , Format(DRM_FORMAT_INVALID) // auto select
+                , Modifier(DRM_FORMAT_MOD_INVALID) // auto select
                 , Output()
                 , AutoScale(true)
             {
@@ -527,6 +529,16 @@ namespace Plugin {
                 return _connector->Commit();
             }
 
+            uint32_t Format() const
+            {
+                return _connector->Format();
+            }
+
+            uint64_t Modifier() const
+            {
+                return _connector->Modifier();
+            }
+
         private:
             Sink _sink;
             Core::ProxyType<Compositor::IOutput> _connector;
@@ -543,8 +555,6 @@ namespace Plugin {
 
         CompositorImplementation()
             : _adminLock()
-            , _format(DRM_FORMAT_INVALID)
-            , _modifier(DRM_FORMAT_MOD_INVALID)
             , _output(nullptr)
             , _renderer()
             , _observers()
@@ -611,9 +621,6 @@ namespace Plugin {
                 return Core::ERROR_PARSE_FAILURE;
             }
 
-            _format = config.Format.Value();
-            _modifier = config.Modifier.Value();
-
             if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
                 _renderDescriptor = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
             } else {
@@ -645,7 +652,11 @@ namespace Plugin {
                 const uint32_t height(HeightFromResolution(resolution));
                 const uint32_t refreshRate(RefreshRateFromResolution(resolution));
 
-                _output = new Output(*this, config.Output.Value(), width, height, refreshRate, _format, _renderer);
+                const Compositor::PixelFormat format(config.Format.Value(), { config.Modifier.Value() });
+
+                TRACE(Trace::Information, ("Requested format: %s", Compositor::ToString(format).c_str()));
+
+                _output = new Output(*this, config.Output.Value(), width, height, refreshRate, format, _renderer);
                 ASSERT((_output != nullptr) && (_output->IsValid()));
 
                 if (_output == nullptr) {
@@ -780,12 +791,12 @@ namespace Plugin {
 
         uint32_t Format() const
         {
-            return _format;
+            return (_output != nullptr) ? _output->Format() : DRM_FORMAT_INVALID;
         }
 
         uint64_t Modifier() const
         {
-            return _modifier;
+            return (_output != nullptr) ? _output->Modifier() : DRM_FORMAT_MOD_INVALID;
         }
 
         /**
@@ -991,8 +1002,6 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _adminLock;
-        uint32_t _format;
-        uint64_t _modifier;
         Output* _output;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         Observers _observers;
