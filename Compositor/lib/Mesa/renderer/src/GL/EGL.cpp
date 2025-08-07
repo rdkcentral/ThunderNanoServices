@@ -28,7 +28,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-#include <iomanip>
+#include <CompositorUtils.h>
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
@@ -131,9 +131,8 @@ namespace Compositor {
             , _display(EGL_NO_DISPLAY)
             , _context(EGL_NO_CONTEXT)
             , _device(EGL_NO_DEVICE_EXT)
-            , _draw_surface(EGL_NO_SURFACE)
-            , _read_surface(EGL_NO_SURFACE)
-            , _formats()
+            , _renderFormats()
+            , _textureFormats()
             , _gbmDescriptor(InvalidFileDescriptor)
             , _gbmDevice(nullptr)
         {
@@ -179,9 +178,10 @@ namespace Compositor {
                 ASSERT(_gbmDevice != nullptr);
             }
 
-            GetPixelFormats(_formats);
+            GetPixelFormats(_renderFormats, true);
+            GetPixelFormats(_textureFormats, false);
 
-            TRACE(Trace::EGL, ("Initialized EGL Display=%p, Context=%p, %d formats supported", _display, _context, _formats.size()));
+            TRACE(Trace::EGL, ("Initialized EGL Display=%p, Context=%p, %d texture formats, %d render formats  supported", _display, _context, _textureFormats.size(), _renderFormats.size()));
         }
 
         EGL::~EGL()
@@ -373,11 +373,6 @@ namespace Compositor {
             return result;
         }
 
-        const std::vector<PixelFormat>& EGL::Formats() const
-        {
-            return _formats;
-        }
-
         void EGL::GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals) const
         {
             if (_api.eglQueryDmaBufModifiersEXT != nullptr) {
@@ -393,13 +388,13 @@ namespace Compositor {
             }
         }
 
-        void EGL::GetPixelFormats(std::vector<PixelFormat>& pixelFormats) const
+        void EGL::GetPixelFormats(std::vector<PixelFormat>& pixelFormats, const bool renderOnly) const
         {
             pixelFormats.clear();
 
             std::vector<int> formats;
 
-            TRACE(Trace::EGL, ("Scanning for pixel formats"));
+            TRACE(Trace::EGL, ("Scanning pixel formats for %s", renderOnly ? "rendering" : "textures"));
 
             if (_api.eglQueryDmaBufFormatsEXT != nullptr) {
                 EGLint nFormats(0);
@@ -413,37 +408,36 @@ namespace Compositor {
 
             for (const auto& format : formats) {
                 std::vector<uint64_t> modifiers;
-                /**
-                 * Indicates if the matching modifier is only supported for
-                 * use with the GL_TEXTURE_EXTERNAL_OES texture target
-                 */
                 std::vector<EGLBoolean> externals;
-
-                std::stringstream line;
 
                 GetModifiers(format, modifiers, externals);
 
-                char* formatName = drmGetFormatName(format);
+                if (renderOnly == true) {
+                    // Filter out external-only modifiers (can't be render targets)
+                    auto modifierIt = modifiers.begin();
+                    auto externalIt = externals.begin();
 
-                line << formatName << ", modifiers: ";
-
-                free(formatName);
-
-                for (uint8_t i(0); i < modifiers.size(); i++) {
-                    char* modifierName = drmGetFormatModifierName(modifiers.at(i));
-
-                    if (modifierName) {
-                        line << modifierName << (externals.at(i) ? "*" : "");
-                        free(modifierName);
+                    while (modifierIt != modifiers.end() && externalIt != externals.end()) {
+                        if (*externalIt == EGL_TRUE) {
+                            // Remove external modifier
+                            modifierIt = modifiers.erase(modifierIt);
+                            externalIt = externals.erase(externalIt);
+                        } else {
+                            ++modifierIt;
+                            ++externalIt;
+                        }
                     }
 
-                    line << ((i < (modifiers.size() - 1)) ? ", " : "");
+                    // Skip formats with no non-external modifiers
+                    if (modifiers.empty()) {
+                        continue;
+                    }
                 }
 
-                TRACE(Trace::EGL, (_T("FormatInfo: %s"), line.str().c_str()));
-
-                pixelFormats.emplace_back(format, modifiers);
+                pixelFormats.emplace_back(format, std::move(modifiers));
             }
+
+            TRACE(Trace::EGL, ("%s\n", Compositor::ToString(pixelFormats).c_str()));
         }
 
         bool EGL::IsExternOnly(const uint32_t format, const uint64_t modifier) const
@@ -459,7 +453,7 @@ namespace Compositor {
                 auto it = std::find(modifiers.begin(), modifiers.end(), modifier);
 
                 if (it != modifiers.end()) {
-                    result = externals[distance(modifiers.begin(), it)];
+                    result = externals[std::distance(modifiers.begin(), it)];
                 }
             }
 
@@ -540,11 +534,13 @@ namespace Compositor {
 
                 result = _api.eglCreateImage(_display, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, nullptr, imageAttributes);
 
-                TRACE(Trace::EGL, ("EGL image created result:%s", API::EGL::ErrorString(eglGetError())));
-                ASSERT(eglGetError() == EGL_SUCCESS);
+                EGLint error = eglGetError();
+                TRACE(Trace::EGL, ("EGL image created result:%s", API::EGL::ErrorString(error)));
+                ASSERT(error == EGL_SUCCESS);
             }
 
             external = IsExternOnly(buffer->Format(), buffer->Modifier());
+            TRACE(Trace::EGL, ("Source buffer is texture only: %s", external ? "YES" : "NO"));
 
             // just unlock and go, client still need to draw something,.
             buffer->Relinquish();
