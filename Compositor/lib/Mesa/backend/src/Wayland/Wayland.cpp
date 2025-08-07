@@ -59,8 +59,6 @@ namespace Compositor {
                 uint64_t modifier;
             } WaylandFormat;
 
-            using FormatRegister = std::unordered_map<uint32_t, std::vector<uint64_t> >;
-
             class ServerMonitor : public Core::IResource {
             public:
                 ServerMonitor() = delete;
@@ -128,6 +126,7 @@ namespace Compositor {
 
             void PresentationClock(const uint32_t clockType);
             void HandleDmaFormatTable(int32_t fd, uint32_t size);
+            void AddShmFormat(const uint32_t format);
 
             void OpenDrmRender(drmDevice* device);
             void OpenDrmRender(const std::string& name);
@@ -157,6 +156,7 @@ namespace Compositor {
             xdg_activation_v1* _wlXdgActivationV1;
             zwp_linux_dmabuf_feedback_v1* _wlZwpLinuxDmabufFeedbackV1;
             std::vector<PixelFormat> _dmaFormats;
+            std::vector<PixelFormat> _shmFormats;
 
             Input _input;
             ServerMonitor _serverMonitor;
@@ -270,7 +270,11 @@ namespace Compositor {
         static void onShmFormat(void* data, struct wl_shm* shm, uint32_t format)
         {
             if (format != DRM_FORMAT_INVALID) {
-                TRACE_GLOBAL(Trace::Backend, ("Found SHM format: %s", DRM::FormatToString(format)));
+                WaylandImplementation* implementation = static_cast<WaylandImplementation*>(data);
+
+                if (implementation != nullptr) {
+                    implementation->AddShmFormat(format);
+                }
             }
         }
 
@@ -482,6 +486,7 @@ namespace Compositor {
             , _wlXdgActivationV1(nullptr)
             , _wlZwpLinuxDmabufFeedbackV1(nullptr)
             , _dmaFormats()
+            , _shmFormats()
             , _input()
             , _serverMonitor(*this, wl_display_get_fd(_wlDisplay))
             , _windows()
@@ -504,6 +509,7 @@ namespace Compositor {
             ASSERT(_dmaFormats.size() > 0);
 
             TRACE(Trace::Backend, ("DMA Formats: %s\n", Compositor::ToString(_dmaFormats).c_str()));
+            TRACE(Trace::Backend, ("SHM Formats: %s\n", Compositor::ToString(_shmFormats).c_str()));
 
             if (const char* token = getenv("XDG_ACTIVATION_TOKEN")) {
                 _activationToken = token;
@@ -701,6 +707,21 @@ namespace Compositor {
                 for (const auto& entry : tempFormats) {
                     _dmaFormats.emplace_back(entry.first, entry.second);
                 }
+            }
+        }
+
+        void WaylandImplementation::AddShmFormat(const uint32_t format)
+        {
+            // Check if format already exists
+            auto it = std::find_if(_shmFormats.begin(), _shmFormats.end(),
+                [format](const PixelFormat& pixelFormat) {
+                    return pixelFormat.Type() == format;
+                });
+
+            if (it == _shmFormats.end()) {
+                // SHM formats typically don't have modifiers, so use default constructor
+                _shmFormats.emplace_back(format);
+                TRACE_GLOBAL(Trace::Backend, ("Added SHM format: %s", DRM::FormatToString(format)));
             }
         }
 
