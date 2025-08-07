@@ -38,7 +38,8 @@ namespace Compositor {
         class WaylandOutput : public IOutput {
 
             struct PresentationFeedbackEvent {
-                PresentationFeedbackEvent() = delete;
+                PresentationFeedbackEvent() = default;
+                
                 PresentationFeedbackEvent(const PresentationFeedbackEvent& copy) = delete;
                 PresentationFeedbackEvent& operator=(const PresentationFeedbackEvent& copy) = delete;
                 PresentationFeedbackEvent(PresentationFeedbackEvent&& move) = delete;
