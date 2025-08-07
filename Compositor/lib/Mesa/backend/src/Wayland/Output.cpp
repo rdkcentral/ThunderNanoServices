@@ -305,6 +305,13 @@ namespace Compositor {
         {
             ASSERT((_surface != nullptr) && (_buffer.IsValid() == true));
 
+            wl_surface_damage_buffer(_surface, 0, 0, _width, _height);
+
+            struct wp_presentation_feedback* feedback = _backend.GetFeedbackInterface(_surface);
+            if (feedback != nullptr) {
+                wp_presentation_feedback_add_listener(feedback, &presentationFeedbackListener, this);
+            }
+
             wl_surface_commit(_surface);
 
             _backend.Flush();
@@ -326,11 +333,13 @@ namespace Compositor {
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)
         {
             struct timespec presentationTimestamp;
+            std::cerr << __FILE__ << ":" << __LINE__ << "BRAM DEBUG" << std::endl;
 
             presentationTimestamp.tv_sec = event.tv_seconds;
             presentationTimestamp.tv_nsec = event.tv_nseconds;
 
             if (_feedback != nullptr) {
+                std::cerr << __FILE__ << ":" << __LINE__ << "BRAM DEBUG" << std::endl;
                 _feedback->Presented(this, event.sequence, Core::Time(presentationTimestamp).Ticks());
             }
         }
