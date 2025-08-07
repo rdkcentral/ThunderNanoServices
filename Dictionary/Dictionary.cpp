@@ -184,7 +184,7 @@ namespace Plugin {
             result = Core::ERROR_NONE;
         
         } else {
-            result = Core::ERROR_INVALID_PATH;
+            result = Core::ERROR_INVALID_PARAMETER;
         }
 
         return (result);
@@ -281,7 +281,7 @@ namespace Plugin {
             result = Core::ERROR_NONE;
         
             } else {
-                result = Core::ERROR_INVALID_PATH;
+                result = Core::ERROR_INVALID_PARAMETER;
             }
                 
 
@@ -337,7 +337,7 @@ namespace Plugin {
             result = Core::ERROR_NONE;
         
         } else{
-            result = Core::ERROR_INVALID_PATH;
+            result = Core::ERROR_INVALID_PARAMETER;
         }
 
         return (result);
@@ -372,7 +372,7 @@ namespace Plugin {
            result = Core::ERROR_NONE;
            
         } else {
-            result = Core::ERROR_INVALID_PATH;
+            result = Core::ERROR_INVALID_PARAMETER;
         }
 
         return (result);
@@ -409,7 +409,7 @@ namespace Plugin {
             result = Core::ERROR_NONE;
                   
         } else {
-            result = Core::ERROR_INVALID_PATH;
+            result = Core::ERROR_INVALID_PARAMETER;
         }
 
         return (result);
