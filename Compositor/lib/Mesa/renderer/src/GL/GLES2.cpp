@@ -34,6 +34,14 @@
 namespace Thunder {
 namespace Compositor {
     namespace Renderer {
+
+#ifdef __DEBUG__
+        // Stack to track debug group context (GLES doesn't provide this automatically)
+        namespace {
+            thread_local std::vector<std::string> g_debugGroupStack;
+        }
+#endif // __DEBUG__
+
         class GLES : public IRenderer {
             using PointCoordinates = std::array<GLfloat, 8>;
 
@@ -45,32 +53,49 @@ namespace Compositor {
             };
 
 #ifdef __DEBUG__
-            static void GLPushDebug(const std::string& file, const std::string& func, const uint32_t line)
+            static std::string GetDebugGroupContext()
             {
-                if (_gles.glPushDebugGroupKHR == nullptr) {
-                    return;
+                if (g_debugGroupStack.empty()) {
+                    return "";
                 }
 
-                std::stringstream message;
-                message << file << ":" << line << "[" << func << "]";
-
-                _gles.glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 1, -1, message.str().c_str());
-            }
-
-            static void GLPopDebug()
-            {
-                if (_gles.glPopDebugGroupKHR != nullptr) {
-                    _gles.glPopDebugGroupKHR();
+                std::stringstream context;
+                for (size_t i = 0; i < g_debugGroupStack.size(); ++i) {
+                    if (i > 0)
+                        context << " -> ";
+                    // Extract just the function name from "file:line[func]"
+                    const std::string& group = g_debugGroupStack[i];
+                    size_t start = group.find('[');
+                    size_t end = group.find(']');
+                    if (start != std::string::npos && end != std::string::npos) {
+                        context << group.substr(start + 1, end - start - 1);
+                    } else {
+                        context << group;
+                    }
                 }
+                return context.str();
             }
 
-            static void DebugSink(GLenum src, GLenum type, GLuint /*id*/, GLenum severity, GLsizei /*len*/, const GLchar* msg,
+            static void DebugSink(GLenum src, GLenum type, GLuint id, GLenum severity, GLsizei /*len*/, const GLchar* msg,
                 const void* /*user*/)
             {
                 std::stringstream line;
                 line << "[" << Compositor::API::GL::SourceString(src)
                      << "](" << Compositor::API::GL::TypeString(type)
-                     << "): " << msg;
+                     << ")";
+
+                // Add debug group context if available
+                std::string context = GetDebugGroupContext();
+                if (!context.empty()) {
+                    line << " in " << context;
+                }
+
+                // Add message ID for more specific error tracking
+                if (id != 0) {
+                    line << " (ID:" << id << ")";
+                }
+
+                line << ": " << msg;
 
                 switch (severity) {
                 case GL_DEBUG_SEVERITY_HIGH_KHR: {
@@ -93,11 +118,39 @@ namespace Compositor {
                 }
             }
 
-#define PushDebug() GLPushDebug(__FILE__, __func__, __LINE__)
-#define PopDebug() GLPopDebug()
+            class GLESDebugScope {
+            public:
+                GLESDebugScope(const char* name)
+                    : _pushed(false)
+                {
+                    if (_gles.glPushDebugGroupKHR != nullptr) {
+                        _gles.glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 2, -1, name);
+                        g_debugGroupStack.push_back(name);
+                        _pushed = true;
+                    }
+                }
+
+                ~GLESDebugScope()
+                {
+                    if (_pushed) {
+                        if (!g_debugGroupStack.empty()) {
+                            g_debugGroupStack.pop_back();
+                        }
+
+                        if (_gles.glPopDebugGroupKHR != nullptr) {
+                            _gles.glPopDebugGroupKHR();
+                        }
+                    }
+                }
+
+            private:
+                bool _pushed;
+            };
+
+#define GLES_DEBUG_SCOPE(name) GLESDebugScope _debug_scope(name)
+
 #else
-#define PushDebug()
-#define PopDebug()
+#define GLES_DEBUG_SCOPE(name)
 #endif
 
             // Framebuffers are usually connected to an output, it's the buffer for the composition to be rendered on.
@@ -113,6 +166,8 @@ namespace Compositor {
                     , _glFrameBuffer(0)
                     , _glRenderBuffer(0)
                 {
+                    GLES_DEBUG_SCOPE("GLESFrameBuffer Constructor");
+
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
@@ -120,12 +175,16 @@ namespace Compositor {
 
                     bool external(false);
 
-                    _eglImage = _parent.Egl().CreateImage(buffer.operator->(), external);
+                    {
+                        GLES_DEBUG_SCOPE("CreateEGLImage");
 
-                    if (_eglImage == EGL_NO_IMAGE) {
-                        EGLint eglError = eglGetError();
-                        TRACE_GLOBAL(Trace::Error, ("Failed to create EGL image: 0x%x", eglError));
-                        ASSERT(false);
+                        _eglImage = _parent.Egl().CreateImage(buffer.operator->(), external);
+
+                        if (_eglImage == EGL_NO_IMAGE) {
+                            EGLint eglError = eglGetError();
+                            TRACE_GLOBAL(Trace::Error, ("Failed to create EGL image: 0x%x", eglError));
+                            ASSERT(false);
+                        }
                     }
 
                     if (external) {
@@ -135,27 +194,72 @@ namespace Compositor {
 
                     ASSERT(_parent.Gles().glEGLImageTargetRenderbufferStorageOES != nullptr);
 
-                    PushDebug();
+                    {
+                        GLES_DEBUG_SCOPE("CreateRenderbuffer");
 
-                    glGenRenderbuffers(1, &_glRenderBuffer);
-                    glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
+                        glGenRenderbuffers(1, &_glRenderBuffer);
+                        glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
 
-                    _parent.Gles().glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
+                        _parent.Gles().glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
 
-                    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-                    glGenFramebuffers(1, &_glFrameBuffer);
+                        GLenum glError = glGetError();
 
-                    Bind();
+                        if (glError != GL_NO_ERROR) {
+                            TRACE_GLOBAL(Trace::Error, ("glEGLImageTargetRenderbufferStorageOES failed: 0x%x", glError));
 
-                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
+                            // Check EGL error too
+                            EGLint eglError = eglGetError();
+                            if (eglError != EGL_SUCCESS) {
+                                TRACE_GLOBAL(Trace::Error, ("EGL error after renderbuffer operation: 0x%x", eglError));
+                            }
+                        } else {
+                            TRACE_GLOBAL(Trace::GL, ("glEGLImageTargetRenderbufferStorageOES succeeded"));
+                        }
 
-                    GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+                        ;
+                    }
 
-                    Unbind();
+                    {
+                        GLES_DEBUG_SCOPE("CreateFramebuffer");
 
-                    PopDebug();
+                        glGenFramebuffers(1, &_glFrameBuffer);
 
-                    ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
+                        Bind();
+
+                        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
+
+                        GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                        TRACE_GLOBAL(Trace::GL, ("Framebuffer status: 0x%x", fb_status));
+
+                        if (fb_status != GL_FRAMEBUFFER_COMPLETE) {
+                            TRACE_GLOBAL(Trace::Error, ("Framebuffer incomplete: 0x%x", fb_status));
+
+                            // Detailed framebuffer status logging
+                            switch (fb_status) {
+                            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT"));
+                                break;
+                            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT"));
+                                break;
+                            case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS"));
+                                break;
+                            case GL_FRAMEBUFFER_UNSUPPORTED:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_UNSUPPORTED"));
+                                break;
+                            default:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: Unknown status 0x%x", fb_status));
+                                break;
+                            }
+                        }
+
+                        Unbind();
+
+                        ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
+                    }
+
                     TRACE(Trace::GL, ("Created GLESFrameBuffer %dpx x %dpx", buffer->Width(), buffer->Height()));
 
                     _parent.Egl().ResetCurrent();
@@ -163,18 +267,15 @@ namespace Compositor {
 
                 ~GLESFrameBuffer()
                 {
+                    GLES_DEBUG_SCOPE("GLESFrameBuffer Destroy");
                     Renderer::EGL::ContextBackup backup;
 
                     _parent.Egl().SetCurrent();
 
-                    Unbind();
-
-                    PushDebug();
+                    // Unbind will be handled by glDeleteFramebuffers
 
                     glDeleteFramebuffers(1, &_glFrameBuffer);
                     glDeleteRenderbuffers(1, &_glRenderBuffer);
-
-                    PopDebug();
 
                     _parent.Egl().ResetCurrent();
 
@@ -188,21 +289,20 @@ namespace Compositor {
 
                 void Unbind() const override
                 {
+                    GLES_DEBUG_SCOPE("FrameBuffer::Unbind");
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
-                    PushDebug();
                     glFlush();
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                    PopDebug();
                 }
 
                 void Bind() const override
                 {
+                    GLES_DEBUG_SCOPE("FrameBuffer::Bind");
+
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
-                    PushDebug();
                     glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
-                    PopDebug();
                 }
 
             private:
@@ -249,8 +349,7 @@ namespace Compositor {
             private:
                 GLuint Compile(GLenum type, const char* source)
                 {
-                    PushDebug();
-
+                    GLES_DEBUG_SCOPE("Compile");
                     GLint status(GL_FALSE);
                     GLuint handle = glCreateShader(type);
 
@@ -267,14 +366,12 @@ namespace Compositor {
                         glDeleteShader(handle);
                         handle = GL_FALSE;
                     }
-
-                    PopDebug();
                     return handle;
                 }
 
                 GLuint Create(const uint8_t variant)
                 {
-                    PushDebug();
+                    GLES_DEBUG_SCOPE("Create");
 
                     GLuint handle(GL_FALSE);
 
@@ -316,8 +413,6 @@ namespace Compositor {
                     } else {
                         TRACE(Trace::Error, ("Error Creating Program"));
                     }
-
-                    PopDebug();
 
                     return handle;
                 }
@@ -363,7 +458,7 @@ namespace Compositor {
 
                 bool Draw(const Compositor::Color& color, const Matrix& matrix)
                 {
-                    PushDebug();
+                    GLES_DEBUG_SCOPE("ColorProgram::Draw");
 
                     if (color[3] >= 1.0) {
                         glDisable(GL_BLEND);
@@ -384,8 +479,6 @@ namespace Compositor {
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
                     glDisableVertexAttribArray(Position());
-
-                    PopDebug();
 
                     return glGetError() == GL_NO_ERROR;
                 }
@@ -445,7 +538,7 @@ namespace Compositor {
 
                 bool Draw(const GLuint id, GLenum target, const bool hasAlpha, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
-                    PushDebug();
+                    GLES_DEBUG_SCOPE("TextureProgram::Draw");
 
                     if ((hasAlpha == false) && (alpha >= 1.0)) {
                         glDisable(GL_BLEND);
@@ -476,8 +569,6 @@ namespace Compositor {
                     glDisableVertexAttribArray(Coordinates());
 
                     glBindTexture(target, 0);
-
-                    PopDebug();
 
                     return glGetError() == GL_NO_ERROR;
                 }
@@ -678,6 +769,8 @@ namespace Compositor {
                 {
                     ASSERT(_buffer != nullptr);
 
+                    GLES_DEBUG_SCOPE("Create GLESTexture");
+
                     _parent.Add(this);
 
                     if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
@@ -740,6 +833,7 @@ namespace Compositor {
 
                 bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
+                    GLES_DEBUG_SCOPE("GLESTexture::Draw");
                     bool result(false);
                     bool hasAlpha(DRM::HasAlpha(_buffer->Format()));
 
@@ -781,6 +875,8 @@ namespace Compositor {
 
                 void ImportDMABuffer()
                 {
+                    GLES_DEBUG_SCOPE("ImportDMABuffer");
+
                     bool external(false);
 
                     Renderer::EGL::ContextBackup backup;
@@ -811,6 +907,8 @@ namespace Compositor {
 
                 void ImportPixelBuffer()
                 {
+                    GLES_DEBUG_SCOPE("ImportPixelBuffer");
+
                     Exchange::IGraphicsBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
 
                     // uint8_t index(0);
@@ -888,8 +986,6 @@ namespace Compositor {
                 }
 #endif
 
-                PushDebug();
-
                 _programs.Announce<ColorProgram>();
                 _programs.Announce<ExternalProgram>();
                 _programs.Announce<RGBAProgram>();
@@ -898,8 +994,6 @@ namespace Compositor {
                 // _programs.Announce<Y_UVProgram>();
                 // _programs.Announce<Y_U_VProgram>();
                 // _programs.Announce<Y_XUXVProgram>();
-
-                PopDebug();
 
                 _egl.ResetCurrent();
             }
@@ -942,6 +1036,7 @@ namespace Compositor {
 
             uint32_t Bind(const Core::ProxyType<IFrameBuffer>& frameBuffer) override
             {
+                GLES_DEBUG_SCOPE("GLES::Bind");
                 ASSERT(_rendering == false);
 
                 _egl.SetCurrent();
@@ -957,6 +1052,7 @@ namespace Compositor {
 
             bool Begin(uint32_t width, uint32_t height) override
             {
+                GLES_DEBUG_SCOPE("GLES::Begin");
                 ASSERT((_rendering == false) && (_egl.IsCurrent() == true));
 
                 _rendering = true;
@@ -969,8 +1065,6 @@ namespace Compositor {
                     }
                 }
 
-                PushDebug();
-
                 glViewport(0, 0, width, height);
 
                 _viewportWidth = width;
@@ -981,13 +1075,12 @@ namespace Compositor {
 
                 glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-                PopDebug();
-
                 return (glGetError() == GL_NO_ERROR);
             }
 
             void End(bool dump) override
             {
+                GLES_DEBUG_SCOPE("GLES::End");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
                 if (dump == true) {
@@ -1010,41 +1103,42 @@ namespace Compositor {
             PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
             void Clear(const Color color) override
             {
+                GLES_DEBUG_SCOPE("GLES::Clear");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
-                PushDebug();
                 glClearColor(color[0], color[1], color[2], color[3]);
                 glClear(GL_COLOR_BUFFER_BIT);
-                PopDebug();
             }
             POP_WARNING()
 
             void Scissor(const Exchange::IComposition::Rectangle* box) override
             {
+                GLES_DEBUG_SCOPE("GLES::Scissor");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
-                PushDebug();
                 if (box != nullptr) {
                     glScissor(box->x, box->y, box->width, box->height);
                     glEnable(GL_SCISSOR_TEST);
                 } else {
                     glDisable(GL_SCISSOR_TEST);
                 }
-                PopDebug();
             }
 
             Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
+                GLES_DEBUG_SCOPE("GLES::FrameBuffer");
                 return (Core::ProxyType<IFrameBuffer>(Core::ProxyType<GLESFrameBuffer>::Create(*this, buffer)));
             };
 
             Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
+                GLES_DEBUG_SCOPE("GLES::Texture");
                 return (Core::ProxyType<ITexture>(Core::ProxyType<GLESTexture>::Create(*this, buffer)));
             };
 
             uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
             {
+                GLES_DEBUG_SCOPE("GLES::Render");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true) && (texture != nullptr));
 
                 const auto index = std::find(_textures.begin(), _textures.end(), &(*texture));
@@ -1079,6 +1173,7 @@ namespace Compositor {
 
             uint32_t Quadrangle(const Color color, const Matrix transformation) override
             {
+                GLES_DEBUG_SCOPE("GLES::Quadrangle");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
                 Matrix gl_matrix;
@@ -1130,7 +1225,7 @@ namespace Compositor {
 
             bool Snapshot(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels)
             {
-                PushDebug();
+                GLES_DEBUG_SCOPE("GLES::Snapshot");
 
                 const GLPixelFormat formatGL(ConvertFormat(format));
 
@@ -1141,8 +1236,6 @@ namespace Compositor {
                 pixels.resize(_viewportWidth * _viewportHeight * (formatGL.BitPerPixel / 8));
 
                 glReadPixels(box.x, box.y, box.width, box.height, formatGL.Format, formatGL.Type, pixels.data());
-
-                PopDebug();
 
                 return glGetError() == GL_NO_ERROR;
             }
