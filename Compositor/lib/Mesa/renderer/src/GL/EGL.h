@@ -75,7 +75,14 @@ namespace Compositor {
                 return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE);
             }
 
-            const std::vector<PixelFormat>& Formats() const;
+            const std::vector<PixelFormat>& TextureFormats() const
+            {
+                return _textureFormats;
+            }
+            const std::vector<PixelFormat>& RenderFormats() const
+            {
+                return _renderFormats;
+            }
 
             EGLImage CreateImage(/*const*/ Exchange::IGraphicsBuffer* buffer, bool&) const;
 
@@ -109,7 +116,7 @@ namespace Compositor {
         private:
             EGLDeviceEXT FindEGLDevice(const int drmFd);
             uint32_t Initialize(EGLenum platform, void* remote_display, bool isMaster);
-            void GetPixelFormats(std::vector<PixelFormat>& formats) const;
+            void GetPixelFormats(std::vector<PixelFormat>& formats, const bool renderOnly) const;
             void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals) const;
             bool IsExternOnly(const uint32_t format, const uint64_t modifier) const;
 
@@ -121,10 +128,8 @@ namespace Compositor {
 
             EGLDeviceEXT _device;
 
-            EGLSurface _draw_surface;
-            EGLSurface _read_surface;
-
-            std::vector<PixelFormat> _formats;
+            std::vector<PixelFormat> _renderFormats;
+            std::vector<PixelFormat> _textureFormats;
 
             int _gbmDescriptor;
             gbm_device* _gbmDevice;
