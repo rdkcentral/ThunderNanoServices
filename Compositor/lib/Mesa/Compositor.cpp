@@ -501,6 +501,11 @@ namespace Plugin {
                     _parent.VSync(output, sequence, time);
                 }
 
+                virtual void Terminated(const Compositor::IOutput* output) override
+                {
+                    _parent.Deactivate(PluginHost::IShell::REQUESTED);
+                }
+
             private:
                 CompositorImplementation& _parent;
             };
@@ -555,6 +560,7 @@ namespace Plugin {
 
         CompositorImplementation()
             : _adminLock()
+            , _service(nullptr)
             , _output(nullptr)
             , _renderer()
             , _observers()
@@ -598,6 +604,11 @@ namespace Plugin {
                 ::close(_renderDescriptor);
                 _renderDescriptor = Compositor::InvalidFileDescriptor;
             }
+
+            if (_service != nullptr) {
+                _service->Release();
+                _service = nullptr;
+            }
         }
 
     public:
@@ -606,11 +617,17 @@ namespace Plugin {
          */
         uint32_t Configure(PluginHost::IShell* service) override
         {
+
+            ASSERT(service != nullptr);
+
+            _service = service;
+            _service->AddRef();
+
             uint32_t result = Core::ERROR_NONE;
             Config config;
 
             Core::OptionalType<Core::JSON::Error> error;
-            bool parseSuccess = config.FromString(service->ConfigLine(), error);
+            bool parseSuccess = config.FromString(_service->ConfigLine(), error);
 
             if (!parseSuccess) {
                 if (error.IsSet()) {
@@ -690,10 +707,10 @@ namespace Plugin {
 
                 _engine = Core::ProxyType<RPC::InvokeServer>::Create(&Core::IWorkerPool::Instance());
 
-                _dispatcher = new DisplayDispatcher(Core::NodeId(comrpcPath.c_str()), service->ProxyStubPath(), this, _engine);
+                _dispatcher = new DisplayDispatcher(Core::NodeId(comrpcPath.c_str()), _service->ProxyStubPath(), this, _engine);
 
                 if (_dispatcher->IsListening() == true) {
-                    PluginHost::ISubSystem* subSystems = service->SubSystems();
+                    PluginHost::ISubSystem* subSystems = _service->SubSystems();
 
                     ASSERT(subSystems != nullptr);
 
@@ -840,6 +857,12 @@ namespace Plugin {
                 _canCommit.store(true, std::memory_order_release);
             }
             _commitCV.notify_one();
+        }
+
+        void Deactivate(const PluginHost::IShell::reason reason)
+        {
+            ASSERT(_service != nullptr);
+            Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, reason));
         }
 
         void Render()
@@ -1002,6 +1025,7 @@ namespace Plugin {
 
     private:
         mutable Core::CriticalSection _adminLock;
+        PluginHost::IShell* _service;
         Output* _output;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         Observers _observers;

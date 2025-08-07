@@ -123,6 +123,7 @@ namespace Compositor {
                 return _commitSequence++;
             }
 
+            void Close();
         private:
             Wayland::IBackend& _backend;
             wl_surface* _surface;
