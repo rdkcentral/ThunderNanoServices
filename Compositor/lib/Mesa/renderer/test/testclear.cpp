@@ -246,7 +246,18 @@ private:
 
     void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint64_t sequence, uint64_t pts /*usec from epoch*/)
     {
-        _fps = 1 / ((pts - _ppts) / 1000000.0f);
+        if (_ppts != 0) { // Skip first frame
+            uint64_t frameDelta = pts - _ppts;
+
+            if (frameDelta > 0) { // Prevent division by zero
+                _fps = 1000000.0f / frameDelta; // Convert microseconds to fps
+            } else {
+                _fps = 0.0f; // Same timestamp or time went backwards
+            }
+        } else {
+            _fps = 0.0f; // First frame
+        }
+
         _sequence = sequence;
         _ppts = pts;
         _vsync.notify_all();
