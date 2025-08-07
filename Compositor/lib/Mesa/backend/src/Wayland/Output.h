@@ -130,8 +130,7 @@ namespace Compositor {
             xdg_toplevel* _topLevelSurface;
             const uint32_t _width;
             const uint32_t _height;
-            uint32_t _format;
-            uint64_t _modifier;
+            Compositor::PixelFormat _format;
             Compositor::Matrix _matrix;
             Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
             Core::Event _signal;

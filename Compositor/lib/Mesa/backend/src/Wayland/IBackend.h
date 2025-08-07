@@ -19,6 +19,7 @@
 #pragma once
 
 #include <interfaces/IGraphicsBuffer.h>
+#include <CompositorTypes.h>
 
 #include <wayland-client-protocol.h>
 #include "generated/presentation-time-client-protocol.h"
@@ -40,7 +41,7 @@ namespace Compositor {
 
                 virtual xdg_surface* WindowSurface(wl_surface* surface) const = 0;
 
-                virtual void Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const = 0;
+                virtual const std::vector<PixelFormat>& Formats() const = 0;
 
                 virtual int RenderNode() const = 0;
 
