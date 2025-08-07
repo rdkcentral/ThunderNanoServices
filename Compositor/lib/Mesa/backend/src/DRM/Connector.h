@@ -24,6 +24,7 @@
 #include <IOutput.h>
 #include <DRM.h>
 #include <DRMTypes.h>
+#include <CompositorUtils.h>
 
 namespace Thunder {
 namespace Compositor {
@@ -164,12 +165,10 @@ namespace Compositor {
 
             Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
                 : _backend(backend)
-                , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, connectorId)
                 , _crtc()
                 , _frameBuffer()
                 , _feedback(feedback)
-                , _renderer(renderer)
                 , _needsModeSet(false)
                 , _selectedMode({})
                 , _dimensionsAdjusted(false)
@@ -195,15 +194,29 @@ namespace Compositor {
 
                     ASSERT((_selectedMode.hdisplay != 0) && (_selectedMode.vdisplay != 0));
 
-                    _frameBuffer.Configure(backendFd, _selectedMode.hdisplay, _selectedMode.vdisplay, _format, _renderer);
+                    Compositor::PixelFormat selectedFormat(format);
+
+                    if (selectedFormat.IsValid() == false) {
+                        std::vector<PixelFormat> drmFormats = Compositor::DRM::ExtractFormats(_primaryPlane);
+
+                        TRACE(Trace::Information, (_T("Selecting format... ")));
+
+                        TRACE(Trace::Backend, ("DRM formats: %s", Compositor::ToString(drmFormats).c_str()));                        
+                        TRACE(Trace::Backend, (_T("Renderer exposes %d render formats. "), renderer->RenderFormats().size()));
+                        TRACE(Trace::Backend, (_T("Backend accepts %d formats."), drmFormats.size()));
+
+                        selectedFormat = Compositor::IntersectFormat(format, { &drmFormats /*, &renderer->RenderFormats()*/ });
+
+                        ASSERT(selectedFormat.IsValid() == true);
+                    }
+
+                    _frameBuffer.Configure(backendFd, _selectedMode.hdisplay, _selectedMode.vdisplay, selectedFormat, renderer);
 
                     ASSERT(_frameBuffer.IsValid() == true);
                     TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, Resolution=%ux%u", this, _connector.Id(), _crtc.Id(), _selectedMode.hdisplay, _selectedMode.vdisplay));
 
                     if (_dimensionsAdjusted) {
-                        TRACE(Trace::Warning, ("Requested dimensions %ux%u@%u adjusted to %ux%u@%u for connector %u", 
-                            width, height, refreshRate ,
-                            _selectedMode.hdisplay, _selectedMode.vdisplay, _selectedMode.vrefresh, connectorId));
+                        TRACE(Trace::Warning, ("Requested dimensions %ux%u@%u adjusted to %ux%u@%u for connector %u", width, height, refreshRate, _selectedMode.hdisplay, _selectedMode.vdisplay, _selectedMode.vrefresh, connectorId));
                     }
                 }
             }
@@ -327,7 +340,6 @@ namespace Compositor {
 
         private:
             Core::ProxyType<Compositor::IBackend> _backend;
-            const Compositor::PixelFormat _format;
             Compositor::DRM::Properties _connector;
             Compositor::DRM::Properties _crtc;
             Compositor::DRM::Properties _primaryPlane;
@@ -337,7 +349,6 @@ namespace Compositor {
             FrameBufferImplementation _frameBuffer;
 
             Compositor::IOutput::ICallback* _feedback;
-            const Core::ProxyType<IRenderer>& _renderer;
 
             bool _needsModeSet;
             drmModeModeInfo _selectedMode;
