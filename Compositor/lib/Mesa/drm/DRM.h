@@ -32,7 +32,10 @@ namespace Exchange {
 }
 
 namespace Compositor {
+    class PixelFormat;
+    
     namespace DRM {
+        class Properties;
 
         using Identifier = uint32_t;
         static constexpr uint32_t InvalidIdentifier = ~0;
@@ -73,6 +76,7 @@ namespace Compositor {
         extern bool ModesEqual(const drmModeModeInfo* mode1, const drmModeModeInfo* mode2);
         extern bool SelectBestMode(const drmModeConnector* const connector, const uint32_t requestedWidth, const uint32_t requestedHeight, const uint32_t requestedRefreshRate, bool& dimensionsAdjusted, drmModeModeInfo& selectedMode);
         extern ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId, const uint32_t requestedWidth, const uint32_t requestedHeigh, const uint32_t requestedRefreshRate);
+        extern std::vector<PixelFormat> ExtractFormats(const Properties& properties);
     } // namespace DRM
 } // namespace Compositor
 } // namespace Thunder
