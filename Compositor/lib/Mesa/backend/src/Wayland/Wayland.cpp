@@ -861,7 +861,7 @@ namespace Compositor {
 
         Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
         {
-            return (Core::ProxyType<IOutput>(_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, format, renderer)));
+            return (Core::ProxyType<IOutput>(_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, format, renderer, feedback)));
         }
 
         struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const

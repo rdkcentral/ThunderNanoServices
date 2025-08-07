@@ -77,7 +77,7 @@ namespace Compositor {
             WaylandOutput(WaylandOutput&&) = delete;
             WaylandOutput(const WaylandOutput&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
-            WaylandOutput(Wayland::IBackend& backend, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer);
+            WaylandOutput(Wayland::IBackend& backend, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback);
 
             virtual ~WaylandOutput();
 
@@ -137,6 +137,7 @@ namespace Compositor {
             uint64_t _commitSequence;
             const Core::ProxyType<Compositor::IRenderer>& _renderer;
             Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer;
+            Compositor::IOutput::ICallback* _feedback;
         }; // WaylandOutput
 
     } // namespace Backend

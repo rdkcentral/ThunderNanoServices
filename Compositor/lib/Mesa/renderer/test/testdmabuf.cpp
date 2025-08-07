@@ -64,7 +64,7 @@ private:
 
         virtual ~Sink() = default;
 
-        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+        virtual void Presented(const Compositor::IOutput* output, const uint64_t sequence, const uint64_t time) override
         {
             _parent.HandleVSync(output, sequence, time);
         }
@@ -229,7 +229,7 @@ private:
         rotation += _radPerFrame;
     }
 
-    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
+    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint64_t sequence, uint64_t pts /*usec from epoch*/)
     {
         _fps = 1 / ((pts - _ppts) / 1000000.0f);
         _sequence = sequence;
@@ -266,7 +266,7 @@ private:
     std::condition_variable _vsync;
     uint64_t _ppts;
     float _fps;
-    uint32_t _sequence;
+    uint64_t _sequence;
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {
