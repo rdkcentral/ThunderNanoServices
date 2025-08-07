@@ -496,7 +496,7 @@ namespace Plugin {
                 }
                 ~Sink() override = default;
 
-                virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
+                virtual void Presented(const Compositor::IOutput* output, const uint64_t sequence, const uint64_t time) override
                 {
                     _parent.VSync(output, sequence, time);
                 }
@@ -826,7 +826,7 @@ namespace Plugin {
         END_INTERFACE_MAP
 
     private:
-        void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
+        void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint64_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
         {
             {
                 std::lock_guard<std::mutex> lock(_clientLock);

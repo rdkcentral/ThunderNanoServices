@@ -141,7 +141,7 @@ namespace Compositor {
 
         WaylandOutput::WaylandOutput(
             Wayland::IBackend& backend, const string& name,
-            const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer)
+            const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
             : _backend(backend)
             , _surface(nullptr)
             , _windowSurface(nullptr)
@@ -155,6 +155,7 @@ namespace Compositor {
             , _commitSequence(0)
             , _renderer(renderer)
             , _frameBuffer()
+            , _feedback(feedback)
 
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
@@ -274,7 +275,6 @@ namespace Compositor {
 
         void WaylandOutput::SurfaceConfigure()
         {
-
             ASSERT(_surface != nullptr);
             ASSERT(_backend.RenderNode() > 0);
 
@@ -323,7 +323,15 @@ namespace Compositor {
 
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)
         {
-            // TODO: Implement presentation feedback handling here.
+            struct timespec presentationTimestamp;
+
+            presentationTimestamp.tv_sec = event.tv_seconds;
+            presentationTimestamp.tv_nsec = event.tv_nseconds;
+
+            if (_feedback != nullptr) {
+                _feedback->Presented(this, event.sequence, Core::Time(presentationTimestamp).Ticks());
+            }
+        }
         }
     } // namespace Backend
 } // namespace Compositor
