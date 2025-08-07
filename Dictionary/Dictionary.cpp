@@ -52,7 +52,6 @@ namespace Plugin {
     bool Dictionary::CreateInternalDictionary(const string& currentSpace, const NameSpace& current)
     {
         bool correctStructure(true);
-        static string delimiter = Delimiter();
         Core::JSON::ArrayType<NameSpace::Entry>::ConstIterator keyIndex(current.Dictionary.Elements());
         Core::JSON::ArrayType<NameSpace>::ConstIterator spaceIndex(current.Spaces.Elements());
         std::list<RuntimeEntry>* currentList = NULL;
@@ -77,7 +76,7 @@ namespace Plugin {
         while ((correctStructure == true) && (spaceIndex.Next() == true)) {
             string nextnameSpace(spaceIndex.Current().Name.Value());
             correctStructure = IsValidName(nextnameSpace);
-            string nameSpace = (currentSpace == delimiter) ? currentSpace + nextnameSpace : currentSpace + delimiter + nextnameSpace;
+            string nameSpace = (currentSpace == Delimiter()) ? currentSpace + nextnameSpace : currentSpace + Delimiter() + nextnameSpace;
             correctStructure = correctStructure && CreateInternalDictionary(nameSpace, spaceIndex.Current());
         }
 
