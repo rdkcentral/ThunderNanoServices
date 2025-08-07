@@ -82,7 +82,7 @@ namespace Compositor {
             TRACE_GLOBAL(Trace::Backend, ("Bye bye, cruel world! <(x_X)>"));
             WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
             // Maybe we want to delete ?
-            // implementation->Release();
+            implementation->Close();
         }
 
         const struct xdg_toplevel_listener WaylandOutput::toplevelListener = {
@@ -334,6 +334,12 @@ namespace Compositor {
                 _feedback->Presented(this, event.sequence, Core::Time(presentationTimestamp).Ticks());
             }
         }
+
+        void WaylandOutput::Close()
+        {
+            if (_feedback != nullptr) {
+                _feedback->Terminated(this);
+            }
         }
     } // namespace Backend
 } // namespace Compositor

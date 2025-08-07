@@ -37,6 +37,8 @@ namespace Compositor {
              * @param time Presentation time stamp, 0 means never presented/timeout.
              */
             virtual void Presented(const IOutput* output, const uint64_t sequence, const uint64_t time) = 0;
+
+            virtual void Terminated(const IOutput* output) = 0;
         }; // struct ICallback
 
         /*

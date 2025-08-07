@@ -69,11 +69,14 @@ private:
             _parent.HandleVSync(output, sequence, time);
         }
 
-        // virtual void Display(const int fd, const std::string& node) override
-        // {
-        //     TRACE(Trace::Information, (_T("Connector fd %d opened on %s"), fd, node.c_str()));
-        //     // _parent.HandleGPUNode(node);
-        // }
+        virtual void Terminated(const Compositor::IOutput* output) override
+        {
+            TRACE_GLOBAL(Thunder::Trace::Information, ("Output terminated, exiting application"));
+
+            _parent.Stop();
+            _parent.RequestExit();
+            _parent.HandleVSync(output, 0, 0);
+        }
 
     private:
         RenderTest& _parent;
@@ -102,6 +105,9 @@ public:
         , _ppts(Core::Time::Now().Ticks())
         , _fps()
         , _sequence(0)
+        , _exitMutex()
+        , _exitSignal()
+        , _exitRequested(false)
     {
         _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
@@ -163,6 +169,19 @@ public:
     bool Running() const
     {
         return _running;
+    }
+
+    void RequestExit()
+    {
+        TRACE(Trace::Information, ("Exit requested via output termination"));
+        std::lock_guard<std::mutex> lock(_exitMutex);
+        _exitRequested = true;
+        _exitSignal.notify_one();
+    }
+
+    bool ShouldExit() const
+    {
+        return _exitRequested.load();
     }
 
 private:
@@ -267,6 +286,9 @@ private:
     uint64_t _ppts;
     float _fps;
     uint64_t _sequence;
+    std::mutex _exitMutex;
+    std::condition_variable _exitSignal;
+    std::atomic<bool> _exitRequested;
 }; // RenderTest
 
 class ConsoleOptions : public Core::Options {
@@ -347,22 +369,41 @@ int main(int argc, char* argv[])
 
         test.Start();
 
-        char keyPress;
+        bool quitApp = false;
 
-        do {
-            keyPress = toupper(getchar());
+        while (!test.ShouldExit() && !quitApp) {
+            // Check for keyboard input non-blockingly
+            if (std::cin.rdbuf()->in_avail() > 0) {
+                char keyPress;
+                std::cin >> keyPress;
+                keyPress = toupper(keyPress);
 
-            switch (keyPress) {
-            case 'S': {
-                (test.Running() == false) ? test.Start() : test.Stop();
-                break;
+                switch (keyPress) {
+                case 'S': {
+                    if (!test.ShouldExit()) {
+                        (test.Running() == false) ? test.Start() : test.Stop();
+                    }
+                    break;
+                }
+                case 'Q': {
+                    quitApp = true;
+                    break;
+                }
+                default:
+                    break;
+                }
             }
-            default:
-                break;
-            }
 
-        } while (keyPress != 'Q');
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
 
+        if (test.ShouldExit()) {
+            TRACE_GLOBAL(Thunder::Trace::Information, ("Exiting due to terminated output ..."));
+        } else if (quitApp) {
+            TRACE_GLOBAL(Thunder::Trace::Information, ("User requested quit via keyboard"));
+        }
+
+        test.Stop();
         TRACE_GLOBAL(Thunder::Trace::Information, ("Exiting %s.... ", executableName));
     }
 
