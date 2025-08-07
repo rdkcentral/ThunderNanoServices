@@ -279,7 +279,7 @@ namespace Compositor {
                     ASSERT(_frameBuffer.IsValid() == true);
                 }
 
-                wl_buffer* buffer = _backend.CreateBuffer(_buffer.operator->());
+                wl_buffer* buffer = _backend.Buffer(_buffer.operator->());
 
                 wl_buffer_add_listener(buffer, &bufferListener, nullptr);
 
