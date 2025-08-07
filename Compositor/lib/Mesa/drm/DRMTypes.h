@@ -202,14 +202,18 @@ namespace Compositor {
             Properties& operator=(const Properties&) = delete;
 
             Properties()
-                : _objectId(InvalidIdentifier)
+                : _descriptor(-1)
+                , _objectId(InvalidIdentifier)
+                , _objectType()
+                , _properties()
+
             {
             }
             Properties(const int fd, object_type type, const Identifier objectId)
             {
                 Load(fd, type, objectId);
             }
-            ~Properties() = default;
+            ~Properties();
 
         public:
             Identifier Id(const property which) const
@@ -231,8 +235,14 @@ namespace Compositor {
 
             void Load(const int fd, object_type type, const Identifier objectId);
 
+            bool Value(const property which, uint64_t& value) const;
+            
+            drmModePropertyBlobPtr Blob(const property which) const;
+
         private:
+            int _descriptor;
             Identifier _objectId;
+            object_type _objectType;
             Elements _properties;
         };
     } // namespace DRM
