@@ -501,7 +501,7 @@ namespace Plugin {
                     _parent.VSync(output, sequence, time);
                 }
 
-                virtual void Terminated(const Compositor::IOutput* output) override
+                virtual void Terminated(const Compositor::IOutput* output VARIABLE_IS_NOT_USED) override
                 {
                     _parent.Deactivate(PluginHost::IShell::REQUESTED);
                 }

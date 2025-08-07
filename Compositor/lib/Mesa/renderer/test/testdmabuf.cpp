@@ -69,7 +69,7 @@ private:
             _parent.HandleVSync(output, sequence, time);
         }
 
-        virtual void Terminated(const Compositor::IOutput* output) override
+        virtual void Terminated(const Compositor::IOutput* output VARIABLE_IS_NOT_USED) override
         {
             TRACE_GLOBAL(Thunder::Trace::Information, ("Output terminated, exiting application"));
 
