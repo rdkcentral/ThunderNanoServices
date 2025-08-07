@@ -99,6 +99,7 @@ namespace Compositor {
 #define PushDebug()
 #define PopDebug()
 #endif
+
             // Framebuffers are usually connected to an output, it's the buffer for the composition to be rendered on.
             class GLESFrameBuffer : public IFrameBuffer {
             public:
@@ -108,7 +109,6 @@ namespace Compositor {
 
                 GLESFrameBuffer(const GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : _parent(parent)
-                    , _external(false)
                     , _eglImage()
                     , _glFrameBuffer(0)
                     , _glRenderBuffer(0)
@@ -116,9 +116,23 @@ namespace Compositor {
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
-                    _eglImage = _parent.Egl().CreateImage(buffer.operator->(), _external);
-                    ASSERT(_eglImage != EGL_NO_IMAGE);
-                    // If this triggers the platform is very old (pre-2008) and not supporting OpenGL 3.0 or higher.
+                    TRACE_GLOBAL(Trace::GL, ("Creating framebuffer for buffer: %dx%d, format=0x%x, modifier=0x%" PRIx64 ", type=%d", buffer->Width(), buffer->Height(), buffer->Format(), buffer->Modifier(), buffer->Type()));
+
+                    bool external(false);
+
+                    _eglImage = _parent.Egl().CreateImage(buffer.operator->(), external);
+
+                    if (_eglImage == EGL_NO_IMAGE) {
+                        EGLint eglError = eglGetError();
+                        TRACE_GLOBAL(Trace::Error, ("Failed to create EGL image: 0x%x", eglError));
+                        ASSERT(false);
+                    }
+
+                    if (external) {
+                        TRACE_GLOBAL(Trace::Error, ("Usage of external EGLImages in GLESFrameBuffers is not supported, please use a different buffer format or modifier"));
+                        ASSERT(false);
+                    }
+
                     ASSERT(_parent.Gles().glEGLImageTargetRenderbufferStorageOES != nullptr);
 
                     PushDebug();
@@ -191,14 +205,8 @@ namespace Compositor {
                     PopDebug();
                 }
 
-                bool External() const
-                {
-                    return _external;
-                }
-
             private:
                 const GLES& _parent;
-                bool _external;
                 EGLImage _eglImage;
                 GLuint _glFrameBuffer;
                 GLuint _glRenderBuffer;
@@ -527,7 +535,6 @@ namespace Compositor {
 
             static bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
             {
-
                 png_structp pngPointer = nullptr;
 
                 pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
@@ -1088,12 +1095,12 @@ namespace Compositor {
 
             const std::vector<PixelFormat>& RenderFormats() const override
             {
-                return _egl.Formats();
+                return _egl.RenderFormats();
             }
 
             const std::vector<PixelFormat>& TextureFormats() const override
             {
-                return _egl.Formats();
+                return _egl.TextureFormats();
             }
             Core::ProxyType<Exchange::IGraphicsBuffer> Bound() const override
             {
