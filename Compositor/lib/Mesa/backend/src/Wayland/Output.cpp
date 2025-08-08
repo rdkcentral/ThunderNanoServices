@@ -20,6 +20,7 @@
 #include <Output.h>
 
 #include <drm_fourcc.h>
+
 #include <CompositorUtils.h>
 
 namespace Thunder {
@@ -59,15 +60,6 @@ namespace Compositor {
         void WaylandOutput::onTopLevelConfigure(void* data, struct xdg_toplevel* xdg_toplevel, int32_t width, int32_t height, struct wl_array* states)
         {
             TRACE_GLOBAL(Trace::Backend, ("Toplevel Configure width: %d height: %d", width, height));
-
-            // if (width == 0 || height == 0) {
-            //     return;
-            // }
-
-            // WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
-
-            // implementation->_width = width;
-            // implementation->_height = height;
         }
 
         /**
@@ -149,8 +141,10 @@ namespace Compositor {
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
             , _topLevelSurface(nullptr)
-            , _width(width)
-            , _height(height)
+            , _renderWidth(width)
+            , _renderHeight(height)
+            , _windowWidth(0)
+            , _windowHeight(0)
             , _format(format)
             , _buffer()
             , _signal(false, true)
@@ -158,9 +152,10 @@ namespace Compositor {
             , _renderer(renderer)
             , _frameBuffer()
             , _feedback(feedback)
-
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
+
+            CalculateWindowSize(_renderWidth, _renderHeight);
 
             if (format.IsValid() == false) {
                 TRACE(Trace::Information, (_T("Selecting format... ")));
@@ -282,7 +277,7 @@ namespace Compositor {
 
             if (_buffer.IsValid() == false) {
                 TRACE(Trace::Information, ("Create buffer with format: %s", Compositor::ToString(_format).c_str()));
-                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _width, _height, _format);
+                _buffer = Compositor::CreateBuffer(_backend.RenderNode(), _renderWidth, _renderHeight, _format);
                 ASSERT(_buffer.IsValid() == true);
 
                 if (_renderer.IsValid() == true) {
@@ -305,7 +300,7 @@ namespace Compositor {
         {
             ASSERT((_surface != nullptr) && (_buffer.IsValid() == true));
 
-            wl_surface_damage_buffer(_surface, 0, 0, _width, _height);
+            wl_surface_damage_buffer(_surface, 0, 0, _renderWidth, _renderHeight);
 
             struct wp_presentation_feedback* feedback = _backend.GetFeedbackInterface(_surface);
             if (feedback != nullptr) {
@@ -333,13 +328,11 @@ namespace Compositor {
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent& event)
         {
             struct timespec presentationTimestamp;
-            std::cerr << __FILE__ << ":" << __LINE__ << "BRAM DEBUG" << std::endl;
 
             presentationTimestamp.tv_sec = event.tv_seconds;
             presentationTimestamp.tv_nsec = event.tv_nseconds;
 
             if (_feedback != nullptr) {
-                std::cerr << __FILE__ << ":" << __LINE__ << "BRAM DEBUG" << std::endl;
                 _feedback->Presented(this, event.sequence, Core::Time(presentationTimestamp).Ticks());
             }
         }
@@ -349,6 +342,61 @@ namespace Compositor {
             if (_feedback != nullptr) {
                 _feedback->Terminated(this);
             }
+        }
+
+        void WaylandOutput::CalculateWindowSize(uint32_t renderWidth, uint32_t renderHeight)
+        {
+            // Target window sizes for development comfort
+            constexpr uint32_t MAX_WINDOW_WIDTH = 1280;
+            constexpr uint32_t MAX_WINDOW_HEIGHT = 720;
+            constexpr uint32_t MIN_WINDOW_WIDTH = 640;
+            constexpr uint32_t MIN_WINDOW_HEIGHT = 480;
+
+            // If render size is already reasonable, use it as-is
+            if (renderWidth <= MAX_WINDOW_WIDTH && renderHeight <= MAX_WINDOW_HEIGHT) {
+                _windowWidth = renderWidth;
+                _windowHeight = renderHeight;
+                TRACE(Trace::Backend, ("Render size %ux%u is reasonable, using as window size", renderWidth, renderHeight));
+                return;
+            }
+
+            // Calculate aspect-ratio preserving scale-down
+            const float renderAspect = static_cast<float>(renderWidth) / static_cast<float>(renderHeight);
+
+            uint32_t targetWidth = MAX_WINDOW_WIDTH;
+            uint32_t targetHeight = static_cast<uint32_t>(targetWidth / renderAspect);
+
+            // If height is too big, scale by height instead
+            if (targetHeight > MAX_WINDOW_HEIGHT) {
+                targetHeight = MAX_WINDOW_HEIGHT;
+                targetWidth = static_cast<uint32_t>(targetHeight * renderAspect);
+            }
+
+            // Ensure minimum size
+            if (targetWidth < MIN_WINDOW_WIDTH || targetHeight < MIN_WINDOW_HEIGHT) {
+                targetWidth = MIN_WINDOW_WIDTH;
+                targetHeight = MIN_WINDOW_HEIGHT;
+            }
+
+            _windowWidth = targetWidth;
+            _windowHeight = targetHeight;
+
+            const float scaleX = static_cast<float>(renderWidth) / static_cast<float>(_windowWidth);
+            const float scaleY = static_cast<float>(renderHeight) / static_cast<float>(_windowHeight);
+
+            TRACE(Trace::Backend, ("Calculated window scaling: %ux%u (scale %.2fx%.2f)", _windowWidth, _windowHeight, scaleX, scaleY));
+        }
+
+        void WaylandOutput::HandleWindowResize(uint32_t newWidth, uint32_t newHeight)
+        {
+            if (newWidth == _windowWidth && newHeight == _windowHeight) {
+                return; // No change
+            }
+
+            TRACE(Trace::Backend, ("Window resize: %ux%u → %ux%u (render buffer stays %ux%u)", _windowWidth, _windowHeight, newWidth, newHeight, _renderWidth, _renderHeight));
+
+            _windowWidth = newWidth;
+            _windowHeight = newHeight;
         }
     } // namespace Backend
 } // namespace Compositor
