@@ -34,6 +34,7 @@ WaylandGenerator(
         linux-dmabuf-unstable-v1
         pointer-gestures-unstable-v1
         relative-pointer-unstable-v1
+        viewporter
         ${CMAKE_CURRENT_LIST_DIR}/protocols/xdg-activation-v1.xml
         ${CMAKE_CURRENT_LIST_DIR}/protocols/drm.xml
 )
