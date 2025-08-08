@@ -19,16 +19,19 @@
 
 #include "../Module.h"
 
-#include <CompositorTypes.h>
-#include <IBuffer.h>
 #include <interfaces/IComposition.h>
 #include <interfaces/IGraphicsBuffer.h>
+
+#include <CompositorTypes.h>
+#include <IBuffer.h>
+
+#include "IBackend.h"
+#include "IOutput.h"
+
 #include <DRM.h>
 
-#include "IOutput.h"
-#include "IBackend.h"
-
 #include <wayland-client.h>
+
 #include "generated/presentation-time-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
@@ -39,7 +42,7 @@ namespace Compositor {
 
             struct PresentationFeedbackEvent {
                 PresentationFeedbackEvent() = default;
-                
+
                 PresentationFeedbackEvent(const PresentationFeedbackEvent& copy) = delete;
                 PresentationFeedbackEvent& operator=(const PresentationFeedbackEvent& copy) = delete;
                 PresentationFeedbackEvent(PresentationFeedbackEvent&& move) = delete;
@@ -100,6 +103,9 @@ namespace Compositor {
             const string& Node() const override;
             Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override;
 
+            uint32_t WindowWidth() const { return _windowWidth; }
+            uint32_t WindowHeight() const { return _windowHeight; }
+
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
             static const struct xdg_surface_listener windowSurfaceListener;
@@ -124,14 +130,20 @@ namespace Compositor {
             }
 
             void Close();
+
+            void CalculateWindowSize(uint32_t renderWidth, uint32_t renderHeight);
+            void HandleWindowResize(uint32_t newWidth, uint32_t newHeight);
+
         private:
             Wayland::IBackend& _backend;
             wl_surface* _surface;
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;
             xdg_toplevel* _topLevelSurface;
-            const uint32_t _width;
-            const uint32_t _height;
+            const uint32_t _renderWidth;
+            const uint32_t _renderHeight;
+            uint32_t _windowWidth;
+            uint32_t _windowHeight;
             Compositor::PixelFormat _format;
             Compositor::Matrix _matrix;
             Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
