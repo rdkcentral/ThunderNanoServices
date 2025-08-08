@@ -59,7 +59,16 @@ namespace Compositor {
          */
         void WaylandOutput::onTopLevelConfigure(void* data, struct xdg_toplevel* xdg_toplevel, int32_t width, int32_t height, struct wl_array* states)
         {
-            TRACE_GLOBAL(Trace::Backend, ("Toplevel Configure width: %d height: %d", width, height));
+            TRACE_GLOBAL(Trace::Backend, ("Toplevel Configure window width: %d height: %d", width, height));
+
+            if (width == 0 || height == 0) {
+                // Compositor is asking us to choose the size - use our calculated window size
+                return;
+            }
+
+            WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
+
+            implementation->HandleWindowResize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
         }
 
         /**
@@ -141,6 +150,7 @@ namespace Compositor {
             , _windowSurface(nullptr)
             , _windowDecoration(nullptr)
             , _topLevelSurface(nullptr)
+            , _viewport(nullptr)
             , _renderWidth(width)
             , _renderHeight(height)
             , _windowWidth(0)
@@ -199,6 +209,12 @@ namespace Compositor {
             xdg_surface_add_listener(_windowSurface, &windowSurfaceListener, this);
             xdg_toplevel_add_listener(_topLevelSurface, &toplevelListener, this);
 
+            _viewport = _backend.GetViewportInterface(_surface);
+
+            if (_viewport != nullptr) {
+                TRACE(Trace::Backend, ("Viewport support available for high-quality scaling"));
+            }
+
             _backend.RoundTrip();
 
             wl_surface_commit(_surface);
@@ -211,6 +227,11 @@ namespace Compositor {
         WaylandOutput::~WaylandOutput()
         {
             _signal.ResetEvent();
+
+            if (_viewport != nullptr) {
+                wp_viewport_destroy(_viewport);
+                _viewport = nullptr;
+            }
 
             if (_windowDecoration != nullptr) {
                 zxdg_toplevel_decoration_v1_destroy(_windowDecoration);
@@ -290,6 +311,8 @@ namespace Compositor {
                 wl_buffer_add_listener(buffer, &bufferListener, nullptr);
 
                 wl_surface_attach(_surface, buffer, 0, 0);
+
+                ConfigureViewportScaling();
 
                 _signal.SetEvent();
             }
@@ -397,6 +420,28 @@ namespace Compositor {
 
             _windowWidth = newWidth;
             _windowHeight = newHeight;
+
+            ConfigureViewportScaling();
+        }
+
+        void WaylandOutput::ConfigureViewportScaling()
+        {
+            if (_viewport != nullptr) {
+                // Set source rectangle: full render buffer (in buffer coordinates)
+                wp_viewport_set_source(_viewport,
+                    wl_fixed_from_int(0), // src_x
+                    wl_fixed_from_int(0), // src_y
+                    wl_fixed_from_int(_renderWidth), // src_width
+                    wl_fixed_from_int(_renderHeight) // src_height
+                );
+
+                // Set destination size: window size (in surface coordinates)
+                wp_viewport_set_destination(_viewport, _windowWidth, _windowHeight);
+
+                TRACE(Trace::Backend, ("Configured viewport scaling: %ux%u → %ux%u", _renderWidth, _renderHeight, _windowWidth, _windowHeight));
+            } else {
+                TRACE(Trace::Information, ("No viewport available, compositor will scale %ux%u buffer to %ux%u window", _renderWidth, _renderHeight, _windowWidth, _windowHeight));
+            }
         }
     } // namespace Backend
 } // namespace Compositor

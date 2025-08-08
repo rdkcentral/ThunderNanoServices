@@ -113,7 +113,8 @@ namespace Compositor {
             int Flush() const override;
             int RenderNode() const override;
 
-            const std::vector<PixelFormat>& Formats() const override {
+            const std::vector<PixelFormat>& Formats() const override
+            {
                 return _dmaFormats;
             }
 
@@ -121,6 +122,7 @@ namespace Compositor {
 
             struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const override;
             struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const override;
+            struct wp_viewport* GetViewportInterface(wl_surface* surface) const override;
 
             void RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version);
 
@@ -144,6 +146,7 @@ namespace Compositor {
             wl_registry* _wlRegistry;
             wl_compositor* _wlCompositor;
             wl_drm* _wlDrm;
+            wp_viewporter* _wlViewporter;
             clockid_t _presentationClock;
 
             xdg_wm_base* _xdgWmBase;
@@ -476,6 +479,7 @@ namespace Compositor {
             , _wlRegistry(wl_display_get_registry(_wlDisplay))
             , _wlCompositor(nullptr)
             , _wlDrm(nullptr)
+            , _wlViewporter(nullptr)
             , _presentationClock(CLOCK_MONOTONIC)
             , _wlZxdgDecorationManagerV1(nullptr)
             , _wlZwpPointerGesturesV1(nullptr)
@@ -540,6 +544,10 @@ namespace Compositor {
 
             if (_wlPresentation != nullptr) {
                 wp_presentation_destroy(_wlPresentation);
+            }
+
+            if (_wlViewporter != nullptr) {
+                wp_viewporter_destroy(_wlViewporter);
             }
 
             if (_wlZwpLinuxDmabufV1 != nullptr) {
@@ -639,6 +647,8 @@ namespace Compositor {
                 wl_shm_add_listener(_wlShm, &shmListener, this);
             } else if (::strcmp(iface, xdg_activation_v1_interface.name) == 0) {
                 _wlXdgActivationV1 = static_cast<xdg_activation_v1*>(wl_registry_bind(registry, name, &xdg_activation_v1_interface, 1));
+            } else if (::strcmp(iface, wp_viewporter_interface.name) == 0) {
+                _wlViewporter = static_cast<wp_viewporter*>(wl_registry_bind(registry, name, &wp_viewporter_interface, 1));
             }
         }
 
@@ -872,7 +882,12 @@ namespace Compositor {
         struct wp_presentation_feedback* WaylandImplementation::GetFeedbackInterface(wl_surface* surface) const
         {
             ASSERT(surface != nullptr);
-            return (_wlPresentation != NULL) ? wp_presentation_feedback(_wlPresentation, surface) : nullptr;
+            return (_wlPresentation != nullptr) ? wp_presentation_feedback(_wlPresentation, surface) : nullptr;
+        }
+        struct wp_viewport* WaylandImplementation::GetViewportInterface(wl_surface* surface) const
+        {
+            ASSERT(surface != nullptr);
+            return (_wlViewporter != nullptr) ? wp_viewporter_get_viewport(_wlViewporter, surface) : nullptr;
         }
 
         /**

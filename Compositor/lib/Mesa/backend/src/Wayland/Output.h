@@ -133,6 +133,7 @@ namespace Compositor {
 
             void CalculateWindowSize(uint32_t renderWidth, uint32_t renderHeight);
             void HandleWindowResize(uint32_t newWidth, uint32_t newHeight);
+            void ConfigureViewportScaling();
 
         private:
             Wayland::IBackend& _backend;
@@ -140,6 +141,7 @@ namespace Compositor {
             xdg_surface* _windowSurface;
             zxdg_toplevel_decoration_v1* _windowDecoration;
             xdg_toplevel* _topLevelSurface;
+            wp_viewport* _viewport;
             const uint32_t _renderWidth;
             const uint32_t _renderHeight;
             uint32_t _windowWidth;
