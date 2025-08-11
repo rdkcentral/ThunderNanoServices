@@ -23,6 +23,7 @@ find_package(${NAMESPACE}Definitions CONFIG REQUIRED)
 find_package(gbm REQUIRED)
 find_package(wayland-client REQUIRED)
 find_package(wayland-protocols REQUIRED)
+find_package(libdecor REQUIRED)
 
 WaylandGenerator(
     HEADERS WaylandHeaders
@@ -60,6 +61,7 @@ target_link_libraries(WaylandBackend
         gbm::gbm
         wayland-client::wayland-client
         wayland-protocols::wayland-protocols
+        libdecor::libdecor
 )
 
 set_target_properties(WaylandBackend PROPERTIES
