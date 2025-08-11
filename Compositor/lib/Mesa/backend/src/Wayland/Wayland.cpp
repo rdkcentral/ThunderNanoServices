@@ -120,7 +120,6 @@ namespace Compositor {
 
             wl_buffer* Buffer(Exchange::IGraphicsBuffer* buffer) const override;
 
-            struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const override;
             struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const override;
             struct wp_viewport* GetViewportInterface(wl_surface* surface) const override;
 
@@ -150,7 +149,6 @@ namespace Compositor {
             clockid_t _presentationClock;
 
             xdg_wm_base* _xdgWmBase;
-            zxdg_decoration_manager_v1* _wlZxdgDecorationManagerV1;
             zwp_pointer_gestures_v1* _wlZwpPointerGesturesV1;
             wp_presentation* _wlPresentation;
             zwp_linux_dmabuf_v1* _wlZwpLinuxDmabufV1;
@@ -481,7 +479,6 @@ namespace Compositor {
             , _wlDrm(nullptr)
             , _wlViewporter(nullptr)
             , _presentationClock(CLOCK_MONOTONIC)
-            , _wlZxdgDecorationManagerV1(nullptr)
             , _wlZwpPointerGesturesV1(nullptr)
             , _wlPresentation(nullptr)
             , _wlZwpLinuxDmabufV1(nullptr)
@@ -532,10 +529,6 @@ namespace Compositor {
 
             if (_drmRenderFd != InvalidFileDescriptor) {
                 close(_drmRenderFd);
-            }
-
-            if (_wlZxdgDecorationManagerV1 != nullptr) {
-                zxdg_decoration_manager_v1_destroy(_wlZxdgDecorationManagerV1);
             }
 
             if (_wlZwpPointerGesturesV1 != nullptr) {
@@ -619,8 +612,6 @@ namespace Compositor {
             } else if (::strcmp(iface, xdg_wm_base_interface.name) == 0) {
                 _xdgWmBase = static_cast<xdg_wm_base*>(wl_registry_bind(registry, name, &xdg_wm_base_interface, 1));
                 xdg_wm_base_add_listener(_xdgWmBase, &xdgWmBaseListener, NULL);
-            } else if (::strcmp(iface, zxdg_decoration_manager_v1_interface.name) == 0) {
-                _wlZxdgDecorationManagerV1 = static_cast<zxdg_decoration_manager_v1*>(wl_registry_bind(registry, name, &zxdg_decoration_manager_v1_interface, 1));
             } else if (::strcmp(iface, zwp_pointer_gestures_v1_interface.name) == 0) {
                 _wlZwpPointerGesturesV1 = static_cast<zwp_pointer_gestures_v1*>(wl_registry_bind(registry, name, &zwp_pointer_gestures_v1_interface, version < 3 ? version : 3));
             } else if (::strcmp(iface, wp_presentation_interface.name) == 0) {
@@ -874,11 +865,6 @@ namespace Compositor {
             return (Core::ProxyType<IOutput>(_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, format, renderer, feedback)));
         }
 
-        struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
-        {
-            ASSERT(topLevelSurface != nullptr);
-            return (_wlZxdgDecorationManagerV1 != nullptr) ? zxdg_decoration_manager_v1_get_toplevel_decoration(_wlZxdgDecorationManagerV1, topLevelSurface) : nullptr;
-        }
         struct wp_presentation_feedback* WaylandImplementation::GetFeedbackInterface(wl_surface* surface) const
         {
             ASSERT(surface != nullptr);

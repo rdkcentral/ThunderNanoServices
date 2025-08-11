@@ -124,10 +124,7 @@ namespace Compositor {
 
             void SurfaceConfigure();
             void PresentationFeedback(const PresentationFeedbackEvent& event);
-            uint64_t NextSequence()
-            {
-                return _commitSequence++;
-            }
+            uint64_t NextSequence() { return _commitSequence++; }
 
             void Close();
 
@@ -139,7 +136,6 @@ namespace Compositor {
             Wayland::IBackend& _backend;
             wl_surface* _surface;
             xdg_surface* _windowSurface;
-            zxdg_toplevel_decoration_v1* _windowDecoration;
             xdg_toplevel* _topLevelSurface;
             wp_viewport* _viewport;
             const uint32_t _renderWidth;

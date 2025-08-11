@@ -148,7 +148,6 @@ namespace Compositor {
             : _backend(backend)
             , _surface(nullptr)
             , _windowSurface(nullptr)
-            , _windowDecoration(nullptr)
             , _topLevelSurface(nullptr)
             , _viewport(nullptr)
             , _renderWidth(width)
@@ -187,27 +186,16 @@ namespace Compositor {
             wl_surface_set_user_data(_surface, this);
 
             _windowSurface = _backend.WindowSurface(_surface);
-
             ASSERT(_windowSurface != nullptr);
 
             _topLevelSurface = xdg_surface_get_toplevel(_windowSurface);
-
             ASSERT(_topLevelSurface != nullptr);
 
-            _windowDecoration = _backend.GetWindowDecorationInterface(_topLevelSurface);
-
-            if (_windowDecoration != nullptr) {
-                zxdg_toplevel_decoration_v1_set_mode(_windowDecoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-            }
-
             xdg_toplevel_set_title(_topLevelSurface, name.c_str());
+            xdg_toplevel_set_app_id(_topLevelSurface, "com.thunder.compositor");
 
-            _backend.Flush();
-
-            xdg_toplevel_set_app_id(_topLevelSurface, name.c_str());
-
-            xdg_surface_add_listener(_windowSurface, &windowSurfaceListener, this);
             xdg_toplevel_add_listener(_topLevelSurface, &toplevelListener, this);
+            xdg_surface_add_listener(_windowSurface, &windowSurfaceListener, this);
 
             _viewport = _backend.GetViewportInterface(_surface);
 
@@ -219,8 +207,6 @@ namespace Compositor {
 
             wl_surface_commit(_surface);
 
-            // _backend.RoundTrip();
-
             _signal.Lock(1000); // Wait for the surface and buffer to be configured
         }
 
@@ -231,10 +217,6 @@ namespace Compositor {
             if (_viewport != nullptr) {
                 wp_viewport_destroy(_viewport);
                 _viewport = nullptr;
-            }
-
-            if (_windowDecoration != nullptr) {
-                zxdg_toplevel_decoration_v1_destroy(_windowDecoration);
             }
 
             if (_topLevelSurface != nullptr) {
