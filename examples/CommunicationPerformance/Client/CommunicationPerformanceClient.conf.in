@@ -1,0 +1,22 @@
+# Set the variable value; do no auto-start the plugin
+startmode = "Deactivated"
+# Set the variable value; depend on a graphics subsystem to be available
+#precondition = ["GRAPHICS"]
+# Set the variable value; deactivate if the subsystem is unavailable
+# IS not recognized but documented
+#termination = ["NOT_GRAPHICS"]
+
+# Create the setting to run this plugin out of process if possible
+
+callsign = "CommunicationPerformanceClient"
+
+# Step 1; create the element configuration
+configuration = JSON();
+# Step 2; create the element root
+root = JSON()
+
+# Step 3; set the variable value
+root.add("mode", "Local")
+
+# Step 4; add the root element to the configuraton
+configuration.add("root", root)
