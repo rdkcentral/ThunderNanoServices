@@ -554,8 +554,8 @@ public:
             string write = "value" + prefix;
             string key = "key" + prefix;
             string read;
-            if (_store.Set(_T("name"), key, write) == true) {
-                if (_store.Get(_T("name"), key, read) == true) {
+            if (_store.Set(_T("name"), key, write) == Core::ERROR_NONE) {
+                if (_store.Get(_T("name"), key, read) == Core::ERROR_NONE) {
                     if (write != read) {
                         printf("Mistmach in set/get set:%s get:%s\n", write.c_str(), read.c_str());
                         status = false;
