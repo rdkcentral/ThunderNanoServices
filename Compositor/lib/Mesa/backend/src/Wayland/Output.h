@@ -82,8 +82,11 @@ namespace Compositor {
             virtual ~WaylandOutput();
 
             // IGraphicsBuffer methods
+
+            PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
             Exchange::IGraphicsBuffer::IIterator* Acquire(const uint32_t timeoutMs) override;
             void Relinquish() override;
+            POP_WARNING()
 
             uint32_t Width() const override;
             uint32_t Height() const override;

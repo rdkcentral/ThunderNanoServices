@@ -1,7 +1,7 @@
-# If not stated otherwise in this file or this component's LICENSE file the
+# If not stated otherwise in this file or this component's license file the
 # following copyright and licenses apply:
 #
-# Copyright 2020 Metrological
+# Copyright 2025 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(PerformanceMonitor)
+project(TestTextOptions)
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -27,34 +27,40 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+set(PLUGIN_TESTTEXTOPTIONS_STARTMODE "Activated" CACHE STRING "Automatically start TestTextOptions plugin")
+set(PLUGIN_TESTTEXTOPTIONS_MODE "Local" CACHE STRING "Controls if the plugin should run in its own process, in process, container or remote.")
+
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
-        Module.cpp
-        PerformanceMonitor.cpp
-        PerformanceMonitorJsonRpc.cpp)
+    TestTextOptions.cpp
+    TestTextOptionsImplementation.cpp
+    Module.cpp
+)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
-        CXX_STANDARD_REQUIRED YES)
-
-target_compile_definitions(${MODULE_NAME} PRIVATE "THUNDER_PERFORMANCE=1")
+    CXX_STANDARD 11
+    CXX_STANDARD_REQUIRED YES)
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+    CompileSettingsDebug::CompileSettingsDebug
+    ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+    ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+    ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
+
+target_include_directories(${MODULE_NAME}
+    PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}>)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
-
-set(PLUGIN_PROCESSMONITOR_STARTMODE "Deactivated" CACHE STRING "Automatically start ProcessMonitor plugin")
 
 write_config()

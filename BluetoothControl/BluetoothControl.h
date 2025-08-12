@@ -2386,6 +2386,7 @@ class BluetoothControl : public PluginHost::IPlugin
                     _parent->Connector().PINCodeReply(Address(), AddressType(), pinCode);
                 });
             }
+            
             uint32_t Callback(IBluetooth::IDevice::IClassic::ISecurityCallback* callback) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
