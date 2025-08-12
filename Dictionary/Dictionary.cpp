@@ -100,7 +100,7 @@ namespace Plugin {
                     if(keyIndex->Type() == PERSISTENT) {
                         // Seems like we need to report this space, build it up
                         NameSpace& blockToFill(current[index->first]);
-                        NameSpace::Entry& entry(blockToFill.Dictionary.Add(NameSpace::Entry(keyIndex->Key(),keyIndex->Value(),keyIndex->Type())));
+                        blockToFill.Dictionary.Add(NameSpace::Entry(keyIndex->Key(), keyIndex->Value(), keyIndex->Type()));
                     }
 
                     keyIndex++;
