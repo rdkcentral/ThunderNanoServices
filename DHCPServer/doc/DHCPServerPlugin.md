@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.DHCP_Server_Plugin"></a>
+<a id="head_DHCP_Server_Plugin"></a>
 # DHCP Server Plugin
 
 **Version: 1.0**
@@ -10,26 +10,26 @@ DHCPServer plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
+- [Introduction](#head_Introduction)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the DHCPServer plugin. It includes detailed specification about its configuration, methods and properties provided.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -59,7 +59,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -79,14 +79,15 @@ The table below lists configuration options of the plugin.
 | configuration.servers[#].poolsize | integer | mandatory | IP pool size (in IP numbers) |
 | configuration.servers[#]?.router | integer | optional | IP of router |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- [DHCPServer.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/DHCPServer.json) (version 1.0.0) (compliant format)
+- IDHCPServer ([IDHCPServer.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IDHCPServer.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the DHCPServer plugin:
@@ -95,11 +96,11 @@ DHCPServer interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [activate](#method.activate) | Activates a DHCP server |
-| [deactivate](#method.deactivate) | Deactivates a DHCP server |
+| [activate](#method_activate) | Activates a DHCP server |
+| [deactivate](#method_deactivate) | Deactivates a DHCP server |
 
-<a name="method.activate"></a>
-## *activate [<sup>method</sup>](#head.Methods)*
+<a id="method_activate"></a>
+## *activate [<sup>method</sup>](#head_Methods)*
 
 Activates a DHCP server.
 
@@ -114,7 +115,7 @@ Activates a DHCP server.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null (default: *None*) |
+| result | null | mandatory | Always null |
 
 ### Errors
 
@@ -149,8 +150,8 @@ Activates a DHCP server.
 }
 ```
 
-<a name="method.deactivate"></a>
-## *deactivate [<sup>method</sup>](#head.Methods)*
+<a id="method_deactivate"></a>
+## *deactivate [<sup>method</sup>](#head_Methods)*
 
 Deactivates a DHCP server.
 
@@ -165,7 +166,7 @@ Deactivates a DHCP server.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null (default: *None*) |
+| result | null | mandatory | Always null |
 
 ### Errors
 
@@ -200,7 +201,7 @@ Deactivates a DHCP server.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the DHCPServer plugin:
@@ -209,41 +210,39 @@ DHCPServer interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [status](#property.status) | read-only | Server status |
+| [status](#property_status) | read-only | Server status |
 
-<a name="property.status"></a>
-## *status [<sup>property</sup>](#head.Properties)*
+<a id="property_status"></a>
+## *status [<sup>property</sup>](#head_Properties)*
 
 Provides access to the server status.
 
 > This property is **read-only**.
 
-> The *server* parameter shall be passed as the index to the property, e.g. ``DHCPServer.1.status@<server>``.
+> The *interface* parameter shall be passed as the index to the property, i.e. ``status@<interface>``.
 
 ### Index
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| server | string | mandatory | If omitted, status of all configured servers is returned |
+| interface | string | mandatory | Server name, if omitted, status of all configured servers is returned |
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | List of configured servers |
-| result[#] | object | mandatory | *...* |
-| result[#].interface | string | mandatory | Network interface name |
-| result[#].active | boolean | mandatory | Denotes if server is currently active |
-| result[#]?.begin | string | optional | IP address pool start |
-| result[#]?.end | string | optional | IP address pool end |
-| result[#]?.router | string | optional | Router IP address |
-| result[#]?.leases | array | optional | List of IP address leases |
-| result[#]?.leases[#] | object | optional | Lease description |
-| result[#]?.leases[#].name | string | mandatory | Client identifier (or client hardware address if identifier is absent) |
-| result[#]?.leases[#].ip | string | mandatory | Client IP address |
-| result[#]?.leases[#]?.expires | string | optional | Client IP expiration time (in ISO8601 format, empty: never expires) |
+| (property) | array | mandatory | List of configured servers *(if only one element is present then the array will be omitted)* |
+| (property)[#] | object | mandatory | *...* |
+| (property)[#].interface | string | mandatory | Network interface name |
+| (property)[#].active | boolean | mandatory | Denotes if server is currently active |
+| (property)[#]?.begin | string | optional | IP address pool start |
+| (property)[#]?.end | string | optional | IP address pool end |
+| (property)[#]?.router | string | optional | Router IP address |
+| (property)[#]?.leases | array | optional | List of IP address leases<br>*Array length must be at most 100 elements.* |
+| (property)[#]?.leases[#] | object | mandatory | *...* |
+| (property)[#]?.leases[#].name | string | mandatory | Client identifier (or client hardware address if identifier is absent) |
+| (property)[#]?.leases[#].ip | string | mandatory | Client IP address |
+| (property)[#]?.leases[#]?.expires | string | optional | Client IP expiration time (in ISO8601 format, empty: never expires) |
 
 ### Errors
 
