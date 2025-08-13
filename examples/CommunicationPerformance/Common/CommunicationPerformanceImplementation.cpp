@@ -133,8 +133,8 @@ public:
 
             // For large n the remainder becomes dominant and may overflow (triggering the ASSERT) 
             if ( (result =    data.first <= ( std::numeric_limits<A>::max() - _remainder.first )
-                         && data.second <= ( std::numeric_limits<B>::max() - _remainder.second )
-                         && _count < std::numeric_limits<size_t>::max()
+                           && data.second <= ( std::numeric_limits<B>::max() - _remainder.second )
+                           && _count < std::numeric_limits<size_t>::max()
                  ) != false
             ) {
                 ++_count;
@@ -1191,10 +1191,15 @@ private :
 
     uint32_t Worker() override
     {
-        // Some educated guess
-        uint32_t waitTime = 1000;
+        // Go at lightning speed or slower after a callee update, in 'blocking' mode
+        uint32_t waitTime = 0;
 
         VARIABLE_IS_NOT_USED uint32_t result = static_cast<T*>(this)->Task(_state, waitTime);
+
+        // Threads 'wait' until a 'runnable' state or timeout on the given value, effectively delaying execution
+        if (_state == STATE::STOP || _state == STATE::ERROR) {
+            Block();
+        }
 
         // Schedule next iteration at this interval
         return waitTime;
@@ -1356,7 +1361,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                                     distribution_t& measurements = measurements_t::Instance<distribution_t>();
 
                                     // Do not continue if values cannot be inserted without error (remainder too large, numerical instability)
-                                    if (/* data corruptiwtie 
+                                    if (/* data corruption
                                         || */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true) {
                                         state = STATE::STOP;
                                     }
