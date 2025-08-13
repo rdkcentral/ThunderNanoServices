@@ -62,8 +62,7 @@ constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(size_t n)
 
 } // namespace CommunicationPerformanceHelpers
 
-class Performance : public Exchange::IPerformance
-{
+class Performance : public Exchange::IPerformance {
 public :
     Performance(const Performance&) = delete;
     Performance(Performance&&) = delete;
@@ -460,7 +459,9 @@ public:
 
         void DoClear()
         {
-// TODO:
+            for(auto& item : _bins) {
+                item.fill(0);
+            }
         }
 
         void DoPrint() const
@@ -1031,25 +1032,25 @@ private :
 
 // The 'out-of-process' part if supported and configured
 template <typename T>
-class SimplePluginCOMRPCImplementation : public Exchange::ISimplePlugin, public Core::Thread {
+class SimplePluginImplementation : public Exchange::ISimplePlugin, public Core::Thread {
 public :
-    SimplePluginCOMRPCImplementation(const SimplePluginCOMRPCImplementation&) = delete;
-    SimplePluginCOMRPCImplementation(SimplePluginCOMRPCImplementation&&) = delete;
+    SimplePluginImplementation(const SimplePluginImplementation&) = delete;
+    SimplePluginImplementation(SimplePluginImplementation&&) = delete;
 
-    SimplePluginCOMRPCImplementation& operator=(const SimplePluginCOMRPCImplementation&) = delete;
-    SimplePluginCOMRPCImplementation& operator=(SimplePluginCOMRPCImplementation&&) = delete;
+    SimplePluginImplementation& operator=(const SimplePluginImplementation&) = delete;
+    SimplePluginImplementation& operator=(SimplePluginImplementation&&) = delete;
 
     // SERVICE_REGISTRATION requires a constructor that takes no arguments
-    SimplePluginCOMRPCImplementation()
+    SimplePluginImplementation()
         : Exchange::ISimplePlugin{}
-        , Core::Thread{ Core::Thread::DefaultStackSize(), "SimplePluginCOMRPCImplementation" }
+        , Core::Thread{ Core::Thread::DefaultStackSize(), "SimplePluginImplementation" }
         , _lock{}
         , _notifyees{}
         , _state{ STATE::IDLE }
         // Load new (proxystub) libraries present in the proxyStubPath directory at runtime
     {}
 
-    ~SimplePluginCOMRPCImplementation() override
+    ~SimplePluginImplementation() override
     {
         /* uint32_t */ ServiceStop(1000);
     }
@@ -1150,7 +1151,7 @@ public :
    }
 
     // Implement the QueryInterface
-    BEGIN_INTERFACE_MAP(SimplePluginCOMRPCImplementation)
+    BEGIN_INTERFACE_MAP(SimplePluginImplementation)
         // Notifees are called on operations but they have to register first
         INTERFACE_ENTRY(Exchange::ISimplePlugin)
     END_INTERFACE_MAP
@@ -1190,6 +1191,7 @@ private :
 
     uint32_t Worker() override
     {
+        // Some educated guess
         uint32_t waitTime = 1000;
 
         VARIABLE_IS_NOT_USED uint32_t result = static_cast<T*>(this)->Task(_state, waitTime);
@@ -1199,7 +1201,7 @@ private :
     }
 };
 
-class SimplePluginCOMRPCClientImplementation : public SimplePluginCOMRPCImplementation<SimplePluginCOMRPCClientImplementation> {
+class SimplePluginCOMRPCClientImplementation : public SimplePluginImplementation<SimplePluginCOMRPCClientImplementation> {
 public :
     SimplePluginCOMRPCClientImplementation(const SimplePluginCOMRPCClientImplementation&) = delete;
     SimplePluginCOMRPCClientImplementation(SimplePluginCOMRPCClientImplementation&&) = delete;
@@ -1251,14 +1253,14 @@ private :
     // Some arbitrary values
     COMRPCClient<1, 0, 4> _client;
 
-    friend SimplePluginCOMRPCImplementation;
+    friend SimplePluginImplementation;
     uint32_t Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
     {
         return Core::ERROR_NONE;
     }
 };
 
-class SimplePluginCOMRPCServerImplementation : public SimplePluginCOMRPCImplementation<SimplePluginCOMRPCServerImplementation> {
+class SimplePluginCOMRPCServerImplementation : public SimplePluginImplementation<SimplePluginCOMRPCServerImplementation> {
 public :
     SimplePluginCOMRPCServerImplementation(const SimplePluginCOMRPCServerImplementation&) = delete;
     SimplePluginCOMRPCServerImplementation(SimplePluginCOMRPCServerImplementation&&) = delete;
@@ -1313,7 +1315,7 @@ private :
     TestData<1> _data;
 #endif
 
-    friend SimplePluginCOMRPCImplementation;
+    friend SimplePluginImplementation;
     uint32_t Task(STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
     {
         uint32_t result = Core::ERROR_GENERAL;
@@ -1326,6 +1328,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                                 // Set to a low value for quick builds
                                 //constexpr uint16_t bufferMaxSize = 9999;
                                 constexpr uint16_t bufferMaxSize = 999;
+
                                 constexpr size_t numberOfBins = 10;
 
 #ifndef _USE_TESTDATA
@@ -1371,15 +1374,16 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                                     using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration>;
 
                                     distribution_t& measurements = measurements_t::Instance<distribution_t>();
-                                    /* bool */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration));
-                                } else {
-                                    state = STATE::STOP;
+
+                                    if (measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true) {
+                                        state = STATE::STOP;
+                                    }
                                 }
 #endif
                                 }
                                 break;
         case STATE::STOP    :
-        case STATE::ERROR   :
+        case STATE::ERROR   :   waitTime = Core::infinite;
         default             :   ;
         }
 POP_WARNING();
