@@ -39,7 +39,7 @@ extern "C"
 #endif
 
 #include <limits>
-#include <list>
+#include <forward_list>
 #include <utility>
 #include <iomanip>
 #include <cstdlib>
@@ -1072,7 +1072,7 @@ public :
             result = notifyee->AddRef();
             ASSERT(result == Core::ERROR_NONE);
 
-            _notifyees.push_back(notifyee);
+            /* void */ _notifyees.emplace_front(notifyee);
         }
 
         _lock.Unlock();
@@ -1085,8 +1085,8 @@ public :
         uint32_t result = Core::ERROR_INVALID_PARAMETER;
 
          _lock.Lock();
-// TODO: forward_list
-        std::list<INotification*>::const_iterator item;
+
+        std::forward_list<INotification*>::const_iterator item;
 
          _lock.Lock();
 
@@ -1094,7 +1094,7 @@ public :
         if (   notifyee != nullptr
             && (item = std::find(_notifyees.begin(), _notifyees.end(), notifyee)) != _notifyees.end()
         ) {
-            /* 'iterator' */ _notifyees.erase(item);
+            /* void */ _notifyees.remove(*item);
 
             result = notifyee->Release();
             ASSERT(result == Core::ERROR_NONE);
@@ -1165,7 +1165,7 @@ private :
 
     // List of sinks / clients to be called on operations
     // SimplePluginCOMRPC only registers one which is itself
-    std::list<Exchange::ISimplePlugin::INotification*> _notifyees;
+    std::forward_list<Exchange::ISimplePlugin::INotification*> _notifyees;
 
     STATE _state;
 
@@ -1244,9 +1244,6 @@ public :
        if ((result = _client.Revoke(waitTime)) != Core::ERROR_NONE) {
             /* uint32_t */ _client.Stop(waitTime);
        } else {
-
-// probably destruction_succeeded
-
             result = _client.Stop(waitTime);
        }
 
