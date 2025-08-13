@@ -40,19 +40,24 @@ namespace Plugin {
 
     const string SecureShellServer::Initialize(PluginHost::IShell* service)
     {
+        string result;
         _skipURL = static_cast<uint8_t>(service->WebPrefix().length());
         Config config;
         config.FromString(service->ConfigLine());
         _InputParameters = config.InputParameters.Value();
 
         TRACE(Trace::Information, (_T("Starting Dropbear Service with options as: %s"), _InputParameters.c_str()));
-        // TODO: Check the return value and based on that change result
-        activate_dropbear(const_cast<char*>(_InputParameters.c_str()));
 
-        return string();
+        if (activate_dropbear(const_cast<char*>(_InputParameters.c_str())) != 0)
+        {
+            TRACE(Trace::Error, (_T("Failed to activate Dropbear service with parameters: %s"), _InputParameters.c_str()));
+            result = _T("Failed to activate Dropbear service");
+        }
+
+        return (result);
     }
 
-    void SecureShellServer::Deinitialize(PluginHost::IShell* service)
+    void SecureShellServer::Deinitialize(PluginHost::IShell* /* service */)
     {
         // Deinitialize what we initialized..
         TRACE(Trace::Information, (_T("Stoping Dropbear Service")));
@@ -65,7 +70,7 @@ namespace Plugin {
         return string();
     }
 
-    void SecureShellServer::Inbound(Web::Request& request)
+    void SecureShellServer::Inbound(Web::Request& /* request */)
     {
     }
 
@@ -115,10 +120,11 @@ namespace Plugin {
 
                 if (index.Current().Text() == "CloseClientSession") {
                         // DELETE       <-CloseClientSession
-		        ISecureShellServer::IClient* client = Core::ServiceType<ClientImpl>::Create<ISecureShellServer::IClient>(
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->IpAddress.Value(),
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->TimeStamp.Value(),
-							request.Body<const JsonData::SecureShellServer::SessioninfoResultData>()->Pid.Value());
+                        auto body = request.Body<const JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem>();
+                        std::string ip = body->Ipaddress.Value();
+                        std::string timestamp = body->Timestamp.Value();
+                        std::string pid = std::to_string(body->Pid.Value());
+                        ISecureShellServer::IClient* client = Core::ServiceType<ClientImpl>::Create<ISecureShellServer::IClient>(ip, timestamp, pid);
                         uint32_t status = SecureShellServer::CloseClientSession(client);
                         if (status != Core::ERROR_NONE) {
                                result->ErrorCode = Web::STATUS_INTERNAL_SERVER_ERROR;
@@ -174,7 +180,7 @@ namespace Plugin {
 	return iter;
      }
 
-    uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo)
+    uint32_t SecureShellServer::GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem>& sessioninfo)
     {
         uint32_t result = Core::ERROR_NONE;
 	Exchange::ISecureShellServer::IClient::IIterator* iter = SessionsInfo();
@@ -188,13 +194,13 @@ namespace Plugin {
                                          iter->Count(), index++, iter->Current()->RemoteId().c_str(), iter->Current()->IpAddress().c_str(),
 					 iter->Current()->TimeStamp().c_str()));
 
-                JsonData::SecureShellServer::SessioninfoResultData newElement;
+                JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem newElement;
 
-                newElement.IpAddress = iter->Current()->IpAddress();
-                newElement.Pid = iter->Current()->RemoteId();
-                newElement.TimeStamp = iter->Current()->TimeStamp();
+                newElement.Ipaddress = iter->Current()->IpAddress();
+                newElement.Pid = std::stoull(iter->Current()->RemoteId());
+                newElement.Timestamp = iter->Current()->TimeStamp();
 
-                JsonData::SecureShellServer::SessioninfoResultData& element(sessioninfo.Add(newElement));
+                sessioninfo.Add(newElement);
             }
 	    iter->Release();
 	}
