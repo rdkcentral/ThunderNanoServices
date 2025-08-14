@@ -29,38 +29,38 @@ namespace Plugin {
 // -----------------------------------------
 
 // State of (this) plugin changed to Activated
-void SimplePluginCOMRPC::PluginNotification::Activated(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
+void SimplePlugin::PluginNotification::Activated(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
 {
     ASSERT(plugin != nullptr);
-    TRACE(Trace::Information, ("SimplePluginCOMRPC::PluginNotification::Activated"));
+    TRACE(Trace::Information, ("SimplePlugin::PluginNotification::Activated"));
 }
 
 // State of (this) plugin changed to Deactivated
-void SimplePluginCOMRPC::PluginNotification::Deactivated(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
+void SimplePlugin::PluginNotification::Deactivated(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
 {
     ASSERT(plugin != nullptr);
-    TRACE(Trace::Information, ("SimplePluginCOMRPC::PluginNotification::Deactivated"));
+    TRACE(Trace::Information, ("SimplePlugin::PluginNotification::Deactivated"));
 }
 
 // State of (this) plugin changed to Unavailable
-void SimplePluginCOMRPC::PluginNotification::Unavailable(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
+void SimplePlugin::PluginNotification::Unavailable(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
 {
     ASSERT(plugin != nullptr);
-    TRACE(Trace::Information, ("SimplePluginCOMRPC::PluginNotification::Information"));
+    TRACE(Trace::Information, ("SimplePlugin::PluginNotification::Information"));
 }
 
 // IPlugin::INotification base IUnknown interface methods
 // ------------------------------------------------------
 
 // Not Sink templated, hence, a defintion here
-uint32_t SimplePluginCOMRPC::PluginNotification::AddRef() const /* override */
+uint32_t SimplePlugin::PluginNotification::AddRef() const /* override */
 {
     // Keep the parent alive for our sake
     return _parent.AddRef();
 }
 
 // Not Sink templated, hence, a defintion here
-uint32_t SimplePluginCOMRPC::PluginNotification::Release() const /* override */
+uint32_t SimplePlugin::PluginNotification::Release() const /* override */
 {
     return _parent.Release();
 }
@@ -69,65 +69,65 @@ uint32_t SimplePluginCOMRPC::PluginNotification::Release() const /* override */
 // --------------------------------------------------
 
 // A (remote) COM-RPC connection has been set up
-void SimplePluginCOMRPC::RemoteConnectionNotification::Activated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) /* override */
+void SimplePlugin::RemoteConnectionNotification::Activated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) /* override */
 {
     ASSERT(connection != nullptr);
-    TRACE(Trace::Information, ("SimplePluginCOMRPC::RemoteConnectionNotification::Activated"));
+    TRACE(Trace::Information, ("SimplePlugin::RemoteConnectionNotification::Activated"));
 }
 
 // A (remote) COM-RPC connection has been (unexpectedly) disconnected / destroyed / dropped
-void SimplePluginCOMRPC::RemoteConnectionNotification::Deactivated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) /* override */
+void SimplePlugin::RemoteConnectionNotification::Deactivated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) /* override */
 {
     ASSERT(connection != nullptr);
 
-    TRACE(Trace::Information, ("SimplePluginCOMRPC::RemoteConnectionNotification::Deactivated"));
+    TRACE(Trace::Information, ("SimplePlugin::RemoteConnectionNotification::Deactivated"));
 
     // Check if the connection to the out-of-process part has unexpectedly dropped
     _parent.Deactivated(connection);
 }
 
 // The remote side (process) has been terminated
-void SimplePluginCOMRPC::RemoteConnectionNotification::Terminated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) /* override */
+void SimplePlugin::RemoteConnectionNotification::Terminated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) /* override */
 {
     ASSERT(connection != nullptr);
 
-    TRACE(Trace::Information, ("SimplePluginCOMRPC::RemoteConnectionNotification::Terminated"));
+    TRACE(Trace::Information, ("SimplePlugin::RemoteConnectionNotification::Terminated"));
 }
 
 // IRemoteConnection::INotification interface methods
 // --------------------------------------------------
 
 // Not Sink templated, hence, a defintion here
-uint32_t SimplePluginCOMRPC::RemoteConnectionNotification::AddRef() const /* override */
+uint32_t SimplePlugin::RemoteConnectionNotification::AddRef() const /* override */
 {
     return _parent.AddRef();
 }
 
 // Not Sink templated, hence, a defintion here
-uint32_t SimplePluginCOMRPC::RemoteConnectionNotification::Release() const /* override */
+uint32_t SimplePlugin::RemoteConnectionNotification::Release() const /* override */
 {
     return _parent.Release();
 }
 
-// SimplePluginCOMRPCNotification::INotification interface methods
+// SimplePluginNotification::INotification interface methods
 // ---------------------------------------------------------
 
-void SimplePluginCOMRPC::SimplePluginCOMRPCNotification::LifeChangingEvent(const string& description) /* override */
+void SimplePlugin::SimplePluginNotification::LifeChangingEvent(const string& description) /* override */
 {
     Exchange::JSimplePlugin::Event::LifeChangingEvent(_parent, description);
 }
 
-// SimplePluginCOMRPCNotification::INotification base IUnknown interface methods
+// SimplePluginNotification::INotification base IUnknown interface methods
 // ------------------------------------------------------------------------
 
 // Not Sink templated, hence, a defintion here
-uint32_t SimplePluginCOMRPC::SimplePluginCOMRPCNotification::AddRef() const /* override */
+uint32_t SimplePlugin::SimplePluginNotification::AddRef() const /* override */
 {
     return _parent.AddRef();
 }
 
 // Not Sink templated, hence, a defintion here
-uint32_t SimplePluginCOMRPC::SimplePluginCOMRPCNotification::Release() const /* override */
+uint32_t SimplePlugin::SimplePluginNotification::Release() const /* override */
 {
     return _parent.Release();
 }
@@ -135,7 +135,7 @@ uint32_t SimplePluginCOMRPC::SimplePluginCOMRPCNotification::Release() const /* 
 //  IPlugin interface methods
 // --------------------------
 
-const string SimplePluginCOMRPC::Initialize(PluginHost::IShell* service) /* override */
+const string SimplePlugin::Initialize(PluginHost::IShell* service) /* override */
 {
     string result;
 
@@ -153,11 +153,11 @@ const string SimplePluginCOMRPC::Initialize(PluginHost::IShell* service) /* over
         // Register for global (event) notifications related to all (IPlugin) plugins
         /* void */ _service->Register(static_cast<PluginHost::IPlugin::INotification*>(&_pluginNotification));
 
-        // Register for global (event) notifications related to all (IRemoteConnection) COMRPCs
+        // Register for global (event) notifications related to all (IRemoteConnection) s
         /* void */ _service->Register(static_cast<RPC::IRemoteConnection::INotification*>(&_remoteConnectionNotification));
 
         // Run the out-of-process capable part out-of-process if the configuration has been set alike
-        // See SimplePluginCOMRPC.conf.in
+        // See SimplePlugin.conf.in
 
         // Generic check if there exists a provider for the interface
         // Automagically AddRef'ed but not Released
@@ -165,10 +165,10 @@ const string SimplePluginCOMRPC::Initialize(PluginHost::IShell* service) /* over
         auto implementation = [this](const std::string& className, uint32_t waitTime, uint32_t version) -> Exchange::ISimplePlugin*
         {
             Exchange::ISimplePlugin* simplePluginImplementation = nullptr;
-    
+
             if (simplePluginImplementation == nullptr) {
                 // None exist so let's become a provider by firing up the out-of-process part 
-         
+
                 // Automagically AddRef'ed but not Released
                 simplePluginImplementation = this->_service->Root<Exchange::ISimplePlugin>(this->_connectionId, waitTime, className.c_str(), version);
             } else if (simplePluginImplementation != nullptr) {
@@ -191,7 +191,7 @@ const string SimplePluginCOMRPC::Initialize(PluginHost::IShell* service) /* over
             /* void */ Exchange::JSimplePlugin::Register(*this, _simplePluginImplementation);
 
             // Round brackets are needed to let the macro work
-            TRACE(Trace::Information, ("SimplePluginCOMRPCImplementation has become an Exchange::ISimplePlugin provider"));
+            TRACE(Trace::Information, ("SimplePluginImplementation has become an Exchange::ISimplePlugin provider"));
         }
     } else {
         result = "Unable to register for IPlugin::INotification";
@@ -200,7 +200,7 @@ const string SimplePluginCOMRPC::Initialize(PluginHost::IShell* service) /* over
     return result;
 }
 
-void SimplePluginCOMRPC::Deinitialize(PluginHost::IShell* service) /* override */
+void SimplePlugin::Deinitialize(PluginHost::IShell* service) /* override */
 {
     ASSERT(_service == service);
 
@@ -213,7 +213,7 @@ void SimplePluginCOMRPC::Deinitialize(PluginHost::IShell* service) /* override *
         // No need to monitor a possible dropped connection as this plugin soon will be deactivated and the out-of-process side as well
         /* void */ _service->Unregister(static_cast<RPC::IRemoteConnection::INotification*>(&_remoteConnectionNotification));
 
-        // Get the handle of the COMRPC connection before realisng the out-of-process side
+        // Get the handle of the  connection before realisng the out-of-process side
         // A non-null indicates the remote part is still reachable 
         // It is AddRef-ed
         connection = service->RemoteConnection(_connectionId);
@@ -254,7 +254,7 @@ void SimplePluginCOMRPC::Deinitialize(PluginHost::IShell* service) /* override *
     }
 }
 
-string SimplePluginCOMRPC::Information() const /* override */
+string SimplePlugin::Information() const /* override */
 {
     return string{};
 }
@@ -263,7 +263,7 @@ string SimplePluginCOMRPC::Information() const /* override */
 // -----------------------
 
 // Required to do some connection ID checking
-void SimplePluginCOMRPC::Deactivated(const RPC::IRemoteConnection* connection) const
+void SimplePlugin::Deactivated(const RPC::IRemoteConnection* connection) const
 {
     if (   connection != nullptr
         && connection->Id() == _connectionId

@@ -30,7 +30,7 @@ namespace Thunder {
 namespace Plugin {
 
 // The 'always' in-process part of the plugin
-class SimplePluginCOMRPC : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+class SimplePlugin : public PluginHost::IPlugin, public PluginHost::JSONRPC {
 private:
 
     // Global (event) notifications related to all (IPlugin) plugins, registration via IShell
@@ -45,7 +45,7 @@ private:
         PluginNotification& operator=(PluginNotification&&) = delete;
 
         // Keep track of parent
-        PluginNotification(SimplePluginCOMRPC& parent)
+        PluginNotification(SimplePlugin& parent)
             : PluginHost::IPlugin::INotification{}
             , _parent{ parent }
         {}
@@ -53,7 +53,7 @@ private:
         ~PluginNotification() override = default;
 
         // Implements QueryInterface for this IPlugin::INotification
-        BEGIN_INTERFACE_MAP(SimplePluginCOMRPCPluginNotification)
+        BEGIN_INTERFACE_MAP(SimplePluginPluginNotification)
             // The instantiation of this class resides in-process and thus it's this pointer sufficies for QueryInterface
             INTERFACE_ENTRY(PluginHost::IPlugin::INotification)
         END_INTERFACE_MAP
@@ -75,10 +75,10 @@ private:
         uint32_t Release() const override;
 
     private :
-        SimplePluginCOMRPC& _parent;
+        SimplePlugin& _parent;
     };
 
-    // Global (event) notifications related to all (IRemoteConnection) COMRPCs, registration via IShell
+    // Global (event) notifications related to all (IRemoteConnection) s, registration via IShell
     // Supports monitoring the out-of-process via existence of the connection between both sides
     class RemoteConnectionNotification : public RPC::IRemoteConnection::INotification { 
     public :
@@ -91,7 +91,7 @@ private:
         RemoteConnectionNotification& operator=(RemoteConnectionNotification&&) = delete;
 
         // Keep track of parent
-        RemoteConnectionNotification(SimplePluginCOMRPC& parent)
+        RemoteConnectionNotification(SimplePlugin& parent)
             : RPC::IRemoteConnection::INotification{}
             , _parent{ parent }
         {}
@@ -99,7 +99,7 @@ private:
         ~RemoteConnectionNotification() override = default;
 
         // Implements QueryInterface for this IPlugin::INotification
-        BEGIN_INTERFACE_MAP(SimplePluginCOMRPCRemoteConnectionNotification)
+        BEGIN_INTERFACE_MAP(SimplePluginRemoteConnectionNotification)
             // The instantiation of this class resides in-process and thus its this pointer sufficies for QueryInterface
             INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
         END_INTERFACE_MAP
@@ -121,23 +121,23 @@ private:
         uint32_t Release() const override;
 
     private :
-        SimplePluginCOMRPC& _parent;
+        SimplePlugin& _parent;
     };
 
     // Passthrough for JSON-RPC notifications of out-of-process event notifications
-    // JSON formatted notifications require coupling to the module.Notify(...) in JSimplePluginCOMRPC
-    class SimplePluginCOMRPCNotification: public Exchange::ISimplePlugin::INotification {
+    // JSON formatted notifications require coupling to the module.Notify(...) in JSimplePlugin
+    class SimplePluginNotification: public Exchange::ISimplePlugin::INotification {
     public : 
         // Typically deleted as it does not keep track of its parent
-        SimplePluginCOMRPCNotification() = delete;
-        SimplePluginCOMRPCNotification(const SimplePluginCOMRPCNotification&) = delete;
-        SimplePluginCOMRPCNotification(SimplePluginCOMRPCNotification&&) = delete;
+        SimplePluginNotification() = delete;
+        SimplePluginNotification(const SimplePluginNotification&) = delete;
+        SimplePluginNotification(SimplePluginNotification&&) = delete;
 
-        SimplePluginCOMRPCNotification& operator=(const SimplePluginCOMRPCNotification&) = delete;
-        SimplePluginCOMRPCNotification& operator=(SimplePluginCOMRPCNotification&&) = delete;
+        SimplePluginNotification& operator=(const SimplePluginNotification&) = delete;
+        SimplePluginNotification& operator=(SimplePluginNotification&&) = delete;
 
         // Keep track of parent
-        SimplePluginCOMRPCNotification(SimplePluginCOMRPC& parent)
+        SimplePluginNotification(SimplePlugin& parent)
             : Exchange::ISimplePlugin::INotification{}
             , _parent{ parent }
         {}
@@ -152,23 +152,23 @@ private:
         uint32_t AddRef() const override;
         uint32_t Release() const override;
 
-        BEGIN_INTERFACE_MAP(SimplePluginCOMRPCNotification)
+        BEGIN_INTERFACE_MAP(SimplePluginNotification)
             INTERFACE_ENTRY(Exchange::ISimplePlugin::INotification)
         END_INTERFACE_MAP
 
     private :
 
-        SimplePluginCOMRPC& _parent;
+        SimplePlugin& _parent;
     };
 
 public :
-    SimplePluginCOMRPC(const SimplePluginCOMRPC&) = delete;
-    SimplePluginCOMRPC(SimplePluginCOMRPC&&) = delete;
+    SimplePlugin(const SimplePlugin&) = delete;
+    SimplePlugin(SimplePlugin&&) = delete;
 
-    SimplePluginCOMRPC& operator=(const SimplePluginCOMRPC&) = delete;
-    SimplePluginCOMRPC& operator=(SimplePluginCOMRPC&&) = delete;
+    SimplePlugin& operator=(const SimplePlugin&) = delete;
+    SimplePlugin& operator=(SimplePlugin&&) = delete;
 
-    SimplePluginCOMRPC()
+    SimplePlugin()
         : PluginHost::IPlugin{}
         , _adminLock{}
         , _service{ nullptr }
@@ -179,7 +179,7 @@ public :
         , _connectionId{ 0 }
     {}
 
-    ~SimplePluginCOMRPC() override
+    ~SimplePlugin() override
     {}
 
     // Exposed interfaces
@@ -187,7 +187,7 @@ public :
     // INTERFACE_AGGREGATE is used if the this pointer does not apply and another object is implementing a certain interface
     // However, it should be added here to make Thunder's in-process aware; then also add INTERFACE_ENTRY at the true implemntation of the class to support QueryInterface in the out-off-process part
     // AND add SERVICE_REGISTRATION to make Thunder aware that the implemented part (service, eg, classname) is made available through the given MODULE_NAME (.so)
-    BEGIN_INTERFACE_MAP(SimplePluginCOMRPCMultiProcess)
+    BEGIN_INTERFACE_MAP(SimplePluginMultiProcess)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         // JSON-RPC support
         INTERFACE_ENTRY(PluginHost::IDispatcher)
@@ -221,7 +221,7 @@ private :
     PluginHost::IShell* _service;
 
     // By Sink<> templating implements AddRef and Release, and, balance checking in the AddRef - Release cycle
-//        Sink<SimplePluginCOMRPCNotification> _notification;
+//        Sink<SimplePluginNotification> _notification;
     //  Here, AddRef and Release need to be implemented
     PluginNotification _pluginNotification;
 
@@ -230,7 +230,7 @@ private :
     RemoteConnectionNotification _remoteConnectionNotification;
 
     // Intermediate to trigger JSON events from out-of-process notification events
-    SimplePluginCOMRPCNotification _simplePluginNotification;
+    SimplePluginNotification _simplePluginNotification;
 
     // The (out of process) implementation
     // Typically implements an interface from ThunderInterfaces, eg, Exchange namespace

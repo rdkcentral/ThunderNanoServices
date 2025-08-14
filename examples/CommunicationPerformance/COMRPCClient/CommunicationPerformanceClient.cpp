@@ -40,7 +40,7 @@ static Metadata<CommunicationPerformanceClient> metadata (
 
 std::string CommunicationPerformanceClient::Classname() const
 {
-    // This name is appended with 'Implementation' at instantiation of the out-ouf-process part    
+    // This name is appended with 'Implementation' at instantiation of the out-ouf-process part
     return "SimplePluginCOMRPCClient";
 }
 

@@ -19,6 +19,10 @@
 
 #include "CommunicationPerformance.h"
 
+
+
+
+
 // Interface to provide an implementation for
 #include <interfaces/IPerformance.h>
 
@@ -55,7 +59,7 @@ template<typename TYPE, size_t... N>
 constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(size_t n)
 {
     // (Integral) TYPE may not have the same range as size_t
-    // Use overflow for arbitrary values     
+    // Use overflow for arbitrary values
 
     return static_cast<TYPE>(n);
 };
@@ -85,7 +89,7 @@ public :
         return Core::ERROR_UNAVAILABLE;
     }
 
-    // Unregister for COM_RPC notifications 
+    // Unregister for COM_RPC notifications
     uint32_t Unregister(VARIABLE_IS_NOT_USED IPerformance::INotification* sink) override
     {
         return Core::ERROR_UNAVAILABLE;

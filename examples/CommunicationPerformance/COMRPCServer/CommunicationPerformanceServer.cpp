@@ -17,14 +17,31 @@
  * limitations under the License.
  */
 
-#include "../Common/CommunicationPerformance.h"
+#include "CommunicationPerformanceServer.h"
 
 namespace Thunder {
 namespace Plugin {
 
-class CommunicationPerformanceServer : public SimplePluginCOMRPC {
-protected :
-    std::string Classname() const override;
-};
+// TODO: Mandatory, why? What does it do?
+namespace {
+
+static Metadata<CommunicationPerformanceServer> metadata (
+    // Version
+    1, 0, 0,
+    // Preconditions
+    {},
+    // Terminations
+    {},
+    // Controls
+    {}
+);
+
+}
+
+std::string CommunicationPerformanceServer::Classname() const
+{
+    // This name is appended with 'Implementation' at instantiation of the out-ouf-process part
+    return "SimplePluginCOMRPCServer";
+}
 
 } } // namespace Thunder::Plugin
