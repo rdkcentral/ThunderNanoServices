@@ -8,7 +8,7 @@ startmode = "Deactivated"
 
 # Create the setting to run this plugin out of process if possible
 
-callsign = "CommunicationPerformanceClient"
+callsign = "CommunicationPerformanceWebSocketServer"
 
 # Step 1; create the element configuration
 configuration = JSON();

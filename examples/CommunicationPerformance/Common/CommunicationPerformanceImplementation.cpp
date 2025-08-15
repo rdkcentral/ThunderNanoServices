@@ -19,9 +19,7 @@
 
 #include "CommunicationPerformance.h"
 
-
-
-
+#include <websocket/websocket.h>
 
 // Interface to provide an implementation for
 #include <interfaces/IPerformance.h>
@@ -1034,8 +1032,306 @@ private :
     }
 };
 
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
+class WebSocketClient {
+public :
+    WebSocketClient(const WebSocketClient&) = delete;
+    WebSocketClient(WebSocketClient&&) = delete;
+
+    WebSocketClient& operator=(const WebSocketClient&) = delete;
+    WebSocketClient& operator=(WebSocketClient&&) = delete;
+
+    WebSocketClient(  const string& remoteNode
+                    , VARIABLE_IS_NOT_USED const string& uriPath     // HTTP URI part, empty path allowed
+                    , VARIABLE_IS_NOT_USED const string& protocol    // Optional HTTP field, WebSocket sub-protocol, ie, Sec-WebSocket-Protocol
+                    , VARIABLE_IS_NOT_USED const string& uriQuery    // HTTP URI part, absent query allowed
+                    , VARIABLE_IS_NOT_USED const string& origin      // Optional, set by browser client
+    )
+        : _remoteNode{ static_cast<const TCHAR*>(remoteNode.c_str()) }
+        // The minimum send and receive buffer sizes are determined by the HTTP upgrade process. The limit here is above that threshold.
+        , _client{ uriPath, protocol, uriQuery, origin, false /* use raw socket */ , _remoteNode.AnyInterface(), _remoteNode, SENDBUFFERSIZE /* send buffer size */, RECEIVEBUFFERSIZE /* receive buffer size */ }
+    {}
+
+    ~WebSocketClient() = default;
+
+private :
+
+    class Client : public Web::WebSocketClientType<STREAMTYPE> {
+    public :
+        Client(const Client&) = delete;
+        Client(Client&&) = delete;
+
+        Client operator=(const Client&) = delete;
+        Client operator=(Client&&) = delete;
+
+        template <typename... Args>
+        Client( const string& path
+              , const string& protocol
+              , const string& query
+              , const string& origin
+              , Args&&... args
+        )
+            // A client should always apply masking when sending frames to the server
+            : Web::WebSocketClientType<STREAMTYPE>(path, protocol, query, origin, false /* binary */, true /* masking */, /* <Arguments SocketStream> */ std::forward<Args>(args)... /* </Arguments SocketStream> */)
+        {
+        }
+
+        ~Client() override = default;
+
+        // Non-idle then data available to send
+        bool IsIdle() const override
+        {
+            _guard.Lock();
+
+            bool result = _post.size() == 0;
+
+            _guard.Unlock();
+
+            return result;
+        }
+
+        // Allow for eventfull state updates in this class
+        void StateChange() override
+        {}
+
+        // Reflects payload, effective after upgrade
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
+        {
+            size_t count = 0;
+
+            if (   dataFrame != nullptr
+                && maxSendSize > 0
+                && !IsIdle()
+                && Web::WebSocketClientType<STREAMTYPE>::IsOpen()
+                && Web::WebSocketClientType<STREAMTYPE>::IsWebSocket() // Redundant, covered by IsOpen
+                && Web::WebSocketClientType<STREAMTYPE>::IsCompleted()
+               ) {
+                _guard.Lock();
+
+                std::basic_string<uint8_t>& message = _post.front();
+
+                count = std::min(message.size(), static_cast<size_t>(maxSendSize));
+
+                /* void* */ memcpy(dataFrame, message.data(), count);
+
+                if (count == message.size()) {
+                    /* iterator */ _post.erase(_post.begin());
+                } else {
+                    /* this */ message.erase(0, count);
+
+                    // Trigger a call to SendData for remaining data
+                    Web::WebSocketClientType<STREAMTYPE>::Link().Trigger();
+                }
+
+                _guard.Unlock();
+            }
+
+            return count;
+        }
+
+        // Reflects payload, effective after upgrade
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
+        {
+            // Echo the data in reverse order
+// TODO: probably the location to use Exchange
+            std::basic_string<uint8_t> message{ dataFrame, receivedSize };
+
+            std::reverse(message.begin(), message.end());
+
+            return Submit(message) ? message.size() : 0;
+        }
+
+        bool Submit(const std::basic_string<uint8_t>& message)
+        {
+// TODO: probably the location to use Exchange
+            _guard.Lock();
+
+            size_t count = _post.size();
+
+            _post.emplace_back(message);
+
+            bool result = count < _post.size();
+
+            _guard.Unlock();
+
+            Web::WebSocketClientType<STREAMTYPE>::Link().Trigger();
+
+            return result;
+        }
+
+    private:
+
+        std::vector<std::basic_string<uint8_t>> _post; // Send message queue
+
+        mutable Core::CriticalSection _guard;
+    };
+ 
+    const Core::NodeId _remoteNode;
+
+    Client _client;
+};
+//TODO buffer size is uint16_t
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
+class WebSocketServer {
+public :
+    WebSocketServer(const WebSocketServer&) = delete;
+    WebSocketServer(WebSocketServer&&) = delete;
+
+    WebSocketServer& operator=(const WebSocketServer&) = delete;
+    WebSocketServer& operator=(WebSocketServer&&) = delete;
+
+    WebSocketServer(const string& localNode)
+        : _localNode{ static_cast<const TCHAR*>(localNode.c_str()) } // listening node
+        , _server{ _localNode }
+    {}
+
+    ~WebSocketServer()
+    {}
+
+private :
+
+    class Server : public Web::WebSocketServerType<STREAMTYPE> {
+    public :
+        Server(const Server&) = delete;
+        Server(Server&&) = delete;
+
+        Server& operator=(const Server&) = delete;
+        Server& operator=(Server&&) = delete;
+
+        // The constructor expected by SocketServerType to exist
+        Server(const SOCKET& socket, const ::Thunder::Core::NodeId& remoteNode, VARIABLE_IS_NOT_USED Core::SocketServerType<Server>* socketServer /* our creator */)
+            // A server should nevwer apply masking when sending frames to the client
+            : Web::WebSocketServerType<STREAMTYPE>(false /* binary */, false /* masking */, /* <Arguments SocketStream> */ false /* use raw socket */, socket, remoteNode, SENDBUFFERSIZE, RECEIVEBUFFERSIZE /* </Arguments SocketStream> */)
+        {}
+
+        ~Server() = default;
+
+        // Non-idle then data available to send
+        bool IsIdle() const override
+        {
+            _guard.Lock();
+
+            bool result = _post.size() == 0;
+
+            _guard.Unlock();
+
+            return result;
+        }
+
+        // Allow for eventfull state updates in this class
+        void StateChange() override
+        {}
+
+        // Reflects payload, effective after upgrade
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
+        {
+// TODO: probably the location to use Exchange
+            size_t count = 0;
+
+            if (   dataFrame != nullptr
+                && maxSendSize > 0
+                && !IsIdle()
+                && Web::WebSocketServerType<STREAMTYPE>::IsOpen()
+                && Web::WebSocketServerType<STREAMTYPE>::IsWebSocket() // Redundant, covered by IsOpen
+                && Web::WebSocketServerType<STREAMTYPE>::IsCompleted()
+               ) {
+                _guard.Lock();
+
+                std::basic_string<uint8_t>& message = _post.front();
+
+                count = std::min(message.size(), static_cast<size_t>(maxSendSize));
+
+                /* void* */ memcpy(dataFrame, message.data(), count);
+
+                if (count == message.size()) {
+                    /* iterator */ _post.erase(_post.begin());
+                } else {
+                    /* this */ message.erase(0, count);
+
+                    // Trigger a call to SendData for remaining data
+                    Web::WebSocketServerType<STREAMTYPE>::Link().Trigger();
+                }
+
+                _guard.Unlock();
+            }
+
+            return count;
+        }
+
+        // Reflects payload, effective after upgrade
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
+        {
+// TODO: probably the location to use Exchange
+            if (receivedSize > 0) {
+                _guard.Lock();
+
+                _response.emplace_back(std::basic_string<uint8_t>{ dataFrame, receivedSize });
+
+                _guard.Unlock();
+            }
+
+            return receivedSize;
+        }
+#ifdef _0
+        // Put data in the queue to send (to the (connected) client)
+        bool Submit(const std::basic_string<uint8_t>& message)
+        {
+            _guard.Lock();
+
+            size_t count = _post.size();
+
+            _post.emplace_back(message);
+
+            bool result =  count < _post.size();
+
+            _guard.Unlock();
+
+            // Trigger a call to SendData
+            Web::WebSocketServerType<STREAMTYPE>::Link().Trigger();
+
+            return result;
+        }
+
+        std::basic_string<uint8_t> Response()
+        {
+            std::basic_string<uint8_t> message;
+
+            _guard.Lock();
+
+            if (_response.size() > 0) {
+                message = _response.front();
+                _response.erase(_response.begin());
+            } 
+
+            _guard.Unlock();
+
+            return message;
+        }
+#endif
+    private:
+
+        std::vector<std::basic_string<uint8_t>> _post; // Send message queue
+        std::vector<std::basic_string<uint8_t>> _response; // Receive message queue
+
+        mutable Core::CriticalSection _guard;
+
+    };
+
+// TODO: currently not used
+    bool _enableBinary;
+    bool _enableMasking;
+
+    const Core::NodeId _localNode;
+
+    // Enable listening with SocketServerType
+    Core::SocketServerType<Server> _server;
+
+// We could use this to call Open(), Lock() etc or request an iterator representing conncetions to remote clients eg Clients()
+
+};
+
 // The 'out-of-process' part if supported and configured
-template <typename T>
+template <typename DERIVED>
 class SimplePluginImplementation : public Exchange::ISimplePlugin, public Core::Thread {
 public :
     SimplePluginImplementation(const SimplePluginImplementation&) = delete;
@@ -1122,7 +1418,7 @@ public :
     {
         uint32_t result = Core::ERROR_GENERAL;
 
-        if ((result = static_cast<T*>(this)->Start(waitTime)) == Core::ERROR_NONE) {
+        if ((result = static_cast<DERIVED*>(this)->Start(waitTime)) == Core::ERROR_NONE) {
             Core::Thread::Run();
 
             while(!Core::Thread::Wait(Core::Thread::RUNNING, waitTime)) {
@@ -1145,7 +1441,7 @@ public :
         while(!Core::Thread::Wait(Thread::STOPPED | Core::Thread::BLOCKED, waitTime)) {
         }
 
-        if ((result = static_cast<T*>(this)->Stop(waitTime)) == Core::ERROR_NONE) {
+        if ((result = static_cast<DERIVED*>(this)->Stop(waitTime)) == Core::ERROR_NONE) {
             NotifyAll("ServiceStop successful", 0);
         } else {
             NotifyAll("ServiceStop incomplete", 0);
@@ -1198,7 +1494,7 @@ private :
         // Go at lightning speed or slower after a callee update, in 'blocking' mode
         uint32_t waitTime = 0;
 
-        VARIABLE_IS_NOT_USED uint32_t result = static_cast<T*>(this)->Task(_state, waitTime);
+        VARIABLE_IS_NOT_USED uint32_t result = static_cast<DERIVED*>(this)->Task(_state, waitTime);
 
         // Threads 'wait' until a 'runnable' state or timeout on the given value, effectively delaying execution
         if (_state == STATE::STOP || _state == STATE::ERROR) {
@@ -1398,10 +1694,95 @@ POP_WARNING();
     }
 };
 
+class SimplePluginWebSocketClientImplementation : public SimplePluginImplementation<SimplePluginWebSocketClientImplementation> {
+public :
+    SimplePluginWebSocketClientImplementation(const SimplePluginWebSocketClientImplementation&) = delete;
+    SimplePluginWebSocketClientImplementation(SimplePluginWebSocketClientImplementation&&) = delete;
+
+    SimplePluginWebSocketClientImplementation& operator=(const SimplePluginWebSocketClientImplementation&) = delete;
+    SimplePluginWebSocketClientImplementation& operator=(SimplePluginWebSocketClientImplementation&&) = delete;
+
+// TODO: initialize members
+
+    SimplePluginWebSocketClientImplementation()
+// TODO: add node string here
+        : _client { _T("127.0.0.1:8081") /* remote node */, "", "", "", "" }
+    {}
+
+    ~SimplePluginWebSocketClientImplementation() = default;
+
+    uint32_t Start(VARIABLE_IS_NOT_USED uint32_t waitTime)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        return result;
+    }
+
+     uint32_t Stop(VARIABLE_IS_NOT_USED uint32_t waitTime)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        return result;
+    }
+
+private :
+// TODO
+    WebSocketClient<1024, 1024, Core::SocketStream> _client;
+
+    friend SimplePluginImplementation;
+    uint32_t Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        return result;
+    }
+
+};
+
+class SimplePluginWebSocketServerImplementation : public SimplePluginImplementation<SimplePluginWebSocketServerImplementation> {
+public :
+    SimplePluginWebSocketServerImplementation(const SimplePluginWebSocketServerImplementation&) = delete;
+    SimplePluginWebSocketServerImplementation(SimplePluginWebSocketServerImplementation&&) = delete;
+
+    SimplePluginWebSocketServerImplementation& operator=(const SimplePluginWebSocketServerImplementation&) = delete;
+    SimplePluginWebSocketServerImplementation& operator=(SimplePluginWebSocketServerImplementation&&) = delete;
+
+// TODO: initialize members
+    SimplePluginWebSocketServerImplementation()
+        : _server{ _T("127.0.0.1:8081") /* listening node */ }
+    {}
+
+    ~SimplePluginWebSocketServerImplementation() = default;
+
+    uint32_t Start(VARIABLE_IS_NOT_USED uint32_t waitTime)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        return result;
+    }
+
+     uint32_t Stop(VARIABLE_IS_NOT_USED uint32_t waitTime)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        return result;
+    }
+
+private :
+// TODO
+    WebSocketServer<1024, 1024, Core::SocketStream> _server;
+
+    friend SimplePluginImplementation;
+    uint32_t Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+    {
+        uint32_t result = Core::ERROR_GENERAL;
+        return result;
+    }  
+};
+
+
 // Inform Thunder this out-of-service (module) implements this service (class)
 // Arguments are module (service) name, major minor and optional patch version
 // Use after the service has been defined / declared
 SERVICE_REGISTRATION(SimplePluginCOMRPCServerImplementation, 1, 0);
 SERVICE_REGISTRATION(SimplePluginCOMRPCClientImplementation, 1, 0);
+
+SERVICE_REGISTRATION(SimplePluginWebSocketClientImplementation, 1, 0);
+SERVICE_REGISTRATION(SimplePluginWebSocketServerImplementation, 1, 0);
 
 } } // namespace Thunder::Plugin

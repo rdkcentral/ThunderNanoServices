@@ -8,7 +8,7 @@ startmode = "Deactivated"
 
 # Create the setting to run this plugin out of process if possible
 
-callsign = "CommunicationPerformanceServer"
+callsign = "CommunicationPerformanceCOMRPCServer"
 
 # Step 1; create the element configuration
 configuration = JSON();

@@ -22,7 +22,7 @@
 namespace Thunder {
 namespace Plugin {
 
-class CommunicationPerformanceServer : public SimplePlugin {
+class CommunicationPerformanceWebSocketClient : public SimplePlugin {
 protected :
     std::string Classname() const override;
 };

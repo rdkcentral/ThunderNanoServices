@@ -16,7 +16,7 @@
 # limitations under the License.
 
 # As no callsign has been configured (manually) the system uses the file name as callsign
-project(CommunicationPerformanceCOMRPCClient)
+project(CommunicationPerformanceWebSocketClient)
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -36,7 +36,7 @@ add_library(
         ${CMAKE_CURRENT_SOURCE_DIR}/../Common/Module.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../Common/CommunicationPerformance.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../Common/CommunicationPerformanceImplementation.cpp
-        CommunicationPerformanceCOMRPCClient.cpp
+        CommunicationPerformanceWebSocketClient.cpp
 )
 
 set_target_properties(

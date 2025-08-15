@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-#include "CommunicationPerformanceClient.h"
+#include "CommunicationPerformanceCOMRPCClient.h"
 
 namespace Thunder {
 namespace Plugin {
@@ -25,7 +25,7 @@ namespace Plugin {
 // TODO: Mandatory, why? What does it do?
 namespace {
 
-static Metadata<CommunicationPerformanceClient> metadata (
+static Metadata<CommunicationPerformanceCOMRPCClient> metadata (
     // Version
     1, 0, 0,
     // Preconditions
@@ -38,7 +38,7 @@ static Metadata<CommunicationPerformanceClient> metadata (
 
 }
 
-std::string CommunicationPerformanceClient::Classname() const
+std::string CommunicationPerformanceCOMRPCClient::Classname() const
 {
     // This name is appended with 'Implementation' at instantiation of the out-ouf-process part
     return "SimplePluginCOMRPCClient";
