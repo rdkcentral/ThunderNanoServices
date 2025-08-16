@@ -1,0 +1,7 @@
+startmode = "@PLUGIN_TESTTEXTOPTIONS_STARTMODE@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTTEXTOPTIONS_MODE@")
+configuration.add("root", root)
