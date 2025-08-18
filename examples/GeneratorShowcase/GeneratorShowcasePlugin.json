@@ -8,8 +8,8 @@
     "version": "1.0"
   },
   "interface": [
-    { "$ref": "interfaces/ISimpleAsync.h" },
-    { "$ref": "interfaces/ISimpleInstanceObjects.h" },
-    { "$ref": "interfaces/ISimpleCustomObjects.h" }
+    { "$ref": "sample_interfaces/ISimpleAsync.h" },
+    { "$ref": "sample_interfaces/ISimpleInstanceObjects.h" },
+    { "$ref": "sample_interfaces/ISimpleCustomObjects.h" }
   ]
 }
