@@ -2387,11 +2387,6 @@ class BluetoothControl : public PluginHost::IPlugin
                 });
             }
             
-            // This brings in the IBluetooth::IDevice::ICallback interfaces
-            // to fix name hiding of the DeviceImpl::Callback methods.
-            uint32_t Callback(IBluetooth::IDevice::ICallback* callback);
-            uint32_t Callback(IBluetooth::IDevice::ISecurityCallback* callback);
-
             uint32_t Callback(IBluetooth::IDevice::IClassic::ISecurityCallback* callback) override
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
