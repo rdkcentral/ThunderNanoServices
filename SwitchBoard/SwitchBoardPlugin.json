@@ -1,0 +1,14 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Switch Board Plugin",
+    "callsign": "SwitchBoard",
+    "locator": "libThunderSwitchBoard.so",
+    "status": "production",
+    "description": "This plugin is configured to manage a group of plugins, within which only one plugin can be active",
+    "version": "1.0"
+  },
+  "interface": [
+    { "$ref": "{cppinterfacedir}/ISwitchBoard.h" }
+  ]
+}
