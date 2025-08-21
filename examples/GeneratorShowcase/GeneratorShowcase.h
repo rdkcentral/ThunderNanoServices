@@ -38,8 +38,8 @@ namespace Plugin {
                             , public PluginHost::JSONRPCSupportsEventStatus
                             , virtual public PluginHost::JSONRPCSupportsAutoObjectLookup
                             , virtual public PluginHost::JSONRPCSupportsObjectLookup
-                            , public Sample::JSimpleInstanceObjects::IHandler
-                            , public Sample::JSimpleCustomObjects::IHandler {
+                            , public Example::JSimpleInstanceObjects::IHandler
+                            , public Example::JSimpleCustomObjects::IHandler {
     public:
         GeneratorShowcase()
             : _service(nullptr)
@@ -147,7 +147,7 @@ namespace Plugin {
         }; // class DecoupledJob
 
     private:
-        class ImaginaryServer : public Sample::ISimpleAsync {
+        class ImaginaryServer : public Example::ISimpleAsync {
         public:
             ImaginaryServer(GeneratorShowcase& parent)
                 : _parent(parent)
@@ -162,7 +162,7 @@ namespace Plugin {
                 , _bindType(_T("none"))
                 , _observers()
                 , _bindingObservers()
-                , _state(Sample::ISimpleAsync::DISCONNECTED)
+                , _state(Example::ISimpleAsync::DISCONNECTED)
             {
                 _linkAddress[0] = 0xFF;
             }
@@ -174,7 +174,7 @@ namespace Plugin {
                 _lock.Lock();
                 if (_callback != nullptr) {
                     // Closing but still a callback is installed
-                    _callback->Complete(_address, Sample::ISimpleAsync::CONNECTING_FAILED);
+                    _callback->Complete(_address, Example::ISimpleAsync::CONNECTING_FAILED);
                     _callback->Release();
                 }
 
@@ -239,7 +239,7 @@ namespace Plugin {
 
                 return Core::ERROR_NONE;
             }
-            Core::hresult Tables6(const bool fill, Sample::ISimpleAsync::Record& pod) override
+            Core::hresult Tables6(const bool fill, Example::ISimpleAsync::Record& pod) override
             {
                 if (fill == true) {
                     pod.param5.param0 = "fred";
@@ -250,10 +250,10 @@ namespace Plugin {
 
                 return Core::ERROR_NONE;
             }
-            Core::hresult Tables7(const bool fill, Core::OptionalType<Sample::ISimpleAsync::Record>& pod) override
+            Core::hresult Tables7(const bool fill, Core::OptionalType<Example::ISimpleAsync::Record>& pod) override
             {
                 if (fill == true) {
-                    Sample::ISimpleAsync::Record p;
+                    Example::ISimpleAsync::Record p;
                     p.param5.param0 = "fred";
                     p.param5.param1 = true;
                     p.param1 = { "garply", "waldo" };
@@ -263,19 +263,19 @@ namespace Plugin {
 
                 return Core::ERROR_NONE;
             }
-            Core::hresult Tables8(const bool fill, Core::OptionalType<Sample::ISimpleAsync::Record2>& pod) override
+            Core::hresult Tables8(const bool fill, Core::OptionalType<Example::ISimpleAsync::Record2>& pod) override
             {
                 if (fill == true) {
-                    Sample::ISimpleAsync::Record2 p;
+                    Example::ISimpleAsync::Record2 p;
                     p.param3 = { "garply", "waldo", "fred" };
                     pod = std::move(p);
                 }
                 return Core::ERROR_NONE;
             }
-            Core::hresult Tables9(const bool fill, Sample::ISimpleAsync::Record2& pod) override
+            Core::hresult Tables9(const bool fill, Example::ISimpleAsync::Record2& pod) override
             {
                 if (fill == true) {
-                    Sample::ISimpleAsync::Record2 p;
+                    Example::ISimpleAsync::Record2 p;
                     p.param3 = { "garply", "waldo", "fred" };
                     pod = std::move(p);
                 }
@@ -292,22 +292,22 @@ namespace Plugin {
             }
 
         public:
-            Core::hresult Connect(const Core::OptionalType<std::vector<uint8_t>>& address, const Core::OptionalType<uint16_t>& timeout, Sample::ISimpleAsync::ICallback* const cb) override
+            Core::hresult Connect(const Core::OptionalType<std::vector<uint8_t>>& address, const Core::OptionalType<uint16_t>& timeout, Example::ISimpleAsync::ICallback* const cb) override
             {
                 Core::hresult result = Core::ERROR_NONE;
 
                 _lock.Lock();
 
-                if (_state == Sample::ISimpleAsync::CONNECTED) {
+                if (_state == Example::ISimpleAsync::CONNECTED) {
                     TRACE(Trace::Error, (_T("Already connected")));
                     result = Core::ERROR_ALREADY_CONNECTED;
                 }
-                else if (_state == Sample::ISimpleAsync::CONNECTING) {
+                else if (_state == Example::ISimpleAsync::CONNECTING) {
                     TRACE(Trace::Error, (_T("Connection in progress")));
                     result = Core::ERROR_INPROGRESS;
                 }
                 else {
-                    _state = Sample::ISimpleAsync::CONNECTING;
+                    _state = Example::ISimpleAsync::CONNECTING;
                     _address = address.Value();
                     TRACE(Trace::Information, (_T("Connecting to %02x:%02x:%02x:%02x:%02x:%02x..."),
                         _address[0], _address[1], _address[2], _address[3], _address[4], _address[5]));
@@ -329,13 +329,13 @@ namespace Plugin {
                         // Stop the connection job
                         _job.Revoke();
 
-                        if (_state == Sample::ISimpleAsync::CONNECTING) {
+                        if (_state == Example::ISimpleAsync::CONNECTING) {
 
-                            _state = Sample::ISimpleAsync::DISCONNECTED;
+                            _state = Example::ISimpleAsync::DISCONNECTED;
 
                             // Timer fired, report a TIMED_OUT state
                             if (_callback != nullptr) {
-                                _callback->Complete(_address, Sample::ISimpleAsync::CONNECTING_TIMED_OUT);
+                                _callback->Complete(_address, Example::ISimpleAsync::CONNECTING_TIMED_OUT);
                                 _callback->Release();
                                 _callback = nullptr;
                             }
@@ -352,13 +352,13 @@ namespace Plugin {
 
                         _lock.Lock();
 
-                        if (_state == Sample::ISimpleAsync::CONNECTING) {
+                        if (_state == Example::ISimpleAsync::CONNECTING) {
 
-                            _state = Sample::ISimpleAsync::CONNECTED;
+                            _state = Example::ISimpleAsync::CONNECTED;
 
                             // Report CONNECTED state
                             if (_callback != nullptr) {
-                                _callback->Complete(_address, Sample::ISimpleAsync::CONNECTED);
+                                _callback->Complete(_address, Example::ISimpleAsync::CONNECTED);
                                 _callback->Release();
                                 _callback = nullptr;
                             }
@@ -383,14 +383,14 @@ namespace Plugin {
 
                 _lock.Lock();
 
-                if (_state != Sample::ISimpleAsync::CONNECTING) {
+                if (_state != Example::ISimpleAsync::CONNECTING) {
                     result = Core::ERROR_ILLEGAL_STATE;
                 }
                 else {
-                    _state = Sample::ISimpleAsync::DISCONNECTED;
+                    _state = Example::ISimpleAsync::DISCONNECTED;
 
                     if (_callback != nullptr) {
-                        _callback->Complete(_address, Sample::ISimpleAsync::CONNECTING_ABORTED);
+                        _callback->Complete(_address, Example::ISimpleAsync::CONNECTING_ABORTED);
                         _callback->Release();
                         _callback = nullptr;
                     }
@@ -406,16 +406,16 @@ namespace Plugin {
 
                 _lock.Lock();
 
-                if (_state == Sample::ISimpleAsync::CONNECTING) {
+                if (_state == Example::ISimpleAsync::CONNECTING) {
                     TRACE(Trace::Error, (_T("Connecting in progress")));
                     result = Core::ERROR_INPROGRESS;
                 }
-                else if (_state == Sample::ISimpleAsync::DISCONNECTED) {
+                else if (_state == Example::ISimpleAsync::DISCONNECTED) {
                     TRACE(Trace::Error, (_T("Not connected")));
                     result = Core::ERROR_ALREADY_RELEASED;
                 }
                 else {
-                    _state = Sample::ISimpleAsync::DISCONNECTED;
+                    _state = Example::ISimpleAsync::DISCONNECTED;
                     TRACE(Trace::Information, (_T("Disconnected")));
                 }
 
@@ -769,7 +769,7 @@ namespace Plugin {
 
         public:
             BEGIN_INTERFACE_MAP(ImaginaryServer)
-                INTERFACE_ENTRY(Sample::ISimpleAsync)
+                INTERFACE_ENTRY(Example::ISimpleAsync)
             END_INTERFACE_MAP
 
         private:
@@ -777,28 +777,28 @@ namespace Plugin {
             mutable Core::CriticalSection _lock;
             DecoupledJob _job;
             DecoupledJob _timer;
-            Sample::ISimpleAsync::ICallback* _callback;
+            Example::ISimpleAsync::ICallback* _callback;
             std::vector<uint8_t> _address;
             uint8_t _linkAddress[6];
             Core::MACAddress _macAddress;
             string _linkMetadata;
             string _bindType;
-            std::vector<Sample::ISimpleAsync::INotification*> _observers;
-            std::vector<Sample::ISimpleAsync::IBindNotification*> _bindingObservers;
-            Sample::ISimpleAsync::state _state;
+            std::vector<Example::ISimpleAsync::INotification*> _observers;
+            std::vector<Example::ISimpleAsync::IBindNotification*> _bindingObservers;
+            Example::ISimpleAsync::state _state;
         }; // class ImaginaryServer
 
     private:
-        class ImaginaryHost : public Sample::ISimpleInstanceObjects {
+        class ImaginaryHost : public Example::ISimpleInstanceObjects {
         public:
-            class DeviceImpl : public Sample::ISimpleInstanceObjects::IDevice {
+            class DeviceImpl : public Example::ISimpleInstanceObjects::IDevice {
             public:
                 DeviceImpl(GeneratorShowcase& parent, const string& name)
                     : _parent(parent)
                     , _lock()
                     , _job()
                     , _name(name)
-                    , _state(Sample::ISimpleInstanceObjects::state::DISABLED)
+                    , _state(Example::ISimpleInstanceObjects::state::DISABLED)
                     , _pins()
                     , _observers()
                 {
@@ -887,14 +887,14 @@ namespace Plugin {
                 {
                     // Mock enabling in 1 second :)
                     _job.Schedule([this](){
-                        SetState(Sample::ISimpleInstanceObjects::ENABLED);
+                        SetState(Example::ISimpleInstanceObjects::ENABLED);
                     }, 1000);
 
                     return (Core::ERROR_NONE);
                 }
                 Core::hresult Disable() override
                 {
-                    SetState(Sample::ISimpleInstanceObjects::DISABLED);
+                    SetState(Example::ISimpleInstanceObjects::DISABLED);
                     return (Core::ERROR_NONE);
                 }
                 Core::hresult Pin(const uint8_t pin, const bool high) override
@@ -923,7 +923,7 @@ namespace Plugin {
                 }
 
             public:
-                Sample::ISimpleInstanceObjects::state State() const
+                Example::ISimpleInstanceObjects::state State() const
                 {
                     return (_state);
                 }
@@ -971,7 +971,7 @@ namespace Plugin {
 
                     _lock.Unlock();
                 }
-                void SetState(const Sample::ISimpleInstanceObjects::state state)
+                void SetState(const Example::ISimpleInstanceObjects::state state)
                 {
                     _lock.Lock();
 
@@ -1014,7 +1014,7 @@ namespace Plugin {
 
             public:
                 BEGIN_INTERFACE_MAP(Devicempl)
-                    INTERFACE_ENTRY(Sample::ISimpleInstanceObjects::IDevice)
+                    INTERFACE_ENTRY(Example::ISimpleInstanceObjects::IDevice)
                 END_INTERFACE_MAP
 
             private:
@@ -1022,9 +1022,9 @@ namespace Plugin {
                 mutable Core::CriticalSection _lock;
                 DecoupledJob _job;
                 string _name;
-                Sample::ISimpleInstanceObjects::state _state;
+                Example::ISimpleInstanceObjects::state _state;
                 std::map<uint8_t, bool> _pins;
-                std::vector<Sample::ISimpleInstanceObjects::IDevice::INotification*> _observers;
+                std::vector<Example::ISimpleInstanceObjects::IDevice::INotification*> _observers;
 
             }; // class Device
 
@@ -1042,7 +1042,7 @@ namespace Plugin {
             ImaginaryHost& operator=(ImaginaryHost&&) = delete;
 
         public:
-            Core::hresult Acquire(const string& name, Sample::ISimpleInstanceObjects::IDevice*& device) override
+            Core::hresult Acquire(const string& name, Example::ISimpleInstanceObjects::IDevice*& device) override
             {
                 Core::hresult result = Core::ERROR_NONE;
 
@@ -1064,7 +1064,7 @@ namespace Plugin {
 
                 return (result);
             }
-            Core::hresult Relinquish(Sample::ISimpleInstanceObjects::IDevice* const device) override
+            Core::hresult Relinquish(Example::ISimpleInstanceObjects::IDevice* const device) override
             {
                 Core::hresult result = Core::ERROR_NONE;
 
@@ -1073,7 +1073,7 @@ namespace Plugin {
                 }
                 else {
                     string deviceName;
-                    static_cast<const Sample::ISimpleInstanceObjects::IDevice*>(device)->Name(deviceName);
+                    static_cast<const Example::ISimpleInstanceObjects::IDevice*>(device)->Name(deviceName);
 
                     auto it = _devices.find(deviceName);
 
@@ -1092,7 +1092,7 @@ namespace Plugin {
 
         public:
             BEGIN_INTERFACE_MAP(ImaginaryHost)
-                INTERFACE_ENTRY(Sample::ISimpleInstanceObjects)
+                INTERFACE_ENTRY(Example::ISimpleInstanceObjects)
             END_INTERFACE_MAP
 
         private:
@@ -1103,9 +1103,9 @@ namespace Plugin {
         }; // class ImaginaryHost
 
     private:
-        class ImaginaryCustomHost : public Sample::ISimpleCustomObjects {
+        class ImaginaryCustomHost : public Example::ISimpleCustomObjects {
         public:
-            class AccessoryImpl : public Sample::ISimpleCustomObjects::IAccessory {
+            class AccessoryImpl : public Example::ISimpleCustomObjects::IAccessory {
             public:
                 AccessoryImpl(GeneratorShowcase& parent, const string& id, const string& name)
                     : _parent(parent)
@@ -1273,7 +1273,7 @@ namespace Plugin {
 
             public:
                 BEGIN_INTERFACE_MAP(AccessoryImpl)
-                    INTERFACE_ENTRY(Sample::ISimpleCustomObjects::IAccessory)
+                    INTERFACE_ENTRY(Example::ISimpleCustomObjects::IAccessory)
                 END_INTERFACE_MAP
 
             private:
@@ -1282,7 +1282,7 @@ namespace Plugin {
                 string _id;
                 string _name;
                 std::map<uint8_t, bool> _pins;
-                std::vector<Sample::ISimpleCustomObjects::IAccessory::INotification*> _observers;
+                std::vector<Example::ISimpleCustomObjects::IAccessory::INotification*> _observers;
             }; // class AccessoryImpl
 
         public:
@@ -1370,7 +1370,7 @@ namespace Plugin {
             }
 
             // Name of the device is not related to its ID
-            Core::hresult Accessory(const string& name, Sample::ISimpleCustomObjects::IAccessory*& accessory) const override
+            Core::hresult Accessory(const string& name, Example::ISimpleCustomObjects::IAccessory*& accessory) const override
             {
                 Core::hresult result = Core::ERROR_NONE;
 
@@ -1438,7 +1438,7 @@ namespace Plugin {
 
                 ASSERT(object != nullptr);
 
-                const Sample::ISimpleCustomObjects::IAccessory* const acc = object->QueryInterface<Sample::ISimpleCustomObjects::IAccessory>();
+                const Example::ISimpleCustomObjects::IAccessory* const acc = object->QueryInterface<Example::ISimpleCustomObjects::IAccessory>();
 
                 // This would be odd.
                 ASSERT(acc != nullptr);
@@ -1465,14 +1465,14 @@ namespace Plugin {
 
         public:
             BEGIN_INTERFACE_MAP(ImaginaryCustomHost)
-                INTERFACE_ENTRY(Sample::ISimpleCustomObjects)
+                INTERFACE_ENTRY(Example::ISimpleCustomObjects)
             END_INTERFACE_MAP
 
         private:
             GeneratorShowcase& _parent;
             mutable Core::CriticalSection _lock;
             std::vector<AccessoryImpl*> _accessories;
-            std::vector<Sample::ISimpleCustomObjects::INotification*> _observers;
+            std::vector<Example::ISimpleCustomObjects::INotification*> _observers;
 
         }; // class ImaginaryCustomHost
 
@@ -1496,14 +1496,14 @@ namespace Plugin {
             ASSERT(_imaginaryCustomHost != nullptr);
 
             // The example async interface
-            Sample::JSimpleAsync::Register(*this, _imaginaryServer);
+            Example::JSimpleAsync::Register(*this, _imaginaryServer);
 
             // The example lookup object interface
-            Sample::JSimpleInstanceObjects::Register(*this, _imaginaryHost, this);
+            Example::JSimpleInstanceObjects::Register(*this, _imaginaryHost, this);
 
             // The example custom lookup object interface
             // Before registering with a custom lookup interface, handlers for each looked up interface need to be installed!
-            PluginHost::JSONRPCSupportsObjectLookup::template Add<Sample::ISimpleCustomObjects::IAccessory>(
+            PluginHost::JSONRPCSupportsObjectLookup::template Add<Example::ISimpleCustomObjects::IAccessory>(
                 // Handler for obj to id translation.
                 // (Context can be omitted from the lambda altogheter if not needed.)
                 [this](const Core::JSONRPC::Context& context, const Core::IUnknown* object) -> string {
@@ -1523,26 +1523,26 @@ namespace Plugin {
                 }
             );
 
-            Sample::JSimpleCustomObjects::Register(*this, _imaginaryCustomHost, this);
+            Example::JSimpleCustomObjects::Register(*this, _imaginaryCustomHost, this);
 
             // Register for channel closures
             service->Register(&_connectionNotificationSink);
 
-            _imaginaryServer->Register(static_cast<Sample::ISimpleAsync::INotification*>(&_linkNotificationSink));
-            _imaginaryServer->Register(static_cast<Sample::ISimpleAsync::IBindNotification*>(&_linkNotificationSink));
+            _imaginaryServer->Register(static_cast<Example::ISimpleAsync::INotification*>(&_linkNotificationSink));
+            _imaginaryServer->Register(static_cast<Example::ISimpleAsync::IBindNotification*>(&_linkNotificationSink));
 
             // If needed, it's possible to install callbacks when devices are acquired/relinquished.
             // The relinquish callback also fires on channel closure.
             // Here it's used to store device notifcation sinks.
-            Callback([this](const bool acquired, const uint32_t, Sample::ISimpleInstanceObjects::IUnknown* obj) {
+            Callback([this](const bool acquired, const uint32_t, Example::ISimpleInstanceObjects::IUnknown* obj) {
                 ASSERT(obj != nullptr);
 
-                Sample::ISimpleInstanceObjects::IDevice* device = obj->QueryInterface<Sample::ISimpleInstanceObjects::IDevice>();
+                Example::ISimpleInstanceObjects::IDevice* device = obj->QueryInterface<Example::ISimpleInstanceObjects::IDevice>();
                 if (device != nullptr) {
                     if (acquired == true) {
                         // device was acquired
                         string name;
-                        static_cast<const Sample::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
+                        static_cast<const Example::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
                         TRACE(Trace::Information, (_T("Device '%s' acquired"), name.c_str()));
 
                         DeviceNotificationImpl* const impl = Core::ServiceType<DeviceNotificationImpl>::Create<DeviceNotificationImpl>(*this, device);
@@ -1561,7 +1561,7 @@ namespace Plugin {
                     else {
                         // device is about to be relinquished
                         string name;
-                        static_cast<const Sample::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
+                        static_cast<const Example::ISimpleInstanceObjects::IDevice*>(device)->Name(name);
                         TRACE(Trace::Information, (_T("Device '%s' released"), name.c_str()));
 
                         _lock.Lock();
@@ -1599,26 +1599,26 @@ namespace Plugin {
             _service->Unregister(&_connectionNotificationSink);
 
             if (_imaginaryServer != nullptr) {
-                _imaginaryServer->Unregister(static_cast<Sample::ISimpleAsync::INotification*>(&_linkNotificationSink));
-                _imaginaryServer->Unregister(static_cast<Sample::ISimpleAsync::IBindNotification*>(&_linkNotificationSink));
-                Sample::JSimpleAsync::Unregister(*this);
+                _imaginaryServer->Unregister(static_cast<Example::ISimpleAsync::INotification*>(&_linkNotificationSink));
+                _imaginaryServer->Unregister(static_cast<Example::ISimpleAsync::IBindNotification*>(&_linkNotificationSink));
+                Example::JSimpleAsync::Unregister(*this);
                 _imaginaryServer->Release();
                 _imaginaryServer = nullptr;
             }
 
             if (_imaginaryHost != nullptr) {
                 Callback(nullptr);
-                Sample::JSimpleInstanceObjects::Unregister(*this);
+                Example::JSimpleInstanceObjects::Unregister(*this);
                 _imaginaryHost->Release();
                 _imaginaryHost = nullptr;
             }
 
             // Uninstall the handler first!
-            PluginHost::JSONRPCSupportsObjectLookup::Remove<Sample::ISimpleCustomObjects::IAccessory>();
+            PluginHost::JSONRPCSupportsObjectLookup::Remove<Example::ISimpleCustomObjects::IAccessory>();
 
             if (_imaginaryCustomHost != nullptr) {
                 _imaginaryCustomHost->Unregister(&_customNotificationSink);
-                Sample::JSimpleCustomObjects::Unregister(*this);
+                Example::JSimpleCustomObjects::Unregister(*this);
                 _imaginaryCustomHost->Release();
                 _imaginaryCustomHost = nullptr;
             }
@@ -1636,15 +1636,15 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(GeneratorShowcase)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_AGGREGATE(Sample::ISimpleAsync, _imaginaryServer)
-            INTERFACE_AGGREGATE(Sample::ISimpleInstanceObjects, _imaginaryHost)
-            INTERFACE_AGGREGATE(Sample::ISimpleCustomObjects, _imaginaryCustomHost)
+            INTERFACE_AGGREGATE(Example::ISimpleAsync, _imaginaryServer)
+            INTERFACE_AGGREGATE(Example::ISimpleInstanceObjects, _imaginaryHost)
+            INTERFACE_AGGREGATE(Example::ISimpleCustomObjects, _imaginaryCustomHost)
         END_INTERFACE_MAP
 
     private:
-        class DeviceNotificationImpl : public Sample::ISimpleInstanceObjects::IDevice::INotification {
+        class DeviceNotificationImpl : public Example::ISimpleInstanceObjects::IDevice::INotification {
         public:
-            DeviceNotificationImpl(GeneratorShowcase& parent, Sample::ISimpleInstanceObjects::IDevice* const device)
+            DeviceNotificationImpl(GeneratorShowcase& parent, Example::ISimpleInstanceObjects::IDevice* const device)
                 : _parent(parent)
                 , _device(device)
             {
@@ -1665,30 +1665,30 @@ namespace Plugin {
         public:
             void NameChanged(const string& name) override
             {
-                Sample::JSimpleInstanceObjects::Event::NameChanged(_parent, _device, name);
+                Example::JSimpleInstanceObjects::Event::NameChanged(_parent, _device, name);
             }
-            void StateChanged(const Sample::ISimpleInstanceObjects::state state) override
+            void StateChanged(const Example::ISimpleInstanceObjects::state state) override
             {
-                Sample::JSimpleInstanceObjects::Event::StateChanged(_parent, _device, state);
+                Example::JSimpleInstanceObjects::Event::StateChanged(_parent, _device, state);
             }
             void PinChanged(const uint8_t pin, const bool high) override
             {
-                Sample::JSimpleInstanceObjects::Event::PinChanged(_parent, _device, pin, high);
+                Example::JSimpleInstanceObjects::Event::PinChanged(_parent, _device, pin, high);
             }
 
         public:
             BEGIN_INTERFACE_MAP(DeviceNotificationImpl)
-                INTERFACE_ENTRY(Sample::ISimpleInstanceObjects::IDevice::INotification)
+                INTERFACE_ENTRY(Example::ISimpleInstanceObjects::IDevice::INotification)
             END_INTERFACE_MAP
 
         private:
             GeneratorShowcase& _parent;
-            Sample::ISimpleInstanceObjects::IDevice* _device;
+            Example::ISimpleInstanceObjects::IDevice* _device;
         }; // class DeviceNotificationImpl
 
-        class AccessoryNotificationImpl : public Sample::ISimpleCustomObjects::IAccessory::INotification {
+        class AccessoryNotificationImpl : public Example::ISimpleCustomObjects::IAccessory::INotification {
         public:
-            AccessoryNotificationImpl(GeneratorShowcase& parent, Sample::ISimpleCustomObjects::IAccessory* const accessory)
+            AccessoryNotificationImpl(GeneratorShowcase& parent, Example::ISimpleCustomObjects::IAccessory* const accessory)
                 : _parent(parent)
                 , _accessory(accessory)
             {
@@ -1709,22 +1709,22 @@ namespace Plugin {
         public:
             void NameChanged(const string& name) override
             {
-                Sample::JSimpleCustomObjects::Event::NameChanged(_parent, _accessory, name);
+                Example::JSimpleCustomObjects::Event::NameChanged(_parent, _accessory, name);
             }
 
         public:
             BEGIN_INTERFACE_MAP(AccessoryNotificationImpl)
-                INTERFACE_ENTRY(Sample::ISimpleCustomObjects::IAccessory::INotification)
+                INTERFACE_ENTRY(Example::ISimpleCustomObjects::IAccessory::INotification)
             END_INTERFACE_MAP
 
         private:
             GeneratorShowcase& _parent;
-            Sample::ISimpleCustomObjects::IAccessory* _accessory;
+            Example::ISimpleCustomObjects::IAccessory* _accessory;
 
         }; // class AccessoryNotificationImpl
 
-        class ImaginaryServerNotificationImpl : public Sample::ISimpleAsync::INotification
-                                              , public Sample::ISimpleAsync::IBindNotification {
+        class ImaginaryServerNotificationImpl : public Example::ISimpleAsync::INotification
+                                              , public Example::ISimpleAsync::IBindNotification {
         public:
             ImaginaryServerNotificationImpl(GeneratorShowcase& parent)
                 : _parent(parent)
@@ -1741,24 +1741,24 @@ namespace Plugin {
         public:
             void StatusChanged(const uint8_t address[6], const bool linked) override
             {
-                Sample::JSimpleAsync::Event::StatusChanged(_parent, address, linked);
+                Example::JSimpleAsync::Event::StatusChanged(_parent, address, linked);
             }
             void BindingChanged(const Core::MACAddress& address, const bool bound) override
             {
-                Sample::JSimpleAsync::Event::BindingChanged(_parent, address, bound);
+                Example::JSimpleAsync::Event::BindingChanged(_parent, address, bound);
             }
 
         public:
             BEGIN_INTERFACE_MAP(ImaginaryServerNotificationImpl)
-                INTERFACE_ENTRY(Sample::ISimpleAsync::INotification)
-                INTERFACE_ENTRY(Sample::ISimpleAsync::IBindNotification)
+                INTERFACE_ENTRY(Example::ISimpleAsync::INotification)
+                INTERFACE_ENTRY(Example::ISimpleAsync::IBindNotification)
             END_INTERFACE_MAP
 
         private:
             GeneratorShowcase& _parent;
         }; // class ImaginaryServerNotificationImpl
 
-        class ImaginaryCustomHostNotificationImpl : public Sample::ISimpleCustomObjects::INotification {
+        class ImaginaryCustomHostNotificationImpl : public Example::ISimpleCustomObjects::INotification {
         public:
             ImaginaryCustomHostNotificationImpl(GeneratorShowcase& parent)
                 : _parent(parent)
@@ -1787,7 +1787,7 @@ namespace Plugin {
             ImaginaryCustomHostNotificationImpl& operator=(ImaginaryCustomHostNotificationImpl&&) = delete;
 
         public:
-            void Added(Sample::ISimpleCustomObjects::IAccessory* const accessory) override
+            void Added(Example::ISimpleCustomObjects::IAccessory* const accessory) override
             {
                 ASSERT(accessory != nullptr);
 
@@ -1804,10 +1804,10 @@ namespace Plugin {
                 accessory->AddRef();
                 accessory->Register(impl);
 
-                Sample::JSimpleCustomObjects::Event::Added(_parent, accessory);
+                Example::JSimpleCustomObjects::Event::Added(_parent, accessory);
             }
 
-            void Removed(Sample::ISimpleCustomObjects::IAccessory* const accessory) override
+            void Removed(Example::ISimpleCustomObjects::IAccessory* const accessory) override
             {
                 ASSERT(accessory != nullptr);
 
@@ -1826,26 +1826,26 @@ namespace Plugin {
 
                 _lock.Unlock();
 
-                Sample::JSimpleCustomObjects::Event::Removed(_parent, accessory);
+                Example::JSimpleCustomObjects::Event::Removed(_parent, accessory);
             }
 
         public:
             BEGIN_INTERFACE_MAP(ImaginaryCustomHostNotificationImpl)
-                INTERFACE_ENTRY(Sample::ISimpleCustomObjects::INotification)
+                INTERFACE_ENTRY(Example::ISimpleCustomObjects::INotification)
             END_INTERFACE_MAP
 
         private:
             GeneratorShowcase& _parent;
             mutable Core::CriticalSection _lock;
-            std::map<Sample::ISimpleCustomObjects::IAccessory*, AccessoryNotificationImpl*> _sinks;
+            std::map<Example::ISimpleCustomObjects::IAccessory*, AccessoryNotificationImpl*> _sinks;
         }; // class ImaginaryCustomHostNotificationImpl
 
     private:
         // ISimpleInstanceObjects statuslistener callbacks
-        void OnStateChangedEventRegistration(Sample::ISimpleInstanceObjects::IDevice* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
+        void OnStateChangedEventRegistration(Example::ISimpleInstanceObjects::IDevice* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
         {
             string name;
-            static_cast<const Sample::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
+            static_cast<const Example::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
 
             TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' state change notifications"), client.c_str(),
                 status == PluginHost::JSONRPCSupportsEventStatus::Status::registered? "registered" : "unregistered", name.c_str()));
@@ -1855,13 +1855,13 @@ namespace Plugin {
             if (status == PluginHost::JSONRPCSupportsEventStatus::Status::registered) {
                 ImaginaryHost::DeviceImpl* device = static_cast<ImaginaryHost::DeviceImpl*>(object);
 
-                Sample::JSimpleInstanceObjects::Event::StateChanged(*this, object, device->State(), client);
+                Example::JSimpleInstanceObjects::Event::StateChanged(*this, object, device->State(), client);
             }
         }
-        void OnPinChangedEventRegistration(Sample::ISimpleInstanceObjects::IDevice* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
+        void OnPinChangedEventRegistration(Example::ISimpleInstanceObjects::IDevice* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
         {
             string name;
-            static_cast<const Sample::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
+            static_cast<const Example::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
 
             TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' pin state change notifications"), client.c_str(),
                 status == PluginHost::JSONRPCSupportsEventStatus::Status::registered? "registered" : "unregistered", name.c_str()));
@@ -1875,7 +1875,7 @@ namespace Plugin {
                 device->IteratePins([this, object, client](const uint8_t index, const bool high) {
 
                     if (high == true) {
-                        Sample::JSimpleInstanceObjects::Event::PinChanged(*this, object, index, true, client);
+                        Example::JSimpleInstanceObjects::Event::PinChanged(*this, object, index, true, client);
                     }
                 });
             }
@@ -1883,16 +1883,16 @@ namespace Plugin {
 
     private:
         // ISimpleCustomObjects statuslistener callbacks
-        void OnNameChangedEventRegistration(Sample::ISimpleCustomObjects::IAccessory* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
+        void OnNameChangedEventRegistration(Example::ISimpleCustomObjects::IAccessory* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
         {
             string name;
-            static_cast<const Sample::ISimpleCustomObjects::IAccessory*>(object)->Name(name);
+            static_cast<const Example::ISimpleCustomObjects::IAccessory*>(object)->Name(name);
 
             TRACE(Trace::Information, (_T("Client '%s' %s for accessory '%s' name change notifications"), client.c_str(),
                 status == PluginHost::JSONRPCSupportsEventStatus::Status::registered? "registered" : "unregistered", name.c_str()));
 
             if (status == PluginHost::JSONRPCSupportsEventStatus::Status::registered) {
-                Sample::JSimpleCustomObjects::Event::NameChanged(*this, object, name, client);
+                Example::JSimpleCustomObjects::Event::NameChanged(*this, object, name, client);
             }
         }
         void OnAddedEventRegistration(const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
@@ -1907,7 +1907,7 @@ namespace Plugin {
                 _imaginaryCustomHost->IterateAccessories([this, &client](ImaginaryCustomHost::AccessoryImpl* acc) {
 
                     ASSERT(acc != nullptr);
-                    Sample::JSimpleCustomObjects::Event::Added(*this, acc, client);
+                    Example::JSimpleCustomObjects::Event::Added(*this, acc, client);
                 });
             }
         }
@@ -1921,7 +1921,7 @@ namespace Plugin {
         ImaginaryServer* _imaginaryServer;
         ImaginaryHost* _imaginaryHost;
         ImaginaryCustomHost* _imaginaryCustomHost;
-        std::map<Sample::ISimpleInstanceObjects::IDevice*, DeviceNotificationImpl*> _deviceNotificationSinks;
+        std::map<Example::ISimpleInstanceObjects::IDevice*, DeviceNotificationImpl*> _deviceNotificationSinks;
 
     }; // class GeneratorShowcase
 
