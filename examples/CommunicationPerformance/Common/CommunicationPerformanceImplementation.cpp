@@ -60,7 +60,7 @@ constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(size_t n)
     // Use overflow for arbitrary values
 
     return static_cast<TYPE>(n);
-};
+}
 
 } // namespace CommunicationPerformanceHelpers
 
@@ -479,9 +479,10 @@ public:
             }
 
             // setw only accepts int
+#ifndef NDEBUG
             using common_t = std::common_type<int, uint64_t>::type;
             ASSERT((width + 2) <= static_cast<common_t>(std::numeric_limits<int>::max()));
-
+#endif
             constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / N;
             constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / N;
 
@@ -704,7 +705,7 @@ public:
 
     // Core::IReferenceCounted methods
     // -------------------------------
- 
+
     uint32_t AddRef() const override
     {
         // Without locking it may spuriously fail
@@ -968,7 +969,7 @@ private :
                     // The examples show that not the same object as in Offer is an input parameter, but the result of QueryInterface
                     && object == _performanceInterface
                 ) {
-                    uint32_t result = _performanceInterface->Release();
+                    VARIABLE_IS_NOT_USED uint32_t result = _performanceInterface->Release();
                     ASSERT((result == Core::ERROR_NONE) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
                     _performanceInterface = nullptr;
@@ -1628,16 +1629,15 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
         case STATE::RUN     :   state = STATE::EXECUTE;
         case STATE::EXECUTE :   {
                                 // Set to a low value for quick builds
-                                //constexpr uint16_t bufferMaxSize = 9999;
-                                constexpr uint16_t bufferMaxSize = 999;
+                                constexpr uint16_t bufferMaxSize = 9999;
 
-                                constexpr size_t numberOfBins = 10;
+                                constexpr size_t numberOfBins = 30;
 
 #ifndef _USE_TESTDATA
                                 std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
                                 // Educated guess, system dependent, required for distribution
-                                constexpr uint64_t upperBoundDuration = 500;
+                                constexpr uint64_t upperBoundDuration = 1500;
  
                                 // Round trip time
                                 uint64_t duration = 0;
@@ -1779,10 +1779,10 @@ private :
 // Inform Thunder this out-of-service (module) implements this service (class)
 // Arguments are module (service) name, major minor and optional patch version
 // Use after the service has been defined / declared
-SERVICE_REGISTRATION(SimplePluginCOMRPCServerImplementation, 1, 0);
-SERVICE_REGISTRATION(SimplePluginCOMRPCClientImplementation, 1, 0);
+SERVICE_REGISTRATION(SimplePluginCOMRPCServerImplementation, 1, 0)
+SERVICE_REGISTRATION(SimplePluginCOMRPCClientImplementation, 1, 0)
 
-SERVICE_REGISTRATION(SimplePluginWebSocketClientImplementation, 1, 0);
-SERVICE_REGISTRATION(SimplePluginWebSocketServerImplementation, 1, 0);
+SERVICE_REGISTRATION(SimplePluginWebSocketClientImplementation, 1, 0)
+SERVICE_REGISTRATION(SimplePluginWebSocketServerImplementation, 1, 0)
 
 } } // namespace Thunder::Plugin

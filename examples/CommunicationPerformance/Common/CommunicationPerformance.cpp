@@ -29,21 +29,21 @@ namespace Plugin {
 // -----------------------------------------
 
 // State of (this) plugin changed to Activated
-void SimplePlugin::PluginNotification::Activated(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
+void SimplePlugin::PluginNotification::Activated(VARIABLE_IS_NOT_USED const string& callsign, VARIABLE_IS_NOT_USED PluginHost::IShell* plugin) /* override */
 {
     ASSERT(plugin != nullptr);
     TRACE(Trace::Information, ("SimplePlugin::PluginNotification::Activated"));
 }
 
 // State of (this) plugin changed to Deactivated
-void SimplePlugin::PluginNotification::Deactivated(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
+void SimplePlugin::PluginNotification::Deactivated(VARIABLE_IS_NOT_USED const string& callsign, VARIABLE_IS_NOT_USED PluginHost::IShell* plugin) /* override */
 {
     ASSERT(plugin != nullptr);
     TRACE(Trace::Information, ("SimplePlugin::PluginNotification::Deactivated"));
 }
 
 // State of (this) plugin changed to Unavailable
-void SimplePlugin::PluginNotification::Unavailable(VARIABLE_IS_NOT_USED const string& callsign, PluginHost::IShell* plugin) /* override */
+void SimplePlugin::PluginNotification::Unavailable(VARIABLE_IS_NOT_USED const string& callsign, VARIABLE_IS_NOT_USED PluginHost::IShell* plugin) /* override */
 {
     ASSERT(plugin != nullptr);
     TRACE(Trace::Information, ("SimplePlugin::PluginNotification::Information"));
@@ -241,7 +241,7 @@ void SimplePlugin::Deinitialize(PluginHost::IShell* service) /* override */
         if (connection != nullptr) {
             /* void */ connection->Terminate();
 
-            uint32_t result = connection->Release();
+            VARIABLE_IS_NOT_USED uint32_t result = connection->Release();
             ASSERT(result == Core::ERROR_NONE);
         }
 
