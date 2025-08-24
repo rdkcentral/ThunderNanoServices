@@ -17,1764 +17,605 @@
  * limitations under the License.
  */
 
-#include "CommunicationPerformance.h"
+//#include "CommunicationPerformance.h"
 
-#include <websocket/websocket.h>
-
-// Interface to provide an implementation for
-#include <interfaces/IPerformance.h>
-
-// Test data for Histogram2D
-//#define _USE_TESTDATA
-#ifdef _USE_TESTDATA
-#include "TestData.h"
-#endif
-
-#include "Helpers.h"
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-#ifdef __cplusplus
-}
-#endif
-
-#include <limits>
-#include <forward_list>
-#include <utility>
-#include <iomanip>
-#include <cstdlib>
-#include <cstring>
+#include "CommunicationPerformanceImplementation.h"
 
 namespace Thunder {
 namespace Plugin {
 
-namespace CommunicationPerformanceHelpers {
+template<typename TYPE>
+Performance<TYPE>::Performance()
+    : Exchange::IPerformance()
+{}
 
-// User defined definition
-template<typename TYPE, size_t... N>
-constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(size_t n)
+template<typename TYPE>
+uint32_t Performance<TYPE>::Register(VARIABLE_IS_NOT_USED IPerformance::INotification* sink)
 {
-    // (Integral) TYPE may not have the same range as size_t
-    // Use overflow for arbitrary values
-
-    return static_cast<TYPE>(n);
+    return Core::ERROR_UNAVAILABLE;
 }
 
-} // namespace CommunicationPerformanceHelpers
+template<typename TYPE>
+uint32_t Performance<TYPE>::Unregister(VARIABLE_IS_NOT_USED IPerformance::INotification* sink)
+{
+    return Core::ERROR_UNAVAILABLE;
+}
 
-class Performance : public Exchange::IPerformance {
-public :
-    Performance(const Performance&) = delete;
-    Performance(Performance&&) = delete;
+template<typename TYPE>
+uint32_t Performance<TYPE>::Send(VARIABLE_IS_NOT_USED const uint16_t sendSize, VARIABLE_IS_NOT_USED const uint8_t buffer[])
+{
+    return Core::ERROR_NONE;
+}
 
-    Performance& operator=(const Performance&) = delete;
-    Performance& operator=(Performance&&) = delete;
+template<typename TYPE>
+uint32_t Performance<TYPE>::Receive(VARIABLE_IS_NOT_USED uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint8_t buffer[]) const
+{
+    return Core::ERROR_NONE;
+}
 
-    Performance()
-        : Exchange::IPerformance()
-    {}
+template<typename TYPE>
+uint32_t Performance<TYPE>::Exchange(VARIABLE_IS_NOT_USED uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint8_t buffer[], VARIABLE_IS_NOT_USED const uint16_t maxBufferSize)
+{
+    // Keep it simple and just 'echo' the result
+    return Core::ERROR_NONE;
+}
 
-    ~Performance() override = default;
-
-    // IPerformance interface methods
-    // ------------------------------
-
-    // Register for COM_RPC notifications 
-    uint32_t Register(VARIABLE_IS_NOT_USED IPerformance::INotification* sink) override
-    {
-        return Core::ERROR_UNAVAILABLE;
-    }
-
-    // Unregister for COM_RPC notifications
-    uint32_t Unregister(VARIABLE_IS_NOT_USED IPerformance::INotification* sink) override
-    {
-        return Core::ERROR_UNAVAILABLE;
-    }
-
-    uint32_t Send(VARIABLE_IS_NOT_USED const uint16_t sendSize, VARIABLE_IS_NOT_USED const uint8_t buffer[]) override
-    {
-        return Core::ERROR_NONE;
-    }
-
-    uint32_t Receive(VARIABLE_IS_NOT_USED uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint8_t buffer[]) const override
-    {
-        return Core::ERROR_NONE;
-    }
-
-    uint32_t Exchange(VARIABLE_IS_NOT_USED uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint8_t buffer[], VARIABLE_IS_NOT_USED const uint16_t maxBufferSize) override
-    {
-        // Keep it simple and just 'echo' the result
-        return Core::ERROR_NONE;
-    }
-
-    BEGIN_INTERFACE_MAP(Performance)
-        INTERFACE_ENTRY(Exchange::IPerformance)
-    END_INTERFACE_MAP
-};
 
 template<typename A, typename B>
-class Measurements {
-public:
+template<typename DERIVED>
+Measurements<A, B>::Distribution2D<DERIVED>::~Distribution2D()
+{
+    Print();
+    Clear();
+}
 
-    template<typename DERIVED>
-    class Distribution2D {
-    public:
-        ~Distribution2D()
-        {
-            Print();
-            Clear();
-        }
+template<typename A, typename B>
+template<typename DERIVED>
+bool Measurements<A, B>::Distribution2D<DERIVED>::Insert(const std::pair<A, B>& data)
+{
+    _lock.Lock();
 
-        bool Insert(const std::pair<A, B>& data)
-        {
-            _lock.Lock();
+    bool result{ false };
 
-            bool result{ false };
+    // For large n the remainder becomes dominant and may overflow (triggering the ASSERT) 
+    if ( (result =    data.first <= ( std::numeric_limits<A>::max() - _remainder.first )
+                   && data.second <= ( std::numeric_limits<B>::max() - _remainder.second )
+                   && _count < std::numeric_limits<size_t>::max()
+         ) != false
+    ) {
+        ++_count;
 
-            // For large n the remainder becomes dominant and may overflow (triggering the ASSERT) 
-            if ( (result =    data.first <= ( std::numeric_limits<A>::max() - _remainder.first )
-                           && data.second <= ( std::numeric_limits<B>::max() - _remainder.second )
-                           && _count < std::numeric_limits<size_t>::max()
-                 ) != false
-            ) {
-                ++_count;
+        _average = std::pair<A, B>(Average(data.first, _average.first, _remainder.first, _sign.first), Average(data.second, _average.second, _remainder.second, _sign.second));
 
-                _average = std::pair<A, B>(Average(data.first, _average.first, _remainder.first, _sign.first), Average(data.second, _average.second, _remainder.second, _sign.second));
+        _maximum = std::pair<A, B>(std::max(data.first, _maximum.first), std::max(data.second, _maximum.second));
 
-                _maximum = std::pair<A, B>(std::max(data.first, _maximum.first), std::max(data.second, _maximum.second));
+        _minimum = std::pair<A, B>(std::min(data.first, _minimum.first), std::min(data.second, _minimum.second));
 
-                _minimum = std::pair<A, B>(std::min(data.first, _minimum.first), std::min(data.second, _minimum.second));
+        static_cast<DERIVED*>(this)->DoInsert(data);
+    }
 
-                static_cast<DERIVED*>(this)->DoInsert(data);
+    _lock.Unlock();
+
+    return result;
+}
+
+template<typename A, typename B>
+template<typename DERIVED>
+void Measurements<A, B>::Distribution2D<DERIVED>::Clear()
+{
+    _lock.Lock();
+
+    static_cast<DERIVED*>(this)->DoClear();
+
+    _lock.Unlock();
+}
+
+template<typename A, typename B>
+template<typename DERIVED>
+const std::pair<A, B>& Measurements<A, B>::Distribution2D<DERIVED>::Average() const
+{
+    return _average;
+}
+
+template<typename A, typename B>
+template<typename DERIVED>
+const std::pair<A, B>& Measurements<A, B>::Distribution2D<DERIVED>::Maximum() const
+{
+    return _maximum;
+}
+
+template<typename A, typename B>
+template<typename DERIVED>
+const std::pair<A, B>& Measurements<A, B>::Distribution2D<DERIVED>::Minimum() const
+{
+    return _minimum;
+}
+
+template<typename A, typename B>
+template<typename DERIVED>
+size_t Measurements<A, B>::Distribution2D<DERIVED>::Count() const
+{
+    return _count;
+}
+
+template<typename A, typename B>
+template<typename DERIVED>
+void Measurements<A, B>::Distribution2D<DERIVED>::Print() const
+{
+    _lock.Lock();
+
+    std::cout << "Distribution2D :"
+              << " - Average(" << Count() << ") = (" << Average().first << ", " << Average().second << ")"
+              << " - Maximum(" << Count() << ") = (" << Maximum().first << ", " << Maximum().second << ")"
+              << " - Minimum(" << Count() << ") = (" << Minimum().first << ", " << Minimum().second << ")"
+              << " - Remainder(" << Count() << ") = (" << _remainder.first << ", " << _remainder.second << ")"
+              << std::endl;
+
+    static_cast<const DERIVED*>(this)->DoPrint();
+
+    _lock.Unlock();
+}
+ 
+template<typename A, typename B>
+template<typename DERIVED>
+Measurements<A, B>::Distribution2D<DERIVED>::Distribution2D()
+    : _average{ std::pair<A, B>(0, 0) }
+    , _remainder{ std::pair<A, B>(0, 0) }
+    , _sign{ std::pair<bool, bool>(false, false) }
+    , _maximum{ std::pair<A, B>(0, 0) }
+    , _minimum{ std::pair<A, B>(std::numeric_limits<A>::max(), std::numeric_limits<B>::max()) }
+    , _count{ 0 }
+    , _lock{}
+{}
+ 
+template<typename A, typename B>
+template<typename DERIVED>
+template<typename TYPE>
+typename std::enable_if<std::is_unsigned<TYPE>::value && std::is_integral<TYPE>::value, TYPE>::type
+Measurements<A, B>::Distribution2D<DERIVED>::Average(TYPE value, TYPE average, TYPE& remainder, bool& negative)
+{
+    ASSERT(_count > 0);
+
+    // Recursive algorithm
+    // a(n) = a[n-1] + 1/n * ( v(n) ) - a(n-1) )
+
+    // Naive compensation per iteration, not cumulative 
+
+    if (value == average) {
+        /*
+        condition
+        v(n) == a(n-1)
+
+        algorithm
+        a(n) = a(n-1)
+
+        check
+        none
+        */
+    } else {
+        // et(n-1), its sign is given by negative
+        TYPE et = remainder;
+
+        if (value < average) {
+            /*
+            condition
+            v(n) < a(n-1)
+
+            algorithm
+            a(n) = a(n-1) - ( ( a(n-1) - v(n) ) / n )
+
+            r(0) = 0
+            r(n) = ( - ( a(n) - v(n) ) ) % n
+
+            et(0) = 0
+            et(n) = -r(n) / n + e(t(n-1)
+
+            check
+            a(n-1) < ( (a(n-1) - v(n) ) / n )
+            */
+
+            ASSERT(average >= ((average - value) / _count));
+
+            // r(n), consider it as negative value
+            remainder = (average - value) % _count;
+
+            // From the current taken branch we know sign(r(n)) == -1 
+
+            // Test sign(et(n-1))
+            if (negative != false) {
+                // sign(et(n-1)) == -1
+
+                // et(n) = -r(n) - et(n-1)
+                // et(n) = - ( r(n) + et(n-1) ) 
+
+                // Possible overflow
+                ASSERT(et <= (std::numeric_limits<TYPE>::max() - remainder));
+
+                et = et + remainder;
+
+                negative = true;
+            } else {
+                // sign(et(n-1)) == 1
+
+                // et(n) = -r(n) + et(n-1)
+
+                if (et <= remainder) {
+                    // et(n) = - ( r(n) - et(n-1) )
+
+                    et = remainder - et;
+
+                    negative = true;
+                } else { 
+                    // et(n) = -r(n) + et(n-1)
+
+                    et = et - remainder;
+
+                    negative = false;
+                }
             }
 
-            _lock.Unlock();
+            // a(n) = a(n-1) - ( ( a(n-1) - v(n) ) / n )
+            average = average - ( ( average - value) / _count );
+        } 
 
-            return result;
-        }
+        if (value > average) {
+            /*
+            condition
+            v(n) > a(n-1)
 
-        void Clear()
-        {
-            _lock.Lock();
+            algorithm
+            a(n) = a(n-1) + ( ( v(n) - a(n-1) ) / n )
 
-            static_cast<DERIVED*>(this)->DoClear();
+            r(0) = 0
+            r(n) = (v(n) - a(n) ) % n
 
-            _lock.Unlock();
-        }
+            et(0) = 0
+            et(n) = r(n) + et(n-1)
 
-        // The average (mean) is not (always) equal to median
-        const std::pair<A, B>& Average() const
-        {
-            return _average;
-        }
+            check
+            a(n-1) > max - ( ( v(n) - a(n-1) ) / n )
+            */
 
-        const std::pair<A, B>& Maximum() const
-        {
-            return _maximum;
-        }
+            ASSERT(average <= ( std::numeric_limits<TYPE>::max()) - ( average + ( ( value - average ) / _count ) ) );
 
-        const std::pair<A, B>& Minimum() const
-        {
-            return _minimum;
-        }
+            // r(n), consider it as positive value
+            remainder = (value - average) % _count;
 
-        size_t Count() const
-        {
-            return _count;
-        }
+            // From the current taken branch we know sign(r(n) == 1 
 
-        void Print() const
-        {
-            _lock.Lock();
+            // Test sign(et(n-1))
+            if (negative != false) {
+                // sign(et(n-1)) == -1
 
-            std::cout << "Distribution2D :"
-                      << " - Average(" << Count() << ") = (" << Average().first << ", " << Average().second << ")"
-                      << " - Maximum(" << Count() << ") = (" << Maximum().first << ", " << Maximum().second << ")"
-                      << " - Minimum(" << Count() << ") = (" << Minimum().first << ", " << Minimum().second << ")"
-                      << " - Remainder(" << Count() << ") = (" << _remainder.first << ", " << _remainder.second << ")"
-                      << std::endl;
- 
-            static_cast<const DERIVED*>(this)->DoPrint();
+                // et(n) = r(n) - et(n-1) 
 
-            _lock.Unlock();
-        }
-    protected:
-        Distribution2D()
-            : _average{ std::pair<A, B>(0, 0) }
-            , _remainder{ std::pair<A, B>(0, 0) }
-            , _sign{ std::pair<bool, bool>(false, false) }
-            , _maximum{ std::pair<A, B>(0, 0) }
-            , _minimum{ std::pair<A, B>(std::numeric_limits<A>::max(), std::numeric_limits<B>::max()) }
-            , _count{ 0 }
-            , _lock{}
-        {}
-    private:
-        std::pair<A, B> _average;
-        std::pair<A, B> _remainder;
-        std::pair<bool, bool> _sign;
-        std::pair<A, B> _maximum;
-        std::pair<A, B> _minimum;
+                if (et <= remainder) {
+                    // et(n) = r(n) - et(n-1)
 
-        size_t _count;
+                    et = remainder - et;
 
-        mutable Core::CriticalSection _lock;
+                    negative = false;
+                } else { 
+                    // et(n) = r(n) - et(n-1)
+                    // et(n) = - ( -r(n) + et(n-1) )
 
-        // Algorithm has only been analysed for unsigned integral types, in particular integer values in the range 0 to max
-        template<typename TYPE>
-        typename std::enable_if<std::is_unsigned<TYPE>::value && std::is_integral<TYPE>::value, TYPE>::type
-        Average(TYPE value, TYPE average, TYPE& remainder, bool& negative = false)
-        {
-            ASSERT(_count > 0);
+                    et = et - remainder;
 
-            // Recursive algorithm
-            // a(n) = a[n-1] + 1/n * ( v(n) ) - a(n-1) )
-
-            // Naive compensation per iteration, not cumulative 
-
-            if (value == average) {
-                /*
-                condition
-                v(n) == a(n-1)
-
-                algorithm
-                a(n) = a(n-1)
-
-                check
-                none
-                */
-            } else {
-                // et(n-1), its sign is given by negative
-                TYPE et = remainder;
-
-                if (value < average) {
-                    /*
-                    condition
-                    v(n) < a(n-1)
-
-                    algorithm
-                    a(n) = a(n-1) - ( ( a(n-1) - v(n) ) / n )
-
-                    r(0) = 0
-                    r(n) = ( - ( a(n) - v(n) ) ) % n
-
-                    et(0) = 0
-                    et(n) = -r(n) / n + e(t(n-1)
-
-                    check
-                    a(n-1) < ( (a(n-1) - v(n) ) / n )
-                    */
-
-                    ASSERT(average >= ((average - value) / _count));
-
-                    // r(n), consider it as negative value
-                    remainder = (average - value) % _count;
-
-                    // From the current taken branch we know sign(r(n)) == -1 
-
-                    // Test sign(et(n-1))
-                    if (negative != false) {
-                        // sign(et(n-1)) == -1
-
-                        // et(n) = -r(n) - et(n-1)
-                        // et(n) = - ( r(n) + et(n-1) ) 
-
-                        // Possible overflow
-                        ASSERT(et <= (std::numeric_limits<TYPE>::max() - remainder));
-
-                        et = et + remainder;
-
-                        negative = true;
-                    } else {
-                        // sign(et(n-1)) == 1
-
-                        // et(n) = -r(n) + et(n-1)
-
-                        if (et <= remainder) {
-                            // et(n) = - ( r(n) - et(n-1) )
-
-                            et = remainder - et;
-
-                            negative = true;
-                        } else { 
-                            // et(n) = -r(n) + et(n-1)
-
-                            et = et - remainder;
-
-                            negative = false;
-                        }
-                    }
-
-                    // a(n) = a(n-1) - ( ( a(n-1) - v(n) ) / n )
-                    average = average - ( ( average - value) / _count );
-                } 
-
-                if (value > average) {
-                    /*
-                    condition
-                    v(n) > a(n-1)
-
-                    algorithm
-                    a(n) = a(n-1) + ( ( v(n) - a(n-1) ) / n )
-
-                    r(0) = 0
-                    r(n) = (v(n) - a(n) ) % n
-
-                    et(0) = 0
-                    et(n) = r(n) + et(n-1)
-
-                    check
-                    a(n-1) > max - ( ( v(n) - a(n-1) ) / n )
-                    */
- 
-                    ASSERT(average <= ( std::numeric_limits<TYPE>::max()) - ( average + ( ( value - average ) / _count ) ) );
-
-                    // r(n), consider it as positive value
-                    remainder = (value - average) % _count;
-
-                    // From the current taken branch we know sign(r(n) == 1 
-
-                    // Test sign(et(n-1))
-                    if (negative != false) {
-                        // sign(et(n-1)) == -1
-
-                        // et(n) = r(n) - et(n-1) 
-
-                        if (et <= remainder) {
-                            // et(n) = r(n) - et(n-1)
-
-                            et = remainder - et;
-
-                            negative = false;
-                        } else { 
-                            // et(n) = r(n) - et(n-1)
-                            // et(n) = - ( -r(n) + et(n-1) )
-
-                            et = et - remainder;
-
-                            negative = true;
-                        }
-                    } else {
-                        // sign(et(n-1)) == 1
-
-                        // et(n) = r(n) + et(n-1)
-
-                        // Possible overflow
-                        ASSERT(et <= ( std::numeric_limits<TYPE>::max() - remainder));
-
-                        et = et + remainder;
-
-                        negative = false;
-                    }
-
-                    // a(n) = a(n-1) + ( ( v(n) - a(n-1) ) / n )
-                    average = average + ( ( value - average ) / _count );
+                    negative = true;
                 }
+            } else {
+                // sign(et(n-1)) == 1
 
-                // Correct for the introduced error
-                // Use et(n) / n or et(n) / (n-1)
+                // et(n) = r(n) + et(n-1)
+
+                // Possible overflow
+                ASSERT(et <= ( std::numeric_limits<TYPE>::max() - remainder));
+
+                et = et + remainder;
+
+                negative = false;
+            }
+
+            // a(n) = a(n-1) + ( ( v(n) - a(n-1) ) / n )
+            average = average + ( ( value - average ) / _count );
+        }
+
+        // Correct for the introduced error
+        // Use et(n) / n or et(n) / (n-1)
 
 #ifdef _RUNNINGAVERAGE_N 
-                // Here et(n) / n 
-                if (_count >= 1) {
-                    // Future et(n-1)
-                    remainder = et % _count;
+        // Here et(n) / n 
+        if (_count >= 1) {
+            // Future et(n-1)
+            remainder = et % _count;
 
-                    if (negative != false) {
-                        ASSERT(average >= (et / _count));
+            if (negative != false) {
+                ASSERT(average >= (et / _count));
 
-                        average = average - (et / _count);
-                    } else {
-                        ASSERT(average >= 0);
-                        ASSERT(average <= (std::numeric_limits<TYPE>::max() - (et / _count)));
+                average = average - (et / _count);
+            } else {
+                ASSERT(average >= 0);
+                ASSERT(average <= (std::numeric_limits<TYPE>::max() - (et / _count)));
 
-                        average = average + (et / _count);
-                    }
-                }
-#else
-                // Here et(n) / (n -1) 
-                if (_count >= 2) {
-                    // Future et(n-1)
-                    remainder = et % (_count - 1);
-
-                    if (negative != false) {
-                        ASSERT(average >= (et / (_count - 1)));
-
-                        average = average - (et / (_count - 1));
-                    } else {
-                        ASSERT(average >= 0);
-                        ASSERT(average <= (std::numeric_limits<TYPE>::max() - (et / _count)));
-
-                        average = average + (et / (_count - 1));
-                    }
-                }
-#endif
+                average = average + (et / _count);
             }
+        }
+#else
+        // Here et(n) / (n -1) 
+        if (_count >= 2) {
+            // Future et(n-1)
+            remainder = et % (_count - 1);
+
+            if (negative != false) {
+                ASSERT(average >= (et / (_count - 1)));
+
+                average = average - (et / (_count - 1));
+            } else {
+                ASSERT(average >= 0);
+                ASSERT(average <= (std::numeric_limits<TYPE>::max() - (et / _count)));
+
+                average = average + (et / (_count - 1));
+            }
+        }
+#endif
+    }
 
 #undef _RUNNINGAVERAGE
 
-            return average;
-        }
-    };
+    return average;
+}
 
-    template<size_t N, A UPPER_BOUND_A = std::numeric_limits<A>::max(), B UPPER_BOUND_B = std::numeric_limits<B>::max(), A LOWER_BOUND_A = 0, B LOWER_BOUND_B = 0>
-    class Histogram2D : public Distribution2D<Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>> {
-        friend Distribution2D<Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>>;
-    public:
-        Histogram2D(const Histogram2D&) = delete;
-        Histogram2D(Histogram2D&&) = delete;
-
-        Histogram2D& operator=(const Histogram2D&) = delete;
-        Histogram2D& operator=(Histogram2D&&) = delete;
-
-        ~Histogram2D() = default;
-
-    protected:
-        void DoInsert(const std::pair<A, B>& data)
-        {
+template<typename A, typename B>
+template<size_t N, A UPPER_BOUND_A, B UPPER_BOUND_B, A LOWER_BOUND_A, B LOWER_BOUND_B>
+void Measurements<A, B>::Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>::DoInsert(const std::pair<A, B>& data)
+{
 // TODO: accept negative values
-            ASSERT(data.first >= 0);
-            ASSERT(data.second >= 0);
+    ASSERT(data.first >= 0);
+    ASSERT(data.second >= 0);
 
-            static_assert(   LOWER_BOUND_A >= 0
-                          && LOWER_BOUND_B >= 0
-                          && LOWER_BOUND_A < UPPER_BOUND_A
-                          && LOWER_BOUND_B < UPPER_BOUND_B
-                         , ""
-            );
+    static_assert(   LOWER_BOUND_A >= 0
+                  && LOWER_BOUND_B >= 0
+                  && LOWER_BOUND_A < UPPER_BOUND_A
+                  && LOWER_BOUND_B < UPPER_BOUND_B
+                 , ""
+    );
 
-            constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / N;
-            constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / N;
+    constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / N;
+    constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / N;
 
-            // Bound to N, array indices are N - 1
-            // The integral step size is truncated eg 'rounded' to zero
+    // Bound to N, array indices are N - 1
+    // The integral step size is truncated eg 'rounded' to zero
 
-            const A indexA = data.first < stepSizeA ? 0 : data.first / stepSizeA;
-            const B indexB = data.second < stepSizeB ? 0 : data.second / stepSizeB;
+    const A indexA = data.first < stepSizeA ? 0 : data.first / stepSizeA;
+    const B indexB = data.second < stepSizeB ? 0 : data.second / stepSizeB;
 
-            ASSERT(indexA <= static_cast<A>(std::numeric_limits<size_t>::max()));
-            ASSERT(indexB <= static_cast<B>(std::numeric_limits<size_t>::max()));
+    ASSERT(indexA <= static_cast<A>(std::numeric_limits<size_t>::max()));
+    ASSERT(indexB <= static_cast<B>(std::numeric_limits<size_t>::max()));
 
-            _bins[static_cast<size_t>(indexA) < (N - 1) ? static_cast<size_t>(indexA) : N - 1][static_cast<size_t>(indexB) < (N -1) ? static_cast<size_t>(indexB) : N - 1]++;
+    _bins[static_cast<size_t>(indexA) < (N - 1) ? static_cast<size_t>(indexA) : N - 1][static_cast<size_t>(indexB) < (N -1) ? static_cast<size_t>(indexB) : N - 1]++;
+}
+
+template<typename A, typename B>
+template<size_t N, A UPPER_BOUND_A, B UPPER_BOUND_B, A LOWER_BOUND_A, B LOWER_BOUND_B>
+void Measurements<A, B>::Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>::DoClear()
+{
+    for(auto& item : _bins) {
+        item.fill(0);
+    }
+}
+
+template<typename A, typename B>
+template<size_t N, A UPPER_BOUND_A, B UPPER_BOUND_B, A LOWER_BOUND_A, B LOWER_BOUND_B>
+void Measurements<A, B>::Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>::DoPrint() const
+{
+    // Display contents
+
+    uint64_t width = 1;
+
+    for (auto& item : _bins) {
+        for (auto value : item) {
+            width = std::max(width, value % 10);
         }
+    }
 
-        void DoClear()
-        {
-            for(auto& item : _bins) {
-                item.fill(0);
-            }
-        }
-
-        void DoPrint() const
-        {
-            // Display contents
-
-            uint64_t width = 1;
-
-            for (auto& item : _bins) {
-                for (auto value : item) {
-                    width = std::max(width, value % 10);
-                }
-            }
-
-            // setw only accepts int
+    // setw only accepts int
 #ifndef NDEBUG
-            using common_t = std::common_type<int, uint64_t>::type;
-            ASSERT((width + 2) <= static_cast<common_t>(std::numeric_limits<int>::max()));
+    using common_t = std::common_type<int, uint64_t>::type;
+    ASSERT((width + 2) <= static_cast<common_t>(std::numeric_limits<int>::max()));
 #endif
-            constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / N;
-            constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / N;
+    constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / N;
+    constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / N;
 
-            std::cout << std::setw(width + 3) << "";
+    std::cout << std::setw(width + 3) << "";
 
-            for (size_t column = 0; column < N; column++) {
-                std::cout << std::setw(width) << column * stepSizeB << ">= ";
-            }
-
-            std::cout << std::endl;
-
-            size_t row = 0;
-
-            for (auto& item : _bins) {
-                std::cout << std::setw(width) << stepSizeA * row << ">= ";
-
-                for (auto value : item) {
-                    std::cout << std::setw(width + 2) << value << " ";
-                }
-
-                std::cout << std::endl;
-
-                ++row;
-            }
-        }
-    private:
-        template<typename DISTRIBUTION>
-        friend DISTRIBUTION& Measurements<A,B>::Instance();
-        Histogram2D()
-            : Distribution2D<Histogram2D<N,UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>>{}
-            , _bins{}
-        {}
-
-        std::array<std::array<uint64_t, N>, N> _bins;
-    };
-
-    Measurements() = delete;
-
-    Measurements(const Measurements&) = delete;
-    Measurements(Measurements&&) = delete;
-
-    Measurements& operator=(const Measurements&) = delete;
-    Measurements& operator=(Measurements&&) = delete;
-
-    ~Measurements() = default;
-
-    // The 'creator'
-    template<typename DISTRIBUTION>
-    static DISTRIBUTION& Instance()
-    {
-        // A distribution should be able to 'accept' types even through conversion
-
-        using a_t = decltype(std::declval<DISTRIBUTION>().Average().first);
-        using b_t = decltype(std::declval<DISTRIBUTION>().Average().second);
-
-        using common_a_t = typename std::common_type<a_t, A>::type;
-        using common_b_t = typename std::common_type<b_t, B>::type;
-
-        static_assert(   static_cast<common_a_t>(std::numeric_limits<A>::max()) <= static_cast<common_a_t>(std::numeric_limits<a_t>::max())
-                      && static_cast<common_b_t>(std::numeric_limits<B>::max()) <= static_cast<common_b_t>(std::numeric_limits<b_t>::max())
-                      , ""
-        );
-
-        static DISTRIBUTION distribution;
-
-        return distribution;
+    for (size_t column = 0; column < N; column++) {
+        std::cout << std::setw(width) << column * stepSizeB << ">= ";
     }
 
-private:
-};
+    std::cout << std::endl;
 
-template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-class COMRPCClient : public Core::IReferenceCounted {
-public:
-    COMRPCClient() = delete;
-    COMRPCClient(const COMRPCClient&) = delete;
-    COMRPCClient(COMRPCClient&&) = delete;
+    size_t row = 0;
 
-    COMRPCClient& operator=(const COMRPCClient&) = delete;
-    COMRPCClient& operator=(COMRPCClient&&) = delete;
+    for (auto& item : _bins) {
+        std::cout << std::setw(width) << stepSizeA * row << ">= ";
 
-    COMRPCClient(const std::string& remoteNode)
-        : _remoteNode{ remoteNode.c_str() }
-        , _messageHandler{}
-        , _communicatorClient{}
-        , _lock{}
-        , _performanceImplementation{ nullptr }
-        , _referenceCount{ 0 }
-    {}
+        for (auto value : item) {
+            std::cout << std::setw(width + 2) << value << " ";
+        }
 
-    ~COMRPCClient() // no override !
-    {
-        ASSERT(_referenceCount == 0);
-        /* uint32_t result = */ Stop(Core::infinite);
+        std::cout << std::endl;
+
+        ++row;
     }
+}
 
-    uint32_t Start(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
+template<typename A, typename B>
+template<size_t N, A UPPER_BOUND_A, B UPPER_BOUND_B, A LOWER_BOUND_A, B LOWER_BOUND_B>
+Measurements<A, B>::Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>::Histogram2D()
+    : Distribution2D<Histogram2D<N,UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUND_A, LOWER_BOUND_B>>{}
+    , _bins{}
+{}
 
-        if (_communicatorClient.IsValid() != true) {
-            _messageHandler = Core::ProxyType<RPC::InvokeServerType<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>>::Create();
 
-            if (_messageHandler.IsValid() != false) {
-                _communicatorClient = Core::ProxyType<RPC::CommunicatorClient>::Create(_remoteNode, Core::ProxyType<Core::IIPCServer>(_messageHandler));
-            }
-        }
+template<typename A, typename B>
+template<typename DISTRIBUTION>
+/* static */ DISTRIBUTION& Measurements<A, B>::Instance()
+{
+    // A distribution should be able to 'accept' types even through conversion
 
-        if (_communicatorClient.IsValid() != false) {
-            result = Open(waitTime);
-        }
+    using a_t = decltype(std::declval<DISTRIBUTION>().Average().first);
+    using b_t = decltype(std::declval<DISTRIBUTION>().Average().second);
 
-        return result;
-    }
+    using common_a_t = typename std::common_type<a_t, A>::type;
+    using common_b_t = typename std::common_type<b_t, B>::type;
 
-    uint32_t Stop(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
+    static_assert(   static_cast<common_a_t>(std::numeric_limits<A>::max()) <= static_cast<common_a_t>(std::numeric_limits<a_t>::max())
+                  && static_cast<common_b_t>(std::numeric_limits<B>::max()) <= static_cast<common_b_t>(std::numeric_limits<b_t>::max())
+                  , ""
+    );
 
-        /* uint32_t */ Revoke(waitTime);
+    static DISTRIBUTION distribution;
 
-        ASSERT(_performanceImplementation == nullptr);
+    return distribution;
+}
 
-        if (   _communicatorClient.IsValid() != false
-            && (result = Close(waitTime)) == Core::ERROR_NONE
-           ) {
-            result = _communicatorClient.Release();
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-        } 
 
-        if (   _communicatorClient.IsValid() != true
-            && _messageHandler.IsValid() != false
-           ) {
-            result = _messageHandler.Release();
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-        }
-
-        return result;
-    }
-
-    // This implementation is asked for a handle to the requested interface
-    Performance* Acquire(uint32_t waitTime)
-    {
-        _lock.Lock();
-
-        ASSERT(_performanceImplementation != nullptr);
-
-        _lock.Unlock();
-
-        return _performanceImplementation;
-    }
-
-    // RPC::CommunicatorClient methods
-    // -------------------------------
-
-    // Offer the remote our implementation of the interface, e.g., inform a server this is implementing the given interface
-    uint32_t Offer(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        // Replace any exisitng interface
-        /* uint32_t */ Revoke(waitTime);
- 
-        _lock.Lock();
-
-        ASSERT(_performanceImplementation == nullptr);
-
-        // Implicit 2x AddRef (?)
-        _performanceImplementation = Core::ServiceType<Performance>::Create<Performance>();
-
-        if (   _performanceImplementation != nullptr
-            && _communicatorClient.IsValid() != false
-            ) {
-            constexpr uint32_t version = static_cast<uint32_t>(~0);
-            // Implicit AddRef
-            result = _communicatorClient->Offer<Exchange::IPerformance>(_performanceImplementation, version, waitTime);
-        }
-
-        _lock.Unlock();
-
-        return result;
-    }
-
-    // Revoke the available (earlier) offered interface
-    uint32_t Revoke(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        _lock.Lock();
-
-        if (   _communicatorClient.IsValid() != false
-            && _performanceImplementation != nullptr
-        ) {
-            constexpr uint32_t version = static_cast<uint32_t>(~0);
-
-            // No implicit Release
-            result = _communicatorClient->Revoke<Exchange::IPerformance>(_performanceImplementation, version, waitTime);
-            ASSERT(result == Core::ERROR_NONE);
-
-            // The missing Release
-            result = _performanceImplementation->Release();
-            ASSERT((result == Core::ERROR_NONE) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
-        }
-
-        // Release for the implicit AddRef of Create()
-        if (_performanceImplementation != nullptr
-            && (    result == Core::ERROR_DESTRUCTION_SUCCEEDED
-                || (result = _performanceImplementation->Release()) == Core::ERROR_DESTRUCTION_SUCCEEDED
-               )
-           ) {
-            _performanceImplementation = nullptr;
-        }
-
-        ASSERT(_performanceImplementation == nullptr);
-
-        _lock.Unlock();
-
-        return result;
-    }
-
-    // Core::IReferenceCounted methods
-    // -------------------------------
-
-    uint32_t AddRef() const override
-    {
-        // Without locking it may spuriously fail
-
-        uint32_t result = Core::ERROR_GENERAL;
-
-        uint32_t expected = _referenceCount;
-
-        if (    expected < std::numeric_limits<uint32_t>::max()
-            && _referenceCount.compare_exchange_strong(expected, (expected + 1))
-        ) {
-            result = Core::ERROR_NONE;
-        }
-
-        return result;
-    }
-
-    uint32_t Release() const override
-    {
-        // Without locking it may spuriously fail
-
-        uint32_t result = Core::ERROR_GENERAL;
-
-        uint32_t expected = _referenceCount;
-
-        if (    expected > 0
-            && _referenceCount.compare_exchange_strong(expected, (expected - 1))
-        ) {
-            result = Core::ERROR_NONE;
-        }
- 
-        return result;
-    }
-
-private:
-
-    Core::NodeId _remoteNode;
-
-    Core::ProxyType< RPC::InvokeServerType<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS> > _messageHandler;
-
-    Core::ProxyType<RPC::CommunicatorClient> _communicatorClient;
-
-    mutable Core::CriticalSection _lock;
-
-    Performance* _performanceImplementation;
-
-    mutable std::atomic<uint32_t> _referenceCount;
-
-    uint32_t Open(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        if (_communicatorClient->IsOpen() != true) {
-            if (   (result = _communicatorClient->Open(waitTime)) != Core::ERROR_NONE
-                || _communicatorClient->IsOpen() != true
-               ) {
-                result = Core::ERROR_CONNECTION_CLOSED;
-            }
-        }
-
-        return result;
-    }
-
-    uint32_t Close(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        if (_communicatorClient->IsOpen() != false) {
-            if (   (result = _communicatorClient->Close(waitTime)) != Core::ERROR_NONE
-                && _communicatorClient->IsOpen() != false
-               ) {
-                result = Core::ERROR_CLOSING_FAILED;
-            }
-        }
-
-        return result;
-    }
-};
-
-// A single server to serve one to N clients
-template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-class COMRPCServer {
-public :
-    COMRPCServer() = delete;
-    COMRPCServer(const COMRPCServer&) = delete;
-    COMRPCServer(COMRPCServer&&) = delete;
-
-    COMRPCServer& operator=(const COMRPCServer&) = delete;
-    COMRPCServer& operator=(COMRPCServer&&) = delete;
-
-    COMRPCServer(const std::string& remoteNode, const string& proxyStubPath, const std::string& sourceName)
-        : _remoteNode{ static_cast<const TCHAR*>(remoteNode.c_str()) }
-        , _proxyStubPath{ proxyStubPath }
-        , _sourceName{ sourceName }
-        , _messageHandler{}
-        , _communicator{}
-        , _lock{}
-    {}
-
-    ~COMRPCServer()
-    {
-        /* uint32_t result = */ Stop(Core::infinite);
-    }
-
-    uint32_t Start(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        if (_communicator.IsValid() != true) {
-            _messageHandler = Core::ProxyType<RPC::InvokeServerType<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>>::Create();
-
-            if (_messageHandler.IsValid() != false) {
-                _communicator = Core::ProxyType<Communicator>::Create(_remoteNode, _proxyStubPath, Core::ProxyType<Core::IIPCServer>(_messageHandler), static_cast<const TCHAR*>(_sourceName.c_str()));
-            }
-        }
-
-        if (_communicator.IsValid() != false) {
-            result = Open(waitTime);
-        }
-
-        return result;
-    }
-
-    uint32_t Stop(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        if (   _communicator.IsValid() != false
-            && (result = Close(waitTime)) == Core::ERROR_NONE
-           ) {
-            _communicator->Revoke(static_cast<Core::IUnknown*>(_communicator->Acquire(_T(""), Exchange::IPerformance::ID, ~0)), Exchange::IPerformance::ID);
-
-            result = _communicator.Release();
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-        }
-
-        if (   _communicator.IsValid() != true
-            && _messageHandler.IsValid() != false
-           ) {
-            result = _messageHandler.Release();
-            ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-        }
-
-        return result;
-    }
-
-    uint32_t Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration) const
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-            Exchange::IPerformance* interface = nullptr;
-
-        if (   _communicator.IsValid() != false
-            // Cast to the interface type and NOT the derived class type!
-            && (interface = static_cast<Exchange::IPerformance*>(_communicator->Acquire("", Exchange::IPerformance::ID, ~0))) != nullptr
-           ) {
-            Core::StopWatch timer;
-
-            /* uint64_t */ timer.Reset();
-
-            result = interface->Exchange(bufferSize, buffer, bufferMaxSize);
-
-            duration = timer.Elapsed();
-        } else {
-            duration = 0;
-        }
-
-        return result;
-    }
-
-private :
-
-    class Communicator : public RPC::Communicator {
-    public :
-        Communicator() = delete;
-        Communicator(const Communicator&) = delete;
-        Communicator(Communicator&&) = delete;
-
-        Communicator& operator=(const Communicator&) = delete;
-        Communicator& operator=(Communicator&&) = delete;
-
-        Communicator(const Core::NodeId& remoteNode, const std::string& proxyStubPath, const Core::ProxyType<Core::IIPCServer>& messageHandler, const TCHAR* sourceName)
-            : RPC::Communicator{ remoteNode, proxyStubPath, messageHandler, sourceName }
-            , _lock{}
-            , _performanceInterface{ nullptr }
-        {}
-
-        ~Communicator()
-        {
-            /* uint32_t */ Revoke(static_cast<Core::IUnknown*>(_performanceInterface), Exchange::IPerformance::ID);
-
-            Lock();
-
-            ASSERT(_performanceInterface == nullptr);
-
-            Unlock();
-        }
-
-        void Lock() const
-        {
-            _lock.Lock();
-        }
-
-        void Unlock() const
-        {
-           _lock.Unlock();
-        }
-
-        // RPC::Communicator methods
-        // -------------------------
-
-        // This implementation is asked for a handle to the requested interface
-        void* Acquire(VARIABLE_IS_NOT_USED const string& className, const uint32_t interfaceId, VARIABLE_IS_NOT_USED const uint32_t version) override
-        {
-            void* result = nullptr;
-
-            if (interfaceId == Exchange::IPerformance::ID) {
-                result = _performanceInterface;
-            }
-
-            return result;
-        }
-
-    private:
-
-        friend uint32_t COMRPCServer::Stop(uint32_t);
-
-        mutable Core::CriticalSection _lock;
-
-        Exchange::IPerformance* _performanceInterface;
-
-        // The remote offered an interface
-        void Offer(Core::IUnknown* object, const uint32_t interfaceId) override 
-        {
-            if (interfaceId == Exchange::IPerformance::ID) {
-                // Obtain the interface from the service object representing the remote side
-                if (object != nullptr) {
-                    // A new interface has been offered; drop the old one
-                    // The remote could invoke it as well, re-use what is available
-                    Revoke(object, interfaceId);
-
-                    Lock();
-
-                    _performanceInterface = object->QueryInterface<Exchange::IPerformance>();
-
-                    ASSERT(_performanceInterface != nullptr);
-
-                    Unlock();
-                }
-            }
-        }
-
-        // The remote revoked an interface
-        void Revoke(const Core::IUnknown* object, const uint32_t interfaceId) override
-        {
-            // Performance the object representing the remote side before releasing the interface
-            if (interfaceId == Exchange::IPerformance::ID) {
-                Lock();
-
-                if (   object != nullptr
-                    // The examples show that not the same object as in Offer is an input parameter, but the result of QueryInterface
-                    && object == _performanceInterface
-                ) {
-                    VARIABLE_IS_NOT_USED uint32_t result = _performanceInterface->Release();
-                    ASSERT((result == Core::ERROR_NONE) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
-
-                    _performanceInterface = nullptr;
-                }
-
-                Unlock();
-            }
-        }
-
-        // The remote probably forgot to revoke the interface 
-        void Dangling(const Core::IUnknown* object, const uint32_t interfaceId) override
-        {
-            if (interfaceId == Exchange::IPerformance::ID) {
-                Revoke(object, interfaceId);
-            }
-        }
-    };
-
-    Core::NodeId _remoteNode;
-
-    const std::string _proxyStubPath;
-    const std::string _sourceName;
-
-    Core::ProxyType< RPC::InvokeServerType<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS> > _messageHandler;
-
-    Core::ProxyType<Communicator> _communicator;
-
-    mutable Core::CriticalSection _lock;
-
-    uint32_t Open(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        if (_communicator->IsListening() != true) {
-            if (!(   (result = _communicator->Open(waitTime)) == Core::ERROR_NONE
-                  && _communicator->IsListening()
-                 )
-            ) {
-                result = Core::ERROR_CONNECTION_CLOSED;
-            }
-        }
-
-        return result;
-    }
-
-    uint32_t Close(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-        if (_communicator->IsListening() == true) {
-            if (!(   (result = _communicator->Close(waitTime)) == Core::ERROR_NONE
-                  && !_communicator->IsListening()
-                )
-            ) {
-                result = Core::ERROR_CLOSING_FAILED;
-            } else {
-            }
-        }
-
-        return result;
-    }
-};
-
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
-class WebSocketClient {
-public :
-    WebSocketClient(const WebSocketClient&) = delete;
-    WebSocketClient(WebSocketClient&&) = delete;
-
-    WebSocketClient& operator=(const WebSocketClient&) = delete;
-    WebSocketClient& operator=(WebSocketClient&&) = delete;
-
-    WebSocketClient(  const string& remoteNode
-                    , VARIABLE_IS_NOT_USED const string& uriPath     // HTTP URI part, empty path allowed
-                    , VARIABLE_IS_NOT_USED const string& protocol    // Optional HTTP field, WebSocket sub-protocol, ie, Sec-WebSocket-Protocol
-                    , VARIABLE_IS_NOT_USED const string& uriQuery    // HTTP URI part, absent query allowed
-                    , VARIABLE_IS_NOT_USED const string& origin      // Optional, set by browser client
-    )
-        : _remoteNode{ static_cast<const TCHAR*>(remoteNode.c_str()) }
-        // The minimum send and receive buffer sizes are determined by the HTTP upgrade process. The limit here is above that threshold.
-        , _client{ uriPath, protocol, uriQuery, origin, false /* use raw socket */ , _remoteNode.AnyInterface(), _remoteNode, SENDBUFFERSIZE /* send buffer size */, RECEIVEBUFFERSIZE /* receive buffer size */ }
-    {}
-
-    ~WebSocketClient() = default;
-
-private :
-
-    class Client : public Web::WebSocketClientType<STREAMTYPE> {
-    public :
-        Client(const Client&) = delete;
-        Client(Client&&) = delete;
-
-        Client operator=(const Client&) = delete;
-        Client operator=(Client&&) = delete;
-
-        template <typename... Args>
-        Client( const string& path
-              , const string& protocol
-              , const string& query
-              , const string& origin
-              , Args&&... args
-        )
-            // A client should always apply masking when sending frames to the server
-            : Web::WebSocketClientType<STREAMTYPE>(path, protocol, query, origin, false /* binary */, true /* masking */, /* <Arguments SocketStream> */ std::forward<Args>(args)... /* </Arguments SocketStream> */)
-        {
-        }
-
-        ~Client() override = default;
-
-        // Non-idle then data available to send
-        bool IsIdle() const override
-        {
-            _guard.Lock();
-
-            bool result = _post.size() == 0;
-
-            _guard.Unlock();
-
-            return result;
-        }
-
-        // Allow for eventfull state updates in this class
-        void StateChange() override
-        {}
-
-        // Reflects payload, effective after upgrade
-        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
-        {
-            size_t count = 0;
-
-            if (   dataFrame != nullptr
-                && maxSendSize > 0
-                && !IsIdle()
-                && Web::WebSocketClientType<STREAMTYPE>::IsOpen()
-                && Web::WebSocketClientType<STREAMTYPE>::IsWebSocket() // Redundant, covered by IsOpen
-                && Web::WebSocketClientType<STREAMTYPE>::IsCompleted()
-               ) {
-                _guard.Lock();
-
-                std::basic_string<uint8_t>& message = _post.front();
-
-                count = std::min(message.size(), static_cast<size_t>(maxSendSize));
-
-                /* void* */ memcpy(dataFrame, message.data(), count);
-
-                if (count == message.size()) {
-                    /* iterator */ _post.erase(_post.begin());
-                } else {
-                    /* this */ message.erase(0, count);
-
-                    // Trigger a call to SendData for remaining data
-                    Web::WebSocketClientType<STREAMTYPE>::Link().Trigger();
-                }
-
-                _guard.Unlock();
-            }
-
-            return count;
-        }
-
-        // Reflects payload, effective after upgrade
-        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
-        {
-            // Echo the data in reverse order
-// TODO: probably the location to use Exchange
-            std::basic_string<uint8_t> message{ dataFrame, receivedSize };
-
-            std::reverse(message.begin(), message.end());
-
-            return Submit(message) ? message.size() : 0;
-        }
-
-        bool Submit(const std::basic_string<uint8_t>& message)
-        {
-// TODO: probably the location to use Exchange
-            _guard.Lock();
-
-            size_t count = _post.size();
-
-            _post.emplace_back(message);
-
-            bool result = count < _post.size();
-
-            _guard.Unlock();
-
-            Web::WebSocketClientType<STREAMTYPE>::Link().Trigger();
-
-            return result;
-        }
-
-    private:
-
-        std::vector<std::basic_string<uint8_t>> _post; // Send message queue
-
-        mutable Core::CriticalSection _guard;
-    };
- 
-    const Core::NodeId _remoteNode;
-
-    Client _client;
-};
-//TODO buffer size is uint16_t
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
-class WebSocketServer {
-public :
-    WebSocketServer(const WebSocketServer&) = delete;
-    WebSocketServer(WebSocketServer&&) = delete;
-
-    WebSocketServer& operator=(const WebSocketServer&) = delete;
-    WebSocketServer& operator=(WebSocketServer&&) = delete;
-
-    WebSocketServer(const string& localNode)
-        : _localNode{ static_cast<const TCHAR*>(localNode.c_str()) } // listening node
-        , _server{ _localNode }
-    {}
-
-    ~WebSocketServer()
-    {}
-
-private :
-
-    class Server : public Web::WebSocketServerType<STREAMTYPE> {
-    public :
-        Server(const Server&) = delete;
-        Server(Server&&) = delete;
-
-        Server& operator=(const Server&) = delete;
-        Server& operator=(Server&&) = delete;
-
-        // The constructor expected by SocketServerType to exist
-        Server(const SOCKET& socket, const ::Thunder::Core::NodeId& remoteNode, VARIABLE_IS_NOT_USED Core::SocketServerType<Server>* socketServer /* our creator */)
-            // A server should nevwer apply masking when sending frames to the client
-            : Web::WebSocketServerType<STREAMTYPE>(false /* binary */, false /* masking */, /* <Arguments SocketStream> */ false /* use raw socket */, socket, remoteNode, SENDBUFFERSIZE, RECEIVEBUFFERSIZE /* </Arguments SocketStream> */)
-        {}
-
-        ~Server() = default;
-
-        // Non-idle then data available to send
-        bool IsIdle() const override
-        {
-            _guard.Lock();
-
-            bool result = _post.size() == 0;
-
-            _guard.Unlock();
-
-            return result;
-        }
-
-        // Allow for eventfull state updates in this class
-        void StateChange() override
-        {}
-
-        // Reflects payload, effective after upgrade
-        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override
-        {
-// TODO: probably the location to use Exchange
-            size_t count = 0;
-
-            if (   dataFrame != nullptr
-                && maxSendSize > 0
-                && !IsIdle()
-                && Web::WebSocketServerType<STREAMTYPE>::IsOpen()
-                && Web::WebSocketServerType<STREAMTYPE>::IsWebSocket() // Redundant, covered by IsOpen
-                && Web::WebSocketServerType<STREAMTYPE>::IsCompleted()
-               ) {
-                _guard.Lock();
-
-                std::basic_string<uint8_t>& message = _post.front();
-
-                count = std::min(message.size(), static_cast<size_t>(maxSendSize));
-
-                /* void* */ memcpy(dataFrame, message.data(), count);
-
-                if (count == message.size()) {
-                    /* iterator */ _post.erase(_post.begin());
-                } else {
-                    /* this */ message.erase(0, count);
-
-                    // Trigger a call to SendData for remaining data
-                    Web::WebSocketServerType<STREAMTYPE>::Link().Trigger();
-                }
-
-                _guard.Unlock();
-            }
-
-            return count;
-        }
-
-        // Reflects payload, effective after upgrade
-        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override
-        {
-// TODO: probably the location to use Exchange
-            if (receivedSize > 0) {
-                _guard.Lock();
-
-                _response.emplace_back(std::basic_string<uint8_t>{ dataFrame, receivedSize });
-
-                _guard.Unlock();
-            }
-
-            return receivedSize;
-        }
-#ifdef _0
-        // Put data in the queue to send (to the (connected) client)
-        bool Submit(const std::basic_string<uint8_t>& message)
-        {
-            _guard.Lock();
-
-            size_t count = _post.size();
-
-            _post.emplace_back(message);
-
-            bool result =  count < _post.size();
-
-            _guard.Unlock();
-
-            // Trigger a call to SendData
-            Web::WebSocketServerType<STREAMTYPE>::Link().Trigger();
-
-            return result;
-        }
-
-        std::basic_string<uint8_t> Response()
-        {
-            std::basic_string<uint8_t> message;
-
-            _guard.Lock();
-
-            if (_response.size() > 0) {
-                message = _response.front();
-                _response.erase(_response.begin());
-            } 
-
-            _guard.Unlock();
-
-            return message;
-        }
-#endif
-    private:
-
-        std::vector<std::basic_string<uint8_t>> _post; // Send message queue
-        std::vector<std::basic_string<uint8_t>> _response; // Receive message queue
-
-        mutable Core::CriticalSection _guard;
-    };
-
-// TODO: currently not used
-    bool _enableBinary;
-    bool _enableMasking;
-
-    const Core::NodeId _localNode;
-
-    // Enable listening with SocketServerType
-    Core::SocketServerType<Server> _server;
-};
-
-// The 'out-of-process' part if supported and configured
 template <typename DERIVED>
-class SimplePluginImplementation : public Exchange::ISimplePlugin {
-public :
-    SimplePluginImplementation(const SimplePluginImplementation&) = delete;
-    SimplePluginImplementation(SimplePluginImplementation&&) = delete;
+SimplePluginImplementation<DERIVED>::SimplePluginImplementation()
+    : Exchange::ISimplePlugin{}
+    , _lock{}
+    , _notifyees{}
+    , _state{ STATE::IDLE }
+    , _job{ *this }
+    // Load new (proxystub) libraries present in the proxyStubPath directory at runtime
+{}
+template <typename DERIVED>
+SimplePluginImplementation<DERIVED>::~SimplePluginImplementation()
+{
+    /* uint32_t */ ServiceStop(1000);
+}
 
-    SimplePluginImplementation& operator=(const SimplePluginImplementation&) = delete;
-    SimplePluginImplementation& operator=(SimplePluginImplementation&&) = delete;
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::Register(ISimplePlugin::INotification* notifyee)
+{
+    uint32_t result = Core::ERROR_INVALID_PARAMETER;
 
-    // SERVICE_REGISTRATION requires a constructor that takes no arguments
-    SimplePluginImplementation()
-        : Exchange::ISimplePlugin{}
-        , _lock{}
-        , _notifyees{}
-        , _state{ STATE::IDLE }
-        , _job{ *this }
-        // Load new (proxystub) libraries present in the proxyStubPath directory at runtime
-    {}
+    _lock.Lock();
 
-    ~SimplePluginImplementation() override
-    {
-        /* uint32_t */ ServiceStop(1000);
+    // Avoid duplicates
+    if (   notifyee != nullptr
+        && std::find(_notifyees.begin(), _notifyees.end(), notifyee) == _notifyees.end()
+    ) {
+        result = notifyee->AddRef();
+        ASSERT(result == Core::ERROR_NONE);
+
+        /* void */ _notifyees.emplace_front(notifyee);
     }
 
-    // ISimplePlugin interface methods
-    // -------------------------------
+    _lock.Unlock();
 
-    // A client / user / notifyee implements ISimplePlugin::INotification::Event(..)
-    uint32_t Register(ISimplePlugin::INotification* notifyee) override
-    {
-        uint32_t result = Core::ERROR_INVALID_PARAMETER;
+    return result;
+}
 
-        _lock.Lock();
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::Unregister(ISimplePlugin::INotification* notifyee)
+{
+    uint32_t result = Core::ERROR_INVALID_PARAMETER;
 
-        // Avoid duplicates
-        if (   notifyee != nullptr
-            && std::find(_notifyees.begin(), _notifyees.end(), notifyee) == _notifyees.end()
-        ) {
-            result = notifyee->AddRef();
-            ASSERT(result == Core::ERROR_NONE);
+     _lock.Lock();
 
-            /* void */ _notifyees.emplace_front(notifyee);
-        }
+    std::forward_list<INotification*>::const_iterator item;
 
-        _lock.Unlock();
+     _lock.Lock();
 
-        return result;
+    // notifyee should be registered
+    if (   notifyee != nullptr
+        && (item = std::find(_notifyees.begin(), _notifyees.end(), notifyee)) != _notifyees.end()
+    ) {
+        /* void */ _notifyees.remove(*item);
+
+        result = notifyee->Release();
+        ASSERT(result == Core::ERROR_NONE);
     }
 
-    uint32_t Unregister(ISimplePlugin::INotification* notifyee) override
-    {
-        uint32_t result = Core::ERROR_INVALID_PARAMETER;
+    _lock.Unlock();
 
-         _lock.Lock();
+    return result;
+}
 
-        std::forward_list<INotification*>::const_iterator item;
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::DoSomething()
+{
+    uint32_t result = Core::ERROR_NONE;
 
-         _lock.Lock();
+    NotifyAll("DoSomeThing", 0);
 
-        // notifyee should be registered
-        if (   notifyee != nullptr
-            && (item = std::find(_notifyees.begin(), _notifyees.end(), notifyee)) != _notifyees.end()
-        ) {
-            /* void */ _notifyees.remove(*item);
+    return result;
+}
 
-            result = notifyee->Release();
-            ASSERT(result == Core::ERROR_NONE);
-        }
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::ServiceStart(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
 
-        _lock.Unlock();
-
-        return result;
+    if (   _job.Submit() != false
+        && (result = static_cast<DERIVED*>(this)->Start(waitTime)) == Core::ERROR_NONE
+       ) {
+        NotifyAll("ServiceStart successful", 0);
+    } else {
+        NotifyAll("ServiceStart incomplete", 0);
     }
 
-    uint32_t DoSomething() override
-    {
-        uint32_t result = Core::ERROR_NONE;
+    return result;
+}
 
-        NotifyAll("DoSomeThing", 0);
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::ServiceStop(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
 
-        return result;
+    /* void */ _job.Revoke();
+    if ((result = static_cast<DERIVED*>(this)->Stop(waitTime)) == Core::ERROR_NONE) {
+        NotifyAll("ServiceStop successful", 0);
+    } else {
+        NotifyAll("ServiceStop incomplete", 0);
     }
 
-    uint32_t ServiceStart(uint32_t waitTime) override
-    {
-        uint32_t result = Core::ERROR_GENERAL;
+    return result;
+}
 
-        if (   _job.Submit() != false
-            && (result = static_cast<DERIVED*>(this)->Start(waitTime)) == Core::ERROR_NONE
-           ) {
-            NotifyAll("ServiceStart successful", 0);
-        } else {
-            NotifyAll("ServiceStart incomplete", 0);
-        }
+template <typename DERIVED>
+void SimplePluginImplementation<DERIVED>::Dispatch()
+{
+    // Go at lightning speed or slower after a callee update
+    // Educated guess
+    uint32_t waitTime = 0;
 
-        return result;
-    }
-
-    uint32_t ServiceStop(uint32_t waitTime) override
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        /* void */ _job.Revoke();
-        if ((result = static_cast<DERIVED*>(this)->Stop(waitTime)) == Core::ERROR_NONE) {
-            NotifyAll("ServiceStop successful", 0);
-        } else {
-            NotifyAll("ServiceStop incomplete", 0);
-        }
-
-        return result;
-   }
-
-    // IWorkerPool::JobType methods
-    // ----------------------------
-
-    void Dispatch()
-    {
-        // Go at lightning speed or slower after a callee update
-        // Educated guess
-        uint32_t waitTime = 0;
-
-        if (static_cast<DERIVED*>(this)->Task(_state, waitTime) == Core::ERROR_NONE) {
-            // Only known jobs can be rescheduled, eg submitted jobs
-            VARIABLE_IS_NOT_USED bool result = _job.Reschedule(Core::Time::Now().Add(waitTime /* milliseconds */));
-            ASSERT(result != true);
-        } else {
+    if (static_cast<DERIVED*>(this)->Task(_state, waitTime) == Core::ERROR_NONE) {
+        // Only known jobs can be rescheduled, eg submitted jobs
+        VARIABLE_IS_NOT_USED bool result = _job.Reschedule(Core::Time::Now().Add(waitTime /* milliseconds */));
+        ASSERT(result != true);
+    } else {
 // TODO:
-            // Error condition
-        }
+        // Error condition
     }
+}
 
-    // Implement the QueryInterface
-    BEGIN_INTERFACE_MAP(SimplePluginImplementation)
-        // Notifees are called on operations but they have to register first
-        INTERFACE_ENTRY(Exchange::ISimplePlugin)
-    END_INTERFACE_MAP
+template <typename DERIVED>
+void SimplePluginImplementation<DERIVED>::NotifyAll(const std::string& eventDesscription, VARIABLE_IS_NOT_USED uint32_t eventValue) const
+{
+    _lock.Lock();
 
-protected :
-    enum class STATE : uint8_t { IDLE, RUN, EXECUTE, STOP, ERROR };
+    for_each(_notifyees.begin(), _notifyees.end(), 
+             [&](INotification* notifyee)
+             {
+                notifyee->LifeChangingEvent(eventDesscription);
+             }
+    );
 
-private :
+    _lock.Unlock();
+}
 
-    mutable Core::CriticalSection _lock;
 
-    // List of sinks / clients to be called on operations
-    // SimplePluginCOMRPC only registers one which is itself
-    std::forward_list<Exchange::ISimplePlugin::INotification*> _notifyees;
-
-    STATE _state;
-
-    Core::IWorkerPool::JobType<SimplePluginImplementation&> _job;
-
-    // (Custom) class methods
-    // ----------------------
-
-    void NotifyAll(const std::string& eventDesscription, VARIABLE_IS_NOT_USED uint32_t eventValue) const
-    {
-        _lock.Lock();
-
-        for_each(_notifyees.begin(), _notifyees.end(), 
-                 [&](INotification* notifyee)
-                 {
-                    notifyee->LifeChangingEvent(eventDesscription);
-                 }
-        );
-
-        _lock.Unlock();
-    }
-};
-
-class SimplePluginCOMRPCClientImplementation : public SimplePluginImplementation<SimplePluginCOMRPCClientImplementation> {
-public :
-    SimplePluginCOMRPCClientImplementation(const SimplePluginCOMRPCClientImplementation&) = delete;
-    SimplePluginCOMRPCClientImplementation(SimplePluginCOMRPCClientImplementation&&) = delete;
-
-    SimplePluginCOMRPCClientImplementation& operator=(const SimplePluginCOMRPCClientImplementation&) = delete;
-    SimplePluginCOMRPCClientImplementation& operator=(SimplePluginCOMRPCClientImplementation&&) = delete;
-
-    // SERVICE_REGISTRATION requires a constructor that takes no arguments
-    SimplePluginCOMRPCClientImplementation()
-        : _client{ _T("127.0.0.1:8080") /* remoteNode */ }
-    {}
-
-    ~SimplePluginCOMRPCClientImplementation()
-    {
-        /* uint32_t */ Stop(Core::infinite);
-    }
-
-    uint32_t Start(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        if ((result = _client.Start(waitTime)) != Core::ERROR_NONE) {
-            /* uint32_t */ Stop(waitTime);
-        } else {
-            result = _client.Offer(waitTime);
-        }
-
-        return result;
-    }
-
-    uint32_t Stop(uint32_t waitTime)
-    {
-        uint32_t result = Core ::ERROR_GENERAL;
-
-       if ((result = _client.Revoke(waitTime)) != Core::ERROR_NONE) {
-            /* uint32_t */ _client.Stop(waitTime);
-       } else {
-            result = _client.Stop(waitTime);
-       }
-
-        return result;
-    }
-
-private :
-// TODO:
-    // Some arbitrary values
-    COMRPCClient<1, 0, 4> _client;
-
-    friend SimplePluginImplementation;
-    uint32_t Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
-    {
-        return Core::ERROR_NONE;
-    }
-};
-
-class SimplePluginCOMRPCServerImplementation : public SimplePluginImplementation<SimplePluginCOMRPCServerImplementation> {
-public :
-    SimplePluginCOMRPCServerImplementation(const SimplePluginCOMRPCServerImplementation&) = delete;
-    SimplePluginCOMRPCServerImplementation(SimplePluginCOMRPCServerImplementation&&) = delete;
-
-    SimplePluginCOMRPCServerImplementation& operator=(const SimplePluginCOMRPCServerImplementation&) = delete;
-    SimplePluginCOMRPCServerImplementation& operator=(SimplePluginCOMRPCServerImplementation&&) = delete;
-
-    // SERVICE_REGISTRATION requires a constructor that takes no arguments
-    SimplePluginCOMRPCServerImplementation()
-        : _server{ _T("127.0.0.1:8080") /* listeningNode */, _T("") /* proxyStubPath */, _T("") /* sourceName */}
-    {}
-
-    ~SimplePluginCOMRPCServerImplementation()
-    {
-        /* uint32_t */ Stop(Core::infinite);
-    }
-
-    uint32_t Start(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        if ((result = _server.Start(waitTime)) != Core::ERROR_NONE) {
-            /* uint32_t */ Stop(waitTime);
-        }
-
-        static_assert(  std::is_integral<decltype(std::time(nullptr))>::value
-                      , "'std::srand' requires an integral type as seed"
-        );
-
-        std::srand(std::time(nullptr));
-
-        return result;
-    }
-
-    uint32_t Stop(uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-
-        if ((result = _server.Stop(waitTime)) == Core::ERROR_NONE) {
-        }
-
-        return result;
-    }
-
-private :
-// TODO:
-    // Some arbitrary values
-    COMRPCServer<1, 0, 4> _server;
-
-#ifdef _USE_TESTDATA
-    // Select series 1, 2, 3, 4 or 5
-    TestData<1> _data;
-#endif
-
-    friend SimplePluginImplementation;
-    uint32_t Task(STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
-    {
-        uint32_t result = Core::ERROR_NONE;
-
-PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
-        switch (state) {
-        case STATE::IDLE    :   state = STATE::RUN;
-        case STATE::RUN     :   state = STATE::EXECUTE;
-        case STATE::EXECUTE :   {
-                                // Set to a low value for quick builds
-                                constexpr uint16_t bufferMaxSize = 899;
-
-                                constexpr size_t numberOfBins = 30;
-
-#ifndef _USE_TESTDATA
-                                std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
-
-                                // Educated guess, system dependent, required for distribution
-                                constexpr uint64_t upperBoundDuration = 1500;
- 
-                                // Round trip time
-                                uint64_t duration = 0;
-
-                                // Add some randomness
-
-                                using common_t = std::common_type<int, uint16_t>::type;
-                                const uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
-
-                                // With no mistakes this always holds 
-                                ASSERT(bufferSize <= bufferMaxSize);
-
-                                // This fails if the client is missing so it is not typically an error
-                                if (_server.Exchange(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE) {
-                                    using measurements_t = Measurements<uint16_t, uint64_t>;
-                                    using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration>;
-
-                                    distribution_t& measurements = measurements_t::Instance<distribution_t>();
-
-                                    // Do not continue if values cannot be inserted without error (remainder too large, numerical instability)
-                                    if (/* data corruption
-                                        || */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true
-                                    ) {
-                                        state = STATE::STOP;
-                                    }
-                                }
-#else
-                                std::pair<uint16_t, uint64_t> element{ 0, 0 };
-
-                                if (_data.Next(element)!= false) {
-                                    uint16_t& bufferSize = element.first;
-                                    uint64_t& duration = element.second;
-
-                                    using measurements_t = Measurements<uint16_t, uint64_t>;
-                                    // Educated guess
-                                    constexpr uint64_t upperBoundDuration = 500;
-                                    using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration>;
-
-                                    distribution_t& measurements = measurements_t::Instance<distribution_t>();
-
-                                    if (measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true) {
-                                        state = STATE::STOP;
-                                    }
-                                }
-#endif
-                                }
-                                break;
-        case STATE::ERROR   :   result = Core::ERROR_GENERAL;
-        case STATE::STOP    :   waitTime = Core::infinite;
-        default             :   ;
-        }
-POP_WARNING();
-
-        return result;
-    }
-};
-
-class SimplePluginWebSocketClientImplementation : public SimplePluginImplementation<SimplePluginWebSocketClientImplementation> {
-public :
-    SimplePluginWebSocketClientImplementation(const SimplePluginWebSocketClientImplementation&) = delete;
-    SimplePluginWebSocketClientImplementation(SimplePluginWebSocketClientImplementation&&) = delete;
-
-    SimplePluginWebSocketClientImplementation& operator=(const SimplePluginWebSocketClientImplementation&) = delete;
-    SimplePluginWebSocketClientImplementation& operator=(SimplePluginWebSocketClientImplementation&&) = delete;
-
-// TODO: initialize members
-
-    SimplePluginWebSocketClientImplementation()
-// TODO: add node string here
-        : _client { _T("127.0.0.1:8081") /* remote node */, "", "", "", "" }
-    {}
-
-    ~SimplePluginWebSocketClientImplementation() = default;
-
-    uint32_t Start(VARIABLE_IS_NOT_USED uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-        return result;
-    }
-
-     uint32_t Stop(VARIABLE_IS_NOT_USED uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-        return result;
-    }
-
-private :
-// TODO
-    WebSocketClient<1024, 1024, Core::SocketStream> _client;
-
-    friend SimplePluginImplementation;
-    uint32_t Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-        return result;
-    }
-
-};
-
-class SimplePluginWebSocketServerImplementation : public SimplePluginImplementation<SimplePluginWebSocketServerImplementation> {
-public :
-    SimplePluginWebSocketServerImplementation(const SimplePluginWebSocketServerImplementation&) = delete;
-    SimplePluginWebSocketServerImplementation(SimplePluginWebSocketServerImplementation&&) = delete;
-
-    SimplePluginWebSocketServerImplementation& operator=(const SimplePluginWebSocketServerImplementation&) = delete;
-    SimplePluginWebSocketServerImplementation& operator=(SimplePluginWebSocketServerImplementation&&) = delete;
-
-// TODO: initialize members
-    SimplePluginWebSocketServerImplementation()
-        : _server{ _T("127.0.0.1:8081") /* listening node */ }
-    {}
-
-    ~SimplePluginWebSocketServerImplementation() = default;
-
-    uint32_t Start(VARIABLE_IS_NOT_USED uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-        return result;
-    }
-
-     uint32_t Stop(VARIABLE_IS_NOT_USED uint32_t waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-        return result;
-    }
-
-private :
-// TODO
-    WebSocketServer<1024, 1024, Core::SocketStream> _server;
-
-    friend SimplePluginImplementation;
-    uint32_t Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
-    {
-        uint32_t result = Core::ERROR_GENERAL;
-        return result;
-    }  
-};
-
-
-// Inform Thunder this out-of-service (module) implements this service (class)
-// Arguments are module (service) name, major minor and optional patch version
-// Use after the service has been defined / declared
-SERVICE_REGISTRATION(SimplePluginCOMRPCServerImplementation, 1, 0)
-SERVICE_REGISTRATION(SimplePluginCOMRPCClientImplementation, 1, 0)
-
-SERVICE_REGISTRATION(SimplePluginWebSocketClientImplementation, 1, 0)
-SERVICE_REGISTRATION(SimplePluginWebSocketServerImplementation, 1, 0)
 
 } } // namespace Thunder::Plugin

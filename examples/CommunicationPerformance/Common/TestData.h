@@ -17,9 +17,14 @@
  * limitations under the License.
  */
 
+#pragma once
+
 #include <array>
 
-// TODO: namespace
+namespace Thunder {
+namespace Plugin {
+
+namespace CommunicationPerformanceHelpers {
 
 template<size_t N>
 class TestData {
@@ -334,3 +339,7 @@ private :
 
 template <size_t N>
 constexpr std::array<std::array<std::pair<uint16_t, uint64_t>, 50>, 5> TestData<N>::series;
+
+} // namespace CommunicationPerformanceHelpers
+ 
+} } // namespace Thunder::Plugin

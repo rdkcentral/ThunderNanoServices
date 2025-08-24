@@ -37,6 +37,7 @@ add_library(
         ${CMAKE_CURRENT_SOURCE_DIR}/../Common/CommunicationPerformance.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../Common/CommunicationPerformanceImplementation.cpp
         CommunicationPerformanceWebSocketClient.cpp
+        CommunicationPerformanceWebSocketClientImplementation.cpp
 )
 
 set_target_properties(

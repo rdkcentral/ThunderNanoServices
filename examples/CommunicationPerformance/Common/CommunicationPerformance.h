@@ -45,10 +45,7 @@ private:
         PluginNotification& operator=(PluginNotification&&) = delete;
 
         // Keep track of parent
-        PluginNotification(SimplePlugin& parent)
-            : PluginHost::IPlugin::INotification{}
-            , _parent{ parent }
-        {}
+        PluginNotification(SimplePlugin& parent);
 
         ~PluginNotification() override = default;
 
@@ -91,10 +88,7 @@ private:
         RemoteConnectionNotification& operator=(RemoteConnectionNotification&&) = delete;
 
         // Keep track of parent
-        RemoteConnectionNotification(SimplePlugin& parent)
-            : RPC::IRemoteConnection::INotification{}
-            , _parent{ parent }
-        {}
+        RemoteConnectionNotification(SimplePlugin& parent);
 
         ~RemoteConnectionNotification() override = default;
 
@@ -137,10 +131,7 @@ private:
         SimplePluginNotification& operator=(SimplePluginNotification&&) = delete;
 
         // Keep track of parent
-        SimplePluginNotification(SimplePlugin& parent)
-            : Exchange::ISimplePlugin::INotification{}
-            , _parent{ parent }
-        {}
+        SimplePluginNotification(SimplePlugin& parent);
 
         // Trigger JSON event
         // JSON messages should use lower case for method!
@@ -168,19 +159,9 @@ public :
     SimplePlugin& operator=(const SimplePlugin&) = delete;
     SimplePlugin& operator=(SimplePlugin&&) = delete;
 
-    SimplePlugin()
-        : PluginHost::IPlugin{}
-        , _adminLock{}
-        , _service{ nullptr }
-        , _pluginNotification{ *this }
-        , _remoteConnectionNotification{ *this }
-        , _simplePluginNotification{ *this }
-        , _simplePluginImplementation{ nullptr }
-        , _connectionId{ 0 }
-    {}
+    SimplePlugin();
 
-    ~SimplePlugin() override
-    {}
+    ~SimplePlugin() override = default;
 
     // Exposed interfaces
     // Implements QueryInterface for this IPlugin

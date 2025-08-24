@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#pragma once
+
 namespace Thunder {
 namespace Plugin {
 

@@ -28,6 +28,11 @@ namespace Plugin {
 //  IPlugin::INotification interface methods
 // -----------------------------------------
 
+SimplePlugin::PluginNotification::PluginNotification(SimplePlugin& parent)
+    : PluginHost::IPlugin::INotification{}
+    , _parent{ parent }
+{}
+
 // State of (this) plugin changed to Activated
 void SimplePlugin::PluginNotification::Activated(VARIABLE_IS_NOT_USED const string& callsign, VARIABLE_IS_NOT_USED PluginHost::IShell* plugin) /* override */
 {
@@ -67,6 +72,11 @@ uint32_t SimplePlugin::PluginNotification::Release() const /* override */
 
 // IRemoteConenction::INotification interface methods
 // --------------------------------------------------
+
+SimplePlugin::RemoteConnectionNotification::RemoteConnectionNotification(SimplePlugin& parent)
+    : RPC::IRemoteConnection::INotification{}
+    , _parent{ parent }
+{}
 
 // A (remote) COM-RPC connection has been set up
 void SimplePlugin::RemoteConnectionNotification::Activated(RPC::IRemoteConnection* connection VARIABLE_IS_NOT_USED) /* override */
@@ -112,6 +122,11 @@ uint32_t SimplePlugin::RemoteConnectionNotification::Release() const /* override
 // SimplePluginNotification::INotification interface methods
 // ---------------------------------------------------------
 
+SimplePlugin::SimplePluginNotification::SimplePluginNotification(SimplePlugin& parent)
+    : Exchange::ISimplePlugin::INotification{}
+    , _parent{ parent }
+{}
+
 void SimplePlugin::SimplePluginNotification::LifeChangingEvent(const string& description) /* override */
 {
     Exchange::JSimplePlugin::Event::LifeChangingEvent(_parent, description);
@@ -134,6 +149,17 @@ uint32_t SimplePlugin::SimplePluginNotification::Release() const /* override */
 
 //  IPlugin interface methods
 // --------------------------
+
+SimplePlugin::SimplePlugin()
+    : PluginHost::IPlugin{}
+    , _adminLock{}
+    , _service{ nullptr }
+    , _pluginNotification{ *this }
+    , _remoteConnectionNotification{ *this }
+    , _simplePluginNotification{ *this }
+    , _simplePluginImplementation{ nullptr }
+    , _connectionId{ 0 }
+{}
 
 const string SimplePlugin::Initialize(PluginHost::IShell* service) /* override */
 {
