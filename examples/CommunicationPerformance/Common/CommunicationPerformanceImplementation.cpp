@@ -1315,7 +1315,6 @@ private :
         std::vector<std::basic_string<uint8_t>> _response; // Receive message queue
 
         mutable Core::CriticalSection _guard;
-
     };
 
 // TODO: currently not used
@@ -1326,14 +1325,11 @@ private :
 
     // Enable listening with SocketServerType
     Core::SocketServerType<Server> _server;
-
-// We could use this to call Open(), Lock() etc or request an iterator representing conncetions to remote clients eg Clients()
-
 };
 
 // The 'out-of-process' part if supported and configured
 template <typename DERIVED>
-class SimplePluginImplementation : public Exchange::ISimplePlugin, public Core::Thread {
+class SimplePluginImplementation : public Exchange::ISimplePlugin {
 public :
     SimplePluginImplementation(const SimplePluginImplementation&) = delete;
     SimplePluginImplementation(SimplePluginImplementation&&) = delete;
@@ -1344,10 +1340,10 @@ public :
     // SERVICE_REGISTRATION requires a constructor that takes no arguments
     SimplePluginImplementation()
         : Exchange::ISimplePlugin{}
-        , Core::Thread{ Core::Thread::DefaultStackSize(), "SimplePluginImplementation" }
         , _lock{}
         , _notifyees{}
         , _state{ STATE::IDLE }
+        , _job{ *this }
         // Load new (proxystub) libraries present in the proxyStubPath directory at runtime
     {}
 
@@ -1419,12 +1415,9 @@ public :
     {
         uint32_t result = Core::ERROR_GENERAL;
 
-        if ((result = static_cast<DERIVED*>(this)->Start(waitTime)) == Core::ERROR_NONE) {
-            Core::Thread::Run();
-
-            while(!Core::Thread::Wait(Core::Thread::RUNNING, waitTime)) {
-            }
-
+        if (   _job.Submit() != false
+            && (result = static_cast<DERIVED*>(this)->Start(waitTime)) == Core::ERROR_NONE
+           ) {
             NotifyAll("ServiceStart successful", 0);
         } else {
             NotifyAll("ServiceStart incomplete", 0);
@@ -1437,11 +1430,7 @@ public :
     {
         uint32_t result = Core::ERROR_GENERAL;
 
-        Core::Thread::Stop();
-
-        while(!Core::Thread::Wait(Thread::STOPPED | Core::Thread::BLOCKED, waitTime)) {
-        }
-
+        /* void */ _job.Revoke();
         if ((result = static_cast<DERIVED*>(this)->Stop(waitTime)) == Core::ERROR_NONE) {
             NotifyAll("ServiceStop successful", 0);
         } else {
@@ -1450,6 +1439,25 @@ public :
 
         return result;
    }
+
+    // IWorkerPool::JobType methods
+    // ----------------------------
+
+    void Dispatch()
+    {
+        // Go at lightning speed or slower after a callee update
+        // Educated guess
+        uint32_t waitTime = 0;
+
+        if (static_cast<DERIVED*>(this)->Task(_state, waitTime) == Core::ERROR_NONE) {
+            // Only known jobs can be rescheduled, eg submitted jobs
+            VARIABLE_IS_NOT_USED bool result = _job.Reschedule(Core::Time::Now().Add(waitTime /* milliseconds */));
+            ASSERT(result != true);
+        } else {
+// TODO:
+            // Error condition
+        }
+    }
 
     // Implement the QueryInterface
     BEGIN_INTERFACE_MAP(SimplePluginImplementation)
@@ -1470,6 +1478,8 @@ private :
 
     STATE _state;
 
+    Core::IWorkerPool::JobType<SimplePluginImplementation&> _job;
+
     // (Custom) class methods
     // ----------------------
 
@@ -1485,25 +1495,6 @@ private :
         );
 
         _lock.Unlock();
-    }
-
-    // Core::Thread methods
-    // --------------------
-
-    uint32_t Worker() override
-    {
-        // Go at lightning speed or slower after a callee update, in 'blocking' mode
-        uint32_t waitTime = 0;
-
-        VARIABLE_IS_NOT_USED uint32_t result = static_cast<DERIVED*>(this)->Task(_state, waitTime);
-
-        // Threads 'wait' until a 'runnable' state or timeout on the given value, effectively delaying execution
-        if (_state == STATE::STOP || _state == STATE::ERROR) {
-            Block();
-        }
-
-        // Schedule next iteration at this interval
-        return waitTime;
     }
 };
 
@@ -1621,7 +1612,7 @@ private :
     friend SimplePluginImplementation;
     uint32_t Task(STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
     {
-        uint32_t result = Core::ERROR_GENERAL;
+        uint32_t result = Core::ERROR_NONE;
 
 PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
         switch (state) {
@@ -1629,7 +1620,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
         case STATE::RUN     :   state = STATE::EXECUTE;
         case STATE::EXECUTE :   {
                                 // Set to a low value for quick builds
-                                constexpr uint16_t bufferMaxSize = 9999;
+                                constexpr uint16_t bufferMaxSize = 899;
 
                                 constexpr size_t numberOfBins = 30;
 
@@ -1659,7 +1650,8 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
 
                                     // Do not continue if values cannot be inserted without error (remainder too large, numerical instability)
                                     if (/* data corruption
-                                        || */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true) {
+                                        || */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true
+                                    ) {
                                         state = STATE::STOP;
                                     }
                                 }
@@ -1684,8 +1676,8 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
 #endif
                                 }
                                 break;
-        case STATE::STOP    :
-        case STATE::ERROR   :   waitTime = Core::infinite;
+        case STATE::ERROR   :   result = Core::ERROR_GENERAL;
+        case STATE::STOP    :   waitTime = Core::infinite;
         default             :   ;
         }
 POP_WARNING();
