@@ -1,0 +1,15 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Generator Showcase Plugin",
+    "callsign": "GeneratorShowcase",
+    "locator": "libThunderGeneratorShowcase.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "interface": [
+    { "$ref": "examples/ISimpleAsync.h" },
+    { "$ref": "examples/ISimpleInstanceObjects.h" },
+    { "$ref": "examples/ISimpleCustomObjects.h" }
+  ]
+}
