@@ -28,7 +28,7 @@ namespace Thunder {
 namespace Plugin {
 
 template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-class COMRPCClient : public Core::IReferenceCounted {
+class COMRPCClient {
 public:
     COMRPCClient() = delete;
     COMRPCClient(const COMRPCClient&) = delete;
@@ -56,13 +56,6 @@ public:
 
     // Revoke the available (earlier) offered interface
     uint32_t Revoke(uint32_t waitTime);
-
-    // Core::IReferenceCounted methods
-    // -------------------------------
-
-    uint32_t AddRef() const override;
-
-    uint32_t Release() const override;
 
 private:
 

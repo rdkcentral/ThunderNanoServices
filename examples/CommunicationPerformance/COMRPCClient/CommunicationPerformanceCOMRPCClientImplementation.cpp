@@ -166,42 +166,6 @@ uint32_t COMRPCClient<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Revoke(uint32_t
 }
 
 template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-uint32_t COMRPCClient<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::AddRef() const
-{
-    // Without locking it may spuriously fail
-
-    uint32_t result = Core::ERROR_GENERAL;
-
-    uint32_t expected = _referenceCount;
-
-    if (    expected < std::numeric_limits<uint32_t>::max()
-        && _referenceCount.compare_exchange_strong(expected, (expected + 1))
-    ) {
-        result = Core::ERROR_NONE;
-    }
-
-    return result;
-}
-
-template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-uint32_t COMRPCClient<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Release() const
-{
-    // Without locking it may spuriously fail
-
-    uint32_t result = Core::ERROR_GENERAL;
-
-    uint32_t expected = _referenceCount;
-
-    if (    expected > 0
-        && _referenceCount.compare_exchange_strong(expected, (expected - 1))
-    ) {
-        result = Core::ERROR_NONE;
-    }
-
-    return result;
-}
-
-template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
 uint32_t COMRPCClient<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Open(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
