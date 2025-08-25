@@ -45,7 +45,7 @@ namespace Plugin {
             ~Data() override = default;
 
         public:
-            Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData> SessionInfo;
+            Core::JSON::ArrayType<JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem> SessionInfo;
             Core::JSON::DecUInt32 ActiveCount;
         };
 
@@ -103,7 +103,7 @@ namespace Plugin {
                 }
 
             public:
-                uint32_t Count() override
+                uint32_t Count() const override
                 {
                    return (static_cast<uint32_t>(_list.size()));
                 }
@@ -219,7 +219,7 @@ namespace Plugin {
 
         // SecureShellServer methods
         uint32_t GetSessionsCount(ISecureShellServer::IClient::IIterator* iter);
-        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& sessioninfo);
+        uint32_t GetSessionsInfo(Core::JSON::ArrayType<JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem>& sessioninfo);
         uint32_t CloseClientSession(ISecureShellServer::IClient* client);
 
     private:
@@ -232,8 +232,8 @@ namespace Plugin {
         void UnregisterAll();
         
         uint32_t endpoint_getactivesessionscount(Core::JSON::DecUInt32& response);
-        uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::SessioninfoResultData>& response);
-        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::SessioninfoResultData& params);
+        uint32_t endpoint_getactivesessionsinfo(Core::JSON::ArrayType<JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem>& response);
+        uint32_t endpoint_closeclientsession(const JsonData::SecureShellServer::GetactivesessionsinfoResultDataElem& params);
 
         uint8_t _skipURL;
         std::string _InputParameters;
