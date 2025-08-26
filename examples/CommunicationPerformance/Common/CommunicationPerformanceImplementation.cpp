@@ -492,7 +492,7 @@ SimplePluginImplementation<DERIVED>::SimplePluginImplementation()
 template <typename DERIVED>
 SimplePluginImplementation<DERIVED>::~SimplePluginImplementation()
 {
-    /* uint32_t */ ServiceStop(1000);
+    /* uint32_t */ DeinitializeTask(1000);
 }
 
 template <typename DERIVED>
@@ -544,41 +544,41 @@ uint32_t SimplePluginImplementation<DERIVED>::Unregister(ISimplePlugin::INotific
 }
 
 template <typename DERIVED>
-uint32_t SimplePluginImplementation<DERIVED>::DoSomething()
+uint32_t SimplePluginImplementation<DERIVED>::ExecuteTask()
 {
     uint32_t result = Core::ERROR_NONE;
 
-    NotifyAll("DoSomeThing", 0);
+    NotifyAll("ExecuteTask", 0);
 
     return result;
 }
 
 template <typename DERIVED>
-uint32_t SimplePluginImplementation<DERIVED>::ServiceStart(uint32_t waitTime)
+uint32_t SimplePluginImplementation<DERIVED>::InitializeTask(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
     if (   _job.Submit() != false
         && (result = static_cast<DERIVED*>(this)->Start(waitTime)) == Core::ERROR_NONE
        ) {
-        NotifyAll("ServiceStart successful", 0);
+        NotifyAll("InitializeTask successful", 0);
     } else {
-        NotifyAll("ServiceStart incomplete", 0);
+        NotifyAll("InitializeTask incomplete", 0);
     }
 
     return result;
 }
 
 template <typename DERIVED>
-uint32_t SimplePluginImplementation<DERIVED>::ServiceStop(uint32_t waitTime)
+uint32_t SimplePluginImplementation<DERIVED>::DeinitializeTask(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
     /* void */ _job.Revoke();
     if ((result = static_cast<DERIVED*>(this)->Stop(waitTime)) == Core::ERROR_NONE) {
-        NotifyAll("ServiceStop successful", 0);
+        NotifyAll("DeinitializeTask successful", 0);
     } else {
-        NotifyAll("ServiceStop incomplete", 0);
+        NotifyAll("DeinitializeTask incomplete", 0);
     }
 
     return result;
@@ -609,13 +609,12 @@ void SimplePluginImplementation<DERIVED>::NotifyAll(const std::string& eventDess
     for_each(_notifyees.begin(), _notifyees.end(), 
              [&](INotification* notifyee)
              {
-                notifyee->LifeChangingEvent(eventDesscription);
+                notifyee->ProcessEvent(eventDesscription);
              }
     );
 
     _lock.Unlock();
 }
-
 
 
 } } // namespace Thunder::Plugin

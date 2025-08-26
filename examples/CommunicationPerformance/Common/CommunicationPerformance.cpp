@@ -127,9 +127,9 @@ SimplePlugin::SimplePluginNotification::SimplePluginNotification(SimplePlugin& p
     , _parent{ parent }
 {}
 
-void SimplePlugin::SimplePluginNotification::LifeChangingEvent(const string& description) /* override */
+void SimplePlugin::SimplePluginNotification::ProcessEvent(const string& description) /* override */
 {
-    Exchange::JSimplePlugin::Event::LifeChangingEvent(_parent, description);
+    Exchange::JSimplePlugin::Event::ProcessEvent(_parent, description);
 }
 
 // SimplePluginNotification::INotification base IUnknown interface methods

@@ -197,11 +197,11 @@ public :
 
     uint32_t Unregister(ISimplePlugin::INotification* notifyee) override;
 
-    uint32_t DoSomething() override;
+    uint32_t ExecuteTask() override;
 
-    uint32_t ServiceStart(uint32_t waitTime) override;
+    uint32_t InitializeTask(const uint32_t waitTime) override;
 
-    uint32_t ServiceStop(uint32_t waitTime) override;
+    uint32_t DeinitializeTask(const uint32_t waitTime) override;
 
     // IWorkerPool::JobType methods
     // ----------------------------

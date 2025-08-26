@@ -135,7 +135,7 @@ private:
 
         // Trigger JSON event
         // JSON messages should use lower case for method!
-        void LifeChangingEvent(const string& description) override;
+        void ProcessEvent(const string& description) override;
 
         // IUnknown interface methods, via ISimplePlugin::INotification base class 
         // -----------------------------------------------------------------------
