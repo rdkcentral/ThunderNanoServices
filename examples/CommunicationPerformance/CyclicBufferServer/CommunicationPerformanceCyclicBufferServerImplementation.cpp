@@ -1,0 +1,231 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2020 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "CommunicationPerformanceCyclicBufferServerImplementation.h"
+
+// Pull in 'Common' template definitions
+#include "../Common/CommunicationPerformanceImplementation.cpp"
+
+namespace Thunder {
+namespace Plugin {
+
+template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::CyclicBufferServer(const std::string& fileName)
+    : _fileName{ fileName }
+// TODO : +1 see CyclicBuffer for reason
+    , _buffer{ _fileName, ACCESSMODE | Core::File::CREATE | Core::File::SHAREABLE /* required for multiple processes to share data */, BUFFERSIZE /* server controls size */ , OVERWRITE }
+    , _lock{}
+{}
+
+template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::~CyclicBufferServer()
+{
+    /* uint32_t result = */ Stop(Core::infinite);
+}
+
+template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Start(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    if (_buffer.IsValid() != true) {
+        result = Open(waitTime);
+    } else {
+        // Already a valid buffer present
+        result = Core::ERROR_NONE;
+    }
+
+    return result;
+}
+
+template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    if (_buffer.IsValid() != false) {
+        result = Close(waitTime);
+    } else {
+        // No valid buffer present
+    }
+
+    return result;
+}
+
+template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::SendData(const uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration) const
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    if (_buffer.IsValid() != false) {
+// TODO: add SignalLock here to ust wait for someone to have produced some data to consume
+        Core::StopWatch timer;
+
+        /* uint64_t */ timer.Reset();
+// TODO: Alert() on destruction to release all blocking processes
+        // buffer writers should make a reservation for space before 'Write(...)' to avoid data corruption
+        // Only write for a complete buffer[], and, only consider a full buffer when processing the data
+        if (   _buffer.Lock() == Core::ERROR_NONE
+            && _buffer.Free() >= bufferSize
+            && _buffer.Reserve(bufferSize) == bufferSize
+            && _buffer.Write(buffer, bufferSize) == bufferSize
+        ) {
+            result = _buffer.Unlock();
+        } else {
+            /* uint32_t */ _buffer.Unlock();
+        }
+
+        duration = timer.Elapsed();
+    } else {
+        duration = 0;
+    }
+
+    return result;
+}
+
+template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Open(VARIABLE_IS_NOT_USED uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    if (   _buffer.IsValid() != true
+        && _buffer.Open() != false
+        && _buffer.IsValid() != false
+       ) {
+        result = Core::ERROR_NONE;
+    }
+
+    return result;
+}
+
+template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Close(VARIABLE_IS_NOT_USED uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    if (_buffer.IsValid() != false) {
+        /* void */ _buffer.Close();
+    }
+
+    if (_buffer.IsValid() != true) {
+        result = Core::ERROR_NONE;
+    }
+
+    return result;
+}
+
+
+SimplePluginCyclicBufferServerImplementation::SimplePluginCyclicBufferServerImplementation()
+    : _server{ _T("/tmp/CommunicationPerformanceCyclicBuffer") }
+{}
+
+SimplePluginCyclicBufferServerImplementation::~SimplePluginCyclicBufferServerImplementation()
+{
+    /* uint32_t */ Stop(Core::infinite);
+}
+
+uint32_t SimplePluginCyclicBufferServerImplementation::Start(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    if ((result = _server.Start(waitTime)) != Core::ERROR_NONE) {
+        /* uint32_t */ Stop(waitTime);
+    }
+
+    static_assert(  std::is_integral<decltype(std::time(nullptr))>::value
+                  , "'std::srand' requires an integral type as seed"
+    );
+
+    std::srand(std::time(nullptr));
+
+    return result;
+}
+
+uint32_t SimplePluginCyclicBufferServerImplementation::Stop(uint32_t waitTime)
+{
+    return _server.Stop(waitTime);
+}
+
+uint32_t SimplePluginCyclicBufferServerImplementation::Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+{
+    uint32_t result = Core::ERROR_NONE;
+
+PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
+    switch (state) {
+    case STATE::IDLE    :   state = STATE::RUN;
+    case STATE::RUN     :   state = STATE::EXECUTE;
+    case STATE::EXECUTE :   {
+                            // Set to a low value for quick builds
+                            constexpr uint16_t bufferMaxSize = 899;
+
+                            constexpr size_t numberOfBins = 30;
+
+                            std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
+
+                            // Educated guess, system dependent, required for distribution
+                            constexpr uint64_t upperBoundDuration = 250;
+
+                            // Round trip time in ticks
+                            uint64_t duration = 0;
+
+                            // Add some randomness
+
+                            using common_t = std::common_type<int, uint16_t>::type;
+                            uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
+
+                            // With no mistakes this always holds
+                            ASSERT(bufferSize <= bufferMaxSize);
+
+                            // This fails if the client is missing so it is not typically an error
+                            if (   bufferSize > 0
+                                && _server.SendData(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE
+                                && bufferSize > 0
+                            ) {
+
+                                using measurements_t = Measurements<uint16_t, uint64_t>;
+                                using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration>;
+
+                                distribution_t& measurements = measurements_t::Instance<distribution_t>();
+
+                                // Do not continue if values cannot be inserted without error (remainder too large, numerical instability)
+                                if (/* data corruption
+                                    || */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true
+                                ) {
+                                    state = STATE::STOP;
+                                }
+                            }
+                            }
+                            break;
+    case STATE::ERROR   :   result = Core::ERROR_GENERAL;
+    case STATE::STOP    :   waitTime = Core::infinite;
+    default             :   ;
+    }
+POP_WARNING();
+
+    return result;
+}
+
+
+// Inform Thunder this out-of-service (module) implements this service (class)
+// Arguments are module (service) name, major minor and optional patch version
+// Use after the service has been defined / declared
+
+SERVICE_REGISTRATION(SimplePluginCyclicBufferServerImplementation, 1, 0)
+
+} } // namespace Thunder::Plugin

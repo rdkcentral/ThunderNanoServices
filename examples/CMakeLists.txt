@@ -38,6 +38,7 @@ option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
 option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 option(PLUGIN_COMMUNICATIONPERFORMANCE_COMRPC "Include CommunicationPerformance COM-RPC plugin(s)" OFF)
+option(PLUGIN_COMMUNICATIONPERFORMANCE_CYCLICBUFFER "Include CommunicationPerformance CyclicBuffer plugin(s)" OFF)
 option(PLUGIN_COMMUNICATIONPERFORMANCE_WEBSOCKET "Include CommunicationPerformance WebSocket plugin(s)" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
@@ -95,6 +96,12 @@ endif()
 
 if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)
     add_subdirectory(DynamicJSONRPCErrorMessage)
+endif()
+
+if(PLUGIN_COMMUNICATIONPERFORMANCE_CYCLICBUFFER)
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+    add_subdirectory(CommunicationPerformance/CyclicBufferClient)
+    add_subdirectory(CommunicationPerformance/CyclicBufferServer)
 endif()
 
 if(PLUGIN_COMMUNICATIONPERFORMANCE_COMRPC)

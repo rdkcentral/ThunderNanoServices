@@ -1,0 +1,76 @@
+# If not stated otherwise in this file or this component's LICENSE file the
+# following copyright and licenses apply:
+#
+# Copyright 2020 RDK Management
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# As no callsign has been configured (manually) the system uses the file name as callsign
+project(CommunicationPerformanceCyclicBufferServer)
+
+cmake_minimum_required(VERSION 3.15)
+
+project_version(1.0.0)
+
+set(MODULE_NAME ${PROJECT_NAME})
+
+message("Set up ${MODULE_NAME} v{PROJECT_VERSION}")
+
+find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
+
+add_library(
+    ${MODULE_NAME}
+    SHARED
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Common/Module.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Common/CommunicationPerformance.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Common/CommunicationPerformanceImplementation.cpp
+        CommunicationPerformanceCyclicBufferServer.cpp
+        CommunicationPerformanceCyclicBufferServerImplementation.cpp
+)
+
+set_target_properties(
+    ${MODULE_NAME}
+    PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES
+)
+
+target_include_directories(
+    ${MODULE_NAME}
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../Common/
+)
+
+target_link_libraries(
+    ${MODULE_NAME}
+    PRIVATE
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+)
+
+install(
+    TARGETS
+        ${MODULE_NAME}
+    DESTINATION
+        ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins
+    COMPONENT
+        ${NAMESPACE}_Runtime
+)
+
+write_config(
+    PLUGINS
+        ${PLUGIN_NAME}
+)
