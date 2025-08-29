@@ -123,23 +123,25 @@ namespace Compositor {
                 GLESDebugScope(const char* name)
                     : _pushed(false)
                 {
+                    ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
+
                     if (_gles.glPushDebugGroupKHR != nullptr) {
                         _gles.glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 2, -1, name);
-                        g_debugGroupStack.push_back(name);
-                        _pushed = true;
+
+                        if (glGetError() == GL_NO_ERROR) {
+                            g_debugGroupStack.push_back(name);
+                            _pushed = true;
+                        } else {
+                            TRACE_GLOBAL(Trace::Error, ("Failed to push GL debug group '%s'", name));
+                        }
                     }
                 }
 
                 ~GLESDebugScope()
                 {
-                    if (_pushed) {
-                        if (!g_debugGroupStack.empty()) {
-                            g_debugGroupStack.pop_back();
-                        }
-
-                        if (_gles.glPopDebugGroupKHR != nullptr) {
-                            _gles.glPopDebugGroupKHR();
-                        }
+                    if ((_pushed == true) && (g_debugGroupStack.empty() == false) && _gles.glPopDebugGroupKHR != nullptr) {
+                        g_debugGroupStack.pop_back();
+                        _gles.glPopDebugGroupKHR();
                     }
                 }
 
@@ -166,10 +168,10 @@ namespace Compositor {
                     , _glFrameBuffer(0)
                     , _glRenderBuffer(0)
                 {
-                    GLES_DEBUG_SCOPE("GLESFrameBuffer Constructor");
-
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
+
+                    GLES_DEBUG_SCOPE("GLESFrameBuffer Constructor");
 
                     TRACE_GLOBAL(Trace::GL, ("Creating framebuffer for buffer: %dx%d, format=0x%x, modifier=0x%" PRIx64 ", type=%d", buffer->Width(), buffer->Height(), buffer->Format(), buffer->Modifier(), buffer->Type()));
 
@@ -217,7 +219,6 @@ namespace Compositor {
                         }
 
                         glBindRenderbuffer(GL_RENDERBUFFER, 0);
-                        ;
                     }
 
                     {
@@ -267,7 +268,6 @@ namespace Compositor {
 
                 ~GLESFrameBuffer()
                 {
-                    GLES_DEBUG_SCOPE("GLESFrameBuffer Destroy");
                     Renderer::EGL::ContextBackup backup;
 
                     _parent.Egl().SetCurrent();
@@ -769,8 +769,6 @@ namespace Compositor {
                 {
                     ASSERT(_buffer != nullptr);
 
-                    GLES_DEBUG_SCOPE("Create GLESTexture");
-
                     _parent.Add(this);
 
                     if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
@@ -875,14 +873,14 @@ namespace Compositor {
 
                 void ImportDMABuffer()
                 {
-                    GLES_DEBUG_SCOPE("ImportDMABuffer");
-
                     bool external(false);
 
                     Renderer::EGL::ContextBackup backup;
 
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetError() == EGL_SUCCESS);
+
+                    GLES_DEBUG_SCOPE("ImportDMABuffer");
 
                     _image = _parent.Egl().CreateImage(&(*_buffer), external);
                     ASSERT(_image != EGL_NO_IMAGE);
@@ -907,7 +905,6 @@ namespace Compositor {
 
                 void ImportPixelBuffer()
                 {
-                    GLES_DEBUG_SCOPE("ImportPixelBuffer");
 
                     Exchange::IGraphicsBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
 
@@ -924,6 +921,8 @@ namespace Compositor {
                     Renderer::EGL::ContextBackup backup;
 
                     _parent.Egl().SetCurrent();
+
+                    GLES_DEBUG_SCOPE("ImportPixelBuffer");
 
                     glGenTextures(1, &_textureId);
                     glBindTexture(_target, _textureId);
@@ -1036,10 +1035,11 @@ namespace Compositor {
 
             uint32_t Bind(const Core::ProxyType<IFrameBuffer>& frameBuffer) override
             {
-                GLES_DEBUG_SCOPE("GLES::Bind");
                 ASSERT(_rendering == false);
 
                 _egl.SetCurrent();
+
+                GLES_DEBUG_SCOPE("GLES::Bind");
 
                 if (frameBuffer.IsValid() == true) {
                     frameBuffer->Bind();
@@ -1052,8 +1052,9 @@ namespace Compositor {
 
             bool Begin(uint32_t width, uint32_t height) override
             {
-                GLES_DEBUG_SCOPE("GLES::Begin");
                 ASSERT((_rendering == false) && (_egl.IsCurrent() == true));
+
+                GLES_DEBUG_SCOPE("GLES::Begin");
 
                 _rendering = true;
 
@@ -1080,8 +1081,9 @@ namespace Compositor {
 
             void End(bool dump) override
             {
-                GLES_DEBUG_SCOPE("GLES::End");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
+
+                GLES_DEBUG_SCOPE("GLES::End");
 
                 if (dump == true) {
                     std::vector<uint8_t> pixels;
@@ -1103,8 +1105,9 @@ namespace Compositor {
             PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
             void Clear(const Color color) override
             {
-                GLES_DEBUG_SCOPE("GLES::Clear");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
+
+                GLES_DEBUG_SCOPE("GLES::Clear");
 
                 glClearColor(color[0], color[1], color[2], color[3]);
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -1113,8 +1116,9 @@ namespace Compositor {
 
             void Scissor(const Exchange::IComposition::Rectangle* box) override
             {
-                GLES_DEBUG_SCOPE("GLES::Scissor");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
+
+                GLES_DEBUG_SCOPE("GLES::Scissor");
 
                 if (box != nullptr) {
                     glScissor(box->x, box->y, box->width, box->height);
@@ -1126,13 +1130,11 @@ namespace Compositor {
 
             Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
-                GLES_DEBUG_SCOPE("GLES::FrameBuffer");
                 return (Core::ProxyType<IFrameBuffer>(Core::ProxyType<GLESFrameBuffer>::Create(*this, buffer)));
             };
 
             Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
-                GLES_DEBUG_SCOPE("GLES::Texture");
                 return (Core::ProxyType<ITexture>(Core::ProxyType<GLESTexture>::Create(*this, buffer)));
             };
 
