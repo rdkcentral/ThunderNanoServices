@@ -166,6 +166,8 @@ namespace Compositor {
                 _api.eglDestroyImage(_egl.Display(), _image);
             }
 
+            _egl.ResetCurrent();
+
             if (_id > 0) {
                 close(_id);
             }
