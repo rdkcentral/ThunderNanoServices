@@ -39,11 +39,13 @@
 #include "generated/drm-client-protocol.h"
 #include "generated/linux-dmabuf-unstable-v1-client-protocol.h"
 #include "generated/pointer-gestures-unstable-v1-client-protocol.h"
-#include "generated/presentation-time-client-protocol.h"
 #include "generated/relative-pointer-unstable-v1-client-protocol.h"
+#include "generated/presentation-time-client-protocol.h"
+
+#ifndef USE_LIBDECOR
 #include "generated/xdg-activation-v1-client-protocol.h"
-#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
+#endif
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
@@ -107,7 +109,7 @@ namespace Compositor {
             uint32_t AddRef() const override;
             uint32_t Release() const override;
 
-            wl_surface* Surface() const override;
+            wl_surface* Surface(const char* const* tag = nullptr) const override;
             xdg_surface* WindowSurface(wl_surface* surface) const override;
             int RoundTrip() const override;
             int Flush() const override;
@@ -120,9 +122,12 @@ namespace Compositor {
 
             wl_buffer* Buffer(Exchange::IGraphicsBuffer* buffer) const override;
 
-            struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const override;
-            struct wp_viewport* GetViewportInterface(wl_surface* surface) const override;
+            struct wp_presentation_feedback* PresentationFeedback(wl_surface* surface) const override;
+            wp_viewport* Viewport(wl_surface* surface) const override;
 
+#ifdef USE_LIBDECOR
+            libdecor* LibDecorContext() const override;
+#endif
             void RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version);
 
             void PresentationClock(const uint32_t clockType);
@@ -134,7 +139,9 @@ namespace Compositor {
 
             int Dispatch(const uint32_t events) const;
 
-            Core::ProxyType<IOutput> Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback);
+            Core::ProxyType<IOutput> Output(const string& name,
+                const uint32_t width, const uint32_t height, uint32_t refreshRate, const Compositor::PixelFormat& format,
+                const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback);
 
         private:
             mutable uint32_t _refCount;
@@ -163,7 +170,9 @@ namespace Compositor {
             ServerMonitor _serverMonitor;
 
             Core::ProxyMapType<string, Exchange::IGraphicsBuffer> _windows;
-
+#ifdef USE_LIBDECOR
+            libdecor* _libDecorContext;
+#endif
         }; // class WaylandImplementation
 
         /**
@@ -427,6 +436,17 @@ namespace Compositor {
         };
 #endif // USE_LEGACY_WAYLAND
 
+#ifdef USE_LIBDECOR
+        static void onLibDecorError(struct libdecor* /*context*/, enum libdecor_error error, const char* message)
+        {
+            TRACE_GLOBAL(Trace::Error, ("Libdecor error[0x%04X]: %s", error, message));
+        }
+
+        static struct libdecor_interface libDecorInterface = {
+            .error = onLibDecorError,
+        };
+#endif
+
         /**
          * @brief Callback for the global event on the registry
          *
@@ -491,6 +511,9 @@ namespace Compositor {
             , _input()
             , _serverMonitor(*this, wl_display_get_fd(_wlDisplay))
             , _windows()
+#ifdef USE_LIBDECOR
+            , _libDecorContext(nullptr)
+#endif
         {
             TRACE(Trace::Backend, ("Starting WaylandImplementation backend"));
             ASSERT(_wlDisplay != nullptr);
@@ -503,6 +526,12 @@ namespace Compositor {
 
             ASSERT(_wlCompositor != nullptr);
             ASSERT(_xdgWmBase != nullptr);
+
+#ifdef USE_LIBDECOR
+            _libDecorContext = libdecor_new(_wlDisplay, &libDecorInterface);
+            ASSERT(_libDecorContext != nullptr);
+            libdecor_dispatch(_libDecorContext, 0);
+#endif
 
             // Query available drm formats
             RoundTrip();
@@ -542,6 +571,12 @@ namespace Compositor {
             if (_wlViewporter != nullptr) {
                 wp_viewporter_destroy(_wlViewporter);
             }
+
+#ifdef USE_LIBDECOR
+            if (_libDecorContext != nullptr) {
+                libdecor_unref(_libDecorContext);
+            }
+#endif
 
             if (_wlZwpLinuxDmabufV1 != nullptr) {
                 zwp_linux_dmabuf_v1_destroy(_wlZwpLinuxDmabufV1);
@@ -808,6 +843,12 @@ namespace Compositor {
                 return 0;
             }
 
+#ifdef USE_LIBDECOR
+            if (_libDecorContext != nullptr) {
+                libdecor_dispatch(_libDecorContext, 0);
+            }
+#endif
+
             return count;
         }
 
@@ -816,12 +857,16 @@ namespace Compositor {
          *
          * @return a Wayland surface (`wl_surface*`).
          */
-        wl_surface* WaylandImplementation::Surface() const
+        wl_surface* WaylandImplementation::Surface(const char* const* tag) const
         {
             wl_surface* surface = wl_compositor_create_surface(_wlCompositor);
 
             if ((_wlXdgActivationV1 != nullptr) && (_activationToken.empty() == false)) {
                 xdg_activation_v1_activate(_wlXdgActivationV1, _activationToken.c_str(), surface);
+            }
+
+            if (tag != nullptr) {
+                wl_proxy_set_tag(reinterpret_cast<wl_proxy*>(surface), tag);
             }
 
             return surface;
@@ -860,21 +905,29 @@ namespace Compositor {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
+        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const uint32_t width, const uint32_t height, uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
         {
-            return (Core::ProxyType<IOutput>(_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, format, renderer, feedback)));
+            return (Core::ProxyType<IOutput>(_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, refreshRate, format, renderer, feedback)));
         }
 
-        struct wp_presentation_feedback* WaylandImplementation::GetFeedbackInterface(wl_surface* surface) const
+        struct wp_presentation_feedback* WaylandImplementation::PresentationFeedback(wl_surface* surface) const
         {
             ASSERT(surface != nullptr);
             return (_wlPresentation != nullptr) ? wp_presentation_feedback(_wlPresentation, surface) : nullptr;
         }
-        struct wp_viewport* WaylandImplementation::GetViewportInterface(wl_surface* surface) const
+
+        wp_viewport* WaylandImplementation::Viewport(wl_surface* surface) const
         {
             ASSERT(surface != nullptr);
             return (_wlViewporter != nullptr) ? wp_viewporter_get_viewport(_wlViewporter, surface) : nullptr;
         }
+
+#ifdef USE_LIBDECOR
+        libdecor* WaylandImplementation::LibDecorContext() const
+        {
+            return _libDecorContext;
+        }
+#endif
 
         /**
          * The function imports a DMA buffer into a Wayland buffer.
@@ -992,7 +1045,6 @@ namespace Compositor {
 
             return result;
         }
-
     } // namespace Backend
 
     /**
@@ -1011,11 +1063,11 @@ namespace Compositor {
      * @return A `Core::ProxyType` object that wraps an instance of `IOutput`.
      */
 
-    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const uint32_t width, const uint32_t height, uint32_t refreshRate VARIABLE_IS_NOT_USED, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
+    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const uint32_t width, const uint32_t height, uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance();
 
-        return backend.Output(name, width, height, format, renderer, feedback);
+        return backend.Output(name, width, height, refreshRate, format, renderer, feedback);
     }
 } // namespace Compositor
 } // namespace Thunder

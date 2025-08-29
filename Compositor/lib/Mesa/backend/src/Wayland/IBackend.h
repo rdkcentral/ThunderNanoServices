@@ -24,21 +24,27 @@
 #include "generated/presentation-time-client-protocol.h"
 #include "generated/viewporter-client-protocol.h"
 #include "generated/xdg-activation-v1-client-protocol.h"
-#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 #include <wayland-client-protocol.h>
+
+#ifdef USE_LIBDECOR
+struct libdecor;
+#else
+// #include "generated/xdg-decoration-unstable-v1-client-protocol.h"
+#endif
 
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
         namespace Wayland {
+
             struct IBackend : public Core::IReferenceCounted {
                 ~IBackend() override = default;
 
                 virtual int RoundTrip() const = 0;
                 virtual int Flush() const = 0;
 
-                virtual wl_surface* Surface() const = 0;
+                virtual wl_surface* Surface(const char * const* tag = nullptr) const = 0;
 
                 virtual xdg_surface* WindowSurface(wl_surface* surface) const = 0;
 
@@ -48,9 +54,12 @@ namespace Compositor {
 
                 virtual wl_buffer* Buffer(Exchange::IGraphicsBuffer* buffer) const = 0;
 
-                virtual struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const = 0;
+                virtual struct wp_presentation_feedback* PresentationFeedback(wl_surface* surface) const = 0;
 
-                virtual struct wp_viewport* GetViewportInterface(wl_surface* surface) const = 0;
+                virtual wp_viewport* Viewport(wl_surface* surface) const = 0;
+#ifdef USE_LIBDECOR
+                virtual libdecor* LibDecorContext() const = 0;
+#endif
             }; // struct IBackend
         } //    namespace Wayland
     } //    namespace Backend
