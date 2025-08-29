@@ -18,7 +18,7 @@
  */
 
 #ifndef MODULE_NAME
-#define MODULE_NAME CompositorClearTest
+#define MODULE_NAME CompositorRenderTest
 #endif
 
 #include <core/core.h>
@@ -45,147 +45,33 @@
 
 #include <drm_fourcc.h>
 
+#include "BaseTest.h"
+
+#include "TerminalInput.h"
+
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 using namespace Thunder;
 
 namespace {
-const Compositor::Color red = { 1.f, 0.f, 0.f, 1.f };
-
-class ClearTest {
-
-    class Sink : public Compositor::IOutput::ICallback {
-    public:
-        Sink(const Sink&) = delete;
-        Sink& operator=(const Sink&) = delete;
-        Sink() = delete;
-
-        Sink(ClearTest& parent)
-            : _parent(parent)
-        {
-        }
-
-        virtual ~Sink() = default;
-
-        virtual void Presented(const Compositor::IOutput* output, const uint64_t sequence, const uint64_t time) override
-        {
-            std::cerr << "Presented!" << std::endl;
-            _parent.HandleVSync(output, sequence, time);
-        }
-
-        virtual void Terminated(const Compositor::IOutput* output) override
-        {
-            TRACE_GLOBAL(Thunder::Trace::Information, ("Output terminated, exiting application"));
-
-            _parent.Stop();
-            _parent.RequestExit();
-            _parent.HandleVSync(output, 0, 0);
-        }
-
-    private:
-        ClearTest& _parent;
-    };
-
+class RenderTest : public BaseTest {
 public:
-    ClearTest() = delete;
-    ClearTest(const ClearTest&) = delete;
-    ClearTest& operator=(const ClearTest&) = delete;
+    RenderTest() = delete;
+    RenderTest(const RenderTest&) = delete;
+    RenderTest& operator=(const RenderTest&) = delete;
 
-    ClearTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
-        : _adminLock()
-        , _renderer()
-        , _connector()
-        , _color(red)
-        , _previousIndex(0)
-        , _period(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t framePerSecond, const uint8_t rotationsPerSecond)
+        : BaseTest(connectorId, renderId, framePerSecond)
         , _rotationPeriod(std::chrono::seconds(rotationsPerSecond))
         , _rotation(0)
-        , _running(false)
-        , _render()
-        , _renderFd(::open(renderId.c_str(), O_RDWR))
-        , _sink(*this)
-        , _rendering()
-        , _vsync()
-        , _ppts(Core::Time::Now().Ticks())
-        , _fps()
-        , _sequence(0)
-        , _exitMutex()
-        , _exitSignal()
-        , _exitRequested(false)
+        , _color(hsv2rgb(_rotation, .9, .7))
     {
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
-        ASSERT(_renderer.IsValid());
-
-        _connector = Compositor::CreateBuffer(
-            connectorId, 1920, 1080, 60000, // 60Hz
-            Compositor::PixelFormat::Default(),
-            _renderer, &_sink);
-
-        ASSERT(_connector.IsValid());
-
         NewFrame();
     }
 
-    ~ClearTest()
-    {
-        Stop();
-
-        _renderer.Release();
-        _connector.Release();
-
-        ::close(_renderFd);
-    }
-
-    void Start()
-    {
-        TRACE(Trace::Information, ("Starting ClearTest"));
-
-        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-        _render = std::thread(&ClearTest::Render, this);
-    }
-
-    void Stop()
-    {
-        TRACE(Trace::Information, ("Stopping ClearTest"));
-
-        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-        if (_running) {
-            _running = false;
-            _render.join();
-        }
-    }
-
-    bool Running() const
-    {
-        return _running;
-    }
-
-    void RequestExit()
-    {
-        TRACE(Trace::Information, ("Exit requested via output termination"));
-        std::lock_guard<std::mutex> lock(_exitMutex);
-        _exitRequested = true;
-        _exitSignal.notify_one();
-    }
-
-    bool ShouldExit() const
-    {
-        return _exitRequested.load();
-    }
+    ~RenderTest() = default;
 
 private:
-    void Render()
-    {
-        _running = true;
-
-        while (_running) {
-            const auto next = _period - NewFrame();
-            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
-        }
-    }
-
     Compositor::Color hsv2rgb(float H, float S, float V)
     {
         Compositor::Color RGB;
@@ -217,86 +103,48 @@ private:
         return RGB;
     }
 
-    std::chrono::microseconds NewFrame()
+    std::chrono::microseconds NewFrame() override
     {
         const auto start = std::chrono::high_resolution_clock::now();
 
-        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+        auto renderer = Renderer();
+        auto connector = Connector();
 
-        _renderer->Bind(frameBuffer);
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = connector->FrameBuffer();
 
-        _renderer->Begin(_connector->Width(), _connector->Height());
-        _renderer->Clear(_color);
-        _renderer->End();
-        _renderer->Unbind(frameBuffer);
+        renderer->Bind(frameBuffer);
 
-        _connector->Commit();
+        renderer->Begin(connector->Width(), connector->Height());
+        renderer->Clear(_color);
+        renderer->End();
+        renderer->Unbind(frameBuffer);
 
-        _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / _period.count()));
+        connector->Commit();
 
-        if (_rotation >= 360)
+        auto periodCount = Period().count();
+
+        if (periodCount > 0) {
+            _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / periodCount));
+        } else {
+            TRACE(Trace::Warning, ("Period count is zero, skipping rotation update"));
+        }
+
+        if (_rotation >= 360) {
             _rotation = 0;
+        }
 
         _color = hsv2rgb(_rotation, .9, .7);
 
-        WaitForVSync(100);
+        WaitForVSync(1000);
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
-    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint64_t sequence, uint64_t pts /*usec from epoch*/)
-    {
-        if (_ppts != 0) { // Skip first frame
-            uint64_t frameDelta = pts - _ppts;
-
-            if (frameDelta > 0) { // Prevent division by zero
-                _fps = 1000000.0f / frameDelta; // Convert microseconds to fps
-            } else {
-                _fps = 0.0f; // Same timestamp or time went backwards
-            }
-        } else {
-            _fps = 0.0f; // First frame
-        }
-
-        _sequence = sequence;
-        _ppts = pts;
-        _vsync.notify_all();
-    }
-
-    void WaitForVSync(uint32_t timeoutMs)
-    {
-        std::unique_lock<std::mutex> lock(_rendering);
-
-        if (timeoutMs == Core::infinite) {
-            _vsync.wait(lock);
-        } else {
-            _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
-        }
-        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
-    }
-
 private:
-    mutable Core::CriticalSection _adminLock;
-    Core::ProxyType<Compositor::IRenderer> _renderer;
-    Core::ProxyType<Compositor::IOutput> _connector;
     Compositor::Color _color;
-    uint8_t _previousIndex;
-    const std::chrono::microseconds _period;
     const std::chrono::seconds _rotationPeriod;
     float _rotation;
-    bool _running;
-    std::thread _render;
-    int _renderFd;
-    Sink _sink;
-    std::mutex _rendering;
-    std::condition_variable _vsync;
-    uint64_t _ppts;
-    float _fps;
-    uint64_t _sequence;
-    std::mutex _exitMutex;
-    std::condition_variable _exitSignal;
-    std::atomic<bool> _exitRequested;
-}; // ClearTest
+}; // RenderTest
 class ConsoleOptions : public Core::Options {
 public:
     ConsoleOptions(int argumentCount, TCHAR* arguments[])
@@ -336,6 +184,7 @@ private:
 
 int main(int argc, char* argv[])
 {
+    bool quitApp(false);
     ConsoleOptions options(argc, argv);
 
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
@@ -343,60 +192,62 @@ int main(int argc, char* argv[])
     const char* executableName(Core::FileNameOnly(argv[0]));
 
     {
+        TerminalInput keyboard;
+        ASSERT(keyboard.IsValid() == true);
+
         Messaging::ConsolePrinter printer(true);
 
         tracer.Callback(&printer);
 
-        const std::vector<string> modules = {
-            "CompositorClearTest",
-            "CompositorBuffer",
-            "CompositorBackend",
-            "CompositorRenderer",
-            "DRMCommon"
+        const std::map<std::string, std::vector<std::string>> modules = {
+            { "CompositorRenderTest", { "" } },
+            { "CompositorBuffer", { "Error", "Information" } },
+            { "CompositorBackend", { "Error", "Information" } },
+            { "CompositorRenderer", { "Error", "Warning", "Information" } },
+            { "DRMCommon", { "Error", "Information" } }
         };
 
-        for (auto module : modules) {
-            tracer.EnableMessage(module, "", true);
+        for (const auto& module_entry : modules) {
+            for (const auto& category : module_entry.second) {
+                tracer.EnableMessage(module_entry.first, category, true);
+            }
         }
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        ClearTest test(options.Output, options.RenderNode, 100, 10);
+        RenderTest test(options.Output, options.RenderNode, 60000, 10);
 
         test.Start();
 
-        bool quitApp = false;
-
-        while (!test.ShouldExit() && !quitApp) {
-            // Check for keyboard input non-blockingly
-            if (std::cin.rdbuf()->in_avail() > 0) {
-                char keyPress;
-                std::cin >> keyPress;
-                keyPress = toupper(keyPress);
-
-                switch (keyPress) {
-                case 'S': {
-                    if (!test.ShouldExit()) {
-                        (test.Running() == false) ? test.Start() : test.Stop();
+        if (keyboard.IsValid() == true) {
+            while (!test.ShouldExit() && !quitApp) {
+                switch (toupper(keyboard.Read())) {
+                case 'S':
+                    if (test.ShouldExit() == false) {
+                        (test.IsRunning() == false) ? test.Start() : test.Stop();
                     }
                     break;
-                }
-                case 'Q': {
+                case 'Q':
                     quitApp = true;
                     break;
-                }
+                case 'F':
+                    TRACE_GLOBAL(Trace::Information, ("Current FPS: %.2f", test.GetFPS()));
+                    break;
+                case 'H':
+                    TRACE_GLOBAL(Trace::Information, ("Available commands:"));
+                    TRACE_GLOBAL(Trace::Information, ("  S - Start/Stop the rendering"));
+                    TRACE_GLOBAL(Trace::Information, ("  F - Show current FPS"));
+                    TRACE_GLOBAL(Trace::Information, ("  Q - Quit the application"));
+                    TRACE_GLOBAL(Trace::Information, ("  H - Show this help message"));
+                    break;
                 default:
                     break;
                 }
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-
-        if (test.ShouldExit()) {
-            TRACE_GLOBAL(Thunder::Trace::Information, ("Exiting due to terminated output ..."));
-        } else if (quitApp) {
-            TRACE_GLOBAL(Thunder::Trace::Information, ("User requested quit via keyboard"));
+        } else {
+            TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to initialize keyboard input"));
         }
 
         test.Stop();
