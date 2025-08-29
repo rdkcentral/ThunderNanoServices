@@ -23,7 +23,12 @@ find_package(${NAMESPACE}Definitions CONFIG REQUIRED)
 find_package(gbm REQUIRED)
 find_package(wayland-client REQUIRED)
 find_package(wayland-protocols REQUIRED)
-find_package(libdecor REQUIRED)
+
+option(SKIP_LIBDECOR "Skip searching for libdecor" OFF)
+
+if (NOT SKIP_LIBDECOR)
+find_package(libdecor QUIET)
+endif()
 
 WaylandGenerator(
     HEADERS WaylandHeaders
@@ -61,8 +66,16 @@ target_link_libraries(WaylandBackend
         gbm::gbm
         wayland-client::wayland-client
         wayland-protocols::wayland-protocols
-        libdecor::libdecor
 )
+
+if (TARGET libdecor::libdecor)
+    target_link_libraries(WaylandBackend
+        PRIVATE
+            libdecor::libdecor
+    )
+
+    target_compile_definitions(WaylandBackend PUBLIC USE_LIBDECOR)
+endif()
 
 set_target_properties(WaylandBackend PROPERTIES
         CXX_STANDARD 11
