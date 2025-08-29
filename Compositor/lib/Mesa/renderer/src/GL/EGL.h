@@ -67,12 +67,12 @@ namespace Compositor {
 
             inline bool SetCurrent() const
             {
-                return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, _context) == EGL_TRUE);
+                return (_display != EGL_NO_DISPLAY) ? (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, _context) == EGL_TRUE) : false;
             }
 
             inline bool ResetCurrent() const
             {
-                return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE);
+                return (_display != EGL_NO_DISPLAY) ? (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE) : false;
             }
 
             const std::vector<PixelFormat>& TextureFormats() const
@@ -92,6 +92,7 @@ namespace Compositor {
             public:
                 ContextBackup(const ContextBackup&) = delete;
                 ContextBackup& operator=(const ContextBackup&) = delete;
+                ContextBackup& operator=(ContextBackup&&) = delete;
 
                 ContextBackup()
                     : _display(eglGetCurrentDisplay())
@@ -103,7 +104,15 @@ namespace Compositor {
 
                 ~ContextBackup()
                 {
-                    eglMakeCurrent((_display == EGL_NO_DISPLAY) ? eglGetCurrentDisplay() : _display, _drawSurface, _readSurface, _context);
+                    if ((_display != EGL_NO_DISPLAY && _context != EGL_NO_CONTEXT)) {
+                        eglMakeCurrent(_display, _drawSurface, _readSurface, _context);
+                    } else {
+                        EGLDisplay currentDisplay = eglGetCurrentDisplay();
+
+                        if (currentDisplay != EGL_NO_DISPLAY) {
+                            eglMakeCurrent(currentDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+                        }
+                    }
                 }
 
             private:
@@ -121,7 +130,7 @@ namespace Compositor {
             bool IsExternOnly(const uint32_t format, const uint64_t modifier) const;
 
         private:
-            API::EGL _api;
+            const API::EGL& _api;
 
             EGLDisplay _display;
             EGLContext _context;
@@ -133,6 +142,8 @@ namespace Compositor {
 
             int _gbmDescriptor;
             gbm_device* _gbmDevice;
+
+            int _drmFd;
         }; // class EGL
     } // namespace Renderer
 } // namespace Compositor

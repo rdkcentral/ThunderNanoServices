@@ -30,6 +30,8 @@
 
 #include <CompositorUtils.h>
 
+#include <mutex>
+
 MODULE_NAME_ARCHIVE_DECLARATION
 
 namespace Thunder {
@@ -126,8 +128,75 @@ namespace Compositor {
     namespace Renderer {
         constexpr int InvalidFileDescriptor = -1;
 
+        class Display {
+        public:
+            Display() = delete;
+            Display(const Display&) = delete;
+            Display& operator=(const Display&) = delete;
+            Display(Display&&) = delete;
+            Display& operator=(Display&&) = delete;
+
+            static EGLDisplay Acquire(EGLenum platform, void* remote_display, const API::Attributes<EGLint>& attrs)
+            {
+                const API::EGL& api = Api();
+
+                ASSERT(api.eglGetPlatformDisplayEXT != nullptr);
+
+                std::lock_guard<std::mutex> lock(getMutex());
+                auto& refCounts = getRefCounts();
+
+                EGLDisplay display = api.eglGetPlatformDisplayEXT(platform, remote_display, attrs);
+
+                if (refCounts[display].fetch_add(1) == 0) {
+                    // First reference - initialize
+                    EGLint major, minor;
+                    if (eglInitialize(display, &major, &minor) != EGL_TRUE) {
+                        refCounts[display].fetch_sub(1);
+                        return EGL_NO_DISPLAY;
+                    }
+
+                    TRACE_GLOBAL(Trace::EGL, ("EGL initialized display %p with version %d.%d", display, major, minor));
+                }
+
+                return display;
+            }
+
+            static void Release(EGLDisplay display)
+            {
+                std::lock_guard<std::mutex> lock(getMutex());
+                auto& refCounts = getRefCounts();
+
+                auto it = refCounts.find(display);
+                if (it != refCounts.end() && it->second.fetch_sub(1) == 1) {
+                    eglTerminate(display);
+                    refCounts.erase(it);
+
+                    TRACE_GLOBAL(Trace::EGL, ("EGL terminated display %p", display));
+                }
+            }
+
+            static const API::EGL& Api()
+            {
+                static API::EGL api;
+                return api;
+            }
+
+        private:
+            static std::mutex& getMutex()
+            {
+                static std::mutex mutex;
+                return mutex;
+            }
+
+            static std::unordered_map<EGLDisplay, std::atomic<int>>& getRefCounts()
+            {
+                static std::unordered_map<EGLDisplay, std::atomic<int>> refCounts;
+                return refCounts;
+            }
+        };
+
         EGL::EGL(const int drmFd)
-            : _api()
+            : _api(Display::Api())
             , _display(EGL_NO_DISPLAY)
             , _context(EGL_NO_CONTEXT)
             , _device(EGL_NO_DEVICE_EXT)
@@ -135,6 +204,7 @@ namespace Compositor {
             , _textureFormats()
             , _gbmDescriptor(InvalidFileDescriptor)
             , _gbmDevice(nullptr)
+            , _drmFd(dup(drmFd))
         {
             TRACE(Trace::EGL, ("%s - build: %s", __func__, __TIMESTAMP__));
 #ifdef __DEBUG__
@@ -159,15 +229,15 @@ namespace Compositor {
 
             ASSERT(eglBind == EGL_TRUE);
 
-            const bool isMaster = drmIsMaster(drmFd);
+            const bool isMaster = drmIsMaster(_drmFd);
 
-            EGLDeviceEXT eglDevice = FindEGLDevice(drmFd);
+            EGLDeviceEXT eglDevice = FindEGLDevice(_drmFd);
 
             if (eglDevice != EGL_NO_DEVICE_EXT) {
                 TRACE(Trace::EGL, ("Initialize EGL using EGL device."));
                 Initialize(EGL_PLATFORM_DEVICE_EXT, eglDevice, isMaster);
             } else {
-                _gbmDescriptor = DRM::ReopenNode(drmFd, true);
+                _gbmDescriptor = DRM::ReopenNode(_drmFd, true);
                 _gbmDevice = gbm_create_device(_gbmDescriptor);
 
                 if (_gbmDevice != nullptr) {
@@ -188,22 +258,27 @@ namespace Compositor {
         {
             ASSERT(_display != EGL_NO_DISPLAY);
 
-            eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-
+            ResetCurrent();
             if (_context != EGL_NO_CONTEXT) {
                 eglDestroyContext(_display, _context);
                 _context = EGL_NO_CONTEXT;
             }
 
-            eglTerminate(_display);
-
-            eglReleaseThread();
+            Display::Release(_display);
+            _display = EGL_NO_DISPLAY;
 
             if (_gbmDevice != nullptr) {
                 gbm_device_destroy(_gbmDevice);
+                _gbmDevice = nullptr;
             }
             if (_gbmDescriptor != InvalidFileDescriptor) {
                 close(_gbmDescriptor);
+                _gbmDescriptor = InvalidFileDescriptor;
+            }
+
+            if (_drmFd != InvalidFileDescriptor) {
+                close(_drmFd);
+                _drmFd = InvalidFileDescriptor;
             }
 
             TRACE(Trace::EGL, ("EGL instance %p destructed", this));
@@ -300,8 +375,7 @@ namespace Compositor {
 
             ASSERT(_api.eglGetPlatformDisplayEXT != nullptr);
 
-            _display = _api.eglGetPlatformDisplayEXT(platform, remote_display, displayAttributes);
-
+            _display = Display::Acquire(platform, remote_display, displayAttributes);
             ASSERT(_display != EGL_NO_DISPLAY);
 
             EGLint major, minor;
