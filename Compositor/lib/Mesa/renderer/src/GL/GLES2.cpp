@@ -31,6 +31,8 @@
 
 #include <DRM.h>
 
+#include <sys/mman.h>
+
 namespace Thunder {
 namespace Compositor {
     namespace Renderer {
@@ -41,6 +43,57 @@ namespace Compositor {
             thread_local std::vector<std::string> g_debugGroupStack;
         }
 #endif // __DEBUG__
+
+        class SHMMapper {
+        public:
+            SHMMapper() = delete;
+            SHMMapper(const SHMMapper&) = delete;
+            SHMMapper& operator=(const SHMMapper&) = delete;
+            SHMMapper(SHMMapper&&) = delete;
+            SHMMapper& operator=(SHMMapper&&) = delete;
+
+            SHMMapper(int fd, size_t size)
+                : _mappedMemory(nullptr)
+                , _size(size)
+                , _isValid(false)
+            {
+                if (fd < 0 || size == 0) {
+                    return;
+                }
+
+                _mappedMemory = mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0);
+
+                if (_mappedMemory == MAP_FAILED) {
+                    TRACE(Trace::Error, ("SHM mmap failed (fd=%d, size=%zu): %s", fd, size, strerror(errno)));
+                    _mappedMemory = nullptr;
+                    return;
+                }
+
+                _isValid = true;
+            }
+
+            ~SHMMapper()
+            {
+                if (_isValid && _mappedMemory != nullptr) {
+                    munmap(_mappedMemory, _size);
+                }
+            }
+
+            bool IsValid() const { return _isValid; }
+
+            const uint8_t* GetData(size_t offset) const
+            {
+                if (!_isValid || offset >= _size) {
+                    return nullptr;
+                }
+                return static_cast<const uint8_t*>(_mappedMemory) + offset;
+            }
+
+        private:
+            void* _mappedMemory;
+            size_t _size;
+            bool _isValid;
+        };
 
         class GLES : public IRenderer {
             using PointCoordinates = std::array<GLfloat, 8>;
@@ -776,7 +829,7 @@ namespace Compositor {
                     }
 
                     if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
-                        ImportPixelBuffer();
+                        ImportSHMBuffer();
                     }
 
                     ASSERT(_textureId != 0);
@@ -903,44 +956,63 @@ namespace Compositor {
                     TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d external=%s", _textureId, _buffer->Width(), _buffer->Height(), external ? "true" : "false"));
                 }
 
-                void ImportPixelBuffer()
+                void ImportSHMBuffer()
                 {
-
                     Exchange::IGraphicsBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
+                    ASSERT(planes != nullptr);
 
-                    // uint8_t index(0);
+                    planes->Next();
 
-                    planes->Next(); // select first plane.
+                    do {
+                        int fd = planes->Descriptor();
+                        const uint32_t stride = planes->Stride();
+                        const uint32_t offset = planes->Offset();
+                        const size_t totalSize = offset + (stride * _buffer->Height());
 
-                    int data(planes->Descriptor());
+                        // One-time mapping with automatic cleanup
+                        SHMMapper mapper(fd, totalSize);
 
-                    ASSERT(data != -1);
+                        if (!mapper.IsValid()) {
+                            TRACE(Trace::Error, ("Failed to map SHM buffer for plane"));
+                            continue;
+                        }
 
-                    GLPixelFormat glFormat = ConvertFormat(_buffer->Format());
+                        const uint8_t* data = mapper.GetData(offset);
+                        if (data == nullptr) {
+                            TRACE(Trace::Error, ("Invalid offset %d for SHM buffer", offset));
+                            continue;
+                        }
 
-                    Renderer::EGL::ContextBackup backup;
+                        GLPixelFormat glFormat = ConvertFormat(_buffer->Format());
 
-                    _parent.Egl().SetCurrent();
+                        Renderer::EGL::ContextBackup backup;
+                        _parent.Egl().SetCurrent();
 
-                    GLES_DEBUG_SCOPE("ImportPixelBuffer");
+                        GLES_DEBUG_SCOPE("ImportPixelBuffer");
 
-                    glGenTextures(1, &_textureId);
-                    glBindTexture(_target, _textureId);
+                        glGenTextures(1, &_textureId);
+                        glBindTexture(_target, _textureId);
 
-                    glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                    glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                        glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                        glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, planes->Stride() / (glFormat.BitPerPixel / 8));
+                        const uint32_t bytesPerPixel = glFormat.BitPerPixel / 8;
+                        glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, stride / bytesPerPixel);
+                        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-                    glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(), 0, glFormat.Format, glFormat.Type, reinterpret_cast<uint8_t*>(data));
+                        glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(),
+                            0, glFormat.Format, glFormat.Type, data);
 
-                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
+                        glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
+                        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
-                    glBindTexture(_target, 0);
+                        glBindTexture(_target, 0);
+
+                        TRACE(Trace::GL, ("Imported SHM texture: %dx%d, stride=%d, offset=%d", _buffer->Width(), _buffer->Height(), stride, offset));
+
+                    } while (planes->Next());
 
                     _buffer->Relinquish();
-
-                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
 
             private:
