@@ -713,11 +713,6 @@ namespace Plugin {
 
             if (index != _observers.end()) {
 
-                _clients.Visit(
-                    [=](const string& name, const Core::ProxyType<Client>& /*element*/) {
-                        notification->Detached(name);
-                    });
-
                 _observers.erase(index);
 
                 notification->Release();
