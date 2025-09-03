@@ -21,6 +21,8 @@
 
 #include "Module.h"
 
+#include <com/com.h>
+
 // Common (shared)
 #include "../Common/CommunicationPerformanceImplementation.h"
 
