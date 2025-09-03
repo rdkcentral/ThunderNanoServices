@@ -588,7 +588,6 @@ namespace Compositor {
         void WaylandOutput::PresentationFeedback(const PresentationFeedbackEvent* event)
         {
             static auto lastFrameTime = std::chrono::high_resolution_clock::now();
-            const auto frameInterval = std::chrono::microseconds(1000000000 / _mfps); // Convert milli-fps to microseconds
 
             uint64_t currentPts;
             bool shouldThrottle = false;
@@ -609,23 +608,27 @@ namespace Compositor {
                 currentPts = now;
             }
 
-            // Check if we're running faster than target fps
-            auto now = std::chrono::high_resolution_clock::now();
-            auto timeSinceLastFrame = now - lastFrameTime;
+            if (_mfps > 0) {
+                const auto frameInterval = std::chrono::microseconds(1000000000 / _mfps); // Convert milli-fps to microseconds
 
-            if (shouldThrottle || timeSinceLastFrame < frameInterval) {
-                auto sleepDuration = frameInterval - timeSinceLastFrame;
+                // Check if we're running faster than target fps
+                auto now = std::chrono::high_resolution_clock::now();
+                auto timeSinceLastFrame = now - lastFrameTime;
 
-                if (sleepDuration > std::chrono::microseconds(0)) {
-                    std::this_thread::sleep_for(sleepDuration);
+                if (shouldThrottle || timeSinceLastFrame < frameInterval) {
+                    auto sleepDuration = frameInterval - timeSinceLastFrame;
 
-                    // Update timing after sleep
-                    now = std::chrono::high_resolution_clock::now();
-                    currentPts = Core::Time::Now().Ticks();
+                    if (sleepDuration > std::chrono::microseconds(0)) {
+                        std::this_thread::sleep_for(sleepDuration);
+
+                        // Update timing after sleep
+                        now = std::chrono::high_resolution_clock::now();
+                        currentPts = Core::Time::Now().Ticks();
+                    }
                 }
-            }
 
-            lastFrameTime = now;
+                lastFrameTime = now;
+            }
 
             if (_feedback != nullptr) {
                 _feedback->Presented(this, _sequenceCounter, currentPts);
