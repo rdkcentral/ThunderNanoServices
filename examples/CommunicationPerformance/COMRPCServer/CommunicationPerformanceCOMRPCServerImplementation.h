@@ -30,6 +30,9 @@
 #include "TestData.h"
 #endif
 
+#define _USE_UNIX_DOMAIN_SOCKET_
+//#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
+
 namespace Thunder {
 namespace Plugin {
 
@@ -94,7 +97,7 @@ private :
         void Revoke(const Core::IUnknown* object, const uint32_t interfaceId) override;
 
         // The remote probably forgot to revoke the interface 
-        void Dangling(const Core::IUnknown* object, const uint32_t interfaceId) override;
+        void Dangling(RPC::Communicator::Danglings&& proxies) override;
     };
 
     Core::NodeId _remoteNode;

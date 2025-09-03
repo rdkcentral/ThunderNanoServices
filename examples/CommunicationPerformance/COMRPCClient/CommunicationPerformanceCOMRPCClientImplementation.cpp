@@ -199,7 +199,11 @@ uint32_t COMRPCClient<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Close(uint32_t 
 
 
 SimplePluginCOMRPCClientImplementation::SimplePluginCOMRPCClientImplementation()
+#ifndef _USE_UNIX_DOMAIN_SOCKET_
     : _client{ _T("127.0.0.1:8080") /* remoteNode */ }
+#else
+    : _client{ _T("/tmp/CommunicationPerformanceCOMRPC") /* remoteNode */ }
+#endif
 {}
 
 SimplePluginCOMRPCClientImplementation::~SimplePluginCOMRPCClientImplementation()

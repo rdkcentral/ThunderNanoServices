@@ -22,6 +22,10 @@
 // Pull in 'Common' template definitions
 #include "../Common/CommunicationPerformanceImplementation.cpp"
 
+#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
+#include <chrono>
+#endif
+
 namespace Thunder {
 namespace Plugin {
 
@@ -96,13 +100,23 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Exchange(uint8_
         // Cast to the interface type and NOT the derived class type!
         && (interface = static_cast<Exchange::IPerformance*>(_communicator->Acquire("", Exchange::IPerformance::ID, ~0))) != nullptr
        ) {
+
+#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
         Core::StopWatch timer;
 
         /* uint64_t */ timer.Reset();
+#else
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
 
         result = interface->Exchange(bufferSize, buffer, bufferMaxSize);
 
+#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
         duration = timer.Elapsed();
+#else
+        auto end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+#endif
     } else {
         duration = 0;
     }
@@ -196,10 +210,12 @@ void COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Communicator::Revok
 }
 
 template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-void COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Communicator::Dangling(const Core::IUnknown* object, const uint32_t interfaceId)
+void COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Communicator::Dangling(RPC::Communicator::Danglings&& proxies)
 {
-    if (interfaceId == Exchange::IPerformance::ID) {
-        Revoke(object, interfaceId);
+    for(auto head = proxies.begin(), tail = proxies.end(), it = head; it != tail; it++) {
+        if (std::get<0>(*it) == Exchange::IPerformance::ID) {
+            Revoke(std::get<1>(*it), std::get<0>(*it));
+        }
     }
 }
 
@@ -240,7 +256,11 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Close(uint32_t 
 
 
 SimplePluginCOMRPCServerImplementation::SimplePluginCOMRPCServerImplementation()
+#ifndef _USE_UNIX_DOMAIN_SOCKET_
     : _server{ _T("127.0.0.1:8080") /* listeningNode */, _T("") /* proxyStubPath */, _T("") /* sourceName */}
+#else
+    : _server{ _T("/tmp/CommunicationPerformanceCOMRPC") /* listeningNode */, _T("") /* proxyStubPath */, _T("") /* sourceName */}
+#endif
 {}
 
 SimplePluginCOMRPCServerImplementation::~SimplePluginCOMRPCServerImplementation()
@@ -285,17 +305,17 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
     case STATE::RUN     :   state = STATE::EXECUTE;
     case STATE::EXECUTE :   {
                             // Set to a low value for quick builds
-                            constexpr uint16_t bufferMaxSize = 899;
+                            constexpr uint16_t bufferMaxSize = 8999;
 
-                            constexpr size_t numberOfBins = 30;
+                            constexpr size_t numberOfBins = 20;
 
 #ifndef _USE_TESTDATA
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
                             // Educated guess, system dependent, required for distribution
-                            constexpr uint64_t upperBoundDuration = 1500;
+                            constexpr uint64_t upperBoundDuration = 1000;
 
-                            // Round trip time
+                            // Round trip time in ticks
                             uint64_t duration = 0;
 
                             // Add some randomness

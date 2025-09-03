@@ -24,6 +24,8 @@
 // Common (shared)
 #include "../Common/CommunicationPerformanceImplementation.h"
 
+#define _USE_UNIX_DOMAIN_SOCKET_
+
 namespace Thunder {
 namespace Plugin {
 

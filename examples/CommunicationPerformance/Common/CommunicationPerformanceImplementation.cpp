@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-//#include "CommunicationPerformance.h"
-
 #include "CommunicationPerformanceImplementation.h"
 
 namespace Thunder {
