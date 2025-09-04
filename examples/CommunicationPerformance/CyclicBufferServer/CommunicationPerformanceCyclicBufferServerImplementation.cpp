@@ -201,7 +201,6 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             if (   bufferSize > 0
                                 && _server.SendData(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE
 // TODO: distinghuish return values for partial and non-partial write
-// TODO: Only write for a complete buffer[], and, only consider a full buffer when processing the data
                                 && bufferSize > 0
                             ) {
 

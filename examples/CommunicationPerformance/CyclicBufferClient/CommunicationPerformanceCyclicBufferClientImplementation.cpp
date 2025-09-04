@@ -117,9 +117,6 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Close(VARIABLE_IS_NOT_USED uint32_t wai
 {
     uint32_t result = Core::ERROR_GENERAL;
 
-// TODO: only one, let the creator close the file
-
-// use ACCESSMODE
     if (_buffer.IsValid() != false) {
 
         /* void */ _buffer.Close();
