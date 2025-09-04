@@ -82,11 +82,6 @@ public :
 private :
     CyclicBufferClient<Core::File::USER_READ> _client;
 
-#ifdef _USE_TESTDATA
-    // Select series 1, 2, 3, 4 or 5
-//    Plugin::CommunicationPerformanceHelpers::TestData<1> _data;
-#endif
-
     friend SimplePluginImplementation;
     uint32_t Task(STATE& state, uint32_t& waitTime);
 };

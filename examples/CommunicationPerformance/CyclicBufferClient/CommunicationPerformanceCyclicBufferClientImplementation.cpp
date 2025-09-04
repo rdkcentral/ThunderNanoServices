@@ -70,22 +70,23 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Stop(uint32_t waitTime)
 template <Core::File::Mode ACCESSMODE>
 uint32_t CyclicBufferClient<ACCESSMODE>::ReceiveData(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration) const
 {
+    ASSERT(bufferSize <= bufferMaxSize);
+
     uint32_t result = Core::ERROR_GENERAL;
 
     if (_buffer.IsValid() != false) {
-// TODO: add SignalLock here to ust wait for someone to have produced some data to consume
         Core::StopWatch timer;
 
         /* uint64_t */ timer.Reset();
-// TODO: Alert() on destruction ) to release all blocking processes
-// TODO : CyclicBuffer asserts if no writer has written data before the initial read
+
         // Only full reads are considered when processing the data
-        if (   _buffer.Lock() == Core::ERROR_NONE
-            && bufferSize == _buffer.Read(buffer, bufferMaxSize, bufferSize != bufferMaxSize /* partial read eg insufficient data to fill the input buffer avaialble */)
-        ) {
+        if ((result = _buffer.Lock()) == Core::ERROR_NONE) {
+            bufferSize =_buffer.Read(buffer, bufferMaxSize, bufferSize != bufferMaxSize /* partial read if true, eg insufficient data to fill the input buffer avaialble */);
+
             result = _buffer.Unlock();
         } else {
-            /* uint32_t */ _buffer.Unlock();
+            // The lock could not be obtained
+            ASSERT(false);
         }
 
         duration = timer.Elapsed();
@@ -173,9 +174,9 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
     case STATE::RUN     :   state = STATE::EXECUTE;
     case STATE::EXECUTE :   {
                             // Set to a low value for quick builds
-                            constexpr uint16_t bufferMaxSize = 899;
+                            constexpr uint16_t bufferMaxSize = 8999;
 
-                            constexpr size_t numberOfBins = 30;
+                            constexpr size_t numberOfBins = 20;
 
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
@@ -196,6 +197,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             // This fails if the client is missing so it is not typically an error
                             if (   bufferSize > 0
                                 && _client.ReceiveData(buffer.data(), bufferSize, bufferSize, duration) == Core::ERROR_NONE
+// TODO: distinghuish return values for partial and non-partial read allowed
                                 && bufferSize > 0
                             ) {
                                 using measurements_t = Measurements<uint16_t, uint64_t>;

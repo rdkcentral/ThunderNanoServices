@@ -28,7 +28,7 @@ namespace Thunder {
 namespace Plugin {
 
 // A single server to serve one to N clients
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE = Core::File::USER_READ | Core::File::USER_WRITE, bool OVERWRITE = false>
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE = Core::File::USER_READ | Core::File::USER_WRITE, bool OVERWRITE = false>
 class CyclicBufferServer {
 public :
     CyclicBufferServer() = delete;
@@ -80,13 +80,8 @@ public :
     uint32_t Stop(uint32_t waitTime);
 
 private :
-// TODO:
-    CyclicBufferServer<899 /* # uint8_t, sufficiently large for write buffers */, static_cast<Core::File::Mode>(Core::File::USER_READ | Core::File::USER_WRITE), false /* do not overwrite existing data without reading */> _server;
-
-#ifdef _USE_TESTDATA
-    // Select series 1, 2, 3, 4 or 5
-//    Plugin::CommunicationPerformanceHelpers::TestData<1> _data;
-#endif
+// TODO: educated guess 1 MiB
+    CyclicBufferServer<1024*1024 /* uint8_t, sufficiently large memory mapped region for write buffers */, static_cast<Core::File::Mode>(Core::File::USER_READ | Core::File::USER_WRITE), false /* do not overwrite existing data without reading */> _server;
 
     friend SimplePluginImplementation;
     uint32_t Task(STATE& state, uint32_t& waitTime);

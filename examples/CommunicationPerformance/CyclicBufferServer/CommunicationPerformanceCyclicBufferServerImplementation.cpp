@@ -25,22 +25,22 @@
 namespace Thunder {
 namespace Plugin {
 
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::CyclicBufferServer(const std::string& fileName)
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CyclicBufferServer(const std::string& fileName)
     : _fileName{ fileName }
 // TODO : +1 see CyclicBuffer for reason
-    , _buffer{ _fileName, ACCESSMODE | Core::File::CREATE | Core::File::SHAREABLE /* required for multiple processes to share data */, BUFFERSIZE /* server controls size */ , OVERWRITE }
+    , _buffer{ _fileName, ACCESSMODE | Core::File::CREATE | Core::File::SHAREABLE /* required for multiple processes to share data */, FILESIZE /* server controls size */ , OVERWRITE }
     , _lock{}
 {}
 
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::~CyclicBufferServer()
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::~CyclicBufferServer()
 {
     /* uint32_t result = */ Stop(Core::infinite);
 }
 
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Start(uint32_t waitTime)
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Start(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -54,8 +54,8 @@ uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Start(uint32_t w
     return result;
 }
 
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t waitTime)
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -68,27 +68,31 @@ uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t wa
     return result;
 }
 
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::SendData(const uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration) const
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::SendData(const uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration) const
 {
+    ASSERT(bufferSize <= bufferMaxSize);
+
     uint32_t result = Core::ERROR_GENERAL;
 
     if (_buffer.IsValid() != false) {
-// TODO: add SignalLock here to ust wait for someone to have produced some data to consume
         Core::StopWatch timer;
 
         /* uint64_t */ timer.Reset();
-// TODO: Alert() on destruction to release all blocking processes
-        // buffer writers should make a reservation for space before 'Write(...)' to avoid data corruption
-        // Only write for a complete buffer[], and, only consider a full buffer when processing the data
-        if (   _buffer.Lock() == Core::ERROR_NONE
-            && _buffer.Free() >= bufferSize
-            && _buffer.Reserve(bufferSize) == bufferSize
-            && _buffer.Write(buffer, bufferSize) == bufferSize
-        ) {
+
+        // Buffer writers should make a reservation for space before 'Write(...)' to avoid data corruption
+        if ((result = _buffer.Lock()) == Core::ERROR_NONE) {
+
+            if (   _buffer.Free() >= bufferSize
+                && _buffer.Reserve(bufferSize) == bufferSize
+            ) {
+                bufferSize = _buffer.Write(buffer, bufferSize);
+            }
+
             result = _buffer.Unlock();
         } else {
-            /* uint32_t */ _buffer.Unlock();
+            // The lock could not be obtained
+            ASSERT(false);
         }
 
         duration = timer.Elapsed();
@@ -99,8 +103,8 @@ uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::SendData(const u
     return result;
 }
 
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Open(VARIABLE_IS_NOT_USED uint32_t waitTime)
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Open(VARIABLE_IS_NOT_USED uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -114,12 +118,13 @@ uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Open(VARIABLE_IS
     return result;
 }
 
-template <uint32_t BUFFERSIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<BUFFERSIZE, ACCESSMODE, OVERWRITE>::Close(VARIABLE_IS_NOT_USED uint32_t waitTime)
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Close(VARIABLE_IS_NOT_USED uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
     if (_buffer.IsValid() != false) {
+// TODO: Wait for the users to signal they are no longer using the CyclicBuffer as the administrative section will become destroyed an inaccessible which make synchronisation primitives unreliable
         /* void */ _buffer.Close();
     }
 
@@ -172,9 +177,9 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
     case STATE::RUN     :   state = STATE::EXECUTE;
     case STATE::EXECUTE :   {
                             // Set to a low value for quick builds
-                            constexpr uint16_t bufferMaxSize = 899;
+                            constexpr uint16_t bufferMaxSize = 8999;
 
-                            constexpr size_t numberOfBins = 30;
+                            constexpr size_t numberOfBins = 20;
 
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
@@ -195,6 +200,8 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             // This fails if the client is missing so it is not typically an error
                             if (   bufferSize > 0
                                 && _server.SendData(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE
+// TODO: distinghuish return values for partial and non-partial write
+// TODO: Only write for a complete buffer[], and, only consider a full buffer when processing the data
                                 && bufferSize > 0
                             ) {
 
