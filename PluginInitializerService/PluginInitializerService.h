@@ -721,7 +721,7 @@ POP_WARNING()
             uint32_t Revoke(const Core::ProxyType<IDispatch>& job, const uint32_t waitTime = Core::infinite)
             {
                 uint32_t result = Core::IWorkerPool::Instance().Revoke(job, waitTime);
-                _active = true;
+                _active = true; 
                 return result;
             }
 
@@ -746,7 +746,11 @@ POP_WARNING()
             }
 
         private:
-            std::atomic_bool _active; // needed to make sure the Submit and Schedule will not be done twice once the job has not been starting to execute (see PluginStarter Deinitialzed)
+            std::atomic_bool _active; // needed to make sure the Submit and Schedule will not be done twice once the job has not been starting to execute (see PluginStarter Deinitialzed). 
+                                      // This as there are asserts in the JobQueuue checking if the job is already in the queue
+                                      // Note not a full mutex is not required as the Submit and Schedule always will be called in a lock itself and the Revoke after the PluginStarter was 
+                                      // removed from the list so could not lead to a retrigger of Submit or Scheduled (called just before PluginStarter destruction).
+                                      // Inside the Dispatch the Job is already out of the queue so then it is not a problem if the Submit or Schedule would be called again
             PluginHost::IShell* _requestedPluginShell;
             Core::ProxyType<RevokeAndBlockJobType<ActivateResultJob>> _resultjob;
         };
