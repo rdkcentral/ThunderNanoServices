@@ -1,0 +1,7 @@
+startmode = "@PLUGIN_TESTPRIORITYQUEUE_STARTMODE@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTPRIORITYQUEUE_MODE@")
+configuration.add("root", root)
