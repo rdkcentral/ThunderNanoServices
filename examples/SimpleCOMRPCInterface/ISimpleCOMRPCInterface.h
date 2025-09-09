@@ -72,8 +72,8 @@ namespace Exchange {
 
 	~IRTTPerformance() override = default;
 
-	virtual uint32_t SendAndReceive(const uint16_t sendSize, const uint8_t in_buffer[] /* @length:sendSize @in */, uint16_t& bufferSize /* @inout */, uint8_t out_buffer[] /* @length:bufferSize @out */ ) = 0;
-        virtual uint32_t SendAndReceive(uint16_t& bufferSize /* @inout */, uint8_t buffer[] /* @length:bufferSize @maxlength:maxBufferSize @inout*/, const uint16_t maxBufferSize) = 0;
-    }
+	virtual uint32_t SendAndReceive(const uint32_t sendSize, const uint8_t in_buffer[] /* @length:sendSize @in */, uint32_t& bufferSize /* @inout */, uint8_t out_buffer[] /* @length:bufferSize @out */ ) = 0;
+        virtual uint32_t SendAndReceive(uint32_t& bufferSize /* @inout */, uint8_t buffer[] /* @length:bufferSize @maxlength:maxBufferSize @inout*/, const uint32_t maxBufferSize) = 0;
+    };
 }
 }

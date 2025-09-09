@@ -148,7 +148,7 @@ void runTest(Exchange::IRTTPerformance* performanceTestService, uint32_t dataSiz
 {
     std::vector<int64_t> times;
     uint8_t* data = new uint8_t[dataSize];
-    memset(buffer, 'A', size);
+    memset(data, 'A', dataSize);
     uint8_t* response = new uint8_t[dataSize];
     if(inMemory)
     {
