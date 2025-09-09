@@ -84,10 +84,12 @@ if (EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE)
     add_subdirectory(PluginSmartInterfaceType)
 endif()
 
-if (EXAMPLE_SIMPLECOMRPC_TEST)
+add_subdirectory(SimpleCOMRPCInterface)
     add_subdirectory(SimpleCOMRPC/PluginServer)
     add_subdirectory(SimpleCOMRPC/Client)
-endif()
+    add_subdirectory(SimpleCOMRPCServer)
+
+
 
 if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)
     add_subdirectory(DynamicJSONRPCErrorMessage)
