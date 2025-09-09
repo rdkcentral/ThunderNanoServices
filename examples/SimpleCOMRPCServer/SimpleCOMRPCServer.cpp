@@ -41,7 +41,7 @@ private:
                 Notifier(const uint16_t period, Exchange::IWallClock::ICallback* callback)
                     : _period(period)
                     , _ticks(Core::Time::Now().Add(_period * 1000).Ticks())
-                    , _callback(_callback) {
+                    , _callback(callback) {
                     _callback->AddRef();
                 }
                 ~Notifier() {
@@ -209,6 +209,39 @@ POP_WARNING()
         WallClockNotifier _notifier;
     };
 
+    class PerfImplementation : public Exchange::IRTTPerformance {
+
+    public:
+	PerfImplementation(const PerfImplementation&) = delete;
+        PerfImplementation& operator= (const PerfImplementation&) = delete;
+	PerfImplementation(const PerfImplementation&&) = delete;
+	PerfImplementation& operator= (const PerfImplementation&&) = delete;
+
+        PerfImplementation(){
+        }
+        ~PerfImplementation() override = default;
+
+        uint32_t SendAndReceive(const uint32_t sendSize, const uint8_t in_buffer[] /* @length:sendSize @in */, uint32_t& bufferSize /* @out */, uint8_t out_buffer[] /* @length:bufferSize @out */ ) const override
+	{
+	     uint32_t size = (bufferSize >= sendSize) ? sendSize : bufferSize;
+	     std::memcpy(out_buffer, in_buffer, size)
+	     return Core::ERROR_NONE;
+	}
+        uint32_t SendAndReceive(uint32_t& bufferSize /* @inout */, uint8_t buffer[] /* @length:bufferSize @maxlength:maxBufferSize @inout*/, const uint32_t maxBufferSize) const override
+	{
+	     printf("inout len[%d]\n",inout.length());
+	     return Core::ERROR_NONE;
+	}
+
+	
+
+	BEGIN_INTERFACE_MAP(PerfImplementation)
+            INTERFACE_ENTRY(Exchange::IRTTPerformance)
+        END_INTERFACE_MAP
+
+    };
+
+
 public:
     COMServer() = delete;
     COMServer(const COMServer&) = delete;
@@ -242,7 +275,7 @@ public:
     }
 
 private:
-    void* Acquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+    void* Acquire(const string& , const uint32_t interfaceId, const uint32_t versionId) override
     {
         void* result = nullptr;
 
@@ -254,6 +287,9 @@ private:
                 // Allright, request a new object that implements the requested interface.
                 result = Core::ServiceType<Implementation>::Create<Exchange::IWallClock>();
             }
+	    else if( interfaceId == ::Exchange::IRTTPerformance::ID) {
+	        result = Core::ServiceType<PerfImplementation>::Create<Exchange::IRTTPerformance>();
+	    }
             else if (interfaceId == Core::IUnknown::ID) {
 
                 // Allright, request a new object that implements the requested interface.

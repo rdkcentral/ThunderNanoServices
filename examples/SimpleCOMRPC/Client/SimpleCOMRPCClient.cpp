@@ -22,7 +22,12 @@
 #include <core/core.h>
 #include <com/com.h>
 #include <plugins/plugins.h>
-#include "../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+#include "../../SimpleCOMRPCInterface/ISimpleCOMRPCInterface.h"
+#include <fstream>
+#include <chrono>
+#include <cmath>
+#include <numeric>
+
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -123,6 +128,67 @@ bool ParseOptions(int argc, char** argv, Core::NodeId& comChannel, ServerType& t
 
     return (showHelp);
 }
+
+// Function to calculate average
+double calculateAverage(const std::vector<int64_t>& times) {
+    return std::accumulate(times.begin(), times.end(), 0LL) / static_cast<double>(times.size());
+}
+
+// Function to calculate standard deviation
+double calculateStdDev(const std::vector<int64_t>& times, double avg) {
+    double variance = 0.0;
+    for (const auto& time : times) {
+        variance += (time - avg) * (time - avg);
+    }
+    variance /= times.size();
+    return std::sqrt(variance);
+}
+
+void runTest(Exchange::IRTTPerformance* performanceTestService, uint32_t dataSize, uint32_t iterations, bool inMemory)
+{
+    std::vector<int64_t> times;
+    uint8_t* data = new uint8_t[dataSize];
+    memset(buffer, 'A', size);
+    uint8_t* response = new uint8_t[dataSize];
+    if(inMemory)
+    {
+        for (uint32_t i = 0; i < iterations; ++i) {
+            auto start = std::chrono::high_resolution_clock::now();
+
+            performanceTestService->SendAndReceive(data);
+
+            auto end = std::chrono::high_resolution_clock::now();
+            auto roundTripTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            times.push_back(roundTripTime);
+        }
+    }
+    else
+    {
+
+        for (uint32_t i = 0; i < iterations; ++i) {
+            auto start = std::chrono::high_resolution_clock::now();
+
+            performanceTestService->SendAndReceive(data, response);
+
+            auto end = std::chrono::high_resolution_clock::now();
+            auto roundTripTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            times.push_back(roundTripTime);
+        }
+    }
+    free (data);
+    free (response);
+
+    int64_t bestTime = *std::min_element(times.begin(), times.end());
+    double averageTime = calculateAverage(times);
+    double stdDevTime = calculateStdDev(times, averageTime);
+    std::cout << "Data size: " << dataSize << " bytes" << std::endl;
+    std::cout << "Best time: " << bestTime << " microseconds" << std::endl;
+    std::cout << "Average time: " << averageTime << " microseconds" << std::endl;
+    std::cout << "Standard deviation: " << stdDevTime << " microseconds" << std::endl;
+    std::cout << "----------------------------" << std::endl;
+
+}
+
 
 
 int main(int argc, char* argv[])
@@ -277,6 +343,60 @@ int main(int argc, char* argv[])
                     }
                 }
                 break;
+	    case 'P':
+		{
+		    Exchange::IRTTPerformance* perf(nullptr);
+		    if (client->IsOpen() == false) {
+                        client->Open(2000);
+                    }
+
+                    if (client->IsOpen() == false) {
+                        printf("Could not open a connection to the server. No exchange of interfaces happened!\n");
+                        break;
+                    } else {
+                        if (type == ServerType::STANDALONE_SERVER) {
+                             perf = client->Acquire<Exchange::IRTTPerformance>(3000, _T("PerfImplementation"), ~0);
+                        }
+                        else {
+                            Thunder::PluginHost::IShell* controller = client->Acquire<Thunder::PluginHost::IShell>(10000, _T("Controller"), ~0);
+                            if (controller == nullptr) {
+                                printf("Could not get the IShell* interface from the controller to execute the QueryInterfaceByCallsign!\n");
+                            }
+                            else {
+                                perf = controller->QueryInterfaceByCallsign<Exchange::IRTTPerformance>("RTTPerformance");
+                                controller->Release();
+                            }
+                        }
+                    }
+
+                    if (perf == nullptr) {
+                        client->Close(Core::infinite);
+                        if (type == ServerType::STANDALONE_SERVER) {
+                            printf("Tried aquiring the IRTTPerformance, but it is not available\n");
+                        }
+                        else {
+                            printf("Tried aquiring the IPerformance, but the plugin (%s) is not available\n", "PerfImplementation");
+
+                        }
+                    } else {
+                            printf("Acquired the IRTTPerformance, ready for use\n");
+			    std::vector<size_t> dataSizes = {32, 128, 512, 1024, 4096, 8192, 16384, 32768, 65536, 1024*1024, 2*1024*1024, 4*1024*1024, 16*1024*1024};
+
+			    // Number of iterations for each data size
+			    int iterations = 100;
+
+			    // Run the test for each data size
+			    printf("****Test with separate buffers for input and output data****");
+			    for (size_t dataSize : dataSizes) {
+				runTest(perf, dataSize, iterations, true);
+			    }
+			    printf("****Test with in-memory modification of buffer****");
+			    for (size_t dataSize : dataSizes) {
+				runTest(perf, dataSize, iterations, false);
+			    }
+                    }
+		}
+		break;
             case 'E': exit(0); break;
             case 'Q': break;
             case'?':
@@ -288,6 +408,7 @@ int main(int argc, char* argv[])
                 printf("<I> Information required, tell  me the current time.\n");
                 printf("<T> Toggle subscription for continous updates.\n");
                 printf("<Q> We are done playing around, eave the application properly.\n");
+		printf("<P> Run RTT Performance tests.\n");
                 printf("<E> Eject, this is an emergency, bail out, just kill the app.\n");
                 printf("<?> Have no clue what I can do, tell me.\n");
             default: break;

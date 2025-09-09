@@ -32,7 +32,8 @@ namespace Exchange {
     enum example_ids {
         ID_WALLCLOCK = 0x80001000,
         ID_WALLCLOCK_CALLBACK = 0x80001001,
-        ID_MATH = 0x80001002
+        ID_MATH = 0x80001002,
+	ID_PERF = 0x80001003
     };
 
     struct IWallClock : virtual public Core::IUnknown {
@@ -64,5 +65,15 @@ namespace Exchange {
         virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;
         virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */)  const = 0;
     };
+
+    struct IRTTPerformance : virtual public Core::IUnknown {
+	
+	enum {ID = ID_PERF} ;
+
+	~IRTTPerformance() override = default;
+
+	virtual uint32_t SendAndReceive(const uint16_t sendSize, const uint8_t in_buffer[] /* @length:sendSize @in */, uint16_t& bufferSize /* @inout */, uint8_t out_buffer[] /* @length:bufferSize @out */ ) = 0;
+        virtual uint32_t SendAndReceive(uint16_t& bufferSize /* @inout */, uint8_t buffer[] /* @length:bufferSize @maxlength:maxBufferSize @inout*/, const uint16_t maxBufferSize) = 0;
+    }
 }
 }
