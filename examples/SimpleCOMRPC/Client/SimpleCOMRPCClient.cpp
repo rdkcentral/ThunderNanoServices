@@ -150,12 +150,13 @@ void runTest(Exchange::IRTTPerformance* performanceTestService, uint32_t dataSiz
     uint8_t* data = new uint8_t[dataSize];
     memset(data, 'A', dataSize);
     uint8_t* response = new uint8_t[dataSize];
+    uint32_t responseSize = dataSize;
     if(inMemory)
     {
         for (uint32_t i = 0; i < iterations; ++i) {
             auto start = std::chrono::high_resolution_clock::now();
 
-            performanceTestService->SendAndReceive(data);
+            performanceTestService->SendAndReceive(dataSize, data, dataSize);
 
             auto end = std::chrono::high_resolution_clock::now();
             auto roundTripTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
@@ -168,15 +169,15 @@ void runTest(Exchange::IRTTPerformance* performanceTestService, uint32_t dataSiz
         for (uint32_t i = 0; i < iterations; ++i) {
             auto start = std::chrono::high_resolution_clock::now();
 
-            performanceTestService->SendAndReceive(data, response);
+            performanceTestService->SendAndReceive(dataSize, data, responseSize, response);
 
             auto end = std::chrono::high_resolution_clock::now();
             auto roundTripTime = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
             times.push_back(roundTripTime);
         }
     }
-    free (data);
-    free (response);
+    delete [] data;
+    delete [] response;
 
     int64_t bestTime = *std::min_element(times.begin(), times.end());
     double averageTime = calculateAverage(times);

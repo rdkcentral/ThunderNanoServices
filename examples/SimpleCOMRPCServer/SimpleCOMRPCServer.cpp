@@ -223,7 +223,7 @@ POP_WARNING()
         uint32_t SendAndReceive(const uint32_t sendSize, const uint8_t in_buffer[] /* @length:sendSize @in */, uint32_t& bufferSize /* @inout */, uint8_t out_buffer[] /* @length:bufferSize @out */ ) override
 	{
 	     uint32_t size = (bufferSize >= sendSize) ? sendSize : bufferSize;
-	     memcpy(out_buffer, in_buffer, size)
+	     memcpy(out_buffer, in_buffer, size);
 	     return Core::ERROR_NONE;
 	}
 	uint32_t SendAndReceive(uint32_t& bufferSize /* @inout */, uint8_t buffer[] /* @length:bufferSize @maxlength:maxBufferSize @inout*/, const uint32_t maxBufferSize) override
