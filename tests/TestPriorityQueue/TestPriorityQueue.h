@@ -39,6 +39,7 @@ namespace Plugin {
             , _connectionId(0)
             , _implMath(nullptr)
             , _notification(*this)
+            , _stop(false)
         {
         }
         
@@ -81,6 +82,9 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
         
+        void StartFlood(uint32_t totalCalls, uint32_t parallelism);
+        void StopFlood();
+
         // Plugin Methods
         void TestPriorityQueueMethod();
         void Deactivated(RPC::IRemoteConnection* connection);
@@ -102,6 +106,9 @@ namespace Plugin {
         uint32_t _connectionId;
         Exchange::IMath* _implMath;
         Core::SinkType<Notification> _notification;
+
+        std::atomic<bool> _stop;
+        std::vector<std::thread> _workers;
     };
 } // Plugin
 } // Thunder

@@ -38,7 +38,8 @@ namespace Plugin {
     
     // Implement all methods from TestPriorityQueue.h
     
-    const string TestPriorityQueue::Initialize(PluginHost::IShell* service) {
+    const string TestPriorityQueue::Initialize(PluginHost::IShell* service)
+    {
         string message;
         
         ASSERT(_service == nullptr);
@@ -55,12 +56,17 @@ namespace Plugin {
         if (_implMath == nullptr) {
             message = _T("Couldn't create instance of implMath");
         }
-        
+        else {
+            StartFlood(100000, std::max(1u, std::thread::hardware_concurrency()));
+        }
+
         return (message);
     }
     
-    void TestPriorityQueue::Deinitialize(PluginHost::IShell* service) {
-        
+    void TestPriorityQueue::Deinitialize(PluginHost::IShell* service)
+    {
+        StopFlood();
+
         ASSERT(_service == service);
         
         _service->Unregister(&_notification);
@@ -89,8 +95,43 @@ namespace Plugin {
         return (string());
     }
     
+    void TestPriorityQueue::StartFlood(uint32_t totalCalls, uint32_t parallelism)
+    {
+        StopFlood();
+
+        _stop.store(false, std::memory_order_release);
+
+        const uint32_t perThread = (totalCalls / parallelism);
+        _workers.reserve(parallelism);
+
+        for (uint32_t i = 0; i < parallelism; ++i) {
+            _workers.emplace_back([this, perThread]() {
+                uint16_t res = 0;
+
+                for (uint32_t n = 0; ((n < perThread) && (_stop.load(std::memory_order_acquire) == false)); ++n) {
+                    const uint16_t a = static_cast<uint16_t>(n * 2);
+                    const uint16_t b = static_cast<uint16_t>(n);
+                    _implMath->Add(a, b, res);
+                    _implMath->Sub(a, b, res);
+                }
+            });
+        }
+    }
+
+    void TestPriorityQueue::StopFlood()
+    {
+        _stop.store(true, std::memory_order_release);
+
+        for (auto& w : _workers) {
+            if (w.joinable()) {
+                w.join();
+            }
+        }
+        _workers.clear();
+    }
+
     void TestPriorityQueue::TestPriorityQueueMethod() {
-    
+        
     }
     
     void TestPriorityQueue::Deactivated(RPC::IRemoteConnection* connection) {

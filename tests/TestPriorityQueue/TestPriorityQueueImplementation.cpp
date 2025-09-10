@@ -45,12 +45,23 @@ namespace Plugin {
         
         // Implement methods from the interface
         // IMath methods
-        Core::hresult IMathMethod1() override {
-            return Core::ERROR_NONE;
+        virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+        {
+            sum = static_cast<uint16_t>(A + B);
+            std::cout << "Add: " << A << " + " << B << " = " << sum << std::endl;
+
+            return (Core::ERROR_NONE);
         }
-        
+        virtual uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& sum) const override
+        {
+            sum = static_cast<uint16_t>(A - B);
+            std::cout << "Sub: " << A << " - " << B << " = " << sum << std::endl;
+
+            return (Core::ERROR_NONE);
+        }
+
     private:
-        
+
         // Note: test is just an example...
         uint32_t _test;
     };
