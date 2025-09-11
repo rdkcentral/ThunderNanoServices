@@ -60,6 +60,7 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
+option(PLUGIN_PLUGININITIALIZERSERVICE "Include PluginInitializerService plugin" OFF)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -240,6 +241,10 @@ endif()
 
 if(PLUGIN_FILETRANSFER)
     add_subdirectory(FileTransfer)
+endif()
+
+if(PLUGIN_PLUGININITIALIZERSERVICE)
+    add_subdirectory(PluginInitializerService)
 endif()
 
 add_subdirectory(examples)
