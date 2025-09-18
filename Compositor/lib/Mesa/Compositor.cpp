@@ -862,6 +862,7 @@ namespace Plugin {
         void Deactivate(const PluginHost::IShell::reason reason)
         {
             ASSERT(_service != nullptr);
+            Stop();
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, reason));
         }
 

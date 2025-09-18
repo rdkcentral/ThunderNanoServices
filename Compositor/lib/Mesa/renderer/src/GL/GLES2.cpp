@@ -1095,6 +1095,7 @@ namespace Compositor {
             uint32_t Unbind(const Core::ProxyType<IFrameBuffer>& frameBuffer) override
             {
                 if (frameBuffer.IsValid() == true) {
+                    _egl.SetCurrent();
                     frameBuffer->Unbind();
                 } else {
                     return Core::ERROR_BAD_REQUEST;
