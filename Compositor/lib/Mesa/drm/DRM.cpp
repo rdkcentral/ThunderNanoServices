@@ -42,7 +42,9 @@ namespace Compositor {
     namespace DRM {
 
         /* simple stringification operator to make errorcodes human readable */
-        #define CASE_TO_STRING(value) case value: return #value;
+#define CASE_TO_STRING(value) \
+    case value:               \
+        return #value;
 
         const TCHAR* FormatToString(const uint32_t format)
         {

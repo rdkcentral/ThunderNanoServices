@@ -24,6 +24,8 @@
 #include <xf86drmMode.h>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <cstring>
 
 namespace Thunder {
 
@@ -33,7 +35,7 @@ namespace Exchange {
 
 namespace Compositor {
     class PixelFormat;
-    
+
     namespace DRM {
         class Properties;
 
@@ -77,6 +79,140 @@ namespace Compositor {
         extern bool SelectBestMode(const drmModeConnector* const connector, const uint32_t requestedWidth, const uint32_t requestedHeight, const uint32_t requestedRefreshRate, bool& dimensionsAdjusted, drmModeModeInfo& selectedMode);
         extern ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId, const uint32_t requestedWidth, const uint32_t requestedHeigh, const uint32_t requestedRefreshRate);
         extern std::vector<PixelFormat> ExtractFormats(const Properties& properties);
+
+        class FormatString {
+        public:
+            FormatString() = delete;
+
+            FormatString(const uint32_t format)
+                : _name(drmGetFormatName(format))
+            {
+            }
+
+            ~FormatString()
+            {
+                if (_name != nullptr) {
+                    free(_name);
+                }
+            }
+
+            // Delete copy constructor and assignment
+            FormatString(const FormatString&) = delete;
+            FormatString& operator=(const FormatString&) = delete;
+
+            // Move semantics
+            FormatString(FormatString&& other) noexcept
+                : _name(other._name)
+            {
+                other._name = nullptr;
+            }
+
+            FormatString& operator=(FormatString&& other) noexcept
+            {
+                if (this != &other) {
+                    if (_name != nullptr) {
+                        free(_name);
+                    }
+                    _name = other._name;
+                    other._name = nullptr;
+                }
+                return *this;
+            }
+
+            // Other operators
+            operator const char*() const { return _name; }
+            const char* operator*() const { return _name; }
+            bool operator!() const { return _name == nullptr; }
+            explicit operator bool() const { return _name != nullptr; }
+
+            // Stream insertion operator (friend function)
+            friend std::ostream& operator<<(std::ostream& os, const FormatString& fmt)
+            {
+                if (fmt._name) {
+                    os << fmt._name;
+                } else {
+                    os << "(null)";
+                }
+                return os;
+            }
+
+        private:
+            char* _name;
+        };
+
+        class ModifierString {
+        public:
+            ModifierString() = delete;
+
+            ModifierString(const uint64_t modifier)
+                : _name(drmGetFormatModifierName(modifier)) // Assuming this function exists
+            {
+            }
+
+            ~ModifierString()
+            {
+                if (_name != nullptr) {
+                    free(_name);
+                }
+            }
+
+            // Delete copy constructor and assignment
+            ModifierString(const ModifierString&) = delete;
+            ModifierString& operator=(const ModifierString&) = delete;
+
+            // Move semantics
+            ModifierString(ModifierString&& other) noexcept
+                : _name(other._name)
+            {
+                other._name = nullptr;
+            }
+
+            ModifierString& operator=(ModifierString&& other) noexcept
+            {
+                if (this != &other) {
+                    if (_name != nullptr) {
+                        free(_name);
+                    }
+                    _name = other._name;
+                    other._name = nullptr;
+                }
+                return *this;
+            }
+
+            // Operators
+            operator const char*() const { return _name; } // Implicit conversion
+            const char* operator*() const { return _name; } // Dereference like pointer
+            bool operator!() const { return _name == nullptr; } // Check if null
+            explicit operator bool() const { return _name != nullptr; } // Check if valid
+
+            // Comparison operators
+            bool operator==(const char* other) const
+            {
+                if (!_name || !other)
+                    return _name == other;
+                return strcmp(_name, other) == 0;
+            }
+
+            bool operator!=(const char* other) const
+            {
+                return !(*this == other);
+            }
+
+            // Stream insertion operator
+            friend std::ostream& operator<<(std::ostream& os, const ModifierString& mod)
+            {
+                if (mod._name) {
+                    os << mod._name;
+                } else {
+                    os << "(unknown modifier)";
+                }
+                return os;
+            }
+
+        private:
+            char* _name;
+        };
+
     } // namespace DRM
 } // namespace Compositor
 } // namespace Thunder
