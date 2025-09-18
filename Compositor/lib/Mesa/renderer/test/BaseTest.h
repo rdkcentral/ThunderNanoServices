@@ -72,7 +72,7 @@ public:
         ASSERT(_connector.IsValid());
     }
 
-    ~BaseTest()
+    virtual ~BaseTest()
     {
         Stop();
 

@@ -82,7 +82,7 @@ public:
         ::close(renderFd);
     }
 
-    ~RenderTest()
+    virtual ~RenderTest()
     {
         _texture.Release();
         _textureBuffer.Release();
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(options.Output, options.RenderNode, options.FPS * 1000, options.RPM);
+        RenderTest test(options.Output, options.RenderNode, 0, options.RPM);
 
         test.Start();
 

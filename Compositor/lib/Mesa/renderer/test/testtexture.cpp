@@ -88,7 +88,7 @@ public:
         _texture = renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
     }
 
-    ~RenderTest() = default;
+    virtual ~RenderTest() = default;
 
 protected:
     std::chrono::microseconds NewFrame() override
@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(options.Output, options.RenderNode, 60000, 30);
+        RenderTest test(options.Output, options.RenderNode, 0, 30);
 
         test.Start();
 

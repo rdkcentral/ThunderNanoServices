@@ -62,14 +62,14 @@ public:
 
     RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t framePerSecond, const uint8_t rotationsPerSecond)
         : BaseTest(connectorId, renderId, framePerSecond)
+        , _color(hsv2rgb(_rotation, .9, .7))
         , _rotationPeriod(std::chrono::seconds(rotationsPerSecond))
         , _rotation(0)
-        , _color(hsv2rgb(_rotation, .9, .7))
     {
         NewFrame();
     }
 
-    ~RenderTest() = default;
+    virtual ~RenderTest() = default;
 
 private:
     Compositor::Color hsv2rgb(float H, float S, float V)
@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(options.Output, options.RenderNode, 60000, 10);
+        RenderTest test(options.Output, options.RenderNode, 0, 10);
 
         test.Start();
 

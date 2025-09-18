@@ -69,7 +69,7 @@ public:
     {
     }
 
-    ~RenderTest() = default;
+    virtual ~RenderTest() = default;
 
 protected:
     std::chrono::microseconds NewFrame() override
