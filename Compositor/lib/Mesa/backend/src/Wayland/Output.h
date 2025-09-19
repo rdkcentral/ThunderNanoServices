@@ -191,7 +191,10 @@ namespace Compositor {
 #ifdef USE_SURFACE_TRACKING
             std::vector<wl_output*> _wlOutputs;
 #endif
-            VSyncTimer* _vsyncTimer;
+#ifdef USE_LIBDECOR
+            std::unique_ptr<VSyncTimer> _vsyncTimer;
+            std::atomic<bool> _commitPending;
+#endif
         }; // WaylandOutput
 
     } // namespace Backend

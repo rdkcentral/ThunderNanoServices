@@ -328,7 +328,10 @@ namespace Compositor {
 #ifdef USE_SURFACE_TRACKING
             , _wlOutputs()
 #endif
+#ifdef USE_LIBDECOR
             , _vsyncTimer(nullptr)
+            , _commitPending(false)
+#endif
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
@@ -395,27 +398,24 @@ namespace Compositor {
 #ifdef USE_LIBDECOR
             // Only start the vsync timer when we have a window managed by libdecor
             // it somehow it breaks the presentation feedback loop.
-            if (_libDecorFrame != nullptr) {
-                _vsyncTimer = new VSyncTimer(refreshRate > 0 ? refreshRate : 60000);
 
-                _vsyncTimer->Start([this](uint64_t sequence, uint64_t timestamp_us) {
-                    if (_feedback != nullptr) {
-                        _feedback->Presented(this, sequence, timestamp_us);
-                    }
-                });
-            }
+            _vsyncTimer.reset(new VSyncTimer(refreshRate > 0 ? refreshRate : 60000));
+
+            _vsyncTimer->Start([this](uint64_t sequence, uint64_t timestamp_us) {
+                if ((_feedback != nullptr) && (_commitPending.exchange(false, std::memory_order_acq_rel))) {
+                    _feedback->Presented(this, sequence, timestamp_us);
+                }
+            });
 #endif
         }
 
         WaylandOutput::~WaylandOutput()
         {
             TRACE(Trace::Backend, ("Destructing wayland output for '%s'", _name.c_str()));
+#ifdef USE_LIBDECOR
+            _vsyncTimer->Stop();
 
-            if (_vsyncTimer != nullptr) {
-                _vsyncTimer->Stop();
-                delete _vsyncTimer;
-                _vsyncTimer = nullptr;
-            }
+#endif
 
             _signal.ResetEvent();
 
@@ -547,6 +547,15 @@ namespace Compositor {
             }
 
             SurfaceCommit();
+
+#ifdef USE_LIBDECOR
+            // Set flag to indicate a frame commit that needs presentation feedback.
+            // libdecor doesn't support wp_presentation_feedback, so we use a VSyncTimer
+            // to simulate presentation events. This flag ensures the timer only triggers
+            // feedback when we've actually committed a new frame, matching the expected
+            // behavior of wp_presentation_feedback.
+            _commitPending.store(true, std::memory_order_release);
+#endif
 
             return (Core::ERROR_NONE);
         }
