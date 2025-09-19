@@ -396,7 +396,7 @@ namespace Compositor {
             // Only start the vsync timer when we have a window managed by libdecor
             // it somehow it breaks the presentation feedback loop.
             if (_libDecorFrame != nullptr) {
-                _vsyncTimer = new VSyncTimer(refreshRate > 0 ? refreshRate : 60);
+                _vsyncTimer = new VSyncTimer(refreshRate > 0 ? refreshRate : 60000);
 
                 _vsyncTimer->Start([this](uint64_t sequence, uint64_t timestamp_us) {
                     if (_feedback != nullptr) {
