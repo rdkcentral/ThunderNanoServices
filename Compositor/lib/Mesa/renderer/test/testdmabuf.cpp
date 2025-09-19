@@ -60,13 +60,11 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t FPS, const uint16_t RPM)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t FPS)
         : BaseTest(connectorId, renderId, FPS)
         , _adminLock()
-        , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
         , _textureBuffer()
         , _texture()
-        , _radPerFrame(((RPM / 60.0f) * (2.0f * M_PI)) / float(FPS / 1000.0f)) // Convert mFPS to FPS
         , _renderStart(std::chrono::high_resolution_clock::now())
     {
         auto renderer = Renderer();
@@ -75,8 +73,10 @@ public:
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(renderFd, Texture::TvTexture);
         _texture = renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(_textureBuffer));
+
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
+
         TRACE_GLOBAL(Thunder::Trace::Information, ("created texture: %p", _texture));
 
         ::close(renderFd);
@@ -91,48 +91,115 @@ public:
 protected:
     std::chrono::microseconds NewFrame() override
     {
-        static float rotation = 0.f;
-
+        static constexpr float RADIANS_PER_REVOLUTION = 2.0f * M_PI;
+        static constexpr float BASE_SPEED = 150.0f; // Base speed in pixels per second
+        static constexpr float MIN_SPEED = 50.0f;   // Minimum speed
+        static constexpr float MAX_SPEED = 800.0f;  // Maximum speed
+        static constexpr float BOUNCE_BOOST = 1.3f; // Speed multiplier on bounce
+        static constexpr float FRICTION = 0.98f;    // Speed decay factor per second
+        static constexpr uint16_t TEXTURE_SIZE = 400; // Size of the texture in pixels
+        
+        // Static variables to maintain state between frames
+        static float posX = 0.0f;
+        static float posY = 0.0f;
+        static float velocityX = BASE_SPEED;
+        static float velocityY = BASE_SPEED * 0.7f;
+        static bool initialized = false;
+        
         const float runtime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - _renderStart).count();
-        float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
-
+        
+        // Simple time-based rotation (1 revolution per 3 seconds)
+        float rotation = runtime * RADIANS_PER_REVOLUTION / 3.0f;
+        
+        // Alpha oscillation for visual effect
+        float alpha = 0.5f * (1 + sin(RADIANS_PER_REVOLUTION * 0.25f * runtime));
+        
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
+        
         auto renderer = Renderer();
         auto connector = Connector();
         
         const uint16_t width(connector->Width());
         const uint16_t height(connector->Height());
-        const uint16_t renderWidth(720);
-        const uint16_t renderHeight(720);
-
-        const float cosX = cos(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
-        const float sinY = sin(M_PI * 2.0f * (rotation * (180.0f / M_PI)) / 360.0f);
-
-        float x = float(renderWidth / 2.0f) * cosX;
-        float y = float(renderHeight / 2.0f) * sinY;
-
+        const uint16_t renderWidth(TEXTURE_SIZE);
+        const uint16_t renderHeight(TEXTURE_SIZE);
+        
+        // Initialize position to center if first frame
+        if (!initialized) {
+            posX = (width - renderWidth) / 2.0f;
+            posY = (height - renderHeight) / 2.0f;
+            initialized = true;
+        }
+        
+        // Calculate frame time for physics
+        static auto lastFrameTime = std::chrono::high_resolution_clock::now();
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float deltaTime = std::chrono::duration<float>(currentTime - lastFrameTime).count();
+        lastFrameTime = currentTime;
+        
+        // Apply friction (slow down over time)
+        float currentSpeed = sqrt(velocityX * velocityX + velocityY * velocityY);
+        if (currentSpeed > MIN_SPEED) {
+            float frictionFactor = pow(FRICTION, deltaTime);
+            velocityX *= frictionFactor;
+            velocityY *= frictionFactor;
+        }
+        
+        // Update position based on velocity
+        posX += velocityX * deltaTime;
+        posY += velocityY * deltaTime;
+        
+        // Bounce off edges with speed boost
+        if (posX <= 0) {
+            posX = 0;
+            velocityX = -velocityX * BOUNCE_BOOST;
+            if (abs(velocityX) > MAX_SPEED) {
+                velocityX = (velocityX > 0 ? MAX_SPEED : -MAX_SPEED);
+            }
+        } else if (posX >= (width - renderWidth)) {
+            posX = width - renderWidth;
+            velocityX = -velocityX * BOUNCE_BOOST;
+            if (abs(velocityX) > MAX_SPEED) {
+                velocityX = (velocityX > 0 ? MAX_SPEED : -MAX_SPEED);
+            }
+        }
+        
+        if (posY <= 0) {
+            posY = 0;
+            velocityY = -velocityY * BOUNCE_BOOST;
+            if (abs(velocityY) > MAX_SPEED) {
+                velocityY = (velocityY > 0 ? MAX_SPEED : -MAX_SPEED);
+            }
+        } else if (posY >= (height - renderHeight)) {
+            posY = height - renderHeight;
+            velocityY = -velocityY * BOUNCE_BOOST;
+            if (abs(velocityY) > MAX_SPEED) {
+                velocityY = (velocityY > 0 ? MAX_SPEED : -MAX_SPEED);
+            }
+        }
+        
         Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = connector->FrameBuffer();
-
+        
         renderer->Bind(frameBuffer);
         renderer->Begin(width, height);
         renderer->Clear(background);
-
-        const Exchange::IComposition::Rectangle renderBox = { 
-            static_cast<int32_t>(((width / 2) - (renderWidth / 2)) + x), 
-            static_cast<int32_t>(((height / 2) - (renderHeight / 2)) + y), 
-            renderWidth, renderHeight 
+        
+        const Exchange::IComposition::Rectangle renderBox = {
+            static_cast<int32_t>(posX),
+            static_cast<int32_t>(posY),
+            renderWidth,
+            renderHeight
         };
-
+        
         Compositor::Matrix matrix;
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, renderer->Projection());
-
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, renderer->Projection());
+        
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
         renderer->Render(_texture, textureBox, matrix, alpha);
-
+        
         renderer->End(false);
         renderer->Unbind(frameBuffer);
-
+        
         uint32_t commit;
         if ((commit = connector->Commit()) == Core::ERROR_NONE) {
             WaitForVSync(100);
@@ -140,18 +207,14 @@ protected:
             TRACE(Trace::Error, ("Commit failed: %d", commit));
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
-
-        rotation += _radPerFrame;
         
-        return std::chrono::microseconds(0); // Timing handled by BaseTest
+        return std::chrono::microseconds(0);
     }
 
 private:
     mutable Core::CriticalSection _adminLock;
-    const Compositor::PixelFormat _format;
     Core::ProxyType<Compositor::DmaBuffer> _textureBuffer;
     Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
-    const float _radPerFrame;
     std::chrono::time_point<std::chrono::high_resolution_clock> _renderStart;
 };
 
@@ -161,8 +224,7 @@ public:
         : Core::Options(argumentCount, arguments, _T("o:r:f:s:h"))
         , RenderNode("/dev/dri/card0")
         , Output(RenderNode)
-        , FPS(60)
-        , RPM(1)
+        , FPS(0) // Default to 0 (use connector's default)
     {
         Parse();
     }
@@ -174,7 +236,6 @@ public:
     const TCHAR* RenderNode;
     const TCHAR* Output;
     uint16_t FPS;
-    uint16_t RPM;
 
 private:
     virtual void Option(const TCHAR option, const TCHAR* argument)
@@ -189,12 +250,9 @@ private:
         case 'f':
             FPS = std::stoi(argument);
             break;
-        case 's':
-            RPM = std::stoi(argument);
-            break;
         case 'h':
         default:
-            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>] [-f <fps>] [-s <rpm>]\n");
+            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>] [-f <30000>]\n");
             exit(EXIT_FAILURE);
             break;
         }
@@ -237,7 +295,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(options.Output, options.RenderNode, 0, options.RPM);
+        RenderTest test(options.Output, options.RenderNode, options.FPS);
 
         test.Start();
 
