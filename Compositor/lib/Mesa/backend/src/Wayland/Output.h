@@ -196,6 +196,7 @@ namespace Compositor {
             std::unique_ptr<VSyncTimer> _vsyncTimer;
             std::atomic<bool> _commitPending;
 #endif
+            std::atomic<bool> _terminated;
         }; // WaylandOutput
 
     } // namespace Backend

@@ -307,6 +307,7 @@ namespace Compositor {
             , _vsyncTimer(nullptr)
             , _commitPending(false)
 #endif
+            , _terminated(false)
         {
             TRACE(Trace::Backend, ("Constructing wayland output for '%s'", name.c_str()));
 
@@ -618,8 +619,12 @@ namespace Compositor {
 
         void WaylandOutput::Close()
         {
-            if (_feedback != nullptr) {
-                _feedback->Terminated(this);
+            bool expected = false;
+            
+            if (_terminated.compare_exchange_strong(expected, true)) {
+                if (_feedback != nullptr) {
+                    _feedback->Terminated(this);
+                }
             }
         }
 
