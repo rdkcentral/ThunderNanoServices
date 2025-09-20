@@ -179,22 +179,8 @@ namespace Compositor {
             if (frame == implementation->_libDecorFrame) {
                 int width(0), height(0);
 
-                if (libdecor_configuration_get_content_size(configuration, frame, &width, &height)) {
-                    const float renderAspect = static_cast<float>(implementation->_renderWidth) / static_cast<float>(implementation->_renderHeight);
-
-                    int correctedWidth = width;
-                    int correctedHeight = static_cast<int>(std::round(width / renderAspect));
-
-                    if (correctedHeight > height) {
-                        correctedHeight = height;
-                        correctedWidth = static_cast<int>(std::round(height * renderAspect));
-                    }
-
-                    implementation->HandleWindowResize(correctedWidth, correctedHeight);
-
-                    struct libdecor_state* state = libdecor_state_new(correctedWidth, correctedHeight);
-                    libdecor_frame_commit(frame, state, configuration);
-                    libdecor_state_free(state);
+                if (libdecor_configuration_get_content_size(configuration, frame, &width, &height) == true) {
+                    implementation->HandleWindowResize(width, height);
                 }
 
                 implementation->InitializeBuffer();
@@ -210,14 +196,7 @@ namespace Compositor {
         void WaylandOutput::onLibDecorFrameCommit(struct libdecor_frame*, void* userData)
         {
             WaylandOutput* implementation = static_cast<WaylandOutput*>(userData);
-
-            implementation->Commit();
-
-            // bool expected = false;
-
-            // if (implementation->_libDecorCommitNeeded.compare_exchange_strong(expected, true) == true) {
-            //     TRACE_GLOBAL(Trace::Information, ("LibDecor Frame Commit requested"));
-            // }
+            implementation->SurfaceCommit();
         }
 
         void WaylandOutput::onLibDecorFrameDismissPopup(struct libdecor_frame*, const char*, void*)
@@ -273,14 +252,10 @@ namespace Compositor {
         {
             TRACE_GLOBAL(Trace::Backend, ("Toplevel Configure window width: %d height: %d", width, height));
 
-            if (width == 0 || height == 0) {
-                // Compositor is asking us to choose the size - use our calculated window size
-                return;
+            if ((width > 0) && (height > 0)) {
+                WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
+                implementation->HandleWindowResize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
             }
-
-            WaylandOutput* implementation = static_cast<WaylandOutput*>(data);
-
-            implementation->HandleWindowResize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
         }
 
         void WaylandOutput::onToplevelClose(void* data, struct xdg_toplevel* xdg_toplevel)
@@ -530,20 +505,13 @@ namespace Compositor {
             ASSERT(_surface != nullptr);
 
             if ((_buffer.IsValid() == true)) {
-
 #ifndef USE_LIBDECOR
                 struct wp_presentation_feedback* feedback = _backend.PresentationFeedback(_surface);
                 wp_presentation_feedback_add_listener(feedback, &presentationFeedbackListener, this);
 #endif
-
-                // wl_buffer* buffer = WlBufferCreate();
-                // wl_surface_attach(_surface, buffer, 0, 0);
-
-                wl_surface_damage(_surface, 0, 0, INT32_MAX, INT32_MAX);
                 wl_surface_set_buffer_scale(_surface, 1);
             } else {
                 wl_surface_attach(_surface, nullptr, 0, 0);
-                wl_surface_damage(_surface, 0, 0, INT32_MAX, INT32_MAX);
             }
 
             SurfaceCommit();
@@ -579,6 +547,7 @@ namespace Compositor {
                     CommitLibDecor(nullptr);
                 }
 #endif
+                wl_surface_damage(_surface, 0, 0, INT32_MAX, INT32_MAX);
                 wl_surface_commit(_surface);
             }
         }
@@ -705,54 +674,68 @@ namespace Compositor {
             TRACE(Trace::Backend, ("Scaled window: %ux%u (aspect: %.3f, error: %.1f%%) from render %ux%u", _windowWidth, _windowHeight, actualAspect, aspectError, renderWidth, renderHeight));
         }
 
-        void WaylandOutput::HandleWindowResize(uint32_t newWidth, uint32_t newHeight)
+        void WaylandOutput::HandleWindowResize(const uint32_t width, const uint32_t height)
         {
-            if (newWidth == _windowWidth && newHeight == _windowHeight) {
-                return; // No change
+            if ((width != _windowWidth) || (height != _windowHeight)) {
+
+                uint32_t windowWidth = width;
+                uint32_t windowHeight = height;
+
+                CorrectAspectRatio(windowWidth, windowHeight);
+
+                _windowWidth = windowWidth;
+                _windowHeight = windowHeight;
+
+                ConfigureViewportScaling();
+
+                _libDecorCommitNeeded.store(true);
+                SurfaceCommit();
             }
+        }
 
-            TRACE(Trace::Backend, ("Window resize: %ux%u → %ux%u (render buffer stays %ux%u)", _windowWidth, _windowHeight, newWidth, newHeight, _renderWidth, _renderHeight));
+        void WaylandOutput::CorrectAspectRatio(uint32_t& width, uint32_t& height)
+        {
+            const float referenceAspectRatio = static_cast<float>(_renderWidth) / static_cast<float>(_renderHeight);
 
-            _windowWidth = newWidth;
-            _windowHeight = newHeight;
+            // Determine what the user actually changed
+            bool widthChanged = (width != _windowWidth);
+            bool heightChanged = (height != _windowHeight);
 
-            ConfigureViewportScaling();
+            if (widthChanged && !heightChanged) {
+                // User dragged left/right edges - adjust height to match
+                height = static_cast<uint32_t>(width / referenceAspectRatio);
+            } else if (heightChanged && !widthChanged) {
+                // User dragged top/bottom edges - adjust width to match
+                width = static_cast<uint32_t>(height * referenceAspectRatio);
+            } else if (widthChanged && heightChanged) {
+                // Diagonal drag - use your existing "best fit" logic
+                uint32_t originalWidth = width;
+                uint32_t originalHeight = height;
+
+                uint32_t widthPriorityHeight = static_cast<uint32_t>(width / referenceAspectRatio);
+                uint32_t heightPriorityWidth = static_cast<uint32_t>(height * referenceAspectRatio);
+
+                int widthChange = static_cast<int>(originalWidth) - static_cast<int>(heightPriorityWidth);
+                int heightChange = static_cast<int>(originalHeight) - static_cast<int>(widthPriorityHeight);
+
+                if (abs(widthChange) <= abs(heightChange)) {
+                    width = heightPriorityWidth;
+                } else {
+                    height = widthPriorityHeight;
+                }
+            }
         }
 
         void WaylandOutput::ConfigureViewportScaling()
         {
             if (_viewport != nullptr) {
-                // Calculate aspect ratios
-                const float renderAspect = static_cast<float>(_renderWidth) / static_cast<float>(_renderHeight);
-                const float windowAspect = static_cast<float>(_windowWidth) / static_cast<float>(_windowHeight);
+                wp_viewport_set_source(_viewport,
+                    wl_fixed_from_int(0), wl_fixed_from_int(0),
+                    wl_fixed_from_int(_renderWidth), wl_fixed_from_int(_renderHeight));
 
-                if (std::abs(renderAspect - windowAspect) < 0.001f) {
-                    // Aspects match - use full viewport
-                    wp_viewport_set_source(_viewport,
-                        wl_fixed_from_int(0), wl_fixed_from_int(0),
-                        wl_fixed_from_int(_renderWidth), wl_fixed_from_int(_renderHeight));
-                    wp_viewport_set_destination(_viewport, _windowWidth, _windowHeight);
-                } else {
-                    // Preserve aspect ratio with letterboxing/pillarboxing
-                    uint32_t destWidth, destHeight;
+                wp_viewport_set_destination(_viewport, _windowWidth, _windowHeight);
 
-                    if (renderAspect > windowAspect) {
-                        // Render is wider - fit to width, letterbox height
-                        destWidth = _windowWidth;
-                        destHeight = static_cast<uint32_t>(_windowWidth / renderAspect);
-                    } else {
-                        // Render is taller - fit to height, pillarbox width
-                        destHeight = _windowHeight;
-                        destWidth = static_cast<uint32_t>(_windowHeight * renderAspect);
-                    }
-
-                    wp_viewport_set_source(_viewport,
-                        wl_fixed_from_int(0), wl_fixed_from_int(0),
-                        wl_fixed_from_int(_renderWidth), wl_fixed_from_int(_renderHeight));
-                    wp_viewport_set_destination(_viewport, destWidth, destHeight);
-                }
-
-                TRACE(Trace::Backend, ("Viewport: render %ux%u (%.3f) → window %ux%u (%.3f)", _renderWidth, _renderHeight, renderAspect, _windowWidth, _windowHeight, windowAspect));
+                // TRACE(Trace::Backend, ("Viewport: render %ux%u → window %ux%u", _renderWidth, _renderHeight, _windowWidth, _windowHeight));
             }
         }
 

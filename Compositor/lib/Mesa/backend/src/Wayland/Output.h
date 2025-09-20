@@ -147,7 +147,8 @@ namespace Compositor {
             void Close();
 
             void CalculateWindowSize(uint32_t renderWidth, uint32_t renderHeight);
-            void HandleWindowResize(uint32_t newWidth, uint32_t newHeight);
+            void HandleWindowResize(uint32_t width, uint32_t height);
+            void CorrectAspectRatio(uint32_t& width, uint32_t& height);
             void ConfigureViewportScaling();
 
 #ifdef USE_LIBDECOR
