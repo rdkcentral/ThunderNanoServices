@@ -42,7 +42,6 @@ public:
     ~CyclicBufferClient(); // no override !
 
     uint32_t Start(uint32_t waitTime);
-
     uint32_t Stop(uint32_t waitTime);
 
     // If bufferSize != bufferMaxSize then buffer may be partially filled
@@ -57,7 +56,6 @@ private:
     mutable Core::CriticalSection _lock;
 
     uint32_t Open(uint32_t waitTime);
-
     uint32_t Close(uint32_t waitTime);
 };
 
