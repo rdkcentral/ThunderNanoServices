@@ -41,6 +41,9 @@ struct ConstexprArray<TYPE, 0, N...>
     // Users should provide the definition
     constexpr static TYPE func(size_t n); 
 
+    // Users should provide the definition
+    constexpr static TYPE marker();
+
     constexpr static std::array<TYPE, sizeof...(N)> values = {{ func(N)... }};
 };
 

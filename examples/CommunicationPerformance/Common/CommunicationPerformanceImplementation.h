@@ -45,14 +45,23 @@ namespace Plugin {
 
 namespace CommunicationPerformanceHelpers {
 
+constexpr uint16_t TemplateRecursionDepth = 899;
+
 // User defined definition
 template<typename TYPE, size_t... N>
 constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(size_t n)
 {
     // (Integral) TYPE may not have the same range as size_t
-    // Use overflow for arbitrary values
 
-    return static_cast<TYPE>(n);
+    using common_t = typename std::common_type<TYPE, size_t>::type;
+
+    return static_cast<TYPE>( (static_cast<common_t>(n) % static_cast<common_t>(std::numeric_limits<TYPE>::max()) ) + 1 );
+}
+
+template<typename TYPE, size_t... N>
+constexpr TYPE ConstexprArray<TYPE, 0, N...>::marker()
+{
+    return static_cast<TYPE>(0);
 }
 
 } // namespace CommunicationPerformanceHelpers

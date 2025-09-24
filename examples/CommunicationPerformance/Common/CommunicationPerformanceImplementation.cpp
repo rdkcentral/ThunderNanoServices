@@ -573,6 +573,7 @@ uint32_t SimplePluginImplementation<DERIVED>::DeinitializeTask(const uint32_t wa
     uint32_t result = Core::ERROR_GENERAL;
 
     /* void */ _job.Revoke();
+
     if ((result = static_cast<DERIVED*>(this)->Stop(waitTime)) == Core::ERROR_NONE) {
         NotifyAll("DeinitializeTask successful", 0);
     } else {
