@@ -27,6 +27,7 @@
 namespace Thunder {
 namespace Plugin {
 
+// TODO: buffer size is uint16_t
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
 class WebSocketClient {
 public :
@@ -42,8 +43,12 @@ public :
                     , const string& uriQuery    // HTTP URI part, absent query allowed
                     , const string& origin      // Optional, set by browser client
     );
- 
-    ~WebSocketClient() = default;
+    ~WebSocketClient();
+
+    uint32_t Start(uint32_t waitTime);
+    uint32_t Stop(uint32_t waitTime);
+
+    uint32_t Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration);
 
 private :
 
@@ -62,8 +67,14 @@ private :
               , const string& origin
               , Args&&... args
         );
+        ~Client() override;
 
-        ~Client() override = default;
+        bool Submit(const std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
+        bool Response(std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
+
+
+        // Web::WebSocketClientType methods
+        // --------------------------------
 
         // Non-idle then data available to send
         bool IsIdle() const override;
@@ -77,18 +88,21 @@ private :
         // Reflects payload, effective after upgrade
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
 
-        bool Submit(const std::basic_string<uint8_t>& message);
-
     private:
 
         std::vector<std::basic_string<uint8_t>> _post; // Send message queue
+        std::vector<std::basic_string<uint8_t>> _response; // Receive message queue
 
-        mutable Core::CriticalSection _guard;
+        mutable Core::CriticalSection _guardPost;
+        mutable Core::CriticalSection _guardResponse;
     };
  
     const Core::NodeId _remoteNode;
 
     Client _client;
+
+    uint32_t Open(uint32_t waitTime);
+    uint32_t Close(uint32_t waitTime);
 };
 
 class SimplePluginWebSocketClientImplementation : public SimplePluginImplementation<SimplePluginWebSocketClientImplementation> {
@@ -100,19 +114,16 @@ public :
     SimplePluginWebSocketClientImplementation& operator=(SimplePluginWebSocketClientImplementation&&) = delete;
 
     SimplePluginWebSocketClientImplementation();
-
-    ~SimplePluginWebSocketClientImplementation() = default;
+    ~SimplePluginWebSocketClientImplementation();
 
     uint32_t Start(uint32_t waitTime);
-
-     uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(uint32_t waitTime);
 
 private :
     WebSocketClient<1024, 1024, Core::SocketStream> _client;
 
     friend SimplePluginImplementation;
     uint32_t Task(STATE& state, uint32_t& waitTime);
-
 };
 
 } } // namespace Thunder::Plugin

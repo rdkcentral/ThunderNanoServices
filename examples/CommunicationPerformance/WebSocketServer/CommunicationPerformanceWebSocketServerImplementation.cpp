@@ -22,6 +22,8 @@
 // Pull in 'Common' template definitions
 #include "../Common/CommunicationPerformanceImplementation.cpp"
 
+#include <algorithm>
+
 namespace Thunder {
 namespace Plugin {
 
@@ -31,137 +33,375 @@ WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::WebSocketServer(
     , _server{ _localNode }
 {}
 
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::~WebSocketServer()
+{
+    /* uint32_t result = */ Stop(Core::infinite);
+}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Start(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    result = Open(waitTime); 
+
+    return result;
+}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Stop(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    result = Close(waitTime);
+
+    return result;
+}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration)
+{
+    ASSERT(bufferSize < bufferMaxSize);
+
+    uint32_t result = Core::ERROR_GENERAL;
+
+    std::basic_string<uint8_t> message{ buffer, bufferSize };
+
+    VARIABLE_IS_NOT_USED uint32_t waitTime = std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), duration); 
+
+    Core::StopWatch timer;
+
+    /* uint64_t */ timer.Reset();
+
+    // Obtain the endpoint at the server side for each (remotely) connected client, eg, an object of Class Server
+    auto it = _server.Clients();
+
+    // Assume a single Client
+    if (it.Next() != false) {
+        // Unless a client has sent an upgrade request, and, the request completed, no data can be send out
+
+        // It should have been upgraded to a websocket
+        if (   it.Client()->IsWebSocket() != false
+        // This is the reversed order compared to the client side
+          && it.Client()->Submit(message, waitTime) != false
+          && it.Client()->Response(message, waitTime) != false
+        ) {
+          ASSERT(bufferSize == message.size());
+
+          result = Core::ERROR_NONE;
+        }
+    }
+
+    duration = timer.Elapsed();
+
+    using common_t = std::common_type<std::basic_string<uint8_t>::size_type, uint16_t>::type;
+
+    /* void* */ memcpy(buffer, message.c_str(), std::min(static_cast<common_t>(message.size()), static_cast<common_t>(bufferMaxSize)));
+
+    return result;
+}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Open(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+
+    // Safe to call repeatedly
+    result = _server.Open(waitTime);
+
+    return result;
+}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Close(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL;
+   
+    // Safe to call repeatedly
+    result = _server.Close(waitTime);
+
+    return result;
+}
+
 
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Server(const SOCKET& socket, const ::Thunder::Core::NodeId& remoteNode, VARIABLE_IS_NOT_USED Core::SocketServerType<Server>* socketServer /* our creator */)
     // A server should nevwer apply masking when sending frames to the client
     : Web::WebSocketServerType<STREAMTYPE>(false /* binary */, false /* masking */, /* <Arguments SocketStream> */ false /* use raw socket */, socket, remoteNode, SENDBUFFERSIZE, RECEIVEBUFFERSIZE /* </Arguments SocketStream> */)
+    , _post{}
+    , _response{}
+    , _guardPost{}
+    , _guardResponse{}
+    , _messageAvailable{ false, false }
 {}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::~Server()
+{
+    /* uint32_t */ _messageAvailable.Unlock();
+}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Submit(const std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED uint32_t waitTime)
+{
+    _guardPost.Lock();
+
+    // Put data in the queue for sending
+
+    size_t count = _post.size();
+
+    if (message.size() > 0) {
+        _post.emplace_back(message);
+    }
+
+    bool result =    message.size()
+                  && count < _post.size()
+                  ;
+
+    _guardPost.Unlock();
+
+    if (   result != false
+        && this->IsOpen() != false
+       ) {
+        // Trigger a call to SendData to get the message from the queue to send
+        Web::WebSocketServerType<STREAMTYPE>::Link().Trigger();
+     }
+
+    return result;
+}
+
+template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Response(std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_NONE;
+
+    message.clear();
+
+    do {
+        _guardResponse.Lock();
+
+        if (_response.size() > 1) {
+            _messageAvailable.Unlock();
+        } 
+
+        _guardResponse.Unlock();
+    } while (   // New messages will be accepted so engage in / enable another 'run' and expect data to be received 
+                this->IsSuspended() != true
+                // A connection is open, and, it is still WebSocket type
+             && this->IsOpen() != false
+             && _messageAvailable.IsSet() != true
+             && (result = _messageAvailable.Lock(waitTime)) != Core::ERROR_GENERAL
+            );
+
+    _guardResponse.Lock();
+
+    if (_response.size() > 1) {
+        message = _response.front();
+        _response.erase(_response.begin());
+    } 
+
+    _guardResponse.Unlock();
+
+    _messageAvailable.ResetEvent();
+
+    return (message.size() > 0);
+}
 
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::IsIdle() const
 {
-    _guard.Lock();
+    _guardPost.Lock();
 
     bool result = _post.size() == 0;
 
-    _guard.Unlock();
+    _guardPost.Unlock();
 
     return result;
 }
 
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 void WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::StateChange()
-{}
+{
+// TODO: transition IsOpen true to false, and, IsSupended false to true
 
+    if (   this->IsOpen() != true 
+        && this->IsSuspended() != false
+       ) {
+        /* uint32_t */ _messageAvailable.Unlock();
+    }
+}
+
+// Reflects payload, effective after upgrade
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 uint16_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
 {
-// TODO: probably the location to use Exchange
-    size_t count = 0;
-
+    size_t count{ 0 };
+    
     if (   dataFrame != nullptr
         && maxSendSize > 0
-        && !IsIdle()
-        && Web::WebSocketServerType<STREAMTYPE>::IsOpen()
-        && Web::WebSocketServerType<STREAMTYPE>::IsWebSocket() // Redundant, covered by IsOpen
-        && Web::WebSocketServerType<STREAMTYPE>::IsCompleted()
+        // Is there anything available in the post queue?
+        && !(this->IsIdle())
+        && this->IsOpen()
+        && this->IsWebSocket() // Redundant, covered by IsOpen
        ) {
-        _guard.Lock();
+        // Put the message of the _post queue into dataFrame
+        // Update count with the message size
+        _guardPost.Lock();
 
         std::basic_string<uint8_t>& message = _post.front();
 
-        count = std::min(message.size(), static_cast<size_t>(maxSendSize));
+        // size_t is mininum 16 bit integral since c++11
+        static_assert(std::is_same<std::basic_string<uint8_t>::size_type, std::size_t>::value, "size_type is not aliasing std::size_t");
 
-        /* void* */ memcpy(dataFrame, message.data(), count);
+        // Do not exceed bounds
+        count = std::min(static_cast<size_t>(maxSendSize), message.size());
 
-        if (count == message.size()) {
-            /* iterator */ _post.erase(_post.begin());
+       // memmove expects unsigned char
+        static_assert(sizeof(unsigned char) == sizeof(uint8_t), "");
+
+        /* void* */ memmove(dataFrame, message.data(), count);
+
+        if (maxSendSize >= count) {
+            // All fits
+          
+            _post.erase(_post.begin()); 
+
+            // message has become invalid
         } else {
-            /* this */ message.erase(0, count);
+            // Only remove data that was send and keep the remaining portion to be send later
 
-            // Trigger a call to SendData for remaining data
+            message.erase(0, count);
+
+            // Trigger a call to SendData to send the remainder
             Web::WebSocketServerType<STREAMTYPE>::Link().Trigger();
         }
 
-        _guard.Unlock();
+        _guardPost.Unlock();
     }
 
-    return count;
+    return static_cast<uint16_t>(count);
 }
 
+// Reflects payload, effective after upgrade
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 uint16_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
 {
-// TODO: probably the location to use Exchange
-    if (receivedSize > 0) {
-        _guard.Lock();
+    uint16_t count{ receivedSize };
 
-        _response.emplace_back(std::basic_string<uint8_t>{ dataFrame, receivedSize });
+    if (   dataFrame != nullptr
+        && this->IsOpen()
+        && this->IsWebSocket() // Redundant, covered by IsOpen
+       ) {
+        _guardResponse.Lock();
 
-        _guard.Unlock();
+        if (_response.empty() != false) {
+            _response.emplace_back(static_cast<const uint8_t*>(nullptr), 0);
+        }
+        _response.back().append(dataFrame, count);
+
+        _guardResponse.Unlock();
+
+        if (this->IsCompleteMessage() != false) {
+            // Entire message has been received
+            // Append data to message in queue
+
+            _guardResponse.Lock();
+
+            // Create the next entry
+            _response.emplace_back(static_cast<const uint8_t*>(nullptr), 0);
+
+            _guardResponse.Unlock();
+
+            /* uint32_t */ _messageAvailable.Unlock();
+        }
     }
-
-    return receivedSize;
+ 
+    // Probably not used by the caller
+    return count;
 }
-#ifdef _0
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Submit(const std::basic_string<uint8_t>& message)
-{
-    _guard.Lock();
-
-    size_t count = _post.size();
-
-    _post.emplace_back(message);
-
-    bool result =  count < _post.size();
-
-    _guard.Unlock();
-
-    // Trigger a call to SendData
-    Web::WebSocketServerType<STREAMTYPE>::Link().Trigger();
-
-    return result;
-}
-
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-std::basic_string<uint8_t> WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Response()
-{
-    std::basic_string<uint8_t> message;
-
-    _guard.Lock();
-
-    if (_response.size() > 0) {
-        message = _response.front();
-        _response.erase(_response.begin());
-    } 
-
-    _guard.Unlock();
-
-    return message;
-}
-#endif
 
 
 SimplePluginWebSocketServerImplementation::SimplePluginWebSocketServerImplementation()
     : _server{ _T("127.0.0.1:8081") /* listening node */ }
 {}
 
-uint32_t SimplePluginWebSocketServerImplementation::Start(VARIABLE_IS_NOT_USED uint32_t waitTime)
+SimplePluginWebSocketServerImplementation::~SimplePluginWebSocketServerImplementation()
+{
+    /* uint32_t */ Stop(Core::infinite);
+}
+
+uint32_t SimplePluginWebSocketServerImplementation::Start(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
+
+    result = _server.Start(waitTime);
+
     return result;
 }
 
- uint32_t SimplePluginWebSocketServerImplementation::Stop(VARIABLE_IS_NOT_USED uint32_t waitTime)
+ uint32_t SimplePluginWebSocketServerImplementation::Stop(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
+
+    result = _server.Stop(waitTime);
+
     return result;
 }
 
-uint32_t SimplePluginWebSocketServerImplementation::Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+uint32_t SimplePluginWebSocketServerImplementation::Task(STATE& state, uint32_t& waitTime)
 {
-    uint32_t result = Core::ERROR_GENERAL;
+    uint32_t result = Core::ERROR_NONE;
+
+PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
+    switch (state) {
+    case STATE::IDLE    :   state = STATE::RUN;
+    case STATE::RUN     :   state = STATE::EXECUTE;
+    case STATE::EXECUTE :   {
+                            // Set to a low value for quick builds
+                            constexpr uint16_t bufferMaxSize = CommunicationPerformanceHelpers::TemplateRecursionDepth;
+
+                            constexpr size_t numberOfBins = 20;
+
+                            std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
+
+                            // Educated guess, system dependent, required for distribution
+                            constexpr uint64_t upperBoundDuration = 1000;
+
+                            // Round trip time in ticks, initialize with value for maximum wait
+                            // Educated guess
+                            uint64_t duration = 2000;
+
+                            // Add some randomness
+
+                            using common_t = std::common_type<int, uint16_t>::type;
+                            const uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
+
+                            // With no mistakes this always holds 
+                            ASSERT(bufferSize <= bufferMaxSize);
+
+                            // This fails if the client is missing so it is not typically an error
+                            if (_server.Exchange(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE) {
+                                using measurements_t = Measurements<uint16_t, uint64_t>;
+                                using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize - 1, upperBoundDuration>;
+
+                                distribution_t& measurements = measurements_t::Instance<distribution_t>();
+
+                                // Do not continue if values cannot be inserted without error (remainder too large, numerical instability)
+                                if (/* data corruption
+                                    || */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true
+                                ) {
+                                    state = STATE::STOP;
+                                }
+                            }
+                            }
+                            break;
+    case STATE::ERROR   :   result = Core::ERROR_GENERAL;
+    case STATE::STOP    :   waitTime = Core::infinite;
+    default             :   ;
+    }
+POP_WARNING();
+
     return result;
 }  
 

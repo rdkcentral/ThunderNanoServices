@@ -27,7 +27,7 @@
 namespace Thunder {
 namespace Plugin {
 
-//TODO buffer size is uint16_t
+// TODO: buffer size is uint16_t
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
 class WebSocketServer {
 public :
@@ -38,8 +38,12 @@ public :
     WebSocketServer& operator=(WebSocketServer&&) = delete;
 
     WebSocketServer(const string& localNode);
+    ~WebSocketServer();
 
-    ~WebSocketServer() = default;
+    uint32_t Start(uint32_t waitTime);
+    uint32_t Stop(uint32_t waitTime);
+
+    uint32_t Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration); 
 
 private :
 
@@ -53,8 +57,13 @@ private :
 
         // The constructor expected by SocketServerType to exist
         Server(const SOCKET& socket, const ::Thunder::Core::NodeId& remoteNode, Core::SocketServerType<Server>* socketServer /* our creator */);
+        ~Server() override;
 
-        ~Server() = default;
+        bool Submit(const std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
+        bool Response(std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
+
+        // Web::WebSocketServerType methods
+        // --------------------------------
 
         // Non-idle then data available to send
         bool IsIdle() const override;
@@ -67,18 +76,17 @@ private :
 
         // Reflects payload, effective after upgrade
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize) override;
-#ifdef _0
-        // Put data in the queue to send (to the (connected) client)
-        bool Submit(const std::basic_string<uint8_t>& message);
 
-        std::basic_string<uint8_t> Response();
-#endif
     private:
 
+// TODO : type uint8_t part of custom STREAMTYPE, eg, STREAMTYPE::underlying_type 
         std::vector<std::basic_string<uint8_t>> _post; // Send message queue
         std::vector<std::basic_string<uint8_t>> _response; // Receive message queue
 
-        mutable Core::CriticalSection _guard;
+        mutable Core::CriticalSection _guardPost;
+        mutable Core::CriticalSection _guardResponse;
+
+        Core::Event _messageAvailable;
     };
 
 // TODO: currently not used
@@ -89,6 +97,9 @@ private :
 
     // Enable listening with SocketServerType
     Core::SocketServerType<Server> _server;
+
+    uint32_t Open(uint32_t waitTime);
+    uint32_t Close(uint32_t waitTime);
 };
 
 class SimplePluginWebSocketServerImplementation : public SimplePluginImplementation<SimplePluginWebSocketServerImplementation> {
@@ -100,12 +111,10 @@ public :
     SimplePluginWebSocketServerImplementation& operator=(SimplePluginWebSocketServerImplementation&&) = delete;
 
     SimplePluginWebSocketServerImplementation();
-
-    ~SimplePluginWebSocketServerImplementation() = default;
+    ~SimplePluginWebSocketServerImplementation();
 
     uint32_t Start(uint32_t waitTime);
-
-     uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(uint32_t waitTime);
 
 private :
     WebSocketServer<1024, 1024, Core::SocketStream> _server;
