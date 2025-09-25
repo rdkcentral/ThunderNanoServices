@@ -237,9 +237,23 @@ uint32_t SimplePluginCOMRPCClientImplementation::Stop(uint32_t waitTime)
     return result;
 }
 
-uint32_t SimplePluginCOMRPCClientImplementation::Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+uint32_t SimplePluginCOMRPCClientImplementation::Task(STATE& state, uint32_t& waitTime)
 {
-    return Core::ERROR_NONE;
+    uint32_t result = Core::ERROR_NONE;
+
+PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
+    switch (state) {
+    case STATE::IDLE    :   state = STATE::RUN;
+    case STATE::RUN     :   state = STATE::EXECUTE;
+    case STATE::EXECUTE :   state = STATE::STOP;
+                            break;
+    case STATE::ERROR   :   result = Core::ERROR_GENERAL;
+    case STATE::STOP    :   waitTime = Core::infinite;
+    default             :   ;
+    }
+POP_WARNING();
+
+    return result;
 }
 
 
