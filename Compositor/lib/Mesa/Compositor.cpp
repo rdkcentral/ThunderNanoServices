@@ -178,11 +178,24 @@ namespace Plugin {
         public:
             constexpr static uint8_t InvalidBufferId = uint8_t(~0);
 
+            struct Stats {
+                std::atomic<uint64_t> renderCount;
+                std::atomic<uint64_t> totalRenderTime;
+                std::atomic<uint64_t> skipCount;
+
+                Stats()
+                    : renderCount(0)
+                    , totalRenderTime(0)
+                    , skipCount(0)
+                {
+                }
+            };
+
         private:
             constexpr static uint32_t MAX_BUFFERS = 4;
 
             class Buffer : public Graphics::ServerBufferType<1> {
-            using BaseClass = Graphics::ServerBufferType<1>;
+                using BaseClass = Graphics::ServerBufferType<1>;
 
             public:
                 Buffer() = delete;
@@ -457,7 +470,7 @@ namespace Plugin {
                 if (id < _buffers.Count()) {
                     _currentId.store(id, std::memory_order_release);
                     _parent.Render();
-            }
+                }
             }
 
         public:
@@ -495,7 +508,7 @@ namespace Plugin {
 
                     if (_buffers[id].IsValid()) {
                         _buffers[id]->Rendered();
-            }
+                    }
                 } else {
                     TRACE(Trace::Error, (_T("Can't release invalid buffers")));
                 }
@@ -768,6 +781,9 @@ namespace Plugin {
             , _commitMutex()
             , _commitCV()
             , _canCommit(true)
+            , _totalRenderTime(0)
+            , _frameCount(0)
+            , _frameTime(0)
         {
         }
         ~CompositorImplementation() override
@@ -784,7 +800,7 @@ namespace Plugin {
             }
 
             if (_renderer.IsValid()) {
-            _renderer.Release();
+                _renderer.Release();
             }
 
             if (_output != nullptr) {
@@ -1081,8 +1097,10 @@ namespace Plugin {
             return client;
         }
 
-        uint64_t RenderOutput() /* 3000uS rpi4*/
+        void RenderOutput() /* 3000uS rpi4*/
         {
+            const uint64_t start(Core::Time::Now().Ticks());
+
             ASSERT(_output != nullptr);
             ASSERT(_output->IsValid() == true);
             ASSERT(_renderer.IsValid() == true);
@@ -1111,6 +1129,8 @@ namespace Plugin {
 
             _renderer->Unbind(frameBuffer);
 
+            _totalRenderTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);
+
             // Block until VSync allows commit
             {
                 std::unique_lock<std::mutex> lock(_commitMutex);
@@ -1128,12 +1148,15 @@ namespace Plugin {
             uint32_t commit = _output->Commit();
             ASSERT(commit == Core::ERROR_NONE);
 
-            return Core::Time::Now().Ticks();
+            _frameCount.fetch_add(1, std::memory_order_relaxed);
+            _frameTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);
         }
 
         void RenderClient(const Core::ProxyType<Client> client)
         {
             ASSERT(client.IsValid() == true);
+
+            const uint64_t start(Core::Time::Now().Ticks());
 
             Core::ProxyType<Compositor::IRenderer::ITexture> texture = client->Acquire();
 
@@ -1160,9 +1183,11 @@ namespace Plugin {
 
                 client->Relinquish();
 
-                client->Pending();
+                const uint64_t duration = Core::Time::Now().Ticks() - start;
+                UpdateClientStats(client->Name(), duration, false);
             } else {
-                TRACE(Trace::Error, (_T("Skipping %s, no texture to render"), client->Name().c_str()));
+                TRACE(Trace::Error, (_T("Skipping %s, no texture to render for buffer"), client->Name().c_str()));
+                UpdateClientStats(client->Name(), 0, true);
             }
         }
 
@@ -1178,6 +1203,7 @@ namespace Plugin {
             Presenter(CompositorImplementation& parent)
                 : Core::Thread(Thread::DefaultStackSize(), PresenterThreadName)
                 , _parent(parent)
+                , _lastStatsTime(std::chrono::steady_clock::now())
             {
             }
 
@@ -1191,12 +1217,23 @@ namespace Plugin {
             uint32_t Worker() override
             {
                 Core::Thread::Block();
+
                 _parent.RenderOutput(); // 3000us
+
+                // Print stats every 5 seconds
+                auto now = std::chrono::steady_clock::now();
+
+                if (std::chrono::duration_cast<std::chrono::seconds>(now - _lastStatsTime).count() >= 5) {
+                    _parent.PrintStats();
+                    _lastStatsTime = now;
+                }
+
                 return Core::infinite;
             }
 
         private:
             CompositorImplementation& _parent;
+            std::chrono::steady_clock::time_point _lastStatsTime;
         };
 
     private:
@@ -1212,6 +1249,48 @@ namespace Plugin {
             });
 
             return (result);
+        }
+
+        void UpdateClientStats(const std::string& clientName, uint64_t renderTime, bool skipped)
+        {
+            std::lock_guard<std::mutex> lock(_statsMutex);
+            Client::Stats& stats = _clientStats[clientName];
+
+            if (skipped) {
+                stats.skipCount.fetch_add(1, std::memory_order_relaxed);
+            } else {
+                stats.renderCount.fetch_add(1, std::memory_order_relaxed);
+                stats.totalRenderTime.fetch_add(renderTime, std::memory_order_relaxed);
+            }
+        }
+
+        void PrintStats()
+        {
+            uint64_t frames = _frameCount.exchange(0);
+            uint64_t totalRender = _totalRenderTime.exchange(0);
+            uint64_t frameTime = _frameTime.exchange(0);
+
+            if (frames > 0) {
+                uint64_t avgFrameTime = frameTime / frames; // microseconds per frame
+                double fps = 1000000.0 / avgFrameTime; // convert to FPS (1 second = 1,000,000 microseconds)
+
+                TRACE(Trace::Stats, (_T("Global: frames: %llu, avg: %llu µs , fps: %.2f"), frames, (totalRender / frames), fps));
+            }
+
+            std::lock_guard<std::mutex> lock(_statsMutex);
+            for (auto& pair : _clientStats) {
+                const std::string& name = pair.first;
+                Client::Stats& stats = pair.second;
+
+                uint64_t renders = stats.renderCount.exchange(0);
+                uint64_t totalTime = stats.totalRenderTime.exchange(0);
+                uint64_t skips = stats.skipCount.exchange(0);
+
+                if (renders > 0 || skips > 0) {
+                    uint64_t avgTime = renders > 0 ? totalTime / renders : 0;
+                    TRACE(Trace::Stats, (_T("Client %s: %llu renders, %llu skips, avg: %llu µs"), name.c_str(), renders, skips, avgTime));
+                }
+            }
         }
 
     private:
@@ -1235,6 +1314,11 @@ namespace Plugin {
         std::mutex _commitMutex;
         std::condition_variable _commitCV;
         std::atomic<bool> _canCommit;
+        std::atomic<uint64_t> _totalRenderTime;
+        std::atomic<uint64_t> _frameCount;
+        std::atomic<uint64_t> _frameTime;
+        mutable std::mutex _statsMutex;
+        std::unordered_map<std::string, Client::Stats> _clientStats;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
