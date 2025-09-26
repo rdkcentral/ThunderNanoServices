@@ -101,17 +101,10 @@ namespace Plugin {
                 : RPC::Communicator(source, proxyStubPath, Core::ProxyType<Core::IIPCServer>(engine), _T("@Compositor"))
                 , _parentInterface(parentInterface)
             {
-                if (_parentInterface != nullptr) {
-                    _parentInterface->AddRef();
-                }
                 Open(Core::infinite);
             }
             ~DisplayDispatcher() override
             {
-                if (_parentInterface != nullptr) {
-                    _parentInterface->Release();
-                }
-
                 Close(Core::infinite);
             }
 
