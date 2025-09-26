@@ -639,6 +639,36 @@ namespace Plugin {
         using Clients = Core::ProxyMapType<string, Client>;
         using Observers = std::vector<Exchange::IComposition::INotification*>;
 
+        void Stop()
+        {
+            _present.Stop(); // This should stop the rendering loop
+            _present.Wait(Core::Thread::STOPPED, 1000); // Wait for it to actually stop
+
+            {
+                std::lock_guard<std::mutex> lock(_commitMutex);
+                _canCommit.store(true, std::memory_order_release);
+            }
+
+            _commitCV.notify_all(); // Wake up all waiting threads
+
+            _descriptorExchange.Close();
+
+            {
+                std::lock_guard<std::mutex> lock(_clientLock);
+                _clients.Clear();
+            }
+
+            if (_renderer.IsValid() && _output != nullptr && _output->IsValid()) {
+                Core::ProxyType<Compositor::IOutput> buffer = _output->Buffer();
+                if (buffer.IsValid()) {
+                    Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = buffer->FrameBuffer();
+                    if (frameBuffer.IsValid()) {
+                        _renderer->Unbind(frameBuffer); // Ensure we're unbound
+                    }
+                }
+            }
+        }
+
     public:
         CompositorImplementation(CompositorImplementation&&) = delete;
         CompositorImplementation(const CompositorImplementation&) = delete;
@@ -669,6 +699,8 @@ namespace Plugin {
         }
         ~CompositorImplementation() override
         {
+            Stop();
+
             if (_dispatcher != nullptr) {
                 delete _dispatcher;
                 _dispatcher = nullptr;
@@ -678,9 +710,9 @@ namespace Plugin {
                 _engine.Release();
             }
 
-            _descriptorExchange.Close();
-            _clients.Clear();
+            if (_renderer.IsValid()) {
             _renderer.Release();
+            }
 
             if (_output != nullptr) {
                 delete _output;
