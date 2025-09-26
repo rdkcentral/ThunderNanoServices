@@ -133,9 +133,115 @@ namespace Plugin {
             Exchange::IComposition::IDisplay* _parentInterface;
         };
 
-        class Client : public Exchange::IComposition::IClient, public Graphics::ServerBufferType<1> {
+        class PrivilegedRequestCallback : public Core::PrivilegedRequest::ICallback {
+        public:
+            PrivilegedRequestCallback() = delete;
+            PrivilegedRequestCallback(PrivilegedRequestCallback&&) = delete;
+            PrivilegedRequestCallback(const PrivilegedRequestCallback&) = delete;
+            PrivilegedRequestCallback& operator=(PrivilegedRequestCallback&&) = delete;
+            PrivilegedRequestCallback& operator=(const PrivilegedRequestCallback&) = delete;
+
+            PrivilegedRequestCallback(CompositorImplementation& parent)
+                : _parent(parent)
+            {
+            }
+            ~PrivilegedRequestCallback() override = default;
+
+        public:
+            void Request(const uint32_t id, Core::PrivilegedRequest::Container& descriptors) override
+            {
+                if (id == DisplayId) {
+                    descriptors.emplace_back(static_cast<int>(_parent.Native()));
+                } else {
+                    TRACE(Trace::Error, (_T("No sharable buffers for id %d"), id));
+                }
+            }
+            void Offer(const uint32_t id, Core::PrivilegedRequest::Container&& descriptors) override
+            {
+                Core::ProxyType<Client> client = _parent.ClientById(id);
+
+                if (client.IsValid() == true) {
+                    uint32_t result = client->AttachBuffer(descriptors);
+                    TRACE(Trace::Information, (_T("Client Id [%d] buffer attached, result:%d"), id, result));
+                } else {
+                    TRACE(Trace::Information, (_T("Client Id [%d] not found"), id));
+                }
+
+                descriptors.clear();
+            }
+
         private:
+            CompositorImplementation& _parent;
+        };
+
+        class Client : public Exchange::IComposition::IClient {
+        public:
+            constexpr static uint8_t InvalidBufferId = uint8_t(~0);
+
+        private:
+            constexpr static uint32_t MAX_BUFFERS = 4;
+
+            class Buffer : public Graphics::ServerBufferType<1> {
             using BaseClass = Graphics::ServerBufferType<1>;
+
+            public:
+                Buffer() = delete;
+                Buffer(Buffer&&) = delete;
+                Buffer(const Buffer&) = delete;
+                Buffer& operator=(Buffer&&) = delete;
+                Buffer& operator=(const Buffer&) = delete;
+
+                Buffer(Client& client, Core::PrivilegedRequest::Container& descriptors)
+                    : BaseClass()
+                    , _client(client)
+                    , _id(InvalidBufferId)
+                    , _texture()
+                {
+                    Load(descriptors);
+                    std::cout << "Buffer for " << client.Name() << "[" << this << "] " << BaseClass::Width() << "x" << BaseClass::Height() << ", format=0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << BaseClass::Format() << ", modifier=0x" << std::setfill('0') << std::setw(16) << BaseClass::Modifier() << std::dec << std::nouppercase << std::endl;
+                    TRACE(Trace::Information, (_T("Buffer for %s[%p] %dx%d, format=0x%08" PRIX32 ", modifier=0x%016" PRIX64), client.Name().c_str(), this, BaseClass::Height(), BaseClass::Width(), BaseClass::Format(), BaseClass::Modifier()));
+                    Core::ResourceMonitor::Instance().Register(*this);
+                }
+
+                ~Buffer() override
+                {
+                    Core::ResourceMonitor::Instance().Unregister(*this);
+                    _texture.Release();
+                    TRACE(Trace::Information, (_T("Buffer for %s[%p] destructed"), _client.Name().c_str(), this));
+                }
+
+                void Request() override
+                {
+                    _client.Activate(_id);
+                }
+
+                Core::ProxyType<Compositor::IRenderer::ITexture> Texture() const
+                {
+                    return _texture;
+                }
+
+                uint8_t Id() const
+                {
+                    return _id;
+                }
+
+                void Configure(const uint8_t id, const Core::ProxyType<Compositor::IRenderer::ITexture>& texture)
+                {
+                    ASSERT(id < MAX_BUFFERS);
+                    ASSERT(_id == InvalidBufferId);
+                    ASSERT(_texture.IsValid() == false);
+
+                    _id = id;
+                    _texture = texture;
+
+                    TRACE(Trace::Information, (_T("Buffer for %s[%p] configured as id:%d"), _client.Name().c_str(), this, _id));
+                }
+
+            private:
+                Client& _client;
+                uint8_t _id;
+                Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
+            };
 
             class Remote : public Exchange::IComposition::IClient {
             public:
@@ -311,22 +417,27 @@ namespace Plugin {
             Client& operator=(const Client&) = delete;
 
             Client(CompositorImplementation& parent, const string& callsign, const uint32_t width, const uint32_t height)
-                : BaseClass(width, height, parent.Format(), parent.Modifier(), Exchange::IGraphicsBuffer::TYPE_DMA)
-                , _parent(parent)
+                : _parent(parent)
                 , _id(Core::InterlockedIncrement(_sequence))
                 , _callsign(callsign)
+                , _width(width) // surface width
+                , _height(height) // surface height
                 , _opacity(255)
                 , _zIndex(0)
-                , _geometry({ 0, 0, width, height })
-                , _texture()
+                , _geometry({ 0, 0, width, height }) // rendering geometry
                 , _remoteClient(*this)
                 , _geometryChanged(false)
+                , _buffers(MAX_BUFFERS)
+                , _pendingQueue()
+                , _currentId(InvalidBufferId)
+                , _renderingId(InvalidBufferId)
+
             {
-                Core::ResourceMonitor::Instance().Register(*this);
+                TRACE(Trace::Information, (_T("Client Constructed %s[%p] id:%d %dx%d"), _callsign.c_str(), this, _id, _width, _height));
             }
             ~Client() override
             {
-                Core::ResourceMonitor::Instance().Unregister(*this);
+                _buffers.Clear();
 
                 _parent.Render(); // request a render to remove this surface from the composition.
 
@@ -339,41 +450,66 @@ namespace Plugin {
                 _remoteClient.AddRef();
                 return (&_remoteClient);
             }
-            uint8_t Descriptors(const uint8_t maxSize, int container[])
+
+        private:
+            void Activate(const uint8_t id)
             {
-                return (BaseClass::Descriptors(maxSize, container));
+                if (id < _buffers.Count()) {
+                    _currentId.store(id, std::memory_order_release);
+                    _parent.Render();
+            }
             }
 
-            void AttachPlanes(Core::PrivilegedRequest::Container& descriptors)
+        public:
+            Core::ProxyType<Compositor::IRenderer::ITexture> Acquire()
             {
-                BaseClass::Planes(descriptors.data(), descriptors.size());
+                Core::ProxyType<Compositor::IRenderer::ITexture> texture;
+
+                uint8_t id = _currentId.exchange(InvalidBufferId, std::memory_order_acq_rel);
+
+                if (id != InvalidBufferId && _buffers[id].IsValid()) {
+                    _renderingId.store(id, std::memory_order_release);
+                    _buffers[id]->Acquire(Compositor::DefaultTimeoutMs);
+                    texture = _buffers[id]->Texture();
+                } else {
+                    _renderingId.store(InvalidBufferId, std::memory_order_release);
+                }
+
+                return texture;
             }
 
-            Core::ProxyType<Compositor::IRenderer::ITexture> Texture()
+            void Relinquish()
             {
-                return _texture;
-            }
-            void Texture(const Core::ProxyType<Compositor::IRenderer::ITexture>& texture)
-            {
-                _texture = texture;
-            }
+                uint8_t id = _renderingId.exchange(InvalidBufferId, std::memory_order_acq_rel);
 
-            /**
-             * Compositor::CompositorBuffer methods
-             */
-            void Request() override
-            {
-                _parent.Render();
-            }
+                if (id != InvalidBufferId) {
+                    _buffers[id]->Relinquish();
 
-            void Pending()
-            {
-                Rendered();
+                    bool queued = _pendingQueue.Push(id, false);
+
+                    if (!queued) {
+                        TRACE(Trace::Error, (_T("Queue full! Buffer %d rejected"), id));
+                    }
+
+                    ASSERT(queued == true);
+
+                    if (_buffers[id].IsValid()) {
+                        _buffers[id]->Rendered();
+            }
+                } else {
+                    TRACE(Trace::Error, (_T("Can't release invalid buffers")));
+                }
             }
 
             void Completed()
             {
-                Published();
+                uint8_t bufferId;
+
+                if (_pendingQueue.Pop(bufferId)) {
+                    if (_buffers[bufferId].IsValid()) {
+                        _buffers[bufferId]->Published();
+                    }
+                }
             }
 
             /**
@@ -402,6 +538,7 @@ namespace Plugin {
                 _geometry = rectangle;
                 _geometryChanged = true;
                 _parent.Render();
+
                 return Core::ERROR_NONE;
             }
 
@@ -436,115 +573,50 @@ namespace Plugin {
             }
             void Revoke()
             {
-                if (_texture.IsValid()) {
-                    _texture.Release(); // make sure to delete the texture so we are skipped by the renderer.
-                }
+                _pendingQueue.Clear();
 
                 _parent.Revoke(this);
             }
+
+            uint32_t AttachBuffer(Core::PrivilegedRequest::Container& descriptors)
+            {
+                uint32_t result = Core::ERROR_UNAVAILABLE;
+
+                if (_buffers.Count() < MAX_BUFFERS) {
+                    Core::ProxyType<Buffer> buffer = Core::ProxyType<Buffer>::Create(*this, descriptors);
+
+                    if (buffer.IsValid() == true) {
+                        int index = _buffers.Add(buffer);
+                        buffer->Configure(index, _parent.Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(buffer)));
+                        result = Core::ERROR_NONE;
+                    } else {
+                        result = Core::ERROR_GENERAL;
+                    }
+                }
+
+                return result;
+            }
+
+            friend class PrivilegedRequestCallback; // to be able to call AttachBuffer
 
         private:
             CompositorImplementation& _parent;
             uint32_t _id;
             const string _callsign; // the callsign of the surface
+            uint32_t _width; // the width of the surface
+            uint32_t _height; // the height of the surface
             uint32_t _opacity; // the opacity of the surface on the composition
             uint16_t _zIndex; // the z-index of the surface on the composition
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
-            Core::ProxyType<Compositor::IRenderer::ITexture> _texture; // the texture handle that is known in the GPU/Renderer.
             Remote _remoteClient;
             bool _geometryChanged;
+            Core::ProxyList<Buffer> _buffers; // the actual pixel buffers that are used by this client but are owed by the compositorclient.
+            AtomicFifo<uint8_t, 3> _pendingQueue;
+            std::atomic<uint8_t> _currentId;
+            std::atomic<uint8_t> _renderingId;
 
             static uint32_t _sequence;
         }; // class Client
-
-        class DescriptorExchange : public Core::PrivilegedRequest {
-        private:
-            class Callback : public Core::PrivilegedRequest::ICallback {
-            public:
-                Callback() = delete;
-                Callback(Callback&&) = delete;
-                Callback(const Callback&) = delete;
-                Callback& operator=(Callback&&) = delete;
-                Callback& operator=(const Callback&) = delete;
-
-                Callback(DescriptorExchange& parent)
-                    : _parent(parent)
-                {
-                }
-                ~Callback() override = default;
-
-            public:
-                void Request(const uint32_t id, Container& descriptors) override
-                {
-                    _parent.Request(id, descriptors);
-                }
-                void Offer(const uint32_t id, Container&& descriptors) override
-                {
-                    _parent.Offer(id, std::move(descriptors));
-                }
-
-            private:
-                DescriptorExchange& _parent;
-            };
-
-        public:
-            DescriptorExchange() = delete;
-            DescriptorExchange(DescriptorExchange&&) = delete;
-            DescriptorExchange(const DescriptorExchange&) = delete;
-            DescriptorExchange& operator=(DescriptorExchange&&) = delete;
-            DescriptorExchange& operator=(const DescriptorExchange&) = delete;
-
-            DescriptorExchange(CompositorImplementation& parent)
-                : Core::PrivilegedRequest(&_callback)
-                , _parent(parent)
-                , _callback(*this)
-            {
-            }
-            ~DescriptorExchange() override
-            {
-                Close();
-            }
-
-        private:
-            void Request(const uint32_t id, Container& descriptors)
-            {
-                if (id == DisplayId) {
-                    descriptors.emplace_back(static_cast<int>(_parent.Native()));
-                } else {
-                    Core::ProxyType<Client> client = _parent.ClientById(id);
-
-                    if (client.IsValid() == false) {
-                        TRACE(Trace::Information, (_T("DescriptorExchange for Id [%d] not found"), id));
-                    } else {
-                        int container[Core::PrivilegedRequest::MaxDescriptorsPerRequest];
-                        uint8_t result = client->Descriptors(sizeof(container), container);
-
-                        for (uint8_t index = 0; index < result; index++) {
-                            descriptors.emplace_back(container[index]);
-                        }
-                    }
-                }
-            }
-            void Offer(const uint32_t id, Core::PrivilegedRequest::Container&& descriptors)
-            {
-                Core::ProxyType<Client> client = _parent.ClientById(id);
-
-                if (client.IsValid() == true) {
-                    client->AttachPlanes(descriptors);
-
-                    Core::ProxyType<Exchange::IGraphicsBuffer> buffer(client);
-
-                    client->Texture(_parent.Texture(buffer));
-                } else {
-                    TRACE(Trace::Information, (_T("DescriptorExchange Id [%d] not found"), id));
-                }
-
-                descriptors.clear();
-            }
-
-            CompositorImplementation& _parent;
-            Callback _callback;
-        }; // class DescriptorExchange
 
         class Output {
         public:
@@ -681,7 +753,8 @@ namespace Plugin {
             , _output(nullptr)
             , _renderer()
             , _observers()
-            , _descriptorExchange(*this)
+            , _privilegedRequestCallback(*this)
+            , _descriptorExchange(&_privilegedRequestCallback)
             , _clientLock()
             , _clients()
             , _lastFrame(0)
@@ -898,7 +971,7 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        Thunder::Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::IGraphicsBuffer> buffer)
+        Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::IGraphicsBuffer> buffer)
         {
             ASSERT(buffer.IsValid());
             return _renderer->Texture(buffer);
@@ -1049,12 +1122,10 @@ namespace Plugin {
                     _canCommit.store(false, std::memory_order_release);
                 } else {
                     TRACE(Trace::Error, (_T("Timeout waiting for VSync, forcing commit")));
-                    // Don't reset _canCommit on timeout - let VSync handle it
                 }
             }
 
             uint32_t commit = _output->Commit();
-
             ASSERT(commit == Core::ERROR_NONE);
 
             return Core::Time::Now().Ticks();
@@ -1064,9 +1135,9 @@ namespace Plugin {
         {
             ASSERT(client.IsValid() == true);
 
-            if (client->Texture() != nullptr) {
-                client->Acquire(Compositor::DefaultTimeoutMs);
+            Core::ProxyType<Compositor::IRenderer::ITexture> texture = client->Acquire();
 
+            if ((texture.IsValid() == true)) {
                 Exchange::IComposition::Rectangle renderBox;
 
                 if ((_autoScale == true) && (client->GeometryChanged() == false)) {
@@ -1081,11 +1152,11 @@ namespace Plugin {
                 Compositor::Matrix clientProjection;
                 Compositor::Transformation::ProjectBox(clientProjection, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, 0, _renderer->Projection());
 
-                const Exchange::IComposition::Rectangle clientArea = { 0, 0, client->Texture()->Width(), client->Texture()->Height() };
+                const Exchange::IComposition::Rectangle clientArea = { 0, 0, texture->Width(), texture->Height() };
 
                 const float alpha = float(client->Opacity()) / float(Exchange::IComposition::maxOpacity);
 
-                _renderer->Render(client->Texture(), clientArea, clientProjection, alpha);
+                _renderer->Render(texture, clientArea, clientProjection, alpha);
 
                 client->Relinquish();
 
@@ -1149,7 +1220,8 @@ namespace Plugin {
         Output* _output;
         Core::ProxyType<Compositor::IRenderer> _renderer;
         Observers _observers;
-        DescriptorExchange _descriptorExchange;
+        PrivilegedRequestCallback _privilegedRequestCallback;
+        Core::PrivilegedRequest _descriptorExchange;
         std::mutex _clientLock;
         Clients _clients;
         uint64_t _lastFrame;
