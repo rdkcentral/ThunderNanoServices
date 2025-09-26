@@ -66,6 +66,10 @@ namespace Compositor {
 
     public:
         DmaBuffer() = delete;
+        DmaBuffer(const DmaBuffer&) = delete;
+        DmaBuffer& operator=(const DmaBuffer&) = delete;
+        DmaBuffer(DmaBuffer&&) = delete;
+        DmaBuffer& operator=(DmaBuffer&&) = delete;
 
         DmaBuffer(int gpuFd, const Texture::PixelData& source)
             : _id(0)
@@ -152,10 +156,8 @@ namespace Compositor {
             glBindTexture(_target, 0);
         }
 
-        DmaBuffer(const DmaBuffer&) = delete;
-        DmaBuffer& operator=(const DmaBuffer&) = delete;
-
-        virtual ~DmaBuffer(){
+        virtual ~DmaBuffer()
+        {
             Renderer::EGL::ContextBackup backup;
 
             _egl.SetCurrent();
@@ -165,6 +167,8 @@ namespace Compositor {
             if (_image != EGL_NO_IMAGE) {
                 _api.eglDestroyImage(_egl.Display(), _image);
             }
+
+            _egl.ResetCurrent();
 
             if (_id > 0) {
                 close(_id);

@@ -39,7 +39,6 @@
 #include <drm.h>
 #include <drm_fourcc.h>
 #include <gbm.h>
-// #include <libudev.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
@@ -71,6 +70,7 @@ namespace Compositor {
                 : _gpuFd(Compositor::DRM::OpenGPU(gpuNode))
                 , _connectors()
                 , _idle(true)
+                , _firstCommit(true)
             {
                 ASSERT(_gpuFd != Compositor::InvalidFileDescriptor);
 
@@ -121,8 +121,10 @@ namespace Compositor {
 
                     if (TRACE_ENABLED(Trace::Information)) {
                         drmVersion* version = drmGetVersion(_gpuFd);
-                        TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", drmGetDeviceNameFromFd2(_gpuFd), version->name));
+                        char* node = drmGetDeviceNameFromFd2(_gpuFd);
+                        TRACE(Trace::Information, ("Destructing DRM backend for %s (%s)", node, version->name));
                         drmFreeVersion(version);
+                        free(node);
                     }
 
                     close(_gpuFd);
@@ -134,9 +136,9 @@ namespace Compositor {
             {
                 return (_gpuFd > 0);
             }
-            Core::ProxyType<Connector> GetConnector(const string& connectorName, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
+            Core::ProxyType<Connector> GetConnector(const string& connectorName, const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
             {
-                return _connectors.Instance<Connector>(connectorName, Core::ProxyType<Compositor::IBackend>(*this, *this), Compositor::DRM::FindConnectorId(_gpuFd, connectorName), width, height, format, renderer, feedback);
+                return _connectors.Instance<Connector>(connectorName, Core::ProxyType<Compositor::IBackend>(*this, *this), Compositor::DRM::FindConnectorId(_gpuFd, connectorName), width, height, refreshRate, format, renderer, feedback);
             }
 
             //
@@ -168,12 +170,19 @@ namespace Compositor {
             {
                 uint32_t result(Core::ERROR_GENERAL);
 
-                static bool doModeSet(true);
-
                 bool idle(true);
 
                 if (_idle.compare_exchange_strong(idle, false) == true) {
                     result = Core::ERROR_NONE;
+                    bool doModeSet(_firstCommit);
+
+                    // check if any connector needs mode setting
+                    _connectors.Visit([&](const string& name, const Core::ProxyType<Connector> connector) {
+                        if (connector->NeedsModeSet()) {
+                            doModeSet = true;
+                            TRACE(Trace::Information, ("Connector %s needs mode set", name.c_str()));
+                        }
+                    });
 
                     Backend::Transaction transaction(_gpuFd, doModeSet, this);
 
@@ -194,7 +203,9 @@ namespace Compositor {
                         });
                     }
 
-                    doModeSet = transaction.ModeSet();
+                    if (doModeSet) {
+                        _firstCommit = false;
+                    }
 
                     TRACE_GLOBAL(Trace::Information, ("Committed connectors: %u", result));
                 } else {
@@ -236,6 +247,7 @@ namespace Compositor {
             int _gpuFd; // GPU opened as master or lease...
             Core::ProxyMapType<string, Connector> _connectors;
             std::atomic<bool> _idle;
+            bool _firstCommit;
         }; // class DRM
 
         static Core::ProxyMapType<string, Backend::DRM> _backends;
@@ -243,7 +255,7 @@ namespace Compositor {
     } // namespace Backend
 
     Core::ProxyType<IOutput> CreateBuffer(const string& connectorName,
-        const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format,
+        const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat& format,
         const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
     {
         ASSERT(drmAvailable() == 1);
@@ -256,7 +268,7 @@ namespace Compositor {
         Core::ProxyType<IOutput> connector;
 
         if (backend.IsValid()) {
-            connector = backend->GetConnector(connectorName, width, height, format, renderer, feedback);
+            connector = backend->GetConnector(connectorName, width, height, refreshRate, format, renderer, feedback);
         }
 
         return connector;

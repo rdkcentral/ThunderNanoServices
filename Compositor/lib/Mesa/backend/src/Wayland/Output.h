@@ -19,26 +19,35 @@
 
 #include "../Module.h"
 
-#include <CompositorTypes.h>
-#include <IBuffer.h>
 #include <interfaces/IComposition.h>
 #include <interfaces/IGraphicsBuffer.h>
+
+#include <CompositorTypes.h>
+#include <IBuffer.h>
+
+#include "IBackend.h"
+#include "IOutput.h"
+
 #include <DRM.h>
 
-#include "IOutput.h"
-#include "IBackend.h"
+#ifdef USE_LIBDECOR
+#include <libdecor.h>
+#endif
 
 #include <wayland-client.h>
+
 #include "generated/presentation-time-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
 
 namespace Thunder {
 namespace Compositor {
     namespace Backend {
+        class VSyncTimer;
         class WaylandOutput : public IOutput {
-
+#ifndef USE_LIBDECOR
             struct PresentationFeedbackEvent {
-                PresentationFeedbackEvent() = delete;
+                PresentationFeedbackEvent() = default;
+
                 PresentationFeedbackEvent(const PresentationFeedbackEvent& copy) = delete;
                 PresentationFeedbackEvent& operator=(const PresentationFeedbackEvent& copy) = delete;
                 PresentationFeedbackEvent(PresentationFeedbackEvent&& move) = delete;
@@ -71,13 +80,14 @@ namespace Compositor {
                 uint32_t flags;
                 bool presented;
             }; // struct PresentationFeedbackEvent
+#endif
 
         public:
             WaylandOutput() = delete;
             WaylandOutput(WaylandOutput&&) = delete;
             WaylandOutput(const WaylandOutput&) = delete;
             WaylandOutput& operator=(const WaylandOutput&) = delete;
-            WaylandOutput(Wayland::IBackend& backend, const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer);
+            WaylandOutput(Wayland::IBackend& backend, const string& name, const uint32_t width, const uint32_t height, uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback);
 
             virtual ~WaylandOutput();
 
@@ -99,45 +109,94 @@ namespace Compositor {
             const string& Node() const override;
             Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override;
 
+            uint32_t WindowWidth() const { return _windowWidth; }
+            uint32_t WindowHeight() const { return _windowHeight; }
+
         private:
             static void onSurfaceConfigure(void* data, struct xdg_surface* xdg_surface, uint32_t serial);
             static const struct xdg_surface_listener windowSurfaceListener;
 
-            static void onTopLevelConfigure(void* data, struct xdg_toplevel* xdg_toplevel, int32_t width, int32_t height, struct wl_array* states);
-            static void onToplevelClose(void* data, struct xdg_toplevel* xdg_toplevel);
-            static const struct xdg_toplevel_listener toplevelListener;
-
             static void onBufferRelease(void* data, struct wl_buffer* buffer);
             static const struct wl_buffer_listener bufferListener;
 
+#ifdef USE_LIBDECOR
+            static void onLibDecorFrameConfigure(struct libdecor_frame* frame, struct libdecor_configuration* configuration, void* user_data);
+            static void onLibDecorFrameClose(struct libdecor_frame* frame, void* user_data);
+            static void onLibDecorFrameCommit(struct libdecor_frame* frame, void* user_data);
+            static void onLibDecorFrameDismissPopup(struct libdecor_frame* frame, const char* seat_name, void* user_data);
+            static struct libdecor_frame_interface libDecorFrameInterface;
+#else
             static void onPresentationFeedbackSyncOutput(void* data, struct wp_presentation_feedback* feedback, struct wl_output* output);
             static void onPresentationFeedbackPresented(void* data, struct wp_presentation_feedback* feedback, uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh_ns, uint32_t seq_hi, uint32_t seq_lo, uint32_t flags);
             static void onPresentationFeedbackDiscarded(void* data, struct wp_presentation_feedback* feedback);
             static const struct wp_presentation_feedback_listener presentationFeedbackListener;
 
-            void SurfaceConfigure();
-            void PresentationFeedback(const PresentationFeedbackEvent& event);
-            uint64_t NextSequence()
-            {
-                return _commitSequence++;
-            }
+            static void onTopLevelConfigure(void* data, struct xdg_toplevel* xdg_toplevel, int32_t width, int32_t height, struct wl_array* states);
+            static void onToplevelClose(void* data, struct xdg_toplevel* xdg_toplevel);
+            static const struct xdg_toplevel_listener toplevelListener;
+#endif
+
+#ifdef USE_SURFACE_TRACKING
+            static bool IsOurSurface(wl_surface* surface);
+            static void onSurfaceEnter(void* data, struct wl_surface* wl_surface, struct wl_output* wl_output);
+            static void onSurfaceLeave(void* data, struct wl_surface* wl_surface, struct wl_output* wl_output);
+            static const struct wl_surface_listener surfaceListener;
+#endif
+            void InitializeBuffer();
+
+            void Close();
+
+            void CalculateWindowSize(uint32_t renderWidth, uint32_t renderHeight);
+            void HandleWindowResize(uint32_t width, uint32_t height);
+            void CorrectAspectRatio(uint32_t& width, uint32_t& height);
+            void ConfigureViewportScaling();
+
+#ifdef USE_LIBDECOR
+            void CommitLibDecor(libdecor_configuration* pConfiguration);
+#else
+            void PresentationFeedback(const PresentationFeedbackEvent* event);
+#endif
+            void SurfaceCommit();
+
+            void WlBufferDestroy(wl_buffer* buffer);
+            wl_buffer* WlBufferCreate();
 
         private:
             Wayland::IBackend& _backend;
+            const string _name;
             wl_surface* _surface;
-            xdg_surface* _windowSurface;
-            zxdg_toplevel_decoration_v1* _windowDecoration;
-            xdg_toplevel* _topLevelSurface;
-            const uint32_t _width;
-            const uint32_t _height;
-            uint32_t _format;
-            uint64_t _modifier;
+            wp_viewport* _viewport;
+            const uint32_t _renderWidth;
+            const uint32_t _renderHeight;
+            uint32_t _windowWidth;
+            uint32_t _windowHeight;
+            uint32_t _mfps;
+            Compositor::PixelFormat _format;
             Compositor::Matrix _matrix;
             Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
             Core::Event _signal;
-            uint64_t _commitSequence;
             const Core::ProxyType<Compositor::IRenderer>& _renderer;
             Core::ProxyType<Compositor::IRenderer::IFrameBuffer> _frameBuffer;
+            Compositor::IOutput::ICallback* _feedback;
+#ifdef USE_LIBDECOR
+            libdecor_frame* _libDecorFrame;
+            std::atomic<bool> _libDecorCommitNeeded; //
+#else
+            xdg_surface* _windowSurface;
+            xdg_toplevel* _topLevelSurface;
+            std::atomic<uint64_t> _sequenceCounter;
+            uint64_t _lastPresentationTime;
+#endif
+            wl_buffer* _wlBuffer;
+
+#ifdef USE_SURFACE_TRACKING
+            std::vector<wl_output*> _wlOutputs;
+#endif
+#ifdef USE_LIBDECOR
+            std::unique_ptr<VSyncTimer> _vsyncTimer;
+            std::atomic<bool> _commitPending;
+#endif
+            std::atomic<bool> _terminated;
         }; // WaylandOutput
 
     } // namespace Backend

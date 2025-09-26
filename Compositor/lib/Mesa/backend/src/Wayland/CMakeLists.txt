@@ -24,6 +24,12 @@ find_package(gbm REQUIRED)
 find_package(wayland-client REQUIRED)
 find_package(wayland-protocols REQUIRED)
 
+option(SKIP_LIBDECOR "Skip searching for libdecor" OFF)
+
+if (NOT SKIP_LIBDECOR)
+find_package(libdecor QUIET)
+endif()
+
 WaylandGenerator(
     HEADERS WaylandHeaders
     SOURCES WaylandSources
@@ -34,6 +40,7 @@ WaylandGenerator(
         linux-dmabuf-unstable-v1
         pointer-gestures-unstable-v1
         relative-pointer-unstable-v1
+        viewporter
         ${CMAKE_CURRENT_LIST_DIR}/protocols/xdg-activation-v1.xml
         ${CMAKE_CURRENT_LIST_DIR}/protocols/drm.xml
 )
@@ -60,6 +67,15 @@ target_link_libraries(WaylandBackend
         wayland-client::wayland-client
         wayland-protocols::wayland-protocols
 )
+
+if (TARGET libdecor::libdecor)
+    target_link_libraries(WaylandBackend
+        PRIVATE
+            libdecor::libdecor
+    )
+
+    target_compile_definitions(WaylandBackend PUBLIC USE_LIBDECOR)
+endif()
 
 set_target_properties(WaylandBackend PROPERTIES
         CXX_STANDARD 11

@@ -24,6 +24,7 @@
 #include <IOutput.h>
 #include <DRM.h>
 #include <DRMTypes.h>
+#include <CompositorUtils.h>
 
 namespace Thunder {
 namespace Compositor {
@@ -42,6 +43,7 @@ namespace Compositor {
                     , _fd(-1)
                     , _activePlane(~0)
                 {
+                    // Double buffering: 0=current, 1=next, swap via XOR
                     _buffer[0] = Core::ProxyType<Exchange::IGraphicsBuffer>();
                     _buffer[1] = Core::ProxyType<Exchange::IGraphicsBuffer>();
                 }
@@ -96,7 +98,7 @@ namespace Compositor {
                 IIterator* Acquire(const uint32_t timeoutMs)
                 {
                     _swap.Lock();
-                    return _buffer[_activePlane ^ 1]->Acquire(timeoutMs);
+                    return _buffer[_activePlane ^ 1]->Acquire(timeoutMs); // Get next buffer
                 }
                 void Relinquish()
                 {
@@ -107,7 +109,7 @@ namespace Compositor {
 
                 uint32_t Width() const
                 {
-                    return (_buffer[0]->Width());
+                    return (_buffer[0]->Width()); // Both buffers have same dimensions
                 }
                 uint32_t Height() const
                 {
@@ -127,7 +129,7 @@ namespace Compositor {
                 }
                 Compositor::DRM::Identifier Id() const
                 {
-                    return _frameId[_activePlane];
+                    return _frameId[_activePlane]; // Current buffer's frame ID
                 }
                 Core::ProxyType<Exchange::IGraphicsBuffer> Buffer() const
                 {
@@ -161,36 +163,61 @@ namespace Compositor {
             Connector& operator=(Connector&&) = delete;
             Connector& operator=(const Connector&) = delete;
 
-            Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, const uint32_t width VARIABLE_IS_NOT_USED, const uint32_t height VARIABLE_IS_NOT_USED, const Compositor::PixelFormat format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
+            Connector(const Core::ProxyType<Compositor::IBackend>& backend, Compositor::DRM::Identifier connectorId, const uint32_t width, const uint32_t height, const uint32_t refreshRate, const Compositor::PixelFormat format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
                 : _backend(backend)
-                , _width(0)
-                , _height(0)
-                , _format(format)
                 , _connector(_backend->Descriptor(), Compositor::DRM::object_type::Connector, connectorId)
                 , _crtc()
                 , _frameBuffer()
                 , _feedback(feedback)
-                , _renderer(renderer)
+                , _needsModeSet(false)
+                , _selectedMode({})
+                , _dimensionsAdjusted(false)
             {
                 ASSERT(_feedback != nullptr);
 
                 int backendFd = _backend->Descriptor();
 
-                if (Scan(backendFd) == false) {
+                Compositor::DRM::ConnectorScanResult scanResult = Compositor::DRM::ScanConnector(backendFd, connectorId, width, height, refreshRate);
+
+                if (!scanResult.success) {
                     TRACE(Trace::Backend, ("Connector %d is not in a valid state", connectorId));
                 } else {
-                    // TODO:    The framebuffer always need to match the dimension of the connected screen.
-                    //          If the requested width and height are not equal to the current _width and _height
-                    //          after the scan we need to modeset the connector before configure the framebuffer.
-                    //          This is not implemented yet. For now we ignore the requested width and height and
-                    //          use the current CRTC's width and height that are set after scanning the connector.
+                    // Apply scan results
+                    _needsModeSet = scanResult.needsModeSet;
+                    _selectedMode = scanResult.selectedMode;
+                    _dimensionsAdjusted = scanResult.dimensionsAdjusted;
+                    _gpuNode = scanResult.gpuNode;
 
-                    ASSERT((_width != 0) && (_height != 0));
+                    // Initialize DRM properties using the scanned IDs
+                    _crtc.Load(backendFd, Compositor::DRM::object_type::Crtc, scanResult.ids.crtcId);
+                    _primaryPlane.Load(backendFd, Compositor::DRM::object_type::Plane, scanResult.ids.planeId);
 
-                    _frameBuffer.Configure(backendFd, _width, _height, _format, _renderer);
+                    ASSERT((_selectedMode.hdisplay != 0) && (_selectedMode.vdisplay != 0));
+
+                    Compositor::PixelFormat selectedFormat(format);
+
+                    if (selectedFormat.IsValid() == false) {
+                        std::vector<PixelFormat> drmFormats = Compositor::DRM::ExtractFormats(_primaryPlane);
+
+                        TRACE(Trace::Information, (_T("Selecting format... ")));
+
+                        TRACE(Trace::Backend, ("DRM formats: %s", Compositor::ToString(drmFormats).c_str()));                        
+                        TRACE(Trace::Backend, (_T("Renderer exposes %d render formats. "), renderer->RenderFormats().size()));
+                        TRACE(Trace::Backend, (_T("Backend accepts %d formats."), drmFormats.size()));
+
+                        selectedFormat = Compositor::IntersectFormat(format, { &drmFormats /*, &renderer->RenderFormats()*/ });
+
+                        ASSERT(selectedFormat.IsValid() == true);
+                    }
+
+                    _frameBuffer.Configure(backendFd, _selectedMode.hdisplay, _selectedMode.vdisplay, selectedFormat, renderer);
 
                     ASSERT(_frameBuffer.IsValid() == true);
-                    TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u,", this, _connector.Id(), _crtc.Id()));
+                    TRACE(Trace::Backend, ("Connector %p for Id=%u Crtc=%u, Resolution=%ux%u", this, _connector.Id(), _crtc.Id(), _selectedMode.hdisplay, _selectedMode.vdisplay));
+
+                    if (_dimensionsAdjusted) {
+                        TRACE(Trace::Warning, ("Requested dimensions %ux%u@%u adjusted to %ux%u@%u for connector %u", width, height, refreshRate, _selectedMode.hdisplay, _selectedMode.vdisplay, _selectedMode.vrefresh, connectorId));
+                    }
                 }
             }
 
@@ -203,6 +230,16 @@ namespace Compositor {
             bool IsValid() const
             {
                 return (_frameBuffer.IsValid());
+            }
+
+            bool NeedsModeSet() const
+            {
+                return _needsModeSet;
+            }
+
+            const drmModeModeInfo* SelectedMode() const
+            {
+                return &_selectedMode;
             }
 
             /**
@@ -260,7 +297,7 @@ namespace Compositor {
             {
                 return _primaryPlane;
             }
-            const Compositor::DRM::CRTCProperties& CrtController() const
+            const Compositor::DRM::Properties& CrtController() const
             {
                 return _crtc;
             }
@@ -302,152 +339,9 @@ namespace Compositor {
             }
 
         private:
-            bool Scan(const int backendFd)
-            {
-                bool result(false);
-
-                drmModeResPtr drmModeResources = drmModeGetResources(backendFd);
-                drmModePlaneResPtr drmModePlaneResources = drmModeGetPlaneResources(backendFd);
-
-                ASSERT(drmModeResources != nullptr);
-                ASSERT(drmModePlaneResources != nullptr);
-
-                drmModeEncoderPtr encoder = NULL;
-
-                TRACE(Trace::Backend, ("Found %d connectors", drmModeResources->count_connectors));
-                TRACE(Trace::Backend, ("Found %d encoders", drmModeResources->count_encoders));
-                TRACE(Trace::Backend, ("Found %d CRTCs", drmModeResources->count_crtcs));
-                TRACE(Trace::Backend, ("Found %d planes", drmModePlaneResources->count_planes));
-
-                for (int c = 0; c < drmModeResources->count_connectors; c++) {
-                    drmModeConnectorPtr drmModeConnector = drmModeGetConnector(backendFd, drmModeResources->connectors[c]);
-
-                    ASSERT(drmModeConnector != nullptr);
-
-                    /* Find our drmModeConnector if it's connected*/
-                    if ((drmModeConnector->connector_id != _connector.Id()) && (drmModeConnector->connection != DRM_MODE_CONNECTED)) {
-                        continue;
-                    }
-
-                    /* Find the encoder (a deprecated KMS object) for this drmModeConnector. */
-                    ASSERT(drmModeConnector->encoder_id != Compositor::InvalidIdentifier);
-
-                    const char* name = drmModeGetConnectorTypeName(drmModeConnector->connector_type);
-                    TRACE(Trace::Backend, ("Connector %s-%u connected", name, drmModeConnector->connector_type_id));
-
-                    /* Get a bitmask of CRTCs the connector is compatible with. */
-                    uint32_t _possibleCrtcs = drmModeConnectorGetPossibleCrtcs(backendFd, drmModeConnector);
-
-                    if (_possibleCrtcs == 0) {
-                        TRACE(Trace::Error, ("No CRTC possible for id", drmModeConnector->connector_id));
-                    }
-
-                    ASSERT(_possibleCrtcs != 0);
-
-                    for (uint8_t e = 0; e < drmModeResources->count_encoders; e++) {
-                        if (drmModeResources->encoders[e] == drmModeConnector->encoder_id) {
-                            encoder = drmModeGetEncoder(backendFd, drmModeResources->encoders[e]);
-                            break;
-                        }
-                    }
-
-                    if (encoder != nullptr) { /*
-                                               * Find the CRTC currently used by this drmModeConnector. It is possible to
-                                               * use a different CRTC if desired, however unlike the pre-atomic API,
-                                               * we have to explicitly change every object in the routing path.
-                                               */
-
-                        drmModePlanePtr plane(nullptr);
-                        drmModeCrtcPtr crtc(nullptr);
-
-                        ASSERT(encoder->crtc_id != Compositor::InvalidIdentifier);
-                        TRACE(Trace::Information, ("Start looking for crtc_id: %d", encoder->crtc_id));
-
-                        for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
-
-                            if (drmModeResources->crtcs[c] == encoder->crtc_id) {
-                                crtc = drmModeGetCrtc(backendFd, drmModeResources->crtcs[c]);
-                                break;
-                            }
-                        }
-
-                        /* Ensure the CRTC is active. */
-                        ASSERT(crtc != nullptr);
-                        ASSERT(crtc->crtc_id != 0);
-                        /*
-                         * On the banana pi, the following ASSERT fired but, although the documentation
-                         * suggests that buffer_id means disconnected, the screen was not disconnected
-                         * Hence wht the ASSERT is, until further investigation, commented out !!!
-                         * ASSERT(crtc->buffer_id != 0);
-                         */
-
-                        /*
-                         * The kernel doesn't directly tell us what it considers to be the
-                         * single primary plane for this CRTC (i.e. what would be updated
-                         * by drmModeSetCrtc), but if it's already active then we can cheat
-                         * by looking for something displaying the same framebuffer ID,
-                         * since that information is duplicated.
-                         */
-                        for (uint8_t p = 0; p < drmModePlaneResources->count_planes; p++) {
-                            plane = drmModeGetPlane(backendFd, drmModePlaneResources->planes[p]);
-
-                            TRACE(Trace::Backend, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB ID %" PRIu32, plane->plane_id, plane->crtc_id, plane->fb_id));
-
-                            if ((plane->crtc_id == crtc->crtc_id) && (plane->fb_id == crtc->buffer_id)) {
-                                break;
-                            }
-                        }
-
-                        ASSERT(plane);
-
-                        uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
-
-                        TRACE(Trace::Backend, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
-
-                        _crtc.Load(backendFd, crtc);
-                        _primaryPlane.Load(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
-
-                        Compositor::DRM::Properties primaryPlane(backendFd, Compositor::DRM::object_type::Plane, plane->plane_id);
-
-                        _width = crtc->width;
-                        _height = crtc->height;
-
-                        plane = drmModeGetPlane(backendFd, primaryPlane.Id());
-
-                        drmModeFreeCrtc(crtc);
-                        drmModeFreePlane(plane);
-
-                        drmModeFreeEncoder(encoder);
-
-                        result = ((_crtc.Id() != Compositor::InvalidIdentifier) && (primaryPlane.Id() != Compositor::InvalidIdentifier));
-
-                    } else {
-                        TRACE(Trace::Error, ("Failed to get encoder for id %u", drmModeConnector->connector_id));
-                    }
-
-                    break;
-                }
-
-                char* node = drmGetDeviceNameFromFd2(backendFd);
-
-                if (node) {
-                    _gpuNode = node;
-                    free(node);
-                }
-
-                drmModeFreeResources(drmModeResources);
-                drmModeFreePlaneResources(drmModePlaneResources);
-
-                return result;
-            }
-
-        private:
             Core::ProxyType<Compositor::IBackend> _backend;
-            int32_t _width;
-            int32_t _height;
-            const Compositor::PixelFormat _format;
             Compositor::DRM::Properties _connector;
-            Compositor::DRM::CRTCProperties _crtc;
+            Compositor::DRM::Properties _crtc;
             Compositor::DRM::Properties _primaryPlane;
 
             string _gpuNode;
@@ -455,7 +349,10 @@ namespace Compositor {
             FrameBufferImplementation _frameBuffer;
 
             Compositor::IOutput::ICallback* _feedback;
-            const Core::ProxyType<IRenderer>& _renderer;
+
+            bool _needsModeSet;
+            drmModeModeInfo _selectedMode;
+            bool _dimensionsAdjusted;
         };
     }
 }

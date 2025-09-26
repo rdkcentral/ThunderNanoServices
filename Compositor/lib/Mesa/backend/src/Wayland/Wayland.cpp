@@ -20,6 +20,7 @@
 #include "../Module.h"
 
 #include <CompositorTypes.h>
+#include <CompositorUtils.h>
 #include <DRM.h>
 #include <IBuffer.h>
 #include <interfaces/IComposition.h>
@@ -38,11 +39,13 @@
 #include "generated/drm-client-protocol.h"
 #include "generated/linux-dmabuf-unstable-v1-client-protocol.h"
 #include "generated/pointer-gestures-unstable-v1-client-protocol.h"
-#include "generated/presentation-time-client-protocol.h"
 #include "generated/relative-pointer-unstable-v1-client-protocol.h"
+#include "generated/presentation-time-client-protocol.h"
+
+#ifndef USE_LIBDECOR
 #include "generated/xdg-activation-v1-client-protocol.h"
-#include "generated/xdg-decoration-unstable-v1-client-protocol.h"
 #include "generated/xdg-shell-client-protocol.h"
+#endif
 
 MODULE_NAME_ARCHIVE_DECLARATION
 
@@ -57,8 +60,6 @@ namespace Compositor {
                 uint32_t padding;
                 uint64_t modifier;
             } WaylandFormat;
-
-            using FormatRegister = std::unordered_map<uint32_t, std::vector<uint64_t> >;
 
             class ServerMonitor : public Core::IResource {
             public:
@@ -108,29 +109,39 @@ namespace Compositor {
             uint32_t AddRef() const override;
             uint32_t Release() const override;
 
-            wl_surface* Surface() const override;
+            wl_surface* Surface(const char* const* tag = nullptr) const override;
             xdg_surface* WindowSurface(wl_surface* surface) const override;
             int RoundTrip() const override;
             int Flush() const override;
-            void Format(const Compositor::PixelFormat& input, uint32_t& format, uint64_t& modifier) const override;
             int RenderNode() const override;
 
-            wl_buffer* CreateBuffer(Exchange::IGraphicsBuffer* buffer) const override;
+            const std::vector<PixelFormat>& Formats() const override
+            {
+                return _dmaFormats;
+            }
 
-            struct zxdg_toplevel_decoration_v1* GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const override;
-            struct wp_presentation_feedback* GetFeedbackInterface(wl_surface* surface) const override;
+            wl_buffer* Buffer(Exchange::IGraphicsBuffer* buffer) const override;
 
+            struct wp_presentation_feedback* PresentationFeedback(wl_surface* surface) const override;
+            wp_viewport* Viewport(wl_surface* surface) const override;
+
+#ifdef USE_LIBDECOR
+            libdecor* LibDecorContext() const override;
+#endif
             void RegisterInterface(struct wl_registry* registry, uint32_t name, const char* iface, uint32_t version);
 
             void PresentationClock(const uint32_t clockType);
             void HandleDmaFormatTable(int32_t fd, uint32_t size);
+            void AddShmFormat(const uint32_t format);
 
             void OpenDrmRender(drmDevice* device);
             void OpenDrmRender(const std::string& name);
 
             int Dispatch(const uint32_t events) const;
 
-            Core::ProxyType<IOutput> Output(const string& name, const Exchange::IComposition::Rectangle& rectangle, const Compositor::PixelFormat& format, Compositor::IOutput::ICallback* feedback);
+            Core::ProxyType<IOutput> Output(const string& name,
+                const uint32_t width, const uint32_t height, uint32_t refreshRate, const Compositor::PixelFormat& format,
+                const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback);
 
         private:
             mutable uint32_t _refCount;
@@ -141,10 +152,10 @@ namespace Compositor {
             wl_registry* _wlRegistry;
             wl_compositor* _wlCompositor;
             wl_drm* _wlDrm;
+            wp_viewporter* _wlViewporter;
             clockid_t _presentationClock;
 
             xdg_wm_base* _xdgWmBase;
-            zxdg_decoration_manager_v1* _wlZxdgDecorationManagerV1;
             zwp_pointer_gestures_v1* _wlZwpPointerGesturesV1;
             wp_presentation* _wlPresentation;
             zwp_linux_dmabuf_v1* _wlZwpLinuxDmabufV1;
@@ -152,13 +163,16 @@ namespace Compositor {
             zwp_relative_pointer_manager_v1* _wlZwpRelativePointerManagerV1;
             xdg_activation_v1* _wlXdgActivationV1;
             zwp_linux_dmabuf_feedback_v1* _wlZwpLinuxDmabufFeedbackV1;
-            FormatRegister _dmaFormats;
+            std::vector<PixelFormat> _dmaFormats;
+            std::vector<PixelFormat> _shmFormats;
 
             Input _input;
             ServerMonitor _serverMonitor;
 
             Core::ProxyMapType<string, Exchange::IGraphicsBuffer> _windows;
-
+#ifdef USE_LIBDECOR
+            libdecor* _libDecorContext;
+#endif
         }; // class WaylandImplementation
 
         /**
@@ -266,7 +280,11 @@ namespace Compositor {
         static void onShmFormat(void* data, struct wl_shm* shm, uint32_t format)
         {
             if (format != DRM_FORMAT_INVALID) {
-                TRACE_GLOBAL(Trace::Backend, ("Found SHM format: %s", DRM::FormatToString(format)));
+                WaylandImplementation* implementation = static_cast<WaylandImplementation*>(data);
+
+                if (implementation != nullptr) {
+                    implementation->AddShmFormat(format);
+                }
             }
         }
 
@@ -418,6 +436,17 @@ namespace Compositor {
         };
 #endif // USE_LEGACY_WAYLAND
 
+#ifdef USE_LIBDECOR
+        static void onLibDecorError(struct libdecor* /*context*/, enum libdecor_error error, const char* message)
+        {
+            TRACE_GLOBAL(Trace::Error, ("Libdecor error[0x%04X]: %s", error, message));
+        }
+
+        static struct libdecor_interface libDecorInterface = {
+            .error = onLibDecorError,
+        };
+#endif
+
         /**
          * @brief Callback for the global event on the registry
          *
@@ -455,7 +484,8 @@ namespace Compositor {
             .global_remove = onRegistryGlobalRemove
         };
 
-        static const TCHAR* DisplayName() {
+        static const TCHAR* DisplayName()
+        {
             return ("");
         }
 
@@ -467,8 +497,8 @@ namespace Compositor {
             , _wlRegistry(wl_display_get_registry(_wlDisplay))
             , _wlCompositor(nullptr)
             , _wlDrm(nullptr)
+            , _wlViewporter(nullptr)
             , _presentationClock(CLOCK_MONOTONIC)
-            , _wlZxdgDecorationManagerV1(nullptr)
             , _wlZwpPointerGesturesV1(nullptr)
             , _wlPresentation(nullptr)
             , _wlZwpLinuxDmabufV1(nullptr)
@@ -477,9 +507,13 @@ namespace Compositor {
             , _wlXdgActivationV1(nullptr)
             , _wlZwpLinuxDmabufFeedbackV1(nullptr)
             , _dmaFormats()
+            , _shmFormats()
             , _input()
             , _serverMonitor(*this, wl_display_get_fd(_wlDisplay))
             , _windows()
+#ifdef USE_LIBDECOR
+            , _libDecorContext(nullptr)
+#endif
         {
             TRACE(Trace::Backend, ("Starting WaylandImplementation backend"));
             ASSERT(_wlDisplay != nullptr);
@@ -493,10 +527,19 @@ namespace Compositor {
             ASSERT(_wlCompositor != nullptr);
             ASSERT(_xdgWmBase != nullptr);
 
+#ifdef USE_LIBDECOR
+            _libDecorContext = libdecor_new(_wlDisplay, &libDecorInterface);
+            ASSERT(_libDecorContext != nullptr);
+            libdecor_dispatch(_libDecorContext, 0);
+#endif
+
             // Query available drm formats
             RoundTrip();
 
             ASSERT(_dmaFormats.size() > 0);
+
+            TRACE(Trace::Backend, ("DMA Formats: %s\n", Compositor::ToString(_dmaFormats).c_str()));
+            TRACE(Trace::Backend, ("SHM Formats: %s\n", Compositor::ToString(_shmFormats).c_str()));
 
             if (const char* token = getenv("XDG_ACTIVATION_TOKEN")) {
                 _activationToken = token;
@@ -517,10 +560,6 @@ namespace Compositor {
                 close(_drmRenderFd);
             }
 
-            if (_wlZxdgDecorationManagerV1 != nullptr) {
-                zxdg_decoration_manager_v1_destroy(_wlZxdgDecorationManagerV1);
-            }
-
             if (_wlZwpPointerGesturesV1 != nullptr) {
                 zwp_pointer_gestures_v1_destroy(_wlZwpPointerGesturesV1);
             }
@@ -528,6 +567,16 @@ namespace Compositor {
             if (_wlPresentation != nullptr) {
                 wp_presentation_destroy(_wlPresentation);
             }
+
+            if (_wlViewporter != nullptr) {
+                wp_viewporter_destroy(_wlViewporter);
+            }
+
+#ifdef USE_LIBDECOR
+            if (_libDecorContext != nullptr) {
+                libdecor_unref(_libDecorContext);
+            }
+#endif
 
             if (_wlZwpLinuxDmabufV1 != nullptr) {
                 zwp_linux_dmabuf_v1_destroy(_wlZwpLinuxDmabufV1);
@@ -598,8 +647,6 @@ namespace Compositor {
             } else if (::strcmp(iface, xdg_wm_base_interface.name) == 0) {
                 _xdgWmBase = static_cast<xdg_wm_base*>(wl_registry_bind(registry, name, &xdg_wm_base_interface, 1));
                 xdg_wm_base_add_listener(_xdgWmBase, &xdgWmBaseListener, NULL);
-            } else if (::strcmp(iface, zxdg_decoration_manager_v1_interface.name) == 0) {
-                _wlZxdgDecorationManagerV1 = static_cast<zxdg_decoration_manager_v1*>(wl_registry_bind(registry, name, &zxdg_decoration_manager_v1_interface, 1));
             } else if (::strcmp(iface, zwp_pointer_gestures_v1_interface.name) == 0) {
                 _wlZwpPointerGesturesV1 = static_cast<zwp_pointer_gestures_v1*>(wl_registry_bind(registry, name, &zwp_pointer_gestures_v1_interface, version < 3 ? version : 3));
             } else if (::strcmp(iface, wp_presentation_interface.name) == 0) {
@@ -626,6 +673,8 @@ namespace Compositor {
                 wl_shm_add_listener(_wlShm, &shmListener, this);
             } else if (::strcmp(iface, xdg_activation_v1_interface.name) == 0) {
                 _wlXdgActivationV1 = static_cast<xdg_activation_v1*>(wl_registry_bind(registry, name, &xdg_activation_v1_interface, 1));
+            } else if (::strcmp(iface, wp_viewporter_interface.name) == 0) {
+                _wlViewporter = static_cast<wp_viewporter*>(wl_registry_bind(registry, name, &wp_viewporter_interface, 1));
             }
         }
 
@@ -667,37 +716,48 @@ namespace Compositor {
                 const WaylandFormat* formats = reinterpret_cast<WaylandFormat*>(map);
                 const uint16_t nFormats(size / sizeof(WaylandFormat));
 
-                // std::string hexData;
-                // Core::ToHexString(static_cast<uint8_t*>(map), size, hexData);
-                // TRACE(Trace::Backend, ("RAW Data: %s", hexData.c_str()));
-
-                _dmaFormats.clear();
+                // Build a temporary map to collect modifiers per format
+                std::unordered_map<uint32_t, std::vector<uint64_t>> tempFormats;
 
                 for (int i = 0; i < nFormats; i++) {
                     const uint32_t format(formats[i].format);
+                    const uint64_t modifier(formats[i].modifier);
 
-                    // somehow Ubuntu is returning a format of 0, which is invalid
-                    // but linear modifier is always valid, so we will just ignore the format
-                    const uint64_t modifier((formats[i].modifier != DRM_FORMAT_MOD_INVALID) ? (formats[i].modifier) : DRM_FORMAT_MOD_LINEAR);
-
-                    TRACE(Trace::Backend, ("%d Found DMA format: %s modifier: 0x%" PRIX64, i, DRM::FormatToString(format), modifier));
-
-                    FormatRegister::iterator index = _dmaFormats.find(format);
-
-                    if (index == _dmaFormats.end()) {
-                        _dmaFormats.emplace(format, std::vector<uint64_t>({ modifier }));
+                    auto index = tempFormats.find(format);
+                    if (index == tempFormats.end()) {
+                        tempFormats.emplace(format, std::vector<uint64_t>({ modifier }));
                     } else {
                         std::vector<uint64_t>& modifiers = index->second;
-
                         if (std::find(modifiers.begin(), modifiers.end(), modifier) == modifiers.end()) {
                             modifiers.push_back(modifier);
                         }
                     }
                 }
 
-                TRACE(Trace::Backend, ("Found %d formats", _dmaFormats.size()));
-
                 ::munmap(map, size);
+
+                // Convert to PixelFormat objects
+                _dmaFormats.clear();
+                _dmaFormats.reserve(tempFormats.size());
+
+                for (const auto& entry : tempFormats) {
+                    _dmaFormats.emplace_back(entry.first, entry.second);
+                }
+            }
+        }
+
+        void WaylandImplementation::AddShmFormat(const uint32_t format)
+        {
+            // Check if format already exists
+            auto it = std::find_if(_shmFormats.begin(), _shmFormats.end(),
+                [format](const PixelFormat& pixelFormat) {
+                    return pixelFormat.Type() == format;
+                });
+
+            if (it == _shmFormats.end()) {
+                // SHM formats typically don't have modifiers, so use default constructor
+                _shmFormats.emplace_back(format);
+                TRACE_GLOBAL(Trace::Backend, ("Added SHM format: %s", DRM::FormatToString(format)));
             }
         }
 
@@ -783,6 +843,12 @@ namespace Compositor {
                 return 0;
             }
 
+#ifdef USE_LIBDECOR
+            if (_libDecorContext != nullptr) {
+                libdecor_dispatch(_libDecorContext, 0);
+            }
+#endif
+
             return count;
         }
 
@@ -791,12 +857,16 @@ namespace Compositor {
          *
          * @return a Wayland surface (`wl_surface*`).
          */
-        wl_surface* WaylandImplementation::Surface() const
+        wl_surface* WaylandImplementation::Surface(const char* const* tag) const
         {
             wl_surface* surface = wl_compositor_create_surface(_wlCompositor);
 
             if ((_wlXdgActivationV1 != nullptr) && (_activationToken.empty() == false)) {
                 xdg_activation_v1_activate(_wlXdgActivationV1, _activationToken.c_str(), surface);
+            }
+
+            if (tag != nullptr) {
+                wl_proxy_set_tag(reinterpret_cast<wl_proxy*>(surface), tag);
             }
 
             return surface;
@@ -830,47 +900,34 @@ namespace Compositor {
             return wl_display_flush(_wlDisplay);
         }
 
-        void WaylandImplementation::Format(const Compositor::PixelFormat& requested, uint32_t& format, uint64_t& modifier) const
-        {
-            format = DRM_FORMAT_INVALID;
-            modifier = DRM_FORMAT_MOD_INVALID;
-
-            for (const auto& localFormat : _dmaFormats) {
-                if (localFormat.first == requested.Type()) {
-                    format = requested.Type();
-                    for (const auto& localModifier : localFormat.second) {
-                        for (const auto& requestedModifier : requested.Modifiers()) {
-                            if (requestedModifier == localModifier) {
-                                modifier = requestedModifier;
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-
         int WaylandImplementation::RenderNode() const
         {
             return (_drmRenderFd); // this will always be the render node. If not, we have a problem :-)
         }
 
-        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
+        Core::ProxyType<IOutput> WaylandImplementation::Output(const string& name, const uint32_t width, const uint32_t height, uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, Compositor::IOutput::ICallback* feedback)
         {
-            return (Core::ProxyType<IOutput> (_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, format, renderer)));
+            return (Core::ProxyType<IOutput>(_windows.Instance<Backend::WaylandOutput>(name, *this, name, width, height, refreshRate, format, renderer, feedback)));
         }
 
-        struct zxdg_toplevel_decoration_v1* WaylandImplementation::GetWindowDecorationInterface(xdg_toplevel* topLevelSurface) const
-        {
-            ASSERT(topLevelSurface != nullptr);
-            return (_wlZxdgDecorationManagerV1 != nullptr) ? zxdg_decoration_manager_v1_get_toplevel_decoration(_wlZxdgDecorationManagerV1, topLevelSurface) : nullptr;
-        }
-        struct wp_presentation_feedback* WaylandImplementation::GetFeedbackInterface(wl_surface* surface) const
+        struct wp_presentation_feedback* WaylandImplementation::PresentationFeedback(wl_surface* surface) const
         {
             ASSERT(surface != nullptr);
-            return (_wlPresentation != NULL) ? wp_presentation_feedback(_wlPresentation, surface) : nullptr;
+            return (_wlPresentation != nullptr) ? wp_presentation_feedback(_wlPresentation, surface) : nullptr;
         }
+
+        wp_viewport* WaylandImplementation::Viewport(wl_surface* surface) const
+        {
+            ASSERT(surface != nullptr);
+            return (_wlViewporter != nullptr) ? wp_viewporter_get_viewport(_wlViewporter, surface) : nullptr;
+        }
+
+#ifdef USE_LIBDECOR
+        libdecor* WaylandImplementation::LibDecorContext() const
+        {
+            return _libDecorContext;
+        }
+#endif
 
         /**
          * The function imports a DMA buffer into a Wayland buffer.
@@ -974,7 +1031,7 @@ namespace Compositor {
          *
          * @return a pointer to a `wl_buffer` object.
          */
-        wl_buffer* WaylandImplementation::CreateBuffer(Exchange::IGraphicsBuffer* buffer) const
+        wl_buffer* WaylandImplementation::Buffer(Exchange::IGraphicsBuffer* buffer) const
         {
             ASSERT(buffer != nullptr);
 
@@ -988,7 +1045,6 @@ namespace Compositor {
 
             return result;
         }
-
     } // namespace Backend
 
     /**
@@ -1007,11 +1063,11 @@ namespace Compositor {
      * @return A `Core::ProxyType` object that wraps an instance of `IOutput`.
      */
 
-    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const uint32_t width, const uint32_t height, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
+    /* static */ Core::ProxyType<IOutput> CreateBuffer(const string& name, const uint32_t width, const uint32_t height, uint32_t refreshRate, const Compositor::PixelFormat& format, const Core::ProxyType<IRenderer>& renderer, IOutput::ICallback* feedback)
     {
         static Backend::WaylandImplementation& backend = Core::SingletonType<Backend::WaylandImplementation>::Instance();
 
-        return backend.Output(name, width, height, format, renderer, feedback);
+        return backend.Output(name, width, height, refreshRate, format, renderer, feedback);
     }
 } // namespace Compositor
 } // namespace Thunder

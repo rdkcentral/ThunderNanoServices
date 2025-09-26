@@ -31,9 +31,70 @@
 
 #include <DRM.h>
 
+#include <sys/mman.h>
+
 namespace Thunder {
 namespace Compositor {
     namespace Renderer {
+
+#ifdef __DEBUG__
+        // Stack to track debug group context (GLES doesn't provide this automatically)
+        namespace {
+            thread_local std::vector<std::string> g_debugGroupStack;
+        }
+#endif // __DEBUG__
+
+        class SHMMapper {
+        public:
+            SHMMapper() = delete;
+            SHMMapper(const SHMMapper&) = delete;
+            SHMMapper& operator=(const SHMMapper&) = delete;
+            SHMMapper(SHMMapper&&) = delete;
+            SHMMapper& operator=(SHMMapper&&) = delete;
+
+            SHMMapper(int fd, size_t size)
+                : _mappedMemory(nullptr)
+                , _size(size)
+                , _isValid(false)
+            {
+                if (fd < 0 || size == 0) {
+                    return;
+                }
+
+                _mappedMemory = mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0);
+
+                if (_mappedMemory == MAP_FAILED) {
+                    TRACE(Trace::Error, ("SHM mmap failed (fd=%d, size=%zu): %s", fd, size, strerror(errno)));
+                    _mappedMemory = nullptr;
+                    return;
+                }
+
+                _isValid = true;
+            }
+
+            ~SHMMapper()
+            {
+                if (_isValid && _mappedMemory != nullptr) {
+                    munmap(_mappedMemory, _size);
+                }
+            }
+
+            bool IsValid() const { return _isValid; }
+
+            const uint8_t* GetData(size_t offset) const
+            {
+                if (!_isValid || offset >= _size) {
+                    return nullptr;
+                }
+                return static_cast<const uint8_t*>(_mappedMemory) + offset;
+            }
+
+        private:
+            void* _mappedMemory;
+            size_t _size;
+            bool _isValid;
+        };
+
         class GLES : public IRenderer {
             using PointCoordinates = std::array<GLfloat, 8>;
 
@@ -45,32 +106,49 @@ namespace Compositor {
             };
 
 #ifdef __DEBUG__
-            static void GLPushDebug(const std::string& file, const std::string& func, const uint32_t line)
+            static std::string GetDebugGroupContext()
             {
-                if (_gles.glPushDebugGroupKHR == nullptr) {
-                    return;
+                if (g_debugGroupStack.empty()) {
+                    return "";
                 }
 
-                std::stringstream message;
-                message << file << ":" << line << "[" << func << "]";
-
-                _gles.glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 1, -1, message.str().c_str());
-            }
-
-            static void GLPopDebug()
-            {
-                if (_gles.glPopDebugGroupKHR != nullptr) {
-                    _gles.glPopDebugGroupKHR();
+                std::stringstream context;
+                for (size_t i = 0; i < g_debugGroupStack.size(); ++i) {
+                    if (i > 0)
+                        context << " -> ";
+                    // Extract just the function name from "file:line[func]"
+                    const std::string& group = g_debugGroupStack[i];
+                    size_t start = group.find('[');
+                    size_t end = group.find(']');
+                    if (start != std::string::npos && end != std::string::npos) {
+                        context << group.substr(start + 1, end - start - 1);
+                    } else {
+                        context << group;
+                    }
                 }
+                return context.str();
             }
 
-            static void DebugSink(GLenum src, GLenum type, GLuint /*id*/, GLenum severity, GLsizei /*len*/, const GLchar* msg,
+            static void DebugSink(GLenum src, GLenum type, GLuint id, GLenum severity, GLsizei /*len*/, const GLchar* msg,
                 const void* /*user*/)
             {
                 std::stringstream line;
                 line << "[" << Compositor::API::GL::SourceString(src)
                      << "](" << Compositor::API::GL::TypeString(type)
-                     << "): " << msg;
+                     << ")";
+
+                // Add debug group context if available
+                std::string context = GetDebugGroupContext();
+                if (!context.empty()) {
+                    line << " in " << context;
+                }
+
+                // Add message ID for more specific error tracking
+                if (id != 0) {
+                    line << " (ID:" << id << ")";
+                }
+
+                line << ": " << msg;
 
                 switch (severity) {
                 case GL_DEBUG_SEVERITY_HIGH_KHR: {
@@ -93,12 +171,43 @@ namespace Compositor {
                 }
             }
 
-#define PushDebug() GLPushDebug(__FILE__, __func__, __LINE__)
-#define PopDebug() GLPopDebug()
+            class GLESDebugScope {
+            public:
+                GLESDebugScope(const char* name)
+                    : _pushed(false)
+                {
+                    ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
+
+                    if (_gles.glPushDebugGroupKHR != nullptr) {
+                        _gles.glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION_KHR, 2, -1, name);
+
+                        if (glGetError() == GL_NO_ERROR) {
+                            g_debugGroupStack.push_back(name);
+                            _pushed = true;
+                        } else {
+                            TRACE_GLOBAL(Trace::Error, ("Failed to push GL debug group '%s'", name));
+                        }
+                    }
+                }
+
+                ~GLESDebugScope()
+                {
+                    if ((_pushed == true) && (g_debugGroupStack.empty() == false) && _gles.glPopDebugGroupKHR != nullptr) {
+                        g_debugGroupStack.pop_back();
+                        _gles.glPopDebugGroupKHR();
+                    }
+                }
+
+            private:
+                bool _pushed;
+            };
+
+#define GLES_DEBUG_SCOPE(name) GLESDebugScope _debug_scope(name)
+
 #else
-#define PushDebug()
-#define PopDebug()
+#define GLES_DEBUG_SCOPE(name)
 #endif
+
             // Framebuffers are usually connected to an output, it's the buffer for the composition to be rendered on.
             class GLESFrameBuffer : public IFrameBuffer {
             public:
@@ -108,7 +217,6 @@ namespace Compositor {
 
                 GLESFrameBuffer(const GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
                     : _parent(parent)
-                    , _external(false)
                     , _eglImage()
                     , _glFrameBuffer(0)
                     , _glRenderBuffer(0)
@@ -116,32 +224,96 @@ namespace Compositor {
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
-                    _eglImage = _parent.Egl().CreateImage(buffer.operator->(), _external);
-                    ASSERT(_eglImage != EGL_NO_IMAGE);
-                    // If this triggers the platform is very old (pre-2008) and not supporting OpenGL 3.0 or higher.
+                    GLES_DEBUG_SCOPE("GLESFrameBuffer Constructor");
+
+                    TRACE_GLOBAL(Trace::GL, ("Creating framebuffer for buffer: %dx%d, format=0x%x, modifier=0x%" PRIx64 ", type=%d", buffer->Width(), buffer->Height(), buffer->Format(), buffer->Modifier(), buffer->Type()));
+
+                    bool external(false);
+
+                    {
+                        GLES_DEBUG_SCOPE("CreateEGLImage");
+
+                        _eglImage = _parent.Egl().CreateImage(buffer.operator->(), external);
+
+                        if (_eglImage == EGL_NO_IMAGE) {
+                            EGLint eglError = eglGetError();
+                            TRACE_GLOBAL(Trace::Error, ("Failed to create EGL image: 0x%x", eglError));
+                            ASSERT(false);
+                        }
+                    }
+
+                    if (external) {
+                        TRACE_GLOBAL(Trace::Error, ("Usage of external EGLImages in GLESFrameBuffers is not supported, please use a different buffer format or modifier"));
+                        ASSERT(false);
+                    }
+
                     ASSERT(_parent.Gles().glEGLImageTargetRenderbufferStorageOES != nullptr);
 
-                    PushDebug();
+                    {
+                        GLES_DEBUG_SCOPE("CreateRenderbuffer");
 
-                    glGenRenderbuffers(1, &_glRenderBuffer);
-                    glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
+                        glGenRenderbuffers(1, &_glRenderBuffer);
+                        glBindRenderbuffer(GL_RENDERBUFFER, _glRenderBuffer);
 
-                    _parent.Gles().glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
+                        _parent.Gles().glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, _eglImage);
 
-                    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-                    glGenFramebuffers(1, &_glFrameBuffer);
+                        GLenum glError = glGetError();
 
-                    Bind();
+                        if (glError != GL_NO_ERROR) {
+                            TRACE_GLOBAL(Trace::Error, ("glEGLImageTargetRenderbufferStorageOES failed: 0x%x", glError));
 
-                    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
+                            // Check EGL error too
+                            EGLint eglError = eglGetError();
+                            if (eglError != EGL_SUCCESS) {
+                                TRACE_GLOBAL(Trace::Error, ("EGL error after renderbuffer operation: 0x%x", eglError));
+                            }
+                        } else {
+                            TRACE_GLOBAL(Trace::GL, ("glEGLImageTargetRenderbufferStorageOES succeeded"));
+                        }
 
-                    GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+                    }
 
-                    Unbind();
+                    {
+                        GLES_DEBUG_SCOPE("CreateFramebuffer");
 
-                    PopDebug();
+                        glGenFramebuffers(1, &_glFrameBuffer);
 
-                    ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
+                        Bind();
+
+                        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, _glRenderBuffer);
+
+                        GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                        TRACE_GLOBAL(Trace::GL, ("Framebuffer status: 0x%x", fb_status));
+
+                        if (fb_status != GL_FRAMEBUFFER_COMPLETE) {
+                            TRACE_GLOBAL(Trace::Error, ("Framebuffer incomplete: 0x%x", fb_status));
+
+                            // Detailed framebuffer status logging
+                            switch (fb_status) {
+                            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT"));
+                                break;
+                            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT"));
+                                break;
+                            case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS"));
+                                break;
+                            case GL_FRAMEBUFFER_UNSUPPORTED:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: GL_FRAMEBUFFER_UNSUPPORTED"));
+                                break;
+                            default:
+                                TRACE_GLOBAL(Trace::Error, ("Framebuffer error: Unknown status 0x%x", fb_status));
+                                break;
+                            }
+                        }
+
+                        Unbind();
+
+                        ASSERT(fb_status == GL_FRAMEBUFFER_COMPLETE);
+                    }
+
                     TRACE(Trace::GL, ("Created GLESFrameBuffer %dpx x %dpx", buffer->Width(), buffer->Height()));
 
                     _parent.Egl().ResetCurrent();
@@ -153,14 +325,10 @@ namespace Compositor {
 
                     _parent.Egl().SetCurrent();
 
-                    Unbind();
-
-                    PushDebug();
+                    // Unbind will be handled by glDeleteFramebuffers
 
                     glDeleteFramebuffers(1, &_glFrameBuffer);
                     glDeleteRenderbuffers(1, &_glRenderBuffer);
-
-                    PopDebug();
 
                     _parent.Egl().ResetCurrent();
 
@@ -174,31 +342,24 @@ namespace Compositor {
 
                 void Unbind() const override
                 {
+                    GLES_DEBUG_SCOPE("FrameBuffer::Unbind");
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
-                    PushDebug();
                     glFlush();
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                    PopDebug();
                 }
 
                 void Bind() const override
                 {
+                    GLES_DEBUG_SCOPE("FrameBuffer::Bind");
+
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
-                    PushDebug();
                     glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
-                    PopDebug();
-                }
-
-                bool External() const
-                {
-                    return _external;
                 }
 
             private:
                 const GLES& _parent;
-                bool _external;
                 EGLImage _eglImage;
                 GLuint _glFrameBuffer;
                 GLuint _glRenderBuffer;
@@ -241,8 +402,7 @@ namespace Compositor {
             private:
                 GLuint Compile(GLenum type, const char* source)
                 {
-                    PushDebug();
-
+                    GLES_DEBUG_SCOPE("Compile");
                     GLint status(GL_FALSE);
                     GLuint handle = glCreateShader(type);
 
@@ -259,14 +419,12 @@ namespace Compositor {
                         glDeleteShader(handle);
                         handle = GL_FALSE;
                     }
-
-                    PopDebug();
                     return handle;
                 }
 
                 GLuint Create(const uint8_t variant)
                 {
-                    PushDebug();
+                    GLES_DEBUG_SCOPE("Create");
 
                     GLuint handle(GL_FALSE);
 
@@ -308,8 +466,6 @@ namespace Compositor {
                     } else {
                         TRACE(Trace::Error, ("Error Creating Program"));
                     }
-
-                    PopDebug();
 
                     return handle;
                 }
@@ -355,7 +511,7 @@ namespace Compositor {
 
                 bool Draw(const Compositor::Color& color, const Matrix& matrix)
                 {
-                    PushDebug();
+                    GLES_DEBUG_SCOPE("ColorProgram::Draw");
 
                     if (color[3] >= 1.0) {
                         glDisable(GL_BLEND);
@@ -376,8 +532,6 @@ namespace Compositor {
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
                     glDisableVertexAttribArray(Position());
-
-                    PopDebug();
 
                     return glGetError() == GL_NO_ERROR;
                 }
@@ -437,7 +591,7 @@ namespace Compositor {
 
                 bool Draw(const GLuint id, GLenum target, const bool hasAlpha, const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
-                    PushDebug();
+                    GLES_DEBUG_SCOPE("TextureProgram::Draw");
 
                     if ((hasAlpha == false) && (alpha >= 1.0)) {
                         glDisable(GL_BLEND);
@@ -468,8 +622,6 @@ namespace Compositor {
                     glDisableVertexAttribArray(Coordinates());
 
                     glBindTexture(target, 0);
-
-                    PopDebug();
 
                     return glGetError() == GL_NO_ERROR;
                 }
@@ -527,7 +679,6 @@ namespace Compositor {
 
             static bool WritePNG(const std::string& filename, const std::vector<uint8_t> buffer, const unsigned int width, const unsigned int height)
             {
-
                 png_structp pngPointer = nullptr;
 
                 pngPointer = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
@@ -678,7 +829,7 @@ namespace Compositor {
                     }
 
                     if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
-                        ImportPixelBuffer();
+                        ImportSHMBuffer();
                     }
 
                     ASSERT(_textureId != 0);
@@ -733,6 +884,7 @@ namespace Compositor {
 
                 bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
+                    GLES_DEBUG_SCOPE("GLESTexture::Draw");
                     bool result(false);
                     bool hasAlpha(DRM::HasAlpha(_buffer->Format()));
 
@@ -781,6 +933,8 @@ namespace Compositor {
                     _parent.Egl().SetCurrent();
                     ASSERT(eglGetError() == EGL_SUCCESS);
 
+                    GLES_DEBUG_SCOPE("ImportDMABuffer");
+
                     _image = _parent.Egl().CreateImage(&(*_buffer), external);
                     ASSERT(_image != EGL_NO_IMAGE);
 
@@ -802,41 +956,63 @@ namespace Compositor {
                     TRACE(Trace::GL, ("Imported dma buffer texture id=%d, width=%d, height=%d external=%s", _textureId, _buffer->Width(), _buffer->Height(), external ? "true" : "false"));
                 }
 
-                void ImportPixelBuffer()
+                void ImportSHMBuffer()
                 {
                     Exchange::IGraphicsBuffer::IIterator* planes = _buffer->Acquire(Compositor::DefaultTimeoutMs);
+                    ASSERT(planes != nullptr);
 
-                    // uint8_t index(0);
+                    planes->Next();
 
-                    planes->Next(); // select first plane.
+                    do {
+                        int fd = planes->Descriptor();
+                        const uint32_t stride = planes->Stride();
+                        const uint32_t offset = planes->Offset();
+                        const size_t totalSize = offset + (stride * _buffer->Height());
 
-                    int data(planes->Descriptor());
+                        // One-time mapping with automatic cleanup
+                        SHMMapper mapper(fd, totalSize);
 
-                    ASSERT(data != -1);
+                        if (!mapper.IsValid()) {
+                            TRACE(Trace::Error, ("Failed to map SHM buffer for plane"));
+                            continue;
+                        }
 
-                    GLPixelFormat glFormat = ConvertFormat(_buffer->Format());
+                        const uint8_t* data = mapper.GetData(offset);
+                        if (data == nullptr) {
+                            TRACE(Trace::Error, ("Invalid offset %d for SHM buffer", offset));
+                            continue;
+                        }
 
-                    Renderer::EGL::ContextBackup backup;
+                        GLPixelFormat glFormat = ConvertFormat(_buffer->Format());
 
-                    _parent.Egl().SetCurrent();
+                        Renderer::EGL::ContextBackup backup;
+                        _parent.Egl().SetCurrent();
 
-                    glGenTextures(1, &_textureId);
-                    glBindTexture(_target, _textureId);
+                        GLES_DEBUG_SCOPE("ImportPixelBuffer");
 
-                    glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                    glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                        glGenTextures(1, &_textureId);
+                        glBindTexture(_target, _textureId);
 
-                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, planes->Stride() / (glFormat.BitPerPixel / 8));
+                        glTexParameteri(_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                        glTexParameteri(_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-                    glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(), 0, glFormat.Format, glFormat.Type, reinterpret_cast<uint8_t*>(data));
+                        const uint32_t bytesPerPixel = glFormat.BitPerPixel / 8;
+                        glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, stride / bytesPerPixel);
+                        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-                    glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
+                        glTexImage2D(_target, 0, glFormat.Format, _buffer->Width(), _buffer->Height(),
+                            0, glFormat.Format, glFormat.Type, data);
 
-                    glBindTexture(_target, 0);
+                        glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT, 0);
+                        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+                        glBindTexture(_target, 0);
+
+                        TRACE(Trace::GL, ("Imported SHM texture: %dx%d, stride=%d, offset=%d", _buffer->Width(), _buffer->Height(), stride, offset));
+
+                    } while (planes->Next());
 
                     _buffer->Relinquish();
-
-                    TRACE(Trace::GL, ("Imported pixel buffer texture id=%d, width=%d, height=%d glformat=0x%04x, gltype=0x%04x glbitperpixel=%d glAlpha=0x%x", _textureId, _buffer->Width(), _buffer->Height(), glFormat.Format, glFormat.Type, glFormat.BitPerPixel, glFormat.Alpha));
                 }
 
             private:
@@ -881,8 +1057,6 @@ namespace Compositor {
                 }
 #endif
 
-                PushDebug();
-
                 _programs.Announce<ColorProgram>();
                 _programs.Announce<ExternalProgram>();
                 _programs.Announce<RGBAProgram>();
@@ -891,8 +1065,6 @@ namespace Compositor {
                 // _programs.Announce<Y_UVProgram>();
                 // _programs.Announce<Y_U_VProgram>();
                 // _programs.Announce<Y_XUXVProgram>();
-
-                PopDebug();
 
                 _egl.ResetCurrent();
             }
@@ -923,6 +1095,7 @@ namespace Compositor {
             uint32_t Unbind(const Core::ProxyType<IFrameBuffer>& frameBuffer) override
             {
                 if (frameBuffer.IsValid() == true) {
+                    _egl.SetCurrent();
                     frameBuffer->Unbind();
                 } else {
                     return Core::ERROR_BAD_REQUEST;
@@ -939,6 +1112,8 @@ namespace Compositor {
 
                 _egl.SetCurrent();
 
+                GLES_DEBUG_SCOPE("GLES::Bind");
+
                 if (frameBuffer.IsValid() == true) {
                     frameBuffer->Bind();
                 } else {
@@ -952,6 +1127,8 @@ namespace Compositor {
             {
                 ASSERT((_rendering == false) && (_egl.IsCurrent() == true));
 
+                GLES_DEBUG_SCOPE("GLES::Begin");
+
                 _rendering = true;
 
                 if (_gles.glGetGraphicsResetStatusKHR != nullptr) {
@@ -961,8 +1138,6 @@ namespace Compositor {
                         return false;
                     }
                 }
-
-                PushDebug();
 
                 glViewport(0, 0, width, height);
 
@@ -974,14 +1149,14 @@ namespace Compositor {
 
                 glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-                PopDebug();
-
                 return (glGetError() == GL_NO_ERROR);
             }
 
             void End(bool dump) override
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
+
+                GLES_DEBUG_SCOPE("GLES::End");
 
                 if (dump == true) {
                     std::vector<uint8_t> pixels;
@@ -1005,10 +1180,10 @@ namespace Compositor {
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
-                PushDebug();
+                GLES_DEBUG_SCOPE("GLES::Clear");
+
                 glClearColor(color[0], color[1], color[2], color[3]);
                 glClear(GL_COLOR_BUFFER_BIT);
-                PopDebug();
             }
             POP_WARNING()
 
@@ -1016,14 +1191,14 @@ namespace Compositor {
             {
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
-                PushDebug();
+                GLES_DEBUG_SCOPE("GLES::Scissor");
+
                 if (box != nullptr) {
                     glScissor(box->x, box->y, box->width, box->height);
                     glEnable(GL_SCISSOR_TEST);
                 } else {
                     glDisable(GL_SCISSOR_TEST);
                 }
-                PopDebug();
             }
 
             Core::ProxyType<IFrameBuffer> FrameBuffer(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
@@ -1038,6 +1213,7 @@ namespace Compositor {
 
             uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
             {
+                GLES_DEBUG_SCOPE("GLES::Render");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true) && (texture != nullptr));
 
                 const auto index = std::find(_textures.begin(), _textures.end(), &(*texture));
@@ -1072,6 +1248,7 @@ namespace Compositor {
 
             uint32_t Quadrangle(const Color color, const Matrix transformation) override
             {
+                GLES_DEBUG_SCOPE("GLES::Quadrangle");
                 ASSERT((_rendering == true) && (_egl.IsCurrent() == true));
 
                 Matrix gl_matrix;
@@ -1088,12 +1265,12 @@ namespace Compositor {
 
             const std::vector<PixelFormat>& RenderFormats() const override
             {
-                return _egl.Formats();
+                return _egl.RenderFormats();
             }
 
             const std::vector<PixelFormat>& TextureFormats() const override
             {
-                return _egl.Formats();
+                return _egl.TextureFormats();
             }
             Core::ProxyType<Exchange::IGraphicsBuffer> Bound() const override
             {
@@ -1123,7 +1300,7 @@ namespace Compositor {
 
             bool Snapshot(const Exchange::IComposition::Rectangle& box, const uint32_t format, std::vector<uint8_t>& pixels)
             {
-                PushDebug();
+                GLES_DEBUG_SCOPE("GLES::Snapshot");
 
                 const GLPixelFormat formatGL(ConvertFormat(format));
 
@@ -1134,8 +1311,6 @@ namespace Compositor {
                 pixels.resize(_viewportWidth * _viewportHeight * (formatGL.BitPerPixel / 8));
 
                 glReadPixels(box.x, box.y, box.width, box.height, formatGL.Format, formatGL.Type, pixels.data());
-
-                PopDebug();
 
                 return glGetError() == GL_NO_ERROR;
             }

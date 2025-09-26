@@ -67,15 +67,22 @@ namespace Compositor {
 
             inline bool SetCurrent() const
             {
-                return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, _context) == EGL_TRUE);
+                return (_display != EGL_NO_DISPLAY) ? (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, _context) == EGL_TRUE) : false;
             }
 
             inline bool ResetCurrent() const
             {
-                return (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE);
+                return (_display != EGL_NO_DISPLAY) ? (eglMakeCurrent(_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_TRUE) : false;
             }
 
-            const std::vector<PixelFormat>& Formats() const;
+            const std::vector<PixelFormat>& TextureFormats() const
+            {
+                return _textureFormats;
+            }
+            const std::vector<PixelFormat>& RenderFormats() const
+            {
+                return _renderFormats;
+            }
 
             EGLImage CreateImage(/*const*/ Exchange::IGraphicsBuffer* buffer, bool&) const;
 
@@ -85,6 +92,7 @@ namespace Compositor {
             public:
                 ContextBackup(const ContextBackup&) = delete;
                 ContextBackup& operator=(const ContextBackup&) = delete;
+                ContextBackup& operator=(ContextBackup&&) = delete;
 
                 ContextBackup()
                     : _display(eglGetCurrentDisplay())
@@ -96,7 +104,15 @@ namespace Compositor {
 
                 ~ContextBackup()
                 {
-                    eglMakeCurrent((_display == EGL_NO_DISPLAY) ? eglGetCurrentDisplay() : _display, _drawSurface, _readSurface, _context);
+                    if ((_display != EGL_NO_DISPLAY && _context != EGL_NO_CONTEXT)) {
+                        eglMakeCurrent(_display, _drawSurface, _readSurface, _context);
+                    } else {
+                        EGLDisplay currentDisplay = eglGetCurrentDisplay();
+
+                        if (currentDisplay != EGL_NO_DISPLAY) {
+                            eglMakeCurrent(currentDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+                        }
+                    }
                 }
 
             private:
@@ -109,25 +125,25 @@ namespace Compositor {
         private:
             EGLDeviceEXT FindEGLDevice(const int drmFd);
             uint32_t Initialize(EGLenum platform, void* remote_display, bool isMaster);
-            void GetPixelFormats(std::vector<PixelFormat>& formats) const;
+            void GetPixelFormats(std::vector<PixelFormat>& formats, const bool renderOnly) const;
             void GetModifiers(const uint32_t format, std::vector<uint64_t>& modifiers, std::vector<EGLBoolean>& externals) const;
             bool IsExternOnly(const uint32_t format, const uint64_t modifier) const;
 
         private:
-            API::EGL _api;
+            const API::EGL& _api;
 
             EGLDisplay _display;
             EGLContext _context;
 
             EGLDeviceEXT _device;
 
-            EGLSurface _draw_surface;
-            EGLSurface _read_surface;
-
-            std::vector<PixelFormat> _formats;
+            std::vector<PixelFormat> _renderFormats;
+            std::vector<PixelFormat> _textureFormats;
 
             int _gbmDescriptor;
             gbm_device* _gbmDevice;
+
+            int _drmFd;
         }; // class EGL
     } // namespace Renderer
 } // namespace Compositor

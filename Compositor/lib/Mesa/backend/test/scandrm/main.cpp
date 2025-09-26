@@ -271,6 +271,10 @@ void Scan()
             ScanResources(fd);
         }
 
+        if(name != nullptr) {
+            free(name);
+        }
+
         close(fd);
     }
 }

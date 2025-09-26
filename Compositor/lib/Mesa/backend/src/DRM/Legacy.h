@@ -68,10 +68,9 @@ namespace Compositor {
             }
             uint32_t Add(Connector& connector)
             {
-
                 uint32_t result = Core::ERROR_NONE;
 
-                ASSERT(connector.CrtController() != nullptr);
+                ASSERT(connector.CrtController().Id() != Compositor::InvalidIdentifier);
 
                 uint32_t connectorId(connector.Properties().Id());
                 const uint32_t crtcId(connector.CrtController().Id());
@@ -81,25 +80,22 @@ namespace Compositor {
                 int drmResult(0);
 
                 if ((connector.IsEnabled()) && (ModeSet() == true)) {
+                    const drmModeModeInfo* mode = connector.SelectedMode();
+                    
+                    uint32_t dpms = DRM_MODE_DPMS_ON;
 
-                    const drmModeModeInfo* mode(nullptr);
-                    uint32_t dpms = DRM_MODE_DPMS_OFF;
+                    drmResult = drmModeConnectorSetProperty(_fd, connectorId, connector.Properties().Id(Compositor::DRM::property::Dpms), dpms);
 
-                    mode = connector.CrtController();
-                    dpms = DRM_MODE_DPMS_ON;
-
-                    if ((drmResult = drmModeConnectorSetProperty(_fd, connectorId, connector.Properties().Id(Compositor::DRM::property::Dpms), dpms)) != 0) {
+                    if (drmResult != 0) {
                         TRACE_GLOBAL(Trace::Error, ("Failed setting DPMS to %s for connector %d: [%d] %s", connector.IsEnabled() ? "on" : "off", connectorId, drmResult, strerror(errno)));
                         result = Core::ERROR_GENERAL;
                     } else {
                         constexpr uint32_t X = 0;
                         constexpr uint32_t Y = 0;
 
-                        /*
-                         * Use the same mode as the previous operation on the CRTC and specified connector(s)
-                         * New framebuffer Id, x, and y properties will set at vblank.
-                         */
-                        if ((drmResult = drmModeSetCrtc(_fd, crtcId, connector.FrameBufferId(), X, Y, &connectorId, 1, const_cast<drmModeModeInfoPtr>(mode)) != 0)) {
+                        drmResult = drmModeSetCrtc(_fd, crtcId, connector.FrameBufferId(), X, Y, &connectorId, 1, const_cast<drmModeModeInfoPtr>(mode));
+
+                        if (drmResult != 0) {
                             TRACE_GLOBAL(Trace::Error, ("Failed to set CRTC: %d: [%d] %s", crtcId, drmResult, strerror(errno)));
                             result = Core::ERROR_INCOMPLETE_CONFIG;
                         }
@@ -109,7 +105,6 @@ namespace Compositor {
                 /*
                  * clear cursor image
                  */
-
                 if ((result == Core::ERROR_NONE) && (drmResult = drmModeSetCursor(_fd, crtcId, 0, 0, 0)) != 0) {
                     TRACE_GLOBAL(Trace::Error, ("Failed to clear cursor: [%d] %s", drmResult, strerror(errno)));
                     result = Core::ERROR_GENERAL;

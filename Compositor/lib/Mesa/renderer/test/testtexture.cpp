@@ -53,215 +53,104 @@
 #include <localtracer/localtracer.h>
 #include <messaging/messaging.h>
 
+#include "BaseTest.h"
+#include "TerminalInput.h"
+
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
-namespace Thunder {
+using namespace Thunder;
+
+namespace {
 const Compositor::Color background = { 0.25f, 0.25f, 0.25f, 1.0f };
 
 static Core::ProxyType<Compositor::PixelBuffer> textureRed(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Red));
 static Core::ProxyType<Compositor::PixelBuffer> textureGreen(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Green));
 static Core::ProxyType<Compositor::PixelBuffer> textureBlue(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Blue));
-
 static Core::ProxyType<Compositor::PixelBuffer> textureSimple(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::Simple));
-
 static Core::ProxyType<Compositor::PixelBuffer> textureTv(Core::ProxyType<Compositor::PixelBuffer>::Create(Texture::TvTexture));
 
-class RenderTest {
-    class Sink : public Compositor::IOutput::ICallback {
-    public:
-        Sink(const Sink&) = delete;
-        Sink& operator=(const Sink&) = delete;
-        Sink() = delete;
-
-        Sink(RenderTest& parent)
-            : _parent(parent)
-        {
-        }
-
-        virtual ~Sink() = default;
-
-        virtual void Presented(const Compositor::IOutput* output, const uint32_t sequence, const uint64_t time) override
-        {
-            _parent.HandleVSync(output, sequence, time);
-        }
-    private:
-        RenderTest& _parent;
-    };
+class RenderTest : public BaseTest {
 public:
     RenderTest() = delete;
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const std::string& renderId, const uint8_t framePerSecond, const uint8_t rotationsPerSecond)
-        : _adminLock()
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t framePerSecond, const uint8_t rotationsPerSecond)
+        : BaseTest(connectorId, renderId, framePerSecond)
+        , _adminLock()
         , _format(DRM_FORMAT_ABGR8888, { DRM_FORMAT_MOD_LINEAR })
-        , _connector()
-        , _renderer()
         , _texture()
-        , _period(std::chrono::microseconds(std::chrono::microseconds(std::chrono::seconds(1)) / framePerSecond))
         , _rotations(rotationsPerSecond)
-        , _running(false)
-        , _render()
-        , _renderFd(::open(renderId.c_str(), O_RDWR))
+        , _rotation(0.0f)
         , _renderStart(std::chrono::high_resolution_clock::now())
-        , _sink(*this)
-        , _rendering()
-        , _vsync()
-        , _ppts(Core::Time::Now().Ticks())
-        , _fps()
-        , _sequence(0)
     {
-        _renderer = Compositor::IRenderer::Instance(_renderFd);
-        ASSERT(_renderer.IsValid());
-
-        _connector = Compositor::CreateBuffer(
-            connectorId, 1920, 1080,
-            Compositor::PixelFormat(DRM_FORMAT_XRGB8888, { DRM_FORMAT_MOD_LINEAR }),
-            _renderer, &_sink);
-
-        ASSERT(_connector.IsValid());
-
-        _texture = _renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
-
-        NewFrame();
+        auto renderer = Renderer();
+        _texture = renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
     }
 
-    ~RenderTest()
+    virtual ~RenderTest() = default;
+
+protected:
+    std::chrono::microseconds NewFrame() override
     {
-        Stop();
-
-        _renderer.Release();
-        _connector.Release();
-
-        ::close(_renderFd);
-    }
-
-    void Start()
-    {
-        TRACE(Trace::Information, ("Starting RenderTest"));
-
-        _renderStart = std::chrono::high_resolution_clock::now();
-
-        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-        _render = std::thread(&RenderTest::Render, this);
-    }
-
-    void Stop()
-    {
-        TRACE(Trace::Information, ("Stopping RenderTest"));
-
-        Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
-
-        if (_running) {
-            _running = false;
-            _render.join();
-        }
-    }
-
-    bool Running() const
-    {
-        return _running;
-    }
-
-private:
-    void Render()
-    {
-        _running = true;
-
-        while (_running) {
-            const auto next = _period - NewFrame();
-            std::this_thread::sleep_for((next.count() > 0) ? next : std::chrono::microseconds(0));
-        }
-    }
-
-    std::chrono::microseconds NewFrame()
-    {
-        static float rotation = 0.f;
-
         const auto start = std::chrono::high_resolution_clock::now();
 
-        //const float runtime = std::chrono::duration<float>(start.time_since_epoch()).count();
         const float runtime = std::chrono::duration<float>(start - _renderStart).count();
-
         float alpha = 0.5f * (1 + sin((2.f * M_PI) * 0.25f * runtime));
 
         Core::SafeSyncType<Core::CriticalSection> scopedLock(_adminLock);
 
-        const uint16_t width(_connector->Width());
-        const uint16_t height(_connector->Height());
+        auto renderer = Renderer();
+        auto connector = Connector();
+
+        const uint16_t width(connector->Width());
+        const uint16_t height(connector->Height());
 
         const uint16_t renderWidth(512);
         const uint16_t renderHeight(512);
 
-        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = _connector->FrameBuffer();
+        Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = connector->FrameBuffer();
 
-        _renderer->Bind(frameBuffer);
+        renderer->Bind(frameBuffer);
+        renderer->Begin(width, height);
+        renderer->Clear(background);
 
-        _renderer->Begin(width, height);
-        _renderer->Clear(background);
-
-        const Exchange::IComposition::Rectangle renderBox = { (width / 2) - (renderWidth / 2), (height / 2) - (renderHeight / 2), renderWidth, renderHeight };
+        const Exchange::IComposition::Rectangle renderBox = { 
+            (width / 2) - (renderWidth / 2), 
+            (height / 2) - (renderHeight / 2), 
+            renderWidth, 
+            renderHeight 
+        };
+        
         Compositor::Matrix matrix;
-
-        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, _renderer->Projection());
+        Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, _rotation, renderer->Projection());
 
         const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
-        _renderer->Render(_texture, textureBox, matrix, alpha);
+        renderer->Render(_texture, textureBox, matrix, alpha);
 
-        _renderer->End(false);
+        renderer->End(false);
+        renderer->Unbind(frameBuffer);
 
-        _renderer->Unbind(frameBuffer);
-
-        _connector->Commit();
+        connector->Commit();
 
         WaitForVSync(100);
 
-        rotation += _period.count() * (2. * M_PI) / (_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
+        auto periodCount = Period().count();
+        if (periodCount > 0) {
+            _rotation += periodCount * (2. * M_PI) / (_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
+        }
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
 
 private:
-    void HandleVSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint32_t sequence, uint64_t pts /*usec from epoch*/)
-    {
-        _fps = 1 / ((pts - _ppts) / 1000000.0f);
-        _sequence = sequence;
-        _ppts = pts;
-        _vsync.notify_all();
-    }
-
-    void WaitForVSync(uint32_t timeoutMs)
-    {
-        std::unique_lock<std::mutex> lock(_rendering);
-
-        if (timeoutMs == Core::infinite) {
-            _vsync.wait(lock);
-        } else {
-            _vsync.wait_for(lock, std::chrono::milliseconds(timeoutMs));
-        }
-        TRACE(Trace::Information, ("Connector running at %.2f fps", _fps));
-    }
-
-private:
     mutable Core::CriticalSection _adminLock;
     const Compositor::PixelFormat _format;
-    Core::ProxyType<Compositor::IOutput> _connector;
-    Core::ProxyType<Compositor::IRenderer> _renderer;
     Core::ProxyType<Compositor::IRenderer::ITexture> _texture;
-    const std::chrono::microseconds _period;
     const uint8_t _rotations;
-    bool _running;
-    std::thread _render;
-    int _renderFd;
+    float _rotation;
     std::chrono::time_point<std::chrono::high_resolution_clock> _renderStart;
-    Sink _sink;
-    std::mutex _rendering;
-    std::condition_variable _vsync;
-    uint64_t _ppts;
-    float _fps;
-    uint32_t _sequence;
-}; // RenderTest
+};
 
 class ConsoleOptions : public Core::Options {
 public:
@@ -302,55 +191,78 @@ private:
 
 int main(int argc, char* argv[])
 {
-    Thunder::ConsoleOptions options(argc, argv);
-    Thunder::Messaging::LocalTracer& tracer = Thunder::Messaging::LocalTracer::Open();
+    bool quitApp(false);
+    ConsoleOptions options(argc, argv);
 
-    const char* executableName(Thunder::Core::FileNameOnly(argv[0]));
+    Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
+
+    const char* executableName(Core::FileNameOnly(argv[0]));
 
     {
-        Thunder::Messaging::ConsolePrinter printer(true);
+        TerminalInput keyboard;
+        ASSERT(keyboard.IsValid() == true);
+
+        Messaging::ConsolePrinter printer(true);
 
         tracer.Callback(&printer);
 
-        const std::vector<string> modules = {
-            "CompositorRenderTest",
-            "CompositorBuffer",
-            "CompositorBackendOff",
-            "CompositorRendererOff",
-            "DRMCommon"
+        const std::map<std::string, std::vector<std::string>> modules = {
+            { "CompositorRenderTest", { "" } },
+            { "CompositorBuffer", { "Error", "Information" } },
+            { "CompositorBackend", { "Error", "Information" } },
+            { "CompositorRenderer", { "Error", "Warning", "Information" } },
+            { "DRMCommon", { "Error", "Information" } }
         };
 
-        for (auto module : modules) {
-            tracer.EnableMessage(module, "", true);
+        for (const auto& module_entry : modules) {
+            for (const auto& category : module_entry.second) {
+                tracer.EnableMessage(module_entry.first, category, true);
+            }
         }
 
-        TRACE_GLOBAL(Thunder::Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
+        TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        Thunder::RenderTest test(options.Output, options.RenderNode, 60, 30);
+        RenderTest test(options.Output, options.RenderNode, 0, 30);
 
         test.Start();
 
-        char keyPress;
+        if (keyboard.IsValid() == true) {
+            while (!test.ShouldExit() && !quitApp) {
+                switch (toupper(keyboard.Read())) {
+                case 'S':
+                    if (test.ShouldExit() == false) {
+                        (test.IsRunning() == false) ? test.Start() : test.Stop();
+                    }
+                    break;
+                case 'F':
+                    TRACE_GLOBAL(Trace::Information, ("Current FPS: %.2f", test.GetFPS()));
+                    break;
+                case 'Q':
+                    quitApp = true;
+                    break;
+                case 'H':
+                    TRACE_GLOBAL(Trace::Information, ("Available commands:"));
+                    TRACE_GLOBAL(Trace::Information, ("  S - Start/Stop the rendering"));
+                    TRACE_GLOBAL(Trace::Information, ("  F - Show current FPS"));
+                    TRACE_GLOBAL(Trace::Information, ("  Q - Quit the application"));
+                    TRACE_GLOBAL(Trace::Information, ("  H - Show this help message"));
+                    break;
+                default:
+                    break;
+                }
 
-        do {
-            keyPress = toupper(getchar());
-
-            switch (keyPress) {
-            case 'S': {
-                (test.Running() == false) ? test.Start() : test.Stop();
-                break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            default:
-                break;
-            }
+        } else {
+            TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to initialize keyboard input"));
+        }
 
-        } while (keyPress != 'Q');
-
+        test.Stop();
         TRACE_GLOBAL(Thunder::Trace::Information, ("Exiting %s.... ", executableName));
     }
 
     tracer.Close();
-    Thunder::Core::Singleton::Dispose();
+    Core::Singleton::Dispose();
 
     return 0;
 }

@@ -1,5 +1,8 @@
 #include "DRMTypes.h"
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <iostream>
 #define _T(x) x
 #define TCHAR char
 
@@ -107,12 +110,27 @@ namespace Thunder {
                 return (Compositor::DRM::PropertyToString(_property));
             }
 
+            Properties::~Properties()
+            {
+                if (_descriptor >= 1) {
+                    close(_descriptor);
+                    _descriptor = -1;
+                }
+            }
+
             void Properties::Load(const int descriptor, object_type type, const Identifier objectId)
             {
+                if (_descriptor >= 1) {
+                    close(_descriptor);
+                    _descriptor = -1;
+                }
+
                 _properties.clear();
                 _objectId = objectId;
+                _objectType = type;
+                _descriptor = dup(descriptor);
 
-                drmModeObjectProperties* properties = drmModeObjectGetProperties(descriptor, objectId, static_cast<uint32_t>(type));
+                drmModeObjectProperties* properties = drmModeObjectGetProperties(_descriptor, _objectId, static_cast<uint32_t>(_objectType));
 
                 if (properties != nullptr) {
                     for (uint32_t i = 0; i < properties->count_props; ++i) {
@@ -121,7 +139,7 @@ namespace Thunder {
                         const auto& property = stringToProperty.find(drmProperty->name);
 
                         if (property != stringToProperty.end()) {
-                            
+
                             _properties.emplace(
                                 std::piecewise_construct,
                                 std::forward_as_tuple(property->second),
@@ -133,6 +151,48 @@ namespace Thunder {
 
                     drmModeFreeObjectProperties(properties);
                 }
+            }
+
+            bool Properties::Value(const property which, uint64_t& value) const
+            {
+                bool result(false);
+
+                if (_descriptor > 0) {
+                    Identifier propId = Id(which);
+
+                    // Query current value from kernel
+                    drmModeObjectPropertiesPtr properties = drmModeObjectGetProperties(_descriptor, _objectId, static_cast<uint32_t>(_objectType));
+
+                    if (properties) {
+                        std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
+
+                        for (uint32_t i = 0; i < properties->count_props; ++i) {
+                            if (properties->props[i] == propId) {
+                                value = properties->prop_values[i];
+                                result = true;
+                                break;
+                            }
+                        }
+
+                        drmModeFreeObjectProperties(properties);
+                    }
+                }
+
+                return result;
+            }
+
+            drmModePropertyBlobPtr Properties::Blob(const property which) const
+            {
+                drmModePropertyBlobPtr result(nullptr);
+
+                uint64_t blobId;
+                std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
+
+                if (Value(which, blobId) == true) {
+                    result = drmModeGetPropertyBlob(_descriptor, static_cast<uint32_t>(blobId));
+                }
+
+                return result;
             }
         }
     }

@@ -92,7 +92,7 @@ int main(int argc, const char* argv[])
             case 'A': {
                 if (framebuffer.IsValid() == false) {
                     Core::ProxyType<Compositor::IRenderer> dummy;
-                    framebuffer = Compositor::CreateBuffer(ConnectorId, 1920, 1080, format, dummy, nullptr);
+                    framebuffer = Compositor::CreateBuffer(ConnectorId, 1920, 1080, 30000, format, dummy, nullptr);
                     TRACE_GLOBAL(Trace::Information, ("Allocated framebuffer %ux%u", framebuffer->Height(), framebuffer->Width()));
                 }
                 break;
