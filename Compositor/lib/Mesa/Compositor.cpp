@@ -211,7 +211,6 @@ namespace Plugin {
                     , _texture()
                 {
                     Load(descriptors);
-                    std::cout << "Buffer for " << client.Name() << "[" << this << "] " << BaseClass::Width() << "x" << BaseClass::Height() << ", format=0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << BaseClass::Format() << ", modifier=0x" << std::setfill('0') << std::setw(16) << BaseClass::Modifier() << std::dec << std::nouppercase << std::endl;
                     TRACE(Trace::Information, (_T("Buffer for %s[%p] %dx%d, format=0x%08" PRIX32 ", modifier=0x%016" PRIX64), client.Name().c_str(), this, BaseClass::Height(), BaseClass::Width(), BaseClass::Format(), BaseClass::Modifier()));
                     Core::ResourceMonitor::Instance().Register(*this);
                 }
