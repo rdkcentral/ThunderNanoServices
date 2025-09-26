@@ -216,6 +216,93 @@ namespace Plugin {
                 Client& _client;
             };
 
+            template <typename T, size_t SIZE>
+            class AtomicFifo {
+            public:
+                AtomicFifo()
+                    : _head { 0 }
+                    , _tail { 0 }
+                {
+                    // Initialize array elements
+                    for (auto& element : _queue) {
+                        element.store(T {}, std::memory_order_relaxed);
+                    }
+                }
+
+                ~AtomicFifo() = default;
+
+                AtomicFifo(const AtomicFifo&) = delete;
+                AtomicFifo& operator=(const AtomicFifo&) = delete;
+                AtomicFifo(AtomicFifo&&) = delete;
+                AtomicFifo& operator=(AtomicFifo&&) = delete;
+
+                /**
+                 * @brief Add an item to the queue (single producer, multi-threaded)
+                 * @param item The item to add
+                 * @param dropOldest If true and queue is full, drop the oldest item
+                 * @return true if item was added, false if queue was full and dropOldest=false
+                 */
+                bool Push(const T& item, bool dropOldest = true)
+                {
+                    const size_t head = _head.load(std::memory_order_relaxed);
+                    const size_t tail = _tail.load(std::memory_order_acquire); // Sync with Pop()
+                    const size_t next_head = (head + 1) % SIZE;
+
+                    if (next_head == tail) {
+                        // Queue is full
+                        if (dropOldest) {
+                            // Can't safely advance tail from producer thread
+                            // Fall back to original behavior - force a Pop
+                            T dummy;
+                            if (!Pop(dummy)) {
+                                return false; // Shouldn't happen but be safe
+                            }
+                        } else {
+                            return false;
+                        }
+                    }
+
+                    _queue[head].store(item, std::memory_order_relaxed);
+                    _head.store(next_head, std::memory_order_release); // Sync with Pop()
+                    return true;
+                }
+
+                /**
+                 * @brief Remove and return the oldest item from the queue (single consumer, multi-threaded)
+                 * @param item Reference to store the popped item
+                 * @return true if item was popped, false if queue was empty
+                 */
+                bool Pop(T& item)
+                {
+                    const size_t tail = _tail.load(std::memory_order_relaxed);
+                    const size_t head = _head.load(std::memory_order_acquire);
+
+                    if (tail == head) {
+                        return false; // Queue empty
+                    }
+
+                    item = _queue[tail].load(std::memory_order_relaxed);
+                    _tail.store((tail + 1) % SIZE, std::memory_order_release);
+                    return true;
+                }
+
+                /**
+                 * @brief Clear all items from the queue
+                 */
+                void Clear()
+                {
+                    T dummy;
+                    while (Pop(dummy)) {
+                        // Pop all items
+                    }
+                }
+
+            private:
+                std::array<std::atomic<T>, SIZE> _queue;
+                std::atomic<size_t> _head;
+                std::atomic<size_t> _tail;
+            };
+
         public:
             Client() = delete;
             Client(Client&&) = delete;
