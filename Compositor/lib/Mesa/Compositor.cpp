@@ -852,8 +852,6 @@ namespace Plugin {
                 return Core::ERROR_INCOMPLETE_CONFIG;
             }
 
-            ASSERT(_renderDescriptor != Compositor::InvalidFileDescriptor);
-
             if (_renderDescriptor < 0) {
                 TRACE(Trace::Error, (_T("Failed to open render node %s, error %d"), config.Render.Value().c_str(), errno));
                 return Core::ERROR_OPENING_FAILED;
