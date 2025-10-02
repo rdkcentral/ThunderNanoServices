@@ -80,13 +80,15 @@ namespace Plugin {
                 State(const State&) = delete;
                 State& operator=(const State&) = delete;
 
-                State(uint32_t count, uint32_t channelId, uint32_t responseId, uint32_t batchId)
+                State(uint32_t count, uint32_t channelId, uint32_t responseId, uint32_t batchId, uint32_t timeoutMs)
                     : _responseLock()
                     , _responseArray()
                     , _pendingCount(count)
                     , _channelId(channelId)
                     , _responseId(responseId)
                     , _batchId(batchId)
+                    , _timeoutMs(timeoutMs)
+                    , _startTime(Core::Time::Now().Ticks())
                 {
                     // Pre-allocate responses
                     for (uint32_t i = 0; i < count; i++) {
@@ -132,6 +134,24 @@ namespace Plugin {
                     return response;
                 }
 
+                bool IsTimedOut() const
+                {
+                    if (_timeoutMs == Core::infinite) {
+                        return false; // No timeout configured
+                    }
+
+                    uint64_t currentTicks = Core::Time::Now().Ticks();
+                    uint64_t elapsedTicks = currentTicks - _startTime;
+                    uint64_t elapsedMs = elapsedTicks / Core::Time::TicksPerMillisecond;
+
+                    return (elapsedMs > _timeoutMs);
+                }
+
+                uint32_t TimeoutMs() const
+                {
+                    return _timeoutMs;
+                }
+
             private:
                 Core::CriticalSection _responseLock;
                 Core::JSON::ArrayType<Response> _responseArray;
@@ -139,6 +159,8 @@ namespace Plugin {
                 uint32_t _channelId;
                 uint32_t _responseId;
                 uint32_t _batchId;
+                uint32_t _timeoutMs;
+                uint64_t _startTime;
             };
 
             Job() = delete;
@@ -160,6 +182,22 @@ namespace Plugin {
                 string output;
 
                 TRACE(Trace::Information, (_T("Process %d:%d"), _state->ChannelId(), _message.Id.Value()));
+
+                if (_state->IsTimedOut()) {
+                    TRACE(Trace::Warning, (_T("Job skipped due to timeout, batchId=%u, jobId=%d"), _state->BatchId(), _message.Id.Value()));
+
+                    // Mark this job as errored
+                    Response& responseMsg = _state->Acquire(_index);
+                    responseMsg.Id = _message.Id.Value();
+                    responseMsg.Error.SetError(Core::ERROR_TIMEDOUT);
+                    responseMsg.Error.Text = _T("Request timed out");
+
+                    // Check if we're the last one
+                    if (_state->ReleaseAndCheckComplete()) {
+                        _parent.SendTimeoutResponse(_state->ChannelId(), _state->ResponseId(), _state->BatchId());
+                    }
+                    return; // Don't process this job
+                }
 
                 uint32_t invokeResult = _parent._dispatch->Invoke(
                     _state->ChannelId(),
@@ -185,17 +223,21 @@ namespace Plugin {
                 }
 
                 if (_state->ReleaseAndCheckComplete()) {
+                    if (_state->IsTimedOut()) {
+                        _parent.SendTimeoutResponse(_state->ChannelId(), _state->ResponseId(), _state->BatchId());
+                    } else {
+                        // Normal response
+                        string response = _state->ToString();
 
-                    string response = _state->ToString();
+                        Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
+                        if (message.IsValid()) {
+                            message->Id = _state->ResponseId();
+                            message->Result = response;
+                            _parent._service->Submit(_state->ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
+                        }
 
-                    Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
-                    if (message.IsValid()) {
-                        message->Id = _state->ResponseId();
-                        message->Result = response;
-                        _parent._service->Submit(_state->ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
+                        TRACE(Trace::Information, (_T("Batch completed, batchId=%u"), _state->BatchId()));
                     }
-
-                    TRACE(Trace::Information, (_T("State completed, batchId=%u"), _state->BatchId()));
                 }
             }
 
@@ -220,6 +262,7 @@ namespace Plugin {
             , _activeWebSocket(0)
             , _batchCounter(0)
             , _maxBatchSize(10)
+            , _timeout(Core::infinite)
         {
         }
 
@@ -250,6 +293,7 @@ namespace Plugin {
     private:
         void Process(uint32_t channelId, uint32_t responseId, const string& token, Core::JSON::ArrayType<Core::JSONRPC::Message>& messages);
         void SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage);
+        void SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId);
 
     private:
         friend class Job;
@@ -259,6 +303,7 @@ namespace Plugin {
         uint32_t _activeWebSocket;
         std::atomic<uint32_t> _batchCounter;
         uint16_t _maxBatchSize;
+        uint32_t _timeout;
     };
 }
 }

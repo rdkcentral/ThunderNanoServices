@@ -40,6 +40,9 @@ namespace Plugin {
         config.FromString(_service->ConfigLine());
 
         _maxBatchSize = config.StackSize.Value();
+        _timeout = config.TimeOut.Value();
+
+        TRACE(Trace::Information, (_T("Configuration loaded: maxBatchSize=%u, timeout=%u"), _maxBatchSize, _timeout));
 
         _dispatch = service->QueryInterfaceByCallsign<PluginHost::IDispatcher>("Controller");
 
@@ -119,11 +122,11 @@ namespace Plugin {
             } else if (messages.Length() == 0) {
                 result = Core::ERROR_BAD_REQUEST;
                 response = _T("Empty message array");
-                TRACE(Trace::Error, (_T("Empty message array received")));
+                TRACE(Trace::Warning, (_T("Empty message array received")));
             } else if (messages.Length() > _maxBatchSize) {
                 result = Core::ERROR_BAD_REQUEST;
                 response = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
-                TRACE(Trace::Error, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
+                TRACE(Trace::Warning, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
             } else {
                 result = ~0; // Keep channel open
                 Process(channelId, id, token, messages);
@@ -138,8 +141,8 @@ namespace Plugin {
         uint32_t batchId = ++_batchCounter;
         uint32_t messageCount = messages.Length();
 
-        TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, channelId=%u"), batchId, messageCount, channelId));
-        Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId);
+        TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, channelId=%u, timeout=%u"), batchId, messageCount, channelId, _timeout));
+        Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId, _timeout);
 
         uint32_t index = 0;
         Core::JSON::ArrayType<Core::JSONRPC::Message>::Iterator it = messages.Elements();
@@ -163,6 +166,12 @@ namespace Plugin {
             errorResponse->Error.Text = errorMessage;
             _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
         }
+    }
+
+    void JsonRpcMuxer::SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId)
+    {
+        TRACE(Trace::Error, (_T("Batch timeout, batchId=%u"), batchId));
+        SendErrorResponse(channelId, responseId, Core::ERROR_TIMEDOUT, _T("Batch processing timed out"));
     }
 
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const string& /* identifier */)
