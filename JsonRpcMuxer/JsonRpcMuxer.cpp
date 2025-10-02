@@ -65,11 +65,22 @@ namespace Plugin {
     bool JsonRpcMuxer::Attach(PluginHost::Channel& channel)
     {
         Web::ProtocolsArray protocols = channel.Protocols();
-        return (std::find(protocols.begin(), protocols.end(), string(_T("json"))) != protocols.end());
+        if (std::find(protocols.begin(), protocols.end(), string(_T("json"))) != protocols.end()) {
+            if (_activeWebSocket == 0) {
+                _activeWebSocket = channel.Id();
+                return true; // Accept first connection
+            }
+            // Reject - already have a connection
+            return false;
+        }
+        return false;
     }
 
     void JsonRpcMuxer::Detach(PluginHost::Channel& channel)
     {
+        if (_activeWebSocket == channel.Id()) {
+            _activeWebSocket = 0; // Clear when active connection disconnects
+        }
     }
 
     Core::hresult JsonRpcMuxer::Invoke(const uint32_t channelId, const uint32_t id, const string& token,
@@ -159,16 +170,18 @@ namespace Plugin {
 
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId, const Core::ProxyType<Core::JSON::IElement>& element)
     {
-        Core::ProxyType<Core::JSONRPC::Message> message(element);
+        if (_activeWebSocket == channelId) {
+            Core::ProxyType<Core::JSONRPC::Message> message(element);
 
-        if (message.IsValid()) {
-            Request request(channelId, message->Id.Value(), "");
-            Core::OptionalType<Core::JSON::Error> parseError;
+            if (message.IsValid()) {
+                Request request(channelId, message->Id.Value(), "");
+                Core::OptionalType<Core::JSON::Error> parseError;
 
-            if (request.FromString(message->Parameters.Value(), parseError) && request.Length() > 0) {
-                _processor.Add(std::move(request));
-            } else {
-                SendResponse(request, parseError.IsSet() ? parseError.Value().Message() : _T("Invalid batch"));
+                if (request.FromString(message->Parameters.Value(), parseError) && request.Length() > 0) {
+                    _processor.Add(std::move(request));
+                } else {
+                    SendResponse(request, parseError.IsSet() ? parseError.Value().Message() : _T("Invalid batch"));
+                }
             }
         }
 

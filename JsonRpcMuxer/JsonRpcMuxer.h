@@ -154,6 +154,7 @@ namespace Plugin {
             : _service(nullptr)
             , _dispatch(nullptr)
             , _processor(*this)
+            , _activeWebSocket(0)
         {
         }
         ~JsonRpcMuxer() override = default;
@@ -188,6 +189,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         PluginHost::IDispatcher* _dispatch;
         Processor _processor;
+        uint32_t _activeWebSocket;
     };
 
     uint32_t JsonRpcMuxer::Request::_sequenceId = 1;
