@@ -29,17 +29,29 @@ namespace Plugin {
 
     const string JsonRpcMuxer::Initialize(PluginHost::IShell* service)
     {
+        string result;
+
         ASSERT(service != nullptr);
 
         _service = service;
         _service->AddRef();
 
-        _dispatch = service->QueryInterfaceByCallsign<PluginHost::IDispatcher>("Controller");
-        ASSERT(_dispatch != nullptr);
-        _dispatch->AddRef();
+        Config config;
+        config.FromString(_service->ConfigLine());
 
-        TRACE(Trace::Information, (_T("Initialized successfully")));
-        return string();
+        _maxBatchSize = config.StackSize.Value();
+
+        _dispatch = service->QueryInterfaceByCallsign<PluginHost::IDispatcher>("Controller");
+
+        if (_dispatch == nullptr) {
+            TRACE(Trace::Error, (_T("Failed to acquire Controller dispatcher")));
+            result = _T("Failed to acquire Controller dispatcher");
+        } else {
+            _dispatch->AddRef();
+            TRACE(Trace::Information, (_T("Initialized successfully")));
+        }
+
+        return result;
     }
 
     void JsonRpcMuxer::Deinitialize(PluginHost::IShell* /*service*/)
@@ -70,9 +82,10 @@ namespace Plugin {
         if (std::find(protocols.begin(), protocols.end(), string(_T("json"))) != protocols.end()) {
             if (_activeWebSocket == 0) {
                 _activeWebSocket = channel.Id();
-                return true; // Accept first connection
+                TRACE(Trace::Information, (_T("WebSocket connected, channelId=%u"), channel.Id()));
+                return true;
             }
-            // Reject - already have a connection
+            TRACE(Trace::Warning, (_T("WebSocket rejected, already connected on channelId=%u"), _activeWebSocket));
             return false;
         }
         return false;
@@ -81,7 +94,8 @@ namespace Plugin {
     void JsonRpcMuxer::Detach(PluginHost::Channel& channel)
     {
         if (_activeWebSocket == channel.Id()) {
-            _activeWebSocket = 0; // Clear when active connection disconnects
+            TRACE(Trace::Information, (_T("WebSocket disconnected, channelId=%u"), channel.Id()));
+            _activeWebSocket = 0;
         }
     }
 
@@ -93,6 +107,7 @@ namespace Plugin {
         if (_dispatch == nullptr) {
             result = Core::ERROR_UNAVAILABLE;
             response = _T("Dispatch is offline");
+            TRACE(Trace::Error, (_T("Invoke failed: Dispatch unavailable")));
         } else {
             Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
             Core::OptionalType<Core::JSON::Error> parseError;
@@ -100,9 +115,15 @@ namespace Plugin {
             if (!messages.FromString(parameters, parseError) || parseError.IsSet()) {
                 result = Core::ERROR_PARSE_FAILURE;
                 response = parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array");
+                TRACE(Trace::Error, (_T("Parse failure: %s"), response.c_str()));
             } else if (messages.Length() == 0) {
                 result = Core::ERROR_BAD_REQUEST;
                 response = _T("Empty message array");
+                TRACE(Trace::Error, (_T("Empty message array received")));
+            } else if (messages.Length() > _maxBatchSize) {
+                result = Core::ERROR_BAD_REQUEST;
+                response = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
+                TRACE(Trace::Error, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
             } else {
                 result = ~0; // Keep channel open
                 Process(channelId, id, token, messages);
@@ -112,17 +133,12 @@ namespace Plugin {
         return result;
     }
 
-    void JsonRpcMuxer::Process(
-        uint32_t channelId,
-        uint32_t responseId,
-        const string& token,
-        Core::JSON::ArrayType<Core::JSONRPC::Message>& messages)
+    void JsonRpcMuxer::Process(uint32_t channelId, uint32_t responseId, const string& token, Core::JSON::ArrayType<Core::JSONRPC::Message>& messages)
     {
         uint32_t batchId = ++_batchCounter;
         uint32_t messageCount = messages.Length();
 
-        TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u"), batchId, messageCount));
-
+        TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, channelId=%u"), batchId, messageCount, channelId));
         Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId);
 
         uint32_t index = 0;
@@ -136,51 +152,51 @@ namespace Plugin {
         TRACE(Trace::Information, (_T("Batch queued to worker pool, batchId=%u, jobs=%u"), batchId, messageCount));
     }
 
+    void JsonRpcMuxer::SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage)
+    {
+        Core::ProxyType<Core::JSONRPC::Message> errorResponse(
+            PluginHost::IFactories::Instance().JSONRPC());
+
+        if (errorResponse.IsValid()) {
+            errorResponse->Id = responseId;
+            errorResponse->Error.SetError(errorCode);
+            errorResponse->Error.Text = errorMessage;
+            _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
+        }
+    }
+
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const string& /* identifier */)
     {
         return Core::ProxyType<Core::JSON::IElement>(PluginHost::IFactories::Instance().JSONRPC());
     }
 
-    Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId, const Core::ProxyType<Core::JSON::IElement>& element)
+    Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId,
+        const Core::ProxyType<Core::JSON::IElement>& element)
     {
         if (_activeWebSocket == channelId) {
             Core::ProxyType<Core::JSONRPC::Message> message(element);
-
             if (message.IsValid()) {
                 Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
                 Core::OptionalType<Core::JSON::Error> parseError;
 
                 if (!messages.FromString(message->Parameters.Value(), parseError)) {
                     TRACE(Trace::Error, (_T("WebSocket inbound parse failure on channelId=%u: %s"), channelId, parseError.IsSet() ? parseError.Value().Message().c_str() : _T("Unknown error")));
-
-                    // Send error response back to client
-                    Core::ProxyType<Core::JSONRPC::Message> errorResponse(PluginHost::IFactories::Instance().JSONRPC());
-                    
-                    if (errorResponse.IsValid()) {
-                        errorResponse->Id = message->Id.Value();
-                        errorResponse->Error.SetError(Core::ERROR_PARSE_FAILURE);
-                        errorResponse->Error.Text = parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array");
-                        _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
-                    }
+                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_PARSE_FAILURE, parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array"));
                 } else if (messages.Length() == 0) {
-                    TRACE(Trace::Error, (_T("WebSocket received empty message array on channelId=%u"), channelId));
-
-                    Core::ProxyType<Core::JSONRPC::Message> errorResponse(PluginHost::IFactories::Instance().JSONRPC());
-
-                    if (errorResponse.IsValid()) {
-                        errorResponse->Id = message->Id.Value();
-                        errorResponse->Error.SetError(Core::ERROR_BAD_REQUEST);
-                        errorResponse->Error.Text = _T("Empty message array");
-                        _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
-                    }
+                    TRACE(Trace::Warning, (_T("WebSocket received empty message array on channelId=%u"), channelId));
+                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_BAD_REQUEST, _T("Empty message array"));
+                } else if (messages.Length() > _maxBatchSize) {
+                    TRACE(Trace::Warning, (_T("WebSocket batch size %u exceeds maximum %u on channelId=%u"), messages.Length(), _maxBatchSize, channelId));
+                    string errorMsg = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
+                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_BAD_REQUEST, errorMsg);
                 } else {
                     Process(channelId, message->Id.Value(), "", messages);
                 }
             } else {
-                TRACE(Trace::Error, (_T("Invalid JSONRPC message received on channelId=%u"), channelId));
+                TRACE(Trace::Warning, (_T("Invalid JSONRPC message received on channelId=%u"), channelId));
             }
         } else {
-            TRACE(Trace::Error, (_T("Received message from inactive WebSocket, channelId=%u"), channelId));
+            TRACE(Trace::Warning, (_T("Received message from inactive WebSocket, channelId=%u"), channelId));
         }
 
         return Core::ProxyType<Core::JSON::IElement>();

@@ -16,13 +16,16 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , TimeOut(Core::infinite)
+                , StackSize(10)
             {
                 Add(_T("timeout"), &TimeOut);
+                Add(_T("stacksize"), &StackSize);
             }
             ~Config() override = default;
 
         public:
             Core::JSON::DecUInt32 TimeOut;
+            Core::JSON::DecUInt16 StackSize;
         };
 
         class Response : public Core::JSON::Container {
@@ -216,6 +219,7 @@ namespace Plugin {
             , _dispatch(nullptr)
             , _activeWebSocket(0)
             , _batchCounter(0)
+            , _maxBatchSize(10)
         {
         }
 
@@ -244,11 +248,8 @@ namespace Plugin {
         Core::ProxyType<Core::JSON::IElement> Inbound(const uint32_t ID, const Core::ProxyType<Core::JSON::IElement>& element) override;
 
     private:
-        void Process(
-            uint32_t channelId,
-            uint32_t responseId,
-            const string& token,
-            Core::JSON::ArrayType<Core::JSONRPC::Message>& messages);
+        void Process(uint32_t channelId, uint32_t responseId, const string& token, Core::JSON::ArrayType<Core::JSONRPC::Message>& messages);
+        void SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage);
 
     private:
         friend class Job;
@@ -257,6 +258,7 @@ namespace Plugin {
         PluginHost::IDispatcher* _dispatch;
         uint32_t _activeWebSocket;
         std::atomic<uint32_t> _batchCounter;
+        uint16_t _maxBatchSize;
     };
 }
 }
