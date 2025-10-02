@@ -7,6 +7,24 @@ namespace Thunder {
 namespace Plugin {
     class JsonRpcMuxer : public PluginHost::IPluginExtended, public PluginHost::JSONRPC, public PluginHost::IWebSocket {
     private:
+        class Config : public Core::JSON::Container {
+        public:
+            Config(Config&&) = delete;
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+            Config()
+                : Core::JSON::Container()
+                , TimeOut(Core::infinite)
+            {
+                Add(_T("timeout"), &TimeOut);
+            }
+            ~Config() override = default;
+
+        public:
+            Core::JSON::DecUInt32 TimeOut;
+        };
+
         class Response : public Core::JSON::Container {
         public:
             ~Response() override = default;
@@ -61,6 +79,7 @@ namespace Plugin {
                 , _responseId(responseId)
                 , _channelId(channelId)
                 , _token(token)
+                , _timestamp(Core::Time::Now().Ticks())
             {
             }
 
@@ -69,12 +88,20 @@ namespace Plugin {
             uint32_t ResponseId() const { return _responseId; }
             uint32_t ChannelId() const { return _channelId; }
             const string& Token() const { return _token; }
+            uint64_t Timestamp() const { return _timestamp; }
+
+            bool IsExpired(uint64_t timeoutMs) const
+            {
+                uint64_t elapsed = (Core::Time::Now().Ticks() - _timestamp) / Core::Time::TicksPerMillisecond;
+                return (elapsed > timeoutMs);
+            }
 
         private:
             uint32_t _tag;
             uint32_t _responseId;
             uint32_t _channelId;
             string _token;
+            uint64_t _timestamp;
         };
 
         class Processor : public Core::Thread {
@@ -90,6 +117,7 @@ namespace Plugin {
                 , _parent(parent)
                 , _adminLock()
                 , _queue()
+                , _timeoutMs(Core::infinite)
             {
             }
 
@@ -97,6 +125,11 @@ namespace Plugin {
             {
                 Core::Thread::Stop();
                 Core::Thread::Wait(Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
+            }
+
+            void SetTimeout(uint32_t timeoutMs)
+            {
+                _timeoutMs = timeoutMs;
             }
 
             uint32_t Add(Request&& request)
@@ -130,6 +163,27 @@ namespace Plugin {
                 while (!_queue.empty()) {
                     Request request(std::move(_queue.front()));
                     _queue.pop_front();
+
+                    // Check timeout before processing
+                    if (_timeoutMs != Core::infinite && request.IsExpired(_timeoutMs)) {
+                        _adminLock.Unlock();
+
+                        // Send timeout error
+                        Core::JSON::ArrayType<Response> errorArray;
+                        Response& error = errorArray.Add();
+                        error.Id = request.ResponseId();
+                        error.Error.SetError(Core::ERROR_TIMEDOUT);
+                        error.Error.Text = _T("Request timeout");
+
+                        string errorResponse;
+                        errorArray.ToString(errorResponse);
+                        _parent.SendResponse(request, errorResponse);
+
+                        _adminLock.Lock();
+                        continue; // Skip to next request
+                    }
+
+                    // Process normally
                     _adminLock.Unlock();
                     _parent.Process(request);
                     _adminLock.Lock();
@@ -143,6 +197,7 @@ namespace Plugin {
             JsonRpcMuxer& _parent;
             Core::CriticalSection _adminLock;
             std::deque<Request> _queue;
+            uint32_t _timeoutMs;
         };
 
     public:

@@ -31,6 +31,13 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
+        Config config;
+        config.FromString(service->ConfigLine());
+
+        if (config.TimeOut.IsSet()) {
+            _processor.SetTimeout(config.TimeOut.Value());
+        }
+
         _service = service;
         _service->AddRef();
 
