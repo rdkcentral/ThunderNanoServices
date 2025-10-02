@@ -20,7 +20,7 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_WebShell
+#define MODULE_NAME Plugin_JsonRpcMuxer
 #endif
 
 #include <plugins/plugins.h>
