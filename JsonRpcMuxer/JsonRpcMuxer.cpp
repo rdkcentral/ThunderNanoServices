@@ -143,17 +143,44 @@ namespace Plugin {
 
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId, const Core::ProxyType<Core::JSON::IElement>& element)
     {
-
         if (_activeWebSocket == channelId) {
             Core::ProxyType<Core::JSONRPC::Message> message(element);
+
             if (message.IsValid()) {
                 Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
                 Core::OptionalType<Core::JSON::Error> parseError;
 
-                if (messages.FromString(message->Parameters.Value(), parseError) && messages.Length() > 0) {
+                if (!messages.FromString(message->Parameters.Value(), parseError)) {
+                    TRACE(Trace::Error, (_T("WebSocket inbound parse failure on channelId=%u: %s"), channelId, parseError.IsSet() ? parseError.Value().Message().c_str() : _T("Unknown error")));
+
+                    // Send error response back to client
+                    Core::ProxyType<Core::JSONRPC::Message> errorResponse(PluginHost::IFactories::Instance().JSONRPC());
+                    
+                    if (errorResponse.IsValid()) {
+                        errorResponse->Id = message->Id.Value();
+                        errorResponse->Error.SetError(Core::ERROR_PARSE_FAILURE);
+                        errorResponse->Error.Text = parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array");
+                        _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
+                    }
+                } else if (messages.Length() == 0) {
+                    TRACE(Trace::Error, (_T("WebSocket received empty message array on channelId=%u"), channelId));
+
+                    Core::ProxyType<Core::JSONRPC::Message> errorResponse(PluginHost::IFactories::Instance().JSONRPC());
+
+                    if (errorResponse.IsValid()) {
+                        errorResponse->Id = message->Id.Value();
+                        errorResponse->Error.SetError(Core::ERROR_BAD_REQUEST);
+                        errorResponse->Error.Text = _T("Empty message array");
+                        _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
+                    }
+                } else {
                     Process(channelId, message->Id.Value(), "", messages);
                 }
+            } else {
+                TRACE(Trace::Error, (_T("Invalid JSONRPC message received on channelId=%u"), channelId));
             }
+        } else {
+            TRACE(Trace::Error, (_T("Received message from inactive WebSocket, channelId=%u"), channelId));
         }
 
         return Core::ProxyType<Core::JSON::IElement>();
