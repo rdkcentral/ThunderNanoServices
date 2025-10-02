@@ -31,13 +31,6 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
-        Config config;
-        config.FromString(service->ConfigLine());
-
-        if (config.TimeOut.IsSet()) {
-            _processor.SetTimeout(config.TimeOut.Value());
-        }
-
         _service = service;
         _service->AddRef();
 
@@ -45,13 +38,13 @@ namespace Plugin {
         ASSERT(_dispatch != nullptr);
         _dispatch->AddRef();
 
+        TRACE(Trace::Information, (_T("Initialized successfully")));
         return string();
     }
 
     void JsonRpcMuxer::Deinitialize(PluginHost::IShell* /*service*/)
     {
-        _processor.Stop();
-        _processor.Wait(Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
+        TRACE(Trace::Information, (_T("Deinitializing...")));
 
         if (_dispatch != nullptr) {
             _dispatch->Release();
@@ -62,6 +55,8 @@ namespace Plugin {
             _service->Release();
             _service = nullptr;
         }
+
+        TRACE(Trace::Information, (_T("Deinitialized")));
     }
 
     string JsonRpcMuxer::Information() const
@@ -99,75 +94,46 @@ namespace Plugin {
             result = Core::ERROR_UNAVAILABLE;
             response = _T("Dispatch is offline");
         } else {
-            Request request(channelId, id, token);
+            Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
             Core::OptionalType<Core::JSON::Error> parseError;
 
-            if (!request.FromString(parameters, parseError) || parseError.IsSet()) {
+            if (!messages.FromString(parameters, parseError) || parseError.IsSet()) {
                 result = Core::ERROR_PARSE_FAILURE;
                 response = parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array");
-            } else if (request.Length() == 0) {
+            } else if (messages.Length() == 0) {
                 result = Core::ERROR_BAD_REQUEST;
                 response = _T("Empty message array");
             } else {
-                result = ~0; // Keep channel open while processing
-                _processor.Add(std::move(request));
+                result = ~0; // Keep channel open
+                Process(channelId, id, token, messages);
             }
         }
 
         return result;
     }
 
-    uint32_t JsonRpcMuxer::Process(const Request& request)
+    void JsonRpcMuxer::Process(
+        uint32_t channelId,
+        uint32_t responseId,
+        const string& token,
+        Core::JSON::ArrayType<Core::JSONRPC::Message>& messages)
     {
-        Core::JSON::ArrayType<Core::JSONRPC::Message>::ConstIterator it = request.Elements();
-        Core::JSON::ArrayType<Response> responseArray;
+        uint32_t batchId = ++_batchCounter;
+        uint32_t messageCount = messages.Length();
+
+        TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u"), batchId, messageCount));
+
+        Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId);
+
+        uint32_t index = 0;
+        Core::JSON::ArrayType<Core::JSONRPC::Message>::Iterator it = messages.Elements();
 
         while (it.Next()) {
-            const Core::JSONRPC::Message& message = it.Current();
-            string output;
-
-            uint32_t invokeResult = _dispatch->Invoke(
-                request.ChannelId(),
-                message.Id.Value(),
-                request.Token(),
-                message.Designator.Value(),
-                message.Parameters.Value(),
-                output);
-
-            Response& responseMsg = responseArray.Add();
-            responseMsg.Id = message.Id.Value();
-
-            if (invokeResult == Core::ERROR_NONE) {
-                responseMsg.Result = output;
-            } else {
-                responseMsg.Error.SetError(invokeResult);
-                if (!output.empty()) {
-                    responseMsg.Error.Text = output;
-                }
-            }
+            Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(*this, token, it.Current(), state, index++);
+            Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
         }
 
-        string response;
-        responseArray.ToString(response);
-
-        return SendResponse(request, response);
-    }
-
-    uint32_t JsonRpcMuxer::SendResponse(const Request& request, const string& response)
-    {
-        if (response.empty()) {
-            return Core::ERROR_UNAVAILABLE;
-        }
-
-        Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
-        if (!message.IsValid()) {
-            return Core::ERROR_BAD_REQUEST;
-        }
-
-        message->Id = request.ResponseId();
-        message->Result = response;
-
-        return _service->Submit(request.ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
+        TRACE(Trace::Information, (_T("Batch queued to worker pool, batchId=%u, jobs=%u"), batchId, messageCount));
     }
 
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const string& /* identifier */)
@@ -177,17 +143,15 @@ namespace Plugin {
 
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId, const Core::ProxyType<Core::JSON::IElement>& element)
     {
+
         if (_activeWebSocket == channelId) {
             Core::ProxyType<Core::JSONRPC::Message> message(element);
-
             if (message.IsValid()) {
-                Request request(channelId, message->Id.Value(), "");
+                Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
                 Core::OptionalType<Core::JSON::Error> parseError;
 
-                if (request.FromString(message->Parameters.Value(), parseError) && request.Length() > 0) {
-                    _processor.Add(std::move(request));
-                } else {
-                    SendResponse(request, parseError.IsSet() ? parseError.Value().Message() : _T("Invalid batch"));
+                if (messages.FromString(message->Parameters.Value(), parseError) && messages.Length() > 0) {
+                    Process(channelId, message->Id.Value(), "", messages);
                 }
             }
         }

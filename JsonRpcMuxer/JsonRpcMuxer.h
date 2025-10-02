@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Module.h"
-#include <deque>
+#include <atomic>
 
 namespace Thunder {
 namespace Plugin {
@@ -68,136 +68,142 @@ namespace Plugin {
             Core::JSONRPC::Message::Info Error;
         };
 
-        class Request : public Core::JSON::ArrayType<Core::JSONRPC::Message> {
-            static uint32_t _sequenceId;
-
+        class Job : public Core::IDispatch {
         public:
-            Request() = delete;
-            Request(const uint32_t channelId, const uint32_t responseId, const string& token)
-                : Core::JSON::ArrayType<Core::JSONRPC::Message>()
-                , _tag(Core::InterlockedIncrement(_sequenceId))
-                , _responseId(responseId)
-                , _channelId(channelId)
-                , _token(token)
-                , _timestamp(Core::Time::Now().Ticks())
-            {
-            }
+            class State {
+            public:
+                State() = delete;
+                State(State&&) = delete;
+                State(const State&) = delete;
+                State& operator=(const State&) = delete;
 
-        public:
-            uint32_t BatchId() const { return _tag; }
-            uint32_t ResponseId() const { return _responseId; }
-            uint32_t ChannelId() const { return _channelId; }
-            const string& Token() const { return _token; }
-            uint64_t Timestamp() const { return _timestamp; }
-
-            bool IsExpired(uint64_t timeoutMs) const
-            {
-                uint64_t elapsed = (Core::Time::Now().Ticks() - _timestamp) / Core::Time::TicksPerMillisecond;
-                return (elapsed > timeoutMs);
-            }
-
-        private:
-            uint32_t _tag;
-            uint32_t _responseId;
-            uint32_t _channelId;
-            string _token;
-            uint64_t _timestamp;
-        };
-
-        class Processor : public Core::Thread {
-        public:
-            Processor() = delete;
-            Processor(Processor&&) = delete;
-            Processor(const Processor&) = delete;
-            Processor& operator=(Processor&&) = delete;
-            Processor& operator=(const Processor&) = delete;
-
-            Processor(JsonRpcMuxer& parent)
-                : Core::Thread()
-                , _parent(parent)
-                , _adminLock()
-                , _queue()
-                , _timeoutMs(Core::infinite)
-            {
-            }
-
-            virtual ~Processor()
-            {
-                Core::Thread::Stop();
-                Core::Thread::Wait(Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
-            }
-
-            void SetTimeout(uint32_t timeoutMs)
-            {
-                _timeoutMs = timeoutMs;
-            }
-
-            uint32_t Add(Request&& request)
-            {
-                uint32_t tag = request.BatchId();
-                _adminLock.Lock();
-                _queue.push_back(std::move(request));
-                _adminLock.Unlock();
-                Run();
-                return tag;
-            }
-
-            void Remove(uint32_t tag)
-            {
-                _adminLock.Lock();
-                _queue.erase(
-                    std::remove_if(_queue.begin(), _queue.end(),
-                        [tag](const Request& request) {
-                            return request.BatchId() == tag;
-                        }),
-                    _queue.end());
-                _adminLock.Unlock();
-            }
-
-        private:
-            uint32_t Worker() override
-            {
-                Core::Thread::Block();
-                _adminLock.Lock();
-
-                while (!_queue.empty()) {
-                    Request request(std::move(_queue.front()));
-                    _queue.pop_front();
-
-                    // Check timeout before processing
-                    if (_timeoutMs != Core::infinite && request.IsExpired(_timeoutMs)) {
-                        _adminLock.Unlock();
-
-                        // Send timeout error
-                        Core::JSON::ArrayType<Response> errorArray;
-                        Response& error = errorArray.Add();
-                        error.Id = request.ResponseId();
-                        error.Error.SetError(Core::ERROR_TIMEDOUT);
-                        error.Error.Text = _T("Request timeout");
-
-                        string errorResponse;
-                        errorArray.ToString(errorResponse);
-                        _parent.SendResponse(request, errorResponse);
-
-                        _adminLock.Lock();
-                        continue; // Skip to next request
+                State(uint32_t count, uint32_t channelId, uint32_t responseId, uint32_t batchId)
+                    : _responseLock()
+                    , _responseArray()
+                    , _pendingCount(count)
+                    , _channelId(channelId)
+                    , _responseId(responseId)
+                    , _batchId(batchId)
+                {
+                    // Pre-allocate responses
+                    for (uint32_t i = 0; i < count; i++) {
+                        _responseArray.Add();
                     }
-
-                    // Process normally
-                    _adminLock.Unlock();
-                    _parent.Process(request);
-                    _adminLock.Lock();
                 }
 
-                _adminLock.Unlock();
-                return Core::infinite;
+                ~State() = default;
+
+                uint32_t ChannelId() const
+                {
+                    return _channelId;
+                }
+
+                uint32_t ResponseId() const
+                {
+                    return _responseId;
+                }
+
+                uint32_t BatchId() const
+                {
+                    return _batchId;
+                }
+
+                Response& Acquire(const uint16_t index)
+                {
+                    ASSERT(index < _responseArray.Elements().Count());
+                    _responseLock.Lock();
+                    return _responseArray[index];
+                }
+
+                bool ReleaseAndCheckComplete()
+                {
+                    _responseLock.Unlock();
+                    return (--_pendingCount == 0);
+                }
+
+                string ToString()
+                {
+                    string response;
+                    _responseArray.ToString(response);
+
+                    return response;
+                }
+
+            private:
+                Core::CriticalSection _responseLock;
+                Core::JSON::ArrayType<Response> _responseArray;
+                std::atomic<uint32_t> _pendingCount;
+                uint32_t _channelId;
+                uint32_t _responseId;
+                uint32_t _batchId;
+            };
+
+            Job() = delete;
+            Job(Job&&) = delete;
+            Job(const Job&) = delete;
+            Job& operator=(const Job&) = delete;
+
+            Job(JsonRpcMuxer& parent, const string& token, const Core::JSONRPC::Message& message, Core::ProxyType<State>& state, uint32_t index)
+                : _parent(parent)
+                , _token(token)
+                , _message(message)
+                , _state(state)
+                , _index(index)
+            {
             }
+
+            void Dispatch() override
+            {
+                string output;
+
+                TRACE(Trace::Information, (_T("Process %d:%d"), _state->ChannelId(), _message.Id.Value()));
+
+                uint32_t invokeResult = _parent._dispatch->Invoke(
+                    _state->ChannelId(),
+                    _message.Id.Value(),
+                    _token,
+                    _message.Designator.Value(),
+                    _message.Parameters.Value(),
+                    output);
+
+                // Update response (thread-safe)
+                Response& responseMsg = _state->Acquire(_index);
+
+                responseMsg.Id = _message.Id.Value();
+
+                if (invokeResult == Core::ERROR_NONE) {
+                    responseMsg.Result = output;
+                } else {
+                    responseMsg.Error.SetError(invokeResult);
+
+                    if (!output.empty()) {
+                        responseMsg.Error.Text = output;
+                    }
+                }
+
+                if (_state->ReleaseAndCheckComplete()) {
+
+                    string response = _state->ToString();
+
+                    Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
+                    if (message.IsValid()) {
+                        message->Id = _state->ResponseId();
+                        message->Result = response;
+                        _parent._service->Submit(_state->ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
+                    }
+
+                    TRACE(Trace::Information, (_T("State completed, batchId=%u"), _state->BatchId()));
+                }
+            }
+
+            ~Job() override = default;
 
         private:
             JsonRpcMuxer& _parent;
-            Core::CriticalSection _adminLock;
-            std::deque<Request> _queue;
-            uint32_t _timeoutMs;
+            string _token;
+            Core::JSONRPC::Message _message;
+            Core::ProxyType<State> _state;
+            uint32_t _index;
         };
 
     public:
@@ -208,10 +214,11 @@ namespace Plugin {
         JsonRpcMuxer()
             : _service(nullptr)
             , _dispatch(nullptr)
-            , _processor(*this)
             , _activeWebSocket(0)
+            , _batchCounter(0)
         {
         }
+
         ~JsonRpcMuxer() override = default;
 
         BEGIN_INTERFACE_MAP(JsonRpcMuxer)
@@ -237,16 +244,19 @@ namespace Plugin {
         Core::ProxyType<Core::JSON::IElement> Inbound(const uint32_t ID, const Core::ProxyType<Core::JSON::IElement>& element) override;
 
     private:
-        uint32_t Process(const Request& request);
-        uint32_t SendResponse(const Request& request, const string& response);
+        void Process(
+            uint32_t channelId,
+            uint32_t responseId,
+            const string& token,
+            Core::JSON::ArrayType<Core::JSONRPC::Message>& messages);
 
     private:
+        friend class Job;
+
         PluginHost::IShell* _service;
         PluginHost::IDispatcher* _dispatch;
-        Processor _processor;
         uint32_t _activeWebSocket;
+        std::atomic<uint32_t> _batchCounter;
     };
-
-    uint32_t JsonRpcMuxer::Request::_sequenceId = 1;
 }
 }
