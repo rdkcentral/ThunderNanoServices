@@ -120,21 +120,15 @@ namespace Plugin {
                 result = Core::ERROR_PARSE_FAILURE;
                 response = parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array");
                 TRACE(Trace::Error, (_T("Parse failure: %s"), response.c_str()));
-            } else if (messages.Length() == 0) {
-                result = Core::ERROR_BAD_REQUEST;
-                response = _T("Empty message array");
-                TRACE(Trace::Warning, (_T("Empty message array received")));
-            } else if (messages.Length() > _maxBatchSize) {
-                result = Core::ERROR_BAD_REQUEST;
-                response = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
-                TRACE(Trace::Warning, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
-            } else if (TryClaimBatchSlot() == false) {
-                result = Core::ERROR_UNAVAILABLE;
-                response = _T("Too many concurrent batches, try again later");
-                TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatches.load(), _maxBatches));
             } else {
-                result = ~0; // Keep channel open
-                Process(channelId, id, token, messages);
+                uint32_t validationResult = ValidateBatch(messages, response);
+
+                if (validationResult != Core::ERROR_NONE) {
+                    result = validationResult;
+                } else {
+                    result = ~0; // Keep channel open
+                    Process(channelId, id, token, messages);
+                }
             }
         }
 
@@ -197,6 +191,32 @@ namespace Plugin {
         return true;
     }
 
+    uint32_t JsonRpcMuxer::ValidateBatch(const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, string& errorMessage)
+    {
+        // Empty batch check
+        if (messages.Length() == 0) {
+            errorMessage = _T("Empty message array");
+            TRACE(Trace::Warning, (_T("Empty message array received")));
+            return Core::ERROR_BAD_REQUEST;
+        }
+
+        // Size limit check
+        if (messages.Length() > _maxBatchSize) {
+            errorMessage = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
+            TRACE(Trace::Warning, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
+            return Core::ERROR_BAD_REQUEST;
+        }
+
+        // Concurrency limit check
+        if (!TryClaimBatchSlot()) {
+            errorMessage = _T("Too many concurrent batches, try again later");
+            TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatches.load(), _maxBatches));
+            return Core::ERROR_UNAVAILABLE;
+        }
+
+        return Core::ERROR_NONE;
+    }
+
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId,
         const Core::ProxyType<Core::JSON::IElement>& element)
     {
@@ -209,18 +229,15 @@ namespace Plugin {
                 if (!messages.FromString(message->Parameters.Value(), parseError)) {
                     TRACE(Trace::Error, (_T("WebSocket inbound parse failure on channelId=%u: %s"), channelId, parseError.IsSet() ? parseError.Value().Message().c_str() : _T("Unknown error")));
                     SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_PARSE_FAILURE, parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array"));
-                } else if (messages.Length() == 0) {
-                    TRACE(Trace::Warning, (_T("WebSocket received empty message array on channelId=%u"), channelId));
-                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_BAD_REQUEST, _T("Empty message array"));
-                } else if (messages.Length() > _maxBatchSize) {
-                    TRACE(Trace::Warning, (_T("WebSocket batch size %u exceeds maximum %u on channelId=%u"), messages.Length(), _maxBatchSize, channelId));
-                    string errorMsg = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
-                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_BAD_REQUEST, errorMsg);
-                } else if (TryClaimBatchSlot() == false) {
-                    TRACE(Trace::Warning, (_T("WebSocket rejected, activeBatches=%u, maxBatches=%u, channelId=%u"), _activeBatches.load(), _maxBatches, channelId));
-                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_UNAVAILABLE, _T("Too many concurrent batches, try again later"));
                 } else {
-                    Process(channelId, message->Id.Value(), "", messages);
+                    string errorMsg;
+                    uint32_t validationResult = ValidateBatch(messages, errorMsg);
+
+                    if (validationResult != Core::ERROR_NONE) {
+                        SendErrorResponse(channelId, message->Id.Value(), validationResult, errorMsg);
+                    } else {
+                        Process(channelId, message->Id.Value(), "", messages);
+                    }
                 }
             } else {
                 TRACE(Trace::Warning, (_T("Invalid JSONRPC message received on channelId=%u"), channelId));

@@ -302,6 +302,7 @@ namespace Plugin {
         void SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage);
         void SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId);
         bool TryClaimBatchSlot();
+        uint32_t ValidateBatch(const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, string& errorMessage);
 
     private:
         friend class Job;
