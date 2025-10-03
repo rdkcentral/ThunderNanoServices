@@ -128,7 +128,7 @@ namespace Plugin {
                 result = Core::ERROR_BAD_REQUEST;
                 response = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
                 TRACE(Trace::Warning, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
-            } else if (_activeBatches >= _maxBatches) {
+            } else if (TryClaimBatchSlot() == false) {
                 result = Core::ERROR_UNAVAILABLE;
                 response = _T("Too many concurrent batches, try again later");
                 TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatches.load(), _maxBatches));
@@ -145,8 +145,6 @@ namespace Plugin {
     {
         uint32_t batchId = ++_batchCounter;
         uint32_t messageCount = messages.Length();
-
-        ++_activeBatches;
 
         TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, channelId=%u, timeout=%u"), batchId, messageCount, channelId, _timeout));
         Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId, _timeout);
@@ -186,6 +184,19 @@ namespace Plugin {
         return Core::ProxyType<Core::JSON::IElement>(PluginHost::IFactories::Instance().JSONRPC());
     }
 
+    bool JsonRpcMuxer::TryClaimBatchSlot()
+    {
+        uint8_t current = _activeBatches.fetch_add(1);
+
+        if (current >= _maxBatches) {
+            // Oops, we exceeded the limit, give it back
+            --_activeBatches;
+            return false;
+        }
+
+        return true;
+    }
+
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId,
         const Core::ProxyType<Core::JSON::IElement>& element)
     {
@@ -205,7 +216,7 @@ namespace Plugin {
                     TRACE(Trace::Warning, (_T("WebSocket batch size %u exceeds maximum %u on channelId=%u"), messages.Length(), _maxBatchSize, channelId));
                     string errorMsg = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
                     SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_BAD_REQUEST, errorMsg);
-                } else if (_activeBatches >= _maxBatches) {
+                } else if (TryClaimBatchSlot() == false) {
                     TRACE(Trace::Warning, (_T("WebSocket rejected, activeBatches=%u, maxBatches=%u, channelId=%u"), _activeBatches.load(), _maxBatches, channelId));
                     SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_UNAVAILABLE, _T("Too many concurrent batches, try again later"));
                 } else {
