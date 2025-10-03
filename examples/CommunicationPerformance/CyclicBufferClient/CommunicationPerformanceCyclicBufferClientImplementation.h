@@ -45,15 +45,53 @@ public:
     uint32_t Stop(uint32_t waitTime);
 
     // If bufferSize != bufferMaxSize then buffer may be partially filled
-    uint32_t ReceiveData(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration) const;
+    uint32_t Exchange(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration); 
 
 private:
 
+    class CustomCyclicBuffer : public Core::CyclicBuffer {
+    public :
+        CustomCyclicBuffer() = delete;
+        CustomCyclicBuffer(const CyclicBuffer&) = delete;
+        CustomCyclicBuffer& operator=(const CyclicBuffer&) = delete;
+
+        CustomCyclicBuffer(const string& fileName, const uint32_t mode, const uint32_t bufferSize, const bool overwrite);
+        CustomCyclicBuffer(Core::DataElementFile& buffer, const bool initiator, const uint32_t offset, const uint32_t bufferSize, const bool overwrite);
+        ~CustomCyclicBuffer() override;
+
+    private :
+        // Actually public but indicate desired use
+        void DataAvailable() override;
+    };
+
     const std::string _fileName;
 
-    mutable Core::CyclicBuffer _buffer;
+    mutable CustomCyclicBuffer _buffer;
 
     mutable Core::CriticalSection _lock;
+
+    class SimplePluginCyclicBufferClientImplementation;
+    using BatonConnectionType = typename SimplePluginImplementation<SimplePluginCyclicBufferClientImplementation>::Baton;
+
+    class BatonConnectedType : public BatonConnectionType {
+    public :
+
+        BatonConnectedType() = delete;
+
+        BatonConnectedType(const BatonConnectedType&) = delete;
+        BatonConnectedType(BatonConnectedType&&) = delete;
+
+        BatonConnectedType& operator=(const BatonConnectedType&) = delete;
+        BatonConnectedType& operator=(BatonConnectedType&&) = delete;
+
+        BatonConnectedType(const Core::NodeId& remoteNodeId);
+        ~BatonConnectedType() override;
+
+    private :
+    };
+
+    // Connecting node
+    BatonConnectedType _batonConnectingNode;
 
     uint32_t Open(uint32_t waitTime);
     uint32_t Close(uint32_t waitTime);

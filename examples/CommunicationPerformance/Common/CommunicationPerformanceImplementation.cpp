@@ -479,6 +479,164 @@ template<typename DISTRIBUTION>
 
 
 template <typename DERIVED>
+SimplePluginImplementation<DERIVED>::Baton::Baton(bool rawSocket, const Core::NodeId& localNodeId, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize)
+    : Core::SocketStream{ rawSocket, localNodeId, remoteNodeId, sendBufferSize, receiveBufferSize }
+    , _handover{ false /* blCondition */, true /* blManualReset */ }
+    , _send{ false }
+{}
+
+template <typename DERIVED>
+SimplePluginImplementation<DERIVED>::Baton::Baton(bool rawSocket, const SOCKET& localSocket, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize)
+    : Core::SocketStream{ rawSocket, localSocket, remoteNodeId, sendBufferSize, receiveBufferSize }
+    , _handover{ false /* blCondition */, true /* blManualReset */ }
+    , _send{ false }
+{}
+
+template <typename DERIVED>
+SimplePluginImplementation<DERIVED>::Baton::~Baton()
+{
+    /* uint32_t */ Close(Core::infinite);
+}
+
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::Baton::Signal(VARIABLE_IS_NOT_USED uint32_t waitTime)
+{
+    uint32_t result{ Core::ERROR_NONE };
+
+//            std::cout << __PRETTY_FUNCTION__ << " : pid = " << Core::ProcessInfo().Id() << " : IsOpen = " << IsOpen() << std::endl;
+
+    if (IsOpen() != false) {
+        /* void */ Trigger();
+    }
+
+    return result;
+}
+
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::Baton::Wait(uint32_t waitTime)
+{
+    uint32_t result{ Core::ERROR_NONE };
+
+//            std::cout << __PRETTY_FUNCTION__ << " : pid = " << Core::ProcessInfo().Id() << " : IsOpen = " << IsOpen() << std::endl;
+
+// TODO: loop on ETIMEDOUT? 
+    if ((result = _handover.Lock(waitTime)) != Core::ERROR_NONE) {
+        // Error / timedout
+    }
+
+    return result;
+}
+
+template <typename DERIVED>
+uint32_t SimplePluginImplementation<DERIVED>::Baton::Open(uint32_t waitTime)
+{
+    uint32_t result = Core::ERROR_GENERAL; 
+
+    if ((result = Core::SocketStream::Open(waitTime)) == Core::ERROR_NONE) {
+        /* bool */ NoDelay();
+    }
+
+    return result;
+}
+
+template <typename DERIVED>
+bool SimplePluginImplementation<DERIVED>::Baton::NoDelay() const
+{
+    SOCKET socket = static_cast<SOCKET>(Descriptor());
+
+    uint8_t optVal{ 0 }; // 0 - disable, 1 - enable (non-zero)
+
+    if ( socket != -1
+        && (LocalNode().Type() & (Core::NodeId::TYPE_IPV4 | Core::NodeId::TYPE_IPV6)) == (Core::NodeId::TYPE_IPV4 | Core::NodeId::TYPE_IPV6)
+       ) {
+        socklen_t optLen { static_cast<socklen_t>(sizeof(optVal)) };
+
+        optVal = 1;
+
+        optVal =    ::setsockopt(socket, IPPROTO_TCP /* TCP level */, TCP_NODELAY /* optname */ , &optVal /* optval */, optLen /* optlen */) == 0
+                 && ::getsockopt(socket, IPPROTO_TCP /* TCP level */, TCP_NODELAY /* optname */ ,  &optVal /* optval */, &optLen /* optlen */) == 0
+                ;
+    }
+
+    return optVal != 0;
+}
+
+template <typename DERIVED>
+uint16_t SimplePluginImplementation<DERIVED>::Baton::SendData(uint8_t* dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxSendSize)
+{
+    using common_t = std::common_type<std::size_t, uint16_t>::type;
+
+    static_assert(static_cast<common_t>(sizeof(pid_t)) <= static_cast<common_t>(std::numeric_limits<uint16_t>::max()), "");
+
+    constexpr uint16_t length{ sizeof(pid_t) / sizeof(uint8_t) };
+
+    // Do not exceed maxSendSize
+
+    ASSERT(length <= maxSendSize);
+
+    const pid_t pid { Core::ProcessInfo().Id() };
+
+    /* void* */ memcpy(dataFrame, &pid, length);
+
+    // Marker, might be identical to a 'byte' in dataFrame with in range of index 0 - (lenght - 1)
+    dataFrame[length] = 0x0;
+
+    // Enable to take a 'lock'
+    /* void */ _handover.ResetEvent();
+
+    // Skip every second call
+    _send = !_send;
+
+    return _send ? length + 1 : 0;
+}
+
+template <typename DERIVED>
+uint16_t SimplePluginImplementation<DERIVED>::Baton::ReceiveData(uint8_t* dataFrame, const uint16_t maxReceiveSize)
+{
+    using common_t = std::common_type<std::size_t, uint16_t>::type;
+
+    static_assert(static_cast<common_t>(sizeof(pid_t)) <= static_cast<common_t>(std::numeric_limits<uint16_t>::max()), "");
+
+    constexpr uint16_t length{ sizeof(pid_t) / sizeof(uint8_t) };
+
+    // A minimum size is expected
+    ASSERT(maxReceiveSize >= length);
+
+    pid_t pid { 0 };
+
+    std::cout << __PRETTY_FUNCTION__ << " : maxReceiveSize = " << maxReceiveSize << std::endl;
+
+    /* void* */ memcpy(&pid, dataFrame, length);
+
+    // Marker
+//TODO: sliding window?
+    ASSERT(dataFrame[length] == 0x0);
+
+    // The 'lock' should have been enabled
+//            ASSERT(_handover.IsSet() != false);
+
+    if (Core::ProcessInfo().Id() != pid) {
+        // Release any taken 'lock'
+        /* void */ _handover.SetEvent();
+    }
+
+    return length + 1;
+}
+
+template <typename DERIVED>
+void SimplePluginImplementation<DERIVED>::Baton::StateChange()
+{
+// TODO: example, IsListening, IsOpen, IsClosed, IsConnecting, IsSuspended, IsForcedClosing, HasError
+
+    switch (State())
+    {
+        case Core::SocketPort::READ :;
+        default                     :;
+    };
+} 
+
+
+template <typename DERIVED>
 SimplePluginImplementation<DERIVED>::SimplePluginImplementation()
     : Exchange::ISimplePlugin{}
     , _lock{}

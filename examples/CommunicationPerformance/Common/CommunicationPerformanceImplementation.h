@@ -198,6 +198,49 @@ public :
 
     ~SimplePluginImplementation() override;
 
+    class Baton : public Core::SocketStream {
+    public :
+        Baton() = delete;
+        Baton(const Baton&) = delete;
+        Baton(Baton&&) = delete;
+
+        Baton& operator=(const Baton&) = delete;
+        Baton& operator=(Baton&&) = delete;
+
+        Baton(bool rawSocket, const Core::NodeId& localNodeId, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize);
+        Baton(bool rawSocket, const SOCKET& localSocket, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize);
+        ~Baton();
+
+        uint32_t Signal(VARIABLE_IS_NOT_USED uint32_t waitTime);
+        uint32_t Wait(uint32_t waitTime);
+
+        uint32_t Open(uint32_t waitTime);
+
+    private :
+
+        bool NoDelay() const;
+
+        // Core::SocketStream methods
+        // --------------------------
+
+        // Illustrate intended use despite being public in the base
+
+        // Called if data has to be sent
+        // Use Trigger() to create the event 
+        uint16_t SendData(uint8_t* dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxSendSize) override;
+
+        // Called if data is received
+        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t maxReceiveSize) override;
+
+        void StateChange() override;
+
+        Core::Event _handover;
+
+        // Stops 'SocketPorts::Write recursion
+        bool _send;
+    };
+
+
     // ISimplePlugin interface methods
     // -------------------------------
 

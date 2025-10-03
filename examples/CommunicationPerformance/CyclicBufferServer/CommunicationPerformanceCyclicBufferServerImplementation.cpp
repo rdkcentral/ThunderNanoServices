@@ -28,9 +28,10 @@ namespace Plugin {
 template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CyclicBufferServer(const std::string& fileName)
     : _fileName{ fileName }
-// TODO : +1 see CyclicBuffer for reason
-    , _buffer{ _fileName, ACCESSMODE | Core::File::CREATE | Core::File::SHAREABLE /* required for multiple processes to share data */, FILESIZE /* server controls size */ , OVERWRITE }
+    , _buffer{ _fileName, ACCESSMODE | Core::File::CREATE | Core::File::USER_WRITE | Core::File::SHAREABLE /* required for multiple processes to share data */, FILESIZE /* server controls size */ , OVERWRITE }
     , _lock{}
+    // Listening node
+    , _batonListeningNode{ Core::NodeId{ std::string{ _fileName + "Baton", Core::NodeId::TYPE_DOMAIN }.c_str() } }
 {}
 
 template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
@@ -44,12 +45,7 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Start(uint32_t wai
 {
     uint32_t result = Core::ERROR_GENERAL;
 
-    if (_buffer.IsValid() != true) {
-        result = Open(waitTime);
-    } else {
-        // Already a valid buffer present
-        result = Core::ERROR_NONE;
-    }
+    result = Open(waitTime);
 
     return result;
 }
@@ -59,7 +55,13 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t wait
 {
     uint32_t result = Core::ERROR_GENERAL;
 
+// _batonListeningNode.Close(waitTime);
+
     if (_buffer.IsValid() != false) {
+        _buffer.Alert();
+
+        _buffer.Flush();
+
         result = Close(waitTime);
     } else {
         // No valid buffer present
@@ -69,30 +71,79 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t wait
 }
 
 template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::SendData(const uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration) const
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration)
 {
     ASSERT(bufferSize <= bufferMaxSize);
 
     uint32_t result = Core::ERROR_GENERAL;
 
+    constexpr bool dataPresent{ false };
+
+    // Testing value
+//    duration = Core::infinite;
+
+// TODO: narrowing conversion
+    uint32_t waitTime{ static_cast<uint32_t>(duration) };
+
     if (_buffer.IsValid() != false) {
+        auto it = _batonListeningNode.Clients();
+
         Core::StopWatch timer;
 
         /* uint64_t */ timer.Reset();
 
-        // Buffer writers should make a reservation for space before 'Write(...)' to avoid data corruption
-        if ((result = _buffer.Lock()) == Core::ERROR_NONE) {
+        if ((result = _buffer.Lock(dataPresent, duration)) == Core::ERROR_NONE) {
 
+            // Buffer writers should make a reservation for space before 'Write(...)' to avoid data corruption
             if (   _buffer.Free() >= bufferSize
                 && _buffer.Reserve(bufferSize) == bufferSize
             ) {
                 bufferSize = _buffer.Write(buffer, bufferSize);
-            }
 
-            result = _buffer.Unlock();
-        } else {
-            // The lock could not be obtained
-            ASSERT(false);
+                ASSERT(_buffer.Used() > 0);
+
+                // The 'client' can read
+
+                it.Reset();
+
+                result = _buffer.Unlock();
+
+                while (   it.Next() != false
+                       && result == Core::ERROR_NONE
+                       && (result = it.Client()->Signal(waitTime)) == Core::ERROR_NONE
+                ) {
+                    result = it.Client()->Wait(waitTime);
+                }
+
+                // The 'client' has written
+
+                if (   result == Core::ERROR_NONE
+                    && (result = _buffer.Lock(waitTime)) == Core::ERROR_NONE
+                ) {
+                    // The 'server' can read the written data 
+
+                    // The read size should match the write size
+                    int16_t bufferWriteSize = bufferSize;
+
+                    bufferSize = _buffer.Used();
+
+                    ASSERT(bufferSize <= bufferMaxSize);
+
+                    bufferSize =_buffer.Read(buffer, bufferSize, false /* partial read if true, eg insufficient data to fill the input buffer avaialble */);
+
+                    ASSERT(_buffer.Used() <= 0);
+
+                    // The read size should match the write size
+                    ASSERT(bufferWriteSize == bufferSize);
+
+                    result = _buffer.Unlock();
+                }
+
+                // Enforce start condition
+                _buffer.Flush();
+            } else {
+                result = _buffer.Unlock();
+            }
         }
 
         duration = timer.Elapsed();
@@ -100,40 +151,84 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::SendData(const uin
         duration = 0;
     }
 
+    ASSERT((result == Core::ERROR_NONE) || (result == Core::ERROR_TIMEDOUT));
+
     return result;
 }
 
 template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Open(VARIABLE_IS_NOT_USED uint32_t waitTime)
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Open(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
-    if (   _buffer.IsValid() != true
-        && _buffer.Open() != false
-        && _buffer.IsValid() != false
-       ) {
+    if (_buffer.IsValid() != true) {
+
+        if (   _buffer.Open() != false
+            && _buffer.IsValid() != false
+        ) {
+            result = Core::ERROR_NONE;
+        }
+
+    } else {
         result = Core::ERROR_NONE;
+    }
+
+    if (   result == Core::ERROR_NONE
+        && _buffer.IsValid() != false
+    ) {
+        result = _batonListeningNode.Open(waitTime);
     }
 
     return result;
 }
 
 template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Close(VARIABLE_IS_NOT_USED uint32_t waitTime)
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Close(uint32_t waitTime)
 {
-    uint32_t result = Core::ERROR_GENERAL;
+    uint32_t result = _batonListeningNode.Close(waitTime);
 
     if (_buffer.IsValid() != false) {
-// TODO: Wait for the users to signal they are no longer using the CyclicBuffer as the administrative section will become destroyed an inaccessible which make synchronisation primitives unreliable
         /* void */ _buffer.Close();
     }
 
-    if (_buffer.IsValid() != true) {
-        result = Core::ERROR_NONE;
+    if (   result == Core:: ERROR_NONE
+        && _buffer.IsValid() != false
+    ) {
+        result = Core::ERROR_GENERAL;
     }
 
     return result;
 }
+
+
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::CustomCyclicBuffer(const string& fileName, const uint32_t mode, const uint32_t bufferSize, const bool overwrite)
+    : CyclicBuffer(fileName, mode, bufferSize, overwrite)
+{}
+
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::CustomCyclicBuffer(Core::DataElementFile& buffer, const bool initiator, const uint32_t offset, const uint32_t bufferSize, const bool overwrite)
+    : CyclicBuffer(buffer, initiator, offset, bufferSize, overwrite)
+{}
+
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::~CustomCyclicBuffer()
+{}
+
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+void CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::DataAvailable()
+{}
+
+
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::BatonAcceptConnectionType::BatonAcceptConnectionType(const SOCKET localSocket, const Core::NodeId& remoteNodeId, Core::SocketServerType<BatonAcceptConnectionType>* server)
+    : BatonConnectionType( false, localSocket, remoteNodeId, 1024, 2024 )
+    , _server{ *server }
+{}
+
+template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::BatonAcceptConnectionType::~BatonAcceptConnectionType()
+{}
 
 
 SimplePluginCyclicBufferServerImplementation::SimplePluginCyclicBufferServerImplementation()
@@ -184,10 +279,12 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
                             // Educated guess, system dependent, required for distribution
-                            constexpr uint64_t upperBoundDuration = 250;
+                            constexpr uint64_t upperBoundDuration = 200;
 
-                            // Round trip time in ticks
-                            uint64_t duration = 0;
+                            // Initial value used as waitTime in Exchange()
+                            // Educated guess
+                            // Return value has the round trip time in ticks
+                            uint64_t duration = 1000;
 
                             // Add some randomness
 
@@ -199,8 +296,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
 
                             // This fails if the client is missing so it is not typically an error
                             if (   bufferSize > 0
-                                && _server.SendData(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE
-// TODO: distinghuish return values for partial and non-partial write
+                                && _server.Exchange(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE
                                 && bufferSize > 0
                             ) {
 

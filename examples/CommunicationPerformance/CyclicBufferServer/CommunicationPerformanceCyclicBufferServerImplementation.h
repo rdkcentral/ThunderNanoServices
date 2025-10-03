@@ -46,18 +46,59 @@ public :
 
     uint32_t Stop(uint32_t waitTime);
 
-    uint32_t SendData(const uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration) const;
+    uint32_t Exchange(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration); 
 
 private :
 
+    class CustomCyclicBuffer : public Core::CyclicBuffer {
+    public :
+        CustomCyclicBuffer() = delete;
+        CustomCyclicBuffer(const CyclicBuffer&) = delete;
+        CustomCyclicBuffer& operator=(const CyclicBuffer&) = delete;
+
+        CustomCyclicBuffer(const string& fileName, const uint32_t mode, const uint32_t bufferSize, const bool overwrite);
+        CustomCyclicBuffer(Core::DataElementFile& buffer, const bool initiator, const uint32_t offset, const uint32_t bufferSize, const bool overwrite);
+        ~CustomCyclicBuffer() override;
+
+    private :
+
+// Actually public but indicate not desired use
+        void DataAvailable() override;
+    };
+
+    class SimplePluginCyclicBufferServerImplementation;
+    using BatonConnectionType = typename SimplePluginImplementation<SimplePluginCyclicBufferServerImplementation>::Baton;
+
+    class BatonAcceptConnectionType : public BatonConnectionType {
+    public :
+        BatonAcceptConnectionType() = delete;
+
+        BatonAcceptConnectionType(const BatonAcceptConnectionType&) = delete;
+        BatonAcceptConnectionType(BatonAcceptConnectionType&&) = delete;
+
+        BatonAcceptConnectionType operator=(const BatonAcceptConnectionType&) = delete;
+        BatonAcceptConnectionType operator=(BatonAcceptConnectionType&&) = delete;
+
+        // Accepted node
+        BatonAcceptConnectionType(const SOCKET localSocket, const Core::NodeId& remoteNodeId, Core::SocketServerType<BatonAcceptConnectionType>* server);
+
+        ~BatonAcceptConnectionType() override;
+
+    private :
+
+        Core::SocketServerType<BatonAcceptConnectionType>& _server;
+    };
+
     const std::string _fileName;
 
-    mutable Core::CyclicBuffer _buffer;
+    mutable CustomCyclicBuffer _buffer;
 
     mutable Core::CriticalSection _lock;
 
-    uint32_t Open(uint32_t waitTime);
+    // Listening node
+    Core::SocketServerType<BatonAcceptConnectionType> _batonListeningNode;
 
+    uint32_t Open(uint32_t waitTime);
     uint32_t Close(uint32_t waitTime);
 };
 

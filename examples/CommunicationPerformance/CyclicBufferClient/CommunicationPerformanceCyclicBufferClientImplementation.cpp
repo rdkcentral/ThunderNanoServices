@@ -28,8 +28,9 @@ namespace Plugin {
 template <Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::CyclicBufferClient(const std::string& fileName)
     : _fileName{ fileName }
-    , _buffer{ _fileName, ACCESSMODE | Core::File::SHAREABLE /* required for multiple processes to share data */, 0 /* ineffective,  server controls size */ , false /* ineffective, server controls flag */ }
+    , _buffer{ _fileName, ACCESSMODE | Core::File::USER_WRITE | Core::File::SHAREABLE /* required for multiple processes to share data */, 0 /* ineffective,  server controls size */ , false /* ineffective, server controls flag */ }
     , _lock{}
+    , _batonConnectingNode{ Core::NodeId{ std::string{ _fileName + "Baton", Core::NodeId::TYPE_DOMAIN }.c_str() } }
 {}
 
 template <Core::File::Mode ACCESSMODE>
@@ -43,12 +44,7 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Start(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
-    if (_buffer.IsValid() != true) {
-        result = Open(waitTime);
-    } else {
-        // Already a valid buffer present
-        result = Core::ERROR_NONE;
-    }
+    result = Open(waitTime);
 
     return result;
 }
@@ -59,6 +55,10 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Stop(uint32_t waitTime)
     uint32_t result = Core::ERROR_GENERAL;
 
     if (_buffer.IsValid() != false) {
+        _buffer.Alert();
+
+        _buffer.Flush();
+
         result = Close(waitTime);
     } else {
         // No valid buffer present
@@ -68,66 +68,152 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Stop(uint32_t waitTime)
 }
 
 template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::ReceiveData(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration) const
+uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration)
 {
     ASSERT(bufferSize <= bufferMaxSize);
 
     uint32_t result = Core::ERROR_GENERAL;
+
+    constexpr bool dataPresent{ false };
+
+    // Testing value
+//    duration = Core::infinite;
+
+// TODO: narrowing conversion
+    uint32_t waitTime{ static_cast<uint32_t>(duration) };
 
     if (_buffer.IsValid() != false) {
         Core::StopWatch timer;
 
         /* uint64_t */ timer.Reset();
 
-        // Only full reads are considered when processing the data
-        if ((result = _buffer.Lock()) == Core::ERROR_NONE) {
-            bufferSize =_buffer.Read(buffer, bufferMaxSize, bufferSize != bufferMaxSize /* partial read if true, eg insufficient data to fill the input buffer avaialble */);
+        if (   (result = _batonConnectingNode.Wait(waitTime)) == Core::ERROR_NONE
+            && (result = _buffer.Lock(dataPresent, duration)) == Core::ERROR_NONE
+        ) {
+            // The 'client side' can read the written data 
 
-            result = _buffer.Unlock();
-        } else {
-            // The lock could not be obtained
-            ASSERT(false);
-        }
+            bufferSize = _buffer.Used();
 
-        duration = timer.Elapsed();
+            ASSERT(bufferSize <= bufferMaxSize);
+
+            bufferSize =_buffer.Read(buffer, bufferSize, false /* partial read if true, eg insufficient data to fill the input buffer avaialble */);
+
+            ASSERT(_buffer.Used() <= 0);
+
+            // The 'client side' can write data
+
+            // Buffer writers should make a reservation for space before 'Write(...)' to avoid data corruption
+            if (   _buffer.Free() >= bufferSize
+                && _buffer.Reserve(bufferSize) == bufferSize
+               ) {
+                // The written size should match the read size
+                uint16_t bufferReadSize = bufferSize;
+
+                bufferSize = _buffer.Write(buffer, bufferSize);
+
+                // The written size should match the read size
+
+                ASSERT(bufferReadSize == bufferSize);
+
+                ASSERT(_buffer.Used() > 0);
+
+                if ((result = _buffer.Unlock()) == Core::ERROR_NONE) {
+                    result = _batonConnectingNode.Signal(waitTime);
+                }
+            } else {
+                result = _buffer.Unlock();
+            }
+      }
+
+      duration = timer.Elapsed();
     } else {
         duration = 0;
     }
 
+    ASSERT((result == Core::ERROR_NONE) || (result == Core::ERROR_TIMEDOUT));
+
     return result;
+
 }
 
 template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Open(VARIABLE_IS_NOT_USED uint32_t waitTime)
+uint32_t CyclicBufferClient<ACCESSMODE>::Open(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
-    if (   _buffer.IsValid() != true
-        && _buffer.Open() != false
+    if (_buffer.IsValid() != true) {
+
+        if (   _buffer.Open() != false
+            && _buffer.IsValid() != false
+        ) {
+            result = Core::ERROR_NONE;
+        }
+
+    } else {
+        result = Core::ERROR_NONE;            
+    }
+        
+    if (   result == Core::ERROR_NONE
         && _buffer.IsValid() != false
-       ) {
-        result = Core::ERROR_NONE;
+        && _batonConnectingNode.IsOpen() != true
+    ) {
+        result = _batonConnectingNode.Open(waitTime);
     }
 
     return result;
 }
 
 template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Close(VARIABLE_IS_NOT_USED uint32_t waitTime)
+uint32_t CyclicBufferClient<ACCESSMODE>::Close(uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
-    if (_buffer.IsValid() != false) {
+    if (_batonConnectingNode.IsOpen() != false) {
+        result = _batonConnectingNode.Close(waitTime);
+    }
 
+    if (_buffer.IsValid() != false) {
         /* void */ _buffer.Close();
     }
 
-    if (_buffer.IsValid() != true) {
-        result = Core::ERROR_NONE;
+    if (    result == Core::ERROR_NONE
+        && _buffer.IsValid() != false
+    ) {
+        result = Core::ERROR_GENERAL;
     }
 
     return result;
 }
+
+
+template <Core::File::Mode ACCESSMODE>
+CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::CustomCyclicBuffer(const string& fileName, const uint32_t mode, const uint32_t bufferSize, const bool overwrite)
+    : CyclicBuffer(fileName, mode, bufferSize, overwrite)
+{}
+
+template <Core::File::Mode ACCESSMODE>
+CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::CustomCyclicBuffer(Core::DataElementFile& buffer, const bool initiator, const uint32_t offset, const uint32_t bufferSize, const bool overwrite)
+    : CyclicBuffer(buffer, initiator, offset, bufferSize, overwrite)
+{}
+
+template <Core::File::Mode ACCESSMODE>
+CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::~CustomCyclicBuffer()
+{}
+
+template <Core::File::Mode ACCESSMODE>
+void CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::DataAvailable()
+{}
+
+
+template <Core::File::Mode ACCESSMODE>
+CyclicBufferClient<ACCESSMODE>::BatonConnectedType::BatonConnectedType(const Core::NodeId& remoteNodeId)
+    // Use identical Type() of the remoteNodeId also locally
+    : BatonConnectionType(false, remoteNodeId.AnyInterface(), remoteNodeId, 1024, 1024)
+{}
+
+template <Core::File::Mode ACCESSMODE>
+CyclicBufferClient<ACCESSMODE>::BatonConnectedType::~BatonConnectedType()
+{}
 
 
 SimplePluginCyclicBufferClientImplementation::SimplePluginCyclicBufferClientImplementation()
@@ -171,43 +257,26 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
     case STATE::RUN     :   state = STATE::EXECUTE;
     case STATE::EXECUTE :   {
                             // Set to a low value for quick builds
-                            constexpr uint16_t bufferMaxSize = 8999;
-
-                            constexpr size_t numberOfBins = 20;
+                            constexpr uint16_t bufferMaxSize = 899;
 
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
-                            // Educated guess, system dependent, required for distribution
-                            constexpr uint64_t upperBoundDuration = 250;
+                            // Initial value used as waitTime in Exchange()
+                            // Educated guess
+                            // Return value has execution time in ticks
+                            uint64_t duration = 1000;
 
-                            // Round trip time in ticks
-                            uint64_t duration = 0;
-
-                            // Add some randomness
-
-                            using common_t = std::common_type<int, uint16_t>::type;
-                            uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
+                            uint16_t bufferSize = bufferMaxSize;
 
                             // With no mistakes this always holds
                             ASSERT(bufferSize <= bufferMaxSize);
 
                             // This fails if the client is missing so it is not typically an error
                             if (   bufferSize > 0
-                                && _client.ReceiveData(buffer.data(), bufferSize, bufferSize, duration) == Core::ERROR_NONE
+                                && _client.Exchange(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE
 // TODO: distinghuish return values for partial and non-partial read allowed
                                 && bufferSize > 0
                             ) {
-                                using measurements_t = Measurements<uint16_t, uint64_t>;
-                                using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration>;
-
-                                distribution_t& measurements = measurements_t::Instance<distribution_t>();
-
-                                // Do not continue if values cannot be inserted without error (remainder too large, numerical instability)
-                                if (/* data corruption
-                                    || */ measurements.Insert(std::pair<uint16_t, uint64_t>(bufferSize, duration)) != true
-                                ) {
-                                    state = STATE::STOP;
-                                }
                             }
                             }
                             break;
