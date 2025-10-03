@@ -16,16 +16,19 @@ namespace Plugin {
             Config()
                 : Core::JSON::Container()
                 , TimeOut(Core::infinite)
-                , StackSize(10)
+                , MaxBatchSize(10)
+                , MaxBatches(5)
             {
                 Add(_T("timeout"), &TimeOut);
-                Add(_T("stacksize"), &StackSize);
+                Add(_T("maxbatchsize"), &MaxBatchSize);
+                Add(_T("maxbatches"), &MaxBatches);
             }
             ~Config() override = default;
 
         public:
             Core::JSON::DecUInt32 TimeOut;
-            Core::JSON::DecUInt16 StackSize;
+            Core::JSON::DecUInt8 MaxBatchSize;
+            Core::JSON::DecUInt8 MaxBatches;
         };
 
         class Response : public Core::JSON::Container {
@@ -223,6 +226,8 @@ namespace Plugin {
                 }
 
                 if (_state->ReleaseAndCheckComplete()) {
+                    --_parent._activeBatches;
+
                     if (_state->IsTimedOut()) {
                         _parent.SendTimeoutResponse(_state->ChannelId(), _state->ResponseId(), _state->BatchId());
                     } else {
@@ -262,6 +267,8 @@ namespace Plugin {
             , _activeWebSocket(0)
             , _batchCounter(0)
             , _maxBatchSize(10)
+            , _activeBatches(0)
+            , _maxBatches(5)
             , _timeout(Core::infinite)
         {
         }
@@ -302,7 +309,9 @@ namespace Plugin {
         PluginHost::IDispatcher* _dispatch;
         uint32_t _activeWebSocket;
         std::atomic<uint32_t> _batchCounter;
-        uint16_t _maxBatchSize;
+        uint8_t _maxBatchSize;
+        std::atomic<uint8_t> _activeBatches;
+        uint8_t _maxBatches;
         uint32_t _timeout;
     };
 }

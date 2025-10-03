@@ -39,10 +39,11 @@ namespace Plugin {
         Config config;
         config.FromString(_service->ConfigLine());
 
-        _maxBatchSize = config.StackSize.Value();
+        _maxBatches = config.MaxBatches.Value();
+        _maxBatchSize = config.MaxBatchSize.Value();
         _timeout = config.TimeOut.Value();
 
-        TRACE(Trace::Information, (_T("Configuration loaded: maxBatchSize=%u, timeout=%u"), _maxBatchSize, _timeout));
+        TRACE(Trace::Information, (_T("Configuration loaded: maxBatches=%u, maxBatchSize=%u, timeout=%u"), _maxBatches, _maxBatchSize, _timeout));
 
         _dispatch = service->QueryInterfaceByCallsign<PluginHost::IDispatcher>("Controller");
 
@@ -127,6 +128,10 @@ namespace Plugin {
                 result = Core::ERROR_BAD_REQUEST;
                 response = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
                 TRACE(Trace::Warning, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
+            } else if (_activeBatches >= _maxBatches) {
+                result = Core::ERROR_UNAVAILABLE;
+                response = _T("Too many concurrent batches, try again later");
+                TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatches.load(), _maxBatches));
             } else {
                 result = ~0; // Keep channel open
                 Process(channelId, id, token, messages);
@@ -140,6 +145,8 @@ namespace Plugin {
     {
         uint32_t batchId = ++_batchCounter;
         uint32_t messageCount = messages.Length();
+
+        ++_activeBatches;
 
         TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, channelId=%u, timeout=%u"), batchId, messageCount, channelId, _timeout));
         Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId, _timeout);
@@ -198,6 +205,9 @@ namespace Plugin {
                     TRACE(Trace::Warning, (_T("WebSocket batch size %u exceeds maximum %u on channelId=%u"), messages.Length(), _maxBatchSize, channelId));
                     string errorMsg = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
                     SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_BAD_REQUEST, errorMsg);
+                } else if (_activeBatches >= _maxBatches) {
+                    TRACE(Trace::Warning, (_T("WebSocket rejected, activeBatches=%u, maxBatches=%u, channelId=%u"), _activeBatches.load(), _maxBatches, channelId));
+                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_UNAVAILABLE, _T("Too many concurrent batches, try again later"));
                 } else {
                     Process(channelId, message->Id.Value(), "", messages);
                 }
