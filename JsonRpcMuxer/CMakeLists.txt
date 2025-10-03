@@ -28,6 +28,9 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_JSONRPCMUXER_STARTMODE "Activated" CACHE STRING "Automatically start JsonRpcMuxer plugin")
+set(PLUGIN_JSONRPCMUXER_MAXBATCHES "" CACHE STRING "Maximum number of concurrent batches")
+set(PLUGIN_JSONRPCMUXER_MAXBATCHSIZE "" CACHE STRING "Maximum number of requests per batch")
+set(PLUGIN_JSONRPCMUXER_TIMEOUT "" CACHE STRING "Batch timeout in milliseconds (0 = infinite)")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})

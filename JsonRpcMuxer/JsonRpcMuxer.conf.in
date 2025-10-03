@@ -1,1 +1,7 @@
 startmode = "@PLUGIN_JSONRPCMUXER_STARTMODE@"
+
+configuration = JSON()
+
+configuration.add("timeout", "@PLUGIN_JSONRPCMUXER_TIMEOUT@")
+configuration.add("maxbatchsize", "@PLUGIN_JSONRPCMUXER_MAXBATCHSIZE@")
+configuration.add("maxbatches", "@PLUGIN_JSONRPCMUXER_MAXBATCHES@")
