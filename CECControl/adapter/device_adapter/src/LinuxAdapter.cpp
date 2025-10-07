@@ -24,7 +24,7 @@
 #include "Message.h"
 
 #include <linux/cec.h>
-
+#include <linux/version.h>
 
 using namespace Thunder;
 
@@ -136,7 +136,11 @@ namespace CEC {
                         if (Write(CEC_DQEVENT, &ev) == 0) {
                             if (ev.event == CEC_EVENT_STATE_CHANGE) {
                                 TRACE(Trace::Information, ("CEC_DQEVENT - CEC_EVENT_STATE_CHANGE - log_addr_mask=0x%04X phys_addr=0x%04X", ev.state_change.log_addr_mask, ev.state_change.phys_addr));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
                                 _parent.StateChange(ev.state_change.log_addr_mask, ev.state_change.phys_addr, (ev.state_change.have_conn_info > 0));
+#else
+                                _parent.StateChange(ev.state_change.log_addr_mask, ev.state_change.phys_addr, false);
+#endif
                             }
                         }
                     }
