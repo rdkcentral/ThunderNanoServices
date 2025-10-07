@@ -61,8 +61,7 @@ endif()
 if("${CEC_DEVICE_ADAPTER_IMPLEMENTATION}" STREQUAL "Amlogic")
     target_sources(${CEC_DEVICE_ADAPTER_LIBRARY_NAME}
         PRIVATE
-            src/AmlogicAdapter.cpp
-            src/LogicAddressClaimer.cpp)
+            src/AmlogicAdapter.cpp)
 
     target_link_libraries(${CEC_DEVICE_ADAPTER_LIBRARY_NAME}
         PUBLIC
