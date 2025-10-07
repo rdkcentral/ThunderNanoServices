@@ -30,7 +30,7 @@ int main(int /*argc*/, const char* argv[])
         // tracer.EnableMessage("CECProcessorTest", "Information", true);
         // tracer.EnableMessage("CECProcessorTest", "Error", true);
 
-        TRACE(Trace::Information, ("%s - build %s", argv[0], __TIMESTAMP__));
+        TRACE_GLOBAL(Trace::Information, ("%s - build %s", argv[0], __TIMESTAMP__));
 
         // these messages need to be awnsered with no feature abort.
         std::list<opcode_type> mms = {
@@ -56,7 +56,7 @@ int main(int /*argc*/, const char* argv[])
 
             Processor::Instance().Process(operation, broadcast);
 
-            TRACE(Trace::Information, ("OpCode 0x%02x [%d] %s. raw data: \'%s\'", *ci, broadcast ? "Broadcast" : "Addressed", (operation.OpCode() != FEATURE_ABORT) ? "OK" : "NOK", sdata.c_str()));
+            TRACE_GLOBAL(Trace::Information, ("OpCode 0x%02x [%d] %s. raw data: \'%s\'", *ci, broadcast ? "Broadcast" : "Addressed", (operation.OpCode() != FEATURE_ABORT) ? "OK" : "NOK", sdata.c_str()));
         }
 
         tracer.Close();

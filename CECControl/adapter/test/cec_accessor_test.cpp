@@ -458,7 +458,7 @@ int main(int argc, const char* argv[])
             tracer.EnableMessage("CECAccessorTest", "Information", true);
             tracer.EnableMessage("CECAccessorTest", "Error", true);
 
-            TRACE(Trace::Information, ("%s - build: %s", Core::FileNameOnly(argv[0]), __TIMESTAMP__));
+            TRACE_GLOBAL(Trace::Information, ("%s - build: %s", Core::FileNameOnly(argv[0]), __TIMESTAMP__));
 
             App app(filename);
 

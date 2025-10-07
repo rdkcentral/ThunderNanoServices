@@ -296,7 +296,7 @@ public:
 
     void ClaimedRoles(const uint8_t roles)
     {
-        TRACE(Trace::Information, ("Claimed roles 0x%02X", roles))
+        TRACE(Trace::Information, ("Claimed roles 0x%02X", roles));
     }
 
 private:
@@ -319,7 +319,7 @@ private:
         if ((length > 0) && (payload[0] != NO_OPCODE)) {
             switch (payload[0]) {
             case GET_CEC_VERSION: {
-                uint8_t parameters[] = { CEC_VERSION, CEC_VERSION_2_0 };
+                uint8_t parameters[] = { CEC_VERSION, VERSION_CEC_2_0 };
                 memcpy(&replyData, &parameters, sizeof(parameters));
                 relayLength = sizeof(parameters);
                 break;
@@ -357,7 +357,7 @@ private:
                 break;
             }
             case GIVE_FEATURES: {
-                uint8_t parameters[] = { REPORT_FEATURES, CEC_VERSION_2_0, 0x00, 0x00, 0x00 };
+                uint8_t parameters[] = { REPORT_FEATURES, VERSION_CEC_2_0, 0x00, 0x00, 0x00 };
                 memcpy(&replyData, &parameters, sizeof(parameters));
                 relayLength = sizeof(parameters);
                 break;
@@ -402,7 +402,7 @@ int main(int argc, const char* argv[])
         tracer.EnableMessage("CECAdapter", "Error", true);
         tracer.EnableMessage("CecDeviceAdapterTest", "Information", true);
 
-        TRACE(Trace::Information, ("%s - build: %s", Core::FileNameOnly(argv[0]), __TIMESTAMP__));
+        TRACE_GLOBAL(Trace::Information, ("%s - build: %s", Core::FileNameOnly(argv[0]), __TIMESTAMP__));
 
         App app(device);
         app.Run();
