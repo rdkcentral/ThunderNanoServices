@@ -30,6 +30,14 @@ namespace Compositor {
     namespace Backend {
         class Transaction {
         private:
+            static constexpr uint32_t DefaultDrmAtomicFlags = DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK;
+
+            // Convert integer pixel value to DRM 16.16 fixed-point format
+            static constexpr uint64_t ToFixedPoint16_16(uint32_t value)
+            {
+                return static_cast<uint64_t>(value) << 16;
+            }
+
             class Request {
             public:
                 Request() = delete;
@@ -47,12 +55,17 @@ namespace Compositor {
                     char* node = drmGetDeviceNameFromFd2(_fd);
                     ASSERT(node != nullptr);
 
-                    TRACE(Trace::Backend, ("New request for %s", node));
+                    if (node != nullptr) {
+                        TRACE(Trace::Backend, ("New request for %s", node));
+                        free(node);
+                    }
                 }
                 ~Request()
                 {
                     for (auto& blobId : _blobs) {
-                        drmModeDestroyPropertyBlob(_fd, blobId);
+                        if (drmModeDestroyPropertyBlob(_fd, blobId) != 0) {
+                            TRACE(Trace::Error, ("Failed to destroy blob %u: %s", blobId, strerror(errno)));
+                        }
                     }
 
                     if (_request != nullptr) {
@@ -154,7 +167,7 @@ namespace Compositor {
             Transaction& operator=(const Transaction&) = delete;
 
             Transaction(const int fd, const bool modeSet, void* userData)
-                : _flags(DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK)
+                : _flags(DefaultDrmAtomicFlags)
                 , _modeSet(modeSet)
                 , _request(fd)
                 , _userData(userData)
@@ -192,9 +205,12 @@ namespace Compositor {
                 _request.Property(connectorId, connector.Properties().Id(DRM::property::CrtcId), connector.IsEnabled() ? crtcId : 0);
 
                 if ((connector.IsEnabled()) && (_modeSet == true)) {
-                    const drmModeModeInfo* mode = connector.CrtController();
-                    _request.Blob(crtcId, connector.CrtController().Id(DRM::property::ModeId), reinterpret_cast<const void*>(mode), sizeof(drmModeModeInfo));
-                    Flags(Flags() | DRM_MODE_ATOMIC_ALLOW_MODESET);
+                    const drmModeModeInfo* mode = connector.SelectedMode();
+
+                    if (mode != nullptr) {
+                        _request.Blob(crtcId, connector.CrtController().Id(DRM::property::ModeId), reinterpret_cast<const void*>(mode), sizeof(drmModeModeInfo));
+                        Flags(Flags() | DRM_MODE_ATOMIC_ALLOW_MODESET);
+                    }
                 }
 
                 _request.Property(crtcId, connector.CrtController().Id(DRM::property::Active), connector.IsEnabled() ? 1 : 0);
@@ -213,8 +229,8 @@ namespace Compositor {
 
                     _request.Property(planeId, connector.Plane().Id(DRM::property::SrcX), 0);
                     _request.Property(planeId, connector.Plane().Id(DRM::property::SrcY), 0);
-                    _request.Property(planeId, connector.Plane().Id(DRM::property::SrcW), uint64_t(width << 16));
-                    _request.Property(planeId, connector.Plane().Id(DRM::property::SrcH), uint64_t(height << 16));
+                    _request.Property(planeId, connector.Plane().Id(DRM::property::SrcW), ToFixedPoint16_16(width));
+                    _request.Property(planeId, connector.Plane().Id(DRM::property::SrcH), ToFixedPoint16_16(height));
 
                     _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcX), x);
                     _request.Property(planeId, connector.Plane().Id(DRM::property::CrtcY), y);

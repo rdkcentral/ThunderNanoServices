@@ -25,6 +25,8 @@
 #include <xf86drmMode.h>
 #include <DRM.h>
 
+#include <CompositorUtils.h>
+
 #ifdef ENABLE_DUMP
 #include <png.h>
 #endif
@@ -160,7 +162,7 @@ namespace Thunder {
             GBM& operator=(const GBM&) = delete;
 
             GBM(const int drmFd, const uint32_t width, const uint32_t height, const PixelFormat& format)
-                : BaseClass(width, height, format.Type(), 0, Exchange::IGraphicsBuffer::TYPE_DMA)
+                : BaseClass(width, height, format.Type(), 0 /* will be set later*/ , Exchange::IGraphicsBuffer::TYPE_DMA)
                 , _device(nullptr)
                 , _bo(nullptr) {
                 ASSERT(drmFd != InvalidFileDescriptor);
@@ -171,6 +173,7 @@ namespace Thunder {
                     ASSERT(_device != nullptr);
 
                     if (_device != nullptr) {
+                        TRACE(Trace::Information, ("Try to create requested buffer  %dx%d, format: %s", width, height, Compositor::ToString(format).c_str()));
 
                         _bo = gbm_bo_create_with_modifiers(_device, width, height, format.Type(), format.Modifiers().data(), format.Modifiers().size());
 
@@ -188,6 +191,8 @@ namespace Thunder {
 
                         if (_bo != nullptr) {
                             uint8_t maxPlanes = gbm_bo_get_plane_count(_bo);
+ 
+                            BaseClass::Modifier(gbm_bo_get_modifier(_bo));
 
                             ASSERT (maxPlanes < /*PLANE_COUNT*/ 4);
 
@@ -250,7 +255,7 @@ namespace Thunder {
             const uint32_t height, 
             const PixelFormat& format)
         {
-            // ASSERT(drmAvailable() == 1);
+            ASSERT(format.IsValid() == true);
 
             Core::ProxyType<Exchange::IGraphicsBuffer> result;
 
