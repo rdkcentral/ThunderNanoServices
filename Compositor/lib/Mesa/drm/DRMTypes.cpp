@@ -164,8 +164,6 @@ namespace Thunder {
                     drmModeObjectPropertiesPtr properties = drmModeObjectGetProperties(_descriptor, _objectId, static_cast<uint32_t>(_objectType));
 
                     if (properties) {
-                        std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
-
                         for (uint32_t i = 0; i < properties->count_props; ++i) {
                             if (properties->props[i] == propId) {
                                 value = properties->prop_values[i];
@@ -184,10 +182,7 @@ namespace Thunder {
             drmModePropertyBlobPtr Properties::Blob(const property which) const
             {
                 drmModePropertyBlobPtr result(nullptr);
-
                 uint64_t blobId;
-                std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
-
                 if (Value(which, blobId) == true) {
                     result = drmModeGetPropertyBlob(_descriptor, static_cast<uint32_t>(blobId));
                 }
