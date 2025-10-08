@@ -74,6 +74,11 @@ class JsonRpcMuxerTester:
                 {"method": "Controller.1.version", "params": {}},
                 {"method": "Controller.1.buildinfo", "params": {}},
                 {"method": "Controller.1.status", "params": {}},
+                {"method": "Controller.1.links", "params": {}},
+                {"method": "Controller.1.environment@Controller", "params": {}},
+                {"method": "Controller.1.configuration@Controller", "params": {}},
+                {"method": "Controller.1.environment@JsonRpcMuxer", "params": {}},
+                {"method": "Controller.1.configuration@JsonRpcMuxer", "params": {}},
             ]
             method_data = methods[i % len(methods)]
             batch.append({
@@ -431,6 +436,60 @@ class JsonRpcMuxerTester:
             print_fail(f"Expected {timeouts} got results, {results}")
             self.failed += 1
     
+    def test_http_burst_batches(self, total_runs):
+        """Test multiple concurrent batches"""
+        print_test(f"WebSocket: Concurrent batches ({total_runs} runs × {self.config.max_batches} connections)")
+        
+        results = []
+        errors = []
+
+        for r in range(total_runs):
+            threads = []
+            trigger = threading.Event()
+
+            def send_batch(batch_id: int, run_id: int):
+                try:
+                    batch = self.create_batch(self.config.max_batch_size)
+                    payload = {
+                        "jsonrpc": "2.0",
+                        "id": 2000 + run_id * 100 + batch_id,
+                        "method": "JsonRpcMuxer.1.invoke",
+                        "params": batch
+                    }
+
+                    trigger.wait()
+
+                    response = requests.post(
+                        self.http_url,
+                        json=payload,
+                        timeout=self.config.timeout / 1000
+                    )
+
+                    results.append(response.json())
+
+                except Exception as e:
+                    errors.append(f"run={run_id} batch={batch_id}: {e}")
+
+            for i in range(self.config.max_batches):
+                t = threading.Thread(target=send_batch, args=(i, r))
+                threads.append(t)
+                t.start()
+
+            trigger.set()
+
+            for t in threads:
+                t.join()
+
+        if errors:
+            print_fail(f"Errors occurred: {errors}")
+            self.failed += 1
+        elif len(results) == total_runs * self.config.max_batches:
+            print_pass(f"All {len(results)} batches completed successfully")
+            self.passed += 1
+        else:
+            print_fail(f"Expected {total_runs * self.config.max_batches} results, got {len(results)}")
+            self.failed += 1
+
     def test_websocket_single_batch(self):
         """Test WebSocket interface with a single batch"""
         print_test("WebSocket: Single batch (4 requests)")
@@ -781,6 +840,7 @@ class JsonRpcMuxerTester:
         self.test_http_empty_batch()
         self.test_http_concurrent_batches()
         self.test_http_cancel_batches()
+        self.test_http_burst_batches(1000)
         
         # WebSocket tests
         print(f"\n{Colors.BOLD}=== WebSocket Tests ==={Colors.RESET}")
