@@ -52,7 +52,7 @@ namespace Plugin {
         END_INTERFACE_MAP
         
         // ITestTextOptions methods
-        Core::hresult TestStandart(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED, 
+        Core::hresult TestStandard(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED, 
         const QualityAssurance::ITestTextOptions::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
             TRACE(Trace::Information, (_T("firstTestParam: %d, secondTestParam: %d, thirdTestParam: %s %s, fourthTestParam: %s"), 
             firstTestParam, secondTestParam, thirdTestParam.testDetailsFirst.c_str(), thirdTestParam.testDetailsSecond.c_str(), Core::EnumerateType<QualityAssurance::ITestTextOptions::EnumTextOptions>(fourthTestParam).Data()));
