@@ -2,6 +2,7 @@
 
 #include "Module.h"
 #include <atomic>
+#include <map>
 
 namespace Thunder {
 namespace Plugin {
@@ -92,6 +93,7 @@ namespace Plugin {
                     , _batchId(batchId)
                     , _timeoutMs(timeoutMs)
                     , _startTime(Core::Time::Now().Ticks())
+                    , _cancelled(false)
                 {
                     // Pre-allocate responses
                     for (uint32_t i = 0; i < count; i++) {
@@ -155,6 +157,16 @@ namespace Plugin {
                     return _timeoutMs;
                 }
 
+                void Cancel()
+                {
+                    _cancelled.store(true);
+                }
+
+                bool IsCancelled() const
+                {
+                    return _cancelled.load();
+                }
+
             private:
                 Core::CriticalSection _responseLock;
                 Core::JSON::ArrayType<Response> _responseArray;
@@ -164,6 +176,7 @@ namespace Plugin {
                 uint32_t _batchId;
                 uint32_t _timeoutMs;
                 uint64_t _startTime;
+                std::atomic<bool> _cancelled;
             };
 
             Job() = delete;
@@ -171,7 +184,7 @@ namespace Plugin {
             Job(const Job&) = delete;
             Job& operator=(const Job&) = delete;
 
-            Job(JsonRpcMuxer& parent, const string& token, const Core::JSONRPC::Message& message, Core::ProxyType<State>& state, uint32_t index)
+            Job(Core::ProxyType<JsonRpcMuxer> parent, const string& token, const Core::JSONRPC::Message& message, Core::ProxyType<State>& state, uint32_t index)
                 : _parent(parent)
                 , _token(token)
                 , _message(message)
@@ -186,6 +199,34 @@ namespace Plugin {
 
                 TRACE(Trace::Information, (_T("Process %d:%d"), _state->ChannelId(), _message.Id.Value()));
 
+                if (_state->IsCancelled()) {
+                    TRACE(Trace::Warning, (_T("Job skipped, batch cancelled, batchId=%u, jobId=%d"), _state->BatchId(), _message.Id.Value()));
+
+                    Response& responseMsg = _state->Acquire(_index);
+                    responseMsg.Id = _message.Id.Value();
+                    responseMsg.Error.SetError(Core::ERROR_UNAVAILABLE);
+                    responseMsg.Error.Text = _T("Batch cancelled");
+
+                    if (_state->ReleaseAndCheckComplete()) {
+                        _parent->RemoveBatchFromRegistry(_state->BatchId());
+                    }
+                    return; // Don't process this job
+                }
+
+                if (_parent->_shuttingDown.load()) {
+                    TRACE(Trace::Warning, (_T("Job skipped, plugin shutting down, batchId=%u, jobId=%d"), _state->BatchId(), _message.Id.Value()));
+
+                    Response& responseMsg = _state->Acquire(_index);
+                    responseMsg.Id = _message.Id.Value();
+                    responseMsg.Error.SetError(Core::ERROR_UNAVAILABLE);
+                    responseMsg.Error.Text = _T("Plugin shutting down");
+
+                    if (_state->ReleaseAndCheckComplete()) {
+                        _parent->RemoveBatchFromRegistry(_state->BatchId());
+                    }
+                    return; // Don't process this job
+                }
+
                 if (_state->IsTimedOut()) {
                     TRACE(Trace::Warning, (_T("Job skipped due to timeout, batchId=%u, jobId=%d"), _state->BatchId(), _message.Id.Value()));
 
@@ -197,12 +238,13 @@ namespace Plugin {
 
                     // Check if we're the last one
                     if (_state->ReleaseAndCheckComplete()) {
-                        _parent.SendTimeoutResponse(_state->ChannelId(), _state->ResponseId(), _state->BatchId());
+                        _parent->RemoveBatchFromRegistry(_state->BatchId());
+                        _parent->SendTimeoutResponse(_state->ChannelId(), _state->ResponseId(), _state->BatchId());
                     }
                     return; // Don't process this job
                 }
 
-                uint32_t invokeResult = _parent._dispatch->Invoke(
+                uint32_t invokeResult = _parent->_dispatch->Invoke(
                     _state->ChannelId(),
                     _message.Id.Value(),
                     _token,
@@ -226,22 +268,27 @@ namespace Plugin {
                 }
 
                 if (_state->ReleaseAndCheckComplete()) {
-                    --_parent._activeBatches;
+                    _parent->RemoveBatchFromRegistry(_state->BatchId());
 
                     if (_state->IsTimedOut()) {
-                        _parent.SendTimeoutResponse(_state->ChannelId(), _state->ResponseId(), _state->BatchId());
+                        _parent->SendTimeoutResponse(_state->ChannelId(), _state->ResponseId(), _state->BatchId());
                     } else {
-                        // Normal response
-                        string response = _state->ToString();
+                        // Normal response - validate channel first
+                        if (_parent->IsChannelValid(_state->ChannelId())) {
+                            string response = _state->ToString();
 
-                        Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
-                        if (message.IsValid()) {
-                            message->Id = _state->ResponseId();
-                            message->Result = response;
-                            _parent._service->Submit(_state->ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
+                            Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
+                            if (message.IsValid()) {
+                                message->Id = _state->ResponseId();
+                                message->Result = response;
+
+                                _parent->SendResponse(_state->ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
+                            }
+
+                            TRACE(Trace::Information, (_T("Batch completed, batchId=%u"), _state->BatchId()));
+                        } else {
+                            TRACE(Trace::Warning, (_T("Batch completed but channel invalid, batchId=%u, channelId=%u"), _state->BatchId(), _state->ChannelId()));
                         }
-
-                        TRACE(Trace::Information, (_T("Batch completed, batchId=%u"), _state->BatchId()));
                     }
                 }
             }
@@ -249,7 +296,7 @@ namespace Plugin {
             ~Job() override = default;
 
         private:
-            JsonRpcMuxer& _parent;
+            Core::ProxyType<JsonRpcMuxer> _parent;
             string _token;
             Core::JSONRPC::Message _message;
             Core::ProxyType<State> _state;
@@ -270,6 +317,10 @@ namespace Plugin {
             , _activeBatches(0)
             , _maxBatches(5)
             , _timeout(Core::infinite)
+            , _shuttingDown(false)
+            , _batchesLock()
+            , _activeBatchStates()
+            , _batchCompletionEvent(false, true)
         {
         }
 
@@ -303,6 +354,12 @@ namespace Plugin {
         void SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId);
         bool TryClaimBatchSlot();
         uint32_t ValidateBatch(const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, string& errorMessage);
+        uint32_t WaitForBatchCompletion(const uint32_t maxWaitMs = 5000);
+        void RemoveBatchFromRegistry(uint32_t batchId);
+        void CancelBatchesForChannel(uint32_t channelId);
+        void CancelAllBatches();
+        bool IsChannelValid(uint32_t channelId) const;
+        uint32_t SendResponse(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response);
 
     private:
         friend class Job;
@@ -315,6 +372,10 @@ namespace Plugin {
         std::atomic<uint8_t> _activeBatches;
         uint8_t _maxBatches;
         uint32_t _timeout;
+        std::atomic<bool> _shuttingDown;
+        Core::CriticalSection _batchesLock;
+        std::map<uint32_t, Core::ProxyType<Job::State>> _activeBatchStates;
+        mutable Core::Event _batchCompletionEvent;
     };
 }
 }

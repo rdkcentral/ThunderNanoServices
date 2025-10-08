@@ -62,6 +62,16 @@ namespace Plugin {
     {
         TRACE(Trace::Information, (_T("Deinitializing...")));
 
+        // Signal shutdown and cancel all batches
+        _shuttingDown.store(true);
+        CancelAllBatches();
+
+        if (WaitForBatchCompletion() == Core::ERROR_TIMEDOUT) {
+            TRACE(Trace::Warning, (_T("Timed out waiting for batches to complete during shutdown")));
+        } else {
+            TRACE(Trace::Information, (_T("All batches completed successfully")));
+        }
+
         if (_dispatch != nullptr) {
             _dispatch->Release();
             _dispatch = nullptr;
@@ -99,6 +109,7 @@ namespace Plugin {
     {
         if (_activeWebSocket == channel.Id()) {
             TRACE(Trace::Information, (_T("WebSocket disconnected, channelId=%u"), channel.Id()));
+            CancelBatchesForChannel(channel.Id());
             _activeWebSocket = 0;
         }
     }
@@ -143,11 +154,15 @@ namespace Plugin {
         TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, channelId=%u, timeout=%u"), batchId, messageCount, channelId, _timeout));
         Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId, _timeout);
 
+        _batchesLock.Lock();
+        _activeBatchStates[batchId] = state;
+        _batchesLock.Unlock();
+
         uint32_t index = 0;
         Core::JSON::ArrayType<Core::JSONRPC::Message>::Iterator it = messages.Elements();
 
         while (it.Next()) {
-            Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(*this, token, it.Current(), state, index++);
+            Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(Core::ProxyType<JsonRpcMuxer>(*this, *this), token, it.Current(), state, index++);
             Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
         }
 
@@ -186,6 +201,81 @@ namespace Plugin {
             // Oops, we exceeded the limit, give it back
             --_activeBatches;
             return false;
+        }
+
+        return true;
+    }
+
+    uint32_t JsonRpcMuxer::SendResponse(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response)
+    {
+        uint32_t result = Core::ERROR_UNAVAILABLE;
+
+        if (_service) {
+            result = _service->Submit(Id, response);
+        }
+
+        return result;
+    }
+
+    uint32_t JsonRpcMuxer::WaitForBatchCompletion(const uint32_t maxWaitMs)
+    {
+        _batchesLock.Lock();
+        bool allDone = _activeBatchStates.empty();
+        _batchesLock.Unlock();
+
+        uint32_t waitResult = Core::ERROR_NONE;
+
+        if (!allDone) {
+            _batchCompletionEvent.ResetEvent();
+            waitResult = _batchCompletionEvent.Lock(maxWaitMs);
+        }
+
+        return waitResult;
+    }
+
+    void JsonRpcMuxer::RemoveBatchFromRegistry(uint32_t batchId)
+    {
+        _batchesLock.Lock();
+        _activeBatchStates.erase(batchId);
+        --_activeBatches;
+        bool allDone = _activeBatchStates.empty();
+        _batchesLock.Unlock();
+
+        if (allDone) {
+            _batchCompletionEvent.SetEvent();
+        }
+    }
+
+    void JsonRpcMuxer::CancelBatchesForChannel(uint32_t channelId)
+    {
+        _batchesLock.Lock();
+
+        for (auto& pair : _activeBatchStates) {
+            if (pair.second->ChannelId() == channelId) {
+                pair.second->Cancel();
+                TRACE(Trace::Information, (_T("Cancelled batch batchId=%u for channelId=%u"), pair.first, channelId));
+            }
+        }
+
+        _batchesLock.Unlock();
+    }
+
+    void JsonRpcMuxer::CancelAllBatches()
+    {
+        _batchesLock.Lock();
+
+        for (auto& pair : _activeBatchStates) {
+            pair.second->Cancel();
+            TRACE(Trace::Information, (_T("Cancelled batch batchId=%u"), pair.first));
+        }
+
+        _batchesLock.Unlock();
+    }
+
+    bool JsonRpcMuxer::IsChannelValid(uint32_t channelId) const
+    {
+        if (_activeWebSocket != 0) {
+            return (channelId == _activeWebSocket);
         }
 
         return true;

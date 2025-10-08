@@ -84,6 +84,71 @@ class JsonRpcMuxerTester:
             })
         return batch
     
+    def plugin_state(self, state, wait = 0):
+        time.sleep(wait)
+
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 405,
+                "method": "Controller.1.status@JsonRpcMuxer",
+            }
+            
+            response = requests.post(
+                self.http_url,
+                json=payload,
+                timeout=self.config.timeout / 1000
+            )
+
+            return (response.status_code == 200) and (response.json()["result"]["state"] == state)
+        except Exception as e:
+            return False
+
+
+    def activate_plugin(self):
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 405,
+                "method": "Controller.1.activate",
+                "params": {
+                    "callsign": "JsonRpcMuxer"
+                }
+            }
+            
+            response = requests.post(
+                self.http_url,
+                json=payload,
+                timeout=self.config.timeout / 1000
+            )
+
+            return (response.status_code == 200) and self.plugin_state("Activated", 0.5)
+        
+        except Exception as e:
+            return False
+
+    def deactivate_plugin(self):
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 404,
+                "method": "Controller.1.deactivate",
+                "params": {
+                    "callsign": "JsonRpcMuxer"
+                }
+            }
+            
+            response = requests.post(
+                self.http_url,
+                json=payload,
+                timeout=self.config.timeout / 1000
+            )
+
+            return (response.status_code == 200) and self.plugin_state("Deactivated", 0.5)
+
+        except Exception as e:
+            return False
+
     def test_http_single_batch(self):
         """Test HTTP interface with a single batch"""
         print_test("HTTP: Single batch (4 requests)")
@@ -297,6 +362,75 @@ class JsonRpcMuxerTester:
             print_fail(f"Expected 3 results, got {len(results)}")
             self.failed += 1
     
+    def test_http_cancel_batches(self):
+        """Test batch cancellation by plugin deactivation"""
+        print_test(f"HTTP: Batch cancellation by plugin deactivation while processing")
+        
+        results = []
+        errors = []
+        timeouts = []
+
+        def send_batch(batch_id: int):
+            try:
+                batch = self.create_batch(self.config.max_batch_size)
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 200 + batch_id,
+                    "method": "JsonRpcMuxer.1.invoke",
+                    "params": batch
+                }
+                
+                response = requests.post(
+                    self.http_url,
+                    json=payload,
+                    timeout=self.config.timeout / 1000
+                )
+
+                data = response.json()
+                
+                if "error" in data:
+                    if "Service is not active" in data["error"].get("message", ""):
+                        timeouts.append(batch_id)
+                    else:
+                        errors.append(f"Batch {batch_id}: Unexpected error: {data['error']}")
+
+            except requests.exceptions.Timeout:
+                timeouts.append(batch_id)
+            except Exception as e:
+                print_fail(f"Error Sending batch: {batch_id}")
+                errors.append(str(e))
+        
+        threads = []
+
+        # schedule plugin deactivation
+        deactivate = threading.Timer(0.0002, self.deactivate_plugin)
+        deactivate.start()
+
+        for i in range(self.config.max_batches):
+            t = threading.Thread(target=send_batch, args=(i,))
+            threads.append(t)
+            t.start()
+        
+        for t in threads:
+            t.join()
+        
+        time.sleep(0.5)
+        deactivate.cancel()
+
+        if self.activate_plugin() == False:
+            print_fail(f"Plugin not active")
+            self.activate_plugin()
+            self.failed += 1
+        elif errors:
+            print_fail(f"Errors occurred: {errors}")
+            self.failed += 1
+        elif timeouts:
+            print_pass(f"Received {timeouts} timeouts")
+            self.passed += 1
+        else:
+            print_fail(f"Expected {timeouts} got results, {results}")
+            self.failed += 1
+    
     def test_websocket_single_batch(self):
         """Test WebSocket interface with a single batch"""
         print_test("WebSocket: Single batch (4 requests)")
@@ -467,6 +601,83 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
+    def test_websocket_cancel_batches(self):
+        """Test that WebSocket cancels batches"""
+        print_test("WebSocket: Try to trigger batch cancellation")
+        
+        try:
+            ws = websocket.create_connection(
+                self.ws_url, 
+                timeout=self.config.timeout / 1000,
+                subprotocols=["json"]
+            )
+            
+            batch = self.create_batch(self.config.max_batch_size)
+            
+            message = {
+                "jsonrpc": "2.0",
+                "id": 302,
+                "params": batch
+            }
+           
+            ws.send(json.dumps(message))
+            ws.close()
+            
+            # plugin not crashed?
+            if self.plugin_state("Activated", 2.0):
+                print_pass(f"Plugin successfully survived a channel closure while processing")
+                self.passed += 1
+            else:
+                print_fail("restarting plugin... ")
+                self.activate_plugin()
+                self.failed += 1
+                
+        except Exception as e:
+            print_fail(f"Exception: {e}")
+            self.failed += 1
+
+    def test_websocket_disable_plugin(self):
+        """Test that WebSocket cancels batches by disabling the plugin mid-flight"""
+        print_test("WebSocket: Try to trigger batch cancellation by disabling the plugin mid-flight")
+        
+        try:
+            ws = websocket.create_connection(
+                self.ws_url, 
+                timeout=self.config.timeout / 1000,
+                subprotocols=["json"]
+            )
+            
+            batch = self.create_batch(self.config.max_batch_size)
+            
+            message = {
+                "jsonrpc": "2.0",
+                "id": 302,
+                "params": batch
+            }
+           
+            # schedule plugin deactivation
+            deactivate = threading.Timer(0.00002, self.deactivate_plugin)
+            deactivate.start()
+           
+            ws.send(json.dumps(message))
+            ws.close()
+
+            time.sleep(2.0)
+            deactivate.cancel()
+            
+            # plugin caused a crash?
+            if self.activate_plugin():
+                print_pass(f"Plugin successfully survived a mid-flight deactivation")
+                self.passed += 1
+            else:
+                print_fail("restarting plugin... ")
+                self.activate_plugin()
+                self.failed += 1
+            
+        except Exception as e:
+            print_fail(f"Exception: {e}")
+            self.failed += 1
+    
     def test_threadpool_overload(self):
         """Test system behavior under heavy concurrent load"""
         print_test(f"Threadpool overload: {self.config.max_batches + 3} concurrent batches")
@@ -569,6 +780,7 @@ class JsonRpcMuxerTester:
         self.test_http_exceeds_batch_size()
         self.test_http_empty_batch()
         self.test_http_concurrent_batches()
+        self.test_http_cancel_batches()
         
         # WebSocket tests
         print(f"\n{Colors.BOLD}=== WebSocket Tests ==={Colors.RESET}")
@@ -576,6 +788,8 @@ class JsonRpcMuxerTester:
         self.test_websocket_max_batch_size()
         self.test_websocket_exceeds_batch_size()
         self.test_websocket_multiple_connections()
+        self.test_websocket_cancel_batches()
+        self.test_websocket_disable_plugin()
         
         # Summary
         print(f"\n{Colors.BOLD}=== Test Summary ==={Colors.RESET}")
