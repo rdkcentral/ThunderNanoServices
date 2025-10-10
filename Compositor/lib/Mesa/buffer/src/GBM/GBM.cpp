@@ -57,14 +57,14 @@ namespace {
         }
 
         if (fmt == NULL) {
-            fprintf(stderr, "unsupported format %" PRIu32 "\n", formatIn);
+            TRACE_GLOBAL(Trace::Error, ("unsupported format %" PRIu32, formatIn));
             return;
         }
 
         FILE* filePointer = fopen(filename.c_str(), "wb");
 
         if (filePointer == NULL) {
-            fprintf(stderr, "failed to open output file\n");
+            TRACE_GLOBAL(Trace::Error, ("ailed to open output file"));
             return;
         }
 
