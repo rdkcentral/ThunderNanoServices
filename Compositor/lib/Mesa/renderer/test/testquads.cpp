@@ -191,9 +191,9 @@ int main(int argc, char* argv[])
         const std::map<std::string, std::vector<std::string>> modules = {
             { "CompositorRenderTest", { "" } },
             { "CompositorBuffer", { "Error", "Information" } },
-            { "CompositorBackend", { "Error", "Information" } },
+            { "CompositorBackend", { "Error" } },
             { "CompositorRenderer", { "Error", "Warning", "Information" } },
-            { "DRMCommon", { "Error", "Information" } }
+            { "DRMCommon", { "Error", "Warning", "Information" } }
         };
 
         for (const auto& module_entry : modules) {
