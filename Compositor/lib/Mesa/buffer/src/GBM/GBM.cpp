@@ -64,7 +64,7 @@ namespace {
         FILE* filePointer = fopen(filename.c_str(), "wb");
 
         if (filePointer == NULL) {
-            TRACE_GLOBAL(Trace::Error, ("ailed to open output file"));
+            TRACE_GLOBAL(Trace::Error, ("Failed to open output file"));
             return;
         }
 
