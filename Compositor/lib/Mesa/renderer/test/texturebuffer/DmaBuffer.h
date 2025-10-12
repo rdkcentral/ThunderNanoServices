@@ -133,7 +133,7 @@ namespace Compositor {
                 &_modifiers);
 
             if (!queried) {
-                printf("Failed to query EGL Image.\n");
+                TRACE(Trace::Error, ("Failed to query EGL Image"));
             }
 
             ASSERT(queried);
@@ -146,12 +146,12 @@ namespace Compositor {
                 &_offset);
 
             if (!exported) {
-                printf("Failed to export EGL Image to a DMA buffer.\n");
+                TRACE(Trace::Error, ("Failed to export EGL Image to a DMA buffer"));
             }
 
             ASSERT(exported);
 
-            printf("DMA buffer available on descriptor %d.\n", _id);
+            TRACE(Trace::Information, ("DMA buffer available on descriptor %d.", _id));
 
             glBindTexture(_target, 0);
         }

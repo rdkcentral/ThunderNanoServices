@@ -22,7 +22,6 @@ class BaseTest {
 
         virtual void Presented(const Compositor::IOutput* output, const uint64_t sequence, const uint64_t time) override
         {
-            std::cerr << "Presented!" << std::endl;
             _parent.HandleVSync(output, sequence, time);
         }
 

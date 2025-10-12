@@ -94,7 +94,7 @@ namespace Compositor {
                     ASSERT(_request != nullptr);
 
                     if (propertyId == DRM::InvalidIdentifier) {
-                        TRACE(Trace::Error, ("ObjectId[%u] property not found.", objectId));
+                        TRACE(Trace::Warning, ("ObjectId[%u] property not found.", objectId));
                     } else {
                         int presult(0);
 

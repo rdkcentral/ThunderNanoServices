@@ -419,14 +419,12 @@ namespace Compositor {
 
             uint16_t nPlanes(0);
 
-            // buffer->Lock();
-
             std::array<uint32_t, 4> handles = { 0, 0, 0, 0 };
             std::array<uint32_t, 4> pitches = { 0, 0, 0, 0 };
             std::array<uint32_t, 4> offsets = { 0, 0, 0, 0 };
-            std::array<uint64_t, 4> modifiers;
+            std::array<uint64_t, 4> modifiers = { 0, 0, 0, 0 };
 
-            modifiers.fill(buffer->Modifier());
+            uint64_t bufferModifier = buffer->Modifier();
 
             Exchange::IGraphicsBuffer::IIterator* planes = buffer->Acquire(Compositor::DefaultTimeoutMs);
             ASSERT(planes != nullptr);
@@ -435,50 +433,71 @@ namespace Compositor {
                 ASSERT(planes->IsValid() == true);
 
                 if (drmPrimeFDToHandle(cardFd, planes->Descriptor(), &handles[nPlanes]) != 0) {
-                    TRACE_GLOBAL(Trace::Error, ("Failed to acquirer drm handle from plane accessor"));
+                    TRACE_GLOBAL(Trace::Error, ("Failed to acquire drm handle from plane accessor"));
                     CloseDrmHandles(cardFd, handles);
-                    break;
+                    buffer->Relinquish();
+                    return 0;
                 }
 
                 pitches[nPlanes] = planes->Stride();
                 offsets[nPlanes] = planes->Offset();
+                modifiers[nPlanes] = bufferModifier;
 
                 ++nPlanes;
             }
 
             buffer->Relinquish();
 
+            TRACE_GLOBAL(Trace::Information, ("Attempting FB creation: %ux%u, format=0x%x, modifier=0x%" PRIX64 ", nPlanes=%u", 
+                                 buffer->Width(), buffer->Height(), buffer->Format(), buffer->Modifier(), nPlanes));
+
             if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
+                int ret = drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(),
+                    buffer->Format(), handles.data(), pitches.data(),
+                    offsets.data(), modifiers.data(), &framebufferId,
+                    DRM_MODE_FB_MODIFIERS);
 
-                if (drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), modifiers.data(), &framebufferId, DRM_MODE_FB_MODIFIERS) != 0) {
-                    TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer with modifiers"));
+                if (ret != 0) {
+                    TRACE_GLOBAL(Trace::Warning, ("Failed to allocate drm framebuffer with modifiers (error: %d, %s), falling back to drmModeAddFB2", ret, strerror(errno)));
+                    framebufferId = 0; // Reset in case it was partially set
+                } else {
+                    TRACE_GLOBAL(Trace::Information, ("Successfully created framebuffer with modifiers"));
+                    CloseDrmHandles(cardFd, handles);
+                    return framebufferId;
                 }
-            } else {
-                if (buffer->Modifier() != DRM_FORMAT_MOD_INVALID && buffer->Modifier() != DRM_FORMAT_MOD_LINEAR) {
-                    TRACE_GLOBAL(Trace::Error, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64, buffer->Modifier()));
-                    return 0;
-                }
+            }
 
-                int ret = drmModeAddFB2(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), &framebufferId, 0);
+            if (buffer->Modifier() != DRM_FORMAT_MOD_INVALID && buffer->Modifier() != DRM_FORMAT_MOD_LINEAR) {
+                TRACE_GLOBAL(Trace::Warning, ("Cannot import drm framebuffer with explicit modifier 0x%" PRIX64 " without modifier support, trying anyway", buffer->Modifier()));
+            }
 
-                if (ret != 0 && buffer->Format() == DRM_FORMAT_ARGB8888 /*&& nPlanes == 1*/ && offsets[0] == 0) {
-                    TRACE_GLOBAL(Trace::Error, ("Failed to allocate drm framebuffer (%s), falling back to old school drmModeAddFB", strerror(-ret)));
+            int ret = drmModeAddFB2(cardFd, buffer->Width(), buffer->Height(), buffer->Format(), handles.data(), pitches.data(), offsets.data(), &framebufferId, 0);
 
+            if (ret != 0) {
+                TRACE_GLOBAL(Trace::Warning, ("Failed to allocate drm framebuffer with drmModeAddFB2 (%s), trying legacy drmModeAddFB", strerror(-ret)));
+
+                // Last resort: old-school drmModeAddFB (only works for single-plane ARGB8888)
+                if (buffer->Format() == DRM_FORMAT_ARGB8888 && nPlanes == 1 && offsets[0] == 0) {
                     uint32_t depth = 32;
                     uint32_t bpp = 32;
 
                     if (drmModeAddFB(cardFd, buffer->Width(), buffer->Height(), depth, bpp, pitches[0], handles[0], &framebufferId) != 0) {
-                        TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer the old school way..."));
+                        TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer with legacy method"));
+                    } else {
+                        TRACE_GLOBAL(Trace::Information, ("Successfully created framebuffer with legacy method"));
                     }
-
-                } else if (ret != 0) {
-                    TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer..."));
+                } else {
+                    TRACE_GLOBAL(Trace::Error, ("Failed to allocate a drm framebuffer with all methods"));
                 }
+            } else {
+                TRACE_GLOBAL(Trace::Information, ("Successfully created framebuffer without modifiers"));
             }
 
             CloseDrmHandles(cardFd, handles);
 
-            TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
+            if (framebufferId > 0) {
+                TRACE_GLOBAL(Trace::Information, ("DRM framebuffer object %u allocated for buffer %p", framebufferId, buffer));
+            }
 
             return framebufferId;
         }
