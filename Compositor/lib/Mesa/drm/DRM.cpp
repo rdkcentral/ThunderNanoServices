@@ -448,8 +448,7 @@ namespace Compositor {
 
             buffer->Relinquish();
 
-            TRACE_GLOBAL(Trace::Information, ("Attempting FB creation: %ux%u, format=0x%x, modifier=0x%" PRIX64 ", nPlanes=%u", 
-                                 buffer->Width(), buffer->Height(), buffer->Format(), buffer->Modifier(), nPlanes));
+            TRACE_GLOBAL(Trace::Information, ("Attempting FB creation: %ux%u, format=0x%x, modifier=0x%" PRIX64 ", nPlanes=%u", buffer->Width(), buffer->Height(), buffer->Format(), buffer->Modifier(), nPlanes));
 
             if (modifierSupported && buffer->Modifier() != DRM_FORMAT_MOD_INVALID) {
                 int ret = drmModeAddFB2WithModifiers(cardFd, buffer->Width(), buffer->Height(),
@@ -698,7 +697,7 @@ namespace Compositor {
                 if (bestMode == nullptr) {
                     bestMode = &connector->modes[0];
                 }
-                TRACE_GLOBAL(Thunder::Trace::Information,
+                TRACE_GLOBAL(Trace::Information,
                     ("Using preferred mode: %ux%u@%uHz",
                         bestMode->hdisplay, bestMode->vdisplay, bestMode->vrefresh));
             }
@@ -720,7 +719,7 @@ namespace Compositor {
                 }
 
                 if (bestMode != nullptr) {
-                    TRACE_GLOBAL(Thunder::Trace::Information,
+                    TRACE_GLOBAL(Trace::Information,
                         ("Found exact resolution %ux%u, selected best refresh rate %uHz",
                             requestedWidth, requestedHeight, bestMode->vrefresh));
                 } else {
@@ -757,12 +756,12 @@ namespace Compositor {
 
                 if (exactMatch != nullptr) {
                     bestMode = exactMatch;
-                    TRACE_GLOBAL(Thunder::Trace::Information,
+                    TRACE_GLOBAL(Trace::Information,
                         ("Found exact match: %ux%u@%uHz",
                             requestedWidth, requestedHeight, targetRefreshHz));
                 } else if (resolutionMatch != nullptr) {
                     bestMode = resolutionMatch;
-                    TRACE_GLOBAL(Thunder::Trace::Information,
+                    TRACE_GLOBAL(Trace::Information,
                         ("Found resolution match %ux%u, closest refresh rate %uHz (requested %uHz)",
                             requestedWidth, requestedHeight, bestMode->vrefresh, targetRefreshHz));
                 } else {
@@ -817,7 +816,7 @@ namespace Compositor {
             return true;
         }
 
-        ConnectorScanResult ScanConnector(const int backendFd, Thunder::Compositor::DRM::Identifier targetConnectorId,
+        ConnectorScanResult ScanConnector(const int backendFd, DRM::Identifier targetConnectorId,
             const uint32_t requestedWidth, const uint32_t requestedHeight, const uint32_t requestedRefreshRate)
         {
             ConnectorScanResult result;
@@ -859,13 +858,6 @@ namespace Compositor {
                     goto cleanup;
                 }
 
-                // Find the encoder (a deprecated KMS object) for this connector
-                if (drmModeConnector->encoder_id == Thunder::Compositor::InvalidIdentifier) {
-                    TRACE_GLOBAL(Thunder::Trace::Error, ("No encoder for connector %u", targetConnectorId));
-                    drmModeFreeConnector(drmModeConnector);
-                    goto cleanup;
-                }
-
                 // Get a bitmask of CRTCs the connector is compatible with
                 uint32_t possibleCrtcs = drmModeConnectorGetPossibleCrtcs(backendFd, drmModeConnector);
                 if (possibleCrtcs == 0) {
@@ -874,71 +866,184 @@ namespace Compositor {
                     goto cleanup;
                 }
 
-                // Find the encoder for this connector
+                // Find or allocate an encoder for this connector
                 drmModeEncoderPtr encoder = nullptr;
-                for (uint8_t e = 0; e < drmModeResources->count_encoders; e++) {
-                    if (drmModeResources->encoders[e] == drmModeConnector->encoder_id) {
-                        encoder = drmModeGetEncoder(backendFd, drmModeResources->encoders[e]);
-                        break;
+                uint32_t selectedEncoderId = DRM::InvalidIdentifier;
+
+                // Strategy 1: If connector already has an encoder assigned, use it
+                if (drmModeConnector->encoder_id != DRM::InvalidIdentifier) {
+                    TRACE_GLOBAL(Trace::Information, ("Connector %u already has encoder %u assigned", targetConnectorId, drmModeConnector->encoder_id));
+
+                    for (uint8_t e = 0; e < drmModeResources->count_encoders; e++) {
+                        if (drmModeResources->encoders[e] == drmModeConnector->encoder_id) {
+                            encoder = drmModeGetEncoder(backendFd, drmModeResources->encoders[e]);
+                            if (encoder) {
+                                selectedEncoderId = encoder->encoder_id;
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                // Strategy 2: If no pre-assigned encoder, search connector's compatible encoders
+                // Priority: encoders already associated with a CRTC (warm state), then free encoders
+                if (!encoder && drmModeConnector->count_encoders > 0) {
+                    TRACE_GLOBAL(Trace::Information, ("No pre-assigned encoder, searching %d compatible encoders for connector %u", drmModeConnector->count_encoders, targetConnectorId));
+
+                    drmModeEncoderPtr candidateWithCrtc = nullptr;
+                    uint32_t candidateWithCrtcId = DRM::InvalidIdentifier;
+                    drmModeEncoderPtr candidateFree = nullptr;
+                    uint32_t candidateFreeId = DRM::InvalidIdentifier;
+
+                    // Search through connector's compatible encoders
+                    for (int e = 0; e < drmModeConnector->count_encoders; e++) {
+                        uint32_t encoderId = drmModeConnector->encoders[e];
+                        drmModeEncoderPtr candidate = drmModeGetEncoder(backendFd, encoderId);
+
+                        if (!candidate) {
+                            continue;
+                        }
+
+                        // Check if this encoder's possible_crtcs overlap with our possibleCrtcs
+                        if ((candidate->possible_crtcs & possibleCrtcs) == 0) {
+                            drmModeFreeEncoder(candidate);
+                            continue;
+                        }
+
+                        // Prefer encoder already associated with a CRTC (warm state)
+                        if (candidate->crtc_id != DRM::InvalidIdentifier) {
+                            if (!candidateWithCrtc) {
+                                candidateWithCrtc = candidate;
+                                candidateWithCrtcId = encoderId;
+                                TRACE_GLOBAL(Trace::Information, ("Found encoder %u with CRTC %u", encoderId, candidate->crtc_id));
+                            } else {
+                                drmModeFreeEncoder(candidate);
+                            }
+                        } else {
+                            // Free encoder as fallback
+                            if (!candidateFree) {
+                                candidateFree = candidate;
+                                candidateFreeId = encoderId;
+                                TRACE_GLOBAL(Trace::Information, ("Found free encoder %u", encoderId));
+                            } else {
+                                drmModeFreeEncoder(candidate);
+                            }
+                        }
+
+                        // If we found an encoder with CRTC, that's our preference
+                        if (candidateWithCrtc) {
+                            break;
+                        }
+                    }
+
+                    // Select: prefer encoder with CRTC, fallback to free encoder
+                    if (candidateWithCrtc) {
+                        encoder = candidateWithCrtc;
+                        selectedEncoderId = candidateWithCrtcId;
+                        if (candidateFree) {
+                            drmModeFreeEncoder(candidateFree);
+                        }
+                        TRACE_GLOBAL(Trace::Information, ("Selected encoder %u (has CRTC)", selectedEncoderId));
+                    } else if (candidateFree) {
+                        encoder = candidateFree;
+                        selectedEncoderId = candidateFreeId;
+                        TRACE_GLOBAL(Trace::Information, ("Selected encoder %u (free)", selectedEncoderId));
                     }
                 }
 
                 if (!encoder) {
-                    TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to get encoder for connector %u", drmModeConnector->connector_id));
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to find suitable encoder for connector %u", drmModeConnector->connector_id));
                     drmModeFreeConnector(drmModeConnector);
                     goto cleanup;
                 }
 
-                // Find the CRTC currently used by this connector
-                if (encoder->crtc_id == Thunder::Compositor::InvalidIdentifier) {
-                    TRACE_GLOBAL(Thunder::Trace::Error, ("Invalid encoder CRTC ID for connector %u", targetConnectorId));
+                // Handle CRTC selection
+                uint32_t selectedCrtcId = encoder->crtc_id;
+
+                // If encoder doesn't have a CRTC, allocate one from possibleCrtcs
+                if (selectedCrtcId == DRM::InvalidIdentifier) {
+                    TRACE_GLOBAL(Trace::Information, ("Encoder %u has no CRTC, allocating from possibleCrtcs bitmask 0x%04X", selectedEncoderId, possibleCrtcs));
+
+                    // Pick first available CRTC from possibleCrtcs bitmask
+                    for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
+                        if ((possibleCrtcs & (1 << c)) != 0) {
+                            selectedCrtcId = drmModeResources->crtcs[c];
+                            TRACE_GLOBAL(Trace::Information, ("Allocated CRTC %u (index %u) for encoder %u", selectedCrtcId, c, selectedEncoderId));
+                            break;
+                        }
+                    }
+
+                    if (selectedCrtcId == DRM::InvalidIdentifier) {
+                        TRACE_GLOBAL(Thunder::Trace::Error, ("Failed to allocate CRTC for encoder %u on connector %u", selectedEncoderId, targetConnectorId));
+                        drmModeFreeEncoder(encoder);
+                        drmModeFreeConnector(drmModeConnector);
+                        goto cleanup;
+                    }
+                }
+
+                TRACE_GLOBAL(Trace::Information, ("Looking for CRTC ID: %u", selectedCrtcId));
+
+                drmModeCrtcPtr crtc = drmModeGetCrtc(backendFd, selectedCrtcId);
+
+                if (!crtc || crtc->crtc_id == DRM::InvalidIdentifier) {
+                    TRACE_GLOBAL(Thunder::Trace::Error, ("Invalid CRTC for connector %u", drmModeConnector->connector_id));
+                    if (crtc) {
+                        drmModeFreeCrtc(crtc);
+                    }
                     drmModeFreeEncoder(encoder);
                     drmModeFreeConnector(drmModeConnector);
                     goto cleanup;
                 }
 
-                TRACE_GLOBAL(Thunder::Trace::Information, ("Start looking for crtc_id: %d", encoder->crtc_id));
+                /*
+                 * Find the primary plane compatible with this CRTC.
+                 * If already active, we can use the one displaying the current framebuffer.
+                 * Otherwise, search for a PRIMARY plane that supports this CRTC.
+                 */
+                drmModePlanePtr plane = nullptr;
 
-                drmModeCrtcPtr crtc = nullptr;
-
+                // First, find which index this CRTC is at
+                uint32_t crtcIndex = 0;
                 for (uint8_t c = 0; c < drmModeResources->count_crtcs; c++) {
-                    if (drmModeResources->crtcs[c] == encoder->crtc_id) {
-                        crtc = drmModeGetCrtc(backendFd, drmModeResources->crtcs[c]);
+                    if (drmModeResources->crtcs[c] == selectedCrtcId) {
+                        crtcIndex = c;
                         break;
                     }
                 }
 
-                if (!crtc || crtc->crtc_id == 0) {
-                    TRACE_GLOBAL(Thunder::Trace::Error, ("Invalid CRTC for connector %u", drmModeConnector->connector_id));
-                    if (crtc)
-                        drmModeFreeCrtc(crtc);
-                    drmModeFreeEncoder(encoder);
-                    drmModeFreeConnector(drmModeConnector);
-                    goto cleanup;
-                }
-
-                /*
-                 * On the banana pi, the following ASSERT fired but, although the documentation
-                 * suggests that buffer_id means disconnected, the screen was not disconnected
-                 * Hence why the ASSERT is, until further investigation, commented out !!!
-                 * ASSERT(crtc->buffer_id != 0);
-                 */
-
-                /*
-                 * The kernel doesn't directly tell us what it considers to be the
-                 * single primary plane for this CRTC (i.e. what would be updated
-                 * by drmModeSetCrtc), but if it's already active then we can cheat
-                 * by looking for something displaying the same framebuffer ID,
-                 * since that information is duplicated.
-                 */
-                drmModePlanePtr plane = nullptr;
                 for (uint8_t p = 0; p < drmModePlaneResources->count_planes; p++) {
                     plane = drmModeGetPlane(backendFd, drmModePlaneResources->planes[p]);
 
-                    TRACE_GLOBAL(Trace::Information, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB ID %" PRIu32, plane->plane_id, plane->crtc_id, plane->fb_id));
+                    if (!plane) {
+                        continue;
+                    }
 
-                    if ((plane->crtc_id == crtc->crtc_id) && (plane->fb_id == crtc->buffer_id)) {
+                    TRACE_GLOBAL(Trace::Information, ("[PLANE: %" PRIu32 "] CRTC ID %" PRIu32 ", FB ID %" PRIu32 ", possible_crtcs: 0x%04X", plane->plane_id, plane->crtc_id, plane->fb_id, plane->possible_crtcs));
+
+                    // Check if plane is compatible with our CRTC
+                    bool planeCanUseCrtc = (plane->possible_crtcs & (1 << crtcIndex)) != 0;
+
+                    if (!planeCanUseCrtc) {
+                        drmModeFreePlane(plane);
+                        plane = nullptr;
+                        continue;
+                    }
+
+                    // If already bound to this CRTC with a framebuffer, use it (warm state)
+                    if ((plane->crtc_id == crtc->crtc_id) && (crtc->buffer_id != 0) && (plane->fb_id == crtc->buffer_id)) {
+                        TRACE_GLOBAL(Trace::Information, ("Found plane %u already active on CRTC %u", plane->plane_id, selectedCrtcId));
                         break;
+                    }
+
+                    // Otherwise, look for a PRIMARY plane
+                    Properties planeProps(backendFd, DRM::object_type::Plane, plane->plane_id);
+                    uint64_t planeType = 0;
+
+                    if (planeProps.Value(DRM::property::Type, planeType)) {
+                        if (planeType == static_cast<uint64_t>(DRM::plane_type::Primary)) {
+                            TRACE_GLOBAL(Trace::Information, ("Found primary plane %u for CRTC %u", plane->plane_id, selectedCrtcId));
+                            break;
+                        }
                     }
 
                     drmModeFreePlane(plane);
@@ -953,25 +1058,29 @@ namespace Compositor {
                     goto cleanup;
                 }
 
-                // Calculate refresh rate for logging
-                uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
-
-                TRACE_GLOBAL(Trace::Information, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
-
                 // Store the IDs for later initialization
                 result.ids.crtcId = crtc->crtc_id;
                 result.ids.planeId = plane->plane_id;
                 result.success = true;
 
-                // Check if we need to change modes
-                result.needsModeSet = !ModesEqual(&result.selectedMode, &crtc->mode);
-
-                if (!result.needsModeSet) {
-                    // Use current mode to ensure exact match (handles any minor differences)
-                    result.selectedMode = crtc->mode;
-                    TRACE_GLOBAL(Trace::Information, ("Using current mode: %ux%u@%uHz", crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh));
+                // Calculate refresh rate for logging
+                if (crtc->mode_valid == 0) {
+                    TRACE_GLOBAL(Trace::Warning, ("CRTC %u has no valid mode, forcing modeset", crtc->crtc_id));
+                    result.needsModeSet = true;
                 } else {
-                    TRACE_GLOBAL(Trace::Information, ("Mode change needed: %ux%u@%uHz -> %ux%u@%uHz", crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh, result.selectedMode.hdisplay, result.selectedMode.vdisplay, result.selectedMode.vrefresh));
+                    uint64_t refresh = ((crtc->mode.clock * 1000000LL / crtc->mode.htotal) + (crtc->mode.vtotal / 2)) / crtc->mode.vtotal;
+                    TRACE_GLOBAL(Trace::Information, ("[CRTC:%" PRIu32 ", CONN %" PRIu32 ", PLANE %" PRIu32 "]: active at %ux%u, %" PRIu64 " mHz", crtc->crtc_id, drmModeConnector->connector_id, plane->plane_id, crtc->width, crtc->height, refresh));
+
+                    // Check if we need to change modes
+                    result.needsModeSet = !ModesEqual(&result.selectedMode, &crtc->mode);
+
+                    if (!result.needsModeSet) {
+                        // Use current mode to ensure exact match (handles any minor differences)
+                        result.selectedMode = crtc->mode;
+                        TRACE_GLOBAL(Trace::Information, ("Using current mode: %ux%u@%uHz", crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh));
+                    } else {
+                        TRACE_GLOBAL(Trace::Information, ("Mode change needed: %ux%u@%uHz -> %ux%u@%uHz", crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh, result.selectedMode.hdisplay, result.selectedMode.vdisplay, result.selectedMode.vrefresh));
+                    }
                 }
 
                 // Cleanup for success case

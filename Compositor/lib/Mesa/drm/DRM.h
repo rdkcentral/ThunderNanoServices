@@ -40,7 +40,7 @@ namespace Compositor {
         class Properties;
 
         using Identifier = uint32_t;
-        static constexpr uint32_t InvalidIdentifier = ~0;
+        static constexpr uint32_t InvalidIdentifier = 0;
 
         struct ConnectorScanResult {
             bool success = false;
