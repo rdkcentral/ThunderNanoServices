@@ -39,11 +39,65 @@ class BaseTest {
     };
 
 public:
+    class ConsoleOptions : public Core::Options {
+    public:
+        ConsoleOptions(int argumentCount, TCHAR* arguments[])
+            : Core::Options(argumentCount, arguments, _T("o:r:f:H:W:h"))
+            , RenderNode("/dev/dri/renderD128")
+            , Output("HDMI-A-1")
+            , FPS(0) // Default to 0 (use connector's default)
+            , Width(0)
+            , Height(0)
+        {
+            Parse();
+        }
+        ~ConsoleOptions()
+        {
+        }
+
+    public:
+        const TCHAR* RenderNode;
+        const TCHAR* Output;
+        uint16_t FPS;
+        uint16_t Width;
+        uint16_t Height;
+
+    private:
+        virtual void Option(const TCHAR option, const TCHAR* argument)
+        {
+            switch (option) {
+            case 'o':
+                Output = argument;
+                break;
+            case 'r':
+                RenderNode = argument;
+                break;
+            case 'f':
+                FPS = std::stoi(argument);
+                break;
+            case 'H':
+                Height = std::stoi(argument);
+                break;
+            case 'W':
+                Width = std::stoi(argument);
+                break;
+
+            case 'h':
+            default:
+                fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>] [-f <30000>] [-H 1080] [-W 1920]\n");
+                exit(EXIT_FAILURE);
+                break;
+            }
+        }
+    };
+
+public:
     BaseTest() = delete;
     BaseTest(const BaseTest&) = delete;
     BaseTest& operator=(const BaseTest&) = delete;
 
-    BaseTest(const std::string& connectorId, const std::string& renderId, const uint16_t mFramePerSecond)
+    BaseTest(const std::string& connectorId, const std::string& renderId,
+        const uint16_t mFramePerSecond = 0, const uint16_t width = 0, const uint16_t height = 0)
         : _renderer()
         , _connector()
         , _period(mFramePerSecond > 0 ? std::chrono::microseconds(1000000000) / mFramePerSecond : std::chrono::microseconds(16667))
@@ -63,12 +117,17 @@ public:
         _renderer = Compositor::IRenderer::Instance(_renderFd);
         ASSERT(_renderer.IsValid());
 
+        TRACE(Trace::Information, ("Using renderer %s[%d] on connector %s (hxw: %dx%d) at %d fps", renderId.c_str(), _renderFd, connectorId.c_str(), width, height, mFramePerSecond));
+
         _connector = Compositor::CreateBuffer(
-            connectorId, 1920, 1080, mFramePerSecond,
+            connectorId, width, height, mFramePerSecond,
             Compositor::PixelFormat::Default(),
             _renderer, &_sink);
 
-        ASSERT(_connector.IsValid());
+        if (_connector.IsValid() == false) {
+            TRACE(Trace::Error, ("Could not create connector for %s", connectorId.c_str()));
+            ASSERT(false);
+        }
     }
 
     virtual ~BaseTest()

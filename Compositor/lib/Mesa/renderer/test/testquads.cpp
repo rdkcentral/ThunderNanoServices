@@ -61,10 +61,10 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t framePerSecond, const uint8_t rotationsPerSecond)
-        : BaseTest(connectorId, renderId, framePerSecond)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t FPS, const uint16_t width = 0, const uint16_t height = 0)
+        : BaseTest(connectorId, renderId, FPS, width, height)
         , _adminLock()
-        , _rotations(rotationsPerSecond)
+        , _rotations(10)
         , _rotation(0.0f)
     {
     }
@@ -89,39 +89,44 @@ protected:
 
         Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = connector->FrameBuffer();
 
-        renderer->Bind(frameBuffer);
-        renderer->Begin(width, height);
-        renderer->Clear(background);
+        if (frameBuffer.IsValid() == true) {
+            renderer->Bind(frameBuffer);
+            renderer->Begin(width, height);
+            renderer->Clear(background);
 
-        constexpr int16_t squareSize(300);
+            constexpr int16_t squareSize(300);
 
-        for (int y = -squareSize; y < height; y += squareSize) {
-            for (int x = -squareSize; x < width; x += squareSize) {
-                const Exchange::IComposition::Rectangle box = { x, y, squareSize, squareSize };
+            for (int y = -squareSize; y < height; y += squareSize) {
+                for (int x = -squareSize; x < width; x += squareSize) {
+                    const Exchange::IComposition::Rectangle box = { x, y, squareSize, squareSize };
 
-                float R = (float(width) - float(x)) / (float(width) - float(-squareSize));
-                float G = (float(x) - float(-squareSize)) / (float(width) - float(-squareSize));
-                float B = (float(y) - float(-squareSize)) / (float(height) - float(-squareSize));
+                    float R = (float(width) - float(x)) / (float(width) - float(-squareSize));
+                    float G = (float(x) - float(-squareSize)) / (float(width) - float(-squareSize));
+                    float B = (float(y) - float(-squareSize)) / (float(height) - float(-squareSize));
 
-                const Compositor::Color color = { R, G, B, alpha };
+                    const Compositor::Color color = { R, G, B, alpha };
 
-                Compositor::Matrix matrix;
-                Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_FLIPPED_180, _rotation, renderer->Projection());
+                    Compositor::Matrix matrix;
+                    Compositor::Transformation::ProjectBox(matrix, box, Compositor::Transformation::TRANSFORM_FLIPPED_180, _rotation, renderer->Projection());
 
-                renderer->Quadrangle(color, matrix);
+                    renderer->Quadrangle(color, matrix);
+                }
             }
-        }
 
-        renderer->End();
-        renderer->Unbind(frameBuffer);
+            renderer->End();
+            renderer->Unbind(frameBuffer);
 
-        connector->Commit();
+            connector->Commit();
 
-        WaitForVSync(100);
+            WaitForVSync(100);
 
-        auto periodCount = Period().count();
-        if (periodCount > 0) {
-            _rotation += periodCount * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
+            auto periodCount = Period().count();
+            if (periodCount > 0) {
+                _rotation += periodCount * (2. * M_PI) / float(_rotations * std::chrono::microseconds(std::chrono::seconds(1)).count());
+            }
+        } else {
+            TRACE(Trace::Error, ("No valid framebuffer to render to"));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
@@ -132,49 +137,13 @@ private:
     const uint8_t _rotations;
     float _rotation;
 };
-
-class ConsoleOptions : public Core::Options {
-public:
-    ConsoleOptions(int argumentCount, TCHAR* arguments[])
-        : Core::Options(argumentCount, arguments, _T("o:r:h"))
-        , RenderNode("/dev/dri/card0")
-        , Output(RenderNode)
-    {
-        Parse();
-    }
-    ~ConsoleOptions()
-    {
-    }
-
-public:
-    const TCHAR* RenderNode;
-    const TCHAR* Output;
-
-private:
-    virtual void Option(const TCHAR option, const TCHAR* argument)
-    {
-        switch (option) {
-        case 'o':
-            Output = argument;
-            break;
-        case 'r':
-            RenderNode = argument;
-            break;
-        case 'h':
-        default:
-            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>]\n");
-            exit(EXIT_FAILURE);
-            break;
-        }
-    }
-};
 }
 
 int main(int argc, char* argv[])
 {
     bool quitApp(false);
 
-    ConsoleOptions options(argc, argv);
+    BaseTest::ConsoleOptions options(argc, argv);
 
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
 
@@ -204,7 +173,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(options.Output, options.RenderNode, 0, 10);
+        RenderTest test(options.Output, options.RenderNode, options.FPS, options.Width, options.Height);
 
         test.Start();
 

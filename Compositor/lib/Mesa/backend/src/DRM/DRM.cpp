@@ -261,14 +261,19 @@ namespace Compositor {
         ASSERT(drmAvailable() == 1);
         ASSERT(connectorName.empty() == false);
 
-        TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
-        std::string gpuNodeName(DRM::GetGPUNode(connectorName));
-        Core::ProxyType<Backend::DRM> backend = Backend::_backends.Instance<Backend::DRM>(gpuNodeName, gpuNodeName);
-
         Core::ProxyType<IOutput> connector;
 
-        if (backend.IsValid()) {
-            connector = backend->GetConnector(connectorName, width, height, refreshRate, format, renderer, feedback);
+        TRACE_GLOBAL(Trace::Backend, ("Requesting connector '%s'", connectorName.c_str()));
+        std::string gpuNodeName(DRM::GetGPUNode(connectorName));
+
+        if (gpuNodeName.empty() == false) {
+            Core::ProxyType<Backend::DRM> backend = Backend::_backends.Instance<Backend::DRM>(gpuNodeName, gpuNodeName);
+
+            if (backend.IsValid()) {
+                connector = backend->GetConnector(connectorName, width, height, refreshRate, format, renderer, feedback);
+            }
+        } else {
+            TRACE_GLOBAL(Trace::Error, ("Could not find GPU node for connector '%s'", connectorName.c_str()));
         }
 
         return connector;
