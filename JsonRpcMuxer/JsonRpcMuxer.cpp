@@ -145,25 +145,6 @@ namespace Plugin {
         TRACE(Trace::Information, (_T("Batch queued to worker pool, batchId=%u, jobs=%u"), batchId, messageCount));
     }
 
-    void JsonRpcMuxer::SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage)
-    {
-        Core::ProxyType<Core::JSONRPC::Message> errorResponse(
-            PluginHost::IFactories::Instance().JSONRPC());
-
-        if (errorResponse.IsValid()) {
-            errorResponse->Id = responseId;
-            errorResponse->Error.SetError(errorCode);
-            errorResponse->Error.Text = errorMessage;
-            _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
-        }
-    }
-
-    void JsonRpcMuxer::SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId)
-    {
-        TRACE(Trace::Error, (_T("Batch timeout, batchId=%u"), batchId));
-        SendErrorResponse(channelId, responseId, Core::ERROR_TIMEDOUT, _T("Batch processing timed out"));
-    }
-
     bool JsonRpcMuxer::TryClaimBatchSlot()
     {
         uint8_t current = _activeBatches.fetch_add(1);
@@ -279,6 +260,25 @@ namespace Plugin {
     }
 
 #ifdef ENABLE_WEBSOCKET_CONNECTION
+    void JsonRpcMuxer::SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage)
+    {
+        Core::ProxyType<Core::JSONRPC::Message> errorResponse(
+            PluginHost::IFactories::Instance().JSONRPC());
+
+        if (errorResponse.IsValid()) {
+            errorResponse->Id = responseId;
+            errorResponse->Error.SetError(errorCode);
+            errorResponse->Error.Text = errorMessage;
+            _service->Submit(channelId, Core::ProxyType<Core::JSON::IElement>(errorResponse));
+        }
+    }
+
+    void JsonRpcMuxer::SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId)
+    {
+        TRACE(Trace::Error, (_T("Batch timeout, batchId=%u"), batchId));
+        SendErrorResponse(channelId, responseId, Core::ERROR_TIMEDOUT, _T("Batch processing timed out"));
+    }
+
     bool JsonRpcMuxer::Attach(PluginHost::Channel& channel)
     {
         Web::ProtocolsArray protocols = channel.Protocols();
