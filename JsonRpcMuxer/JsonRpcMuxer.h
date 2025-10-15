@@ -165,8 +165,6 @@ namespace Plugin {
 
                 const Core::JSONRPC::Message& message = _messages[index];
 
-                TRACE(Trace::Information, (_T("Invoking method %s (id=%u) (params=%s)"), message.Designator.Value().c_str(), message.Id.Value(), message.Parameters.Value().c_str()));
-
                 result = _parent->_dispatch->Invoke(
                     ChannelId(), message.Id.Value(), Token(),
                     message.Designator.Value(), message.Parameters.Value(),
@@ -177,9 +175,6 @@ namespace Plugin {
 
                     // Do the same as in JSONRPC::InvokeHandler (Source/plugins/JSONRPC.h) 
                     if ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE))) {
-
-                        TRACE(Trace::Information, (_T("Method %s (id=%u) completed with result %d"), message.Designator.Value().c_str(), message.Id.Value(), result));
-
                         Response& response = _responseArray[index];
 
                         if (message.Id.IsSet()) {
