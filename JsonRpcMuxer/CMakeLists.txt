@@ -32,6 +32,8 @@ set(PLUGIN_JSONRPCMUXER_MAXBATCHES "" CACHE STRING "Maximum number of concurrent
 set(PLUGIN_JSONRPCMUXER_MAXBATCHSIZE "" CACHE STRING "Maximum number of requests per batch")
 set(PLUGIN_JSONRPCMUXER_TIMEOUT "" CACHE STRING "Batch timeout in milliseconds (0 = infinite)")
 
+option(ENABLE_WEBSOCKET "Enable websocket connection on the plugin" OFF)
+
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
 endif()
@@ -57,6 +59,10 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+
+if(ENABLE_WEBSOCKET_CONNECTION)
+    target_compile_definitions(${MODULE_NAME} PRIVATE ENABLE_WEBSOCKET_CONNECTION)
+endif()
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)

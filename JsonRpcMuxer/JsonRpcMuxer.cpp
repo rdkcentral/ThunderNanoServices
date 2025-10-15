@@ -90,30 +90,6 @@ namespace Plugin {
         return string();
     }
 
-    bool JsonRpcMuxer::Attach(PluginHost::Channel& channel)
-    {
-        Web::ProtocolsArray protocols = channel.Protocols();
-        if (std::find(protocols.begin(), protocols.end(), string(_T("json"))) != protocols.end()) {
-            if (_activeWebSocket == 0) {
-                _activeWebSocket = channel.Id();
-                TRACE(Trace::Information, (_T("WebSocket connected, channelId=%u"), channel.Id()));
-                return true;
-            }
-            TRACE(Trace::Warning, (_T("WebSocket rejected, already connected on channelId=%u"), _activeWebSocket));
-            return false;
-        }
-        return false;
-    }
-
-    void JsonRpcMuxer::Detach(PluginHost::Channel& channel)
-    {
-        if (_activeWebSocket == channel.Id()) {
-            TRACE(Trace::Information, (_T("WebSocket disconnected, channelId=%u"), channel.Id()));
-            CancelBatchesForChannel(channel.Id());
-            _activeWebSocket = 0;
-        }
-    }
-
     Core::hresult JsonRpcMuxer::Invoke(const uint32_t channelId, const uint32_t id, const string& token,
         const string& method, const string& parameters, string& response)
     {
@@ -186,11 +162,6 @@ namespace Plugin {
     {
         TRACE(Trace::Error, (_T("Batch timeout, batchId=%u"), batchId));
         SendErrorResponse(channelId, responseId, Core::ERROR_TIMEDOUT, _T("Batch processing timed out"));
-    }
-
-    Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const string& /* identifier */)
-    {
-        return Core::ProxyType<Core::JSON::IElement>(PluginHost::IFactories::Instance().JSONRPC());
     }
 
     bool JsonRpcMuxer::TryClaimBatchSlot()
@@ -307,6 +278,36 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
+#ifdef ENABLE_WEBSOCKET_CONNECTION
+    bool JsonRpcMuxer::Attach(PluginHost::Channel& channel)
+    {
+        Web::ProtocolsArray protocols = channel.Protocols();
+        if (std::find(protocols.begin(), protocols.end(), string(_T("json"))) != protocols.end()) {
+            if (_activeWebSocket == 0) {
+                _activeWebSocket = channel.Id();
+                TRACE(Trace::Information, (_T("WebSocket connected, channelId=%u"), channel.Id()));
+                return true;
+            }
+            TRACE(Trace::Warning, (_T("WebSocket rejected, already connected on channelId=%u"), _activeWebSocket));
+            return false;
+        }
+        return false;
+    }
+
+    void JsonRpcMuxer::Detach(PluginHost::Channel& channel)
+    {
+        if (_activeWebSocket == channel.Id()) {
+            TRACE(Trace::Information, (_T("WebSocket disconnected, channelId=%u"), channel.Id()));
+            CancelBatchesForChannel(channel.Id());
+            _activeWebSocket = 0;
+        }
+    }
+
+    Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const string& /* identifier */)
+    {
+        return Core::ProxyType<Core::JSON::IElement>(PluginHost::IFactories::Instance().JSONRPC());
+    }
+
     Core::ProxyType<Core::JSON::IElement> JsonRpcMuxer::Inbound(const uint32_t channelId,
         const Core::ProxyType<Core::JSON::IElement>& element)
     {
@@ -338,5 +339,6 @@ namespace Plugin {
 
         return Core::ProxyType<Core::JSON::IElement>();
     }
+#endif
 }
 }
