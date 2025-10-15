@@ -60,7 +60,6 @@ class JsonRpcMuxerTester:
     def __init__(self, config: TestConfig):
         self.config = config
         self.http_url = f"http://{config.host}:{config.port}/jsonrpc"
-        self.ws_url = f"ws://{config.host}:{config.port}/Service/JsonRpcMuxer"
         self.passed = 0
         self.failed = 0
     
@@ -153,7 +152,7 @@ class JsonRpcMuxerTester:
         except Exception as e:
             return False
 
-    def test_http_single_batch(self):
+    def test_http_single_batch(self, method):
         """Test HTTP interface with a single batch"""
         print_test("HTTP: Single batch (4 requests)")
         
@@ -161,7 +160,7 @@ class JsonRpcMuxerTester:
         payload = {
             "jsonrpc": "2.0",
             "id": 100,
-            "method": "JsonRpcMuxer.1.invoke",
+            "method": "JsonRpcMuxer.1." + method,
             "params": batch
         }
         
@@ -210,7 +209,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
-    def test_http_max_batch_size(self):
+    def test_http_max_batch_size(self, method):
         """Test HTTP interface with maximum batch size"""
         print_test(f"HTTP: Maximum batch size ({self.config.max_batch_size} requests)")
         
@@ -218,7 +217,7 @@ class JsonRpcMuxerTester:
         payload = {
             "jsonrpc": "2.0",
             "id": 101,
-            "method": "JsonRpcMuxer.1.invoke",
+            "method": "JsonRpcMuxer.1." + method,
             "params": batch
         }
         
@@ -255,7 +254,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
-    def test_http_exceeds_batch_size(self):
+    def test_http_exceeds_batch_size(self, method):
         """Test that batches exceeding max size are rejected"""
         print_test(f"HTTP: Exceed batch size limit (should reject)")
         
@@ -263,7 +262,7 @@ class JsonRpcMuxerTester:
         payload = {
             "jsonrpc": "2.0",
             "id": 102,
-            "method": "JsonRpcMuxer.1.invoke",
+            "method": "JsonRpcMuxer.1." + method,
             "params": batch
         }
         
@@ -288,14 +287,14 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
-    def test_http_empty_batch(self):
+    def test_http_empty_batch(self, method):
         """Test that empty batches are rejected"""
         print_test("HTTP: Empty batch (should reject)")
         
         payload = {
             "jsonrpc": "2.0",
             "id": 103,
-            "method": "JsonRpcMuxer.1.invoke",
+            "method": "JsonRpcMuxer.1." + method,
             "params": []
         }
         
@@ -319,7 +318,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
-    def test_http_concurrent_batches(self):
+    def test_http_concurrent_batches(self, method):
         """Test multiple concurrent batches"""
         print_test(f"HTTP: Concurrent batches (3 batches simultaneously)")
         
@@ -332,7 +331,7 @@ class JsonRpcMuxerTester:
                 payload = {
                     "jsonrpc": "2.0",
                     "id": 200 + batch_id,
-                    "method": "JsonRpcMuxer.1.invoke",
+                    "method": "JsonRpcMuxer.1." + method,
                     "params": batch
                 }
                 
@@ -366,7 +365,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Expected 3 results, got {len(results)}")
             self.failed += 1
     
-    def test_http_cancel_batches(self):
+    def test_http_cancel_batches(self, method):
         """Test batch cancellation by plugin deactivation"""
         print_test(f"HTTP: Batch cancellation by plugin deactivation while processing")
         
@@ -380,7 +379,7 @@ class JsonRpcMuxerTester:
                 payload = {
                     "jsonrpc": "2.0",
                     "id": 200 + batch_id,
-                    "method": "JsonRpcMuxer.1.invoke",
+                    "method": "JsonRpcMuxer.1." + method,
                     "params": batch
                 }
                 
@@ -435,7 +434,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Expected {timeouts} got results, {results}")
             self.failed += 1
     
-    def test_http_burst_batches(self, total_runs):
+    def test_http_burst_batches(self, total_runs, method):
         """Test multiple concurrent batches"""
         print_test(f"HTTP: Concurrent batches ({total_runs} runs × {self.config.max_batches} connections)")
         
@@ -452,7 +451,7 @@ class JsonRpcMuxerTester:
                     payload = {
                         "jsonrpc": "2.0",
                         "id": 2000 + run_id * 100 + batch_id,
-                        "method": "JsonRpcMuxer.1.invoke",
+                        "method": "JsonRpcMuxer.1." + method,
                         "params": batch
                     }
 
@@ -497,13 +496,21 @@ class JsonRpcMuxerTester:
         
         # HTTP tests
         print(f"\n{Colors.BOLD}=== HTTP Tests ==={Colors.RESET}")
-        self.test_http_single_batch()
-        self.test_http_max_batch_size()
-        self.test_http_exceeds_batch_size()
-        self.test_http_empty_batch()
-        self.test_http_concurrent_batches()
-        self.test_http_cancel_batches()
-        self.test_http_burst_batches(1000)
+        self.test_http_single_batch("parallel")
+        self.test_http_max_batch_size("parallel")
+        self.test_http_exceeds_batch_size("parallel")
+        self.test_http_empty_batch("parallel")
+        self.test_http_concurrent_batches("parallel")
+        self.test_http_cancel_batches("parallel")
+        self.test_http_burst_batches(1000, "parallel")
+
+        self.test_http_single_batch("sequential")
+        self.test_http_max_batch_size("sequential")
+        self.test_http_exceeds_batch_size("sequential")
+        self.test_http_empty_batch("sequential")
+        self.test_http_concurrent_batches("sequential")
+        self.test_http_cancel_batches("sequential")
+        self.test_http_burst_batches(1000, "sequential")
         
         # Summary
         print(f"\n{Colors.BOLD}=== Test Summary ==={Colors.RESET}")

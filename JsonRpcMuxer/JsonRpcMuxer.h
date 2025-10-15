@@ -86,20 +86,37 @@ namespace Plugin {
         private:
             class Job : public Core::IDispatch {
             public:
-                Job() = delete;
-                Job(Job&&) = delete;
-                Job(const Job&) = delete;
-                Job& operator=(const Job&) = delete;
-
                 Job(Batch* batch, uint32_t index)
                     : _batch(batch)
                     , _index(index)
                 {
                 }
 
-                void Dispatch() override;
+                Job(const Job&) = delete;
+                Job(Job&&) = delete;
+                Job& operator=(const Job&) = delete;
+                Job& operator=(Job&&) = delete;
 
-                ~Job() override = default;
+                void Dispatch() override
+                {
+                    Core::hresult result = Core::ERROR_UNAVAILABLE;
+                    std::string output;
+
+                    if (_batch->IsActive()) {
+                        const auto& message = _batch->GetMessage(_index);
+                        const auto& token = _batch->Token();
+
+                        result = _batch->_parent->_dispatch->Invoke(
+                            _batch->ChannelId(),
+                            message.Id.Value(),
+                            token,
+                            message.Designator.Value(),
+                            message.Parameters.Value(),
+                            output);
+                    }
+
+                    _batch->ReportResult(_index, result, output);
+                }
 
             private:
                 Batch* _batch;
@@ -107,22 +124,20 @@ namespace Plugin {
             };
 
         public:
-            Batch() = delete;
-            Batch(Batch&&) = delete;
-            Batch(const Batch&) = delete;
-            Batch& operator=(const Batch&) = delete;
-
             Batch(
-                Core::ProxyType<JsonRpcMuxer> parent,  uint32_t batchId,bool parallel,
+                Core::ProxyType<JsonRpcMuxer> parent,
+                uint32_t batchId,
+                bool parallel,
                 const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages,
-                uint32_t channelId, uint32_t responseId, const string& token,  uint32_t timeoutMs)
+                uint32_t channelId,
+                uint32_t responseId,
+                const std::string& token,
+                uint32_t timeoutMs)
                 : _parent(parent)
                 , _batchId(batchId)
                 , _parallel(parallel)
                 , _pendingCount(messages.Length())
                 , _messages(messages)
-                , _responseLock()
-                , _responseArray()
                 , _channelId(channelId)
                 , _responseId(responseId)
                 , _token(token)
@@ -130,82 +145,38 @@ namespace Plugin {
                 , _startTime(Core::Time::Now().Ticks())
                 , _cancelled(false)
             {
-                // Pre-allocate responses
-                for (uint32_t i = 0; i < _pendingCount; i++) {
+                for (uint32_t i = 0; i < _pendingCount; ++i) {
                     _responseArray.Add();
                 }
             }
 
+            Batch(const Batch&) = delete;
+            Batch(Batch&&) = delete;
+            Batch& operator=(const Batch&) = delete;
+            Batch& operator=(Batch&&) = delete;
             ~Batch() = default;
 
-            uint32_t ChannelId() const
+            void Start()
             {
-                return _channelId;
-            }
-
-            uint32_t ResponseId() const
-            {
-                return _responseId;
-            }
-
-            uint32_t BatchId() const
-            {
-                return _batchId;
-            }
-
-            Response& Acquire(const uint16_t index)
-            {
-                ASSERT(index < _responseArray.Elements().Count());
-                _responseLock.Lock();
-                return _responseArray[index];
-            }
-
-            bool ReleaseAndCheckComplete()
-            {
-                _responseLock.Unlock();
-                return (--_pendingCount == 0);
-            }
-
-            string ToString()
-            {
-                string response;
-                _responseArray.ToString(response);
-
-                return response;
-            }
-
-            bool IsTimedOut() const
-            {
-                if (_timeoutMs == Core::infinite) {
-                    return false; // No timeout configured
+                if (_parallel) {
+                    for (uint32_t i = 0; i < _messages.Length(); ++i) {
+                        SubmitJob(i);
+                    }
+                } else if (_messages.Length() > 0) {
+                    SubmitJob(0);
                 }
-
-                uint64_t currentTicks = Core::Time::Now().Ticks();
-                uint64_t elapsedTicks = currentTicks - _startTime;
-                uint64_t elapsedMs = elapsedTicks / Core::Time::TicksPerMillisecond;
-
-                return (elapsedMs > _timeoutMs);
             }
 
-            uint32_t TimeoutMs() const
+            bool IsActive() const
             {
-                return _timeoutMs;
+                return !_cancelled.load() && !_parent->_shuttingDown.load() && !IsTimedOut();
             }
 
-            void Cancel()
-            {
-                _cancelled.store(true);
-            }
+            void Cancel() { _cancelled.store(true); }
+            bool IsCancelled() const { return _cancelled.load(); }
 
-            bool IsCancelled() const
-            {
-                return _cancelled.load();
-            }
-
-            const string& Token() const
-            {
-                return _token;
-            }
+            uint32_t ChannelId() const { return _channelId; }
+            uint32_t ResponseId() const { return _responseId; }
 
             const Core::JSONRPC::Message& GetMessage(uint32_t index) const
             {
@@ -213,11 +184,83 @@ namespace Plugin {
                 return _messages[index];
             }
 
-            void Start();
-            void OnJobComplete(uint32_t completedIndex);
+            const std::string& Token() const { return _token; }
+
+            bool IsTimedOut() const
+            {
+                if (_timeoutMs == Core::infinite)
+                    return false;
+                uint64_t elapsedMs = (Core::Time::Now().Ticks() - _startTime) / Core::Time::TicksPerMillisecond;
+                return elapsedMs > _timeoutMs;
+            }
+
+            void ReportResult(uint32_t index, Core::hresult result, const std::string& output)
+            {
+                _responseLock.Lock();
+                Response& response = _responseArray[index];
+                const auto& message = GetMessage(index);
+                response.Id = message.Id.Value();
+
+                if (!_cancelled.load() && !_parent->_shuttingDown.load() && !IsTimedOut()) {
+                    if (result == Core::ERROR_NONE) {
+                        response.Result = output;
+                    } else {
+                        response.Error.SetError(result);
+                        if (!output.empty()) {
+                            response.Error.Text = output;
+                        }
+                    }
+                } else {
+                    if (_cancelled.load()) {
+                        response.Error.SetError(Core::ERROR_UNAVAILABLE);
+                        response.Error.Text = "Batch cancelled";
+                    } else if (_parent->_shuttingDown.load()) {
+                        response.Error.SetError(Core::ERROR_UNAVAILABLE);
+                        response.Error.Text = "Plugin shutting down";
+                    } else if (IsTimedOut()) {
+                        response.Error.SetError(Core::ERROR_TIMEDOUT);
+                        response.Error.Text = "Request timed out";
+                    }
+                }
+                _responseLock.Unlock();
+
+                bool complete = (--_pendingCount == 0);
+                if (complete) {
+                    FinishBatch();
+                } else if (!_parallel) {
+                    SubmitJob(index + 1);
+                }
+            }
 
         private:
-            void SubmitJob(uint32_t index);
+            void SubmitJob(uint32_t index)
+            {
+                if (index >= _messages.Length())
+                    return;
+                Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(this, index);
+                Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
+            }
+
+            void FinishBatch()
+            {
+                if (_parent->IsChannelValid(_channelId)) {
+                    std::string response = ToString();
+                    Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
+                    if (message.IsValid()) {
+                        message->Id = _responseId;
+                        message->Result = response;
+                        _parent->SendResponse(_channelId, Core::ProxyType<Core::JSON::IElement>(message));
+                    }
+                }
+                _parent->RemoveBatchFromRegistry(_batchId);
+            }
+
+            std::string ToString() const
+            {
+                std::string response;
+                _responseArray.ToString(response);
+                return response;
+            }
 
         private:
             Core::ProxyType<JsonRpcMuxer> _parent;
@@ -229,7 +272,7 @@ namespace Plugin {
             Core::JSON::ArrayType<Response> _responseArray;
             uint32_t _channelId;
             uint32_t _responseId;
-            string _token;
+            std::string _token;
             uint32_t _timeoutMs;
             uint64_t _startTime;
             std::atomic<bool> _cancelled;
@@ -274,7 +317,7 @@ namespace Plugin {
 
         Core::hresult Invoke(
             const uint32_t channelId, const uint32_t id, const string& token,
-            const string& method, const string& parameters, string& response) override;
+            const string& designator, const string& parameters, string& response) override;
 
 #ifdef ENABLE_WEBSOCKET_CONNECTION
         bool Attach(PluginHost::Channel& channel) override;

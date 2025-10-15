@@ -90,143 +90,6 @@ namespace Plugin {
         return string();
     }
 
-    void JsonRpcMuxer::Batch::Start()
-    {
-        TRACE(Trace::Information, (_T("Batch started, batchId=%u, jobs=%u"), _batchId, _messages.Length()));
-
-        if (_parallel) {
-            // Parallel: submit all jobs immediately
-            for (uint32_t i = 0; i < _messages.Length(); i++) {
-                SubmitJob(i);
-            }
-        } else {
-            // Sequential: submit only first job
-            SubmitJob(0);
-        }
-    }
-
-    void JsonRpcMuxer::Batch::OnJobComplete(uint32_t completedIndex)
-    {
-        if (!_parallel) {
-            // Sequential mode: submit next job
-            uint32_t nextIdx = completedIndex + 1;
-            if (nextIdx < _messages.Length()) {
-                SubmitJob(nextIdx);
-            }
-        }
-        // Parallel mode: nothing to do
-    }
-
-    void JsonRpcMuxer::Batch::SubmitJob(uint32_t index)
-    {
-        ASSERT(index < _messages.Length());
-
-        // Create job with just this pointer and index - simple!
-        Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(this, index);
-        Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
-    }
-
-    void JsonRpcMuxer::Batch::Job::Dispatch()
-    {
-        string output;
-        const Core::JSONRPC::Message& message = _batch->GetMessage(_index);
-        const string& token = _batch->Token();
-
-        TRACE(Trace::Information, (_T("Process %d:%d"), _batch->ChannelId(), message.Id.Value()));
-
-        if (_batch->IsCancelled()) {
-            TRACE(Trace::Warning, (_T("Job skipped, batch cancelled, batchId=%u, jobId=%d"), _batch->BatchId(), message.Id.Value()));
-
-            Response& responseMsg = _batch->Acquire(_index);
-            responseMsg.Id = message.Id.Value();
-            responseMsg.Error.SetError(Core::ERROR_UNAVAILABLE);
-            responseMsg.Error.Text = _T("Batch cancelled");
-
-            if (_batch->ReleaseAndCheckComplete()) {
-                _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
-            }
-            return;
-        }
-
-        if (_batch->_parent->_shuttingDown.load()) {
-            TRACE(Trace::Warning, (_T("Job skipped, plugin shutting down, batchId=%u, jobId=%d"), _batch->BatchId(), message.Id.Value()));
-
-            Response& responseMsg = _batch->Acquire(_index);
-            responseMsg.Id = message.Id.Value();
-            responseMsg.Error.SetError(Core::ERROR_UNAVAILABLE);
-            responseMsg.Error.Text = _T("Plugin shutting down");
-
-            if (_batch->ReleaseAndCheckComplete()) {
-                _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
-            }
-            return;
-        }
-
-        if (_batch->IsTimedOut()) {
-            TRACE(Trace::Warning, (_T("Job skipped due to timeout, batchId=%u, jobId=%d"), _batch->BatchId(), message.Id.Value()));
-
-            Response& responseMsg = _batch->Acquire(_index);
-            responseMsg.Id = message.Id.Value();
-            responseMsg.Error.SetError(Core::ERROR_TIMEDOUT);
-            responseMsg.Error.Text = _T("Request timed out");
-
-            if (_batch->ReleaseAndCheckComplete()) {
-                _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
-                _batch->_parent->SendTimeoutResponse(_batch->ChannelId(), _batch->ResponseId(), _batch->BatchId());
-            }
-            return;
-        }
-
-        uint32_t invokeResult = _batch->_parent->_dispatch->Invoke(
-            _batch->ChannelId(),
-            message.Id.Value(),
-            token,
-            message.Designator.Value(),
-            message.Parameters.Value(),
-            output);
-
-        // Update response (thread-safe)
-        Response& responseMsg = _batch->Acquire(_index);
-        responseMsg.Id = message.Id.Value();
-
-        if (invokeResult == Core::ERROR_NONE) {
-            responseMsg.Result = output;
-        } else {
-            responseMsg.Error.SetError(invokeResult);
-            if (!output.empty()) {
-                responseMsg.Error.Text = output;
-            }
-        }
-
-        bool batchComplete = _batch->ReleaseAndCheckComplete();
-
-        if (!batchComplete) {
-            // Not done yet - let Batch orchestrate next job
-            _batch->OnJobComplete(_index);
-        } else {
-            // Batch complete - send response
-            _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
-
-            if (_batch->IsTimedOut()) {
-                _batch->_parent->SendTimeoutResponse(_batch->ChannelId(), _batch->ResponseId(), _batch->BatchId());
-            } else if (_batch->_parent->IsChannelValid(_batch->ChannelId())) {
-                string response = _batch->ToString();
-
-                Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
-                if (message.IsValid()) {
-                    message->Id = _batch->ResponseId();
-                    message->Result = response;
-
-                    _batch->_parent->SendResponse(_batch->ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
-                }
-
-                TRACE(Trace::Information, (_T("Batch completed, batchId=%u"), _batch->BatchId()));
-            } else {
-                TRACE(Trace::Warning, (_T("Batch completed but channel invalid, batchId=%u, channelId=%u"), _batch->BatchId(), _batch->ChannelId()));
-            }
-        }
-    }
-
     void JsonRpcMuxer::Process(uint32_t channelId, uint32_t responseId, const string& token,
         Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, bool parallel)
     {
@@ -238,11 +101,15 @@ namespace Plugin {
             Core::ProxyType<JsonRpcMuxer>(*this, *this), batchId, parallel, messages,
             channelId, responseId, token, _timeout);
 
-        _batchesLock.Lock();
-        _activeBatches[batchId] = batch;
-        _batchesLock.Unlock();
+        if (batch.IsValid() == false) {
+            TRACE(Trace::Fatal, (_T("Failed to create batch object, out of memory?")));
+        } else {
+            _batchesLock.Lock();
+            _activeBatches.emplace(batchId, batch);
+            _batchesLock.Unlock();
 
-        batch->Start();
+            batch->Start();
+        }
     }
 
     bool JsonRpcMuxer::TryClaimBatchSlot()
@@ -360,8 +227,10 @@ namespace Plugin {
     }
 
     Core::hresult JsonRpcMuxer::Invoke(const uint32_t channelId, const uint32_t id, const string& token,
-        const string& method, const string& parameters, string& response)
+        const string& designator, const string& parameters, string& response)
     {
+        const string method = Core::JSONRPC::Message::Method(designator);
+
         uint32_t result(Core::ERROR_NONE);
 
         if (_dispatch == nullptr) {
