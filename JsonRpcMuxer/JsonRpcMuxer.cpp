@@ -102,7 +102,7 @@ namespace Plugin {
             channelId, responseId, token, _timeout);
 
         if (batch.IsValid() == false) {
-            TRACE(Trace::Fatal, (_T("Failed to create batch object, out of memory?")));
+            TRACE(Trace::Error, (_T("Failed to create batch object, out of memory?")));
         } else {
             _batchesLock.Lock();
             _activeBatches.emplace(batchId, batch);

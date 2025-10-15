@@ -99,28 +99,12 @@ namespace Plugin {
 
                 void Dispatch() override
                 {
-                    Core::hresult result = Core::ERROR_UNAVAILABLE;
-                    std::string output;
-
-                    if (_batch->IsActive()) {
-                        const auto& message = _batch->GetMessage(_index);
-                        const auto& token = _batch->Token();
-
-                        result = _batch->_parent->_dispatch->Invoke(
-                            _batch->ChannelId(),
-                            message.Id.Value(),
-                            token,
-                            message.Designator.Value(),
-                            message.Parameters.Value(),
-                            output);
-                    }
-
-                    _batch->ReportResult(_index, result, output);
+                    _batch->Run(_index);
                 }
 
             private:
                 Batch* _batch;
-                uint32_t _index;
+                const uint32_t _index;
             };
 
         public:
@@ -167,6 +151,69 @@ namespace Plugin {
                 }
             }
 
+            void Run(uint32_t index)
+            {
+                ASSERT(index < _messages.Length());
+
+                if (IsActive() == false) {
+                    --_pendingCount;
+                    return; // No need to process if batch is not active
+                }
+
+                Core::hresult result = Core::ERROR_UNAVAILABLE;
+                std::string output;
+
+                const Core::JSONRPC::Message& message = _messages[index];
+
+                TRACE(Trace::Information, (_T("Invoking method %s (id=%u) (params=%s)"), message.Designator.Value().c_str(), message.Id.Value(), message.Parameters.Value().c_str()));
+
+                result = _parent->_dispatch->Invoke(
+                    ChannelId(), message.Id.Value(), Token(),
+                    message.Designator.Value(), message.Parameters.Value(),
+                    output);
+
+                if (IsActive()) { // Are we still active?
+                    _responseLock.Lock();
+
+                    // Do the same as in JSONRPC::InvokeHandler (Source/plugins/JSONRPC.h) 
+                    if ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE))) {
+
+                        TRACE(Trace::Information, (_T("Method %s (id=%u) completed with result %d"), message.Designator.Value().c_str(), message.Id.Value(), result));
+
+                        Response& response = _responseArray[index];
+
+                        if (message.Id.IsSet()) {
+                            response.Id = message.Id.Value();
+                        }
+
+                        if (result == Core::ERROR_NONE) {
+                            if (output.empty() == true) {
+                                response.Result.Null(true);
+                            } else {
+                                response.Result = output;
+                            }
+                        } else {
+                            response.Error.SetError(result);
+
+                            if (output.empty() == false) {
+                                response.Error.Text = output;
+                            }
+                        }
+                    }
+
+                    _responseLock.Unlock();
+
+                    if (--_pendingCount == 0) {
+                        FinishBatch();
+                    } else if (!_parallel) {
+                        SubmitJob(index + 1);
+                    }
+                } else {
+                    --_pendingCount;
+                    _responseLock.Unlock();
+                }
+            }
+
             bool IsActive() const
             {
                 return !_cancelled.load() && !_parent->_shuttingDown.load() && !IsTimedOut();
@@ -177,15 +224,9 @@ namespace Plugin {
 
             uint32_t ChannelId() const { return _channelId; }
             uint32_t ResponseId() const { return _responseId; }
-
-            const Core::JSONRPC::Message& GetMessage(uint32_t index) const
-            {
-                ASSERT(index < _messages.Length());
-                return _messages[index];
-            }
-
             const std::string& Token() const { return _token; }
 
+        private:
             bool IsTimedOut() const
             {
                 if (_timeoutMs == Core::infinite)
@@ -194,49 +235,11 @@ namespace Plugin {
                 return elapsedMs > _timeoutMs;
             }
 
-            void ReportResult(uint32_t index, Core::hresult result, const std::string& output)
-            {
-                _responseLock.Lock();
-                Response& response = _responseArray[index];
-                const auto& message = GetMessage(index);
-                response.Id = message.Id.Value();
-
-                if (!_cancelled.load() && !_parent->_shuttingDown.load() && !IsTimedOut()) {
-                    if (result == Core::ERROR_NONE) {
-                        response.Result = output;
-                    } else {
-                        response.Error.SetError(result);
-                        if (!output.empty()) {
-                            response.Error.Text = output;
-                        }
-                    }
-                } else {
-                    if (_cancelled.load()) {
-                        response.Error.SetError(Core::ERROR_UNAVAILABLE);
-                        response.Error.Text = "Batch cancelled";
-                    } else if (_parent->_shuttingDown.load()) {
-                        response.Error.SetError(Core::ERROR_UNAVAILABLE);
-                        response.Error.Text = "Plugin shutting down";
-                    } else if (IsTimedOut()) {
-                        response.Error.SetError(Core::ERROR_TIMEDOUT);
-                        response.Error.Text = "Request timed out";
-                    }
-                }
-                _responseLock.Unlock();
-
-                bool complete = (--_pendingCount == 0);
-                if (complete) {
-                    FinishBatch();
-                } else if (!_parallel) {
-                    SubmitJob(index + 1);
-                }
-            }
-
-        private:
             void SubmitJob(uint32_t index)
             {
-                if (index >= _messages.Length())
+                if (index >= _messages.Length()) {
                     return;
+                }
                 Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(this, index);
                 Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
             }
