@@ -335,7 +335,7 @@ namespace Compositor {
             }
             Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override
             {
-                return _frameBuffer.FrameBuffer();
+                return (_frameBuffer.IsValid() == true) ?  _frameBuffer.FrameBuffer() : Core::ProxyType<Compositor::IRenderer::IFrameBuffer>();
             }
 
         private:

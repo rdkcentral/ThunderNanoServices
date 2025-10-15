@@ -60,10 +60,10 @@ public:
     RenderTest(const RenderTest&) = delete;
     RenderTest& operator=(const RenderTest&) = delete;
 
-    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t framePerSecond, const uint8_t rotationsPerSecond)
-        : BaseTest(connectorId, renderId, framePerSecond)
+    RenderTest(const std::string& connectorId, const std::string& renderId, const uint16_t FPS, const uint16_t width = 0, const uint16_t height = 0)
+        : BaseTest(connectorId, renderId, FPS, width, height)
         , _color(hsv2rgb(_rotation, .9, .7))
-        , _rotationPeriod(std::chrono::seconds(rotationsPerSecond))
+        , _rotationPeriod(std::chrono::seconds(10))
         , _rotation(0)
     {
         NewFrame();
@@ -112,30 +112,35 @@ private:
 
         Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = connector->FrameBuffer();
 
-        renderer->Bind(frameBuffer);
+        if (frameBuffer.IsValid() == true) {
+            renderer->Bind(frameBuffer);
 
-        renderer->Begin(connector->Width(), connector->Height());
-        renderer->Clear(_color);
-        renderer->End();
-        renderer->Unbind(frameBuffer);
+            renderer->Begin(connector->Width(), connector->Height());
+            renderer->Clear(_color);
+            renderer->End();
+            renderer->Unbind(frameBuffer);
 
-        connector->Commit();
+            connector->Commit();
 
-        auto periodCount = Period().count();
+            auto periodCount = Period().count();
 
-        if (periodCount > 0) {
-            _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / periodCount));
+            if (periodCount > 0) {
+                _rotation += 360. / (_rotationPeriod.count() * (std::chrono::microseconds(std::chrono::seconds(1)).count() / periodCount));
+            } else {
+                TRACE(Trace::Warning, ("Period count is zero, skipping rotation update"));
+            }
+
+            if (_rotation >= 360) {
+                _rotation = 0;
+            }
+
+            _color = hsv2rgb(_rotation, .9, .7);
+
+            WaitForVSync(1000);
         } else {
-            TRACE(Trace::Warning, ("Period count is zero, skipping rotation update"));
+            TRACE(Trace::Error, ("No valid framebuffer to render to"));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-
-        if (_rotation >= 360) {
-            _rotation = 0;
-        }
-
-        _color = hsv2rgb(_rotation, .9, .7);
-
-        WaitForVSync(1000);
 
         return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start);
     }
@@ -145,47 +150,13 @@ private:
     const std::chrono::seconds _rotationPeriod;
     float _rotation;
 }; // RenderTest
-class ConsoleOptions : public Core::Options {
-public:
-    ConsoleOptions(int argumentCount, TCHAR* arguments[])
-        : Core::Options(argumentCount, arguments, _T("o:r:h"))
-        , RenderNode("/dev/dri/card0")
-        , Output(RenderNode)
-    {
-        Parse();
-    }
-    ~ConsoleOptions()
-    {
-    }
 
-public:
-    const TCHAR* RenderNode;
-    const TCHAR* Output;
-
-private:
-    virtual void Option(const TCHAR option, const TCHAR* argument)
-    {
-        switch (option) {
-        case 'o':
-            Output = argument;
-            break;
-        case 'r':
-            RenderNode = argument;
-            break;
-        case 'h':
-        default:
-            fprintf(stderr, "Usage: " EXPAND_AND_QUOTE(APPLICATION_NAME) " [-o <HDMI-A-1>] [-r </dev/dri/renderD128>]\n");
-            exit(EXIT_FAILURE);
-            break;
-        }
-    }
-};
 }
 
 int main(int argc, char* argv[])
 {
     bool quitApp(false);
-    ConsoleOptions options(argc, argv);
+    BaseTest::ConsoleOptions options(argc, argv);
 
     Messaging::LocalTracer& tracer = Messaging::LocalTracer::Open();
 
@@ -215,7 +186,7 @@ int main(int argc, char* argv[])
 
         TRACE_GLOBAL(Trace::Information, ("%s - build: %s", executableName, __TIMESTAMP__));
 
-        RenderTest test(options.Output, options.RenderNode, 0, 10);
+        RenderTest test(options.Output, options.RenderNode, options.FPS, options.Width, options.Height);
 
         test.Start();
 

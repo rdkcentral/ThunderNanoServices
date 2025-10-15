@@ -331,12 +331,12 @@ namespace Plugin {
             class AtomicFifo {
             public:
                 AtomicFifo()
-                    : _head { 0 }
-                    , _tail { 0 }
+                    : _head{ 0 }
+                    , _tail{ 0 }
                 {
                     // Initialize array elements
                     for (auto& element : _queue) {
-                        element.store(T {}, std::memory_order_relaxed);
+                        element.store(T{}, std::memory_order_relaxed);
                     }
                 }
 
@@ -637,7 +637,10 @@ namespace Plugin {
 
             {
                 _connector = Compositor::CreateBuffer(name, width, height, refreshRate, format, renderer, &_sink);
-                TRACE(Trace::Information, (_T("Output %s created."), name.c_str()));
+
+                if (_connector.IsValid() == false) {
+                    TRACE(Trace::Error, (_T("Could not create output connector for %s"), name.c_str()));
+                }
             }
 
             virtual ~Output()
@@ -683,7 +686,7 @@ namespace Plugin {
             {
                 return (_connector->Height());
             }
-            bool IsValid()
+            bool IsValid() const
             {
                 return _connector.IsValid();
             }
