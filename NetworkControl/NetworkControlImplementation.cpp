@@ -796,7 +796,12 @@ namespace Plugin
                     } else {
                         DHCPEngine& engine = AddInterface(hardware, index.Current());
                         if (hardware.IsUp() == false) {
-                            hardware.Up(true);
+                            if (hardware.Up(true) != Core::ERROR_NONE) {
+                                SYSLOG(Logging::Startup, (_T("Interface [%s], could not be brought up!"), interfaceName.c_str()));
+                            }
+                            else {
+                                _observer.Event(interfaceName);
+                            }
                         } else {
                             Reload(interfaceName, (engine.Info().Mode() == Exchange::INetworkControl::ModeType::DYNAMIC));
                         }

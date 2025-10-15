@@ -120,32 +120,38 @@ namespace Compositor {
             Property()
                 : _property(property::InvalidProperty)
                 , _id(InvalidIdentifier)
-                , _flags(0) {
+                , _flags(0)
+            {
             }
             Property(const property which, const Identifier id, const uint32_t flags)
                 : _property(which)
                 , _id(id)
-                , _flags(flags) {
+                , _flags(flags)
+            {
             }
             Property(Property&& move)
                 : _property(std::move(move._property))
                 , _id(std::move(move._id))
-                , _flags(std::move(move._flags)) {
+                , _flags(std::move(move._flags))
+            {
             }
             Property(const Property& copy)
                 : _property(copy._property)
                 , _id(copy._id)
-                , _flags(copy._flags) {
+                , _flags(copy._flags)
+            {
             }
             ~Property() = default;
 
-            Property& operator= (Property&& rhs) {
+            Property& operator=(Property&& rhs)
+            {
                 _property = std::move(rhs._property);
                 _id = std::move(rhs._id);
                 _flags = std::move(rhs._flags);
                 return (*this);
             }
-            Property& operator= (const Property& rhs) {
+            Property& operator=(const Property& rhs)
+            {
                 _property = rhs._property;
                 _id = rhs._id;
                 _flags = rhs._flags;
@@ -153,19 +159,24 @@ namespace Compositor {
             }
 
         public:
-            bool IsValid() const {
+            bool IsValid() const
+            {
                 return (_property != property::InvalidProperty);
             }
-            Identifier Id() const {
+            Identifier Id() const
+            {
                 return _id;
             }
-            bool IsReadOnly() const {
+            bool IsReadOnly() const
+            {
                 return ((_flags & DRM_MODE_PROP_IMMUTABLE) != 0);
             }
-            bool IsAtomic() const {
+            bool IsAtomic() const
+            {
                 return ((_flags & DRM_MODE_PROP_ATOMIC) != 0);
             }
-            property_type Type() const {
+            property_type Type() const
+            {
                 return static_cast<property_type>(_flags & (DRM_MODE_PROP_LEGACY_TYPE | DRM_MODE_PROP_EXTENDED_TYPE));
             }
             operator enum property() const {
@@ -182,7 +193,7 @@ namespace Compositor {
         class Properties {
         private:
             using Element = std::pair<Identifier, uint32_t>;
-            using Elements = std::unordered_map<property, Element >;
+            using Elements = std::unordered_map<property, Element>;
 
         public:
             Properties(Properties&&) = delete;
@@ -190,11 +201,19 @@ namespace Compositor {
             Properties& operator=(Properties&&) = delete;
             Properties& operator=(const Properties&) = delete;
 
-            Properties() : _objectId(InvalidIdentifier) {}
-            Properties(const int fd, object_type type, const Identifier objectId) {
+            Properties()
+                : _descriptor(-1)
+                , _objectId(InvalidIdentifier)
+                , _objectType()
+                , _properties()
+
+            {
+            }
+            Properties(const int fd, object_type type, const Identifier objectId)
+            {
                 Load(fd, type, objectId);
             }
-            ~Properties() = default;
+            ~Properties();
 
         public:
             Identifier Id(const property which) const
@@ -206,49 +225,26 @@ namespace Compositor {
             {
                 const auto& entry = _properties.find(which);
                 return (entry != _properties.end()
-                    ? Property(which, entry->second.first, entry->second.second) 
-                    : Property(which, InvalidIdentifier, 0));
+                        ? Property(which, entry->second.first, entry->second.second)
+                        : Property(which, InvalidIdentifier, 0));
             }
-            Identifier Id () const {
+            Identifier Id() const
+            {
                 return (_objectId);
             }
 
             void Load(const int fd, object_type type, const Identifier objectId);
 
+            bool Value(const property which, uint64_t& value) const;
+            
+            drmModePropertyBlobPtr Blob(const property which) const;
+
         private:
+            int _descriptor;
             Identifier _objectId;
+            object_type _objectType;
             Elements _properties;
         };
-
-        class CRTCProperties : public Properties {
-        public:
-            CRTCProperties(CRTCProperties&&) = delete;
-            CRTCProperties(const CRTCProperties&) = delete;
-            CRTCProperties& operator=(CRTCProperties&&) = delete;
-            CRTCProperties& operator=(const CRTCProperties&) = delete;
-
-            CRTCProperties() = default;
-            CRTCProperties(const int fd, const drmModeCrtc* crtc) {
-                Load(fd, crtc);
-            }
-            ~CRTCProperties() = default;
-
-        public:
-            void Load(const int fd, const drmModeCrtc* crtc) {
-                memset(&_drmModeStatus, 0, sizeof(drmModeModeInfo));
-
-                _drmModeStatus = crtc->mode;
-
-                Properties::Load(fd, Compositor::DRM::object_type::Crtc, crtc->crtc_id);
-            }
-            operator const drmModeModeInfo* () const {
-                return (&_drmModeStatus);
-            }
-
-        private:
-            drmModeModeInfo _drmModeStatus;
-        };
-
     } // namespace DRM
 } // namespace Compositor
 } // namespace Thunder

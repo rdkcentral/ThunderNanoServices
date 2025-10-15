@@ -1,4 +1,3 @@
-
 /*
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
@@ -37,13 +36,15 @@ namespace Compositor {
              * @param sequence Commit sequence number that was presented.
              * @param time Presentation time stamp, 0 means never presented/timeout.
              */
-            virtual void Presented(const IOutput* output, const uint32_t sequence, const uint64_t time) = 0;
+            virtual void Presented(const IOutput* output, const uint64_t sequence, const uint64_t time) = 0;
+
+            virtual void Terminated(const IOutput* output) = 0;
         }; // struct ICallback
 
         /*
          * @brief  Get the framebuffer associated with this output where the render should end up.
          *
-         * @return Proxy to the framebuffer 
+         * @return Proxy to the framebuffer
          */
         virtual Core::ProxyType<IRenderer::IFrameBuffer> FrameBuffer() const = 0;
 
@@ -66,18 +67,26 @@ namespace Compositor {
      * @brief  Allocate a new output.
      *         When the callee is done with the output, they must release it.
      *
-     *
-     * @param connector  Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
-     * @param rectangle  the area that this connector covers in the composition
-     * @param format Pixel layout for this buffer
+     * @param connector   Identification of the a output like a connector name 'card1-HDMI-A-1' or 'wayland-0'
+     * @param width       Requested width in pixels (0 = auto-detect preferred mode)
+     * @param height      Requested height in pixels (0 = auto-detect preferred mode)
+     * @param refreshRate Refresh rate in mHz (0 = auto-detect preferred mode)
+     * @param format      Pixel layout for this buffer
+     * @param renderer    Renderer instance for creating framebuffers
+     * @param callback    Callback for presentation events
      *
      * @return Core::ProxyType<IOutput> The allocated buffer
+     *
+     * @note When width and height are both 0, the backend will automatically select
+     *       the preferred display mode. If the requested dimensions are too large,
+     *       the backend will select the best fitting mode.
      */
 
     EXTERNAL Core::ProxyType<IOutput> CreateBuffer(
         const string& connector,
         const uint32_t width,
         const uint32_t height,
+        const uint32_t refreshRate,
         const Compositor::PixelFormat& format,
         const Core::ProxyType<IRenderer>& renderer,
         IOutput::ICallback* callback);
