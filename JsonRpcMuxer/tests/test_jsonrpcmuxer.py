@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test script for Thunder JsonRpcMuxer plugin
-Tests both HTTP JSON-RPC and WebSocket interfaces
+Tests HTTP JSON-RPC interface
 """
 
 import json
@@ -108,7 +108,6 @@ class JsonRpcMuxerTester:
             return (response.status_code == 200) and (response.json()["result"]["state"] == state)
         except Exception as e:
             return False
-
 
     def activate_plugin(self):
         try:
@@ -438,7 +437,7 @@ class JsonRpcMuxerTester:
     
     def test_http_burst_batches(self, total_runs):
         """Test multiple concurrent batches"""
-        print_test(f"WebSocket: Concurrent batches ({total_runs} runs × {self.config.max_batches} connections)")
+        print_test(f"HTTP: Concurrent batches ({total_runs} runs × {self.config.max_batches} connections)")
         
         results = []
         errors = []
@@ -490,342 +489,6 @@ class JsonRpcMuxerTester:
             print_fail(f"Expected {total_runs * self.config.max_batches} results, got {len(results)}")
             self.failed += 1
 
-    def test_websocket_single_batch(self):
-        """Test WebSocket interface with a single batch"""
-        print_test("WebSocket: Single batch (4 requests)")
-        
-        try:
-            ws = websocket.create_connection(
-                self.ws_url, 
-                timeout=self.config.timeout / 1000,
-                subprotocols=["json"]
-            )
-            
-            batch = self.create_batch(4)
-            
-            # WebSocket message format
-            message = {
-                "jsonrpc": "2.0",
-                "id": 300,
-                "params": batch
-            }
-            
-            ws.send(json.dumps(message))
-            
-            # Wait for response
-            response_str = ws.recv()
-            response = json.loads(response_str)
-            
-            ws.close()
-            
-            # Check response
-            if "result" not in response:
-                print_fail("No 'result' field in response")
-                self.failed += 1
-                return
-            
-            # Result is a JSON string that needs to be parsed
-            result_str = response["result"]
-            if isinstance(result_str, str):
-                results = json.loads(result_str)
-            else:
-                results = result_str
-            
-            if len(results) != len(batch):
-                print_fail(f"Expected {len(batch)} results, got {len(results)}")
-                self.failed += 1
-                return
-            
-            print_pass(f"Received {len(results)} results via WebSocket")
-            self.passed += 1
-            
-        except Exception as e:
-            print_fail(f"Exception: {e}")
-            self.failed += 1
-    
-    def test_websocket_max_batch_size(self):
-        """Test WebSocket with maximum batch size"""
-        print_test(f"WebSocket: Maximum batch size ({self.config.max_batch_size} requests)")
-        
-        try:
-            ws = websocket.create_connection(
-                self.ws_url, 
-                timeout=self.config.timeout / 1000,
-                subprotocols=["json"]
-            )
-            
-            batch = self.create_batch(self.config.max_batch_size)
-            
-            message = {
-                "jsonrpc": "2.0",
-                "id": 301,
-                "params": batch
-            }
-            
-            ws.send(json.dumps(message))
-            response_str = ws.recv()
-            response = json.loads(response_str)
-            
-            ws.close()
-            
-            if "result" not in response:
-                print_fail("No 'result' field in response")
-                self.failed += 1
-                return
-            
-            # Result is a JSON string that needs to be parsed
-            result_str = response["result"]
-            if isinstance(result_str, str):
-                results = json.loads(result_str)
-            else:
-                results = result_str
-            
-            if len(results) != self.config.max_batch_size:
-                print_fail(f"Expected {self.config.max_batch_size} results, got {len(results)}")
-                self.failed += 1
-                return
-            
-            print_pass(f"Successfully processed max batch size ({self.config.max_batch_size})")
-            self.passed += 1
-            
-        except Exception as e:
-            print_fail(f"Exception: {e}")
-            self.failed += 1
-    
-    def test_websocket_exceeds_batch_size(self):
-        """Test that WebSocket rejects batches exceeding max size"""
-        print_test("WebSocket: Exceed batch size limit (should reject)")
-        
-        try:
-            ws = websocket.create_connection(
-                self.ws_url, 
-                timeout=self.config.timeout / 1000,
-                subprotocols=["json"]
-            )
-            
-            batch = self.create_batch(self.config.max_batch_size + 1)
-            
-            message = {
-                "jsonrpc": "2.0",
-                "id": 302,
-                "params": batch
-            }
-            
-            ws.send(json.dumps(message))
-            response_str = ws.recv()
-            response = json.loads(response_str)
-            
-            ws.close()
-            
-            # Should get an error
-            if "error" in response:
-                print_pass(f"Correctly rejected: {response['error'].get('message', 'Unknown error')}")
-                self.passed += 1
-            else:
-                print_fail("Should have been rejected but wasn't")
-                self.failed += 1
-                
-        except Exception as e:
-            print_fail(f"Exception: {e}")
-            self.failed += 1
-    
-    def test_websocket_multiple_connections(self):
-        """Test that only one WebSocket connection is allowed"""
-        print_test("WebSocket: Multiple connections (should reject second)")
-        
-        try:
-            ws1 = websocket.create_connection(
-                self.ws_url, 
-                timeout=self.config.timeout / 1000,
-                subprotocols=["json"]
-            )
-            print_info("First WebSocket connected")
-            
-            try:
-                ws2 = websocket.create_connection(
-                    self.ws_url, 
-                    timeout=2,
-                    subprotocols=["json"]
-                )
-                print_fail("Second WebSocket should have been rejected")
-                ws2.close()
-                self.failed += 1
-            except Exception:
-                print_pass("Second WebSocket correctly rejected")
-                self.passed += 1
-            
-            ws1.close()
-            
-        except Exception as e:
-            print_fail(f"Exception: {e}")
-            self.failed += 1
-    
-    def test_websocket_cancel_batches(self):
-        """Test that WebSocket cancels batches"""
-        print_test("WebSocket: Try to trigger batch cancellation")
-        
-        try:
-            ws = websocket.create_connection(
-                self.ws_url, 
-                timeout=self.config.timeout / 1000,
-                subprotocols=["json"]
-            )
-            
-            batch = self.create_batch(self.config.max_batch_size)
-            
-            message = {
-                "jsonrpc": "2.0",
-                "id": 302,
-                "params": batch
-            }
-           
-            ws.send(json.dumps(message))
-            ws.close()
-            
-            # plugin not crashed?
-            if self.plugin_state("Activated", 2.0):
-                print_pass(f"Plugin successfully survived a channel closure while processing")
-                self.passed += 1
-            else:
-                print_fail("restarting plugin... ")
-                self.activate_plugin()
-                self.failed += 1
-                
-        except Exception as e:
-            print_fail(f"Exception: {e}")
-            self.failed += 1
-
-    def test_websocket_disable_plugin(self):
-        """Test that WebSocket cancels batches by disabling the plugin mid-flight"""
-        print_test("WebSocket: Try to trigger batch cancellation by disabling the plugin mid-flight")
-        
-        try:
-            ws = websocket.create_connection(
-                self.ws_url, 
-                timeout=self.config.timeout / 1000,
-                subprotocols=["json"]
-            )
-            
-            batch = self.create_batch(self.config.max_batch_size)
-            
-            message = {
-                "jsonrpc": "2.0",
-                "id": 302,
-                "params": batch
-            }
-           
-            # schedule plugin deactivation
-            deactivate = threading.Timer(0.00002, self.deactivate_plugin)
-            deactivate.start()
-           
-            ws.send(json.dumps(message))
-            ws.close()
-
-            time.sleep(2.0)
-            deactivate.cancel()
-            
-            # plugin caused a crash?
-            if self.activate_plugin():
-                print_pass(f"Plugin successfully survived a mid-flight deactivation")
-                self.passed += 1
-            else:
-                print_fail("restarting plugin... ")
-                self.activate_plugin()
-                self.failed += 1
-            
-        except Exception as e:
-            print_fail(f"Exception: {e}")
-            self.failed += 1
-    
-    def test_threadpool_overload(self):
-        """Test system behavior under heavy concurrent load"""
-        print_test(f"Threadpool overload: {self.config.max_batches + 3} concurrent batches")
-        print_info(f"Expecting {self.config.max_batches} to succeed, rest to be rejected")
-        
-        results = []
-        errors = []
-        accepted = 0
-        rejected = 0
-        
-        def send_batch(batch_id: int):
-            nonlocal accepted, rejected
-            try:
-                batch = self.create_batch(self.config.max_batch_size)
-                payload = {
-                    "jsonrpc": "2.0",
-                    "id": 400 + batch_id,
-                    "method": "JsonRpcMuxer.1.invoke",
-                    "params": batch
-                }
-                
-                response = requests.post(
-                    self.http_url,
-                    json=payload,
-                    timeout=self.config.timeout / 1000
-                )
-                
-                data = response.json()
-                
-                if "error" in data:
-                    # Rejected due to maxbatches limit
-                    if "Too many concurrent batches" in data["error"].get("message", ""):
-                        rejected += 1
-                    else:
-                        errors.append(f"Batch {batch_id}: Unexpected error: {data['error']}")
-                elif "result" in data:
-                    # Accepted and processed
-                    accepted += 1
-                else:
-                    errors.append(f"Batch {batch_id}: No result or error in response")
-                    
-                results.append(data)
-                
-            except requests.exceptions.Timeout:
-                errors.append(f"Batch {batch_id}: Timeout")
-            except Exception as e:
-                errors.append(f"Batch {batch_id}: {str(e)}")
-        
-        # Send more batches than maxbatches allows
-        num_batches = self.config.max_batches + 3
-        threads = []
-        
-        for i in range(num_batches):
-            t = threading.Thread(target=send_batch, args=(i,))
-            threads.append(t)
-            t.start()
-            # Small stagger to simulate realistic arrival pattern
-            time.sleep(0.01)
-        
-        for t in threads:
-            t.join()
-        
-        print_info(f"Accepted: {accepted}, Rejected: {rejected}, Errors: {len(errors)}")
-        
-        if errors:
-            for error in errors[:5]:  # Show first 5 errors
-                print_info(f"  {error}")
-            if len(errors) > 5:
-                print_info(f"  ... and {len(errors) - 5} more errors")
-        
-        # We expect:
-        # - Some batches to be accepted (up to maxbatches)
-        # - Some batches to be rejected (the excess ones)
-        # - Total = num_batches
-        total_handled = accepted + rejected
-        
-        if total_handled != num_batches:
-            print_fail(f"Expected {num_batches} responses, got {total_handled}")
-            self.failed += 1
-        elif rejected < 1:
-            print_fail(f"Expected some rejections due to maxbatches limit, got 0")
-            self.failed += 1
-        elif accepted < 1:
-            print_fail(f"Expected some acceptances, got 0")
-            self.failed += 1
-        else:
-            print_pass(f"System correctly handled overload: {accepted} accepted, {rejected} rejected")
-            self.passed += 1
-    
     def run_all_tests(self):
         """Run all tests"""
         print(f"\n{Colors.BOLD}JsonRpcMuxer Test Suite{Colors.RESET}")
@@ -842,15 +505,6 @@ class JsonRpcMuxerTester:
         self.test_http_cancel_batches()
         self.test_http_burst_batches(1000)
         
-        # WebSocket tests
-        print(f"\n{Colors.BOLD}=== WebSocket Tests ==={Colors.RESET}")
-        self.test_websocket_single_batch()
-        self.test_websocket_max_batch_size()
-        self.test_websocket_exceeds_batch_size()
-        self.test_websocket_multiple_connections()
-        self.test_websocket_cancel_batches()
-        self.test_websocket_disable_plugin()
-        
         # Summary
         print(f"\n{Colors.BOLD}=== Test Summary ==={Colors.RESET}")
         total = self.passed + self.failed
@@ -864,7 +518,6 @@ class JsonRpcMuxerTester:
         else:
             print(f"\n{Colors.RED}{Colors.BOLD}✗ Some tests failed{Colors.RESET}")
             return 1
-
 
 def main():
     parser = argparse.ArgumentParser(description="Test Thunder JsonRpcMuxer plugin")
@@ -888,7 +541,6 @@ def main():
     exit_code = tester.run_all_tests()
     
     exit(exit_code)
-
 
 if __name__ == "__main__":
     main()
