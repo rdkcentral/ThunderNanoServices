@@ -90,68 +90,168 @@ namespace Plugin {
         return string();
     }
 
-    Core::hresult JsonRpcMuxer::Invoke(const uint32_t channelId, const uint32_t id, const string& token,
-        const string& method, const string& parameters, string& response)
+    void JsonRpcMuxer::Batch::Start()
     {
-        uint32_t result(Core::ERROR_NONE);
+        TRACE(Trace::Information, (_T("Batch started, batchId=%u, jobs=%u"), _batchId, _messages.Length()));
 
-        if (_dispatch == nullptr) {
-            result = Core::ERROR_UNAVAILABLE;
-            response = _T("Dispatch is offline");
-            TRACE(Trace::Error, (_T("Invoke failed: Dispatch unavailable")));
+        if (_parallel) {
+            // Parallel: submit all jobs immediately
+            for (uint32_t i = 0; i < _messages.Length(); i++) {
+                SubmitJob(i);
+            }
         } else {
-            Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
-            Core::OptionalType<Core::JSON::Error> parseError;
+            // Sequential: submit only first job
+            SubmitJob(0);
+        }
+    }
 
-            if (!messages.FromString(parameters, parseError) || parseError.IsSet()) {
-                result = Core::ERROR_PARSE_FAILURE;
-                response = parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array");
-                TRACE(Trace::Error, (_T("Parse failure: %s"), response.c_str()));
-            } else {
-                uint32_t validationResult = ValidateBatch(messages, response);
+    void JsonRpcMuxer::Batch::OnJobComplete(uint32_t completedIndex)
+    {
+        if (!_parallel) {
+            // Sequential mode: submit next job
+            uint32_t nextIdx = completedIndex + 1;
+            if (nextIdx < _messages.Length()) {
+                SubmitJob(nextIdx);
+            }
+        }
+        // Parallel mode: nothing to do
+    }
 
-                if (validationResult != Core::ERROR_NONE) {
-                    result = validationResult;
-                } else {
-                    result = ~0; // Keep channel open
-                    Process(channelId, id, token, messages);
-                }
+    void JsonRpcMuxer::Batch::SubmitJob(uint32_t index)
+    {
+        ASSERT(index < _messages.Length());
+
+        // Create job with just this pointer and index - simple!
+        Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(this, index);
+        Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
+    }
+
+    void JsonRpcMuxer::Batch::Job::Dispatch()
+    {
+        string output;
+        const Core::JSONRPC::Message& message = _batch->GetMessage(_index);
+        const string& token = _batch->Token();
+
+        TRACE(Trace::Information, (_T("Process %d:%d"), _batch->ChannelId(), message.Id.Value()));
+
+        if (_batch->IsCancelled()) {
+            TRACE(Trace::Warning, (_T("Job skipped, batch cancelled, batchId=%u, jobId=%d"), _batch->BatchId(), message.Id.Value()));
+
+            Response& responseMsg = _batch->Acquire(_index);
+            responseMsg.Id = message.Id.Value();
+            responseMsg.Error.SetError(Core::ERROR_UNAVAILABLE);
+            responseMsg.Error.Text = _T("Batch cancelled");
+
+            if (_batch->ReleaseAndCheckComplete()) {
+                _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
+            }
+            return;
+        }
+
+        if (_batch->_parent->_shuttingDown.load()) {
+            TRACE(Trace::Warning, (_T("Job skipped, plugin shutting down, batchId=%u, jobId=%d"), _batch->BatchId(), message.Id.Value()));
+
+            Response& responseMsg = _batch->Acquire(_index);
+            responseMsg.Id = message.Id.Value();
+            responseMsg.Error.SetError(Core::ERROR_UNAVAILABLE);
+            responseMsg.Error.Text = _T("Plugin shutting down");
+
+            if (_batch->ReleaseAndCheckComplete()) {
+                _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
+            }
+            return;
+        }
+
+        if (_batch->IsTimedOut()) {
+            TRACE(Trace::Warning, (_T("Job skipped due to timeout, batchId=%u, jobId=%d"), _batch->BatchId(), message.Id.Value()));
+
+            Response& responseMsg = _batch->Acquire(_index);
+            responseMsg.Id = message.Id.Value();
+            responseMsg.Error.SetError(Core::ERROR_TIMEDOUT);
+            responseMsg.Error.Text = _T("Request timed out");
+
+            if (_batch->ReleaseAndCheckComplete()) {
+                _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
+                _batch->_parent->SendTimeoutResponse(_batch->ChannelId(), _batch->ResponseId(), _batch->BatchId());
+            }
+            return;
+        }
+
+        uint32_t invokeResult = _batch->_parent->_dispatch->Invoke(
+            _batch->ChannelId(),
+            message.Id.Value(),
+            token,
+            message.Designator.Value(),
+            message.Parameters.Value(),
+            output);
+
+        // Update response (thread-safe)
+        Response& responseMsg = _batch->Acquire(_index);
+        responseMsg.Id = message.Id.Value();
+
+        if (invokeResult == Core::ERROR_NONE) {
+            responseMsg.Result = output;
+        } else {
+            responseMsg.Error.SetError(invokeResult);
+            if (!output.empty()) {
+                responseMsg.Error.Text = output;
             }
         }
 
-        return result;
+        bool batchComplete = _batch->ReleaseAndCheckComplete();
+
+        if (!batchComplete) {
+            // Not done yet - let Batch orchestrate next job
+            _batch->OnJobComplete(_index);
+        } else {
+            // Batch complete - send response
+            _batch->_parent->RemoveBatchFromRegistry(_batch->BatchId());
+
+            if (_batch->IsTimedOut()) {
+                _batch->_parent->SendTimeoutResponse(_batch->ChannelId(), _batch->ResponseId(), _batch->BatchId());
+            } else if (_batch->_parent->IsChannelValid(_batch->ChannelId())) {
+                string response = _batch->ToString();
+
+                Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
+                if (message.IsValid()) {
+                    message->Id = _batch->ResponseId();
+                    message->Result = response;
+
+                    _batch->_parent->SendResponse(_batch->ChannelId(), Core::ProxyType<Core::JSON::IElement>(message));
+                }
+
+                TRACE(Trace::Information, (_T("Batch completed, batchId=%u"), _batch->BatchId()));
+            } else {
+                TRACE(Trace::Warning, (_T("Batch completed but channel invalid, batchId=%u, channelId=%u"), _batch->BatchId(), _batch->ChannelId()));
+            }
+        }
     }
 
-    void JsonRpcMuxer::Process(uint32_t channelId, uint32_t responseId, const string& token, Core::JSON::ArrayType<Core::JSONRPC::Message>& messages)
+    void JsonRpcMuxer::Process(uint32_t channelId, uint32_t responseId, const string& token,
+        Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, bool parallel)
     {
         uint32_t batchId = ++_batchCounter;
-        uint32_t messageCount = messages.Length();
 
-        TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, channelId=%u, timeout=%u"), batchId, messageCount, channelId, _timeout));
-        Core::ProxyType<Job::State> state = Core::ProxyType<Job::State>::Create(messageCount, channelId, responseId, batchId, _timeout);
+        TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, mode=%s"), batchId, messages.Length(), parallel ? _T("parallel") : _T("sequential")));
+
+        Core::ProxyType<Batch> batch = Core::ProxyType<Batch>::Create(
+            Core::ProxyType<JsonRpcMuxer>(*this, *this), batchId, parallel, messages,
+            channelId, responseId, token, _timeout);
 
         _batchesLock.Lock();
-        _activeBatchStates[batchId] = state;
+        _activeBatches[batchId] = batch;
         _batchesLock.Unlock();
 
-        uint32_t index = 0;
-        Core::JSON::ArrayType<Core::JSONRPC::Message>::Iterator it = messages.Elements();
-
-        while (it.Next()) {
-            Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(Core::ProxyType<JsonRpcMuxer>(*this, *this), token, it.Current(), state, index++);
-            Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
-        }
-
-        TRACE(Trace::Information, (_T("Batch queued to worker pool, batchId=%u, jobs=%u"), batchId, messageCount));
+        batch->Start();
     }
 
     bool JsonRpcMuxer::TryClaimBatchSlot()
     {
-        uint8_t current = _activeBatches.fetch_add(1);
+        uint8_t current = _activeBatchCount.fetch_add(1);
 
         if (current >= _maxBatches) {
             // Oops, we exceeded the limit, give it back
-            --_activeBatches;
+            --_activeBatchCount;
             return false;
         }
 
@@ -172,7 +272,7 @@ namespace Plugin {
     uint32_t JsonRpcMuxer::WaitForBatchCompletion(const uint32_t maxWaitMs)
     {
         _batchesLock.Lock();
-        bool allDone = _activeBatchStates.empty();
+        bool allDone = _activeBatches.empty();
         _batchesLock.Unlock();
 
         uint32_t waitResult = Core::ERROR_NONE;
@@ -188,9 +288,9 @@ namespace Plugin {
     void JsonRpcMuxer::RemoveBatchFromRegistry(uint32_t batchId)
     {
         _batchesLock.Lock();
-        _activeBatchStates.erase(batchId);
-        --_activeBatches;
-        bool allDone = _activeBatchStates.empty();
+        _activeBatches.erase(batchId);
+        --_activeBatchCount;
+        bool allDone = _activeBatches.empty();
         _batchesLock.Unlock();
 
         if (allDone) {
@@ -202,7 +302,7 @@ namespace Plugin {
     {
         _batchesLock.Lock();
 
-        for (auto& pair : _activeBatchStates) {
+        for (auto& pair : _activeBatches) {
             if (pair.second->ChannelId() == channelId) {
                 pair.second->Cancel();
                 TRACE(Trace::Information, (_T("Cancelled batch batchId=%u for channelId=%u"), pair.first, channelId));
@@ -216,7 +316,7 @@ namespace Plugin {
     {
         _batchesLock.Lock();
 
-        for (auto& pair : _activeBatchStates) {
+        for (auto& pair : _activeBatches) {
             pair.second->Cancel();
             TRACE(Trace::Information, (_T("Cancelled batch batchId=%u"), pair.first));
         }
@@ -252,11 +352,47 @@ namespace Plugin {
         // Concurrency limit check
         if (!TryClaimBatchSlot()) {
             errorMessage = _T("Too many concurrent batches, try again later");
-            TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatches.load(), _maxBatches));
+            TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatchCount.load(), _maxBatches));
             return Core::ERROR_UNAVAILABLE;
         }
 
         return Core::ERROR_NONE;
+    }
+
+    Core::hresult JsonRpcMuxer::Invoke(const uint32_t channelId, const uint32_t id, const string& token,
+        const string& method, const string& parameters, string& response)
+    {
+        uint32_t result(Core::ERROR_NONE);
+
+        if (_dispatch == nullptr) {
+            result = Core::ERROR_UNAVAILABLE;
+            response = _T("Dispatch is offline");
+            TRACE(Trace::Error, (_T("Invoke failed: Dispatch unavailable")));
+        } else if (method != _T("parallel") && method != _T("sequential")) {
+            result = Core::ERROR_BAD_REQUEST;
+            response = _T("Invalid method, must be 'parallel' or 'sequential'");
+            TRACE(Trace::Warning, (_T("Invalid method: %s"), method.c_str()));
+        } else {
+            Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
+            Core::OptionalType<Core::JSON::Error> parseError;
+
+            if (!messages.FromString(parameters, parseError) || parseError.IsSet()) {
+                result = Core::ERROR_PARSE_FAILURE;
+                response = parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array");
+                TRACE(Trace::Error, (_T("Parse failure: %s"), response.c_str()));
+            } else {
+                uint32_t validationResult = ValidateBatch(messages, response);
+
+                if (validationResult != Core::ERROR_NONE) {
+                    result = validationResult;
+                } else {
+                    result = ~0; // Keep channel open
+                    Process(channelId, id, token, messages, (method == _T("parallel")));
+                }
+            }
+        }
+
+        return result;
     }
 
 #ifdef ENABLE_WEBSOCKET_CONNECTION
@@ -313,21 +449,26 @@ namespace Plugin {
     {
         if (_activeWebSocket == channelId) {
             Core::ProxyType<Core::JSONRPC::Message> message(element);
+
             if (message.IsValid()) {
-                Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
-                Core::OptionalType<Core::JSON::Error> parseError;
-
-                if (!messages.FromString(message->Parameters.Value(), parseError)) {
-                    TRACE(Trace::Error, (_T("WebSocket inbound parse failure on channelId=%u: %s"), channelId, parseError.IsSet() ? parseError.Value().Message().c_str() : _T("Unknown error")));
-                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_PARSE_FAILURE, parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array"));
+                if (message->Method() != _T("parallel") && message->Method() != _T("sequential")) {
+                    SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_BAD_REQUEST, _T("Invalid method, must be 'parallel' or 'sequential'"));
                 } else {
-                    string errorMsg;
-                    uint32_t validationResult = ValidateBatch(messages, errorMsg);
+                    Core::JSON::ArrayType<Core::JSONRPC::Message> messages;
+                    Core::OptionalType<Core::JSON::Error> parseError;
 
-                    if (validationResult != Core::ERROR_NONE) {
-                        SendErrorResponse(channelId, message->Id.Value(), validationResult, errorMsg);
+                    if (!messages.FromString(message->Parameters.Value(), parseError)) {
+                        TRACE(Trace::Error, (_T("WebSocket inbound parse failure on channelId=%u: %s"), channelId, parseError.IsSet() ? parseError.Value().Message().c_str() : _T("Unknown error")));
+                        SendErrorResponse(channelId, message->Id.Value(), Core::ERROR_PARSE_FAILURE, parseError.IsSet() ? parseError.Value().Message() : _T("Failed to parse message array"));
                     } else {
-                        Process(channelId, message->Id.Value(), "", messages);
+                        string errorMsg;
+                        uint32_t validationResult = ValidateBatch(messages, errorMsg);
+
+                        if (validationResult != Core::ERROR_NONE) {
+                            SendErrorResponse(channelId, message->Id.Value(), validationResult, errorMsg);
+                        } else {
+                            Process(channelId, message->Id.Value(), "", messages, (message->Method() == _T("parallel")));
+                        }
                     }
                 }
             } else {
