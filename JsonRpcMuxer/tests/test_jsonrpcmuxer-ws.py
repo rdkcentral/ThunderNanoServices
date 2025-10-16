@@ -154,7 +154,7 @@ class JsonRpcMuxerTester:
         except Exception as e:
             return False
 
-    def test_websocket_single_batch(self):
+    def test_websocket_single_batch(self, method):
         """Test WebSocket interface with a single batch"""
         print_test("WebSocket: Single batch (4 requests)")
         
@@ -171,6 +171,7 @@ class JsonRpcMuxerTester:
             message = {
                 "jsonrpc": "2.0",
                 "id": 300,
+                "method": "JsonRpcMuxer.1." + method,
                 "params": batch
             }
             
@@ -207,7 +208,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
-    def test_websocket_max_batch_size(self):
+    def test_websocket_max_batch_size(self, method):
         """Test WebSocket with maximum batch size"""
         print_test(f"WebSocket: Maximum batch size ({self.config.max_batch_size} requests)")
         
@@ -223,6 +224,7 @@ class JsonRpcMuxerTester:
             message = {
                 "jsonrpc": "2.0",
                 "id": 301,
+                "method": "JsonRpcMuxer.1." + method,
                 "params": batch
             }
             
@@ -256,7 +258,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
-    def test_websocket_exceeds_batch_size(self):
+    def test_websocket_exceeds_batch_size(self, method):
         """Test that WebSocket rejects batches exceeding max size"""
         print_test("WebSocket: Exceed batch size limit (should reject)")
         
@@ -272,6 +274,7 @@ class JsonRpcMuxerTester:
             message = {
                 "jsonrpc": "2.0",
                 "id": 302,
+                "method": "JsonRpcMuxer.1." + method,
                 "params": batch
             }
             
@@ -324,7 +327,44 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
     
-    def test_websocket_cancel_batches(self):
+    def test_websocket_invalid_methode(self):
+        """Test that WebSocket rejects invalid method"""
+        print_test("WebSocket: Invalid method (should reject)")
+        
+        try:
+            ws = websocket.create_connection(
+                self.ws_url, 
+                timeout=self.config.timeout / 1000,
+                subprotocols=["json"]
+            )
+            
+            batch = self.create_batch(4)
+            
+            message = {
+                "jsonrpc": "2.0",
+                "id": 303,
+                "method": "JsonRpcMuxer.1.invalidmethod",
+                "params": batch
+            }
+            
+            ws.send(json.dumps(message))
+            response_str = ws.recv()
+            response = json.loads(response_str)
+            
+            ws.close()
+            
+            if "error" in response:
+                print_pass(f"Correctly rejected: {response['error'].get('message', 'Unknown error')}")
+                self.passed += 1
+            else:
+                print_fail("Should have been rejected but wasn't")
+                self.failed += 1
+                
+        except Exception as e:
+            print_fail(f"Exception: {e}")
+            self.failed += 1
+
+    def test_websocket_cancel_batches(self, method):
         """Test that WebSocket cancels batches"""
         print_test("WebSocket: Try to trigger batch cancellation")
         
@@ -340,6 +380,7 @@ class JsonRpcMuxerTester:
             message = {
                 "jsonrpc": "2.0",
                 "id": 302,
+                "method": "JsonRpcMuxer.1." + method,
                 "params": batch
             }
            
@@ -359,10 +400,11 @@ class JsonRpcMuxerTester:
             print_fail(f"Exception: {e}")
             self.failed += 1
 
-    def test_websocket_disable_plugin(self):
+    def test_websocket_disable_plugin(self, method):
         """Test that WebSocket cancels batches by disabling the plugin mid-flight"""
         print_test("WebSocket: Try to trigger batch cancellation by disabling the plugin mid-flight")
-        
+        self.activate_plugin()
+
         try:
             ws = websocket.create_connection(
                 self.ws_url, 
@@ -375,6 +417,7 @@ class JsonRpcMuxerTester:
             message = {
                 "jsonrpc": "2.0",
                 "id": 302,
+                "method": "JsonRpcMuxer.1." + method,
                 "params": batch
             }
            
@@ -409,12 +452,23 @@ class JsonRpcMuxerTester:
         
         # WebSocket tests
         print(f"\n{Colors.BOLD}=== WebSocket Tests ==={Colors.RESET}")
-        self.test_websocket_single_batch()
-        self.test_websocket_max_batch_size()
-        self.test_websocket_exceeds_batch_size()
         self.test_websocket_multiple_connections()
-        self.test_websocket_cancel_batches()
-        self.test_websocket_disable_plugin()
+        self.test_websocket_invalid_methode()
+
+        self.test_websocket_single_batch("sequential")
+        self.test_websocket_single_batch("parallel")
+
+        self.test_websocket_max_batch_size("sequential")
+        self.test_websocket_max_batch_size("parallel")
+
+        self.test_websocket_exceeds_batch_size("sequential")
+        self.test_websocket_exceeds_batch_size("parallel")
+
+        self.test_websocket_cancel_batches("sequential")
+        self.test_websocket_cancel_batches("parallel")
+
+        self.test_websocket_disable_plugin("sequential")
+        self.test_websocket_disable_plugin("parallel")
         
         # Summary
         print(f"\n{Colors.BOLD}=== Test Summary ==={Colors.RESET}")

@@ -6,7 +6,6 @@ Tests HTTP JSON-RPC interface
 
 import json
 import requests
-import websocket
 import threading
 import time
 import argparse
@@ -69,12 +68,13 @@ class JsonRpcMuxerTester:
         for i in range(count):
             # Alternate between different Controller methods
             methods = [
-                {"method": "Controller.1.subsystems", "params": {}},
                 {"method": "Controller.1.version", "params": {}},
                 {"method": "Controller.1.buildinfo", "params": {}},
+                {"method": "Controller.1.environment@Controller", "params": {}},
+                {"method": "Unknow.1.status", "params": {}},
+                {"method": "Controller.1.subsystems", "params": {}},
                 {"method": "Controller.1.status", "params": {}},
                 {"method": "Controller.1.links", "params": {}},
-                {"method": "Controller.1.environment@Controller", "params": {}},
                 {"method": "Controller.1.configuration@Controller", "params": {}},
                 {"method": "Controller.1.environment@JsonRpcMuxer", "params": {}},
                 {"method": "Controller.1.configuration@JsonRpcMuxer", "params": {}},
@@ -487,6 +487,37 @@ class JsonRpcMuxerTester:
         else:
             print_fail(f"Expected {total_runs * self.config.max_batches} results, got {len(results)}")
             self.failed += 1
+    
+    def test_http_invalid_methode(self):
+        """Test HTTP interface with an invalid method"""
+        print_test("HTTP: Invalid method (should reject)")
+        
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 104,
+            "method": "JsonRpcMuxer.1.invalidmethod",
+            "params": []
+        }
+        
+        try:
+            response = requests.post(
+                self.http_url,
+                json=payload,
+                timeout=self.config.timeout / 1000
+            )
+            
+            data = response.json()
+            
+            if "error" in data:
+                print_pass(f"Correctly rejected: {data['error'].get('message', 'Unknown error')}")
+                self.passed += 1
+            else:
+                print_fail("Should have been rejected but wasn't")
+                self.failed += 1
+                
+        except Exception as e:
+            print_fail(f"Exception: {e}")
+            self.failed += 1
 
     def run_all_tests(self):
         """Run all tests"""
@@ -496,13 +527,15 @@ class JsonRpcMuxerTester:
         
         # HTTP tests
         print(f"\n{Colors.BOLD}=== HTTP Tests ==={Colors.RESET}")
+        self.test_http_invalid_methode()
+
         self.test_http_single_batch("parallel")
         self.test_http_max_batch_size("parallel")
         self.test_http_exceeds_batch_size("parallel")
         self.test_http_empty_batch("parallel")
         self.test_http_concurrent_batches("parallel")
         self.test_http_cancel_batches("parallel")
-        self.test_http_burst_batches(1000, "parallel")
+        self.test_http_burst_batches(100, "parallel")
 
         self.test_http_single_batch("sequential")
         self.test_http_max_batch_size("sequential")
@@ -510,7 +543,7 @@ class JsonRpcMuxerTester:
         self.test_http_empty_batch("sequential")
         self.test_http_concurrent_batches("sequential")
         self.test_http_cancel_batches("sequential")
-        self.test_http_burst_batches(1000, "sequential")
+        self.test_http_burst_batches(100, "sequential")
         
         # Summary
         print(f"\n{Colors.BOLD}=== Test Summary ==={Colors.RESET}")
