@@ -61,4 +61,6 @@ target_include_directories(${MODULE_NAME}
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
+add_subdirectory(test_app)
+
 write_config()
