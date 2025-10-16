@@ -140,16 +140,12 @@ int main(int /*argc*/, const char* argv[])
 
     {
         TRACE_GLOBAL(Trace::Information, ("Test %d", testNumber++));
-
-        uint64_t mods[1] = { DRM_FORMAT_MOD_LINEAR };
-        Compositor::PixelFormat format(DRM_FORMAT_XRGB8888, (sizeof(mods) / sizeof(mods[0])), mods);
-
-        Core::ProxyType<Exchange::IGraphicsBuffer> buffer = Compositor::CreateBuffer(fdRender, 1920, 1080, format);
+        Core::ProxyType<Exchange::IGraphicsBuffer> buffer = Compositor::CreateBuffer(fdRender, 1920, 1080, Compositor::PixelFormat::Default());
 
         assert(buffer.operator->());
         assert(buffer->Width() == 1920);
         assert(buffer->Height() == 1080);
-        assert(buffer->Format() == format.Type());
+        assert(buffer->Format() != Compositor::PixelFormat::Default().Type()); // should have picked a valid format
 
         buffer.Release();
     }

@@ -283,8 +283,46 @@ grep "VSync.*called" /var/log/thunder.log | tail -10
 # CPU usage tracking
 top -p $(pidof Thunder)
 ```
+## DRM Debug Commands
 
-### Debug Commands
+### Enable Debug Logging
+
+#### Check and Mount debugfs
+
+```bash
+# Check if debugfs is mounted
+mount | grep debugfs
+
+# Mount debugfs (if not already mounted)
+sudo mount -t debugfs none /sys/kernel/debug
+
+# Make it persistent across reboots (optional)
+echo "debugfs /sys/kernel/debug debugfs defaults 0 0" | sudo tee -a /etc/fstab
+```
+
+#### Enable DRM Kernel Debug Output
+
+```bash
+# Enable DRM debug logging
+# Debug levels:
+# 0x01 - Core DRM
+# 0x02 - Driver-specific
+# 0x04 - KMS (mode setting)
+# 0x08 - Prime (buffer sharing)
+# 0x10 - Atomic
+# 0x1f - All common categories
+echo 0x1f | sudo tee /sys/module/drm/parameters/debug
+
+# Watch kernel logs in real-time
+sudo dmesg -wH
+
+# Disable debug logging when done
+echo 0 | sudo tee /sys/module/drm/parameters/debug
+```
+
+### DRM Information Commands
+
+#### Basic DRM Information
 
 ```bash
 # DRM connector info
@@ -293,9 +331,74 @@ modetest -M <gpu> -c
 # Display timing info  
 modetest -M <gpu> -w <connector>:<property>:<value>
 
+# Show all planes and their capabilities (including format/modifier support)
+modetest -M <gpu> -p
+
+# List available DRM devices
+ls /sys/kernel/debug/dri/
+```
+
+#### Detailed State Information
+
+```bash
 # Buffer info
 cat /sys/kernel/debug/dri/0/framebuffer
+
+# Full DRM state (connectors, CRTCs, planes, properties)
+sudo cat /sys/kernel/debug/dri/0/state
+
+# Check specific VC4 info (Broadcom/Raspberry Pi)
+sudo cat /sys/kernel/debug/dri/0/vc4_*
 ```
+
+### Example: Debug Framebuffer Creation Issues
+
+```bash
+# 1. Enable DRM debugging
+echo 0x1f | sudo tee /sys/module/drm/parameters/debug
+
+# 2. Run your application in another terminal
+
+# 3. Monitor kernel logs for DRM-specific messages
+sudo dmesg | grep -i drm
+
+# 4. Look for specific errors
+sudo dmesg | grep -i "modifier\|addfb\|framebuffer"
+
+# 5. Disable debugging when done
+echo 0 | sudo tee /sys/module/drm/parameters/debug
+```
+
+### Common Issues and Their Debug Output
+
+#### Modifier-related Issues
+
+When you see errors like:
+```
+non-zero modifier for unused plane
+```
+
+This indicates that modifiers are being set for unused planes. Only active planes should have non-zero modifiers.
+
+#### Format Not Supported
+
+```
+unsupported pixel format
+```
+
+Use `modetest -M <gpu> -p` to check which formats and modifiers are supported by each plane.
+
+#### Invalid Argument (EINVAL)
+
+```
+ret=-22
+```
+
+Common causes:
+- Incorrect modifier for unused planes
+- Format/modifier combination not supported by hardware
+- Invalid buffer dimensions or stride
+
 
 ## 🤝 Contributing
 

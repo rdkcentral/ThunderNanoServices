@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #pragma once
 
 #ifndef MODULE_NAME
@@ -26,3 +26,39 @@
 #include <core/core.h>
 #include <messaging/messaging.h>
 #include <com/com.h>
+
+namespace Thunder {
+namespace Trace {
+    class Stats {
+    public:
+        ~Stats() = default;
+        Stats() = delete;
+        Stats(const Stats&) = delete;
+        Stats& operator=(const Stats&) = delete;
+        Stats(const TCHAR formatter[], ...)
+        {
+            va_list ap;
+            va_start(ap, formatter);
+            Thunder::Trace::Format(_text, formatter, ap);
+            va_end(ap);
+        }
+        explicit Stats(const string& text)
+            : _text(Thunder::Core::ToString(text))
+        {
+        }
+
+    public:
+        const char* Data() const
+        {
+            return (_text.c_str());
+        }
+        uint16_t Length() const
+        {
+            return (static_cast<uint16_t>(_text.length()));
+        }
+
+    private:
+        std::string _text;
+    }; // class Stats
+}
+}
