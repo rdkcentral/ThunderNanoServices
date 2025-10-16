@@ -122,6 +122,8 @@ namespace Plugin {
                 , _parallel(parallel)
                 , _pendingCount(messages.Length())
                 , _messages(messages)
+                , _responseLock() 
+                , _responseArray()
                 , _channelId(channelId)
                 , _responseId(responseId)
                 , _token(token)
@@ -173,7 +175,7 @@ namespace Plugin {
                 if (IsActive()) { // Are we still active?
                     _responseLock.Lock();
 
-                    // Do the same as in JSONRPC::InvokeHandler (Source/plugins/JSONRPC.h) 
+                    // Do the same as in JSONRPC::InvokeHandler (Source/plugins/JSONRPC.h)
                     if ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE))) {
                         Response& response = _responseArray[index];
 
