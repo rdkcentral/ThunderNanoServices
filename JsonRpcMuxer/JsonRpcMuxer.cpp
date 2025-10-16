@@ -170,7 +170,7 @@ namespace Plugin {
         _batchesLock.Lock();
 
         for (auto& pair : _activeBatches) {
-            if (pair.second->ChannelId() == channelId) {
+            if (pair.second->IsForChannel(channelId)) {
                 pair.second->Cancel();
                 TRACE(Trace::Information, (_T("Cancelled batch batchId=%u for channelId=%u"), pair.first, channelId));
             }

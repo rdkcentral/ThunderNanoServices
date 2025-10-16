@@ -122,7 +122,7 @@ namespace Plugin {
                 , _parallel(parallel)
                 , _pendingCount(messages.Length())
                 , _messages(messages)
-                , _responseLock() 
+                , _responseLock()
                 , _responseArray()
                 , _channelId(channelId)
                 , _responseId(responseId)
@@ -142,6 +142,16 @@ namespace Plugin {
             Batch& operator=(Batch&&) = delete;
             ~Batch() = default;
 
+            bool IsActive() const
+            {
+                return !_cancelled.load() && !_parent->_shuttingDown.load() && !IsTimedOut();
+            }
+
+            bool IsForChannel(uint32_t channelId) const
+            {
+                return (_channelId == channelId);
+            }
+
             void Start()
             {
                 if (_parallel) {
@@ -153,30 +163,35 @@ namespace Plugin {
                 }
             }
 
+            void Cancel() { _cancelled.store(true); }
+
+        private:
             void Run(uint32_t index)
             {
                 ASSERT(index < _messages.Length());
 
                 if (IsActive() == false) {
-                    --_pendingCount;
-                    return; // No need to process if batch is not active
-                }
+                    _responseLock.Lock();
+                    bool isComplete = (--_pendingCount == 0);
+                    _responseLock.Unlock();
 
-                Core::hresult result = Core::ERROR_UNAVAILABLE;
-                string output;
+                    if (isComplete) {
+                        FinishBatch();
+                    }
+                } else {
+                    const Core::JSONRPC::Message& message = _messages[index];
 
-                const Core::JSONRPC::Message& message = _messages[index];
+                    string output;
+                    Core::hresult result = _parent->_dispatch->Invoke(
+                        _channelId, message.Id.Value(), _token,
+                        message.Designator.Value(), message.Parameters.Value(),
+                        output);
 
-                result = _parent->_dispatch->Invoke(
-                    ChannelId(), message.Id.Value(), Token(),
-                    message.Designator.Value(), message.Parameters.Value(),
-                    output);
+                    bool isActive = IsActive();
 
-                if (IsActive()) { // Are we still active?
                     _responseLock.Lock();
 
-                    // Do the same as in JSONRPC::InvokeHandler (Source/plugins/JSONRPC.h)
-                    if ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE))) {
+                    if (isActive && ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE)))) {
                         Response& response = _responseArray[index];
 
                         if (message.Id.IsSet()) {
@@ -184,46 +199,34 @@ namespace Plugin {
                         }
 
                         if (result == Core::ERROR_NONE) {
-                            if (output.empty() == true) {
+                            if (output.empty()) {
                                 response.Result.Null(true);
                             } else {
                                 response.Result = output;
                             }
                         } else {
                             response.Error.SetError(result);
-
-                            if (output.empty() == false) {
+                            if (!output.empty()) {
                                 response.Error.Text = output;
                             }
                         }
                     }
 
+                    bool isComplete = (--_pendingCount == 0);
+                    uint32_t nextIndex = index + 1;
+
                     _responseLock.Unlock();
 
-                    if (--_pendingCount == 0) {
+                    // Handle completion or chain next job
+                    if (isComplete) {
                         FinishBatch();
-                    } else if (!_parallel) {
-                        SubmitJob(index + 1);
+                    } else if (!_parallel && isActive) {
+                        // Sequential: only chain next if this job completed successfully
+                        SubmitJob(nextIndex);
                     }
-                } else {
-                    --_pendingCount;
-                    _responseLock.Unlock();
                 }
             }
 
-            bool IsActive() const
-            {
-                return !_cancelled.load() && !_parent->_shuttingDown.load() && !IsTimedOut();
-            }
-
-            void Cancel() { _cancelled.store(true); }
-            bool IsCancelled() const { return _cancelled.load(); }
-
-            uint32_t ChannelId() const { return _channelId; }
-            uint32_t ResponseId() const { return _responseId; }
-            const string& Token() const { return _token; }
-
-        private:
             bool IsTimedOut() const
             {
                 if (_timeoutMs == Core::infinite)
@@ -244,7 +247,8 @@ namespace Plugin {
             void FinishBatch()
             {
                 if (_parent->IsChannelValid(_channelId)) {
-                    string response = ToString();
+                    string response;
+                    _responseArray.ToString(response);
                     Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
                     if (message.IsValid()) {
                         message->Id = _responseId;
@@ -253,13 +257,6 @@ namespace Plugin {
                     }
                 }
                 _parent->RemoveBatchFromRegistry(_batchId);
-            }
-
-            string ToString() const
-            {
-                string response;
-                _responseArray.ToString(response);
-                return response;
             }
 
         private:
