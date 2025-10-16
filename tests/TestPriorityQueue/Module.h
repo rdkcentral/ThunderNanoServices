@@ -23,9 +23,9 @@
 #define MODULE_NAME Plugin_TestPriorityQueue
 #endif
 
+#include <com/com.h>
 #include <core/core.h>
 #include <plugins/plugins.h>
-#include <messaging/messaging.h>
 
 #undef EXTERNAL
 #define EXTERNAL

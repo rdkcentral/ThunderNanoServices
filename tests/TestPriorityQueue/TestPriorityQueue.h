@@ -34,7 +34,6 @@ namespace Plugin {
         
         TestPriorityQueue()
             : PluginHost::IPlugin()
-            , _example(0)
             , _service(nullptr)
             , _connectionId(0)
             , _implMath(nullptr)
@@ -86,7 +85,6 @@ namespace Plugin {
         void StopFlood();
 
         // Plugin Methods
-        void TestPriorityQueueMethod();
         void Deactivated(RPC::IRemoteConnection* connection);
         
         BEGIN_INTERFACE_MAP(TestPriorityQueue)
@@ -97,11 +95,7 @@ namespace Plugin {
     private:
         // Timeout (2000ms) may be changed if necassary, however, it must not exceed RPC::CommunicationTimeOut
         static constexpr uint32_t timeout = 2000;
-        
-        // Include the correct member variables for your plugin:
-        // Note this is only an example, you are responsible for adding the correct members:
-        uint32_t _example;
-        
+
         PluginHost::IShell* _service;
         uint32_t _connectionId;
         Exchange::IMath* _implMath;

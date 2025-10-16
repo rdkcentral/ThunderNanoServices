@@ -35,37 +35,34 @@ namespace Plugin {
             {}
         );
     }
-    
-    // Implement all methods from TestPriorityQueue.h
-    
+
     const string TestPriorityQueue::Initialize(PluginHost::IShell* service)
     {
         string message;
-        
+
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
         ASSERT(_implMath == nullptr);
         ASSERT(_connectionId == 0);
-        
+
         _service = service;
         _service->AddRef();
         _service->Register(&_notification);
         
-        // Example
         _implMath = service->Root<Exchange::IMath>(_connectionId, timeout, _T("TestPriorityQueueImplementation"));
         if (_implMath == nullptr) {
             message = _T("Couldn't create instance of implMath");
         }
-        else {
+        /*else {
             StartFlood(100000, std::max(1u, std::thread::hardware_concurrency()));
-        }
+        }*/
 
         return (message);
     }
-    
+
     void TestPriorityQueue::Deinitialize(PluginHost::IShell* service)
     {
-        StopFlood();
+        //StopFlood();
 
         ASSERT(_service == service);
         
@@ -130,16 +127,12 @@ namespace Plugin {
         _workers.clear();
     }
 
-    void TestPriorityQueue::TestPriorityQueueMethod() {
-        
-    }
-    
     void TestPriorityQueue::Deactivated(RPC::IRemoteConnection* connection) {
         if (connection->Id() == _connectionId) {
             ASSERT(_service != nullptr);
             Core::IWorkerPool::Instance().Submit(PluginHost::IShell::Job::Create(_service, PluginHost::IShell::DEACTIVATED, PluginHost::IShell::FAILURE));
         }
     }
-    
+
 } // Plugin
 } // Thunder

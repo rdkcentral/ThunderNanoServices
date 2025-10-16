@@ -20,10 +20,33 @@
 #include "Module.h"
 #include <interfaces/IMath.h>
 
+namespace {
+    class DummyNotification : public Thunder::PluginHost::IPlugin::INotification {
+    public:
+        DummyNotification() = default;
+        DummyNotification(const DummyNotification&) = delete;
+        DummyNotification& operator=(const DummyNotification&) = delete;
+
+        void Activated(const string&, Thunder::PluginHost::IShell*) override
+        {
+        }
+        void Deactivated(const string&, Thunder::PluginHost::IShell*) override
+        {
+        }
+        void Unavailable(const string&, Thunder::PluginHost::IShell*) override
+        {
+        }
+
+        BEGIN_INTERFACE_MAP(DummyNotification)
+            INTERFACE_ENTRY(Thunder::PluginHost::IPlugin::INotification)
+        END_INTERFACE_MAP
+    };
+}
+
 namespace Thunder {
 namespace Plugin {
     
-    class TestPriorityQueueImplementation : public Exchange::IMath {
+    class TestPriorityQueueImplementation : public Exchange::IMath, public PluginHost::IPlugin {
     public:
         TestPriorityQueueImplementation(const TestPriorityQueueImplementation&) = delete;
         TestPriorityQueueImplementation& operator=(const TestPriorityQueueImplementation&) = delete;
@@ -32,7 +55,8 @@ namespace Plugin {
         
         TestPriorityQueueImplementation()
             : Exchange::IMath()
-            , _test(0)
+            , PluginHost::IPlugin()
+            , _service(nullptr)
         {
         }
         ~TestPriorityQueueImplementation() override = default;
@@ -41,12 +65,49 @@ namespace Plugin {
         
         BEGIN_INTERFACE_MAP(TestPriorityQueueImplementation)
             INTERFACE_ENTRY(Exchange::IMath)
+            INTERFACE_ENTRY(PluginHost::IPlugin)
         END_INTERFACE_MAP
         
-        // Implement methods from the interface
+        const string Initialize(PluginHost::IShell* service) override
+        {
+            ASSERT(_service == nullptr);
+            _service = service;
+
+            if (_service != nullptr) {
+                _service->AddRef();
+            }
+            return string();
+        }
+        void Deinitialize(PluginHost::IShell* service) override
+        {
+            ASSERT(service == _service);
+
+            if (_service != nullptr) {
+                _service->Release();
+                _service = nullptr;
+            }
+        }
+        string Information() const override
+        {
+            return _T("TestPriorityQueue test plugin to exercise priority queuing and re-entrancy.");
+        }
+
         // IMath methods
         virtual uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
         {
+            if (_service != nullptr) {
+                DummyNotification* sink = Core::ServiceType<DummyNotification>::Create<DummyNotification>();
+
+                SleepMs(50);
+                _service->Register(sink);
+
+                SleepMs(5);
+                _service->Unregister(sink);
+                sink->Release();
+            } else {
+                TRACE_L1("TestPriorityQueue: _service is null; plugin not initialized?");
+            }
+
             sum = static_cast<uint16_t>(A + B);
             std::cout << "Add: " << A << " + " << B << " = " << sum << std::endl;
 
@@ -61,9 +122,7 @@ namespace Plugin {
         }
 
     private:
-
-        // Note: test is just an example...
-        uint32_t _test;
+        PluginHost::IShell* _service;
     };
     
     SERVICE_REGISTRATION(TestPriorityQueueImplementation, 1, 0)
