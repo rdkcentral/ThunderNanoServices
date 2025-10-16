@@ -169,7 +169,7 @@ namespace Plugin {
             ~JSONRPCServer() override = default;
 
         public:
-            virtual void Received(Core::ProxyType<INTERFACE>& jsonObject) override
+            virtual void Received(const Core::ProxyType<INTERFACE>& jsonObject) override
             {
                 if (jsonObject.IsValid() == false) {
                     printf("Oops");
@@ -181,7 +181,7 @@ namespace Plugin {
                     this->Submit(jsonObject);
                 }
             }
-            virtual void Send(Core::ProxyType<INTERFACE>& jsonObject) override
+            virtual void Send(const Core::ProxyType<INTERFACE>& jsonObject) override
             {
                 if (jsonObject.IsValid() == false) {
                     printf("Oops");
