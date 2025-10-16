@@ -115,7 +115,7 @@ namespace Plugin {
                 const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages,
                 uint32_t channelId,
                 uint32_t responseId,
-                const std::string& token,
+                const string& token,
                 uint32_t timeoutMs)
                 : _parent(parent)
                 , _batchId(batchId)
@@ -163,7 +163,7 @@ namespace Plugin {
                 }
 
                 Core::hresult result = Core::ERROR_UNAVAILABLE;
-                std::string output;
+                string output;
 
                 const Core::JSONRPC::Message& message = _messages[index];
 
@@ -221,7 +221,7 @@ namespace Plugin {
 
             uint32_t ChannelId() const { return _channelId; }
             uint32_t ResponseId() const { return _responseId; }
-            const std::string& Token() const { return _token; }
+            const string& Token() const { return _token; }
 
         private:
             bool IsTimedOut() const
@@ -244,7 +244,7 @@ namespace Plugin {
             void FinishBatch()
             {
                 if (_parent->IsChannelValid(_channelId)) {
-                    std::string response = ToString();
+                    string response = ToString();
                     Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
                     if (message.IsValid()) {
                         message->Id = _responseId;
@@ -255,9 +255,9 @@ namespace Plugin {
                 _parent->RemoveBatchFromRegistry(_batchId);
             }
 
-            std::string ToString() const
+            string ToString() const
             {
-                std::string response;
+                string response;
                 _responseArray.ToString(response);
                 return response;
             }
@@ -272,7 +272,7 @@ namespace Plugin {
             Core::JSON::ArrayType<Response> _responseArray;
             uint32_t _channelId;
             uint32_t _responseId;
-            std::string _token;
+            string _token;
             uint32_t _timeoutMs;
             uint64_t _startTime;
             std::atomic<bool> _cancelled;
