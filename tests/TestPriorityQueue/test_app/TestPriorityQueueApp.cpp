@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
         const long v = std::strtol(argv[1], nullptr, 10);
 
         if (v > 0) {
-            workers = ( (static_cast<uint32_t>(v) == 0) ? 1 : static_cast<uint32_t>(v) );
+            workers = static_cast<uint32_t>(v);
         }
     }
 
