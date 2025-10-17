@@ -6,7 +6,7 @@
     "locator": "libThunderTestPriorityQueue.so",
     "status": "development",
     "description": [
-    ""
+      "Provides a test implementation of a priority queue for demonstration and development purposes."
     ],
     "version": "1.0"
   },
