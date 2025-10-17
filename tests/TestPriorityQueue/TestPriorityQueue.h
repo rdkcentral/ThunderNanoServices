@@ -93,7 +93,7 @@ namespace Plugin {
         END_INTERFACE_MAP
         
     private:
-        // Timeout (2000ms) may be changed if necassary, however, it must not exceed RPC::CommunicationTimeOut
+        // Timeout (2000ms) may be changed if necessary, however, it must not exceed RPC::CommunicationTimeOut
         static constexpr uint32_t timeout = 2000;
 
         PluginHost::IShell* _service;
