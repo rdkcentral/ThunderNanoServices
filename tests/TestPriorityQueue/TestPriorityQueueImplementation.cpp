@@ -27,13 +27,13 @@ namespace {
         DummyNotification(const DummyNotification&) = delete;
         DummyNotification& operator=(const DummyNotification&) = delete;
 
-        void Activated(const string&, Thunder::PluginHost::IShell*) override
+        void Activated(const Thunder::Core::string&, Thunder::PluginHost::IShell*) override
         {
         }
-        void Deactivated(const string&, Thunder::PluginHost::IShell*) override
+        void Deactivated(const Thunder::Core::string&, Thunder::PluginHost::IShell*) override
         {
         }
-        void Unavailable(const string&, Thunder::PluginHost::IShell*) override
+        void Unavailable(const Thunder::Core::string&, Thunder::PluginHost::IShell*) override
         {
         }
 
