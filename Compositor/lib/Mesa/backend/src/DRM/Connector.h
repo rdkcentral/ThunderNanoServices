@@ -183,7 +183,7 @@ namespace Compositor {
                     TRACE(Trace::Backend, ("Connector %d is not in a valid state", connectorId));
                 } else {
                     // Apply scan results
-                    _needsModeSet = scanResult.needsModeSet;
+                    _needsModeSet.store(scanResult.needsModeSet, std::memory_order_relaxed);
                     _selectedMode = scanResult.selectedMode;
                     _dimensionsAdjusted = scanResult.dimensionsAdjusted;
                     _gpuNode = scanResult.gpuNode;
@@ -201,7 +201,7 @@ namespace Compositor {
 
                         TRACE(Trace::Information, (_T("Selecting format... ")));
 
-                        TRACE(Trace::Backend, ("DRM formats: %s", Compositor::ToString(drmFormats).c_str()));                        
+                        TRACE(Trace::Backend, ("DRM formats: %s", Compositor::ToString(drmFormats).c_str()));
                         TRACE(Trace::Backend, (_T("Renderer exposes %d render formats. "), renderer->RenderFormats().size()));
                         TRACE(Trace::Backend, (_T("Backend accepts %d formats."), drmFormats.size()));
 
@@ -234,7 +234,8 @@ namespace Compositor {
 
             bool NeedsModeSet() const
             {
-                return _needsModeSet;
+                // no hotplug detection by design.
+                return _needsModeSet.exchange(false, std::memory_order_acq_rel);
             }
 
             const drmModeModeInfo* SelectedMode() const
@@ -335,7 +336,7 @@ namespace Compositor {
             }
             Core::ProxyType<Compositor::IRenderer::IFrameBuffer> FrameBuffer() const override
             {
-                return (_frameBuffer.IsValid() == true) ?  _frameBuffer.FrameBuffer() : Core::ProxyType<Compositor::IRenderer::IFrameBuffer>();
+                return (_frameBuffer.IsValid() == true) ? _frameBuffer.FrameBuffer() : Core::ProxyType<Compositor::IRenderer::IFrameBuffer>();
             }
 
         private:
@@ -350,7 +351,7 @@ namespace Compositor {
 
             Compositor::IOutput::ICallback* _feedback;
 
-            bool _needsModeSet;
+            mutable std::atomic<bool> _needsModeSet;
             drmModeModeInfo _selectedMode;
             bool _dimensionsAdjusted;
         };
