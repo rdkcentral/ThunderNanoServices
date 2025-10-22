@@ -45,7 +45,6 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     DHCPServer.cpp
-    DHCPServerJsonRpc.cpp
     DHCPServerImplementation.cpp
     Module.cpp)
 
