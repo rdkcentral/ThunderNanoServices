@@ -20,30 +20,31 @@
 #pragma once
 
 #include "Module.h"
-
-#include <interfaces/json/JsonData_PerformanceMonitor.h>
+#include <interfaces/IPerformance.h>
+#include <interfaces/json/JPerformance.h>
+#include <interfaces/json/JPerformanceStatistics.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class PerformanceMonitor : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class PerformanceMonitor : public Exchange::IPerformance
+                             , public Exchange::IPerformanceStatistics
+                             , public PluginHost::IPlugin
+                             , public PluginHost::JSONRPC {
     public:
         PerformanceMonitor(const PerformanceMonitor&) = delete;
         PerformanceMonitor& operator=(const PerformanceMonitor&) = delete;
 
     public:
         PerformanceMonitor()
-            : _skipURL(0)
-        {
-            RegisterAll();
+            : _skipURL(0) {
         }
 
-        ~PerformanceMonitor() override
-        {
-            UnregisterAll();
-        }
+        ~PerformanceMonitor() override = default;
 
         BEGIN_INTERFACE_MAP(PerformanceMonitor)
+        INTERFACE_ENTRY(Exchange::IPerformance)
+        INTERFACE_ENTRY(Exchange::IPerformanceStatistics)
         INTERFACE_ENTRY(PluginHost::IPlugin)
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
@@ -55,25 +56,36 @@ namespace Plugin {
         string Information() const override;
 
     private:
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_clear();
-        uint32_t endpoint_send(const JsonData::PerformanceMonitor::BufferInfo& params, Core::JSON::DecUInt32& response);
-        uint32_t endpoint_receive(const Core::JSON::DecUInt32& params, JsonData::PerformanceMonitor::BufferInfo& response);
-        uint32_t endpoint_exchange(const JsonData::PerformanceMonitor::BufferInfo& params, JsonData::PerformanceMonitor::BufferInfo& response);
-        uint32_t get_measurement(const string& index, JsonData::PerformanceMonitor::MeasurementData& response) const;
+        // IPerformance methods - a majority of the code for performance measurement is provided by the generators
+        // -------------------------------------------------------------------------------------------------------
+        Core::hresult Send(const uint16_t sendSize, const uint8_t buffer[]) override;
+        Core::hresult Receive(uint16_t& bufferSize, uint8_t buffer[]) const override;
+        Core::hresult Exchange(uint16_t& bufferSize, uint8_t buffer[], const uint16_t maxBufferSize) override;
 
-        uint32_t RetrieveInfo(const uint32_t packageSize, JsonData::PerformanceMonitor::MeasurementData& measurementData) const;
-        uint32_t Send(const JsonData::PerformanceMonitor::BufferInfo& data, Core::JSON::DecUInt32& result);
-        uint32_t Receive(const Core::JSON::DecUInt32& maxSize, JsonData::PerformanceMonitor::BufferInfo& data);
-        uint32_t Exchange(const JsonData::PerformanceMonitor::BufferInfo& data, JsonData::PerformanceMonitor::BufferInfo& result);
+        // IPerformanceStatistics methods
+        // -------------------------------------------------------------------------------------------------------
+        Core::hresult Measurement(const uint32_t index, Exchange::IPerformanceStatistics::Measurements& measurement) const override;
+        Core::hresult Reset() override;
 
-        inline void Measurement(const PluginHost::PerformanceAdministrator::Statistics::Tuple& statistics, JsonData::PerformanceMonitor::MeasurementData::StatisticsData& statisticsData) const {
+        inline void Measurement(const PluginHost::PerformanceAdministrator::Statistics::Tuple& statistics, Exchange::IPerformanceStatistics::Statistics& statisticsData) const
+        {
+            statisticsData.minimum = statistics.Minimum();
+            statisticsData.maximum = statistics.Maximum();
+            statisticsData.average = statistics.Average();
+            statisticsData.count   = statistics.Count();
+        }
 
-            statisticsData.Minimum = statistics.Minimum();
-            statisticsData.Maximum = statistics.Maximum();
-            statisticsData.Average = statistics.Average();
-            statisticsData.Count = statistics.Count();
+        inline void FillBuffer(const uint16_t& bufferSize, uint8_t buffer[], const uint8_t patternLength, const uint8_t pattern[]) const
+        {
+            uint32_t index = 0;
+            uint8_t patternIndex = 0;
+
+            while (index < bufferSize) {
+
+                buffer[index++] = pattern[patternIndex++];
+
+                patternIndex %= (patternLength - 1);
+            }
         }
 
     private:

@@ -9,6 +9,6 @@
     "version": "1.0"
   },
   "interface": {
-    "$ref": "{interfacedir}/PerformanceMonitor.json#"
+    "$ref": "{cppinterfacedir}/IPerformance.h"
   }
 }

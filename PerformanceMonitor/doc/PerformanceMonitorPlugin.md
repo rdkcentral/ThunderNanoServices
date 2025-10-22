@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Performance_Monitor_Plugin"></a>
+<a id="head_Performance_Monitor_Plugin"></a>
 # Performance Monitor Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ PerformanceMonitor plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the PerformanceMonitor plugin. It includes detailed specification about its configuration, methods and properties provided.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -58,14 +58,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 Retrieve the performance measurement against given package size.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -77,41 +77,54 @@ The table below lists configuration options of the plugin.
 | locator | string | mandatory | Library name: *libThunderPerformanceMonitor.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- [PerformanceMonitor.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/PerformanceMonitor.json) (version 1.0.0) (uncompliant-collapsed format)
+- IPerformance ([IPerformance.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IPerformance.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+- IPerformanceStatistics ([IPerformance.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IPerformance.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
+
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the PerformanceMonitor plugin:
 
-PerformanceMonitor interface methods:
+Performance interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [clear](#method.clear) | Clear all performance data collected |
-| [send](#method.send) | Interface to test send data |
-| [receive](#method.receive) | Interface to test receive data |
-| [exchange](#method.exchange) | Interface to test exchange data |
+| [send](#method_send) | Test the process of sending the data |
+| [receive](#method_receive) | Test the process of receiving the data |
+| [exchange](#method_exchange) | Test the process of both sending and receiving the data |
 
-<a name="method.clear"></a>
-## *clear [<sup>method</sup>](#head.Methods)*
+PerformanceStatistics interface methods:
 
-Clear all performance data collected.
+| Method | Description |
+| :-------- | :-------- |
+| [reset](#method_reset) / [clear](#method_reset) | Clear all performance data collected so far |
+
+<a id="method_send"></a>
+## *send [<sup>method</sup>](#head_Methods)*
+
+Test the process of sending the data.
 
 ### Parameters
 
-This method takes no parameters.
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.sendsize | integer | mandatory | Length of the sent data |
+| params.buffer | string (base64) | mandatory | Any data to be sent |
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null (default: *None*) |
+| result | null | mandatory | Always null |
 
 ### Example
 
@@ -121,7 +134,11 @@ This method takes no parameters.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "PerformanceMonitor.1.clear"
+  "method": "PerformanceMonitor.1.send",
+  "params": {
+    "sendsize": 15,
+    "buffer": "HelloWorld"
+  }
 }
 ```
 
@@ -135,72 +152,25 @@ This method takes no parameters.
 }
 ```
 
-<a name="method.send"></a>
-## *send [<sup>method</sup>](#head.Methods)*
+<a id="method_receive"></a>
+## *receive [<sup>method</sup>](#head_Methods)*
 
-Interface to test send data.
+Test the process of receiving the data.
 
 ### Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params?.data | string | optional | Any string data upto the size specified in the length |
-| params?.length | integer | optional | Size of the data |
-| params?.duration | integer | optional | Duration of the measurements |
-
-### Result
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Size of data received by the jsonrpc interface |
-
-### Example
-
-#### Request
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "PerformanceMonitor.1.send",
-  "params": {
-    "data": "abababababab",
-    "length": 0,
-    "duration": 0
-  }
-}
-```
-
-#### Response
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "result": 0
-}
-```
-
-<a name="method.receive"></a>
-## *receive [<sup>method</sup>](#head.Methods)*
-
-Interface to test receive data.
-
-### Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | integer | mandatory | Size of data to be provided by the jsonrpc interface |
+| params.buffersize | integer | mandatory | Size of data to be provided |
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | result | object | mandatory | *...* |
-| result?.data | string | optional | Any string data upto the size specified in the length |
-| result?.length | integer | optional | Size of the data |
-| result?.duration | integer | optional | Duration of the measurements |
+| result.buffersize | integer | mandatory | Size of data to be provided |
+| result.buffer | string (base64) | mandatory | Data with a specified length |
 
 ### Example
 
@@ -211,7 +181,9 @@ Interface to test receive data.
   "jsonrpc": "2.0",
   "id": 42,
   "method": "PerformanceMonitor.1.receive",
-  "params": 0
+  "params": {
+    "buffersize": 10
+  }
 }
 ```
 
@@ -222,35 +194,33 @@ Interface to test receive data.
   "jsonrpc": "2.0",
   "id": 42,
   "result": {
-    "data": "abababababab",
-    "length": 0,
-    "duration": 0
+    "buffersize": 10,
+    "buffer": "fhrjtus4p1"
   }
 }
 ```
 
-<a name="method.exchange"></a>
-## *exchange [<sup>method</sup>](#head.Methods)*
+<a id="method_exchange"></a>
+## *exchange [<sup>method</sup>](#head_Methods)*
 
-Interface to test exchange data.
+Test the process of both sending and receiving the data.
 
 ### Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params?.data | string | optional | Any string data upto the size specified in the length |
-| params?.length | integer | optional | Size of the data |
-| params?.duration | integer | optional | Duration of the measurements |
+| params.buffersize | integer | mandatory | Length of the data to be both sent as well as received |
+| params.buffer | string (base64) | mandatory | Data to be sent and then also received |
+| params.maxbuffersize | integer | mandatory | Maximum size of the buffer that can be received |
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | result | object | mandatory | *...* |
-| result?.data | string | optional | Any string data upto the size specified in the length |
-| result?.length | integer | optional | Size of the data |
-| result?.duration | integer | optional | Duration of the measurements |
+| result.buffersize | integer | mandatory | Length of the data to be both sent as well as received |
+| result.buffer | string (base64) | mandatory | Data to be sent and then also received |
 
 ### Example
 
@@ -262,9 +232,9 @@ Interface to test exchange data.
   "id": 42,
   "method": "PerformanceMonitor.1.exchange",
   "params": {
-    "data": "abababababab",
-    "length": 0,
-    "duration": 0
+    "buffersize": 20,
+    "buffer": "kjrpq018rt",
+    "maxbuffersize": 100
   }
 }
 ```
@@ -276,80 +246,112 @@ Interface to test exchange data.
   "jsonrpc": "2.0",
   "id": 42,
   "result": {
-    "data": "abababababab",
-    "length": 0,
-    "duration": 0
+    "buffersize": 20,
+    "buffer": "kjrpq018rt"
   }
 }
 ```
 
-<a name="head.Properties"></a>
-# Properties
+<a id="method_reset"></a>
+## *reset [<sup>method</sup>](#head_Methods)*
 
-The following properties are provided by the PerformanceMonitor plugin:
+Clear all performance data collected so far.
 
-PerformanceMonitor interface properties:
+> ``clear`` is an alternative name for this method. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
-| Property | R/W | Description |
-| :-------- | :-------- | :-------- |
-| [measurement](#property.measurement) | read-only | Retrieve the performance measurement against given package size |
+### Parameters
 
-<a name="property.measurement"></a>
-## *measurement [<sup>property</sup>](#head.Properties)*
-
-Provides access to the retrieve the performance measurement against given package size. Measurements will be provided in milliseconds.
-
-> This property is **read-only**.
-
-> The *package size* parameter shall be passed as the index to the property, e.g. ``PerformanceMonitor.1.measurement@<package-size>``.
-
-### Index
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| package-size | string | mandatory | Size of package whose statistics info has to be retrieved |
-
-### Value
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| (property) | object | mandatory | Retrieve the performance measurement against given package size. Measurements will be provided in milliseconds |
-| (property).serialization | object | mandatory | Time taken to complete serialization |
-| (property).serialization?.minimum | integer | optional | Minimum value of measurements |
-| (property).serialization?.maximum | integer | optional | Maximum value of measurements |
-| (property).serialization?.average | integer | optional | Average value of measurements |
-| (property).serialization?.count | integer | optional | How many times measurement has been collected |
-| (property).deserialization | object | mandatory | Time taken to complete deserialization |
-| (property).deserialization?.minimum | integer | optional | Minimum value of measurements |
-| (property).deserialization?.maximum | integer | optional | Maximum value of measurements |
-| (property).deserialization?.average | integer | optional | Average value of measurements |
-| (property).deserialization?.count | integer | optional | How many times measurement has been collected |
-| (property).execution | object | mandatory | Time taken to complete execution |
-| (property).execution?.minimum | integer | optional | Minimum value of measurements |
-| (property).execution?.maximum | integer | optional | Maximum value of measurements |
-| (property).execution?.average | integer | optional | Average value of measurements |
-| (property).execution?.count | integer | optional | How many times measurement has been collected |
-| (property).threadpool | object | mandatory | Time taken to complete threadpool wait |
-| (property).threadpool?.minimum | integer | optional | Minimum value of measurements |
-| (property).threadpool?.maximum | integer | optional | Maximum value of measurements |
-| (property).threadpool?.average | integer | optional | Average value of measurements |
-| (property).threadpool?.count | integer | optional | How many times measurement has been collected |
-| (property).communication | object | mandatory | Time taken to complete communication |
-| (property).communication?.minimum | integer | optional | Minimum value of measurements |
-| (property).communication?.maximum | integer | optional | Maximum value of measurements |
-| (property).communication?.average | integer | optional | Average value of measurements |
-| (property).communication?.count | integer | optional | How many times measurement has been collected |
-| (property).total | object | mandatory | Time taken to complete whole jsonrpc process |
-| (property).total?.minimum | integer | optional | Minimum value of measurements |
-| (property).total?.maximum | integer | optional | Maximum value of measurements |
-| (property).total?.average | integer | optional | Average value of measurements |
-| (property).total?.count | integer | optional | How many times measurement has been collected |
+This method takes no parameters.
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null (default: *None*) |
+| result | null | mandatory | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.reset"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="head_Properties"></a>
+# Properties
+
+The following properties are provided by the PerformanceMonitor plugin:
+
+PerformanceStatistics interface properties:
+
+| Property | R/W | Description |
+| :-------- | :-------- | :-------- |
+| [measurement](#property_measurement) | read-only | Retrieve the performance measurement against a given package size |
+
+<a id="property_measurement"></a>
+## *measurement [<sup>property</sup>](#head_Properties)*
+
+Provides access to the retrieve the performance measurement against a given package size. Measurements will be provided in milliseconds.
+
+> This property is **read-only**.
+
+> The *index* parameter shall be passed as the index to the property, i.e. ``measurement@<index>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| index | integer | mandatory | Size of package which statistics info is about to be retrieved |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | object | mandatory | Various performance measurements against a given package size |
+| (property).serialization | object | mandatory | Time taken to complete serialization |
+| (property).serialization.minimum | integer | mandatory | Minimum value of measurements |
+| (property).serialization.maximum | integer | mandatory | Maximum value of measurements |
+| (property).serialization.average | integer | mandatory | Average value of measurements |
+| (property).serialization.count | integer | mandatory | How many times measurement has been collected |
+| (property).deserialization | object | mandatory | Time taken to complete deserialization |
+| (property).deserialization.minimum | integer | mandatory | Minimum value of measurements |
+| (property).deserialization.maximum | integer | mandatory | Maximum value of measurements |
+| (property).deserialization.average | integer | mandatory | Average value of measurements |
+| (property).deserialization.count | integer | mandatory | How many times measurement has been collected |
+| (property).execution | object | mandatory | Time taken to complete execution |
+| (property).execution.minimum | integer | mandatory | Minimum value of measurements |
+| (property).execution.maximum | integer | mandatory | Maximum value of measurements |
+| (property).execution.average | integer | mandatory | Average value of measurements |
+| (property).execution.count | integer | mandatory | How many times measurement has been collected |
+| (property).threadpool | object | mandatory | Time taken to complete threadpool wait |
+| (property).threadpool.minimum | integer | mandatory | Minimum value of measurements |
+| (property).threadpool.maximum | integer | mandatory | Maximum value of measurements |
+| (property).threadpool.average | integer | mandatory | Average value of measurements |
+| (property).threadpool.count | integer | mandatory | How many times measurement has been collected |
+| (property).communication | object | mandatory | Time taken to complete communication |
+| (property).communication.minimum | integer | mandatory | Minimum value of measurements |
+| (property).communication.maximum | integer | mandatory | Maximum value of measurements |
+| (property).communication.average | integer | mandatory | Average value of measurements |
+| (property).communication.count | integer | mandatory | How many times measurement has been collected |
+| (property).total | object | mandatory | Time taken to complete whole JSON-RPC process |
+| (property).total.minimum | integer | mandatory | Minimum value of measurements |
+| (property).total.maximum | integer | mandatory | Maximum value of measurements |
+| (property).total.average | integer | mandatory | Average value of measurements |
+| (property).total.count | integer | mandatory | How many times measurement has been collected |
 
 ### Example
 
@@ -369,7 +371,44 @@ Provides access to the retrieve the performance measurement against given packag
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": null
+  "result": {
+    "serialization": {
+      "minimum": 1,
+      "maximum": 4,
+      "average": 2,
+      "count": 5
+    },
+    "deserialization": {
+      "minimum": 1,
+      "maximum": 4,
+      "average": 2,
+      "count": 5
+    },
+    "execution": {
+      "minimum": 1,
+      "maximum": 4,
+      "average": 2,
+      "count": 5
+    },
+    "threadpool": {
+      "minimum": 1,
+      "maximum": 4,
+      "average": 2,
+      "count": 5
+    },
+    "communication": {
+      "minimum": 1,
+      "maximum": 4,
+      "average": 2,
+      "count": 5
+    },
+    "total": {
+      "minimum": 1,
+      "maximum": 4,
+      "average": 2,
+      "count": 5
+    }
+  }
 }
 ```
 
