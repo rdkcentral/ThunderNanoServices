@@ -1,5 +1,8 @@
 name: Build ThunderNanoServices on Windows
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:
