@@ -103,6 +103,15 @@ This plugin implements the following interfaces:
 
 The following methods are provided by the BluetoothControl plugin:
 
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
+| [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
+| [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
+
 JSONRPC BluetoothControl interface methods:
 
 | Method | Description |
@@ -122,6 +131,212 @@ JSONRPC BluetoothControl interface methods:
 | [forget](#method_forget) | Forgets a previously seen Bluetooth device |
 | [getdevicelist](#method_getdevicelist) | Retrieves a list of known remote Bluetooth devices |
 | [getdeviceinfo](#method_getdeviceinfo) | Retrieves detailed information about a known Bluetooth device |
+
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JController",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *adapters, adapter, devices, device, versions, exists, register, unregister, setdiscoverable, stopdiscoverable, scan, stopscanning, connect, disconnect, pair, unpair, abortpairing, providepincode, confirmpasskey, providepasskey, forget, getdevicelist, getdeviceinfo*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.exists",
+  "params": {
+    "method": "adapters"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_register"></a>
+## *register [<sup>method</sup>](#head_Methods)*
+
+Registers for an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[pincoderequest](#notification_pincoderequest), [passkeyconfirmrequest](#notification_passkeyconfirmrequest), [passkeyrequest](#notification_passkeyrequest), [passkeydisplayrequest](#notification_passkeydisplayrequest), [discoverablestarted](#notification_discoverablestarted), [discoverablecomplete](#notification_discoverablecomplete), [scanstarted](#notification_scanstarted), [scancomplete](#notification_scancomplete), [devicestatechanged](#notification_devicestatechanged)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_REGISTERED``` | Failed to register for the notification (e.g. already registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.register",
+  "params": {
+    "event": "pincoderequest",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unregister"></a>
+## *unregister [<sup>method</sup>](#head_Methods)*
+
+Unregisters from an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[pincoderequest](#notification_pincoderequest), [passkeyconfirmrequest](#notification_passkeyconfirmrequest), [passkeyrequest](#notification_passkeyrequest), [passkeydisplayrequest](#notification_passkeydisplayrequest), [discoverablestarted](#notification_discoverablestarted), [discoverablecomplete](#notification_discoverablecomplete), [scanstarted](#notification_scanstarted), [scancomplete](#notification_scancomplete), [devicestatechanged](#notification_devicestatechanged)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_UNREGISTERED``` | Failed to unregister from the notification (e.g. not yet registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.unregister",
+  "params": {
+    "event": "pincoderequest",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
 
 <a id="method_setdiscoverable"></a>
 ## *setdiscoverable [<sup>method</sup>](#head_Methods)*
@@ -1212,15 +1427,211 @@ JSONRPC BluetoothControl interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
+| [pincoderequest](#notification_pincoderequest) | Notifies of a PIN code request during authenticated BR/EDR legacy pairing process |
+| [passkeyconfirmrequest](#notification_passkeyconfirmrequest) | Notifies of a user confirmation request during authenticated BR/EDR SSP pairing process |
+| [passkeyrequest](#notification_passkeyrequest) | Notifies of a passkey supply request during authenticated LE pairing process |
+| [passkeydisplayrequest](#notification_passkeydisplayrequest) | Notifies of a passkey presentation request during authenticated LE pairing process |
 | [discoverablestarted](#notification_discoverablestarted) | Reports entering the discoverable state |
 | [discoverablecomplete](#notification_discoverablecomplete) | Reports leaving the discoverable state |
 | [scanstarted](#notification_scanstarted) | Reports start of scanning |
 | [scancomplete](#notification_scancomplete) | Reports end of scanning |
 | [devicestatechanged](#notification_devicestatechanged) | disconnectReason If disconnected specifies the cause of disconnection |
-| [pincoderequest](#notification_pincoderequest) | Notifies of a PIN code request during authenticated BR/EDR legacy pairing process |
-| [passkeyconfirmrequest](#notification_passkeyconfirmrequest) | Notifies of a user confirmation request during authenticated BR/EDR SSP pairing process |
-| [passkeyrequest](#notification_passkeyrequest) | Notifies of a passkey supply request during authenticated LE pairing process |
-| [passkeydisplayrequest](#notification_passkeydisplayrequest) | Notifies of a passkey presentation request during authenticated LE pairing process |
+
+<a id="notification_pincoderequest"></a>
+## *pincoderequest [<sup>notification</sup>](#head_Notifications)*
+
+Notifies of a PIN code request during authenticated BR/EDR legacy pairing process.
+
+### Description
+
+Upon receiving this event the client is required to respond with "providePinCode" call in order to complete the pairing procedure. The PIN code value is typically collected by prompting the end-user on the local device. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string | mandatory | *...* |
+| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.register",
+  "params": {
+    "event": "pincoderequest",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.pincoderequest",
+  "params": {
+    "address": "...",
+    "type": "LowEnergy"
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.pincoderequest``.
+
+<a id="notification_passkeyconfirmrequest"></a>
+## *passkeyconfirmrequest [<sup>notification</sup>](#head_Notifications)*
+
+Notifies of a user confirmation request during authenticated BR/EDR SSP pairing process.
+
+### Description
+
+Upon receiving this event the client is required to respond with "confirmPasskey" call in order to complete the pairing procedure. The passkey confirmation is typically collected by prompting the end-user on the local device. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string | mandatory | *...* |
+| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
+| params?.secret | integer | optional | A six-digit decimal number sent by the remote device to be presented to the end-user for confirmation on the local device (e.g 123456). The passkey may be omitted for simple yes/no paring<br>*Value must be <= 999999* |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.register",
+  "params": {
+    "event": "passkeyconfirmrequest",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.passkeyconfirmrequest",
+  "params": {
+    "address": "...",
+    "type": "LowEnergy",
+    "secret": 0
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.passkeyconfirmrequest``.
+
+<a id="notification_passkeyrequest"></a>
+## *passkeyrequest [<sup>notification</sup>](#head_Notifications)*
+
+Notifies of a passkey supply request during authenticated LE pairing process.
+
+### Description
+
+Upon receiving this event the client is required to respond with "providePasskey" call in order to complete the pairing procedure. The passkey value is typically collected by prompting the end-user on the local device. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string | mandatory | *...* |
+| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.register",
+  "params": {
+    "event": "passkeyrequest",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.passkeyrequest",
+  "params": {
+    "address": "...",
+    "type": "LowEnergy"
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.passkeyrequest``.
+
+<a id="notification_passkeydisplayrequest"></a>
+## *passkeydisplayrequest [<sup>notification</sup>](#head_Notifications)*
+
+Notifies of a passkey presentation request during authenticated LE pairing process.
+
+### Description
+
+Upon receiving this event the client is required to display the passkey on the local device. The end-user on the remote device will need to enter this passkey to complete the pairing procedure. If end-user fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | string | mandatory | *...* |
+| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
+| params.secret | integer | mandatory | A six-digit decimal number to be displayed on the local device (e.g 123456)<br>*Value must be <= 999999* |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothControl.1.register",
+  "params": {
+    "event": "passkeydisplayrequest",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.passkeydisplayrequest",
+  "params": {
+    "address": "...",
+    "type": "LowEnergy",
+    "secret": 0
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.passkeydisplayrequest``.
 
 <a id="notification_discoverablestarted"></a>
 ## *discoverablestarted [<sup>notification</sup>](#head_Notifications)*
@@ -1449,200 +1860,4 @@ disconnectReason If disconnected specifies the cause of disconnection.
 ```
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.devicestatechanged``.
-
-<a id="notification_pincoderequest"></a>
-## *pincoderequest [<sup>notification</sup>](#head_Notifications)*
-
-Notifies of a PIN code request during authenticated BR/EDR legacy pairing process.
-
-### Description
-
-Upon receiving this event the client is required to respond with "providePinCode" call in order to complete the pairing procedure. The PIN code value is typically collected by prompting the end-user on the local device. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
-
-### Notification Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.address | string | mandatory | *...* |
-| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothControl.1.register",
-  "params": {
-    "event": "pincoderequest",
-    "id": "myid"
-  }
-}
-```
-
-#### Notification
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "myid.pincoderequest",
-  "params": {
-    "address": "...",
-    "type": "LowEnergy"
-  }
-}
-```
-
-> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.pincoderequest``.
-
-<a id="notification_passkeyconfirmrequest"></a>
-## *passkeyconfirmrequest [<sup>notification</sup>](#head_Notifications)*
-
-Notifies of a user confirmation request during authenticated BR/EDR SSP pairing process.
-
-### Description
-
-Upon receiving this event the client is required to respond with "confirmPasskey" call in order to complete the pairing procedure. The passkey confirmation is typically collected by prompting the end-user on the local device. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
-
-### Notification Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.address | string | mandatory | *...* |
-| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
-| params?.secret | integer | optional | A six-digit decimal number sent by the remote device to be presented to the end-user for confirmation on the local device (e.g 123456). The passkey may be omitted for simple yes/no paring<br>*Value must be <= 999999* |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothControl.1.register",
-  "params": {
-    "event": "passkeyconfirmrequest",
-    "id": "myid"
-  }
-}
-```
-
-#### Notification
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "myid.passkeyconfirmrequest",
-  "params": {
-    "address": "...",
-    "type": "LowEnergy",
-    "secret": 0
-  }
-}
-```
-
-> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.passkeyconfirmrequest``.
-
-<a id="notification_passkeyrequest"></a>
-## *passkeyrequest [<sup>notification</sup>](#head_Notifications)*
-
-Notifies of a passkey supply request during authenticated LE pairing process.
-
-### Description
-
-Upon receiving this event the client is required to respond with "providePasskey" call in order to complete the pairing procedure. The passkey value is typically collected by prompting the end-user on the local device. If the client fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
-
-### Notification Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.address | string | mandatory | *...* |
-| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothControl.1.register",
-  "params": {
-    "event": "passkeyrequest",
-    "id": "myid"
-  }
-}
-```
-
-#### Notification
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "myid.passkeyrequest",
-  "params": {
-    "address": "...",
-    "type": "LowEnergy"
-  }
-}
-```
-
-> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.passkeyrequest``.
-
-<a id="notification_passkeydisplayrequest"></a>
-## *passkeydisplayrequest [<sup>notification</sup>](#head_Notifications)*
-
-Notifies of a passkey presentation request during authenticated LE pairing process.
-
-### Description
-
-Upon receiving this event the client is required to display the passkey on the local device. The end-user on the remote device will need to enter this passkey to complete the pairing procedure. If end-user fails to respond before the pairing timeout elapses the pairing procedure will be aborted.
-
-### Notification Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.address | string | mandatory | *...* |
-| params.type | string | mandatory | *...* (must be one of the following: *Classic, LowEnergy, LowEnergyRandom*) |
-| params.secret | integer | mandatory | A six-digit decimal number to be displayed on the local device (e.g 123456)<br>*Value must be <= 999999* |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothControl.1.register",
-  "params": {
-    "event": "passkeydisplayrequest",
-    "id": "myid"
-  }
-}
-```
-
-#### Notification
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "myid.passkeydisplayrequest",
-  "params": {
-    "address": "...",
-    "type": "LowEnergy",
-    "secret": 0
-  }
-}
-```
-
-> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.passkeydisplayrequest``.
 

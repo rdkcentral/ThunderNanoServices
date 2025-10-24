@@ -115,12 +115,227 @@ This plugin implements the following interfaces:
 
 The following methods are provided by the BluetoothRemoteControl plugin:
 
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
+| [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
+| [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
+
 BluetoothRemoteControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
 | [assign](#method_assign) | Assigns a Bluetooth device as a RCU |
 | [revoke](#method_revoke) | Revokes a Bluetooth device from RCU operation |
+
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JController",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *device, metadata, batterylevel, voicecontrol, name, state, capabilities, audioprofile, time, speed, versions, exists, register, unregister, assign, revoke*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.exists",
+  "params": {
+    "method": "device"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_register"></a>
+## *register [<sup>method</sup>](#head_Methods)*
+
+Registers for an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[batterylevelchange](#notification_batterylevelchange), [audiotransmission](#notification_audiotransmission), [audioframe](#notification_audioframe)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_REGISTERED``` | Failed to register for the notification (e.g. already registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.register",
+  "params": {
+    "event": "batterylevelchange",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unregister"></a>
+## *unregister [<sup>method</sup>](#head_Methods)*
+
+Unregisters from an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[batterylevelchange](#notification_batterylevelchange), [audiotransmission](#notification_audiotransmission), [audioframe](#notification_audioframe)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_UNREGISTERED``` | Failed to unregister from the notification (e.g. not yet registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.unregister",
+  "params": {
+    "event": "batterylevelchange",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
 
 <a id="method_assign"></a>
 ## *assign [<sup>method</sup>](#head_Methods)*

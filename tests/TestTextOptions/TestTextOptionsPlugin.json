@@ -5,12 +5,9 @@
     "callsign": "TestTextOptions",
     "locator": "libThunderTestTextOptions.so",
     "status": "development",
-    "description": [
-    ""
-    ],
     "version": "1.0"
   },
   "interface": {
-    "$cppref": "{cppinterfacedir}/ITestAutomation.h"
+    "$ref": "{cppinterfacedir}/ITestAutomation.h"
   }
 }

@@ -84,6 +84,15 @@ This plugin implements the following interfaces:
 
 The following methods are provided by the GeneratorShowcase plugin:
 
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
+| [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
+| [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
+
 SimpleAsync interface methods:
 
 | Method | Description |
@@ -114,6 +123,212 @@ SimpleInstanceObjects interface methods:
 | [relinquish](#method_relinquish) | Relinquishes a device |
 | [device::enable](#method_device__enable) | Enable the device |
 | [device::disable](#method_device__disable) | Disable the device |
+
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JController",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *connected, linkedDevice, metadata, boundDevice, type, device::name, device::pin, accessory, accessory::name, accessory::pin, versions, exists, register, unregister, connect, abort, disconnect, link, unlink, bind, unbind, tables, tables2, tables3, tables4, tables5, tables6, tables7, tables8, tables9, optionalResult, acquire, relinquish, device::enable, device::disable*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.exists",
+  "params": {
+    "method": "connected"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_register"></a>
+## *register [<sup>method</sup>](#head_Methods)*
+
+Registers for an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[bindingChanged](#notification_bindingChanged), [statusChanged](#notification_statusChanged), [device#ID::nameChanged](#notification_device#ID::nameChanged), [device#ID::stateChanged](#notification_device#ID::stateChanged), [device#ID::pinChanged](#notification_device#ID::pinChanged), [added](#notification_added), [removed](#notification_removed), [accessory#ID::nameChanged](#notification_accessory#ID::nameChanged)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_REGISTERED``` | Failed to register for the notification (e.g. already registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.register",
+  "params": {
+    "event": "bindingChanged",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unregister"></a>
+## *unregister [<sup>method</sup>](#head_Methods)*
+
+Unregisters from an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[bindingChanged](#notification_bindingChanged), [statusChanged](#notification_statusChanged), [device#ID::nameChanged](#notification_device#ID::nameChanged), [device#ID::stateChanged](#notification_device#ID::stateChanged), [device#ID::pinChanged](#notification_device#ID::pinChanged), [added](#notification_added), [removed](#notification_removed), [accessory#ID::nameChanged](#notification_accessory#ID::nameChanged)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_UNREGISTERED``` | Failed to unregister from the notification (e.g. not yet registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.unregister",
+  "params": {
+    "event": "bindingChanged",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
 
 <a id="method_connect"></a>
 ## *connect [<sup>method</sup>](#head_Methods)*
