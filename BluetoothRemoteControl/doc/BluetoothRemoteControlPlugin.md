@@ -171,7 +171,7 @@ This method takes no parameters.
   "id": 42,
   "result": [
     {
-      "name": "JController",
+      "name": "JMyInterface",
       "major": 1,
       "minor": 0,
       "patch": 0
@@ -234,7 +234,7 @@ Registers for an asynchronous JSON-RPC notification.
 
 ### Description
 
-This method supports the following event names: *[batterylevelchange](#notification_batterylevelchange), [audiotransmission](#notification_audiotransmission), [audioframe](#notification_audioframe)*.
+This method supports the following event names: *[batterylevelchange](#notification_batterylevelchange), [audioframe](#notification_audioframe), [audiotransmission](#notification_audiotransmission)*.
 
 ### Parameters
 
@@ -289,7 +289,7 @@ Unregisters from an asynchronous JSON-RPC notification.
 
 ### Description
 
-This method supports the following event names: *[batterylevelchange](#notification_batterylevelchange), [audiotransmission](#notification_audiotransmission), [audioframe](#notification_audioframe)*.
+This method supports the following event names: *[batterylevelchange](#notification_batterylevelchange), [audioframe](#notification_audioframe), [audiotransmission](#notification_audiotransmission)*.
 
 ### Parameters
 
@@ -1007,8 +1007,8 @@ AudioStream interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [audiotransmission](#notification_audiotransmission) | Signals state of the stream |
 | [audioframe](#notification_audioframe) | Provides audio data |
+| [audiotransmission](#notification_audiotransmission) | Signals state of the stream |
 
 <a id="notification_batterylevelchange"></a>
 ## *batterylevelchange [<sup>notification</sup>](#head_Notifications)*
@@ -1053,6 +1053,54 @@ Signals battery level change.
 ```
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.batterylevelchange``.
+
+<a id="notification_audioframe"></a>
+## *audioframe [<sup>notification</sup>](#head_Notifications)*
+
+Provides audio data.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params?.seq | integer | optional | Frame number in current transmission |
+| params?.timestamp | integer | optional | Timestamp of the frame |
+| params.length | integer | mandatory | Size of the raw data frame in bytes |
+| params.data | string (base64) | mandatory | Raw audio data, the format of the data is specified in the most recent *audiotransmission* notification |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "BluetoothRemoteControl.1.register",
+  "params": {
+    "event": "audioframe",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.audioframe",
+  "params": {
+    "seq": 1,
+    "timestamp": 0,
+    "length": 400,
+    "data": "..."
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.audioframe``.
 
 <a id="notification_audiotransmission"></a>
 ## *audiotransmission [<sup>notification</sup>](#head_Notifications)*
@@ -1112,52 +1160,4 @@ Signals state of the stream.
 ```
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.audiotransmission``.
-
-<a id="notification_audioframe"></a>
-## *audioframe [<sup>notification</sup>](#head_Notifications)*
-
-Provides audio data.
-
-### Notification Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params?.seq | integer | optional | Frame number in current transmission |
-| params?.timestamp | integer | optional | Timestamp of the frame |
-| params.length | integer | mandatory | Size of the raw data frame in bytes |
-| params.data | string (base64) | mandatory | Raw audio data, the format of the data is specified in the most recent *audiotransmission* notification |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "BluetoothRemoteControl.1.register",
-  "params": {
-    "event": "audioframe",
-    "id": "myid"
-  }
-}
-```
-
-#### Notification
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "myid.audioframe",
-  "params": {
-    "seq": 1,
-    "timestamp": 0,
-    "length": 400,
-    "data": "..."
-  }
-}
-```
-
-> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.audioframe``.
 
