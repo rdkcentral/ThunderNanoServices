@@ -13,8 +13,6 @@ FileTransfer plugin for Thunder framework.
 - [Introduction](#head_Introduction)
 - [Description](#head_Description)
 - [Configuration](#head_Configuration)
-- [Interfaces](#head_Interfaces)
-- [Methods](#head_Methods)
 
 <a id="head_Introduction"></a>
 # Introduction
@@ -22,7 +20,7 @@ FileTransfer plugin for Thunder framework.
 <a id="head_Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the FileTransfer plugin. It includes detailed specification about its configuration and methods provided.
+This document describes purpose and functionality of the FileTransfer plugin. It includes detailed specification about its configuration.
 
 <a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -78,117 +76,4 @@ The table below lists configuration options of the plugin.
 | configuration | object | optional | *...* |
 | configuration?.port | integer | optional | Port number (default: 2201) |
 | configuration?.fullfile | boolean | optional | If value failse update at the end of the file (default: false) |
-
-<a id="head_Interfaces"></a>
-# Interfaces
-
-This plugin implements the following interfaces:
-
-<a id="head_Methods"></a>
-# Methods
-
-The following methods are provided by the FileTransfer plugin:
-
-Built-in methods:
-
-| Method | Description |
-| :-------- | :-------- |
-| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
-| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
-
-<a id="method_versions"></a>
-## *versions [<sup>method</sup>](#head_Methods)*
-
-Retrieves a list of JSON-RPC interfaces offered by this service.
-
-### Parameters
-
-This method takes no parameters.
-
-### Result
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
-| result[#] | object | mandatory | *...* |
-| result[#].name | string | mandatory | Name of the interface |
-| result[#].major | integer | mandatory | Major part of version number |
-| result[#].minor | integer | mandatory | Minor part of version number |
-| result[#].patch | integer | mandatory | Patch part of version version number |
-
-### Example
-
-#### Request
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "FileTransfer.1.versions"
-}
-```
-
-#### Response
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "result": [
-    {
-      "name": "JMyInterface",
-      "major": 1,
-      "minor": 0,
-      "patch": 0
-    }
-  ]
-}
-```
-
-<a id="method_exists"></a>
-## *exists [<sup>method</sup>](#head_Methods)*
-
-Checks if a JSON-RPC method or property exists.
-
-### Description
-
-This method will return *True* for the following methods/properties: *versions, exists*.
-
-### Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.method | string | mandatory | Name of the method or property to look up |
-
-### Result
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| result | boolean | mandatory | Denotes if the method exists or not |
-
-### Example
-
-#### Request
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "FileTransfer.1.exists",
-  "params": {
-    "method": "versions"
-  }
-}
-```
-
-#### Response
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "result": false
-}
-```
 
