@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Power_Plugin"></a>
+<a id="head_Power_Plugin"></a>
 # Power Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ Power plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the Power plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -58,7 +58,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -77,7 +77,7 @@ The table below lists configuration options of the plugin.
 | configuration?.gpiotype | sting | optional | GPIO type (Broadcom) |
 | configuration?.statechange | integer | optional | Statechange (Broadcom) |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
@@ -85,7 +85,7 @@ This plugin implements the following interfaces:
 - IPower ([IPower.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IPower.h)) (version 1.0.0) (compliant format)
 > This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the Power plugin:
@@ -94,19 +94,21 @@ Power interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [setstate](#method.setstate) | Set the power state |
+| [setstate](#method_setstate) / [set](#method_setstate) | Set the power state |
 
-<a name="method.setstate"></a>
-## *setstate [<sup>method</sup>](#head.Methods)*
+<a id="method_setstate"></a>
+## *setstate [<sup>method</sup>](#head_Methods)*
 
 Set the power state.
+
+> ``set`` is an alternative name for this method. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
 ### Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.state | string | mandatory | The power state to set (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
+| params.state | string | mandatory | The power state to set (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
 | params.waittime | integer | mandatory | The time to wait for the power state to be set in seconds |
 
 ### Result
@@ -150,7 +152,7 @@ Set the power state.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the Power plugin:
@@ -159,22 +161,22 @@ Power interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [getstate](#property.getstate) | read-only | Get the current power state |
+| [getstate](#property_getstate) / [state](#property_getstate) | read-only | Get the current power state |
 
-<a name="property.getstate"></a>
-## *getstate [<sup>property</sup>](#head.Properties)*
+<a id="property_getstate"></a>
+## *getstate [<sup>property</sup>](#head_Properties)*
 
 Provides access to the get the current power state.
 
 > This property is **read-only**.
 
-### Value
+> ``state`` is an alternative name for this property. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
 
-### Result
+### Value
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | The current power state (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
+| (property) | string | mandatory | The current power state (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
 
 ### Example
 
@@ -198,7 +200,7 @@ Provides access to the get the current power state.
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -209,10 +211,10 @@ Power interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [statechange](#notification.statechange) | Signals a change in the power state |
+| [statechange](#notification_statechange) | Signals a change in the power state |
 
-<a name="notification.statechange"></a>
-## *statechange [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_statechange"></a>
+## *statechange [<sup>notification</sup>](#head_Notifications)*
 
 Signals a change in the power state.
 
@@ -221,8 +223,8 @@ Signals a change in the power state.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.origin | string | mandatory | The state the device is transitioning from (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
-| params.destination | string | mandatory | The state the device is transitioning to (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRam*) |
+| params.origin | string | mandatory | The state the device is transitioning from (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
+| params.destination | string | mandatory | The state the device is transitioning to (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
 | params.phase | string | mandatory | The phase of the transition (must be one of the following: *After, Before*) |
 
 ### Example
@@ -254,4 +256,6 @@ Signals a change in the power state.
   }
 }
 ```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.statechange``.
 

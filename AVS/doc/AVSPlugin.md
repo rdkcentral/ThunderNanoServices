@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.AVS_Plugin"></a>
+<a id="head_AVS_Plugin"></a>
 # AVS Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ AVS plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the AVS plugin. It includes detailed specification about its configuration, methods provided and notifications sent.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -58,14 +58,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The Alexa Voice Service Headless Client serves as a personal assistant.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -85,7 +85,7 @@ The table below lists configuration options of the plugin.
 | configuration?.enablesmartscreen | boolean | optional | Enable the SmartScreen support in the runtime. The SmartScreen functionality must be compiled in |
 | configuration?.enablekwd | boolean | optional | Enable the Keyword Detection engine in the runtime. The KWD functionality must be compiled in |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
@@ -93,7 +93,7 @@ This plugin implements the following interfaces:
 - IAVSController ([IAVSClient.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IAVSClient.h)) (version 1.0.0) (uncompliant-collapsed format)
 > This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the AVS plugin:
@@ -102,11 +102,11 @@ AVSController interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [mute](#method.mute) | Mutes the audio output of AVS |
-| [record](#method.record) | Starts or stops the voice recording, skipping keyword detection |
+| [mute](#method_mute) | Mutes the audio output of AVS |
+| [record](#method_record) | Starts or stops the voice recording, skipping keyword detection |
 
-<a name="method.mute"></a>
-## *mute [<sup>method</sup>](#head.Methods)*
+<a id="method_mute"></a>
+## *mute [<sup>method</sup>](#head_Methods)*
 
 Mutes the audio output of AVS.
 
@@ -151,8 +151,8 @@ Mutes the audio output of AVS.
 }
 ```
 
-<a name="method.record"></a>
-## *record [<sup>method</sup>](#head.Methods)*
+<a id="method_record"></a>
+## *record [<sup>method</sup>](#head_Methods)*
 
 Starts or stops the voice recording, skipping keyword detection.
 
@@ -197,7 +197,7 @@ Starts or stops the voice recording, skipping keyword detection.
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -208,10 +208,10 @@ AVSController interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [dialoguestatechange](#notification.dialoguestatechange) | Notifies about dialogue state changes |
+| [dialoguestatechange](#notification_dialoguestatechange) | Notifies about dialogue state changes |
 
-<a name="notification.dialoguestatechange"></a>
-## *dialoguestatechange [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_dialoguestatechange"></a>
+## *dialoguestatechange [<sup>notification</sup>](#head_Notifications)*
 
 Notifies about dialogue state changes.
 
@@ -246,4 +246,6 @@ Notifies about dialogue state changes.
   "params": "SPEAKING"
 }
 ```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.dialoguestatechange``.
 

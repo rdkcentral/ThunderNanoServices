@@ -1,17 +1,16 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a id="head_Doggo_Plugin"></a>
-# Doggo Plugin
+<a id="head_DynamicJSONRPCErrorMessage_Plugin"></a>
+# DynamicJSONRPCErrorMessage Plugin
 
 **Version: 1.0**
 
-**Status: :black_circle::black_circle::white_circle:**
+**Status: :black_circle::white_circle::white_circle:**
 
-Doggo plugin for Thunder framework.
+DynamicJSONRPCErrorMessage plugin for Thunder framework.
 
 ### Table of Contents
 
 - [Introduction](#head_Introduction)
-- [Description](#head_Description)
 - [Configuration](#head_Configuration)
 - [Interfaces](#head_Interfaces)
 - [Methods](#head_Methods)
@@ -22,7 +21,7 @@ Doggo plugin for Thunder framework.
 <a id="head_Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Doggo plugin. It includes detailed specification about its configuration and methods provided.
+This document describes purpose and functionality of the DynamicJSONRPCErrorMessage plugin. It includes detailed specification about its configuration and methods provided.
 
 <a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -57,13 +56,6 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a id="head_Description"></a>
-# Description
-
-The watchdog control plugin allows control a build-in kernel watchdog.
-
-The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
-
 <a id="head_Configuration"></a>
 # Configuration
 
@@ -71,9 +63,9 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| callsign | string | mandatory | Plugin instance name (default: *Doggo*) |
-| classname | string | mandatory | Class name: *Doggo* |
-| locator | string | mandatory | Library name: *libWPEDoggo.so* |
+| callsign | string | mandatory | Plugin instance name (default: *DynamicJSONRPCErrorMessage*) |
+| classname | string | mandatory | Class name: *DynamicJSONRPCErrorMessage* |
+| locator | string | mandatory | Library name: *libThunderDynamicJSONRPCErrorMessage.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
 <a id="head_Interfaces"></a>
@@ -81,37 +73,38 @@ The table below lists configuration options of the plugin.
 
 This plugin implements the following interfaces:
 
-- IWatchDog ([IWatchDog.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IWatchDog.h)) (version 1.0.0) (compliant format)
-> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
+- IMath ([IMath.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IMath.h)) (version 1.0.0) (compliant format)
 
 <a id="head_Methods"></a>
 # Methods
 
-The following methods are provided by the Doggo plugin:
+The following methods are provided by the DynamicJSONRPCErrorMessage plugin:
 
-WatchDog interface methods:
+Math interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [touch](#method_touch) | Touch the watchdog as a sign of life |
+| [add](#method_add) | Perform addition on given inputs |
+| [sub](#method_sub) | Perform subtraction on given inputs |
 
-<a id="method_touch"></a>
-## *touch [<sup>method</sup>](#head_Methods)*
+<a id="method_add"></a>
+## *add [<sup>method</sup>](#head_Methods)*
 
-Touch the watchdog as a sign of life.
+Perform addition on given inputs.
 
 ### Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.callsign | string | mandatory | In case a specific watchdog needs to be padded pass the name of the callsign for which we want to touch |
+| params.a | integer | mandatory | First input |
+| params.b | integer | mandatory | Second input |
 
 ### Result
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null |
+| result | integer | mandatory | *...* |
 
 ### Example
 
@@ -121,9 +114,10 @@ Touch the watchdog as a sign of life.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Doggo.1.touch",
+  "method": "DynamicJSONRPCErrorMessage.1.add",
   "params": {
-    "callsign": "..."
+    "a": 0,
+    "b": 0
   }
 }
 ```
@@ -134,7 +128,52 @@ Touch the watchdog as a sign of life.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": null
+  "result": 0
+}
+```
+
+<a id="method_sub"></a>
+## *sub [<sup>method</sup>](#head_Methods)*
+
+Perform subtraction on given inputs.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.a | integer | mandatory | First input |
+| params.b | integer | mandatory | Second input |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DynamicJSONRPCErrorMessage.1.sub",
+  "params": {
+    "a": 0,
+    "b": 0
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 0
 }
 ```
 

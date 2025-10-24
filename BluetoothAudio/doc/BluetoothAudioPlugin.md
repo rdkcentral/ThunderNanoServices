@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Bluetooth_Audio_Plugin"></a>
+<a id="head_Bluetooth_Audio_Plugin"></a>
 # Bluetooth Audio Plugin
 
 **Version: 1.0**
@@ -10,28 +10,28 @@ BluetoothAudio plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the BluetoothAudio plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -52,7 +52,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="term.bitpool">bitpool</a> | A parameter to the LC-SBC codec that changes the encoding bitrate; the higher it is the higher the bitrate and thus the audio quality |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -62,14 +62,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The Bluetooth Audio Sink plugin enables audio streaming to Bluetooth audio sink devices. The plugin is sink a from the host device stack perspective; in Bluetooth topology the host device becomes in fact an audio source. The plugin requires a Bluetooth controller service that will provide Bluetooth BR/EDR scanning, pairing and connection functionality; typically this is fulfiled by the *BluetoothControl* plugin.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -96,7 +96,7 @@ The table below lists configuration options of the plugin.
 | source.codecs?.LC-SBC | object | optional | Settings for the LC-SBC codec |
 | source.codecs?.LC-SBC.maxbitpool | integer | mandatory | Maximum accepted bitpool value |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
@@ -107,7 +107,7 @@ This plugin implements the following interfaces:
 - IBluetoothAudio::ISource ([IBluetoothAudio.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IBluetoothAudio.h)) (version 1.0.0) (compliant format)
 > This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the BluetoothAudio plugin:
@@ -116,11 +116,11 @@ BluetoothAudio Sink interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [sink::assign](#method.sink::assign) | Assigns a Bluetooth sink device for audio playback |
-| [sink::revoke](#method.sink::revoke) | Revokes a Bluetooth sink device from audio playback |
+| [sink::assign](#method_sink__assign) | Assigns a Bluetooth sink device for audio playback |
+| [sink::revoke](#method_sink__revoke) | Revokes a Bluetooth sink device from audio playback |
 
-<a name="method.sink::assign"></a>
-## *sink::assign [<sup>method</sup>](#head.Methods)*
+<a id="method_sink__assign"></a>
+## *sink::assign [<sup>method</sup>](#head_Methods)*
 
 Assigns a Bluetooth sink device for audio playback.
 
@@ -169,8 +169,8 @@ Assigns a Bluetooth sink device for audio playback.
 }
 ```
 
-<a name="method.sink::revoke"></a>
-## *sink::revoke [<sup>method</sup>](#head.Methods)*
+<a id="method_sink__revoke"></a>
+## *sink::revoke [<sup>method</sup>](#head_Methods)*
 
 Revokes a Bluetooth sink device from audio playback.
 
@@ -212,7 +212,7 @@ This method takes no parameters.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the BluetoothAudio plugin:
@@ -221,29 +221,29 @@ BluetoothAudio Sink interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [sink::state](#property.sink::state) | read-only | Current state o the audio sink device |
-| [sink::device](#property.sink::device) | read-only | Bluetooth address of the audio sink device |
-| [sink::type](#property.sink::type) | read-only | Type of the audio sink device |
-| [sink::latency](#property.sink::latency) | read/write | Latency of the audio sink device |
-| [sink::supportedcodecs](#property.sink::supportedcodecs) | read-only | Audio codecs supported by the audio sink device |
-| [sink::supporteddrms](#property.sink::supporteddrms) | read-only | DRM schemes supported by the audio sink device |
-| [sink::codec](#property.sink::codec) | read-only | Properites of the currently used audio codec |
-| [sink::drm](#property.sink::drm) | read-only | Properites of the currently used DRM scheme |
-| [sink::stream](#property.sink::stream) | read-only | Properties of the currently transmitted audio stream |
+| [sink::state](#property_sink__state) | read-only | Current state o the audio sink device |
+| [sink::device](#property_sink__device) | read-only | Bluetooth address of the audio sink device |
+| [sink::type](#property_sink__type) | read-only | Type of the audio sink device |
+| [sink::latency](#property_sink__latency) | read/write | Latency of the audio sink device |
+| [sink::supportedcodecs](#property_sink__supportedcodecs) | read-only | Audio codecs supported by the audio sink device |
+| [sink::supporteddrms](#property_sink__supporteddrms) | read-only | DRM schemes supported by the audio sink device |
+| [sink::codec](#property_sink__codec) | read-only | Properites of the currently used audio codec |
+| [sink::drm](#property_sink__drm) | read-only | Properites of the currently used DRM scheme |
+| [sink::stream](#property_sink__stream) | read-only | Properties of the currently transmitted audio stream |
 
 BluetoothAudio Source interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [source::state](#property.source::state) | read-only | Current state of the source device |
-| [source::device](#property.source::device) | read-only | Bluetooth address of the source device |
-| [source::type](#property.source::type) | read-only | Type of the audio source device |
-| [source::codec](#property.source::codec) | read-only | Properites of the currently used codec |
-| [source::drm](#property.source::drm) | read-only | Properties of the currently used DRM scheme |
-| [source::stream](#property.source::stream) | read-only | Properites of the currently transmitted audio stream |
+| [source::state](#property_source__state) | read-only | Current state of the source device |
+| [source::device](#property_source__device) | read-only | Bluetooth address of the source device |
+| [source::type](#property_source__type) | read-only | Type of the audio source device |
+| [source::codec](#property_source__codec) | read-only | Properites of the currently used codec |
+| [source::drm](#property_source__drm) | read-only | Properties of the currently used DRM scheme |
+| [source::stream](#property_source__stream) | read-only | Properites of the currently transmitted audio stream |
 
-<a name="property.sink::state"></a>
-## *sink::state [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__state"></a>
+## *sink::state [<sup>property</sup>](#head_Properties)*
 
 Provides access to the current state o the audio sink device.
 
@@ -251,11 +251,9 @@ Provides access to the current state o the audio sink device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Current state o the audio sink device (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
+| (property) | string | mandatory | Current state o the audio sink device (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
 
 ### Example
 
@@ -275,12 +273,12 @@ Provides access to the current state o the audio sink device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "Unassigned"
+  "result": "Disconnected"
 }
 ```
 
-<a name="property.sink::device"></a>
-## *sink::device [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__device"></a>
+## *sink::device [<sup>property</sup>](#head_Properties)*
 
 Provides access to the bluetooth address of the audio sink device.
 
@@ -288,11 +286,9 @@ Provides access to the bluetooth address of the audio sink device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Bluetooth address of the audio sink device |
+| (property) | string | mandatory | Bluetooth address of the audio sink device |
 
 ### Errors
 
@@ -322,8 +318,8 @@ Provides access to the bluetooth address of the audio sink device.
 }
 ```
 
-<a name="property.sink::type"></a>
-## *sink::type [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__type"></a>
+## *sink::type [<sup>property</sup>](#head_Properties)*
 
 Provides access to the type of the audio sink device.
 
@@ -331,11 +327,9 @@ Provides access to the type of the audio sink device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Type of the audio sink device (must be one of the following: *Amplifier, Headphone, Recorder, Speaker, Unknown*) |
+| (property) | string | mandatory | Type of the audio sink device (must be one of the following: *Amplifier, Headphone, Recorder, Speaker, Unknown*) |
 
 ### Errors
 
@@ -361,12 +355,12 @@ Provides access to the type of the audio sink device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "Unknown"
+  "result": "Headphone"
 }
 ```
 
-<a name="property.sink::latency"></a>
-## *sink::latency [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__latency"></a>
+## *sink::latency [<sup>property</sup>](#head_Properties)*
 
 Provides access to the latency of the audio sink device.
 
@@ -377,11 +371,9 @@ Provides access to the latency of the audio sink device.
 | (property) | object | mandatory | Latency of the audio sink device |
 | (property).value | integer | mandatory | Audio latency in milliseconds |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Latency of the audio sink device |
+| (property) | integer | mandatory | Latency of the audio sink device |
 
 ### Errors
 
@@ -434,8 +426,8 @@ Provides access to the latency of the audio sink device.
 }
 ```
 
-<a name="property.sink::supportedcodecs"></a>
-## *sink::supportedcodecs [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__supportedcodecs"></a>
+## *sink::supportedcodecs [<sup>property</sup>](#head_Properties)*
 
 Provides access to the audio codecs supported by the audio sink device.
 
@@ -443,12 +435,10 @@ Provides access to the audio codecs supported by the audio sink device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Audio codecs supported by the audio sink device |
-| result[#] | string | mandatory | *...* (must be one of the following: *LC-SBC*) |
+| (property) | array | mandatory | Audio codecs supported by the audio sink device |
+| (property)[#] | string | mandatory | *...* (must be one of the following: *LC-SBC*) |
 
 ### Errors
 
@@ -480,8 +470,8 @@ Provides access to the audio codecs supported by the audio sink device.
 }
 ```
 
-<a name="property.sink::supporteddrms"></a>
-## *sink::supporteddrms [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__supporteddrms"></a>
+## *sink::supporteddrms [<sup>property</sup>](#head_Properties)*
 
 Provides access to the DRM schemes supported by the audio sink device.
 
@@ -489,12 +479,10 @@ Provides access to the DRM schemes supported by the audio sink device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | DRM schemes supported by the audio sink device |
-| result[#] | string | mandatory | *...* (must be one of the following: *DTCP, SCMS-T*) |
+| (property) | array | mandatory | DRM schemes supported by the audio sink device |
+| (property)[#] | string | mandatory | *...* (must be one of the following: *DTCP, SCMS-T*) |
 
 ### Errors
 
@@ -521,13 +509,13 @@ Provides access to the DRM schemes supported by the audio sink device.
   "jsonrpc": "2.0",
   "id": 42,
   "result": [
-    "DTCP"
+    "SCMS-T"
   ]
 }
 ```
 
-<a name="property.sink::codec"></a>
-## *sink::codec [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__codec"></a>
+## *sink::codec [<sup>property</sup>](#head_Properties)*
 
 Provides access to the properites of the currently used audio codec.
 
@@ -535,13 +523,11 @@ Provides access to the properites of the currently used audio codec.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Properites of the currently used audio codec |
-| result.codec | string | mandatory | Audio codec used (must be one of the following: *LC-SBC*) |
-| result.settings | opaque object | mandatory | Codec-specific audio quality preset, compression profile, etc |
+| (property) | object | mandatory | Properites of the currently used audio codec |
+| (property).codec | string | mandatory | Audio codec used (must be one of the following: *LC-SBC*) |
+| (property).settings | opaque object | mandatory | Codec-specific audio quality preset, compression profile, etc |
 
 ### Errors
 
@@ -574,8 +560,8 @@ Provides access to the properites of the currently used audio codec.
 }
 ```
 
-<a name="property.sink::drm"></a>
-## *sink::drm [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__drm"></a>
+## *sink::drm [<sup>property</sup>](#head_Properties)*
 
 Provides access to the properites of the currently used DRM scheme.
 
@@ -583,13 +569,11 @@ Provides access to the properites of the currently used DRM scheme.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Properites of the currently used DRM scheme |
-| result.drm | string | mandatory | Content protection scheme used (must be one of the following: *DTCP, SCMS-T*) |
-| result.settings | opaque object | mandatory | DRM-specific content protection level, encoding rules, etc |
+| (property) | object | mandatory | Properites of the currently used DRM scheme |
+| (property).drm | string | mandatory | Content protection scheme used (must be one of the following: *DTCP, SCMS-T*) |
+| (property).settings | opaque object | mandatory | DRM-specific content protection level, encoding rules, etc |
 
 ### Errors
 
@@ -616,14 +600,14 @@ Provides access to the properites of the currently used DRM scheme.
   "jsonrpc": "2.0",
   "id": 42,
   "result": {
-    "drm": "DTCP",
+    "drm": "SCMS-T",
     "settings": {}
   }
 }
 ```
 
-<a name="property.sink::stream"></a>
-## *sink::stream [<sup>property</sup>](#head.Properties)*
+<a id="property_sink__stream"></a>
+## *sink::stream [<sup>property</sup>](#head_Properties)*
 
 Provides access to the properties of the currently transmitted audio stream.
 
@@ -631,16 +615,14 @@ Provides access to the properties of the currently transmitted audio stream.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Properties of the currently transmitted audio stream |
-| result.samplerate | integer | mandatory | Sample rate in Hz |
-| result.bitrate | integer | mandatory | Target bitrate in bits per second (eg. 320000) |
-| result.channels | integer | mandatory | Number of audio channels |
-| result.resolution | integer | mandatory | Sampling resolution in bits per sample |
-| result.isresampled | boolean | mandatory | Indicates if the source stream is being resampled by the stack to match sink capabilities |
+| (property) | object | mandatory | Properties of the currently transmitted audio stream |
+| (property).samplerate | integer | mandatory | Sample rate in Hz |
+| (property).bitrate | integer | mandatory | Target bitrate in bits per second (eg. 320000) |
+| (property).channels | integer | mandatory | Number of audio channels |
+| (property).resolution | integer | mandatory | Sampling resolution in bits per sample |
+| (property).isresampled | boolean | mandatory | Indicates if the source stream is being resampled by the stack to match sink capabilities |
 
 ### Errors
 
@@ -676,8 +658,8 @@ Provides access to the properties of the currently transmitted audio stream.
 }
 ```
 
-<a name="property.source::state"></a>
-## *source::state [<sup>property</sup>](#head.Properties)*
+<a id="property_source__state"></a>
+## *source::state [<sup>property</sup>](#head_Properties)*
 
 Provides access to the current state of the source device.
 
@@ -685,11 +667,9 @@ Provides access to the current state of the source device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Current state of the source device (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
+| (property) | string | mandatory | Current state of the source device (must be one of the following: *Connected, ConnectedBad, ConnectedRestricted, Connecting, Disconnected, Ready, Streaming, Unassigned*) |
 
 ### Example
 
@@ -709,12 +689,12 @@ Provides access to the current state of the source device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "Unassigned"
+  "result": "Disconnected"
 }
 ```
 
-<a name="property.source::device"></a>
-## *source::device [<sup>property</sup>](#head.Properties)*
+<a id="property_source__device"></a>
+## *source::device [<sup>property</sup>](#head_Properties)*
 
 Provides access to the bluetooth address of the source device.
 
@@ -722,11 +702,9 @@ Provides access to the bluetooth address of the source device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Bluetooth address of the source device |
+| (property) | string | mandatory | Bluetooth address of the source device |
 
 ### Errors
 
@@ -756,8 +734,8 @@ Provides access to the bluetooth address of the source device.
 }
 ```
 
-<a name="property.source::type"></a>
-## *source::type [<sup>property</sup>](#head.Properties)*
+<a id="property_source__type"></a>
+## *source::type [<sup>property</sup>](#head_Properties)*
 
 Provides access to the type of the audio source device.
 
@@ -765,11 +743,9 @@ Provides access to the type of the audio source device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Type of the audio source device (must be one of the following: *Microphone, Mixer, Player, Tuner, Unknown*) |
+| (property) | string | mandatory | Type of the audio source device (must be one of the following: *Microphone, Mixer, Player, Tuner, Unknown*) |
 
 ### Errors
 
@@ -795,12 +771,12 @@ Provides access to the type of the audio source device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "Unknown"
+  "result": "Player"
 }
 ```
 
-<a name="property.source::codec"></a>
-## *source::codec [<sup>property</sup>](#head.Properties)*
+<a id="property_source__codec"></a>
+## *source::codec [<sup>property</sup>](#head_Properties)*
 
 Provides access to the properites of the currently used codec.
 
@@ -808,13 +784,11 @@ Provides access to the properites of the currently used codec.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Properites of the currently used codec |
-| result.codec | string | mandatory | Audio codec used (must be one of the following: *LC-SBC*) |
-| result.settings | opaque object | mandatory | Codec-specific audio quality preset, compression profile, etc |
+| (property) | object | mandatory | Properites of the currently used codec |
+| (property).codec | string | mandatory | Audio codec used (must be one of the following: *LC-SBC*) |
+| (property).settings | opaque object | mandatory | Codec-specific audio quality preset, compression profile, etc |
 
 ### Errors
 
@@ -847,8 +821,8 @@ Provides access to the properites of the currently used codec.
 }
 ```
 
-<a name="property.source::drm"></a>
-## *source::drm [<sup>property</sup>](#head.Properties)*
+<a id="property_source__drm"></a>
+## *source::drm [<sup>property</sup>](#head_Properties)*
 
 Provides access to the properties of the currently used DRM scheme.
 
@@ -856,13 +830,11 @@ Provides access to the properties of the currently used DRM scheme.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Properties of the currently used DRM scheme |
-| result.drm | string | mandatory | Content protection scheme used (must be one of the following: *DTCP, SCMS-T*) |
-| result.settings | opaque object | mandatory | DRM-specific content protection level, encoding rules, etc |
+| (property) | object | mandatory | Properties of the currently used DRM scheme |
+| (property).drm | string | mandatory | Content protection scheme used (must be one of the following: *DTCP, SCMS-T*) |
+| (property).settings | opaque object | mandatory | DRM-specific content protection level, encoding rules, etc |
 
 ### Errors
 
@@ -889,14 +861,14 @@ Provides access to the properties of the currently used DRM scheme.
   "jsonrpc": "2.0",
   "id": 42,
   "result": {
-    "drm": "DTCP",
+    "drm": "SCMS-T",
     "settings": {}
   }
 }
 ```
 
-<a name="property.source::stream"></a>
-## *source::stream [<sup>property</sup>](#head.Properties)*
+<a id="property_source__stream"></a>
+## *source::stream [<sup>property</sup>](#head_Properties)*
 
 Provides access to the properites of the currently transmitted audio stream.
 
@@ -904,16 +876,14 @@ Provides access to the properites of the currently transmitted audio stream.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Properites of the currently transmitted audio stream |
-| result.samplerate | integer | mandatory | Sample rate in Hz |
-| result.bitrate | integer | mandatory | Target bitrate in bits per second (eg. 320000) |
-| result.channels | integer | mandatory | Number of audio channels |
-| result.resolution | integer | mandatory | Sampling resolution in bits per sample |
-| result.isresampled | boolean | mandatory | Indicates if the source stream is being resampled by the stack to match sink capabilities |
+| (property) | object | mandatory | Properites of the currently transmitted audio stream |
+| (property).samplerate | integer | mandatory | Sample rate in Hz |
+| (property).bitrate | integer | mandatory | Target bitrate in bits per second (eg. 320000) |
+| (property).channels | integer | mandatory | Number of audio channels |
+| (property).resolution | integer | mandatory | Sampling resolution in bits per sample |
+| (property).isresampled | boolean | mandatory | Indicates if the source stream is being resampled by the stack to match sink capabilities |
 
 ### Errors
 
@@ -949,7 +919,7 @@ Provides access to the properites of the currently transmitted audio stream.
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -960,16 +930,16 @@ BluetoothAudio Sink interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [sink::statechanged](#notification.sink::statechanged) | Signals audio sink state change |
+| [sink::statechanged](#notification_sink__statechanged) | Signals audio sink state change |
 
 BluetoothAudio Source interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [source::statechanged](#notification.source::statechanged) | Signals audio source state change |
+| [source::statechanged](#notification_source__statechanged) | Signals audio source state change |
 
-<a name="notification.sink::statechanged"></a>
-## *sink::statechanged [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_sink__statechanged"></a>
+## *sink::statechanged [<sup>notification</sup>](#head_Notifications)*
 
 Signals audio sink state change.
 
@@ -1003,13 +973,15 @@ Signals audio sink state change.
   "jsonrpc": "2.0",
   "method": "myid.sink::statechanged",
   "params": {
-    "state": "Unassigned"
+    "state": "Disconnected"
   }
 }
 ```
 
-<a name="notification.source::statechanged"></a>
-## *source::statechanged [<sup>notification</sup>](#head.Notifications)*
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.sink::statechanged``.
+
+<a id="notification_source__statechanged"></a>
+## *source::statechanged [<sup>notification</sup>](#head_Notifications)*
 
 Signals audio source state change.
 
@@ -1043,8 +1015,10 @@ Signals audio source state change.
   "jsonrpc": "2.0",
   "method": "myid.source::statechanged",
   "params": {
-    "state": "Unassigned"
+    "state": "Disconnected"
   }
 }
 ```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.source::statechanged``.
 

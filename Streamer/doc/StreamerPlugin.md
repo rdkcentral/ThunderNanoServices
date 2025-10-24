@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Streamer_Plugin"></a>
+<a id="head_Streamer_Plugin"></a>
 # Streamer Plugin
 
 **Version: 1.0**
@@ -10,28 +10,28 @@ Streamer plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the Streamer plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -49,7 +49,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -59,14 +59,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 .
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -78,14 +78,14 @@ The table below lists configuration options of the plugin.
 | locator | string | mandatory | Library name: *libThunderStreamer.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
 - [Streamer.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Streamer.json) (version 1.0.0) (uncompliant-extended format)
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the Streamer plugin:
@@ -94,14 +94,14 @@ Streamer interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [create](#method.create) | Creates a stream instance |
-| [destroy](#method.destroy) | Destroys a stream instance |
-| [load](#method.load) | Loads a source into a stream |
-| [attach](#method.attach) | Attaches a decoder to the streamer |
-| [detach](#method.detach) | Detaches a decoder from the streamer |
+| [create](#method_create) | Creates a stream instance |
+| [destroy](#method_destroy) | Destroys a stream instance |
+| [load](#method_load) | Loads a source into a stream |
+| [attach](#method_attach) | Attaches a decoder to the streamer |
+| [detach](#method_detach) | Detaches a decoder from the streamer |
 
-<a name="method.create"></a>
-## *create [<sup>method</sup>](#head.Methods)*
+<a id="method_create"></a>
+## *create [<sup>method</sup>](#head_Methods)*
 
 Creates a stream instance.
 
@@ -150,8 +150,8 @@ Creates a stream instance.
 }
 ```
 
-<a name="method.destroy"></a>
-## *destroy [<sup>method</sup>](#head.Methods)*
+<a id="method_destroy"></a>
+## *destroy [<sup>method</sup>](#head_Methods)*
 
 Destroys a stream instance.
 
@@ -199,12 +199,12 @@ Destroys a stream instance.
 }
 ```
 
-<a name="method.load"></a>
-## *load [<sup>method</sup>](#head.Methods)*
+<a id="method_load"></a>
+## *load [<sup>method</sup>](#head_Methods)*
 
 Loads a source into a stream.
 
-Also see: [statechange](#event.statechange)
+Also see: [statechange](#event_statechange)
 
 ### Parameters
 
@@ -255,8 +255,8 @@ Also see: [statechange](#event.statechange)
 }
 ```
 
-<a name="method.attach"></a>
-## *attach [<sup>method</sup>](#head.Methods)*
+<a id="method_attach"></a>
+## *attach [<sup>method</sup>](#head_Methods)*
 
 Attaches a decoder to the streamer.
 
@@ -307,8 +307,8 @@ Attaches a decoder to the streamer.
 }
 ```
 
-<a name="method.detach"></a>
-## *detach [<sup>method</sup>](#head.Methods)*
+<a id="method_detach"></a>
+## *detach [<sup>method</sup>](#head_Methods)*
 
 Detaches a decoder from the streamer.
 
@@ -358,7 +358,7 @@ Detaches a decoder from the streamer.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the Streamer plugin:
@@ -367,20 +367,20 @@ Streamer interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [speed](#property.speed) | read/write | Playback speed |
-| [position](#property.position) | read/write | Stream position |
-| [window](#property.window) | read/write | Stream playback window |
-| [speeds](#property.speeds) | read-only | Speeds supported by the stream player |
-| [streams](#property.streams) | read-only | All created stream instance IDs |
-| [type](#property.type) | read-only | Type of a stream |
-| [drm](#property.drm) | read-only | DRM type associated with a stream |
-| [state](#property.state) | read-only | Current state of a stream |
-| [metadata](#property.metadata) | read-only | Metadata associated with the stream |
-| [error](#property.error) | read-only | Most recent error code |
-| [elements](#property.elements) | read-only | Stream elements |
+| [speed](#property_speed) | read/write | Playback speed |
+| [position](#property_position) | read/write | Stream position |
+| [window](#property_window) | read/write | Stream playback window |
+| [speeds](#property_speeds) | read-only | Speeds supported by the stream player |
+| [streams](#property_streams) | read-only | All created stream instance IDs |
+| [type](#property_type) | read-only | Type of a stream |
+| [drm](#property_drm) | read-only | DRM type associated with a stream |
+| [state](#property_state) | read-only | Current state of a stream |
+| [metadata](#property_metadata) | read-only | Metadata associated with the stream |
+| [error](#property_error) | read-only | Most recent error code |
+| [elements](#property_elements) | read-only | Stream elements |
 
-<a name="property.speed"></a>
-## *speed [<sup>property</sup>](#head.Properties)*
+<a id="property_speed"></a>
+## *speed [<sup>property</sup>](#head_Properties)*
 
 Provides access to the playback speed.
 
@@ -388,9 +388,9 @@ Provides access to the playback speed.
 
 Speed (in percentage)
 
-Also see: [statechange](#event.statechange)
+Also see: [statechange](#event_statechange)
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.speed@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``speed@<stream-id>``.
 
 ### Index
 
@@ -404,11 +404,9 @@ Also see: [statechange](#event.statechange)
 | :-------- | :-------- | :-------- | :-------- |
 | (property) | integer | mandatory | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
+| (property) | integer | mandatory | Speed percentage; e.g.: 0 - pause, 100 - normal playback, -100 - rewind, -200 - reverse at twice the normal speed, 50 - forward at half speed, etc. Must be one of the speeds supported by the player |
 
 ### Errors
 
@@ -460,12 +458,12 @@ Also see: [statechange](#event.statechange)
 }
 ```
 
-<a name="property.position"></a>
-## *position [<sup>property</sup>](#head.Properties)*
+<a id="property_position"></a>
+## *position [<sup>property</sup>](#head_Properties)*
 
 Provides access to the stream position.
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.position@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``position@<stream-id>``.
 
 ### Index
 
@@ -479,11 +477,9 @@ Provides access to the stream position.
 | :-------- | :-------- | :-------- | :-------- |
 | (property) | integer | mandatory | Position (in milliseconds) |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Position (in milliseconds) |
+| (property) | integer | mandatory | Position (in milliseconds) |
 
 ### Errors
 
@@ -535,12 +531,12 @@ Provides access to the stream position.
 }
 ```
 
-<a name="property.window"></a>
-## *window [<sup>property</sup>](#head.Properties)*
+<a id="property_window"></a>
+## *window [<sup>property</sup>](#head_Properties)*
 
 Provides access to the stream playback window.
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.window@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``window@<stream-id>``.
 
 ### Index
 
@@ -558,15 +554,13 @@ Provides access to the stream playback window.
 | (property).width | integer | mandatory | Width of the window (in pixels) |
 | (property).height | integer | mandatory | Height of the window (in pixels) |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Geometry of the window |
-| result.x | integer | mandatory | Horizontal position of the window (in pixels) |
-| result.y | integer | mandatory | Vertical position of the window (in pixels) |
-| result.width | integer | mandatory | Width of the window (in pixels) |
-| result.height | integer | mandatory | Height of the window (in pixels) |
+| (property) | object | mandatory | Geometry of the window |
+| (property).x | integer | mandatory | Horizontal position of the window (in pixels) |
+| (property).y | integer | mandatory | Vertical position of the window (in pixels) |
+| (property).width | integer | mandatory | Width of the window (in pixels) |
+| (property).height | integer | mandatory | Height of the window (in pixels) |
 
 ### Errors
 
@@ -628,14 +622,14 @@ Provides access to the stream playback window.
 }
 ```
 
-<a name="property.speeds"></a>
-## *speeds [<sup>property</sup>](#head.Properties)*
+<a id="property_speeds"></a>
+## *speeds [<sup>property</sup>](#head_Properties)*
 
 Provides access to the speeds supported by the stream player.
 
 > This property is **read-only**.
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.speeds@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``speeds@<stream-id>``.
 
 ### Index
 
@@ -645,12 +639,10 @@ Provides access to the speeds supported by the stream player.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Supported speeds (in percentage) |
-| result[#] | integer | mandatory | (speeds in percentage) |
+| (property) | array | mandatory | Supported speeds (in percentage) |
+| (property)[#] | integer | mandatory | (speeds in percentage) |
 
 ### Errors
 
@@ -689,8 +681,8 @@ Provides access to the speeds supported by the stream player.
 }
 ```
 
-<a name="property.streams"></a>
-## *streams [<sup>property</sup>](#head.Properties)*
+<a id="property_streams"></a>
+## *streams [<sup>property</sup>](#head_Properties)*
 
 Provides access to the all created stream instance IDs.
 
@@ -698,12 +690,10 @@ Provides access to the all created stream instance IDs.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Stream IDs |
-| result[#] | integer | mandatory | (a stream ID) |
+| (property) | array | mandatory | Stream IDs |
+| (property)[#] | integer | mandatory | (a stream ID) |
 
 ### Example
 
@@ -732,14 +722,14 @@ Provides access to the all created stream instance IDs.
 }
 ```
 
-<a name="property.type"></a>
-## *type [<sup>property</sup>](#head.Properties)*
+<a id="property_type"></a>
+## *type [<sup>property</sup>](#head_Properties)*
 
 Provides access to the type of a stream.
 
 > This property is **read-only**.
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.type@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``type@<stream-id>``.
 
 ### Index
 
@@ -749,11 +739,9 @@ Provides access to the type of a stream.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Stream type (must be one of the following: *cable, dab, handheld, ip, multicast, rf, satellite, terrestrial, undefined, unicast*) |
+| (property) | string | mandatory | Stream type (must be one of the following: *cable, dab, handheld, ip, multicast, rf, satellite, terrestrial, undefined, unicast*) |
 
 ### Errors
 
@@ -783,16 +771,16 @@ Provides access to the type of a stream.
 }
 ```
 
-<a name="property.drm"></a>
-## *drm [<sup>property</sup>](#head.Properties)*
+<a id="property_drm"></a>
+## *drm [<sup>property</sup>](#head_Properties)*
 
 Provides access to the DRM type associated with a stream.
 
 > This property is **read-only**.
 
-Also see: [drmchange](#event.drmchange)
+Also see: [drmchange](#event_drmchange)
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.drm@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``drm@<stream-id>``.
 
 ### Index
 
@@ -802,11 +790,9 @@ Also see: [drmchange](#event.drmchange)
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | DRM used (must be one of the following: *clearkey, none, playready, unknown, widevine*) |
+| (property) | string | mandatory | DRM used (must be one of the following: *clearkey, none, playready, unknown, widevine*) |
 
 ### Errors
 
@@ -836,16 +822,16 @@ Also see: [drmchange](#event.drmchange)
 }
 ```
 
-<a name="property.state"></a>
-## *state [<sup>property</sup>](#head.Properties)*
+<a id="property_state"></a>
+## *state [<sup>property</sup>](#head_Properties)*
 
 Provides access to the current state of a stream.
 
 > This property is **read-only**.
 
-Also see: [statechange](#event.statechange)
+Also see: [statechange](#event_statechange)
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.state@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``state@<stream-id>``.
 
 ### Index
 
@@ -855,11 +841,9 @@ Also see: [statechange](#event.statechange)
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Stream state (must be one of the following: *controlled, error, idle, loading, prepared*) |
+| (property) | string | mandatory | Stream state (must be one of the following: *controlled, error, idle, loading, prepared*) |
 
 ### Errors
 
@@ -889,14 +873,14 @@ Also see: [statechange](#event.statechange)
 }
 ```
 
-<a name="property.metadata"></a>
-## *metadata [<sup>property</sup>](#head.Properties)*
+<a id="property_metadata"></a>
+## *metadata [<sup>property</sup>](#head_Properties)*
 
 Provides access to the metadata associated with the stream.
 
 > This property is **read-only**.
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.metadata@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``metadata@<stream-id>``.
 
 ### Index
 
@@ -906,11 +890,9 @@ Provides access to the metadata associated with the stream.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Custom implementation-specific metadata |
+| (property) | string | mandatory | Custom implementation-specific metadata |
 
 ### Errors
 
@@ -940,14 +922,14 @@ Provides access to the metadata associated with the stream.
 }
 ```
 
-<a name="property.error"></a>
-## *error [<sup>property</sup>](#head.Properties)*
+<a id="property_error"></a>
+## *error [<sup>property</sup>](#head_Properties)*
 
 Provides access to the most recent error code.
 
 > This property is **read-only**.
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.error@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``error@<stream-id>``.
 
 ### Index
 
@@ -957,11 +939,9 @@ Provides access to the most recent error code.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Custom implementation-specific error code value |
+| (property) | integer | mandatory | Custom implementation-specific error code value |
 
 ### Errors
 
@@ -991,14 +971,14 @@ Provides access to the most recent error code.
 }
 ```
 
-<a name="property.elements"></a>
-## *elements [<sup>property</sup>](#head.Properties)*
+<a id="property_elements"></a>
+## *elements [<sup>property</sup>](#head_Properties)*
 
 Provides access to the stream elements.
 
 > This property is **read-only**.
 
-> The *stream id* parameter shall be passed as the index to the property, e.g. ``Streamer.1.elements@<stream-id>``.
+> The *stream id* parameter shall be passed as the index to the property, i.e. ``elements@<stream-id>``.
 
 ### Index
 
@@ -1008,13 +988,11 @@ Provides access to the stream elements.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | List of stream elements |
-| result[#] | object | mandatory | Stream element |
-| result[#].type | string | mandatory | Stream element type (must be one of the following: *audio, data, subtitles, teletext, video*) |
+| (property) | array | mandatory | List of stream elements |
+| (property)[#] | object | mandatory | Stream element |
+| (property)[#].type | string | mandatory | Stream element type (must be one of the following: *audio, data, subtitles, teletext, video*) |
 
 ### Errors
 
@@ -1049,7 +1027,7 @@ Provides access to the stream elements.
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -1060,20 +1038,20 @@ Streamer interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [statechange](#notification.statechange) | Notifies of stream state change |
-| [timeupdate](#notification.timeupdate) | Notifies of stream position change |
-| [stream](#notification.stream) | Notifies of a custom stream incident |
-| [player](#notification.player) | Notifies of a custom player incident |
-| [drm](#notification.drm) | Notifies of a custom DRM-related incident |
+| [statechange](#notification_statechange) | Notifies of stream state change |
+| [timeupdate](#notification_timeupdate) | Notifies of stream position change |
+| [stream](#notification_stream) | Notifies of a custom stream incident |
+| [player](#notification_player) | Notifies of a custom player incident |
+| [drm](#notification_drm) | Notifies of a custom DRM-related incident |
 
-<a name="notification.statechange"></a>
-## *statechange [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_statechange"></a>
+## *statechange [<sup>notification</sup>](#head_Notifications)*
 
 Notifies of stream state change.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
+> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
 
 ### Notification Parameters
 
@@ -1110,16 +1088,18 @@ Notifies of stream state change.
 }
 ```
 
-> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.statechange*.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.statechange``.
 
-<a name="notification.timeupdate"></a>
-## *timeupdate [<sup>notification</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.statechange``.
+
+<a id="notification_timeupdate"></a>
+## *timeupdate [<sup>notification</sup>](#head_Notifications)*
 
 Notifies of stream position change. This event is fired every second to indicate the current stream position. It does not fire if the stream is paused (i.e. speed is set to 0).
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
+> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
 
 ### Notification Parameters
 
@@ -1156,16 +1136,18 @@ Notifies of stream position change. This event is fired every second to indicate
 }
 ```
 
-> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.timeupdate*.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.timeupdate``.
 
-<a name="notification.stream"></a>
-## *stream [<sup>notification</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.timeupdate``.
+
+<a id="notification_stream"></a>
+## *stream [<sup>notification</sup>](#head_Notifications)*
 
 Notifies of a custom stream incident.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
+> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
 
 ### Notification Parameters
 
@@ -1202,16 +1184,18 @@ Notifies of a custom stream incident.
 }
 ```
 
-> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.stream*.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.stream``.
 
-<a name="notification.player"></a>
-## *player [<sup>notification</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.stream``.
+
+<a id="notification_player"></a>
+## *player [<sup>notification</sup>](#head_Notifications)*
 
 Notifies of a custom player incident.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
+> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
 
 ### Notification Parameters
 
@@ -1248,16 +1232,18 @@ Notifies of a custom player incident.
 }
 ```
 
-> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.player*.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.player``.
 
-<a name="notification.drm"></a>
-## *drm [<sup>notification</sup>](#head.Notifications)*
+> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.player``.
+
+<a id="notification_drm"></a>
+## *drm [<sup>notification</sup>](#head_Notifications)*
 
 Notifies of a custom DRM-related incident.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the client ID during registration, e.g. *0.myid*
+> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
 
 ### Notification Parameters
 
@@ -1294,5 +1280,7 @@ Notifies of a custom DRM-related incident.
 }
 ```
 
-> The *Stream ID* parameter is passed within the designator, e.g. *0.myid.drm*.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.drm``.
+
+> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.drm``.
 

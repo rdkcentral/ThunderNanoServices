@@ -1,12 +1,12 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a id="head_ResourceMonitor_Plugin"></a>
-# ResourceMonitor Plugin
+<a id="head_TestAutomationComRpc_Plugin"></a>
+# TestAutomationComRpc Plugin
 
 **Version: 1.0**
 
-**Status: :black_circle::white_circle::white_circle:**
+**Status: :black_circle::black_circle::black_circle:**
 
-ResourceMonitor plugin for Thunder framework.
+TestAutomationComRpc plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -20,7 +20,7 @@ ResourceMonitor plugin for Thunder framework.
 <a id="head_Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the ResourceMonitor plugin. It includes detailed specification about its configuration.
+This document describes purpose and functionality of the TestAutomationComRpc plugin. It includes detailed specification about its configuration.
 
 <a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -58,7 +58,7 @@ The table below provides and overview of terms and abbreviations used in this do
 <a id="head_Description"></a>
 # Description
 
-The ResourceMonitor plugin provides web browsing functionality based on the ResourceMonitor engine.
+TestAutomationComRpc helps you to validate COMRPC messages via Automated Tests.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
@@ -69,13 +69,8 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| callsign | string | mandatory | Plugin instance name (default: *ResourceMonitor*) |
-| classname | string | mandatory | Class name: *ResourceMonitor* |
-| locator | string | mandatory | Library name: *libThunderResourceMonitor.so* |
+| callsign | string | mandatory | Plugin instance name (default: *TestAutomationComRpc*) |
+| classname | string | mandatory | Class name: *TestAutomationComRpc* |
+| locator | string | mandatory | Library name: *libThunderTestAutomationComRpc.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
-| configuration | object | optional | *...* |
-| configuration?.path | string | optional | Path of resource |
-| configuration?.interval | integer | optional | Duration between measurements (default: 5) |
-| configuration?.mode | string | optional | Mode (options: "single", "multiple", "callsign", "classname") |
-| configuration?.parent-name | string | optional | Name of parent process |
 

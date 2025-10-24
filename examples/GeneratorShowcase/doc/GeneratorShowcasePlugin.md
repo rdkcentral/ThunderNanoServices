@@ -95,6 +95,16 @@ SimpleAsync interface methods:
 | [unlink](#method_unlink) | Unlinks a device |
 | [bind](#method_bind) | Binds a device |
 | [unbind](#method_unbind) | Unlinks a device |
+| [tables](#method_tables) |  |
+| [tables2](#method_tables2) |  |
+| [tables3](#method_tables3) |  |
+| [tables4](#method_tables4) |  |
+| [tables5](#method_tables5) |  |
+| [tables6](#method_tables6) |  |
+| [tables7](#method_tables7) |  |
+| [tables8](#method_tables8) |  |
+| [tables9](#method_tables9) |  |
+| [optionalResult](#method_optionalResult) |  |
 
 SimpleInstanceObjects interface methods:
 
@@ -443,12 +453,547 @@ Unlinks a device.
 }
 ```
 
+<a id="method_tables"></a>
+## *tables [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result[#] | string | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "..."
+  ]
+}
+```
+
+<a id="method_tables2"></a>
+## *tables2 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result.stringTables | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result.stringTables[#] | string | mandatory | *...* |
+| result.intTables | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result.intTables[#] | integer | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables2",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "stringTables": [
+      "..."
+    ],
+    "intTables": [
+      0
+    ]
+  }
+}
+```
+
+<a id="method_tables3"></a>
+## *tables3 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result[#] | string | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables3",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "..."
+  ]
+}
+```
+
+<a id="method_tables4"></a>
+## *tables4 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | *...* |
+| result[#] | string | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables4",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    "..."
+  ]
+}
+```
+
+<a id="method_tables5"></a>
+## *tables5 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result.stringTables | array | mandatory | *...* |
+| result.stringTables[#] | string | mandatory | *...* |
+| result.intTables | array | mandatory | *...* |
+| result.intTables[#] | integer | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables5",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "stringTables": [
+      "..."
+    ],
+    "intTables": [
+      0
+    ]
+  }
+}
+```
+
+<a id="method_tables6"></a>
+## *tables6 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result.param0 | string | mandatory | *...* |
+| result.param1 | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result.param1[#] | string | mandatory | *...* |
+| result.param2 | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result.param2[#] | string | mandatory | *...* |
+| result?.param3 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param3[#] | string | mandatory | *...* |
+| result?.param4 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param4[#] | string | mandatory | *...* |
+| result.param5 | object | mandatory | *...* |
+| result.param5.param0 | string | mandatory | *...* |
+| result.param5.param1 | boolean | mandatory | *...* |
+| result?.param6 | object | optional | *...* |
+| result?.param6.param0 | string | mandatory | *...* |
+| result?.param6.param1 | boolean | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables6",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "param0": "...",
+    "param1": [
+      "..."
+    ],
+    "param2": [
+      "..."
+    ],
+    "param3": [
+      "..."
+    ],
+    "param4": [
+      "..."
+    ],
+    "param5": {
+      "param0": "...",
+      "param1": false
+    },
+    "param6": {
+      "param0": "...",
+      "param1": false
+    }
+  }
+}
+```
+
+<a id="method_tables7"></a>
+## *tables7 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result.param0 | string | mandatory | *...* |
+| result.param1 | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result.param1[#] | string | mandatory | *...* |
+| result.param2 | array | mandatory | *...*<br>*Array length must be at most 10 elements.* |
+| result.param2[#] | string | mandatory | *...* |
+| result?.param3 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param3[#] | string | mandatory | *...* |
+| result?.param4 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param4[#] | string | mandatory | *...* |
+| result.param5 | object | mandatory | *...* |
+| result.param5.param0 | string | mandatory | *...* |
+| result.param5.param1 | boolean | mandatory | *...* |
+| result?.param6 | object | optional | *...* |
+| result?.param6.param0 | string | mandatory | *...* |
+| result?.param6.param1 | boolean | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables7",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "param0": "...",
+    "param1": [
+      "..."
+    ],
+    "param2": [
+      "..."
+    ],
+    "param3": [
+      "..."
+    ],
+    "param4": [
+      "..."
+    ],
+    "param5": {
+      "param0": "...",
+      "param1": false
+    },
+    "param6": {
+      "param0": "...",
+      "param1": false
+    }
+  }
+}
+```
+
+<a id="method_tables8"></a>
+## *tables8 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result?.param3 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param3[#] | string | mandatory | *...* |
+| result?.param4 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param4[#] | string | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables8",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "param3": [
+      "..."
+    ],
+    "param4": [
+      "..."
+    ]
+  }
+}
+```
+
+<a id="method_tables9"></a>
+## *tables9 [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | *...* |
+| result?.param3 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param3[#] | string | mandatory | *...* |
+| result?.param4 | array | optional | *...*<br>*Array length must be at most 10 elements.* |
+| result?.param4[#] | string | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.tables9",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "param3": [
+      "..."
+    ],
+    "param4": [
+      "..."
+    ]
+  }
+}
+```
+
+<a id="method_optionalResult"></a>
+## *optionalResult [<sup>method</sup>](#head_Methods)*
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.fill | boolean | mandatory | *...* |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | string | mandatory | *...* |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.optionalResult",
+  "params": {
+    "fill": false
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "..."
+}
+```
+
 <a id="method_acquire"></a>
 ## *acquire [<sup>method</sup>](#head_Methods)*
 
 Acquires a device.
-
-> This method creates an instance of a *device* object.
 
 ### Parameters
 
@@ -461,7 +1006,7 @@ Acquires a device.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer (instance ID) | mandatory | Instance of the acquired device<br> |
+| result | integer | mandatory | Instance of the acquired device |
 
 ### Errors
 
@@ -504,7 +1049,7 @@ Relinquishes a device.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.device | integer (instance ID) | mandatory | Device instance to relinquish<br> |
+| params.device | integer | mandatory | Device instance to relinquish |
 
 ### Result
 
@@ -574,7 +1119,7 @@ This method takes no parameters.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::enable"
+  "method": "GeneratorShowcase.1.device#id1::enable"
 }
 ```
 
@@ -619,7 +1164,7 @@ This method takes no parameters.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::disable"
+  "method": "GeneratorShowcase.1.device#id1::disable"
 }
 ```
 
@@ -938,7 +1483,7 @@ Provides access to the name of the device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::name"
+  "method": "GeneratorShowcase.1.device#id1::name"
 }
 ```
 
@@ -958,7 +1503,7 @@ Provides access to the name of the device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::name",
+  "method": "GeneratorShowcase.1.device#id1::name",
   "params": {
     "value": "..."
   }
@@ -1015,7 +1560,7 @@ Provides access to the A pin.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::pin@0"
+  "method": "GeneratorShowcase.1.device#id1::pin@0"
 }
 ```
 
@@ -1035,7 +1580,7 @@ Provides access to the A pin.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::pin@0",
+  "method": "GeneratorShowcase.1.device#id1::pin@0",
   "params": {
     "value": false
   }
@@ -1071,7 +1616,7 @@ Provides access to the accessory by name.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| (property) | string (instance ID) | mandatory | Accessory instance<br> |
+| (property) | string | mandatory | Accessory instance |
 
 ### Example
 
@@ -1091,7 +1636,7 @@ Provides access to the accessory by name.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "id1"
+  "result": "..."
 }
 ```
 
@@ -1240,8 +1785,8 @@ SimpleAsync interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [statusChanged](#notification_statusChanged) | Signals completion of the Connect method |
 | [bindingChanged](#notification_bindingChanged) | Signals completion of the Connect method |
+| [statusChanged](#notification_statusChanged) | Signals completion of the Connect method |
 
 SimpleInstanceObjects interface events:
 
@@ -1258,54 +1803,6 @@ SimpleCustomObjects interface events:
 | [added](#notification_added) | Signals addition of a accessory |
 | [removed](#notification_removed) | Signals removal of a accessory |
 | [accessory::nameChanged](#notification_accessory__nameChanged) | Signals addition of a accessory |
-
-<a id="notification_statusChanged"></a>
-## *statusChanged [<sup>notification</sup>](#head_Notifications)*
-
-Signals completion of the Connect method.
-
-### Notification Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.address | array | mandatory | Device address |
-| params.address[#] | integer | mandatory | Device address |
-| params.linked | boolean | mandatory | Denotes if device is linked |
-
-### Example
-
-#### Registration
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "GeneratorShowcase.1.register",
-  "params": {
-    "event": "statusChanged",
-    "id": "myid"
-  }
-}
-```
-
-#### Notification
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "myid.statusChanged",
-  "params": {
-    "address": [
-      11,
-      22
-    ],
-    "linked": false
-  }
-}
-```
-
-> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.statusChanged``.
 
 <a id="notification_bindingChanged"></a>
 ## *bindingChanged [<sup>notification</sup>](#head_Notifications)*
@@ -1355,6 +1852,54 @@ Signals completion of the Connect method.
 
 > The *address* parameter is passed within the notification designator, i.e. ``<address>.<client-id>.bindingChanged``.
 
+<a id="notification_statusChanged"></a>
+## *statusChanged [<sup>notification</sup>](#head_Notifications)*
+
+Signals completion of the Connect method.
+
+### Notification Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.address | array | mandatory | Device address<br>*Array length must be equal to 6 elements.* |
+| params.address[#] | integer | mandatory | Device address |
+| params.linked | boolean | mandatory | Denotes if device is linked |
+
+### Example
+
+#### Registration
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "GeneratorShowcase.1.register",
+  "params": {
+    "event": "statusChanged",
+    "id": "myid"
+  }
+}
+```
+
+#### Notification
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "myid.statusChanged",
+  "params": {
+    "address": [
+      11,
+      22
+    ],
+    "linked": false
+  }
+}
+```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.statusChanged``.
+
 <a id="notification_device__nameChanged"></a>
 ## *device::nameChanged [<sup>notification</sup>](#head_Notifications)*
 
@@ -1375,7 +1920,7 @@ Signals device name changes.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::register",
+  "method": "GeneratorShowcase.1.device#id1::register",
   "params": {
     "event": "nameChanged",
     "id": "myid"
@@ -1388,7 +1933,7 @@ Signals device name changes.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "myid.device#1::nameChanged",
+  "method": "myid.device#id1::nameChanged",
   "params": {
     "state": "..."
   }
@@ -1421,7 +1966,7 @@ Signals device state changes.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::register",
+  "method": "GeneratorShowcase.1.device#id1::register",
   "params": {
     "event": "stateChanged",
     "id": "myid"
@@ -1434,7 +1979,7 @@ Signals device state changes.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "myid.device#1::stateChanged",
+  "method": "myid.device#id1::stateChanged",
   "params": {
     "state": "DISABLED"
   }
@@ -1471,7 +2016,7 @@ Signals pin state changes.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#1::register",
+  "method": "GeneratorShowcase.1.device#id1::register",
   "params": {
     "event": "pinChanged",
     "id": "0.myid"
@@ -1484,7 +2029,7 @@ Signals pin state changes.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.myid.device#1::pinChanged",
+  "method": "0.myid.device#id1::pinChanged",
   "params": {
     "high": false
   }
@@ -1509,7 +2054,7 @@ Signals addition of a accessory.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.accessory | string (instance ID) | mandatory | Accessory instance<br> |
+| params.accessory | string | mandatory | Accessory instance |
 
 ### Example
 
@@ -1534,7 +2079,7 @@ Signals addition of a accessory.
   "jsonrpc": "2.0",
   "method": "myid.added",
   "params": {
-    "accessory": "id1"
+    "accessory": "..."
   }
 }
 ```
@@ -1551,7 +2096,7 @@ Signals removal of a accessory.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.accessory | string (instance ID) | mandatory | Accessory instance<br> |
+| params.accessory | string | mandatory | Accessory instance |
 
 ### Example
 
@@ -1576,7 +2121,7 @@ Signals removal of a accessory.
   "jsonrpc": "2.0",
   "method": "myid.removed",
   "params": {
-    "accessory": "id1"
+    "accessory": "..."
   }
 }
 ```
