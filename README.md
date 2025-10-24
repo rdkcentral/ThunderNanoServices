@@ -4,7 +4,7 @@
 * [BluetoothAudio](BluetoothAudio/doc/BluetoothAudioPlugin.md)
 * [BluetoothControl](BluetoothControl/doc/BluetoothControlPlugin.md)
 * [BluetoothRemoteControl](BluetoothRemoteControl/doc/BluetoothRemoteControlPlugin.md)
-* [BluetoothSDPServer](BluetoothAudioSink/doc/BluetoothSDPServerPlugin.md)
+* [BluetoothSDPServer](BluetoothSDPServer/doc/BluetoothSDPServerPlugin.md)
 * CECControl
 * [Cobalt](Cobalt/doc/CobaltPlugin.md)
 * [Commander](Commnader/doc/CommanderPlugin.md)
