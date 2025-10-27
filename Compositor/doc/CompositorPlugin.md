@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Compositor_Plugin"></a>
+<a id="head_Compositor_Plugin"></a>
 # Compositor Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ Compositor plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the Compositor plugin. It includes detailed specification about its configuration, methods and properties provided.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -58,14 +58,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 Compositor gives you control over what is displayed on screen.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -80,7 +80,7 @@ The table below lists configuration options of the plugin.
 | configuration?.hardwareready | integer | optional | Hardware delay (Nexus) |
 | configuration?.resolution | string | optional | Screen resolution (Nexus) |
 | configuration?.allowedclients | array | optional | List of allowed clients (Nexus) |
-| configuration?.allowedclients[#] | string | optional | *...* |
+| configuration?.allowedclients[#] | string | mandatory | *...* |
 | configuration?.connector | enum | optional | Resolution (Wayland) |
 | configuration?.join | boolean | optional | Enable join (Wayland) |
 | configuration?.display | string | optional | Display (Westeros) |
@@ -89,28 +89,131 @@ The table below lists configuration options of the plugin.
 | configuration?.width | string | optional | Screen width (Westeros) |
 | configuration?.height | string | optional | Screen height (Westeros) |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
 - [Compositor.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/Compositor.json) (version 1.0.0) (uncompliant-extended format)
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the Compositor plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
 
 Compositor interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [putontop](#method.putontop) | Puts client surface on top in z-order |
-| [putbelow](#method.putbelow) | Puts client surface below another surface |
-| [select](#method.select) | Directs the input to the given client, disabling all the others |
+| [putontop](#method_putontop) | Puts client surface on top in z-order |
+| [putbelow](#method_putbelow) | Puts client surface below another surface |
+| [select](#method_select) | Directs the input to the given client, disabling all the others |
 
-<a name="method.putontop"></a>
-## *putontop [<sup>method</sup>](#head.Methods)*
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Compositor.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *resolution, zorder, brightness, geometry, visiblity, opacity, versions, exists, putontop, putbelow, select*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "Compositor.1.exists",
+  "params": {
+    "method": "resolution"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_putontop"></a>
+## *putontop [<sup>method</sup>](#head_Methods)*
 
 Puts client surface on top in z-order.
 
@@ -162,8 +265,8 @@ Use this method to get a client's surface to the top position.
 }
 ```
 
-<a name="method.putbelow"></a>
-## *putbelow [<sup>method</sup>](#head.Methods)*
+<a id="method_putbelow"></a>
+## *putbelow [<sup>method</sup>](#head_Methods)*
 
 Puts client surface below another surface.
 
@@ -217,8 +320,8 @@ Use this method to reorder client surfaces in the z-order list.
 }
 ```
 
-<a name="method.select"></a>
-## *select [<sup>method</sup>](#head.Methods)*
+<a id="method_select"></a>
+## *select [<sup>method</sup>](#head_Methods)*
 
 Directs the input to the given client, disabling all the others.
 
@@ -270,7 +373,7 @@ Use this method to direct all inputs to this client. The client that is receivin
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the Compositor plugin:
@@ -279,15 +382,15 @@ Compositor interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [resolution](#property.resolution) | read/write | Screen resolution |
-| [zorder](#property.zorder) | read-only | List of compositor clients sorted by z-order |
-| [brightness](#property.brightness) | read/write | Brightness of SDR graphics in HDR display |
-| [geometry](#property.geometry) | read/write | Client surface geometry |
-| [visiblity](#property.visiblity) | write-only | Client surface visibility |
-| [opacity](#property.opacity) | write-only | Client surface opacity |
+| [resolution](#property_resolution) | read/write | Screen resolution |
+| [zorder](#property_zorder) | read-only | List of compositor clients sorted by z-order |
+| [brightness](#property_brightness) | read/write | Brightness of SDR graphics in HDR display |
+| [geometry](#property_geometry) | read/write | Client surface geometry |
+| [visiblity](#property_visiblity) | write-only | Client surface visibility |
+| [opacity](#property_opacity) | write-only | Client surface opacity |
 
-<a name="property.resolution"></a>
-## *resolution [<sup>property</sup>](#head.Properties)*
+<a id="property_resolution"></a>
+## *resolution [<sup>property</sup>](#head_Properties)*
 
 Provides access to the screen resolution.
 
@@ -301,11 +404,9 @@ Use this property to set or retrieve the current resolution of the screen.
 | :-------- | :-------- | :-------- | :-------- |
 | (property) | string | mandatory | Screen resolution (must be one of the following: *1080i50, 1080p24, 1080p50, 1080p60, 2160p50, 2160p60, 480i, 480p, 720p50, 720p60, unknown*) |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Screen resolution (must be one of the following: *1080i50, 1080p24, 1080p50, 1080p60, 2160p50, 2160p60, 480i, 480p, 720p50, 720p60, unknown*) |
+| (property) | string | mandatory | Screen resolution (must be one of the following: *1080i50, 1080p24, 1080p50, 1080p60, 2160p50, 2160p60, 480i, 480p, 720p50, 720p60, unknown*) |
 
 ### Errors
 
@@ -358,8 +459,8 @@ Use this property to set or retrieve the current resolution of the screen.
 }
 ```
 
-<a name="property.zorder"></a>
-## *zorder [<sup>property</sup>](#head.Properties)*
+<a id="property_zorder"></a>
+## *zorder [<sup>property</sup>](#head_Properties)*
 
 Provides access to the list of compositor clients sorted by z-order.
 
@@ -371,12 +472,10 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | List of compositor clients sorted by z-order |
-| result[#] | string | mandatory | Client name |
+| (property) | array | mandatory | List of compositor clients sorted by z-order |
+| (property)[#] | string | mandatory | Client name |
 
 ### Errors
 
@@ -408,8 +507,8 @@ Use this property to retrieve the list of all clients in z-order. Each client ha
 }
 ```
 
-<a name="property.brightness"></a>
-## *brightness [<sup>property</sup>](#head.Properties)*
+<a id="property_brightness"></a>
+## *brightness [<sup>property</sup>](#head_Properties)*
 
 Provides access to the brightness of SDR graphics in HDR display.
 
@@ -423,11 +522,9 @@ Use this property to set or retrieve the brightness of the SDR graphics.
 | :-------- | :-------- | :-------- | :-------- |
 | (property) | string | mandatory | Brightness of SDR graphics in HDR display (must be one of the following: *default, match_video, max*) |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Brightness of SDR graphics in HDR display (must be one of the following: *default, match_video, max*) |
+| (property) | string | mandatory | Brightness of SDR graphics in HDR display (must be one of the following: *default, match_video, max*) |
 
 ### Errors
 
@@ -480,8 +577,8 @@ Use this property to set or retrieve the brightness of the SDR graphics.
 }
 ```
 
-<a name="property.geometry"></a>
-## *geometry [<sup>property</sup>](#head.Properties)*
+<a id="property_geometry"></a>
+## *geometry [<sup>property</sup>](#head_Properties)*
 
 Provides access to the client surface geometry.
 
@@ -489,7 +586,7 @@ Provides access to the client surface geometry.
 
 Use this property to update or retrieve the geometry of a client's surface.
 
-> The *client* parameter shall be passed as the index to the property, e.g. ``Compositor.1.geometry@<client>``.
+> The *client* parameter shall be passed as the index to the property, i.e. ``geometry@<client>``.
 
 ### Index
 
@@ -507,15 +604,13 @@ Use this property to update or retrieve the geometry of a client's surface.
 | (property).width | integer | mandatory | Surface width |
 | (property).height | integer | mandatory | Surface height |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Client surface geometry |
-| result.x | integer | mandatory | Horizontal coordinate of the surface |
-| result.y | integer | mandatory | Vertical coordinate of the surface |
-| result.width | integer | mandatory | Surface width |
-| result.height | integer | mandatory | Surface height |
+| (property) | object | mandatory | Client surface geometry |
+| (property).x | integer | mandatory | Horizontal coordinate of the surface |
+| (property).y | integer | mandatory | Vertical coordinate of the surface |
+| (property).width | integer | mandatory | Surface width |
+| (property).height | integer | mandatory | Surface height |
 
 ### Errors
 
@@ -576,8 +671,8 @@ Use this property to update or retrieve the geometry of a client's surface.
 }
 ```
 
-<a name="property.visiblity"></a>
-## *visiblity [<sup>property</sup>](#head.Properties)*
+<a id="property_visiblity"></a>
+## *visiblity [<sup>property</sup>](#head_Properties)*
 
 Provides access to the client surface visibility.
 
@@ -587,7 +682,7 @@ Provides access to the client surface visibility.
 
 Use this property to set the client's surface visibility.
 
-> The *client* parameter shall be passed as the index to the property, e.g. ``Compositor.1.visiblity@<client>``.
+> The *client* parameter shall be passed as the index to the property, i.e. ``visiblity@<client>``.
 
 ### Index
 
@@ -630,8 +725,8 @@ Use this property to set the client's surface visibility.
 }
 ```
 
-<a name="property.opacity"></a>
-## *opacity [<sup>property</sup>](#head.Properties)*
+<a id="property_opacity"></a>
+## *opacity [<sup>property</sup>](#head_Properties)*
 
 Provides access to the client surface opacity.
 
@@ -641,7 +736,7 @@ Provides access to the client surface opacity.
 
 Use this property to set the client's surface opacity level.
 
-> The *client* parameter shall be passed as the index to the property, e.g. ``Compositor.1.opacity@<client>``.
+> The *client* parameter shall be passed as the index to the property, i.e. ``opacity@<client>``.
 
 ### Index
 

@@ -1,12 +1,12 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a id="head_Pollux_Plugin"></a>
-# Pollux Plugin
+<a id="head_DynamicJSONRPCErrorMessage_Plugin"></a>
+# DynamicJSONRPCErrorMessage Plugin
 
 **Version: 1.0**
 
 **Status: :black_circle::white_circle::white_circle:**
 
-Pollux plugin for Thunder framework.
+DynamicJSONRPCErrorMessage plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -21,7 +21,7 @@ Pollux plugin for Thunder framework.
 <a id="head_Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Pollux plugin. It includes detailed specification about its configuration and methods provided.
+This document describes purpose and functionality of the DynamicJSONRPCErrorMessage plugin. It includes detailed specification about its configuration and methods provided.
 
 <a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -63,14 +63,10 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| callsign | string | mandatory | Plugin instance name (default: *Pollux*) |
-| classname | string | mandatory | Class name: *Pollux* |
-| locator | string | mandatory | Library name: *libThunderPollux.so* |
+| callsign | string | mandatory | Plugin instance name (default: *DynamicJSONRPCErrorMessage*) |
+| classname | string | mandatory | Class name: *DynamicJSONRPCErrorMessage* |
+| locator | string | mandatory | Library name: *libThunderDynamicJSONRPCErrorMessage.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
-| configuration | object | mandatory | *...* |
-| configuration?.Polluxcallsign | string | optional | Callsign of the Yin service (typically *Yin*) |
-| configuration.etymology | string | mandatory | Describes the meaning of Pollux |
-| configuration?.color | string | optional | Default color of Pollux |
 
 <a id="head_Interfaces"></a>
 # Interfaces
@@ -82,7 +78,7 @@ This plugin implements the following interfaces:
 <a id="head_Methods"></a>
 # Methods
 
-The following methods are provided by the Pollux plugin:
+The following methods are provided by the DynamicJSONRPCErrorMessage plugin:
 
 Built-in methods:
 
@@ -126,7 +122,7 @@ This method takes no parameters.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Pollux.1.versions"
+  "method": "DynamicJSONRPCErrorMessage.1.versions"
 }
 ```
 
@@ -177,7 +173,7 @@ This method will return *True* for the following methods/properties: *versions, 
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Pollux.1.exists",
+  "method": "DynamicJSONRPCErrorMessage.1.exists",
   "params": {
     "method": "versions"
   }
@@ -221,7 +217,7 @@ Perform addition on given inputs.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Pollux.1.add",
+  "method": "DynamicJSONRPCErrorMessage.1.add",
   "params": {
     "a": 0,
     "b": 0
@@ -266,7 +262,7 @@ Perform subtraction on given inputs.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Pollux.1.sub",
+  "method": "DynamicJSONRPCErrorMessage.1.sub",
   "params": {
     "a": 0,
     "b": 0

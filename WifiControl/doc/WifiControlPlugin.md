@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Wifi_Control_Plugin"></a>
+<a id="head_Wifi_Control_Plugin"></a>
 # Wifi Control Plugin
 
 **Version: 1.0**
@@ -10,28 +10,28 @@ WifiControl plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the WifiControl plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -49,7 +49,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -59,14 +59,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The WiFi Control plugin allows to manage various aspects of wireless connectivity.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -84,7 +84,7 @@ The table below lists configuration options of the plugin.
 | configuration?.autoconnect | string | optional | Enable autoconnect |
 | configuration?.retryinterval | string | optional | Retry interval |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
@@ -92,23 +92,238 @@ This plugin implements the following interfaces:
 - IWifiControl ([IWifiControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IWifiControl.h)) (version 1.0.0) (compliant format)
 > This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the WifiControl plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
+| [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
+| [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
 
 WifiControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [scan](#method.scan) | Trigger Scanning |
-| [abortscan](#method.abortscan) | Abort Currentlt running scan |
-| [connect](#method.connect) | Connect device to requested SSID |
-| [disconnect](#method.disconnect) | Disconnect device from requested SSID |
-| [status](#method.status) | Status of current device, like which SSID is connected and it is in scanning state or not |
+| [scan](#method_scan) | Trigger Scanning |
+| [abortscan](#method_abortscan) | Abort Currentlt running scan |
+| [connect](#method_connect) | Connect device to requested SSID |
+| [disconnect](#method_disconnect) | Disconnect device from requested SSID |
+| [status](#method_status) | Status of current device, like which SSID is connected and it is in scanning state or not |
 
-<a name="method.scan"></a>
-## *scan [<sup>method</sup>](#head.Methods)*
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *networks, securities, configs, config, versions, exists, register, unregister, scan, abortscan, connect, disconnect, status*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.exists",
+  "params": {
+    "method": "networks"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_register"></a>
+## *register [<sup>method</sup>](#head_Methods)*
+
+Registers for an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[networkchange](#notification_networkchange), [connectionchange](#notification_connectionchange)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_REGISTERED``` | Failed to register for the notification (e.g. already registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.register",
+  "params": {
+    "event": "networkchange",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unregister"></a>
+## *unregister [<sup>method</sup>](#head_Methods)*
+
+Unregisters from an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[networkchange](#notification_networkchange), [connectionchange](#notification_connectionchange)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_UNREGISTERED``` | Failed to unregister from the notification (e.g. not yet registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "WifiControl.1.unregister",
+  "params": {
+    "event": "networkchange",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_scan"></a>
+## *scan [<sup>method</sup>](#head_Methods)*
 
 Trigger Scanning.
 
@@ -144,8 +359,8 @@ This method takes no parameters.
 }
 ```
 
-<a name="method.abortscan"></a>
-## *abortscan [<sup>method</sup>](#head.Methods)*
+<a id="method_abortscan"></a>
+## *abortscan [<sup>method</sup>](#head_Methods)*
 
 Abort Currentlt running scan.
 
@@ -181,8 +396,8 @@ This method takes no parameters.
 }
 ```
 
-<a name="method.connect"></a>
-## *connect [<sup>method</sup>](#head.Methods)*
+<a id="method_connect"></a>
+## *connect [<sup>method</sup>](#head_Methods)*
 
 Connect device to requested SSID.
 
@@ -224,8 +439,8 @@ Connect device to requested SSID.
 }
 ```
 
-<a name="method.disconnect"></a>
-## *disconnect [<sup>method</sup>](#head.Methods)*
+<a id="method_disconnect"></a>
+## *disconnect [<sup>method</sup>](#head_Methods)*
 
 Disconnect device from requested SSID.
 
@@ -267,8 +482,8 @@ Disconnect device from requested SSID.
 }
 ```
 
-<a name="method.status"></a>
-## *status [<sup>method</sup>](#head.Methods)*
+<a id="method_status"></a>
+## *status [<sup>method</sup>](#head_Methods)*
 
 Status of current device, like which SSID is connected and it is in scanning state or not.
 
@@ -309,7 +524,7 @@ This method takes no parameters.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the WifiControl plugin:
@@ -318,13 +533,13 @@ WifiControl interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [networks](#property.networks) | read-only | Provides available networks information |
-| [securities](#property.securities) | read-only | Provides security method of requested SSID |
-| [configs](#property.configs) | read-only | Provides configs list |
-| [config](#property.config) | read/write | Provide config details for requested SSID |
+| [networks](#property_networks) | read-only | Provides available networks information |
+| [securities](#property_securities) | read-only | Provides security method of requested SSID |
+| [configs](#property_configs) | read-only | Provides configs list |
+| [config](#property_config) | read/write | Provide config details for requested SSID |
 
-<a name="property.networks"></a>
-## *networks [<sup>property</sup>](#head.Properties)*
+<a id="property_networks"></a>
+## *networks [<sup>property</sup>](#head_Properties)*
 
 Provides access to the provides available networks information.
 
@@ -332,18 +547,16 @@ Provides access to the provides available networks information.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Provides available networks information |
-| result[#] | object | mandatory | *...* |
-| result[#].ssid | string | mandatory | SSID of the network |
-| result[#].bssid | integer | mandatory | BSSID of the network |
-| result[#].frequency | integer | mandatory | Frequency used |
-| result[#].signal | integer | mandatory | Signal strength |
-| result[#].security | array | mandatory | Security method |
-| result[#].security[#] | string | mandatory | *...* (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
+| (property) | array | mandatory | Provides available networks information |
+| (property)[#] | object | mandatory | *...* |
+| (property)[#]?.ssid | string | optional | SSID of the network |
+| (property)[#].bssid | integer | mandatory | BSSID of the network |
+| (property)[#].frequency | integer | mandatory | Frequency used |
+| (property)[#].signal | integer | mandatory | Signal strength |
+| (property)[#].security | array | mandatory | Security method |
+| (property)[#].security[#] | string | mandatory | *...* (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
 
 ### Example
 
@@ -370,21 +583,21 @@ Provides access to the provides available networks information.
       "frequency": 0,
       "signal": 0,
       "security": [
-        "Open"
+        "WEP"
       ]
     }
   ]
 }
 ```
 
-<a name="property.securities"></a>
-## *securities [<sup>property</sup>](#head.Properties)*
+<a id="property_securities"></a>
+## *securities [<sup>property</sup>](#head_Properties)*
 
 Provides access to the provides security method of requested SSID.
 
 > This property is **read-only**.
 
-> The *ssid* parameter shall be passed as the index to the property, e.g. ``WifiControl.1.securities@<ssid>``.
+> The *ssid* parameter shall be passed as the index to the property, i.e. ``securities@<ssid>``.
 
 ### Index
 
@@ -394,15 +607,13 @@ Provides access to the provides security method of requested SSID.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Provides security method of requested SSID |
-| result[#] | object | mandatory | *...* |
-| result[#].method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
-| result[#].keys | array | mandatory | Security Keys |
-| result[#].keys[#] | string | mandatory | *...* (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
+| (property) | array | mandatory | Provides security method of requested SSID |
+| (property)[#] | object | mandatory | *...* |
+| (property)[#].method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
+| (property)[#]?.keys | array | optional | Security Keys |
+| (property)[#]?.keys[#] | string | mandatory | *...* (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
 
 ### Example
 
@@ -424,17 +635,17 @@ Provides access to the provides security method of requested SSID.
   "id": 42,
   "result": [
     {
-      "method": "Open",
+      "method": "WEP",
       "keys": [
-        "PSK"
+        "EAP"
       ]
     }
   ]
 }
 ```
 
-<a name="property.configs"></a>
-## *configs [<sup>property</sup>](#head.Properties)*
+<a id="property_configs"></a>
+## *configs [<sup>property</sup>](#head_Properties)*
 
 Provides access to the provides configs list.
 
@@ -442,12 +653,10 @@ Provides access to the provides configs list.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Provides configs list |
-| result[#] | string | mandatory | *...* |
+| (property) | array | mandatory | Provides configs list |
+| (property)[#] | string | mandatory | *...* |
 
 ### Example
 
@@ -473,12 +682,12 @@ Provides access to the provides configs list.
 }
 ```
 
-<a name="property.config"></a>
-## *config [<sup>property</sup>](#head.Properties)*
+<a id="property_config"></a>
+## *config [<sup>property</sup>](#head_Properties)*
 
 Provides access to the provide config details for requested SSID.
 
-> The *ssid* parameter shall be passed as the index to the property, e.g. ``WifiControl.1.config@<ssid>``.
+> The *ssid* parameter shall be passed as the index to the property, i.e. ``config@<ssid>``.
 
 ### Index
 
@@ -494,24 +703,22 @@ Provides access to the provide config details for requested SSID.
 | (property).value | object | mandatory | *...* |
 | (property).value.hidden | boolean | mandatory | Visibility of the router (hidden or visible) |
 | (property).value.accesspoint | boolean | mandatory | Accesspoint or not |
-| (property).value.ssid | string | mandatory | SSID of the router/ap |
-| (property).value.secret | string | mandatory | Secret key used |
-| (property).value.identity | string | mandatory | Identity |
+| (property).value?.ssid | string | optional | SSID of the router/ap |
+| (property).value?.secret | string | optional | Secret key used |
+| (property).value?.identity | string | optional | Identity |
 | (property).value.method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
-| (property).value.key | string | mandatory | Security Info: method and keys (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
-
-### Result
+| (property).value?.key | string | optional | Security Info: method and keys (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Details about requested SSID |
-| result.hidden | boolean | mandatory | Visibility of the router (hidden or visible) |
-| result.accesspoint | boolean | mandatory | Accesspoint or not |
-| result.ssid | string | mandatory | SSID of the router/ap |
-| result.secret | string | mandatory | Secret key used |
-| result.identity | string | mandatory | Identity |
-| result.method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
-| result.key | string | mandatory | Security Info: method and keys (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
+| (property) | object | mandatory | Details about requested SSID |
+| (property).hidden | boolean | mandatory | Visibility of the router (hidden or visible) |
+| (property).accesspoint | boolean | mandatory | Accesspoint or not |
+| (property)?.ssid | string | optional | SSID of the router/ap |
+| (property)?.secret | string | optional | Secret key used |
+| (property)?.identity | string | optional | Identity |
+| (property).method | string | mandatory | Security method (must be one of the following: *Enterprise, Open, Unknown, WEP, WPA, WPA2, WPA_WPA2, WPS*) |
+| (property)?.key | string | optional | Security Info: method and keys (must be one of the following: *CCMP, EAP, None, PBC, PIN, PSK, PSK_HASHED, Preauth, TKIP*) |
 
 ### Example
 
@@ -537,8 +744,8 @@ Provides access to the provide config details for requested SSID.
     "ssid": "...",
     "secret": "...",
     "identity": "...",
-    "method": "Open",
-    "key": "PSK"
+    "method": "WEP",
+    "key": "EAP"
   }
 }
 ```
@@ -557,8 +764,8 @@ Provides access to the provide config details for requested SSID.
       "ssid": "...",
       "secret": "...",
       "identity": "...",
-      "method": "Open",
-      "key": "PSK"
+      "method": "WEP",
+      "key": "EAP"
     }
   }
 }
@@ -574,7 +781,7 @@ Provides access to the provide config details for requested SSID.
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -585,11 +792,11 @@ WifiControl interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [networkchange](#notification.networkchange) | Notifies that Network were added, removed or modified |
-| [connectionchange](#notification.connectionchange) | Notifies that wifi connection changes |
+| [networkchange](#notification_networkchange) | Notifies that Network were added, removed or modified |
+| [connectionchange](#notification_connectionchange) | Notifies that wifi connection changes |
 
-<a name="notification.networkchange"></a>
-## *networkchange [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_networkchange"></a>
+## *networkchange [<sup>notification</sup>](#head_Notifications)*
 
 Notifies that Network were added, removed or modified.
 
@@ -622,8 +829,10 @@ This notification carries no parameters.
 }
 ```
 
-<a name="notification.connectionchange"></a>
-## *connectionchange [<sup>notification</sup>](#head.Notifications)*
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.networkchange``.
+
+<a id="notification_connectionchange"></a>
+## *connectionchange [<sup>notification</sup>](#head_Notifications)*
 
 Notifies that wifi connection changes.
 
@@ -661,4 +870,6 @@ Notifies that wifi connection changes.
   }
 }
 ```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.connectionchange``.
 

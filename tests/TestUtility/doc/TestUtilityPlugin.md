@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Test_Utility_Plugin"></a>
+<a id="head_Test_Utility_Plugin"></a>
 # Test Utility Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ TestUtility plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the TestUtility plugin. It includes detailed specification about its configuration, methods and properties provided.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -58,14 +58,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The TestUtility plugin enables to execute embedded test commands on the platform.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -77,27 +77,130 @@ The table below lists configuration options of the plugin.
 | locator | string | mandatory | Library name: *libThunderTestUtility.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
 - [TestUtility.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/TestUtility.json) (version 1.0.0) (uncompliant-extended format)
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the TestUtility plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
 
 TestUtility interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [runmemory](#method.runmemory) | Runs a memory test command |
-| [runcrash](#method.runcrash) | Runs a crash test command |
+| [runmemory](#method_runmemory) | Runs a memory test command |
+| [runcrash](#method_runcrash) | Runs a crash test command |
 
-<a name="method.runmemory"></a>
-## *runmemory [<sup>method</sup>](#head.Methods)*
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestUtility.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *commands, description, parameters, shutdowntimeout, versions, exists, runmemory, runcrash*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestUtility.1.exists",
+  "params": {
+    "method": "commands"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_runmemory"></a>
+## *runmemory [<sup>method</sup>](#head_Methods)*
 
 Runs a memory test command.
 
@@ -155,8 +258,8 @@ Runs a memory test command.
 }
 ```
 
-<a name="method.runcrash"></a>
-## *runcrash [<sup>method</sup>](#head.Methods)*
+<a id="method_runcrash"></a>
+## *runcrash [<sup>method</sup>](#head_Methods)*
 
 Runs a crash test command.
 
@@ -209,7 +312,7 @@ Runs a crash test command.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the TestUtility plugin:
@@ -218,13 +321,13 @@ TestUtility interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [commands](#property.commands) | read-only | List of test commands |
-| [description](#property.description) | read-only | Description of a test command |
-| [parameters](#property.parameters) | read-only | Parameters of a test command |
-| [shutdowntimeout](#property.shutdowntimeout) | write-only | Timeout to be waited before deactivating the plugin |
+| [commands](#property_commands) | read-only | List of test commands |
+| [description](#property_description) | read-only | Description of a test command |
+| [parameters](#property_parameters) | read-only | Parameters of a test command |
+| [shutdowntimeout](#property_shutdowntimeout) | write-only | Timeout to be waited before deactivating the plugin |
 
-<a name="property.commands"></a>
-## *commands [<sup>property</sup>](#head.Properties)*
+<a id="property_commands"></a>
+## *commands [<sup>property</sup>](#head_Properties)*
 
 Provides access to the list of test commands.
 
@@ -232,12 +335,10 @@ Provides access to the list of test commands.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | List of test commands |
-| result[#] | string | mandatory | Available test commands |
+| (property) | array | mandatory | List of test commands |
+| (property)[#] | string | mandatory | Available test commands |
 
 ### Example
 
@@ -263,14 +364,14 @@ Provides access to the list of test commands.
 }
 ```
 
-<a name="property.description"></a>
-## *description [<sup>property</sup>](#head.Properties)*
+<a id="property_description"></a>
+## *description [<sup>property</sup>](#head_Properties)*
 
 Provides access to the description of a test command.
 
 > This property is **read-only**.
 
-> The *command* parameter shall be passed as the index to the property, e.g. ``TestUtility.1.description@<command>``.
+> The *command* parameter shall be passed as the index to the property, i.e. ``description@<command>``.
 
 ### Index
 
@@ -280,12 +381,10 @@ Provides access to the description of a test command.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Description of a test command |
-| result.description | string | mandatory | Test command description |
+| (property) | object | mandatory | Description of a test command |
+| (property).description | string | mandatory | Test command description |
 
 ### Errors
 
@@ -318,14 +417,14 @@ Provides access to the description of a test command.
 }
 ```
 
-<a name="property.parameters"></a>
-## *parameters [<sup>property</sup>](#head.Properties)*
+<a id="property_parameters"></a>
+## *parameters [<sup>property</sup>](#head_Properties)*
 
 Provides access to the parameters of a test command.
 
 > This property is **read-only**.
 
-> The *command* parameter shall be passed as the index to the property, e.g. ``TestUtility.1.parameters@<command>``.
+> The *command* parameter shall be passed as the index to the property, i.e. ``parameters@<command>``.
 
 ### Index
 
@@ -335,20 +434,18 @@ Provides access to the parameters of a test command.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Parameters of a test command |
-| result?.input | array | optional | Input parameter list |
-| result?.input[#] | object | optional | *...* |
-| result?.input[#].name | string | mandatory | Test command parameter |
-| result?.input[#].type | string | mandatory | Test command parameter type (must be one of the following: *Boolean, Number, Object, String, Symbol*) |
-| result?.input[#].comment | string | mandatory | Test command parameter description |
-| result.output | object | mandatory | Output parameter list |
-| result.output.name | string | mandatory | Test command parameter |
-| result.output.type | string | mandatory | Test command parameter type (must be one of the following: *Boolean, Number, Object, String, Symbol*) |
-| result.output.comment | string | mandatory | Test command parameter description |
+| (property) | object | mandatory | Parameters of a test command |
+| (property)?.input | array | optional | Input parameter list |
+| (property)?.input[#] | object | mandatory | *...* |
+| (property)?.input[#].name | string | mandatory | Test command parameter |
+| (property)?.input[#].type | string | mandatory | Test command parameter type (must be one of the following: *Boolean, Number, Object, String, Symbol*) |
+| (property)?.input[#].comment | string | mandatory | Test command parameter description |
+| (property).output | object | mandatory | Output parameter list |
+| (property).output.name | string | mandatory | Test command parameter |
+| (property).output.type | string | mandatory | Test command parameter type (must be one of the following: *Boolean, Number, Object, String, Symbol*) |
+| (property).output.comment | string | mandatory | Test command parameter description |
 
 ### Errors
 
@@ -392,8 +489,8 @@ Provides access to the parameters of a test command.
 }
 ```
 
-<a name="property.shutdowntimeout"></a>
-## *shutdowntimeout [<sup>property</sup>](#head.Properties)*
+<a id="property_shutdowntimeout"></a>
+## *shutdowntimeout [<sup>property</sup>](#head_Properties)*
 
 Provides access to the timeout to be waited before deactivating the plugin.
 
