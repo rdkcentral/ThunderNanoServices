@@ -83,12 +83,7 @@ namespace Plugin {
 
             void Dangling(const Core::IUnknown* remote, const uint32_t interfaceId) override
             {
-                //not interested in this notification
-                TRACE(Trace::Information, (_T("Cleanup an interface: %d [%X] on object: [%s]"), interfaceId, interfaceId, typeid(*remote).name()));
-            }
-            void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId) override
-            {   
-                TRACE(Trace::Information, (_T("Revoking an interface: %d [%X] on object: [%s]"), interfaceId, interfaceId, typeid(*remote).name()));
+                TRACE(Trace::Information, (_T("Dangling interface: %d [%X] on object: [%s]"), interfaceId, interfaceId, typeid(*remote).name()));
 
                 // Something happened to the other side
                 ASSERT(interfaceId != Exchange::ID_WALLCLOCK);
@@ -98,7 +93,7 @@ namespace Plugin {
 
                     ASSERT(result != nullptr);
 
-                    _parent.OnRevoke(result);
+                    _parent.OnInterfaceDangling(result);
 
                     // Do not forget to release the QI from a few lines above :-)
                     result->Release();
@@ -304,7 +299,7 @@ POP_WARNING()
         virtual string Information() const;
 
     private:
-        void OnRevoke(const Exchange::IWallClock::ICallback* remote);
+        void OnInterfaceDangling(const Exchange::IWallClock::ICallback* remote);
 
     private:
         WallClockNotifier _notifier;
