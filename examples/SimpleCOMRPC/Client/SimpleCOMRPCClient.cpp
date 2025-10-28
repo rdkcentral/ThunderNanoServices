@@ -244,7 +244,7 @@ int main(int argc, char* argv[])
                     printf("We do not have a clock interface, so we can not get the time\n");
                 }
                 else {
-                    printf("The Ticker is at: %llu\n", clock->Now());
+                    printf("The Ticker is at: %lu\n", clock->Now());
                 }
                 break;
             case 'T':
