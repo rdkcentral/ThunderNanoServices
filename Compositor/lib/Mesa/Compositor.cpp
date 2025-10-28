@@ -331,12 +331,13 @@ namespace Plugin {
             class AtomicFifo {
             public:
                 AtomicFifo()
-                    : _head{ 0 }
-                    , _tail{ 0 }
+                    : _queue()
+                    , _head(0)
+                    , _tail(0)
                 {
                     // Initialize array elements
                     for (auto& element : _queue) {
-                        element.store(T{}, std::memory_order_relaxed);
+                        element.store(T {}, std::memory_order_relaxed);
                     }
                 }
 
@@ -433,8 +434,8 @@ namespace Plugin {
                 , _remoteClient(*this)
                 , _geometryChanged(false)
                 , _buffers(MAX_BUFFERS)
+                , _requestQueue()
                 , _pendingQueue()
-                , _currentId(InvalidBufferId)
                 , _renderingId(InvalidBufferId)
 
             {
@@ -460,8 +461,13 @@ namespace Plugin {
             void Activate(const uint8_t id)
             {
                 if (id < _buffers.Count()) {
-                    _currentId.store(id, std::memory_order_release);
+                    bool queued = _requestQueue.Push(id, false);
+
+                    if (queued) {
                     _parent.Render();
+                    } else {
+                        TRACE(Trace::Error, (_T("Client %s request queue full, dropping buffer %d"), _callsign.c_str(), id));
+                    }
                 }
             }
 
@@ -470,13 +476,19 @@ namespace Plugin {
             {
                 Core::ProxyType<Compositor::IRenderer::ITexture> texture;
 
-                uint8_t id = _currentId.exchange(InvalidBufferId, std::memory_order_acq_rel);
-
-                if (id != InvalidBufferId && _buffers[id].IsValid()) {
+                uint8_t id;
+                if (_requestQueue.Pop(id)) {
+                    // Got buffer ID from queue
+                    if (id < _buffers.Count() && _buffers[id].IsValid()) {
                     _renderingId.store(id, std::memory_order_release);
                     _buffers[id]->Acquire(Compositor::DefaultTimeoutMs);
                     texture = _buffers[id]->Texture();
                 } else {
+                        _renderingId.store(InvalidBufferId, std::memory_order_release);
+                        TRACE(Trace::Error, (_T("Client %s invalid buffer %d from queue"), _callsign.c_str(), id));
+                    }
+                } else {
+                    // Queue empty - no pending render
                     _renderingId.store(InvalidBufferId, std::memory_order_release);
                 }
 
@@ -616,8 +628,8 @@ namespace Plugin {
             Remote _remoteClient;
             bool _geometryChanged;
             Core::ProxyList<Buffer> _buffers; // the actual pixel buffers that are used by this client but are owed by the compositorclient.
-            AtomicFifo<uint8_t, 3> _pendingQueue;
-            std::atomic<uint8_t> _currentId;
+            AtomicFifo<uint8_t, MAX_BUFFERS> _requestQueue;
+            AtomicFifo<uint8_t, MAX_BUFFERS> _pendingQueue;
             std::atomic<uint8_t> _renderingId;
 
             static uint32_t _sequence;
