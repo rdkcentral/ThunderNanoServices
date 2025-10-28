@@ -1195,10 +1195,12 @@ namespace Plugin {
         }
 
     public:
-        void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId VARIABLE_IS_NOT_USED)
+        void OnDangling(const Core::IUnknown* remote, const uint32_t interfaceId VARIABLE_IS_NOT_USED)
         {
             if (remote == _callback) {
                 TRACE(Trace::Information, (_T("Remote client died; cleaning up callbaks on behalf of the dead")));
+
+                ASSERT(interfaceId == Exchange::IBluetoothAudio::ISource::ICallback::ID);
 
                 Callback(nullptr);
 
