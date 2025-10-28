@@ -36,25 +36,24 @@ namespace Plugin {
 
         class ComNotificationSink : public PluginHost::IShell::ICOMLink::INotification {
         public:
-            ComNotificationSink() = delete;
             ComNotificationSink(const ComNotificationSink&) = delete;
             ComNotificationSink& operator=(const ComNotificationSink&) = delete;
+            ComNotificationSink(ComNotificationSink&&) = delete;
+            ComNotificationSink& operator=(ComNotificationSink&&) = delete;
+
+            ComNotificationSink() = delete;
+
             ComNotificationSink(BluetoothAudio& parent)
                 : _parent(parent)
             {
             }
+
             ~ComNotificationSink() = default;
 
         public:
             void Dangling(const Core::IUnknown* remote, const uint32_t interfaceId) override
             {
-                Revoked(remote, interfaceId);
-            }
-            void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId) override
-            {
-                ASSERT(remote != nullptr);
-
-                _parent.Revoked(remote, interfaceId);
+                _parent.Dangling(remote, interfaceId);
             }
 
         public:
@@ -101,14 +100,16 @@ namespace Plugin {
         }
 
     private:
-        void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId)
+        void Dangling(const Core::IUnknown* remote, const uint32_t interfaceId)
         {
+            ASSERT(remote != nullptr);
+
             if (_sink != nullptr) {
-                _sink->Revoked(remote, interfaceId);
+                _sink->OnDangling(remote, interfaceId);
             }
 
             if (_source != nullptr) {
-                _source->Revoked(remote, interfaceId);
+                _source->OnDangling(remote, interfaceId);
             }
         }
 
