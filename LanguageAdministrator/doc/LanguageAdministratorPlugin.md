@@ -1,12 +1,12 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a id="head_Power_Plugin"></a>
-# Power Plugin
+<a id="head_Language_Administrator_Plugin"></a>
+# Language Administrator Plugin
 
 **Version: 1.0**
 
 **Status: :black_circle::white_circle::white_circle:**
 
-Power plugin for Thunder framework.
+LanguageAdministrator plugin for Thunder framework.
 
 ### Table of Contents
 
@@ -23,7 +23,7 @@ Power plugin for Thunder framework.
 <a id="head_Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the Power plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
+This document describes purpose and functionality of the LanguageAdministrator plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
 <a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
@@ -65,30 +65,23 @@ The table below lists configuration options of the plugin.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| callsign | string | mandatory | Plugin instance name (default: *Power*) |
-| classname | string | mandatory | Class name: *Power* |
-| locator | string | mandatory | Library name: *libThunderPower.so* |
+| callsign | string | mandatory | Plugin instance name (default: *LanguageAdministrator*) |
+| classname | string | mandatory | Class name: *LanguageAdministrator* |
+| locator | string | mandatory | Library name: *libThunderLanguageAdministrator.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
-| configuration | object | optional | *...* |
-| configuration?.powerkey | integer | optional | Key associated as powerkey |
-| configuration?.offmode | string | optional | Type of offmode |
-| configuration?.control | boolean | optional | Enable control clients |
-| configuration?.gpiopin | integer | optional | GGIO pin (Broadcom) |
-| configuration?.gpiotype | sting | optional | GPIO type (Broadcom) |
-| configuration?.statechange | integer | optional | Statechange (Broadcom) |
 
 <a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
-- IPower ([IPower.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IPower.h)) (version 1.0.0) (compliant format)
+- ILanguageTag ([ILanguageTag.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/ILanguageTag.h)) (version 1.0.0) (uncompliant-collapsed format)
 > This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
 <a id="head_Methods"></a>
 # Methods
 
-The following methods are provided by the Power plugin:
+The following methods are provided by the LanguageAdministrator plugin:
 
 Built-in methods:
 
@@ -98,12 +91,6 @@ Built-in methods:
 | [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
 | [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
 | [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
-
-Power interface methods:
-
-| Method | Description |
-| :-------- | :-------- |
-| [setstate](#method_setstate) / [set](#method_setstate) | Set the power state |
 
 <a id="method_versions"></a>
 ## *versions [<sup>method</sup>](#head_Methods)*
@@ -133,7 +120,7 @@ This method takes no parameters.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.versions"
+  "method": "LanguageAdministrator.1.versions"
 }
 ```
 
@@ -161,7 +148,7 @@ Checks if a JSON-RPC method or property exists.
 
 ### Description
 
-This method will return *True* for the following methods/properties: *getstate, versions, exists, register, unregister, setstate*.
+This method will return *True* for the following methods/properties: *language, versions, exists, register, unregister*.
 
 ### Parameters
 
@@ -184,9 +171,9 @@ This method will return *True* for the following methods/properties: *getstate, 
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.exists",
+  "method": "LanguageAdministrator.1.exists",
   "params": {
-    "method": "getstate"
+    "method": "language"
   }
 }
 ```
@@ -208,7 +195,7 @@ Registers for an asynchronous JSON-RPC notification.
 
 ### Description
 
-This method supports the following event names: *[statechange](#notification_statechange)*.
+This method supports the following event names: *[languagechanged](#notification_languagechanged)*.
 
 ### Parameters
 
@@ -238,9 +225,9 @@ This method supports the following event names: *[statechange](#notification_sta
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.register",
+  "method": "LanguageAdministrator.1.register",
   "params": {
-    "event": "statechange",
+    "event": "languagechanged",
     "id": "myapp"
   }
 }
@@ -263,7 +250,7 @@ Unregisters from an asynchronous JSON-RPC notification.
 
 ### Description
 
-This method supports the following event names: *[statechange](#notification_statechange)*.
+This method supports the following event names: *[languagechanged](#notification_languagechanged)*.
 
 ### Parameters
 
@@ -293,66 +280,10 @@ This method supports the following event names: *[statechange](#notification_sta
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.unregister",
+  "method": "LanguageAdministrator.1.unregister",
   "params": {
-    "event": "statechange",
+    "event": "languagechanged",
     "id": "myapp"
-  }
-}
-```
-
-#### Response
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "result": null
-}
-```
-
-<a id="method_setstate"></a>
-## *setstate [<sup>method</sup>](#head_Methods)*
-
-Set the power state.
-
-> ``set`` is an alternative name for this method. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
-
-### Parameters
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.state | string | mandatory | The power state to set (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
-| params.waittime | integer | mandatory | The time to wait for the power state to be set in seconds |
-
-### Result
-
-| Name | Type | M/O | Description |
-| :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null |
-
-### Errors
-
-| Message | Description |
-| :-------- | :-------- |
-| ```ERROR_GENERAL``` | General failure |
-| ```ERROR_DUPLICATE_KEY``` | Trying to set the same power mode |
-| ```ERROR_ILLEGAL_STATE``` | Power state is not supported |
-| ```ERROR_BAD_REQUEST``` | Invalid Power state or Bad JSON param data format |
-
-### Example
-
-#### Request
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 42,
-  "method": "Power.1.setstate",
-  "params": {
-    "state": "Hibernate",
-    "waittime": 10
   }
 }
 ```
@@ -370,28 +301,28 @@ Set the power state.
 <a id="head_Properties"></a>
 # Properties
 
-The following properties are provided by the Power plugin:
+The following properties are provided by the LanguageAdministrator plugin:
 
-Power interface properties:
+LanguageTag interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [getstate](#property_getstate) / [state](#property_getstate) | read-only | Get the current power state |
+| [language](#property_language) | read/write | Current application user interface language tag |
 
-<a id="property_getstate"></a>
-## *getstate [<sup>property</sup>](#head_Properties)*
+<a id="property_language"></a>
+## *language [<sup>property</sup>](#head_Properties)*
 
-Provides access to the get the current power state.
-
-> This property is **read-only**.
-
-> ``state`` is an alternative name for this property. This name is **deprecated** and may be removed in the future. It is not recommended for use in new implementations.
+Provides access to the current application user interface language tag.
 
 ### Value
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| (property) | string | mandatory | The current power state (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
+| (property) | string | mandatory | Language string as per RFC5646 |
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Language string as per RFC5646 |
 
 ### Example
 
@@ -401,7 +332,7 @@ Provides access to the get the current power state.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.getstate"
+  "method": "LanguageAdministrator.1.language"
 }
 ```
 
@@ -411,7 +342,28 @@ Provides access to the get the current power state.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "PassiveStandby"
+  "result": "en"
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "LanguageAdministrator.1.language",
+  "params": "en"
+}
+```
+
+#### Set Response
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 42,
+    "result": "null"
 }
 ```
 
@@ -420,27 +372,24 @@ Provides access to the get the current power state.
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
 
-The following events are provided by the Power plugin:
+The following events are provided by the LanguageAdministrator plugin:
 
-Power interface events:
+LanguageTag interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [statechange](#notification_statechange) | Signals a change in the power state |
+| [languagechanged](#notification_languagechanged) | Notify that the Language tag has been changed |
 
-<a id="notification_statechange"></a>
-## *statechange [<sup>notification</sup>](#head_Notifications)*
+<a id="notification_languagechanged"></a>
+## *languagechanged [<sup>notification</sup>](#head_Notifications)*
 
-Signals a change in the power state.
+Notify that the Language tag has been changed.
 
 ### Notification Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| params | object | mandatory | *...* |
-| params.origin | string | mandatory | The state the device is transitioning from (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
-| params.destination | string | mandatory | The state the device is transitioning to (must be one of the following: *ActiveStandby, Hibernate, On, PassiveStandby, PowerOff, SuspendToRAM*) |
-| params.phase | string | mandatory | The phase of the transition (must be one of the following: *After, Before*) |
+| params | string | mandatory | New LangauageTag value |
 
 ### Example
 
@@ -450,9 +399,9 @@ Signals a change in the power state.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Power.1.register",
+  "method": "LanguageAdministrator.1.register",
   "params": {
-    "event": "statechange",
+    "event": "languagechanged",
     "id": "myid"
   }
 }
@@ -463,14 +412,10 @@ Signals a change in the power state.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "myid.statechange",
-  "params": {
-    "origin": "ActiveStandby",
-    "destination": "SuspendToRAM",
-    "phase": "After"
-  }
+  "method": "myid.languagechanged",
+  "params": "..."
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.statechange``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.languagechanged``.
 

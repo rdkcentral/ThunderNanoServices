@@ -1,0 +1,19 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Language Administrator Plugin",
+    "callsign": "LanguageAdministrator",
+    "locator": "libThunderLanguageAdministrator.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "confguration": {
+    "type":"object",
+    "params": {
+      "languagetag": "Default language code (e.g. \"en_US\")"
+    }
+  },
+  "interface": {
+    "$ref": "{cppinterfacedir}/ILanguageTag.h"
+  }
+}

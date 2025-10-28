@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Performance_Monitor_Plugin"></a>
+<a id="head_Performance_Monitor_Plugin"></a>
 # Performance Monitor Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ PerformanceMonitor plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the PerformanceMonitor plugin. It includes detailed specification about its configuration, methods and properties provided.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -58,14 +58,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 Retrieve the performance measurement against given package size.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -77,29 +77,132 @@ The table below lists configuration options of the plugin.
 | locator | string | mandatory | Library name: *libThunderPerformanceMonitor.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
 - [PerformanceMonitor.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/PerformanceMonitor.json) (version 1.0.0) (uncompliant-collapsed format)
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the PerformanceMonitor plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
 
 PerformanceMonitor interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [clear](#method.clear) | Clear all performance data collected |
-| [send](#method.send) | Interface to test send data |
-| [receive](#method.receive) | Interface to test receive data |
-| [exchange](#method.exchange) | Interface to test exchange data |
+| [clear](#method_clear) | Clear all performance data collected |
+| [send](#method_send) | Interface to test send data |
+| [receive](#method_receive) | Interface to test receive data |
+| [exchange](#method_exchange) | Interface to test exchange data |
 
-<a name="method.clear"></a>
-## *clear [<sup>method</sup>](#head.Methods)*
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *measurement, versions, exists, clear, send, receive, exchange*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "PerformanceMonitor.1.exists",
+  "params": {
+    "method": "measurement"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_clear"></a>
+## *clear [<sup>method</sup>](#head_Methods)*
 
 Clear all performance data collected.
 
@@ -135,8 +238,8 @@ This method takes no parameters.
 }
 ```
 
-<a name="method.send"></a>
-## *send [<sup>method</sup>](#head.Methods)*
+<a id="method_send"></a>
+## *send [<sup>method</sup>](#head_Methods)*
 
 Interface to test send data.
 
@@ -182,8 +285,8 @@ Interface to test send data.
 }
 ```
 
-<a name="method.receive"></a>
-## *receive [<sup>method</sup>](#head.Methods)*
+<a id="method_receive"></a>
+## *receive [<sup>method</sup>](#head_Methods)*
 
 Interface to test receive data.
 
@@ -229,8 +332,8 @@ Interface to test receive data.
 }
 ```
 
-<a name="method.exchange"></a>
-## *exchange [<sup>method</sup>](#head.Methods)*
+<a id="method_exchange"></a>
+## *exchange [<sup>method</sup>](#head_Methods)*
 
 Interface to test exchange data.
 
@@ -283,7 +386,7 @@ Interface to test exchange data.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the PerformanceMonitor plugin:
@@ -292,16 +395,16 @@ PerformanceMonitor interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [measurement](#property.measurement) | read-only | Retrieve the performance measurement against given package size |
+| [measurement](#property_measurement) | read-only | Retrieve the performance measurement against given package size |
 
-<a name="property.measurement"></a>
-## *measurement [<sup>property</sup>](#head.Properties)*
+<a id="property_measurement"></a>
+## *measurement [<sup>property</sup>](#head_Properties)*
 
 Provides access to the retrieve the performance measurement against given package size. Measurements will be provided in milliseconds.
 
 > This property is **read-only**.
 
-> The *package size* parameter shall be passed as the index to the property, e.g. ``PerformanceMonitor.1.measurement@<package-size>``.
+> The *package size* parameter shall be passed as the index to the property, i.e. ``measurement@<package-size>``.
 
 ### Index
 
@@ -345,11 +448,9 @@ Provides access to the retrieve the performance measurement against given packag
 | (property).total?.average | integer | optional | Average value of measurements |
 | (property).total?.count | integer | optional | How many times measurement has been collected |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | null | mandatory | Always null (default: *None*) |
+| (property) | null | mandatory | Always null (default: *None*) |
 
 ### Example
 

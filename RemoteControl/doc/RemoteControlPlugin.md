@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Remote_Control_Plugin"></a>
+<a id="head_Remote_Control_Plugin"></a>
 # Remote Control Plugin
 
 **Version: 1.0**
@@ -10,28 +10,28 @@ RemoteControl plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the RemoteControl plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -49,7 +49,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -59,14 +59,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The RemoteControl plugin provides user-input functionality from various key-code sources (e.g. STB RC).
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -85,52 +85,267 @@ The table below lists configuration options of the plugin.
 | configuration?.repeatinterval | integer | optional | Maximum duration between repeats |
 | configuration?.releasetimeout | integer | optional | Release timeout |
 | configuration?.devices | array | optional | List of devices |
-| configuration?.devices[#] | object | optional | *...* |
+| configuration?.devices[#] | object | mandatory | *...* |
 | configuration?.devices[#]?.name | string | optional | Name |
 | configuration?.devices[#]?.mapfile | string | optional | Map File |
 | configuration?.devices[#]?.passon | boolean | optional | Enable passon |
 | configuration?.devices[#]?.settings | string | optional | Settings |
 | configuration?.virtuals | array | optional | List of virtuals |
-| configuration?.virtuals[#] | object | optional | *...* |
+| configuration?.virtuals[#] | object | mandatory | *...* |
 | configuration?.virtuals[#]?.name | string | optional | Name |
 | configuration?.virtuals[#]?.mapfile | string | optional | Map File |
 | configuration?.virtuals[#]?.passon | boolean | optional | Enable passon |
 | configuration?.virtuals[#]?.settings | string | optional | Settings |
 | configuration?.links | array | optional | List of Links |
-| configuration?.links[#] | object | optional | *...* |
+| configuration?.links[#] | object | mandatory | *...* |
 | configuration?.links[#]?.name | string | optional | Name |
 | configuration?.links[#]?.mapfile | string | optional | Map File |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
 - [RemoteControl.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/RemoteControl.json) (version 1.0.0) (compliant format)
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the RemoteControl plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
+| [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
+| [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
 
 RemoteControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [key](#method.key) | Gets key code details |
-| [send](#method.send) | Sends a key to a device (press and release) |
-| [press](#method.press) | Presses a key on a device |
-| [release](#method.release) | Releases a key on a device |
-| [add](#method.add) | Adds a key code to the key map |
-| [modify](#method.modify) | Modifies a key code in the key map |
-| [delete](#method.delete) | Deletes a key code from the key map |
-| [load](#method.load) | Re-loads the device's key map from persistent memory |
-| [save](#method.save) | Saves the device's key map into persistent path |
-| [pair](#method.pair) | Activates pairing mode of a device |
-| [unpair](#method.unpair) | Unpairs a device |
+| [key](#method_key) | Gets key code details |
+| [send](#method_send) | Sends a key to a device (press and release) |
+| [press](#method_press) | Presses a key on a device |
+| [release](#method_release) | Releases a key on a device |
+| [add](#method_add) | Adds a key code to the key map |
+| [modify](#method_modify) | Modifies a key code in the key map |
+| [delete](#method_delete) | Deletes a key code from the key map |
+| [load](#method_load) | Re-loads the device's key map from persistent memory |
+| [save](#method_save) | Saves the device's key map into persistent path |
+| [pair](#method_pair) | Activates pairing mode of a device |
+| [unpair](#method_unpair) | Unpairs a device |
 
-<a name="method.key"></a>
-## *key [<sup>method</sup>](#head.Methods)*
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *devices, device, versions, exists, register, unregister, key, send, press, release, add, modify, delete, load, save, pair, unpair*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.exists",
+  "params": {
+    "method": "devices"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_register"></a>
+## *register [<sup>method</sup>](#head_Methods)*
+
+Registers for an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[keypressed](#notification_keypressed)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_REGISTERED``` | Failed to register for the notification (e.g. already registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.register",
+  "params": {
+    "event": "keypressed",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unregister"></a>
+## *unregister [<sup>method</sup>](#head_Methods)*
+
+Unregisters from an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[keypressed](#notification_keypressed)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_UNREGISTERED``` | Failed to unregister from the notification (e.g. not yet registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "RemoteControl.1.unregister",
+  "params": {
+    "event": "keypressed",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_key"></a>
+## *key [<sup>method</sup>](#head_Methods)*
 
 Gets key code details.
 
@@ -150,7 +365,7 @@ Gets key code details.
 | result.code | integer | mandatory | Key code |
 | result.key | integer | mandatory | Key ingest value |
 | result?.modifiers | array | optional | List of key modifiers |
-| result?.modifiers[#] | string | optional | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
+| result?.modifiers[#] | string | mandatory | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
 
 ### Errors
 
@@ -192,8 +407,8 @@ Gets key code details.
 }
 ```
 
-<a name="method.send"></a>
-## *send [<sup>method</sup>](#head.Methods)*
+<a id="method_send"></a>
+## *send [<sup>method</sup>](#head_Methods)*
 
 Sends a key to a device (press and release).
 
@@ -247,8 +462,8 @@ Sends a key to a device (press and release).
 }
 ```
 
-<a name="method.press"></a>
-## *press [<sup>method</sup>](#head.Methods)*
+<a id="method_press"></a>
+## *press [<sup>method</sup>](#head_Methods)*
 
 Presses a key on a device.
 
@@ -301,8 +516,8 @@ Presses a key on a device.
 }
 ```
 
-<a name="method.release"></a>
-## *release [<sup>method</sup>](#head.Methods)*
+<a id="method_release"></a>
+## *release [<sup>method</sup>](#head_Methods)*
 
 Releases a key on a device.
 
@@ -356,8 +571,8 @@ Releases a key on a device.
 }
 ```
 
-<a name="method.add"></a>
-## *add [<sup>method</sup>](#head.Methods)*
+<a id="method_add"></a>
+## *add [<sup>method</sup>](#head_Methods)*
 
 Adds a key code to the key map.
 
@@ -370,7 +585,7 @@ Adds a key code to the key map.
 | params.code | integer | mandatory | Key code |
 | params.key | integer | mandatory | Key ingest value |
 | params?.modifiers | array | optional | List of key modifiers |
-| params?.modifiers[#] | string | optional | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
+| params?.modifiers[#] | string | mandatory | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
 
 ### Result
 
@@ -416,8 +631,8 @@ Adds a key code to the key map.
 }
 ```
 
-<a name="method.modify"></a>
-## *modify [<sup>method</sup>](#head.Methods)*
+<a id="method_modify"></a>
+## *modify [<sup>method</sup>](#head_Methods)*
 
 Modifies a key code in the key map.
 
@@ -430,7 +645,7 @@ Modifies a key code in the key map.
 | params.code | integer | mandatory | Key code |
 | params.key | integer | mandatory | Key ingest value |
 | params?.modifiers | array | optional | List of key modifiers |
-| params?.modifiers[#] | string | optional | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
+| params?.modifiers[#] | string | mandatory | Key modifier (must be one of the following: *leftalt, leftctrl, leftshift, rightalt, rightctrl, rightshift*) |
 
 ### Result
 
@@ -476,8 +691,8 @@ Modifies a key code in the key map.
 }
 ```
 
-<a name="method.delete"></a>
-## *delete [<sup>method</sup>](#head.Methods)*
+<a id="method_delete"></a>
+## *delete [<sup>method</sup>](#head_Methods)*
 
 Deletes a key code from the key map.
 
@@ -529,8 +744,8 @@ Deletes a key code from the key map.
 }
 ```
 
-<a name="method.load"></a>
-## *load [<sup>method</sup>](#head.Methods)*
+<a id="method_load"></a>
+## *load [<sup>method</sup>](#head_Methods)*
 
 Re-loads the device's key map from persistent memory.
 
@@ -582,8 +797,8 @@ Re-loads the device's key map from persistent memory.
 }
 ```
 
-<a name="method.save"></a>
-## *save [<sup>method</sup>](#head.Methods)*
+<a id="method_save"></a>
+## *save [<sup>method</sup>](#head_Methods)*
 
 Saves the device's key map into persistent path.
 
@@ -634,8 +849,8 @@ Saves the device's key map into persistent path.
 }
 ```
 
-<a name="method.pair"></a>
-## *pair [<sup>method</sup>](#head.Methods)*
+<a id="method_pair"></a>
+## *pair [<sup>method</sup>](#head_Methods)*
 
 Activates pairing mode of a device.
 
@@ -685,8 +900,8 @@ Activates pairing mode of a device.
 }
 ```
 
-<a name="method.unpair"></a>
-## *unpair [<sup>method</sup>](#head.Methods)*
+<a id="method_unpair"></a>
+## *unpair [<sup>method</sup>](#head_Methods)*
 
 Unpairs a device.
 
@@ -738,7 +953,7 @@ Unpairs a device.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the RemoteControl plugin:
@@ -747,11 +962,11 @@ RemoteControl interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [devices](#property.devices) | read-only | Names of all available devices |
-| [device](#property.device) | read-only | Metadata of a specific device |
+| [devices](#property_devices) | read-only | Names of all available devices |
+| [device](#property_device) | read-only | Metadata of a specific device |
 
-<a name="property.devices"></a>
-## *devices [<sup>property</sup>](#head.Properties)*
+<a id="property_devices"></a>
+## *devices [<sup>property</sup>](#head_Properties)*
 
 Provides access to the names of all available devices.
 
@@ -759,12 +974,10 @@ Provides access to the names of all available devices.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Names of all available devices |
-| result[#] | string | mandatory | Device name |
+| (property) | array | mandatory | Names of all available devices |
+| (property)[#] | string | mandatory | Device name |
 
 ### Example
 
@@ -790,14 +1003,14 @@ Provides access to the names of all available devices.
 }
 ```
 
-<a name="property.device"></a>
-## *device [<sup>property</sup>](#head.Properties)*
+<a id="property_device"></a>
+## *device [<sup>property</sup>](#head_Properties)*
 
 Provides access to the metadata of a specific device.
 
 > This property is **read-only**.
 
-> The *device* parameter shall be passed as the index to the property, e.g. ``RemoteControl.1.device@<device>``.
+> The *device* parameter shall be passed as the index to the property, i.e. ``device@<device>``.
 
 ### Index
 
@@ -807,12 +1020,10 @@ Provides access to the metadata of a specific device.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Metadata of a specific device |
-| result.metadata | string | mandatory | Device metadata |
+| (property) | object | mandatory | Metadata of a specific device |
+| (property).metadata | string | mandatory | Device metadata |
 
 ### Errors
 
@@ -846,7 +1057,7 @@ Provides access to the metadata of a specific device.
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -857,16 +1068,16 @@ RemoteControl interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [keypressed](#notification.keypressed) | Notifies of a key press/release action |
+| [keypressed](#notification_keypressed) | Notifies of a key press/release action |
 
-<a name="notification.keypressed"></a>
-## *keypressed [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_keypressed"></a>
+## *keypressed [<sup>notification</sup>](#head_Notifications)*
 
 Notifies of a key press/release action.
 
 ### Parameters
 
-> The *key code* parameter shall be passed within the client ID during registration, e.g. *42.myid*
+> The *key code* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<key code>.<client-id>``.
 
 ### Notification Parameters
 
@@ -903,5 +1114,7 @@ Notifies of a key press/release action.
 }
 ```
 
-> The *key code* parameter is passed within the designator, e.g. *42.myid.keypressed*.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<key code>.<client-id>.keypressed``.
+
+> The *key code* parameter is passed within the notification designator, i.e. ``<key code>.<client-id>.keypressed``.
 

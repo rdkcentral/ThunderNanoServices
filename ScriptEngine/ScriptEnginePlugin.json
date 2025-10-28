@@ -1,0 +1,13 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Script Engine Plugin",
+    "callsign": "ScriptEngine",
+    "locator": "libScriptEngine.so",
+    "status": "alpha",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{cppinterfacedir}/IScriptEngine.h"
+  }
+}

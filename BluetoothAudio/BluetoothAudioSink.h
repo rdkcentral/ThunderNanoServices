@@ -1900,12 +1900,14 @@ namespace Plugin {
         }
 
     public:
-        void Revoked(const Core::IUnknown* remote, const uint32_t interfaceId VARIABLE_IS_NOT_USED)
+        void OnDangling(const Core::IUnknown* remote, const uint32_t interfaceId VARIABLE_IS_NOT_USED)
         {
             // The COM-RPC link has been disconnected abruptly, clean up!
 
             if (remote == _callback) {
                 TRACE(SinkFlow, (_T("Bluetooth audio sink remote client died; cleaning up the playback session on behalf of the dead")));
+
+                ASSERT(interfaceId == Exchange::IBluetoothAudio::ISink::ICallback::ID);
 
                 Callback(nullptr);
                 Source(nullptr);

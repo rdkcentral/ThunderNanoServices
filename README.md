@@ -4,7 +4,7 @@
 * [BluetoothAudio](BluetoothAudio/doc/BluetoothAudioPlugin.md)
 * [BluetoothControl](BluetoothControl/doc/BluetoothControlPlugin.md)
 * [BluetoothRemoteControl](BluetoothRemoteControl/doc/BluetoothRemoteControlPlugin.md)
-* [BluetoothSDPServer](BluetoothAudioSink/doc/BluetoothSDPServerPlugin.md)
+* [BluetoothSDPServer](BluetoothSDPServer/doc/BluetoothSDPServerPlugin.md)
 * CECControl
 * [Cobalt](Cobalt/doc/CobaltPlugin.md)
 * [Commander](Commnader/doc/CommanderPlugin.md)
@@ -18,14 +18,15 @@
 * [FirmwareControl](FirmwareControl/doc/FirmwareControlPlugin.md)
 * [InputSwitch](InputSwitch/doc/InputSwitchPlugin.md)
 * [IOConnector](IOConnector/doc/IOConnectorPlugin.md)
-* LanguageAdministrator
+* [LanguageAdministrator](LanguageAdministrator/doc/LanguageAdministratorPlugin.md)
 * [NetworkControl](NetworkControl/doc/NetworkControlPlugin.md)
 * [PerformanceMonitor](PerformanceMonitor/doc/PerformanceMonitorPlugin.md)
+* [PluginInitializerService](PluginInitializerService/doc/PluginInitializerServicePlugin.md)
 * [Power](Power/doc/PowerPlugin.md)
 * [ProcessMonitor](ProcessMonitor/doc/ProcessMonitorPlugin.md)
 * [RemoteControl](RemoteControl/doc/RemoteControlPlugin.md)
 * [ResourceMonitor](ResourceMonitor/doc/ResourceMonitorPlugin.md)
-* ScriptEngine
+* [ScriptEngine](ScriptEngine/doc/ScriptEnginePlugin.md)
 * SecureShellServer
 * Snapshot
 * [Spark](Spark/doc/SparkPlugin.md)
@@ -43,7 +44,3 @@
 * WebServer
 * WebShell
 * [WifiControl](WifiControl/doc/WifiControlPlugin.md)
-
-### Examples
-* [TestController](examples/TestController/doc/TestControllerPlugin.md)
-* [TestUtility](examples/TestUtility/doc/TestUtilityPlugin.md)
