@@ -47,6 +47,12 @@ namespace CommunicationPerformanceHelpers {
 
 constexpr uint16_t TemplateRecursionDepth = 899;
 
+constexpr uint64_t LowerBoundDuration = 0;
+constexpr uint64_t UpperBoundDuration = 200;
+
+constexpr size_t NumberOfBins = 20;
+
+
 // User defined definition
 template<typename TYPE, size_t... N>
 constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(size_t n)

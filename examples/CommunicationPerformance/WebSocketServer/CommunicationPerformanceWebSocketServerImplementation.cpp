@@ -361,12 +361,11 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             // Set to a low value for quick builds
                             constexpr uint16_t bufferMaxSize = CommunicationPerformanceHelpers::TemplateRecursionDepth;
 
-                            constexpr size_t numberOfBins = 20;
+                            constexpr size_t numberOfBins = CommunicationPerformanceHelpers::NumberOfBins;
 
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
-                            // Educated guess, system dependent, required for distribution
-                            constexpr uint64_t upperBoundDuration = 1000;
+                            constexpr uint64_t upperBoundDuration = CommunicationPerformanceHelpers::UpperBoundDuration;
 
                             // Round trip time in ticks, initialize with value for maximum wait
                             // Educated guess

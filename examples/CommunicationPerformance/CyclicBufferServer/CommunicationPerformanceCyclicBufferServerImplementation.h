@@ -62,7 +62,7 @@ private :
 
     private :
 
-// Actually public but indicate not desired use
+        // Actually public but indicate desired use
         void DataAvailable() override;
     };
 

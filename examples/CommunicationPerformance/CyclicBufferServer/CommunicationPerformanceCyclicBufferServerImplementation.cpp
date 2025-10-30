@@ -272,14 +272,14 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
     case STATE::RUN     :   state = STATE::EXECUTE;
     case STATE::EXECUTE :   {
                             // Set to a low value for quick builds
-                            constexpr uint16_t bufferMaxSize = 8999;
+                            constexpr uint16_t bufferMaxSize = CommunicationPerformanceHelpers::TemplateRecursionDepth;
 
-                            constexpr size_t numberOfBins = 20;
+                            constexpr size_t numberOfBins = CommunicationPerformanceHelpers::NumberOfBins;
 
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
                             // Educated guess, system dependent, required for distribution
-                            constexpr uint64_t upperBoundDuration = 200;
+                            constexpr uint64_t upperBoundDuration = CommunicationPerformanceHelpers::UpperBoundDuration;
 
                             // Initial value used as waitTime in Exchange()
                             // Educated guess
