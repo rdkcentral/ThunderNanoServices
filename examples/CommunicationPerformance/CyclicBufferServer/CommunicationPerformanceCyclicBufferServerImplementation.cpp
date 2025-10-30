@@ -55,8 +55,6 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t wait
 {
     uint32_t result = Core::ERROR_GENERAL;
 
-// _batonListeningNode.Close(waitTime);
-
     if (_buffer.IsValid() != false) {
         _buffer.Alert();
 
@@ -262,7 +260,7 @@ uint32_t SimplePluginCyclicBufferServerImplementation::Stop(uint32_t waitTime)
     return _server.Stop(waitTime);
 }
 
-uint32_t SimplePluginCyclicBufferServerImplementation::Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+uint32_t SimplePluginCyclicBufferServerImplementation::Task(STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 

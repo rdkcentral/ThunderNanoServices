@@ -247,7 +247,7 @@ uint32_t SimplePluginCyclicBufferClientImplementation::Stop(uint32_t waitTime)
     return _client.Stop(waitTime);
 }
 
-uint32_t SimplePluginCyclicBufferClientImplementation::Task(VARIABLE_IS_NOT_USED STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+uint32_t SimplePluginCyclicBufferClientImplementation::Task(STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 

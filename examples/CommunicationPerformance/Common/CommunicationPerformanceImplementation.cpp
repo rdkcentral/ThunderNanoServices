@@ -503,8 +503,6 @@ uint32_t SimplePluginImplementation<DERIVED>::Baton::Signal(VARIABLE_IS_NOT_USED
 {
     uint32_t result{ Core::ERROR_NONE };
 
-//            std::cout << __PRETTY_FUNCTION__ << " : pid = " << Core::ProcessInfo().Id() << " : IsOpen = " << IsOpen() << std::endl;
-
     if (IsOpen() != false) {
         /* void */ Trigger();
     }
@@ -517,9 +515,6 @@ uint32_t SimplePluginImplementation<DERIVED>::Baton::Wait(uint32_t waitTime)
 {
     uint32_t result{ Core::ERROR_NONE };
 
-//            std::cout << __PRETTY_FUNCTION__ << " : pid = " << Core::ProcessInfo().Id() << " : IsOpen = " << IsOpen() << std::endl;
-
-// TODO: loop on ETIMEDOUT? 
     if ((result = _handover.Lock(waitTime)) != Core::ERROR_NONE) {
         // Error / timedout
     }
