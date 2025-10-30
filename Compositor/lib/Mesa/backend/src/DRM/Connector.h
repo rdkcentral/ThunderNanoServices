@@ -42,6 +42,9 @@ namespace Compositor {
                     : _swap()
                     , _fd(-1)
                     , _activePlane(~0)
+                    , _buffer()
+                    , _frameId()
+                    , _frameBuffer()
                 {
                     // Double buffering: 0=current, 1=next, swap via XOR
                     _buffer[0] = Core::ProxyType<Exchange::IGraphicsBuffer>();
