@@ -37,6 +37,8 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <sstream>
+#include <iomanip>
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
@@ -138,7 +140,7 @@ namespace Plugin {
                 : _parent(parent)
             {
             }
-            ~PrivilegedRequestCallback() override = default;
+            ~PrivilegedRequestCallback() override { }
 
         public:
             void Request(const uint32_t id, Core::PrivilegedRequest::Container& descriptors) override
@@ -171,22 +173,121 @@ namespace Plugin {
         public:
             constexpr static uint8_t InvalidBufferId = uint8_t(~0);
 
+            constexpr static uint32_t MaxClientBuffers = 4;
+            struct BufferStats {
+                std::atomic<uint64_t> requestCount; // Times requested
+                std::atomic<uint64_t> renderCount; // Times rendered
+                std::atomic<uint64_t> skipCount; // Times skipped
+                std::atomic<uint64_t> totalAge; // Sum of ages (µs)
+                std::atomic<uint64_t> maxAge; // Max age seen (µs)
+                std::atomic<uint64_t> lastUsed; // Timestamp last used
+
+                BufferStats()
+                    : requestCount(0)
+                    , renderCount(0)
+                    , skipCount(0)
+                    , totalAge(0)
+                    , maxAge(0)
+                    , lastUsed(0)
+                {
+                }
+
+                uint64_t AvgAge() const
+                {
+                    uint64_t count = renderCount.load();
+                    return count > 0 ? totalAge.load() / count : 0;
+                }
+            };
+
             struct Stats {
+                // Overall stats
                 std::atomic<uint64_t> renderCount;
                 std::atomic<uint64_t> totalRenderTime;
                 std::atomic<uint64_t> skipCount;
+
+                // Per-buffer detailed stats
+                std::array<BufferStats, MaxClientBuffers> buffers;
+
+                // Queue stats
+                std::atomic<uint64_t> queueFullCount;
+                std::atomic<uint64_t> queueMaxSize; // Max queue depth seen
+
+                // Current state
+                std::atomic<uint8_t> currentBufferId;
+                std::atomic<uint64_t> lastRenderTime;
 
                 Stats()
                     : renderCount(0)
                     , totalRenderTime(0)
                     , skipCount(0)
+                    , buffers {} // Zero-init array
+                    , queueFullCount(0)
+                    , queueMaxSize(0)
+                    , currentBufferId(0xFF) // InvalidBufferId
+                    , lastRenderTime(0)
                 {
+                }
+
+                string ToString() const
+                {
+                    std::ostringstream ss;
+
+                    uint64_t renders = renderCount.load();
+                    uint64_t skips = skipCount.load();
+                    uint64_t total = renders + skips;
+                    ss << "Overall:\n";
+                    ss << "  Renders:     " << renders << "\n";
+                    ss << "  Skips:       " << skips;
+                    if (total > 0) {
+                        ss << " (" << std::fixed << std::setprecision(1) << (100.0 * skips / total) << "%)\n";
+                    } else {
+                        ss << "\n";
+                    }
+
+                    if (renders > 0) {
+                        uint64_t avgTime = totalRenderTime.load() / renders;
+                        ss << "  Avg Time:    " << avgTime << " µs\n";
+                    }
+
+                    ss << "Queue:\n";
+                    ss << "  Full Events: " << queueFullCount.load() << "\n";
+                    ss << "  Max Depth:   " << queueMaxSize.load() << "\n";
+
+                    ss << "Buffers:\n";
+                    for (size_t i = 0; i < MaxClientBuffers; i++) {
+                        const auto& buf = buffers[i];
+                        uint64_t requests = buf.requestCount.load();
+                        uint64_t bufRenders = buf.renderCount.load();
+                        uint64_t bufSkips = buf.skipCount.load();
+
+                        if (requests > 0 || bufRenders > 0) {
+                            ss << "  [" << i << "] Req:" << requests
+                               << " Rnd:" << bufRenders
+                               << " Skip:" << bufSkips;
+
+                            if (bufRenders > 0) {
+                                ss << " AvgAge:" << buf.AvgAge()
+                                   << " MaxAge:" << buf.maxAge.load() << " µs";
+                            }
+                            ss << "\n";
+                        }
+                    }
+
+                    uint8_t current = currentBufferId.load();
+                    if (current < MaxClientBuffers) {
+                        uint64_t now = Core::Time::Now().Ticks();
+                        uint64_t lastRender = lastRenderTime.load();
+                        uint64_t idleTime = lastRender > 0 ? (now - lastRender) : 0;
+                        ss << "Current: Buffer " << static_cast<uint32_t>(current)
+                           << " (idle " << idleTime << " µs / "
+                           << std::fixed << std::setprecision(1) << (idleTime / 1000.0) << " ms)\n";
+                    }
+
+                    return ss.str();
                 }
             };
 
         private:
-            constexpr static uint32_t MAX_BUFFERS = 4;
-
             class Buffer : public Graphics::ServerBufferType<1> {
                 using BaseClass = Graphics::ServerBufferType<1>;
 
@@ -212,6 +313,10 @@ namespace Plugin {
                 {
                     Core::ResourceMonitor::Instance().Unregister(*this);
                     _texture.Release();
+                    
+                    Rendered();
+                    Published();
+                    
                     TRACE(Trace::Information, (_T("Buffer for %s[%p] destructed"), _client.Name().c_str(), this));
                 }
 
@@ -232,7 +337,7 @@ namespace Plugin {
 
                 void Configure(const uint8_t id, const Core::ProxyType<Compositor::IRenderer::ITexture>& texture)
                 {
-                    ASSERT(id < MAX_BUFFERS);
+                    ASSERT(id < MaxClientBuffers);
                     ASSERT(_id == InvalidBufferId);
                     ASSERT(_texture.IsValid() == false);
 
@@ -261,7 +366,7 @@ namespace Plugin {
                     , _client(client)
                 {
                 }
-                ~Remote() override = default;
+                ~Remote() override { }
 
             public:
                 // Core::IUnknown
@@ -433,11 +538,12 @@ namespace Plugin {
                 , _geometry({ 0, 0, width, height }) // rendering geometry
                 , _remoteClient(*this)
                 , _geometryChanged(false)
-                , _buffers(MAX_BUFFERS)
+                , _buffers(MaxClientBuffers)
                 , _requestQueue()
                 , _pendingQueue()
+                , _currentId(InvalidBufferId)
                 , _renderingId(InvalidBufferId)
-
+                , _stats()
             {
                 TRACE(Trace::Information, (_T("Client Constructed %s[%p] id:%d %dx%d"), _callsign.c_str(), this, _id, _width, _height));
             }
@@ -446,6 +552,12 @@ namespace Plugin {
                 _buffers.Clear();
 
                 _parent.Render(); // request a render to remove this surface from the composition.
+
+                // while (_pendingQueue.Pop(bufferId)) {
+                //     if (_buffers[bufferId].IsValid()) {
+                //         _buffers[bufferId]->Published();
+                //     }
+                // }
 
                 TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
             }
@@ -461,35 +573,89 @@ namespace Plugin {
             void Activate(const uint8_t id)
             {
                 if (id < _buffers.Count()) {
+                    _stats.buffers[id].requestCount.fetch_add(1, std::memory_order_relaxed);
+                    _stats.buffers[id].lastUsed.store(Core::Time::Now().Ticks(), std::memory_order_relaxed);
+
+                    _currentId.store(id, std::memory_order_release);
+
+                    // Signal new frame via queue
                     bool queued = _requestQueue.Push(id, false);
 
                     if (queued) {
-                    _parent.Render();
+                        _parent.Render();
                     } else {
                         TRACE(Trace::Error, (_T("Client %s request queue full, dropping buffer %d"), _callsign.c_str(), id));
+                        // Note: _currentId is still updated, so next vsync will render this buffer
+                        _stats.queueFullCount.fetch_add(1, std::memory_order_relaxed);
                     }
                 }
             }
 
         public:
+            uint8_t CurrentBufferId() const
+            {
+                return _stats.currentBufferId.load(std::memory_order_relaxed);
+            }
+
+            void IncrementBufferSkip(uint8_t id)
+            {
+                if (id < MaxClientBuffers) {
+                    _stats.buffers[id].skipCount.fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+
+            const Stats& Statistics() const
+            {
+                return _stats;
+            }
+
             Core::ProxyType<Compositor::IRenderer::ITexture> Acquire()
             {
                 Core::ProxyType<Compositor::IRenderer::ITexture> texture;
 
                 uint8_t id;
+                uint64_t acquireTime = Core::Time::Now().Ticks();
+
+                // Check for new frame in queue
                 if (_requestQueue.Pop(id)) {
-                    // Got buffer ID from queue
-                    if (id < _buffers.Count() && _buffers[id].IsValid()) {
+                    // New frame requested! Update current
+                    _currentId.store(id, std::memory_order_release);
+                } else {
+                    // No new frame, use current buffer (static content)
+                    id = _currentId.load(std::memory_order_acquire);
+                }
+
+                // Render the buffer (new or repeated)
+                if (id != InvalidBufferId && id < _buffers.Count() && _buffers[id].IsValid()) {
                     _renderingId.store(id, std::memory_order_release);
+
+                    // Record buffer render
+                    _stats.buffers[id].renderCount.fetch_add(1, std::memory_order_relaxed);
+
+                    // Calculate and record age
+                    uint64_t requestTime = _stats.buffers[id].lastUsed.load(std::memory_order_relaxed);
+                    if (requestTime > 0 && acquireTime >= requestTime) {
+                        uint64_t age = acquireTime - requestTime;
+                        _stats.buffers[id].totalAge.fetch_add(age, std::memory_order_relaxed);
+
+                        // Update max age using CAS
+                        uint64_t currentMax = _stats.buffers[id].maxAge.load(std::memory_order_relaxed);
+                        while (age > currentMax && !_stats.buffers[id].maxAge.compare_exchange_weak(currentMax, age, std::memory_order_relaxed))
+                            ;
+                    }
+
+                    // Update current buffer tracking
+                    _stats.currentBufferId.store(id, std::memory_order_relaxed);
+                    _stats.lastRenderTime.store(acquireTime, std::memory_order_relaxed);
+
                     _buffers[id]->Acquire(Compositor::DefaultTimeoutMs);
                     texture = _buffers[id]->Texture();
                 } else {
-                        _renderingId.store(InvalidBufferId, std::memory_order_release);
-                        TRACE(Trace::Error, (_T("Client %s invalid buffer %d from queue"), _callsign.c_str(), id));
-                    }
-                } else {
-                    // Queue empty - no pending render
                     _renderingId.store(InvalidBufferId, std::memory_order_release);
+
+                    if (id != InvalidBufferId) {
+                        TRACE(Trace::Error, (_T("Client %s invalid buffer %d"), _callsign.c_str(), id));
+                    }
                 }
 
                 return texture;
@@ -599,7 +765,7 @@ namespace Plugin {
             {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
-                if (_buffers.Count() < MAX_BUFFERS) {
+                if (_buffers.Count() < MaxClientBuffers) {
                     Core::ProxyType<Buffer> buffer = Core::ProxyType<Buffer>::Create(*this, descriptors);
 
                     if (buffer.IsValid() == true) {
@@ -628,9 +794,11 @@ namespace Plugin {
             Remote _remoteClient;
             bool _geometryChanged;
             Core::ProxyList<Buffer> _buffers; // the actual pixel buffers that are used by this client but are owed by the compositorclient.
-            AtomicFifo<uint8_t, MAX_BUFFERS> _requestQueue;
-            AtomicFifo<uint8_t, MAX_BUFFERS> _pendingQueue;
+            AtomicFifo<uint8_t, MaxClientBuffers> _requestQueue;
+            AtomicFifo<uint8_t, MaxClientBuffers> _pendingQueue;
+            std::atomic<uint8_t> _currentId;
             std::atomic<uint8_t> _renderingId;
+            Stats _stats;
 
             static uint32_t _sequence;
         }; // class Client
@@ -655,7 +823,7 @@ namespace Plugin {
                 }
             }
 
-            virtual ~Output()
+            ~Output()
             {
                 _connector.Release();
             }
@@ -673,7 +841,7 @@ namespace Plugin {
                     : _parent(parent)
                 {
                 }
-                ~Sink() override = default;
+                ~Sink() override { }
 
                 virtual void Presented(const Compositor::IOutput* output, const uint64_t sequence, const uint64_t time) override
                 {
@@ -733,8 +901,9 @@ namespace Plugin {
 
         void Stop()
         {
-            _present.Stop(); // This should stop the rendering loop
-            _present.Wait(Core::Thread::STOPPED, 1000); // Wait for it to actually stop
+            _terminated.store(true, std::memory_order_release);
+
+            _renderPending.store(false, std::memory_order_release);
 
             {
                 std::lock_guard<std::mutex> lock(_commitMutex);
@@ -743,10 +912,17 @@ namespace Plugin {
 
             _commitCV.notify_all(); // Wake up all waiting threads
 
+            _present.Stop(); // This should stop the rendering loop
+
+            if (_present.Wait(Core::Thread::STOPPED, 5000) == false) {
+                TRACE(Trace::Error, ("Presenter thread did not stop in time!"));
+            }
+
             _descriptorExchange.Close();
 
             {
                 std::lock_guard<std::mutex> lock(_clientLock);
+
                 _clients.Clear();
             }
 
@@ -791,6 +967,8 @@ namespace Plugin {
             , _totalRenderTime(0)
             , _frameCount(0)
             , _frameTime(0)
+            , _renderPending(false)
+            , _terminated(false)
         {
         }
         ~CompositorImplementation() override
@@ -1058,6 +1236,10 @@ namespace Plugin {
     private:
         void VSync(const Compositor::IOutput* output VARIABLE_IS_NOT_USED, const uint64_t sequence VARIABLE_IS_NOT_USED, const uint64_t pts VARIABLE_IS_NOT_USED /*usec since epoch*/)
         {
+            if (_terminated.load(std::memory_order_acquire)) {
+                return;
+            }
+
             {
                 std::lock_guard<std::mutex> lock(_clientLock);
                 _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
@@ -1081,6 +1263,7 @@ namespace Plugin {
 
         void Render()
         {
+            _renderPending.store(true, std::memory_order_release);
             _present.Run();
         }
 
@@ -1106,55 +1289,61 @@ namespace Plugin {
         {
             const uint64_t start(Core::Time::Now().Ticks());
 
-            ASSERT(_output != nullptr);
-            ASSERT(_output->IsValid() == true);
-            ASSERT(_renderer.IsValid() == true);
+            if (_output != nullptr) {
+                ASSERT(_output->IsValid() == true);
+                ASSERT(_renderer.IsValid() == true);
 
-            Core::ProxyType<Compositor::IOutput> buffer = _output->Buffer();
+                Core::ProxyType<Compositor::IOutput> buffer = _output->Buffer();
+                ASSERT(buffer.IsValid() == true);
 
-            ASSERT(buffer.IsValid() == true);
+                Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = buffer->FrameBuffer();
 
-            Core::ProxyType<Compositor::IRenderer::IFrameBuffer> frameBuffer = buffer->FrameBuffer();
+                if (frameBuffer.IsValid() == true) {
+                    _renderer->Bind(frameBuffer);
 
-            _renderer->Bind(frameBuffer);
+                    _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
 
-            _renderer->Begin(buffer->Width(), buffer->Height()); // set viewport for render
+                    _renderer->Clear(_background);
 
-            _renderer->Clear(_background);
+                    {
+                        std::lock_guard<std::mutex> lock(_clientLock);
 
-            {
-                std::lock_guard<std::mutex> lock(_clientLock);
+                        _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
+                            RenderClient(client); // ~500-900 uS rpi4
+                        });
+                    }
 
-                _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
-                    RenderClient(client); // ~500-900 uS rpi4
-                });
-            }
+                    _renderer->End(false);
 
-            _renderer->End(false);
+                    _renderer->Unbind(frameBuffer);
 
-            _renderer->Unbind(frameBuffer);
+                    _totalRenderTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);
 
-            _totalRenderTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);
+                    // Block until VSync allows commit
+                    {
+                        std::unique_lock<std::mutex> lock(_commitMutex);
+                        if (_commitCV.wait_for(lock, std::chrono::milliseconds(100), [this] {
+                                return _canCommit.load(std::memory_order_acquire); // Wait for permission
+                            })) {
+                            // Got permission, reset it for next frame
+                            _canCommit.store(false, std::memory_order_release);
+                        } else {
+                            TRACE(Trace::Error, (_T("Timeout waiting for VSync, forcing commit")));
+                        }
+                    }
 
-            // Block until VSync allows commit
-            {
-                std::unique_lock<std::mutex> lock(_commitMutex);
+                    if (_output != nullptr) {
+                        uint32_t commit = _output->Commit();
 
-                if (_commitCV.wait_for(lock, std::chrono::milliseconds(100), [this] {
-                        return _canCommit.load(std::memory_order_acquire); // Wait for permission
-                    })) {
-                    // Got permission, reset it for next frame
-                    _canCommit.store(false, std::memory_order_release);
-                } else {
-                    TRACE(Trace::Error, (_T("Timeout waiting for VSync, forcing commit")));
+                        if (commit != Core::ERROR_NONE) {
+                            TRACE(Trace::Error, (_T("Commit failed: %d"), commit));
+                        }
+                    }
+
+                    _frameCount.fetch_add(1, std::memory_order_relaxed);
+                    _frameTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);
                 }
             }
-
-            uint32_t commit = _output->Commit();
-            ASSERT(commit == Core::ERROR_NONE);
-
-            _frameCount.fetch_add(1, std::memory_order_relaxed);
-            _frameTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);
         }
 
         void RenderClient(const Core::ProxyType<Client> client)
@@ -1186,14 +1375,19 @@ namespace Plugin {
 
                 _renderer->Render(texture, clientArea, clientProjection, alpha);
 
-                client->Relinquish();
-
                 const uint64_t duration = Core::Time::Now().Ticks() - start;
                 UpdateClientStats(client->Name(), duration, false);
             } else {
                 TRACE(Trace::Error, (_T("Skipping %s, no texture to render for buffer"), client->Name().c_str()));
                 UpdateClientStats(client->Name(), 0, true);
+
+                uint8_t currentId = client->CurrentBufferId();
+                if (currentId < Client::MaxClientBuffers) {
+                    client->IncrementBufferSkip(currentId);
+                }
             }
+
+            client->Relinquish();
         }
 
         class Presenter : public Core::Thread {
@@ -1221,16 +1415,23 @@ namespace Plugin {
         private:
             uint32_t Worker() override
             {
-                Core::Thread::Block();
+                while (IsRunning()) {
+                    // Wait for signal
+                    Core::Thread::Block();
 
-                _parent.RenderOutput(); // 3000us
+                    // Process one frame per wake-up
+                    bool expected = true;
+                    if (_parent._renderPending.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
+                        _parent.RenderOutput();
 
-                // Print stats every 5 seconds
-                auto now = std::chrono::steady_clock::now();
+                        // Print stats every 5 seconds
+                        auto now = std::chrono::steady_clock::now();
 
-                if (std::chrono::duration_cast<std::chrono::seconds>(now - _lastStatsTime).count() >= 5) {
-                    _parent.PrintStats();
-                    _lastStatsTime = now;
+                        if (std::chrono::duration_cast<std::chrono::seconds>(now - _lastStatsTime).count() >= 5) {
+                            _parent.PrintStats();
+                            _lastStatsTime = now;
+                        }
+                    }
                 }
 
                 return Core::infinite;
@@ -1282,20 +1483,13 @@ namespace Plugin {
                 TRACE(Trace::Stats, (_T("Global: frames: %llu, avg: %llu µs , fps: %.2f"), frames, (totalRender / frames), fps));
             }
 
-            std::lock_guard<std::mutex> lock(_statsMutex);
-            for (auto& pair : _clientStats) {
-                const std::string& name = pair.first;
-                Client::Stats& stats = pair.second;
-
-                uint64_t renders = stats.renderCount.exchange(0);
-                uint64_t totalTime = stats.totalRenderTime.exchange(0);
-                uint64_t skips = stats.skipCount.exchange(0);
-
-                if (renders > 0 || skips > 0) {
-                    uint64_t avgTime = renders > 0 ? totalTime / renders : 0;
-                    TRACE(Trace::Stats, (_T("Client %s: %llu renders, %llu skips, avg: %llu µs"), name.c_str(), renders, skips, avgTime));
+            std::lock_guard<std::mutex> lock(_clientLock);
+            _clients.Visit([&](const string& name, const Core::ProxyType<Client>& client) {
+                if (client.IsValid()) {
+                    string stats = client->Statistics().ToString();
+                    TRACE(Trace::Stats, (_T("=====%s======\n%s"), name.c_str(), stats.c_str()));
                 }
-            }
+            });
         }
 
     private:
@@ -1324,6 +1518,8 @@ namespace Plugin {
         std::atomic<uint64_t> _frameTime;
         mutable std::mutex _statsMutex;
         std::unordered_map<std::string, Client::Stats> _clientStats;
+        std::atomic<bool> _renderPending;
+        std::atomic<bool> _terminated;
     };
 
     SERVICE_REGISTRATION(CompositorImplementation, 1, 0)
