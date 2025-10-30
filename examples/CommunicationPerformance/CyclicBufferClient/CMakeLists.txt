@@ -22,9 +22,9 @@ cmake_minimum_required(VERSION 3.15)
 
 project_version(1.0.0)
 
-set(MODULE_NAME ${PROJECT_NAME})
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
-message("Set up ${MODULE_NAME} v{PROJECT_VERSION}")
+message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
