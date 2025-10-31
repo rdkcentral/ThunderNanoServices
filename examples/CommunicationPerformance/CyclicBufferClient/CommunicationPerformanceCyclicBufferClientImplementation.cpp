@@ -68,7 +68,7 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Stop(uint32_t waitTime)
 }
 
 template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration)
+uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration)
 {
     ASSERT(bufferSize <= bufferMaxSize);
 
@@ -107,7 +107,7 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bu
                 && _buffer.Reserve(bufferSize) == bufferSize
                ) {
                 // The written size should match the read size
-                uint16_t bufferReadSize = bufferSize;
+                VARIABLE_IS_NOT_USED uint16_t bufferReadSize = bufferSize;
 
                 bufferSize = _buffer.Write(buffer, bufferSize);
 

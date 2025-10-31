@@ -121,7 +121,7 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Exchange(uint8_t b
                     // The 'server' can read the written data 
 
                     // The read size should match the write size
-                    int16_t bufferWriteSize = bufferSize;
+                    VARIABLE_IS_NOT_USED int16_t bufferWriteSize = bufferSize;
 
                     bufferSize = _buffer.Used();
 
