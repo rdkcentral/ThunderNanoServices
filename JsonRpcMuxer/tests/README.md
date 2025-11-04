@@ -38,12 +38,9 @@ pip3 install websocket-client requests
 **Usage:**
 ```bash
 python3 test_jsonrpcmuxer.py
-python3 test_jsonrpcmuxer-ws.py
-
 
 # With custom configuration
 python3 test_jsonrpcmuxer.py --host 192.168.1.100 --port 9998 --max-batch-size 10 --max-batches 5
-python3 test_jsonrpcmuxer-ws.py --host 192.168.1.100 --port 9998 --max-batch-size 10 --max-batches 5
 ```
 
 **Expected output:** All tests pass

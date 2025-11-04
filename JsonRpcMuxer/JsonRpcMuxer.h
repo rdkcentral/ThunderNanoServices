@@ -7,12 +7,7 @@
 namespace Thunder {
 namespace Plugin {
     class JsonRpcMuxer :
-#ifdef ENABLE_WEBSOCKET_CONNECTION
-        public PluginHost::IPluginExtended,
-        public PluginHost::IWebSocket,
-#else
         public PluginHost::IPlugin,
-#endif
         public PluginHost::JSONRPC {
     private:
         class Config : public Core::JSON::Container {
@@ -300,10 +295,6 @@ namespace Plugin {
 
         BEGIN_INTERFACE_MAP(JsonRpcMuxer)
         INTERFACE_ENTRY(PluginHost::IPlugin)
-#ifdef ENABLE_WEBSOCKET_CONNECTION
-        INTERFACE_ENTRY(PluginHost::IPluginExtended)
-        INTERFACE_ENTRY(PluginHost::IWebSocket)
-#endif
         INTERFACE_ENTRY(PluginHost::IDispatcher)
         END_INTERFACE_MAP
 
@@ -315,14 +306,6 @@ namespace Plugin {
         Core::hresult Invoke(
             const uint32_t channelId, const uint32_t id, const string& token,
             const string& designator, const string& parameters, string& response) override;
-
-#ifdef ENABLE_WEBSOCKET_CONNECTION
-        bool Attach(PluginHost::Channel& channel) override;
-        void Detach(PluginHost::Channel& channel) override;
-
-        Core::ProxyType<Core::JSON::IElement> Inbound(const string& identifier) override;
-        Core::ProxyType<Core::JSON::IElement> Inbound(const uint32_t ID, const Core::ProxyType<Core::JSON::IElement>& element) override;
-#endif
 
     private:
         void Process(uint32_t channelId, uint32_t responseId, const string& token, Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, bool parallel);
