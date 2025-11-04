@@ -2026,7 +2026,7 @@ Signals completion of the Connect method.
 
 ### Parameters
 
-> The *address* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<address>.<client-id>``.
+> The *address* parameter shall be passed as index to the ``register`` call, i.e. ``register@<address>``.
 
 ### Notification Parameters
 
@@ -2043,10 +2043,10 @@ Signals completion of the Connect method.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.register",
+  "method": "GeneratorShowcase.1.register@[11,22]",
   "params": {
     "event": "bindingChanged",
-    "id": "[11,22].myid"
+    "id": "myid"
   }
 }
 ```
@@ -2056,16 +2056,14 @@ Signals completion of the Connect method.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "[11,22].myid.bindingChanged",
+  "method": "myid.bindingChanged@[11,22]",
   "params": {
     "bound": false
   }
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, i.e. ``<address>.<client-id>.bindingChanged``.
-
-> The *address* parameter is passed within the notification designator, i.e. ``<address>.<client-id>.bindingChanged``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.bindingChanged@<address>``.
 
 <a id="notification_statusChanged"></a>
 ## *statusChanged [<sup>notification</sup>](#head_Notifications)*
@@ -2214,7 +2212,7 @@ Signals pin state changes.
 
 ### Parameters
 
-> The *pin* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<pin>.<client-id>``.
+> The *pin* parameter shall be passed as index to the ``register`` call, i.e. ``register@<pin>``.
 
 ### Notification Parameters
 
@@ -2231,10 +2229,10 @@ Signals pin state changes.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::register",
+  "method": "GeneratorShowcase.1.device#id1::register@0",
   "params": {
     "event": "pinChanged",
-    "id": "0.myid"
+    "id": "myid"
   }
 }
 ```
@@ -2244,18 +2242,16 @@ Signals pin state changes.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.myid.device#id1::pinChanged",
+  "method": "myid.device#id1::pinChanged@0",
   "params": {
     "high": false
   }
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, i.e. ``<pin>.<client-id>.device#<device-id>::pinChanged``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::pinChanged@<pin>``.
 
-> The *pin* parameter is passed within the notification designator, i.e. ``<pin>.<client-id>.device#<device-id>::pinChanged``.
-
-> The *device instance id* parameter is passed within the notification designator, i.e. ``<pin>.<client-id>.device#<device-id>::pinChanged``.
+> The *device instance id* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::pinChanged@<pin>``.
 
 <a id="notification_added"></a>
 ## *added [<sup>notification</sup>](#head_Notifications)*

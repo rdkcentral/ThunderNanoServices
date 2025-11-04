@@ -1858,26 +1858,23 @@ namespace Plugin {
                 Example::JSimpleInstanceObjects::Event::StateChanged(*this, object, device->State(), client);
             }
         }
-        void OnPinChangedEventRegistration(Example::ISimpleInstanceObjects::IDevice* object, const string& client, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
+        void OnPinChangedEventRegistration(Example::ISimpleInstanceObjects::IDevice* object, const string& client, const string& index, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
         {
             string name;
             static_cast<const Example::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
 
-            TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' pin state change notifications"), client.c_str(),
-                status == PluginHost::JSONRPCSupportsEventStatus::Status::registered? "registered" : "unregistered", name.c_str()));
+            TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' pin %s state change notifications"), client.c_str(),
+                status == PluginHost::JSONRPCSupportsEventStatus::Status::registered? "registered" : "unregistered", name.c_str(), index.c_str()));
 
             // A JSON-RPC client registered for "pinchanged" notifications, let them know the state if the pin is lit already.
             // Only the registering client will recieve this extra notification, via the default sendif method generated.
-            // The client designator also carries index of the pin.
             if (status == PluginHost::JSONRPCSupportsEventStatus::Status::registered) {
                 ImaginaryHost::DeviceImpl* device = static_cast<ImaginaryHost::DeviceImpl*>(object);
 
-                device->IteratePins([this, object, client](const uint8_t index, const bool high) {
-
-                    if (high == true) {
-                        Example::JSimpleInstanceObjects::Event::PinChanged(*this, object, index, true, client);
-                    }
-                });
+                const uint8_t pin = ::atoi(index.c_str());
+                if (device->PinStatus(pin) == true) {
+                    Example::JSimpleInstanceObjects::Event::PinChanged(*this, object, pin, true, client);
+                }
             }
         }
 
