@@ -98,8 +98,12 @@ POP_WARNING()
 
             if (_switches.size() == 0) {
                 _service->Unregister(&_sink);
+                _service->Release();
                 _service = nullptr;
                 _switches.clear();
+            }
+            else {
+                Exchange::JSwitchBoard::Register(*this, this);
             }
         }
 
@@ -114,6 +118,8 @@ POP_WARNING()
         if (_service != nullptr) {
             ASSERT(_service == service);
             ASSERT(_switches.size() > 1);
+
+            Exchange::JSwitchBoard::Unregister(*this);
 
             for (auto& index: _switches) {
                 index.second.Unregister(&_sink);
@@ -134,111 +140,100 @@ POP_WARNING()
         return (string());
     }
 
-    /* virtual */ void SwitchBoard::Inbound(Web::Request& request VARIABLE_IS_NOT_USED)
+    Core::hresult SwitchBoard::Register(Exchange::ISwitchBoard::INotification* const notification)
     {
-        // No body required...
+        Core::hresult result = Core::ERROR_ALREADY_CONNECTED;
+
+        ASSERT(notification != nullptr);
+
+        _adminLock.Lock();
+
+        auto it = std::find(_notificationClients.begin(), _notificationClients.end(), notification);
+        ASSERT(it == _notificationClients.end());
+
+        if (it == _notificationClients.end()) {
+            notification->AddRef();
+
+            _notificationClients.push_back(notification);
+
+            result = Core::ERROR_NONE;
+        }
+
+        _adminLock.Unlock();
+
+        return (result);
     }
 
-    /* virtual */ Core::ProxyType<Web::Response> SwitchBoard::Process(const Web::Request& request)
+    Core::hresult SwitchBoard::Unregister(const Exchange::ISwitchBoard::INotification* const notification)
     {
-        Core::ProxyType<Web::Response> result(PluginHost::IFactories::Instance().Response());
+        Core::hresult result = Core::ERROR_ALREADY_RELEASED;
 
-        TRACE(Trace::Information, (string(_T("Received request"))));
+        ASSERT(notification != nullptr);
 
-        Core::TextSegmentIterator index(Core::TextFragment(
-            request.Path,
-            _skipURL,
-            request.Path.length() - _skipURL),
-            false,
-            '/');
+        _adminLock.Lock();
 
-        // Always skip the first one, it is an empty part because we start with '/' if tehre are more parameters.
-        index.Next();
+        auto it = std::find(_notificationClients.cbegin(), _notificationClients.cend(), notification);
+        ASSERT(it != _notificationClients.end());
 
-        result->ErrorCode = Web::STATUS_BAD_REQUEST;
-        result->Message = string(_T("Dont understand what to do with this request"));
+        if (it != _notificationClients.end()) {
+            (*it)->Release();
 
-        // For now, whatever the URL, we will just, on a get, drop all info we have
-        if ( (request.Verb == Web::Request::HTTP_GET) && (index.Next() == false) ) {
+            _notificationClients.erase(it);
 
-            Core::ProxyType<Web::JSONBodyType<Config> > response(jsonBodySwitchFactory.Element());
+            result = Core::ERROR_NONE;
+        }
 
-            SwitchBoard::Iterator index(_switches);
-            Core::JSON::String element(true);
+        _adminLock.Unlock();
 
-            while (index.Next() == true) {
-                element = index.Callsign();
-                response->Callsigns.Add(element);
-            }
+        return (result);
+    }
 
-            if (_defaultCallsign != nullptr) {
-                response->Default = _defaultCallsign->Callsign();
-            }
+    Core::hresult SwitchBoard::Switches(Exchange::ISwitchBoard::IStringIterator*& switches) const
+    {
+        std::vector<string> list;
 
-            result->ErrorCode = Web::STATUS_OK;
-            result->Message = string(_T("OK"));
-            result->Body(Core::ProxyType<Web::IBody>(response));
+        for (const auto& entry : _switches) {
+            list.push_back(entry.first);
+        }
 
-        } else if ( (request.Verb == Web::Request::HTTP_PUT) && (index.Next() == true) ) {
-            const string callSign(index.Current().Text());
-            uint32_t error = Activate(callSign);
-            if (error != Core::ERROR_NONE) {
-                result->ErrorCode = Web::STATUS_NOT_MODIFIED;
-                result->Message = string(_T("Switch did not succeed. Error: ")) +
-                    Core::NumberType<uint32_t>(error).Text();
-            } else {
-                result->ErrorCode = Web::STATUS_OK;
-                result->Message = string(_T("OK"));
-            }
+        using Implementation = RPC::IteratorType<RPC::IStringIterator>;
+        switches = Core::ServiceType<Implementation>::Create<RPC::IStringIterator>(list);
+
+        return (Core::ERROR_NONE);
+    }
+
+    Core::hresult SwitchBoard::Default(string& callsign) const
+    {
+        Core::hresult result = Core::ERROR_NONE;
+
+        if (_defaultCallsign != nullptr) {
+            callsign = _defaultCallsign->Callsign();
+        }
+        else {
+            result = Core::ERROR_UNAVAILABLE;
         }
 
         return (result);
     }
 
-    void SwitchBoard::Register(Exchange::ISwitchBoard::INotification* notification)
+    /* virtual */ Core::hresult SwitchBoard::IsActive(const string& callsign, bool& active) const
     {
-        ASSERT(notification != nullptr);
-
-        _adminLock.Lock();
-
-        std::list<Exchange::ISwitchBoard::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), notification));
-
-        ASSERT(index == _notificationClients.end());
-
-        if (index == _notificationClients.end()) {
-            _notificationClients.push_back(notification);
-        }
-
-        _adminLock.Unlock();
-    }
-
-    void SwitchBoard::Unregister(Exchange::ISwitchBoard::INotification* notification)
-    {
-        ASSERT(notification != nullptr);
-
-        _adminLock.Lock();
-
-        std::list<Exchange::ISwitchBoard::INotification*>::iterator index(std::find(_notificationClients.begin(), _notificationClients.end(), notification));
-
-        ASSERT(index != _notificationClients.end());
-
-        if (index != _notificationClients.end()) {
-            _notificationClients.erase(index);
-        }
-
-        _adminLock.Unlock();
-    }
-
-    /* virtual */ bool SwitchBoard::IsActive(const string& callsign) const
-    {
+        Core::hresult result = Core::ERROR_NONE;
         std::map<string, Entry>::const_iterator index(_switches.find(callsign));
 
-        return (index != _switches.end() ? index->second.IsActive() : false);
+        if (index != _switches.end()) {
+            active = index->second.IsActive();
+        }
+        else {
+            result = Core::ERROR_UNKNOWN_KEY;
+        }
+
+        return (result);
     }
 
-    /* virtual */ uint32_t SwitchBoard::Activate(const string& callsign)
+    /* virtual */ Core::hresult SwitchBoard::Activate(const string& callsign)
     {
-        uint32_t result = (_state == INACTIVE ? Core::ERROR_ILLEGAL_STATE : Core::ERROR_INPROGRESS);
+        Core::hresult result = (_state == INACTIVE ? Core::ERROR_ILLEGAL_STATE : Core::ERROR_INPROGRESS);
 
         _adminLock.Lock();
 
@@ -283,9 +278,9 @@ POP_WARNING()
         return (result);
     }
 
-    /* virtual */ uint32_t SwitchBoard::Deactivate(const string& callsign)
+    /* virtual */ Core::hresult SwitchBoard::Deactivate(const string& callsign)
     {
-        uint32_t result = (_state == INACTIVE ? Core::ERROR_ILLEGAL_STATE : Core::ERROR_INPROGRESS);
+        Core::hresult result = (_state == INACTIVE ? Core::ERROR_ILLEGAL_STATE : Core::ERROR_INPROGRESS);
 
         _adminLock.Lock();
 
@@ -398,6 +393,8 @@ POP_WARNING()
                 (*index)->Activated(callsign);
                 index++;
             }
+
+            Exchange::JSwitchBoard::Event::Activated(*this, callsign);
         }
     }
 
