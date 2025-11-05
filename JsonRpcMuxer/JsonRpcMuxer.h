@@ -321,6 +321,7 @@ namespace Plugin {
         void SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage);
         void SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId);
         bool TryClaimBatchSlot();
+        void ReleaseBatchSlot();
         uint32_t ValidateBatch(const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, string& errorMessage);
         uint32_t WaitForBatchCompletion(const uint32_t maxWaitMs = Core::infinite);
         void RemoveBatchFromRegistry(uint32_t batchId);

@@ -103,6 +103,7 @@ namespace Plugin {
 
         if (batch.IsValid() == false) {
             TRACE(Trace::Error, (_T("Failed to create batch object, out of memory?")));
+            ReleaseBatchSlot();
         } else {
             _batchesLock.Lock();
             _activeBatches.emplace(batchId, batch);
@@ -122,7 +123,9 @@ namespace Plugin {
             return false;
         }
 
-        return true;
+    void JsonRpcMuxer::ReleaseBatchSlot()
+    {
+        _activeBatchCount.fetch_sub(1, std::memory_order_release);
     }
 
     uint32_t JsonRpcMuxer::SendResponse(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response)
@@ -154,7 +157,8 @@ namespace Plugin {
 
     void JsonRpcMuxer::RemoveBatchFromRegistry(uint32_t batchId)
     {
-        _batchesLock.Lock();
+        ReleaseBatchSlot();
+
         _activeBatches.erase(batchId);
         --_activeBatchCount;
         bool allDone = _activeBatches.empty();
