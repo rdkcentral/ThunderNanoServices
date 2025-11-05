@@ -116,7 +116,7 @@ namespace Plugin {
     bool JsonRpcMuxer::TryClaimBatchSlot()
     {
         uint8_t current = _activeBatchCount.load(std::memory_order_acquire);
-
+        
         while (current < _maxBatches) {
             // Try to atomically increment if still under limit
             if (_activeBatchCount.compare_exchange_weak(current, current + 1, 
@@ -128,8 +128,8 @@ namespace Plugin {
         }
 
         // All slots taken
-            return false;
-        }
+        return false;
+    }
 
     void JsonRpcMuxer::ReleaseBatchSlot()
     {
@@ -167,11 +167,12 @@ namespace Plugin {
     {
         ReleaseBatchSlot();
 
+        _batchesLock.Lock();
         _activeBatches.erase(batchId);
         --_activeBatchCount;
         bool allDone = _activeBatches.empty();
         _batchesLock.Unlock();
-
+        
         if (allDone) {
             _batchCompletionEvent.SetEvent();
         }
