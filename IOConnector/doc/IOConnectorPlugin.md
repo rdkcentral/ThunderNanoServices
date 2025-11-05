@@ -418,7 +418,7 @@ Notifies about GPIO pin activity.
 
 ### Parameters
 
-> The *id* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<id>.<client-id>``.
+> The *id* parameter shall be passed as index to the ``register`` call, i.e. ``register@<id>``.
 
 ### Notification Parameters
 
@@ -435,10 +435,10 @@ Notifies about GPIO pin activity.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "IOConnector.1.register",
+  "method": "IOConnector.1.register@189",
   "params": {
     "event": "activity",
-    "id": "189.myid"
+    "id": "myid"
   }
 }
 ```
@@ -448,14 +448,12 @@ Notifies about GPIO pin activity.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "189.myid.activity",
+  "method": "myid.activity@189",
   "params": {
     "value": 1
   }
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, i.e. ``<id>.<client-id>.activity``.
-
-> The *id* parameter is passed within the notification designator, i.e. ``<id>.<client-id>.activity``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.activity@<id>``.
 

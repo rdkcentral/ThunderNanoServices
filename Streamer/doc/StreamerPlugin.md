@@ -1266,7 +1266,7 @@ Notifies of stream state change.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
+> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``. This registration syntax is **deprecated** and will be changed in the next major release.
 
 ### Notification Parameters
 
@@ -1305,7 +1305,7 @@ Notifies of stream state change.
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.statechange``.
 
-> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.statechange``.
+> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.statechange``. This syntax is deprecated.
 
 <a id="notification_timeupdate"></a>
 ## *timeupdate [<sup>notification</sup>](#head_Notifications)*
@@ -1314,7 +1314,7 @@ Notifies of stream position change. This event is fired every second to indicate
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
+> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``. This registration syntax is **deprecated** and will be changed in the next major release.
 
 ### Notification Parameters
 
@@ -1353,7 +1353,7 @@ Notifies of stream position change. This event is fired every second to indicate
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.timeupdate``.
 
-> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.timeupdate``.
+> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.timeupdate``. This syntax is deprecated.
 
 <a id="notification_stream"></a>
 ## *stream [<sup>notification</sup>](#head_Notifications)*
@@ -1362,7 +1362,7 @@ Notifies of a custom stream incident.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
+> The *Stream ID* parameter shall be passed as index to the ``register`` call, i.e. ``register@<stream id>``.
 
 ### Notification Parameters
 
@@ -1379,10 +1379,10 @@ Notifies of a custom stream incident.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Streamer.1.register",
+  "method": "Streamer.1.register@0",
   "params": {
     "event": "stream",
-    "id": "0.myid"
+    "id": "myid"
   }
 }
 ```
@@ -1392,16 +1392,14 @@ Notifies of a custom stream incident.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.myid.stream",
+  "method": "myid.stream@0",
   "params": {
     "code": 1
   }
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.stream``.
-
-> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.stream``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.stream@<stream id>``.
 
 <a id="notification_player"></a>
 ## *player [<sup>notification</sup>](#head_Notifications)*
@@ -1410,7 +1408,7 @@ Notifies of a custom player incident.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
+> The *Stream ID* parameter shall be passed as index to the ``register`` call, i.e. ``register@<stream id>``.
 
 ### Notification Parameters
 
@@ -1427,10 +1425,10 @@ Notifies of a custom player incident.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Streamer.1.register",
+  "method": "Streamer.1.register@0",
   "params": {
     "event": "player",
-    "id": "0.myid"
+    "id": "myid"
   }
 }
 ```
@@ -1440,16 +1438,14 @@ Notifies of a custom player incident.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.myid.player",
+  "method": "myid.player@0",
   "params": {
     "code": 1
   }
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.player``.
-
-> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.player``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.player@<stream id>``.
 
 <a id="notification_drm"></a>
 ## *drm [<sup>notification</sup>](#head_Notifications)*
@@ -1458,7 +1454,7 @@ Notifies of a custom DRM-related incident.
 
 ### Parameters
 
-> The *Stream ID* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<stream id>.<client-id>``.
+> The *Stream ID* parameter shall be passed as index to the ``register`` call, i.e. ``register@<stream id>``.
 
 ### Notification Parameters
 
@@ -1475,10 +1471,10 @@ Notifies of a custom DRM-related incident.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "Streamer.1.register",
+  "method": "Streamer.1.register@0",
   "params": {
     "event": "drm",
-    "id": "0.myid"
+    "id": "myid"
   }
 }
 ```
@@ -1488,14 +1484,12 @@ Notifies of a custom DRM-related incident.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "0.myid.drm",
+  "method": "myid.drm@0",
   "params": {
     "code": 1
   }
 }
 ```
 
-> The *client ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.drm``.
-
-> The *Stream ID* parameter is passed within the notification designator, i.e. ``<stream id>.<client-id>.drm``.
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.drm@<stream id>``.
 

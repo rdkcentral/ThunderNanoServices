@@ -24,5 +24,8 @@
         }
       }
     }
+  },
+  "interface": {
+    "$ref": "{cppinterfacedir}/IDictionary.h"
   }
 }

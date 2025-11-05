@@ -1077,7 +1077,7 @@ Notifies of a key press/release action.
 
 ### Parameters
 
-> The *key code* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<key code>.<client-id>``.
+> The *key code* parameter shall be passed within the *id* parameter to the ``register`` call, i.e. ``<key code>.<client-id>``. This registration syntax is **deprecated** and will be changed in the next major release.
 
 ### Notification Parameters
 
@@ -1116,5 +1116,5 @@ Notifies of a key press/release action.
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<key code>.<client-id>.keypressed``.
 
-> The *key code* parameter is passed within the notification designator, i.e. ``<key code>.<client-id>.keypressed``.
+> The *key code* parameter is passed within the notification designator, i.e. ``<key code>.<client-id>.keypressed``. This syntax is deprecated.
 
