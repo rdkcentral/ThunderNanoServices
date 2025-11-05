@@ -117,9 +117,17 @@ namespace Plugin {
     {
         uint8_t current = _activeBatchCount.load(std::memory_order_acquire);
 
-        if (current >= _maxBatches) {
-            // Oops, we exceeded the limit, give it back
-            --_activeBatchCount;
+        while (current < _maxBatches) {
+            // Try to atomically increment if still under limit
+            if (_activeBatchCount.compare_exchange_weak(current, current + 1, 
+                std::memory_order_acq_rel, std::memory_order_acquire)) {
+                // Successfully claimed a slot
+                return true;
+            }
+            // CAS failed, current was updated with the new value, loop will retry
+        }
+
+        // All slots taken
             return false;
         }
 
