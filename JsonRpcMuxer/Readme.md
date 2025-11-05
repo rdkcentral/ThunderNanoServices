@@ -77,9 +77,9 @@ Use this mode when call order matters or when the target services share resource
   "id": 101,
   "method": "JsonRpcMuxer.1.sequential",
   "params": [
-    { "id": 1, "jsonrpc": "2.0", "method": "Controller.1.activate", "params": {"callsign": "Network"} },
-    { "id": 2, "jsonrpc": "2.0", "method": "Controller.1.status" },
-    { "id": 3, "jsonrpc": "2.0", "method": "Unknown.1.status" }
+    { "id": 1, "method": "Controller.1.activate", "params": {"callsign": "Network"} },
+    { "id": 2, "method": "Controller.1.status" },
+    { "id": 3, "method": "Unknown.1.status" }
   ]
 }
 ```
@@ -121,7 +121,6 @@ parallel batches will create **multiple concurrent jobs in the Thunder worker po
 > This may delay other Thunder framework operations (plugin activation, JSON-RPC calls, etc.) until batch jobs complete.
 >
 > **Recommendations:**
-> - Use `sequential` mode for batches > 3 requests
 > - Use `parallel` only for truly independent, non-blocking calls
 > - Monitor system performance if using large parallel batches frequently
 
@@ -135,9 +134,9 @@ Same as for `sequential`.
   "id": 100,
   "method": "JsonRpcMuxer.1.parallel",
   "params": [
-    { "id": 1, "jsonrpc": "2.0", "method": "Controller.1.version" },
-    { "id": 2, "jsonrpc": "2.0", "method": "Controller.1.status" },
-    { "id": 3, "jsonrpc": "2.0", "method": "Controller.1.buildinfo" }
+    { "id": 1, "method": "Controller.1.version" },
+    { "id": 2, "method": "Controller.1.status" },
+    { "id": 3, "method": "Controller.1.buildinfo" }
   ]
 }
 ```
@@ -198,50 +197,13 @@ Same as for `sequential`.
 - ✅ Operations that depend on each other (activate plugin → configure plugin)
 - ✅ Resource-constrained environments (RPi, STBs)
 - ✅ Default choice for most use cases
-- ✅ Batches with more than 3 requests
 
 ### When to Use Parallel
 - ✅ Truly independent read operations (status checks, version queries)
-- ✅ Small batches (≤3 requests)
 - ✅ Time-critical scenarios where latency reduction is essential
 - ❌ NOT for write operations or operations with side effects
 
-### Batch Size Guidelines
-- **Optimal**: 3-5 requests per batch
-- **Maximum**: Configurable via `maxbatchsize` (default 10)
-- **Concurrent batches**: Configurable via `maxbatches` (default 5)
-
-### Performance Considerations
-- Sequential batches: ~1-5ms overhead per request (minimal)
-- Parallel batches: Can saturate worker pool with >3 requests
-- HTTP overhead: ~10-20ms per batch request
-- Large batches (>5 requests): Use sequential to avoid worker pool saturation
-
 ---
-
-## Lifecycle and Control
-
-The plugin can be **activated** or **deactivated** through the Thunder `Controller` interface.
-
-### Activate
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "Controller.1.activate",
-  "params": { "callsign": "JsonRpcMuxer" }
-}
-```
-
-### Deactivate
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "Controller.1.deactivate",
-  "params": { "callsign": "JsonRpcMuxer" }
-}
-```
 
 ### Cancellation Behavior
 
@@ -277,20 +239,6 @@ If a batch exceeds the configured `timeout` (default 5000ms):
 ```
 
 **Note**: The timeout applies to the **entire batch**, not individual calls. Set `timeout: 0` in configuration for infinite timeout.
-
----
-
-## Behavior Summary
-
-| Behavior | Description |
-|-----------|--------------|
-| **Sequential Mode** | Executes each call one-by-one in order |
-| **Parallel Mode** | Launches all batch calls concurrently (can use more worker threads) |
-| **Cancellation** | Ongoing batches are aborted when plugin deactivates |
-| **Concurrency** | Up to `maxbatches` simultaneous batches allowed |
-| **Timeout Handling** | Batches exceeding `timeout` ms are cancelled; partial results discarded |
-| **Error Isolation** | Individual call errors don't affect other calls in the same batch |
-| **Transport** | HTTP JSON-RPC (`/jsonrpc` endpoint) |
 
 ---
 
