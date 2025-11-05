@@ -139,7 +139,9 @@ namespace Plugin {
 
             bool IsActive() const
             {
-                return !_cancelled.load() && !_parent->_shuttingDown.load() && !IsTimedOut();
+                return !_cancelled.load(std::memory_order_acquire) && 
+                       !_parent->_shuttingDown.load(std::memory_order_acquire) && 
+                       !IsTimedOut();
             }
 
             bool IsForChannel(uint32_t channelId) const
@@ -158,7 +160,10 @@ namespace Plugin {
                 }
             }
 
-            void Cancel() { _cancelled.store(true); }
+            void Cancel() 
+            { 
+                _cancelled.store(true, std::memory_order_release); 
+            }
 
         private:
             void Run(uint32_t index)

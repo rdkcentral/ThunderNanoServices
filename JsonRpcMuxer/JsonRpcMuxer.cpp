@@ -63,7 +63,7 @@ namespace Plugin {
         TRACE(Trace::Information, (_T("Deinitializing...")));
 
         // Signal shutdown and cancel all batches
-        _shuttingDown.store(true);
+        _shuttingDown.store(true, std::memory_order_release);
         CancelAllBatches();
 
         if (WaitForBatchCompletion() == Core::ERROR_TIMEDOUT) {
@@ -93,7 +93,7 @@ namespace Plugin {
     void JsonRpcMuxer::Process(uint32_t channelId, uint32_t responseId, const string& token,
         Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, bool parallel)
     {
-        uint32_t batchId = ++_batchCounter;
+        uint32_t batchId = _batchCounter.fetch_add(1, std::memory_order_relaxed);
 
         TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, mode=%s"), batchId, messages.Length(), parallel ? _T("parallel") : _T("sequential")));
 
@@ -114,7 +114,7 @@ namespace Plugin {
 
     bool JsonRpcMuxer::TryClaimBatchSlot()
     {
-        uint8_t current = _activeBatchCount.fetch_add(1);
+        uint8_t current = _activeBatchCount.load(std::memory_order_acquire);
 
         if (current >= _maxBatches) {
             // Oops, we exceeded the limit, give it back
@@ -219,7 +219,7 @@ namespace Plugin {
         // Concurrency limit check
         if (!TryClaimBatchSlot()) {
             errorMessage = _T("Too many concurrent batches, try again later");
-            TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatchCount.load(), _maxBatches));
+            TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatchCount.load(std::memory_order_acquire), _maxBatches));
             return Core::ERROR_UNAVAILABLE;
         }
 
