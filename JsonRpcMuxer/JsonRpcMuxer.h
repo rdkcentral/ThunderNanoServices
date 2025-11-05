@@ -117,7 +117,6 @@ namespace Plugin {
                 , _parallel(parallel)
                 , _pendingCount(messages.Length())
                 , _messages(messages)
-                , _responseLock()
                 , _responseArray()
                 , _channelId(channelId)
                 , _responseId(responseId)
@@ -125,6 +124,7 @@ namespace Plugin {
                 , _timeoutMs(timeoutMs)
                 , _startTime(Core::Time::Now().Ticks())
                 , _cancelled(false)
+                , _finishing(false)
             {
                 for (uint32_t i = 0; i < _pendingCount; ++i) {
                     _responseArray.Add();
@@ -165,14 +165,13 @@ namespace Plugin {
             {
                 ASSERT(index < _messages.Length());
 
-                if (IsActive() == false) {
-                    _responseLock.Lock();
-                    bool isComplete = (--_pendingCount == 0);
-                    _responseLock.Unlock();
+                bool shouldFinish = false;
+                uint32_t nextIndex = index + 1;
 
-                    if (isComplete) {
-                        FinishBatch();
-                    }
+                if (IsActive() == false) {
+                    // Batch is cancelled/timed out, just decrement and check if done
+                    uint32_t remaining = _pendingCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
+                    shouldFinish = (remaining == 0);
                 } else {
                     const Core::JSONRPC::Message& message = _messages[index];
 
@@ -183,8 +182,6 @@ namespace Plugin {
                         output);
 
                     bool isActive = IsActive();
-
-                    _responseLock.Lock();
 
                     if (isActive && ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE)))) {
                         Response& response = _responseArray[index];
@@ -207,17 +204,24 @@ namespace Plugin {
                         }
                     }
 
-                    bool isComplete = (--_pendingCount == 0);
-                    uint32_t nextIndex = index + 1;
+                    uint32_t remaining = _pendingCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
+                    shouldFinish = (remaining == 0);
 
-                    _responseLock.Unlock();
-
-                    // Handle completion or chain next job
-                    if (isComplete) {
-                        FinishBatch();
-                    } else if (!_parallel && isActive) {
-                        // Sequential: only chain next if this job completed successfully
+                    // For sequential mode, submit next job if we're not done and still active
+                    if (!_parallel && isActive && !shouldFinish && nextIndex < _messages.Length()) {
                         SubmitJob(nextIndex);
+                    }
+                }
+
+                // Only one thread will see remaining == 0, so only one calls FinishBatch
+                if (shouldFinish) {
+                    // Try to claim the finishing role
+                    bool expected = false;
+                    if (_finishing.compare_exchange_strong(expected, true, 
+                        std::memory_order_acq_rel, std::memory_order_acquire)) {
+                        // We won the race to finish
+                        // The acq_rel on fetch_sub ensures we see all response writes
+                        FinishBatch();
                     }
                 }
             }
@@ -260,7 +264,6 @@ namespace Plugin {
             bool _parallel;
             std::atomic<uint32_t> _pendingCount;
             Core::JSON::ArrayType<Core::JSONRPC::Message> _messages;
-            Core::CriticalSection _responseLock;
             Core::JSON::ArrayType<Response> _responseArray;
             uint32_t _channelId;
             uint32_t _responseId;
@@ -268,6 +271,7 @@ namespace Plugin {
             uint32_t _timeoutMs;
             uint64_t _startTime;
             std::atomic<bool> _cancelled;
+            std::atomic<bool> _finishing;
         };
 
     public:
