@@ -342,7 +342,7 @@ namespace Plugin {
         uint32_t _timeout;
         std::atomic<bool> _shuttingDown;
         Core::CriticalSection _batchesLock;
-        std::map<uint32_t, Core::ProxyType<Batch>> _activeBatches;
+        std::unordered_map<uint32_t, Core::ProxyType<Batch>> _activeBatches;
         mutable Core::Event _batchCompletionEvent;
     };
 }
