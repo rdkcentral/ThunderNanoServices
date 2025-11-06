@@ -177,7 +177,12 @@ class JsonRpcMuxerTester:
                 return
             
             data = response.json()
-            
+
+            if "error" in data:
+                print_fail(f"Error result: {data['error'].get('message', 'Unknown error')}")
+                self.failed += 1
+                return
+        
             # Check response structure
             if "result" not in data:
                 print_fail("No 'result' field in response")
@@ -234,6 +239,11 @@ class JsonRpcMuxerTester:
                 return
             
             data = response.json()
+
+            if "error" in data:
+                print_fail(f"Error result: {data['error'].get('message', 'Unknown error')}")
+                self.failed += 1
+                return
             
             if "result" not in data:
                 print_fail("No 'result' field in response")
@@ -392,7 +402,8 @@ class JsonRpcMuxerTester:
                 data = response.json()
                 
                 if "error" in data:
-                    if "Service is not active" in data["error"].get("message", ""):
+                    code = data["error"].get("code")
+                    if code == -31002:
                         timeouts.append(batch_id)
                     else:
                         errors.append(f"Batch {batch_id}: Unexpected error: {data['error']}")

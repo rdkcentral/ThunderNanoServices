@@ -77,7 +77,7 @@ class ControllerStressTester:
             })
         return batch
     
-    def test_high_concurrency(self, num_batches: int = 20):
+    def test_high_concurrency(self, num_batches: int = 20, method: str = "sequential"):
         """Test with many batches sent simultaneously"""
         print_test(f"High concurrency: {num_batches} batches sent at once")
         print_info(f"Expected maxbatches={self.config.max_batches}, so ~{self.config.max_batches} should succeed initially")
@@ -95,7 +95,7 @@ class ControllerStressTester:
                 payload = {
                     "jsonrpc": "2.0",
                     "id": 1000 + batch_id,
-                    "method": "JsonRpcMuxer.1.invoke",
+                    "method": "JsonRpcMuxer.1." + method,
                     "params": batch
                 }
                 
@@ -163,7 +163,7 @@ class ControllerStressTester:
             print_pass(f"System handled concurrency: {accepted} accepted, {rejected} rejected")
             self.passed += 1
     
-    def test_burst_waves(self, waves: int = 3, batches_per_wave: int = 10, wave_delay_ms: int = 50):
+    def test_burst_waves(self, waves: int = 3, batches_per_wave: int = 10, wave_delay_ms: int = 50, method: str = "sequential"):
         """Test with waves of batches to catch them overlapping"""
         print_test(f"Burst waves: {waves} waves of {batches_per_wave} batches, {wave_delay_ms}ms apart")
         
@@ -182,7 +182,7 @@ class ControllerStressTester:
                     payload = {
                         "jsonrpc": "2.0",
                         "id": 2000 + wave_num * 100 + batch_id,
-                        "method": "JsonRpcMuxer.1.invoke",
+                        "method": "JsonRpcMuxer.1." + method,
                         "params": batch
                     }
                     
@@ -235,7 +235,7 @@ class ControllerStressTester:
             print_info("No rejections across all waves (system handles load well)")
             self.passed += 1
     
-    def test_soak(self, duration_minutes: int = 5, batches_per_second: float = 2.0):
+    def test_soak(self, duration_minutes: int = 5, batches_per_second: float = 2.0, method: str = "sequential"):
         """Run continuous load for extended period"""
         print_test(f"Soak test: {duration_minutes} minutes at {batches_per_second} batches/sec")
         
@@ -260,7 +260,7 @@ class ControllerStressTester:
                 payload = {
                     "jsonrpc": "2.0",
                     "id": 3000 + batch_id,
-                    "method": "JsonRpcMuxer.1.invoke",
+                    "method": "JsonRpcMuxer.1." + method,
                     "params": batch
                 }
                 
