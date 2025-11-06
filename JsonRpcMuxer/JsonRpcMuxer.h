@@ -261,12 +261,28 @@ namespace Plugin {
                 _adminLock.Unlock();
 
                 if (_parent->IsChannelValid(_channelId)) {
-                    string response;
-                    _responseArray.ToString(response);
                     Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
+
                     if (message.IsValid()) {
                         message->Id = _responseId;
-                        message->Result = response;
+
+                        if (IsActive() == true) {
+                            string response;
+                            _responseArray.ToString(response);
+                            message->Result = response;
+                        } else {
+                            if (_cancelled == true) {
+                                message->Error.Code = Core::ERROR_ABORTED;
+                                message->Error.Text = _T("Batch was canceled");
+                            } else if (IsTimedOut() == true) {
+                                message->Error.Code = Core::ERROR_TIMEDOUT;
+                                message->Error.Text = _T("Batch could not be processed within ") + Core::NumberType<uint32_t>(_timeoutMs).Text() + _T("ms");
+                            } else if (_parent->IsShuttingDown() == true) {
+                                message->Error.Code = Core::ERROR_PENDING_SHUTDOWN;
+                                message->Error.Text = _T("Plugin shutting down");
+                            }
+                        }
+
                         _parent->SendResponse(_channelId, Core::ProxyType<Core::JSON::IElement>(message));
                     }
                 }

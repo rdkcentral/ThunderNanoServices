@@ -230,7 +230,7 @@ namespace Plugin {
         if (messages.Length() > _maxBatchSize) {
             errorMessage = _T("Batch size exceeds maximum allowed (") + Core::NumberType<uint16_t>(_maxBatchSize).Text() + _T(")");
             TRACE(Trace::Warning, (_T("Batch size %u exceeds maximum %u"), messages.Length(), _maxBatchSize));
-            return Core::ERROR_BAD_REQUEST;
+            return Core::ERROR_INVALID_RANGE;
         }
 
         // Concurrency limit check
@@ -242,7 +242,7 @@ namespace Plugin {
             _adminLock.Unlock();
             
             TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), currentCount, _maxBatches));
-            return Core::ERROR_UNAVAILABLE;
+            return Core::ERROR_ACCEPT_FAILED;
         }
 
         return Core::ERROR_NONE;
@@ -260,7 +260,7 @@ namespace Plugin {
             response = _T("Dispatch is offline");
             TRACE(Trace::Error, (_T("Invoke failed: Dispatch unavailable")));
         } else if (method != _T("parallel") && method != _T("sequential")) {
-            result = Core::ERROR_BAD_REQUEST;
+            result = Core::ERROR_UNKNOWN_METHOD;
             response = _T("Invalid method, must be 'parallel' or 'sequential'");
             TRACE(Trace::Warning, (_T("Invalid method: %s"), method.c_str()));
         } else {

@@ -96,14 +96,6 @@ Use this mode when call order matters or when the target services share resource
   ]
 }
 ```
-
-#### Error Conditions
-| Condition | Error Response |
-|------------|----------------|
-| Empty batch | `{"error": {"code": -32600, "message": "Empty message array"}}` |
-| Batch size exceeds limit | `{"error": {"code": -32600, "message": "Batch size exceeds maximum allowed"}}` |
-| Plugin inactive | `{"error": {"code": -32000, "message": "Service is not active"}}` |
-
 ---
 
 ### 2. `parallel`
@@ -181,14 +173,6 @@ Same as for `sequential`.
 }
 ```
 
-#### Error Conditions
-| Condition | Error Response |
-|------------|----------------|
-| Batch size exceeds limit | `{"error": {"code": -32600, "message": "Batch size exceeds maximum allowed"}}` |
-| Empty batch | `{"error": {"code": -32600, "message": "Empty message array"}}` |
-| Plugin inactive | `{"error": {"code": -32000, "message": "Service is not active"}}` |
-| Too many concurrent batches | `{"error": {"code": -32000, "message": "Too many concurrent batches, try again later"}}` |
-
 ---
 
 ## Usage Recommendations
@@ -232,7 +216,7 @@ If a batch exceeds the configured `timeout` (default 5000ms):
   "jsonrpc": "2.0",
   "id": 100,
   "error": {
-    "code": -32003,
+    "code": -32011,
     "message": "Batch processing timed out"
   }
 }
@@ -299,7 +283,7 @@ If a batch exceeds the configured `timeout` (default 5000ms):
   "jsonrpc": "2.0",
   "id": 100,
   "error": {
-    "code": -31030,
+    "code": -31045,
     "message": "Batch size exceeds maximum allowed (10)"
   }
 }
@@ -323,35 +307,25 @@ If a batch exceeds the configured `timeout` (default 5000ms):
   "jsonrpc": "2.0",
   "id": 100,
   "error": {
-    "code": -32000,
+    "code": -32007,
     "message": "Too many concurrent batches, try again later"
   }
 }
 ```
-
-### Batch timeout
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 100,
-  "error": {
-    "code": -32003,
-    "message": "Batch processing timed out"
-  }
-}
-```
-
 ---
 
 ## Error Codes Reference
 
 | Code | Thunder Constant | Meaning |
 |------|------------------|---------|
-| -32600 | ERROR_BAD_REQUEST | Invalid request format or parameters |
-| -32000 | ERROR_UNAVAILABLE | Plugin inactive or service unavailable |
-| -32003 | ERROR_TIMEDOUT | Batch processing exceeded timeout limit |
-| -31030 | ERROR_BAD_REQUEST | Batch validation failed (size/empty) |
-| -31022 | ERROR_UNKNOWN_KEY | Unknown method or plugin |
-| -31002 | ERROR_UNAVAILABLE | Requested service not available |
+| -32050 | ERROR_PARSE_FAILURE | Misformed or corrupted batch data |
+| -31030 | ERROR_BAD_REQUEST | Batch is empty |
+| -31045 | ERROR_INVALID_RANGE | Batch contains too much items |
+| -31053 | ERROR_UNKNOWN_METHOD | Invalid method called, must be 'parallel' or 'sequential'" |
+| -32007 | ERROR_ACCEPT_FAILED | Too many concurrent batches are processing at the time of calling |
+| -32011 | ERROR_TIMEDOUT | It took too much time for the batch to process |
+| -32058 | ERROR_ABORTED | Batch was canceled/aborted |
+| -32008 | ERROR_PENDING_SHUTDOWN | Plugin is shutting down while batch was processing |
+
 
 **Note**: Individual batched requests may return their own error codes if they fail. The batch itself succeeds as long as it's properly formatted and accepted by JsonRpcMuxer.
