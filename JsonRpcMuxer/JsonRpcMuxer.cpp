@@ -63,7 +63,10 @@ namespace Plugin {
         TRACE(Trace::Information, (_T("Deinitializing...")));
 
         // Signal shutdown and cancel all batches
-        _shuttingDown.store(true, std::memory_order_release);
+        _adminLock.Lock();
+        _shuttingDown = true;
+        _adminLock.Unlock();
+        
         CancelAllBatches();
 
         if (WaitForBatchCompletion() == Core::ERROR_TIMEDOUT) {
@@ -93,7 +96,9 @@ namespace Plugin {
     void JsonRpcMuxer::Process(uint32_t channelId, uint32_t responseId, const string& token,
         Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, bool parallel)
     {
-        uint32_t batchId = _batchCounter.fetch_add(1, std::memory_order_relaxed);
+        _adminLock.Lock();
+        uint32_t batchId = _batchCounter++;
+        _adminLock.Unlock();
 
         TRACE(Trace::Information, (_T("Processing batch, batchId=%u, count=%u, mode=%s"), batchId, messages.Length(), parallel ? _T("parallel") : _T("sequential")));
 
@@ -105,9 +110,9 @@ namespace Plugin {
             TRACE(Trace::Error, (_T("Failed to create batch object, out of memory?")));
             ReleaseBatchSlot();
         } else {
-            _batchesLock.Lock();
+            _adminLock.Lock();
             _activeBatches.emplace(batchId, batch);
-            _batchesLock.Unlock();
+            _adminLock.Unlock();
 
             batch->Start();
         }
@@ -115,25 +120,25 @@ namespace Plugin {
 
     bool JsonRpcMuxer::TryClaimBatchSlot()
     {
-        uint8_t current = _activeBatchCount.load(std::memory_order_acquire);
+        _adminLock.Lock();
         
-        while (current < _maxBatches) {
-            // Try to atomically increment if still under limit
-            if (_activeBatchCount.compare_exchange_weak(current, current + 1, 
-                std::memory_order_acq_rel, std::memory_order_acquire)) {
-                // Successfully claimed a slot
-                return true;
-            }
-            // CAS failed, current was updated with the new value, loop will retry
+        bool success = false;
+        if (_activeBatchCount < _maxBatches) {
+            ++_activeBatchCount;
+            success = true;
         }
-
-        // All slots taken
-        return false;
+        
+        _adminLock.Unlock();
+        
+        return success;
     }
 
     void JsonRpcMuxer::ReleaseBatchSlot()
     {
-        _activeBatchCount.fetch_sub(1, std::memory_order_release);
+        _adminLock.Lock();
+        ASSERT(_activeBatchCount > 0);
+        --_activeBatchCount;
+        _adminLock.Unlock();
     }
 
     uint32_t JsonRpcMuxer::SendResponse(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response)
@@ -149,9 +154,9 @@ namespace Plugin {
 
     uint32_t JsonRpcMuxer::WaitForBatchCompletion(const uint32_t maxWaitMs)
     {
-        _batchesLock.Lock();
+        _adminLock.Lock();
         bool allDone = _activeBatches.empty();
-        _batchesLock.Unlock();
+        _adminLock.Unlock();
 
         uint32_t waitResult = Core::ERROR_NONE;
 
@@ -165,14 +170,13 @@ namespace Plugin {
 
     void JsonRpcMuxer::RemoveBatchFromRegistry(uint32_t batchId)
     {
-        ReleaseBatchSlot();
-
-        _batchesLock.Lock();
+        _adminLock.Lock();
         _activeBatches.erase(batchId);
+        ASSERT(_activeBatchCount > 0);
         --_activeBatchCount;
         bool allDone = _activeBatches.empty();
-        _batchesLock.Unlock();
-        
+        _adminLock.Unlock();
+
         if (allDone) {
             _batchCompletionEvent.SetEvent();
         }
@@ -180,7 +184,7 @@ namespace Plugin {
 
     void JsonRpcMuxer::CancelBatchesForChannel(uint32_t channelId)
     {
-        _batchesLock.Lock();
+        _adminLock.Lock();
 
         for (auto& pair : _activeBatches) {
             if (pair.second->IsForChannel(channelId)) {
@@ -189,19 +193,19 @@ namespace Plugin {
             }
         }
 
-        _batchesLock.Unlock();
+        _adminLock.Unlock();
     }
 
     void JsonRpcMuxer::CancelAllBatches()
     {
-        _batchesLock.Lock();
+        _adminLock.Lock();
 
         for (auto& pair : _activeBatches) {
             pair.second->Cancel();
             TRACE(Trace::Information, (_T("Cancelled batch batchId=%u"), pair.first));
         }
 
-        _batchesLock.Unlock();
+        _adminLock.Unlock();
     }
 
     bool JsonRpcMuxer::IsChannelValid(uint32_t channelId) const
@@ -232,7 +236,12 @@ namespace Plugin {
         // Concurrency limit check
         if (!TryClaimBatchSlot()) {
             errorMessage = _T("Too many concurrent batches, try again later");
-            TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), _activeBatchCount.load(std::memory_order_acquire), _maxBatches));
+            
+            _adminLock.Lock();
+            uint8_t currentCount = _activeBatchCount;
+            _adminLock.Unlock();
+            
+            TRACE(Trace::Warning, (_T("Rejected batch, activeBatches=%u, maxBatches=%u"), currentCount, _maxBatches));
             return Core::ERROR_UNAVAILABLE;
         }
 

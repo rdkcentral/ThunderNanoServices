@@ -1,14 +1,12 @@
 #pragma once
 
 #include "Module.h"
-#include <atomic>
-#include <map>
+#include <unordered_map>
 
 namespace Thunder {
 namespace Plugin {
-    class JsonRpcMuxer :
-        public PluginHost::IPlugin,
-        public PluginHost::JSONRPC {
+    class JsonRpcMuxer : public PluginHost::IPlugin,
+                         public PluginHost::JSONRPC {
     private:
         class Config : public Core::JSON::Container {
         public:
@@ -112,10 +110,13 @@ namespace Plugin {
                 uint32_t responseId,
                 const string& token,
                 uint32_t timeoutMs)
-                : _parent(parent)
+                : _adminLock()
+                , _parent(parent)
                 , _batchId(batchId)
                 , _parallel(parallel)
                 , _pendingCount(messages.Length())
+                , _finishing(false)
+                , _cancelled(false)
                 , _messages(messages)
                 , _responseArray()
                 , _channelId(channelId)
@@ -123,8 +124,6 @@ namespace Plugin {
                 , _token(token)
                 , _timeoutMs(timeoutMs)
                 , _startTime(Core::Time::Now().Ticks())
-                , _cancelled(false)
-                , _finishing(false)
             {
                 for (uint32_t i = 0; i < _pendingCount; ++i) {
                     _responseArray.Add();
@@ -139,9 +138,11 @@ namespace Plugin {
 
             bool IsActive() const
             {
-                return !_cancelled.load(std::memory_order_acquire) && 
-                       !_parent->_shuttingDown.load(std::memory_order_acquire) && 
-                       !IsTimedOut();
+                _adminLock.Lock();
+                bool isCancelled = _cancelled;
+                _adminLock.Unlock();
+
+                return (isCancelled == false) && (_parent->IsShuttingDown() == false) && (IsTimedOut() == false);
             }
 
             bool IsForChannel(uint32_t channelId) const
@@ -160,9 +161,11 @@ namespace Plugin {
                 }
             }
 
-            void Cancel() 
-            { 
-                _cancelled.store(true, std::memory_order_release); 
+            void Cancel()
+            {
+                _adminLock.Lock();
+                _cancelled = true;
+                _adminLock.Unlock();
             }
 
         private:
@@ -170,71 +173,70 @@ namespace Plugin {
             {
                 ASSERT(index < _messages.Length());
 
-                bool shouldFinish = false;
-                uint32_t nextIndex = index + 1;
-
                 if (IsActive() == false) {
-                    // Batch is cancelled/timed out, just decrement and check if done
-                    uint32_t remaining = _pendingCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
-                    shouldFinish = (remaining == 0);
-                } else {
-                    const Core::JSONRPC::Message& message = _messages[index];
+                    // Just decrement and check completion
+                    _adminLock.Lock();
+                    bool isComplete = (--_pendingCount == 0);
+                    _adminLock.Unlock();
 
-                    string output;
-                    Core::hresult result = _parent->_dispatch->Invoke(
-                        _channelId, message.Id.Value(), _token,
-                        message.Designator.Value(), message.Parameters.Value(),
-                        output);
+                    if (isComplete) {
+                        FinishBatch();
+                    }
+                    return;
+                }
 
-                    bool isActive = IsActive();
+                const Core::JSONRPC::Message& message = _messages[index];
 
-                    if (isActive && ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE)))) {
-                        Response& response = _responseArray[index];
+                string output;
+                Core::hresult result = _parent->_dispatch->Invoke(
+                    _channelId, message.Id.Value(), _token,
+                    message.Designator.Value(), message.Parameters.Value(),
+                    output);
 
-                        if (message.Id.IsSet()) {
-                            response.Id = message.Id.Value();
-                        }
+                bool isActive = IsActive();
 
-                        if (result == Core::ERROR_NONE) {
-                            if (output.empty()) {
-                                response.Result.Null(true);
-                            } else {
-                                response.Result = output;
-                            }
-                        } else {
-                            response.Error.SetError(result);
-                            if (!output.empty()) {
-                                response.Error.Text = output;
-                            }
-                        }
+                _adminLock.Lock();
+
+                if (isActive && ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE)))) {
+                    Response& response = _responseArray[index];
+
+                    if (message.Id.IsSet()) {
+                        response.Id = message.Id.Value();
                     }
 
-                    uint32_t remaining = _pendingCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
-                    shouldFinish = (remaining == 0);
-
-                    // For sequential mode, submit next job if we're not done and still active
-                    if (!_parallel && isActive && !shouldFinish && nextIndex < _messages.Length()) {
-                        SubmitJob(nextIndex);
+                    if (result == Core::ERROR_NONE) {
+                        if (output.empty()) {
+                            response.Result.Null(true);
+                        } else {
+                            response.Result = output;
+                        }
+                    } else {
+                        response.Error.SetError(result);
+                        if (!output.empty()) {
+                            response.Error.Text = output;
+                        }
                     }
                 }
 
-                // Only one thread will see remaining == 0, so only one calls FinishBatch
-                if (shouldFinish) {
-                    // Try to claim the finishing role
-                    bool expected = false;
-                    if (_finishing.compare_exchange_strong(expected, true, 
-                        std::memory_order_acq_rel, std::memory_order_acquire)) {
-                        // We won the race to finish
-                        // The acq_rel on fetch_sub ensures we see all response writes
-                        FinishBatch();
-                    }
+                // Update completion state
+                bool isComplete = (--_pendingCount == 0);
+
+                uint32_t nextIndex = index + 1;
+
+                _adminLock.Unlock();
+
+                if (isComplete) {
+                    FinishBatch();
+                } else if (!_parallel && isActive) {
+                    SubmitJob(nextIndex);
                 }
             }
 
             bool IsTimedOut() const
             {
-                if (_timeoutMs == Core::infinite)
+                if (_timeoutMs == Core::infinite) {
                     return false;
+                }
                 uint64_t elapsedMs = (Core::Time::Now().Ticks() - _startTime) / Core::Time::TicksPerMillisecond;
                 return elapsedMs > _timeoutMs;
             }
@@ -250,6 +252,14 @@ namespace Plugin {
 
             void FinishBatch()
             {
+                _adminLock.Lock();
+                if (_finishing) {
+                    _adminLock.Unlock();
+                    return;
+                }
+                _finishing = true;
+                _adminLock.Unlock();
+
                 if (_parent->IsChannelValid(_channelId)) {
                     string response;
                     _responseArray.ToString(response);
@@ -264,10 +274,13 @@ namespace Plugin {
             }
 
         private:
+            mutable Core::CriticalSection _adminLock;
             Core::ProxyType<JsonRpcMuxer> _parent;
             uint32_t _batchId;
             bool _parallel;
-            std::atomic<uint32_t> _pendingCount;
+            uint32_t _pendingCount;
+            bool _finishing;
+            bool _cancelled;
             Core::JSON::ArrayType<Core::JSONRPC::Message> _messages;
             Core::JSON::ArrayType<Response> _responseArray;
             uint32_t _channelId;
@@ -275,8 +288,6 @@ namespace Plugin {
             string _token;
             uint32_t _timeoutMs;
             uint64_t _startTime;
-            std::atomic<bool> _cancelled;
-            std::atomic<bool> _finishing;
         };
 
     public:
@@ -285,17 +296,17 @@ namespace Plugin {
         JsonRpcMuxer& operator=(const JsonRpcMuxer&) = delete;
 
         JsonRpcMuxer()
-            : _service(nullptr)
+            : _adminLock()
+            , _service(nullptr)
             , _dispatch(nullptr)
             , _activeWebSocket(0)
             , _batchCounter(0)
             , _maxBatchSize(10)
-            , _activeBatchCount(0)
             , _maxBatches(5)
             , _timeout(Core::infinite)
             , _shuttingDown(false)
-            , _batchesLock()
             , _activeBatches()
+            , _activeBatchCount(0)
             , _batchCompletionEvent(false, true)
         {
         }
@@ -316,6 +327,14 @@ namespace Plugin {
             const uint32_t channelId, const uint32_t id, const string& token,
             const string& designator, const string& parameters, string& response) override;
 
+        bool IsShuttingDown() const
+        {
+            _adminLock.Lock();
+            bool result = _shuttingDown;
+            _adminLock.Unlock();
+            return result;
+        }
+
     private:
         void Process(uint32_t channelId, uint32_t responseId, const string& token, Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, bool parallel);
         void SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage);
@@ -333,17 +352,18 @@ namespace Plugin {
     private:
         friend class Batch;
 
+        mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         PluginHost::IDispatcher* _dispatch;
         uint32_t _activeWebSocket;
-        std::atomic<uint32_t> _batchCounter;
         uint8_t _maxBatchSize;
-        std::atomic<uint8_t> _activeBatchCount;
         uint8_t _maxBatches;
         uint32_t _timeout;
-        std::atomic<bool> _shuttingDown;
-        Core::CriticalSection _batchesLock;
+        uint32_t _batchCounter;
+        bool _shuttingDown;
         std::unordered_map<uint32_t, Core::ProxyType<Batch>> _activeBatches;
+        uint8_t _activeBatchCount;
+
         mutable Core::Event _batchCompletionEvent;
     };
 }
