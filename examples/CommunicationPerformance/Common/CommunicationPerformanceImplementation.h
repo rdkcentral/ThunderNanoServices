@@ -45,10 +45,11 @@ namespace Plugin {
 
 namespace CommunicationPerformanceHelpers {
 
-constexpr uint16_t TemplateRecursionDepth = 899;
+constexpr uint16_t TemplateRecursionDepth = 8999;
+//constexpr uint16_t TemplateRecursionDepth = 899;
 
 constexpr uint64_t LowerBoundDuration = 0;
-constexpr uint64_t UpperBoundDuration = 200;
+constexpr uint64_t UpperBoundDuration = 400;
 
 constexpr size_t NumberOfBins = 20;
 
