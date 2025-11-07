@@ -31,7 +31,7 @@ CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CyclicBufferServer(const st
     , _buffer{ _fileName, ACCESSMODE | Core::File::CREATE | Core::File::USER_WRITE | Core::File::SHAREABLE /* required for multiple processes to share data */, FILESIZE /* server controls size */ , OVERWRITE }
     , _lock{}
     // Listening node
-    , _batonListeningNode{ Core::NodeId{ std::string{ _fileName + "Baton", Core::NodeId::TYPE_DOMAIN }.c_str() } }
+    , _batonListeningNode{ Core::NodeId{ std::string{ _fileName + "Baton" }.c_str(), Core::NodeId::TYPE_DOMAIN } }
 {}
 
 template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
@@ -170,6 +170,7 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Open(uint32_t wait
     } else {
         result = Core::ERROR_NONE;
     }
+
 
     if (   result == Core::ERROR_NONE
         && _buffer.IsValid() != false

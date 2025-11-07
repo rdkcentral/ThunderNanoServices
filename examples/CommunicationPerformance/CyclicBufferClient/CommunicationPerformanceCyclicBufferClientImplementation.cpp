@@ -30,7 +30,7 @@ CyclicBufferClient<ACCESSMODE>::CyclicBufferClient(const std::string& fileName)
     : _fileName{ fileName }
     , _buffer{ _fileName, ACCESSMODE | Core::File::USER_WRITE | Core::File::SHAREABLE /* required for multiple processes to share data */, 0 /* ineffective,  server controls size */ , false /* ineffective, server controls flag */ }
     , _lock{}
-    , _batonConnectingNode{ Core::NodeId{ std::string{ _fileName + "Baton", Core::NodeId::TYPE_DOMAIN }.c_str() } }
+    , _batonConnectingNode{ Core::NodeId{ std::string{ _fileName + "Baton" }.c_str(), Core::NodeId::TYPE_DOMAIN } }
 {}
 
 template <Core::File::Mode ACCESSMODE>
