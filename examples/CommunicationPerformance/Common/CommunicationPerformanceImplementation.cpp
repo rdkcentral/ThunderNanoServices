@@ -586,7 +586,7 @@ uint16_t SimplePluginImplementation<DERIVED>::Baton::SendData(uint8_t* dataFrame
 }
 
 template <typename DERIVED>
-uint16_t SimplePluginImplementation<DERIVED>::Baton::ReceiveData(uint8_t* dataFrame, const uint16_t maxReceiveSize)
+uint16_t SimplePluginImplementation<DERIVED>::Baton::ReceiveData(uint8_t* dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxReceiveSize)
 {
     using common_t = std::common_type<std::size_t, uint16_t>::type;
 
