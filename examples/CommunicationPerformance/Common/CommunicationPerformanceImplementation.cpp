@@ -599,8 +599,6 @@ uint16_t SimplePluginImplementation<DERIVED>::Baton::ReceiveData(uint8_t* dataFr
 
     pid_t pid { 0 };
 
-    std::cout << __PRETTY_FUNCTION__ << " : maxReceiveSize = " << maxReceiveSize << std::endl;
-
     /* void* */ memcpy(&pid, dataFrame, length);
 
     // Marker
