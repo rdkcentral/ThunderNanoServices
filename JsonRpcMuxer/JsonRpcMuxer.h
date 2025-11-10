@@ -5,13 +5,15 @@
 
 namespace Thunder {
 namespace Plugin {
-    class JsonRpcMuxer : public PluginHost::IPlugin,
-                         public PluginHost::JSONRPC {
+    class JsonRpcMuxer 
+        : public PluginHost::IPlugin
+        , public PluginHost::JSONRPC {
     private:
         class Config : public Core::JSON::Container {
         public:
             Config(Config&&) = delete;
             Config(const Config&) = delete;
+            Config& operator=(Config&&) = delete;
             Config& operator=(const Config&) = delete;
 
             Config()
@@ -32,283 +34,261 @@ namespace Plugin {
             Core::JSON::DecUInt8 MaxBatches;
         };
 
-        class Response : public Core::JSON::Container {
-        public:
-            ~Response() override = default;
-
-            Response()
-                : Core::JSON::Container()
-                , Id(~0)
-                , Result(false)
-                , Error()
-            {
-                Add(_T("id"), &Id);
-                Add(_T("result"), &Result);
-                Add(_T("error"), &Error);
-                Clear();
-            }
-
-            Response(const Response& copy)
-                : Core::JSON::Container()
-                , Id(copy.Id)
-                , Result(copy.Result)
-                , Error(copy.Error)
-            {
-                Add(_T("id"), &Id);
-                Add(_T("result"), &Result);
-                Add(_T("error"), &Error);
-            }
-
-            Response(Response&& move) noexcept
-                : Core::JSON::Container()
-                , Id(std::move(move.Id))
-                , Result(std::move(move.Result))
-                , Error(std::move(move.Error))
-            {
-                Add(_T("id"), &Id);
-                Add(_T("result"), &Result);
-                Add(_T("error"), &Error);
-            }
-
-            Core::JSON::DecUInt32 Id;
-            Core::JSON::String Result;
-            Core::JSONRPC::Message::Info Error;
-        };
-
         class Batch {
         private:
-            class Job : public Core::IDispatch {
+            enum state : uint8_t {
+                IN_PROGRESS = 0x01,
+                COMPLETED   = 0x02,
+                ABORTED     = 0x03
+            };
+
+            class Job {
             public:
-                Job(Batch* batch, uint32_t index)
-                    : _batch(batch)
-                    , _index(index)
-                {
-                }
-
-                Job(const Job&) = delete;
+                Job() = delete;
                 Job(Job&&) = delete;
-                Job& operator=(const Job&) = delete;
-                Job& operator=(Job&&) = delete;
+                Job(const Job&) = delete;
+                Job& operator= (Job&&) = delete;
+                Job& operator= (const Job&) = delete;
 
-                void Dispatch() override
-                {
-                    _batch->Run(_index);
+                Job(Batch& parent, const uint8_t index) 
+                   : _parent(parent)
+                   , _index(index) {
+                }
+                ~Job() = default;
+
+            public:
+                void Dispatch() {
+                    _parent.Dispatch(_index);
                 }
 
             private:
-                Batch* _batch;
-                const uint32_t _index;
+                Batch&  _parent;
+                uint8_t _index;
+            };
+
+            class Request {
+            public:
+                Request() = delete;
+                Request(Request&&) = delete;
+                Request(const Request&) = delete;
+                Request& operator= (Request&&) = delete;
+                Request& operator= (const Request&) = delete;
+
+                Request (const Core::JSONRPC::Message& message) 
+                    : _id(message)
+                    , _designator(message)
+                    , _data(message)
+                    , _error(0)
+                    , _completed(false) {
+                }
+                ~Request() = default;
+
+            public:
+                inline bool IsCompleted() const {
+                    return(_completed);
+                }
+                inline uint32_t Id() const {
+                    return (_id);
+                }
+                inline const string& Designator() const {
+                    return(_designator);
+                }
+                inline const string& Parameters() const {
+                    return (_data);
+                }
+                inline void Set(const Core::hresult errorCode, const string& output) {
+                    _completed = true;
+                    if (errorCode == Core::ERROR_NONE) {
+                        _data = output;
+                    }
+                    else {
+                        _error = error
+                        _data = output;
+                    }
+                }
+
+            private:
+                const uint32_t _id;
+                const string _designator;
+                string _data; // parameters, on input, error response or result on output
+                sint32 _error;
+                bool _completed;
             };
 
         public:
-            Batch(
-                Core::ProxyType<JsonRpcMuxer> parent,
-                uint32_t batchId,
-                bool parallel,
-                const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages,
-                uint32_t channelId,
-                uint32_t responseId,
-                const string& token,
-                uint32_t timeoutMs)
-                : _adminLock()
-                , _parent(parent)
-                , _batchId(batchId)
-                , _parallel(parallel)
-                , _pendingCount(messages.Length())
-                , _finishing(false)
-                , _cancelled(false)
-                , _messages(messages)
-                , _responseArray()
-                , _channelId(channelId)
-                , _responseId(responseId)
-                , _token(token)
-                , _timeoutMs(timeoutMs)
-                , _startTime(Core::Time::Now().Ticks())
-            {
-                for (uint32_t i = 0; i < _pendingCount; ++i) {
-                    _responseArray.Add();
-                }
-            }
-
-            Batch(const Batch&) = delete;
             Batch(Batch&&) = delete;
+            Batch(const Batch&) = delete;
             Batch& operator=(const Batch&) = delete;
             Batch& operator=(Batch&&) = delete;
-            ~Batch() = default;
 
-            bool IsActive() const
+            Batch(
+                JsonRpcMuxer&  parent,
+                const uint8_t  parallel,
+                const uint32_t channelId,
+                const uint32_t responseId,
+                const string&  token,
+                const uint32_t timeoutMs,
+                const Core::JSON::ArrayType<Core::JSONRPC::Message>& requests)
+                : _adminLock()
+                , _parent(parent)
+                , _state(state::IN_PROGRESS)
+                , _requests()
+                , _jobs()
+                , _index(0)
+                , _channelId(channelId)
+                , _responseId(responseId)
+                , _startTime()
             {
-                _adminLock.Lock();
-                bool isCancelled = _cancelled;
-                _adminLock.Unlock();
+                ASSERT (parallel >= 1);
 
-                return (isCancelled == false) && (_parent->IsShuttingDown() == false) && (IsTimedOut() == false);
-            }
+                // Move all requests into the batch
+                _requests.reserve(requests.count());
+                Core::JSON::ArrayType<const Core::JSONRPC::Message>::ConstIterator index(requests.Elements());
 
-            bool IsForChannel(uint32_t channelId) const
-            {
-                return (_channelId == channelId);
-            }
+                while (index.Next() == true) {
+                    _request.emplace_back(index.Current());
+                }
 
-            void Start()
-            {
-                if (_parallel) {
-                    for (uint32_t i = 0; i < _messages.Length(); ++i) {
-                        SubmitJob(i);
-                    }
-                } else if (_messages.Length() > 0) {
-                    SubmitJob(0);
+                // Create the number of jobs that are allowed to run in parallel..
+                uint8_t jobs(static_cast<uint8_t>(std::min(static_cast<uint32_t>(parallel), static_cast<uint32_t>(_requests.size()))));
+                _jobs.reserve(jobs);
+                for (uint8_t position = 0; position < jobs; position++) {
+                    _jobs.emplace_back(Core::ProxyType<Job>::Create(*this, position));
                 }
             }
+            ~Batch() = default;
 
-            void Cancel()
+        public:
+            inline const uint64_t& StartTime() const {
+                return (_startTime);
+            }
+            inline bool IsCompleted() const {
+                return (_state == state::COMPLETED);
+            }
+            void Activate() {
+                _adminLock.Lock();
+                if (state == state::IN_PROGRESS) {
+                    _startTime = Core::Time::Now();
+                    for (auto& element : _jobs) {
+                        Core::ProxyType<Core::IDispatch> job(element.Submit());
+
+                        if (job.IsValid()) {
+                            IWorkerPool::Instance().Submit(job);
+                        }
+                    }
+                }
+                _adminLock.Unlock();
+            }
+            void Abort()
             {
                 _adminLock.Lock();
-                _cancelled = true;
+                if (state == state::IN_PROGRESS) {
+                    _state = state::ABORTED;
+                    for (auto& element : _jobs) {
+                        Core::ProxyType<IDispatch> job(element.Revoke());
+
+                        if (job.IsValid() == true) {
+                            if (Core::IWorkerPool::Instance().Revoke(job, 0) != Core::ERROR_TIMEDOUT) {
+                                element.Revoked();
+                            }
+                        }
+                    }
+                }
                 _adminLock.Unlock();
+            }
+            uint32_t WaitForIdle(const uint32_t time) const
+            {
+                uint32_t left(time);
+                uint8_t index(0);
+                uint32_t result(Core::ERROR_TIMEDOUT);
+
+                // No need to lock, the std::vector of jobs is fixed from construction to destruction :-)
+                while ((result == Core::ERROR_TIMEDOUT) && (left > 0)) {
+                    if (_jobs[index].IsIdle() == false) {
+                        Core::ProxyType<IDispatch> job(_jobs[index].Revoke());
+                        if (job.IsValid() == false) {
+                            ASSERT(_jobs[index].IsIdle());
+                            ++index;
+                        }
+                        else {
+                            if (Core::IWorkerPool::Instance().Revoke(job, TimeSlot) == Core::ERROR_TIMEDOUT) {
+                                left = (time == Core::infinite ? left : left - std::min(left, TimeSlot));
+                            }
+                            else {
+                                element.Revoked();
+                                ++index;
+                            }
+                        }
+                    }
+                    else if (index < _jobs.size()) {
+                        ++index;
+                    }
+                    else {
+                        result = Core::ERROR_NONE;
+                    }
+                }
+
+                return (result);
             }
 
         private:
-            void Run(uint32_t index)
-            {
-                ASSERT(index < _messages.Length());
+            void Dispatch(const uint8_t index) {
+                ASSERT(index < _jobs.size());
 
-                if (IsActive() == false) {
-                    // Just decrement and check completion
+                // Oke, lets pick a request to handle, do it in a locked fashion so the
+                // administration is always correct.
+                _adminLock.Lock();
+
+                if ((_state == state::IN_PROGRESS) && (_index < _requests.size())) {
+                    Request& msg(_request[_index]);
+                    _index++;
+                    _adminLock.Unlock();
+
+                    string output;
+                    Core::hresult result = _parent.Invoke (_channelId, msg.Id(), msg.Designator(), msg.Parameters(), output);
+                    msg.Set(result, output);
+
                     _adminLock.Lock();
-                    bool isComplete = (--_pendingCount == 0);
-                    _adminLock.Unlock();
+                    if (_state == state::IN_PROGRESS) {
+                        if (_index < _requests.size()) {
+                            Core::ProxyType<Core::IDispatch> job(_jobs[index].Submit());
 
-                    if (isComplete) {
-                        FinishBatch();
-                    }
-                    return;
-                }
-
-                const Core::JSONRPC::Message& message = _messages[index];
-
-                string output;
-                Core::hresult result = _parent->_dispatch->Invoke(
-                    _channelId, message.Id.Value(), _token,
-                    message.Designator.Value(), message.Parameters.Value(),
-                    output);
-
-                bool isActive = IsActive();
-
-                _adminLock.Lock();
-
-                if (isActive && ((result != static_cast<uint32_t>(~0)) && ((message.Id.IsSet()) || (result != Core::ERROR_NONE)))) {
-                    Response& response = _responseArray[index];
-
-                    if (message.Id.IsSet()) {
-                        response.Id = message.Id.Value();
-                    }
-
-                    if (result == Core::ERROR_NONE) {
-                        if (output.empty()) {
-                            response.Result.Null(true);
-                        } else {
-                            response.Result = output;
-                        }
-                    } else {
-                        response.Error.SetError(result);
-                        if (!output.empty()) {
-                            response.Error.Text = output;
-                        }
-                    }
-                }
-
-                // Update completion state
-                bool isComplete = (--_pendingCount == 0);
-
-                uint32_t nextIndex = index + 1;
-
-                _adminLock.Unlock();
-
-                if (isComplete) {
-                    FinishBatch();
-                } else if (!_parallel && isActive) {
-                    SubmitJob(nextIndex);
-                }
-            }
-
-            bool IsTimedOut() const
-            {
-                if (_timeoutMs == Core::infinite) {
-                    return false;
-                }
-                uint64_t elapsedMs = (Core::Time::Now().Ticks() - _startTime) / Core::Time::TicksPerMillisecond;
-                return elapsedMs > _timeoutMs;
-            }
-
-            void SubmitJob(uint32_t index)
-            {
-                if (index >= _messages.Length()) {
-                    return;
-                }
-                Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(this, index);
-                Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
-            }
-
-            void FinishBatch()
-            {
-                _adminLock.Lock();
-                if (_finishing) {
-                    _adminLock.Unlock();
-                    return;
-                }
-                _finishing = true;
-                _adminLock.Unlock();
-
-                if (_parent->IsChannelValid(_channelId)) {
-                    Core::ProxyType<Core::JSONRPC::Message> message(PluginHost::IFactories::Instance().JSONRPC());
-
-                    if (message.IsValid()) {
-                        message->Id = _responseId;
-
-                        if (IsActive() == true) {
-                            string response;
-                            _responseArray.ToString(response);
-                            message->Result = response;
-                        } else {
-                            if (_cancelled == true) {
-                                message->Error.Code = Core::ERROR_ABORTED;
-                                message->Error.Text = _T("Batch was canceled");
-                            } else if (IsTimedOut() == true) {
-                                message->Error.Code = Core::ERROR_TIMEDOUT;
-                                message->Error.Text = _T("Batch could not be processed within ") + Core::NumberType<uint32_t>(_timeoutMs).Text() + _T("ms");
-                            } else if (_parent->IsShuttingDown() == true) {
-                                message->Error.Code = Core::ERROR_PENDING_SHUTDOWN;
-                                message->Error.Text = _T("Plugin shutting down");
+                            if (job.IsValid()) {
+                                IWorkerPool::Instance().Submit(job);
                             }
                         }
-
-                        _parent->SendResponse(_channelId, Core::ProxyType<Core::JSON::IElement>(message));
+                        else {
+                            uint32_t position(0);
+                            while ((position < _requests.size()) && (_requests[position].IsCompleted() == true)) {
+                                ++position;
+                            }
+                            if (position == _requests.size()) {
+                                _state = state::COMPLETED;
+                                _parent.Completed();
+                            }
+                        }
                     }
                 }
-                _parent->RemoveBatchFromRegistry(_batchId);
+
+                _adminLock.Unlock();
             }
 
         private:
             mutable Core::CriticalSection _adminLock;
-            Core::ProxyType<JsonRpcMuxer> _parent;
-            uint32_t _batchId;
-            bool _parallel;
-            uint32_t _pendingCount;
-            bool _finishing;
-            bool _cancelled;
-            Core::JSON::ArrayType<Core::JSONRPC::Message> _messages;
-            Core::JSON::ArrayType<Response> _responseArray;
+            JsonRpcMuxer& _parent;
+            state _state;
+            std::vector<Request> _requests;
+            std::vector< Core::ThreadPool::JobType<Job> > _jobs;
+            uint32_t _index;
             uint32_t _channelId;
             uint32_t _responseId;
-            string _token;
-            uint32_t _timeoutMs;
             uint64_t _startTime;
         };
 
     public:
         JsonRpcMuxer(JsonRpcMuxer&&) = delete;
         JsonRpcMuxer(const JsonRpcMuxer&) = delete;
+        JsonRpcMuxer& operator=(JsonRpcMuxer&&) = delete;
         JsonRpcMuxer& operator=(const JsonRpcMuxer&) = delete;
 
         JsonRpcMuxer()
@@ -324,46 +304,43 @@ namespace Plugin {
             , _activeBatches()
             , _activeBatchCount(0)
             , _batchCompletionEvent(false, true)
-        {
+            , _job(*this) {
         }
-
         ~JsonRpcMuxer() override = default;
-
-        BEGIN_INTERFACE_MAP(JsonRpcMuxer)
-        INTERFACE_ENTRY(PluginHost::IPlugin)
-        INTERFACE_ENTRY(PluginHost::IDispatcher)
-        END_INTERFACE_MAP
 
     public:
         const string Initialize(PluginHost::IShell* service) override;
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-        Core::hresult Invoke(
-            const uint32_t channelId, const uint32_t id, const string& token,
+        Core::hresult Invoke(const uint32_t channelId, const uint32_t id,
             const string& designator, const string& parameters, string& response) override;
 
-        bool IsShuttingDown() const
-        {
-            _adminLock.Lock();
-            bool result = _shuttingDown;
-            _adminLock.Unlock();
-            return result;
-        }
+        BEGIN_INTERFACE_MAP(JsonRpcMuxer)
+            INTERFACE_ENTRY(PluginHost::IPlugin)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
+        END_INTERFACE_MAP
 
     private:
-        void Process(uint32_t channelId, uint32_t responseId, const string& token, Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, bool parallel);
-        void SendErrorResponse(uint32_t channelId, uint32_t responseId, uint32_t errorCode, const string& errorMessage);
-        void SendTimeoutResponse(uint32_t channelId, uint32_t responseId, uint32_t batchId);
-        bool TryClaimBatchSlot();
-        void ReleaseBatchSlot();
-        uint32_t ValidateBatch(const Core::JSON::ArrayType<Core::JSONRPC::Message>& messages, string& errorMessage);
-        uint32_t WaitForBatchCompletion(const uint32_t maxWaitMs = Core::infinite);
-        void RemoveBatchFromRegistry(uint32_t batchId);
-        void CancelBatchesForChannel(uint32_t channelId);
-        void CancelAllBatches();
-        bool IsChannelValid(uint32_t channelId) const;
-        uint32_t SendResponse(const uint32_t Id, const Core::ProxyType<Core::JSON::IElement>& response);
+        void Dispatch() {
+            _adminLock.Lock();
+
+            std::list<Batch>::iterator index(_batches.begin());
+
+            while (index != _batches.end()) {
+                if (index->IsCompleted() == false) {
+                    index++;
+                }
+                else {
+                    index = _batches.erase(index);
+                }
+            }
+
+            _adminLock.Unlock();
+        }
+        void Completed() {
+            _job.Submit();
+        }
 
     private:
         friend class Batch;
@@ -376,11 +353,10 @@ namespace Plugin {
         uint8_t _maxBatches;
         uint32_t _timeout;
         uint32_t _batchCounter;
-        bool _shuttingDown;
-        std::unordered_map<uint32_t, Core::ProxyType<Batch>> _activeBatches;
         uint8_t _activeBatchCount;
 
-        mutable Core::Event _batchCompletionEvent;
+        std::list<Batch> _batches;
+        Core::IWorkerPool::JobType<JsonRpcMuxer&> _job;
     };
 }
 }
