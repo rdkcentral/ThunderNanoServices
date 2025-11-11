@@ -246,6 +246,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
     case STATE::IDLE    :   state = STATE::RUN;
     case STATE::RUN     :   state = STATE::EXECUTE;
     case STATE::EXECUTE :   state = STATE::STOP;
+                            waitTime = Core::infinite;
                             break;
     case STATE::ERROR   :   result = Core::ERROR_GENERAL;
     case STATE::STOP    :   waitTime = Core::infinite;
