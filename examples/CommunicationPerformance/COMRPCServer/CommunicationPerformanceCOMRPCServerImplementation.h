@@ -32,7 +32,6 @@
 #include "TestData.h"
 #endif
 
-#define _USE_UNIX_DOMAIN_SOCKET_
 //#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
 
 namespace Thunder {
