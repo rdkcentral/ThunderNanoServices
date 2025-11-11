@@ -375,17 +375,23 @@ void Measurements<A, B>::Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUN
                   && LOWER_BOUND_B >= 0
                   && LOWER_BOUND_A < UPPER_BOUND_A
                   && LOWER_BOUND_B < UPPER_BOUND_B
+                  && N >= 2
                  , ""
     );
 
-    constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / N;
-    constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / N;
+    constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / (N - 2);
+    constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / (N - 2);
+
+    static_assert(   stepSizeA > 0
+                  && stepSizeB > 0
+                  , ""
+    );
 
     // Bound to N, array indices are N - 1
     // The integral step size is truncated eg 'rounded' to zero
 
-    const A indexA = data.first < stepSizeA ? 0 : data.first / stepSizeA;
-    const B indexB = data.second < stepSizeB ? 0 : data.second / stepSizeB;
+    const A indexA = data.first < LOWER_BOUND_A ? 0 : ((data.first - LOWER_BOUND_A) / stepSizeA) + 1;
+    const B indexB = data.second < LOWER_BOUND_B ? 0 : ((data.second - LOWER_BOUND_B) / stepSizeB) + 1;
 
     ASSERT(indexA <= static_cast<A>(std::numeric_limits<size_t>::max()));
     ASSERT(indexB <= static_cast<B>(std::numeric_limits<size_t>::max()));
@@ -421,21 +427,24 @@ void Measurements<A, B>::Histogram2D<N, UPPER_BOUND_A, UPPER_BOUND_B, LOWER_BOUN
     using common_t = std::common_type<int, uint64_t>::type;
     ASSERT((width + 2) <= static_cast<common_t>(std::numeric_limits<int>::max()));
 #endif
-    constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / N;
-    constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / N;
+
+    constexpr A stepSizeA = (UPPER_BOUND_A - LOWER_BOUND_A) / (N - 2);
+    constexpr B stepSizeB = (UPPER_BOUND_B - LOWER_BOUND_B) / (N - 2);
 
     std::cout << std::setw(width + 3) << "";
 
-    for (size_t column = 0; column < N; column++) {
-        std::cout << std::setw(width) << column * stepSizeB << ">= ";
+    std::cout << std::setw(width) << 0 <<  ">= ";
+    for (size_t column = 1; column < (N -1); column++) {
+        std::cout << std::setw(width) << LOWER_BOUND_B + (column - 1) * stepSizeB << ">= ";
     }
+    std::cout << std::setw(width) << UPPER_BOUND_B <<  ">= ";
 
     std::cout << std::endl;
 
     size_t row = 0;
 
     for (auto& item : _bins) {
-        std::cout << std::setw(width) << stepSizeA * row << ">= ";
+        std::cout << std::setw(width) << ((row == 0 || row == (N - 1)) ? (row == 0 ? 0 : UPPER_BOUND_A) : LOWER_BOUND_A + (stepSizeA * (row - 1))) << ">= ";
 
         for (auto value : item) {
             std::cout << std::setw(width + 2) << value << " ";

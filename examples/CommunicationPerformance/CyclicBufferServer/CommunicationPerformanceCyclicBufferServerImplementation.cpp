@@ -279,6 +279,8 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
 
                             // Educated guess, system dependent, required for distribution
                             constexpr uint64_t upperBoundDuration = CommunicationPerformanceHelpers::UpperBoundDuration;
+                            constexpr uint64_t lowerBoundDuration = CommunicationPerformanceHelpers::LowerBoundDuration;
+                            constexpr uint16_t bufferMinSize = 0;
 
                             // Initial value used as waitTime in Exchange()
                             // Educated guess
@@ -300,7 +302,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             ) {
 
                                 using measurements_t = Measurements<uint16_t, uint64_t>;
-                                using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration>;
+                                using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration, bufferMinSize, lowerBoundDuration>;
 
                                 distribution_t& measurements = measurements_t::Instance<distribution_t>();
 

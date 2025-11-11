@@ -366,6 +366,8 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
                             constexpr uint64_t upperBoundDuration = CommunicationPerformanceHelpers::UpperBoundDuration;
+                            constexpr uint64_t lowerBoundDuration = CommunicationPerformanceHelpers::LowerBoundDuration;
+                            constexpr uint16_t bufferMinSize = 0;
 
                             // Round trip time in ticks, initialize with value for maximum wait
                             // Educated guess
@@ -382,7 +384,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             // This fails if the client is missing so it is not typically an error
                             if (_server.Exchange(buffer.data(), bufferSize, bufferMaxSize, duration) == Core::ERROR_NONE) {
                                 using measurements_t = Measurements<uint16_t, uint64_t>;
-                                using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize - 1, upperBoundDuration>;
+                                using distribution_t = measurements_t::Histogram2D<numberOfBins, bufferMaxSize, upperBoundDuration, bufferMinSize, lowerBoundDuration>;
 
                                 distribution_t& measurements = measurements_t::Instance<distribution_t>();
 
