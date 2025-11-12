@@ -22,6 +22,10 @@
 // Pull in 'Common' template definitions
 #include "../Common/CommunicationPerformanceImplementation.cpp"
 
+#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
+#include <chrono>
+#endif
+
 namespace Thunder {
 namespace Plugin {
 
@@ -83,9 +87,13 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bu
     uint32_t waitTime{ static_cast<uint32_t>(duration) };
 
     if (_buffer.IsValid() != false) {
+#ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
         Core::StopWatch timer;
 
         /* uint64_t */ timer.Reset();
+#else
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
 
         if (   (result = _batonConnectingNode.Wait(waitTime)) == Core::ERROR_NONE
             && (result = _buffer.Lock(dataPresent, duration)) == Core::ERROR_NONE
@@ -125,7 +133,12 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bu
             }
       }
 
+#ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
       duration = timer.Elapsed();
+#else
+        auto end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+#endif
     } else {
         duration = 0;
     }

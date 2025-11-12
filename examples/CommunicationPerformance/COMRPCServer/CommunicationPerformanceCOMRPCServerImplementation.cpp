@@ -101,7 +101,7 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Exchange(uint8_
         && (interface = static_cast<Exchange::IPerformance*>(_communicator->Acquire("", Exchange::IPerformance::ID, ~0))) != nullptr
        ) {
 
-#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
+#ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
         Core::StopWatch timer;
 
         /* uint64_t */ timer.Reset();
@@ -111,7 +111,7 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Exchange(uint8_
 
         result = interface->Exchange(bufferSize, buffer, bufferMaxSize);
 
-#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
+#ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
         duration = timer.Elapsed();
 #else
         auto end = std::chrono::high_resolution_clock::now();

@@ -24,6 +24,10 @@
 
 #include <algorithm>
 
+#ifdef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
+#include <chrono>
+#endif
+
 namespace Thunder {
 namespace Plugin {
 
@@ -70,9 +74,13 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchang
 
     VARIABLE_IS_NOT_USED uint32_t waitTime = std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), duration); 
 
+#ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
     Core::StopWatch timer;
 
     /* uint64_t */ timer.Reset();
+#else
+        auto start = std::chrono::high_resolution_clock::now();
+#endif
 
     // Obtain the endpoint at the server side for each (remotely) connected client, eg, an object of Class Server
     auto it = _server.Clients();
@@ -93,7 +101,12 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchang
         }
     }
 
+#ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
     duration = timer.Elapsed();
+#else
+        auto end = std::chrono::high_resolution_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+#endif
 
     using common_t = std::common_type<std::basic_string<uint8_t>::size_type, uint16_t>::type;
 
