@@ -288,36 +288,36 @@ namespace Plugin {
             };
 
         private:
-            class Buffer : public Graphics::ServerBufferType<1> {
+            class ExternalBuffer : public Graphics::ServerBufferType<1> {
                 using BaseClass = Graphics::ServerBufferType<1>;
 
             public:
-                Buffer() = delete;
-                Buffer(Buffer&&) = delete;
-                Buffer(const Buffer&) = delete;
-                Buffer& operator=(Buffer&&) = delete;
-                Buffer& operator=(const Buffer&) = delete;
+                ExternalBuffer() = delete;
+                ExternalBuffer(ExternalBuffer&&) = delete;
+                ExternalBuffer(const ExternalBuffer&) = delete;
+                ExternalBuffer& operator=(ExternalBuffer&&) = delete;
+                ExternalBuffer& operator=(const ExternalBuffer&) = delete;
 
-                Buffer(Client& client, Core::PrivilegedRequest::Container& descriptors)
+                ExternalBuffer(Client& client, Core::PrivilegedRequest::Container& descriptors)
                     : BaseClass()
                     , _client(client)
                     , _id(InvalidBufferId)
                     , _texture()
                 {
                     Load(descriptors);
-                    TRACE(Trace::Information, (_T("Buffer for %s[%p] %dx%d, format=0x%08" PRIX32 ", modifier=0x%016" PRIX64), client.Name().c_str(), this, BaseClass::Height(), BaseClass::Width(), BaseClass::Format(), BaseClass::Modifier()));
+                    TRACE(Trace::Information, (_T("ExternalBuffer for %s[%p] %dx%d, format=0x%08" PRIX32 ", modifier=0x%016" PRIX64), client.Name().c_str(), this, BaseClass::Height(), BaseClass::Width(), BaseClass::Format(), BaseClass::Modifier()));
                     Core::ResourceMonitor::Instance().Register(*this);
                 }
 
-                ~Buffer() override
+                ~ExternalBuffer() override
                 {
                     Core::ResourceMonitor::Instance().Unregister(*this);
                     _texture.Release();
-                    
+
                     Rendered();
                     Published();
-                    
-                    TRACE(Trace::Information, (_T("Buffer for %s[%p] destructed"), _client.Name().c_str(), this));
+
+                    TRACE(Trace::Information, (_T("ExternalBuffer for %s[%p] destructed"), _client.Name().c_str(), this));
                 }
 
                 void Request() override
@@ -344,7 +344,7 @@ namespace Plugin {
                     _id = id;
                     _texture = texture;
 
-                    TRACE(Trace::Information, (_T("Buffer for %s[%p] configured as id:%d"), _client.Name().c_str(), this, _id));
+                    TRACE(Trace::Information, (_T("ExternalBuffer for %s[%p] configured as id:%d"), _client.Name().c_str(), this, _id));
                 }
 
             private:
@@ -648,8 +648,11 @@ namespace Plugin {
                     _stats.currentBufferId.store(id, std::memory_order_relaxed);
                     _stats.lastRenderTime.store(acquireTime, std::memory_order_relaxed);
 
-                    _buffers[id]->Acquire(Compositor::DefaultTimeoutMs);
-                    texture = _buffers[id]->Texture();
+                    if (_buffers[id]->Acquire(0) != nullptr) {
+                        texture = _buffers[id]->Texture();
+                    } else {
+                        TRACE(Trace::Error, (_T("Client %s buffer %d failed to acquire for rendering"), _callsign.c_str(), id));
+                    }
                 } else {
                     _renderingId.store(InvalidBufferId, std::memory_order_release);
 
@@ -766,7 +769,7 @@ namespace Plugin {
                 uint32_t result = Core::ERROR_UNAVAILABLE;
 
                 if (_buffers.Count() < MaxClientBuffers) {
-                    Core::ProxyType<Buffer> buffer = Core::ProxyType<Buffer>::Create(*this, descriptors);
+                    Core::ProxyType<ExternalBuffer> buffer = Core::ProxyType<ExternalBuffer>::Create(*this, descriptors);
 
                     if (buffer.IsValid() == true) {
                         int index = _buffers.Add(buffer);
@@ -793,7 +796,7 @@ namespace Plugin {
             Exchange::IComposition::Rectangle _geometry; // the actual geometry of the surface on the composition
             Remote _remoteClient;
             bool _geometryChanged;
-            Core::ProxyList<Buffer> _buffers; // the actual pixel buffers that are used by this client but are owed by the compositorclient.
+            Core::ProxyList<ExternalBuffer> _buffers; // the actual pixel buffers that are used by this client but are owed by the compositorclient.
             AtomicFifo<uint8_t, MaxClientBuffers> _requestQueue;
             AtomicFifo<uint8_t, MaxClientBuffers> _pendingQueue;
             std::atomic<uint8_t> _currentId;
