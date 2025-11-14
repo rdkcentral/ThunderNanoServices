@@ -132,11 +132,7 @@ namespace Compositor {
                 }
                 Compositor::DRM::Identifier Id() const
                 {
-                    return _frameId[_activePlane]; // Current buffer's frame ID
-                }
-                Core::ProxyType<Exchange::IGraphicsBuffer> Buffer() const
-                {
-                    return _buffer[_activePlane];
+                    return _frameId[_activePlane];
                 }
                 void Swap()
                 {

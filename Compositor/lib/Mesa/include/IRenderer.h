@@ -29,7 +29,7 @@ namespace Compositor {
         /**
          * @brief A frame buffer represents an image used as a target for rendering.
          */
-        struct IFrameBuffer{
+        struct IFrameBuffer {
             virtual ~IFrameBuffer() = default;
 
             virtual bool IsValid() const = 0;
@@ -72,22 +72,34 @@ namespace Compositor {
         virtual uint32_t Unbind(const Core::ProxyType<IFrameBuffer>& framebuffer) = 0;
 
         /**
-         * @brief Start a render pass with the provided viewport.
-         *
-         * This should be called after a binding a buffer, callee must call
-         * End() when they are done rendering.
+         * @brief Begins recording rendering commands for the current frame.
          *
          * @param width Viewport width in pixels
          * @param height Viewport height in pixels
-         * @return false on failure, in which case compositors shouldn't try rendering.
+         * @return false on failure
          */
         virtual bool Begin(uint32_t width, uint32_t height) = 0;
 
         /**
-         * @brief Ends a render pass.
+         * @brief Ends recording rendering commands for the current frame.
          *
+         * After calling End(), the command buffer is closed but NOT yet submitted to GPU.
+         * Call Finish() to submit and wait for GPU completion.
+         *
+         * @param dump If true, captures a snapshot of the rendered frame
          */
         virtual void End(bool dump = false) = 0;
+
+        /**
+         * @brief Submits recorded commands to GPU and waits for completion.
+         *
+         * This call blocks until all rendering commands have finished executing on the GPU.
+         * Must be called after End() and before committing the frame buffer to display hardware.
+         *
+         * @param timeoutMs Maximum time to wait in milliseconds (default: 100ms)
+         * @return uint32_t Core::ERROR_NONE if rendering completed, Core::ERROR_TIMEDOUT on timeout
+         */
+        virtual uint32_t Finish(uint32_t timeoutMs = 100) = 0;
 
         /**
          * @brief Clear the viewport with the provided color

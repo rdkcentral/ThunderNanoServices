@@ -200,6 +200,7 @@ protected:
 
             renderer->End(false);
             renderer->Unbind(frameBuffer);
+            renderer->Finish();
 
             uint32_t commit;
             if ((commit = connector->Commit()) == Core::ERROR_NONE) {
