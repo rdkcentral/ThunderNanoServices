@@ -1318,6 +1318,12 @@ namespace Plugin {
 
                     _renderer->End(false);
 
+                    // Ensure all rendering commands are finished on the GPU
+                    uint32_t syncResult = _renderer->Finish();
+                    if (syncResult != Core::ERROR_NONE) {
+                        TRACE(Trace::Error, (_T("GPU sync failed: %d"), syncResult));
+                    }
+
                     _renderer->Unbind(frameBuffer);
 
                     _totalRenderTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);

@@ -344,17 +344,13 @@ namespace Compositor {
                 {
                     GLES_DEBUG_SCOPE("FrameBuffer::Unbind");
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
-
-                    glFlush();
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
                 }
 
                 void Bind() const override
                 {
                     GLES_DEBUG_SCOPE("FrameBuffer::Bind");
-
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
-
                     glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
                 }
 
@@ -1034,6 +1030,8 @@ namespace Compositor {
                 , _viewportHeight(0)
                 , _programs()
                 , _rendering(false)
+                , _textures()
+                , _pendingSync(EGL_NO_SYNC)
             {
                 _egl.SetCurrent();
 
@@ -1072,20 +1070,16 @@ namespace Compositor {
             virtual ~GLES()
             {
                 _egl.SetCurrent();
-#ifdef __DEBUG__
+                _egl.DestroySync(_pendingSync);
 
+#ifdef __DEBUG__
                 const std::string glExtensions(reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
 
                 if (API::HasExtension(glExtensions, "GL_KHR_debug")) {
                     glDisable(GL_DEBUG_OUTPUT_KHR);
                     _gles.glDebugMessageCallbackKHR(nullptr, nullptr);
                 }
-
 #endif
-
-                // glFinish();
-                // glFlush();
-                // glGetError();
 
                 _egl.ResetCurrent();
 
@@ -1170,9 +1164,47 @@ namespace Compositor {
                     }
                 }
 
-                // nothing to do
+                if (_pendingSync != EGL_NO_SYNC) {
+                    _egl.DestroySync(_pendingSync);
+                }
+
+                _pendingSync = _egl.CreateSync();
+
+                if (_pendingSync == EGL_NO_SYNC) {
+                    TRACE(Trace::Error, ("Failed to create GPU fence: 0x%x", eglGetError()));
+                }
 
                 _rendering = false;
+            }
+
+            uint32_t Finish(uint32_t timeoutMs) override
+            {
+                glFlush();
+
+                uint32_t result = Core::ERROR_NONE;
+
+                if (_pendingSync == EGL_NO_SYNC) {
+                    TRACE(Trace::GL, ("No GPU fence pending"));
+                    return Core::ERROR_NONE;
+                }
+
+                // Convert ms to ns for EGL API
+                const uint64_t timeoutNs = static_cast<uint64_t>(timeoutMs) * 1000000;
+
+                EGLint syncResult = _egl.WaitSync(_pendingSync, timeoutNs);
+                _egl.DestroySync(_pendingSync);
+
+                if (syncResult != EGL_CONDITION_SATISFIED) {
+                    if (syncResult == EGL_TIMEOUT_EXPIRED) {
+                        TRACE(Trace::Error, ("GPU fence timeout after %u ms", timeoutMs));
+                        result = Core::ERROR_TIMEDOUT;
+                    } else {
+                        TRACE(Trace::Error, ("GPU fence wait failed: 0x%x", eglGetError()));
+                        result = Core::ERROR_GENERAL;
+                    }
+                }
+
+                return result;
             }
 
             PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
@@ -1351,6 +1383,7 @@ namespace Compositor {
             ProgramRegistry _programs;
             mutable bool _rendering;
             TextureRegister _textures;
+            EGLSync _pendingSync;
         }; // class GLES
 
         API::GL GLES::_gles;

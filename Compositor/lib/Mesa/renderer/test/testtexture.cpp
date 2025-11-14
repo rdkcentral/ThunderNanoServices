@@ -131,6 +131,7 @@ protected:
 
             renderer->End(false);
             renderer->Unbind(frameBuffer);
+            renderer->Finish();
 
             connector->Commit();
 

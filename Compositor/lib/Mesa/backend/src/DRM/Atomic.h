@@ -30,7 +30,7 @@ namespace Compositor {
     namespace Backend {
         class Transaction {
         private:
-            static constexpr uint32_t DefaultDrmAtomicFlags = DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_NONBLOCK;
+            static constexpr uint32_t DefaultDrmAtomicFlags = DRM_MODE_PAGE_FLIP_EVENT;
 
             // Convert integer pixel value to DRM 16.16 fixed-point format
             static constexpr uint64_t ToFixedPoint16_16(uint32_t value)
