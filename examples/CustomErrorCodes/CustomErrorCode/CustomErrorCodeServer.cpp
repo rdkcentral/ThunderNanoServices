@@ -18,7 +18,7 @@
  */
 
 #include "CustomErrorCodeServer.h"
-#include <interfaces/json/JCustomErrorCode.h>
+#include <example_interfaces/json/JCustomErrorCode.h>
 
 namespace Thunder {
 
@@ -40,13 +40,13 @@ namespace Plugin {
 
     const string CustomErrorCodeServer::Initialize(PluginHost::IShell*) 
     {
-        Exchange::JCustomErrorCode::Register(*this, this);
+        Example::JCustomErrorCode::Register(*this, this);
         return (EMPTY_STRING);
     }
 
     void CustomErrorCodeServer::Deinitialize(PluginHost::IShell*) 
     {
-        Exchange::JCustomErrorCode::Unregister(*this);
+        Example::JCustomErrorCode::Unregister(*this);
     }
 
     string CustomErrorCodeServer::Information() const 

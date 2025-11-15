@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(SimpleCOMRPCClient)
+project(CustomCodeToStringLibrary)
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -23,15 +23,16 @@ find_package(Thunder)
 
 project_version(1.0.0)
 
-set(MODULE_NAME ${PROJECT_NAME})
+set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-find_package(${NAMESPACE}Core)
-find_package(${NAMESPACE}COM REQUIRED)
+find_package(${NAMESPACE}Core REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(${MODULE_NAME} SimpleCOMRPCClient.cpp)
+add_library(${MODULE_NAME} SHARED
+    CustomCodeToString.cpp
+)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -39,10 +40,8 @@ set_target_properties(${MODULE_NAME} PROPERTIES
         )     
 
 target_link_libraries(${MODULE_NAME}
-        PRIVATE
+    PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
-        ${NAMESPACE}COM::${NAMESPACE}COM
-        CompileSettingsDebug::CompileSettingsDebug
-    )
+        CompileSettingsDebug::CompileSettingsDebug)
 
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${NAMESPACE}_Runtime)

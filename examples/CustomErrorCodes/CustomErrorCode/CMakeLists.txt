@@ -27,14 +27,20 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(CompileSettingsDebug CONFIG REQUIRED)
+find_package(${NAMESPACE}Messaging REQUIRED)
+find_package(CompileSettingsDebug REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     Module.cpp
     CustomErrorCodeServer.cpp
 )
+
+target_include_directories(${MODULE_NAME} SYSTEM
+    PRIVATE
+        ".")
 
 set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_STANDARD 11
@@ -42,11 +48,12 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
+        CompileSettingsDebug::CompileSettingsDebug)
 
-install(TARGETS ${MODULE_NAME}
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
+install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()

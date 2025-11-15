@@ -11,17 +11,15 @@
 
 #ifdef _UNICODE
 #define _T(x) L##x
-#define TCHAR wchar_t
 #endif
 
 #ifndef _UNICODE
 #define _T(x) x
-#define TCHAR char
 #endif
 
 #endif // __LINUX__
 
-#include <core\ICustomErrorCode.h>
+#include <core/ICustomErrorCode.h>
 
 const TCHAR* CustomCodeToSting(int32_t code) {
     const TCHAR* text = nullptr;

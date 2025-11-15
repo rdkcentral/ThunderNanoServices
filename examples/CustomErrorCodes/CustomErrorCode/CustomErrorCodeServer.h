@@ -19,12 +19,12 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/ICustomErrorCode.h>
+#include <example_interfaces/ICustomErrorCode.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class CustomErrorCodeServer : public Exchange::ICustomErrorCode, public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class CustomErrorCodeServer : public Example::ICustomErrorCode, public PluginHost::IPlugin, public PluginHost::JSONRPC {
     public:
         CustomErrorCodeServer(const CustomErrorCodeServer&) = delete;
         CustomErrorCodeServer& operator=(const CustomErrorCodeServer&) = delete;
@@ -32,7 +32,7 @@ namespace Plugin {
         CustomErrorCodeServer& operator=(CustomErrorCodeServer&&) = delete;
 
         CustomErrorCodeServer()
-            : Exchange::ICustomErrorCode()
+            : Example::ICustomErrorCode()
             , PluginHost::IPlugin()
             , PluginHost::JSONRPC()
         {
@@ -45,7 +45,7 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(CustomErrorCodeServer)
             INTERFACE_ENTRY(IPlugin)
             INTERFACE_ENTRY(IDispatcher)
-            INTERFACE_ENTRY(Exchange::ICustomErrorCode)
+            INTERFACE_ENTRY(Example::ICustomErrorCode)
         END_INTERFACE_MAP
 
         const string Initialize(PluginHost::IShell* service);
@@ -99,7 +99,7 @@ namespace Plugin {
                 result = customerrorcode;
             }
 
-            return Core::CustomCode(customerrorcode); // calling Core::CustomCode will convert the custom code into the correct hresult value so the custom code value gets stored appropriately in the hresult  
+            return Core::CustomCode(result); // calling Core::CustomCode will convert the custom code into the correct hresult value so the custom code value gets stored appropriately in the hresult  
         }
         void ExampleHandlingHResultWhichCouldContainCustomCode(const Core::hresult errorcode) const
         {
