@@ -21,7 +21,7 @@
 
 #include <core/ICustomErrorCode.h>
 
-const TCHAR* CustomCodeToSting(int32_t code) {
+const TCHAR* CustomCodeToSting(const int32_t code) {
     const TCHAR* text = nullptr;
     if (code == 100) {
         text = _T("Custom Error code 100");
