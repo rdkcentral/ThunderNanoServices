@@ -57,12 +57,46 @@ namespace Plugin {
             : Exchange::IMath()
             , PluginHost::IPlugin()
             , _service(nullptr)
+            , _thread(*this)
         {
         }
         ~TestPriorityQueueImplementation() override = default;
         
     public:
         
+        class AsyncInitThread {
+        public:
+            explicit AsyncInitThread(TestPriorityQueueImplementation& parent)
+                : _parent(parent)
+                , _worker(*this)
+            {
+            }
+            ~AsyncInitThread() = default;
+
+            void Start()
+            {
+                _worker.Submit();
+            }
+
+            void Stop()
+            {
+                _worker.Revoke();
+            }
+            AsyncInitThread(const AsyncInitThread&) = delete;
+            AsyncInitThread& operator=(const AsyncInitThread&) = delete;
+
+        private:
+            void Dispatch()
+            {
+                std::cout << "\n\n@@@@@ AsyncInitThread Dispatch called. @@@@@\n\n";
+            }
+
+        private:
+            TestPriorityQueueImplementation& _parent;
+            friend Core::ThreadPool::JobType<AsyncInitThread&>;
+            Core::WorkerPool::JobType<AsyncInitThread&> _worker;
+        };
+
         BEGIN_INTERFACE_MAP(TestPriorityQueueImplementation)
             INTERFACE_ENTRY(Exchange::IMath)
             INTERFACE_ENTRY(PluginHost::IPlugin)
@@ -70,6 +104,8 @@ namespace Plugin {
         
         const string Initialize(PluginHost::IShell* service) override
         {
+            std::cout << "\n\n@@@@@ TestPriorityQueue: Initialize called. @@@@@\n\n";
+            _thread.Start();
             ASSERT(_service == nullptr);
             _service = service;
 
@@ -80,6 +116,7 @@ namespace Plugin {
         }
         void Deinitialize(PluginHost::IShell* service) override
         {
+            _thread.Stop();
             ASSERT(service == _service);
 
             if (_service != nullptr) {
@@ -123,6 +160,7 @@ namespace Plugin {
 
     private:
         PluginHost::IShell* _service;
+        mutable AsyncInitThread _thread;
     };
     
     SERVICE_REGISTRATION(TestPriorityQueueImplementation, 1, 0)

@@ -36,7 +36,7 @@ namespace Plugin {
         );
     }
 
-    const string TestPriorityQueue::Initialize(PluginHost::IShell* service)
+const string TestPriorityQueue::Initialize(PluginHost::IShell* service)
     {
         string message;
 
@@ -48,41 +48,59 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
         _service->Register(&_notification);
-        
+
+        // Create the out-of-process implementation
         _implMath = service->Root<Exchange::IMath>(_connectionId, timeout, _T("TestPriorityQueueImplementation"));
+
         if (_implMath == nullptr) {
             message = _T("Couldn't create instance of implMath");
+        } else {
+            // Query for IPlugin interface and call Initialize explicitly
+            PluginHost::IPlugin* plugin = _implMath->QueryInterface<PluginHost::IPlugin>();
+
+            if (plugin != nullptr) {
+                string initResult = plugin->Initialize(service);
+
+                if (!initResult.empty()) {
+                    message = _T("Initialization of TestPriorityQueueImplementation failed: ") + initResult;
+                }
+
+                plugin->Release();
+            } else {
+                TRACE_L1("TestPriorityQueueImplementation doesn't implement IPlugin");
+            }
         }
-        /*else {
-            StartFlood(100000, std::max(1u, std::thread::hardware_concurrency()));
-        }*/
 
         return (message);
     }
 
     void TestPriorityQueue::Deinitialize(PluginHost::IShell* service)
     {
-        //StopFlood();
-
         ASSERT(_service == service);
-        
+
         _service->Unregister(&_notification);
-        
+
         if (_implMath != nullptr) {
-            
+            // Query for IPlugin and call Deinitialize
+            PluginHost::IPlugin* plugin = _implMath->QueryInterface<PluginHost::IPlugin>();
+
+            if (plugin != nullptr) {
+                plugin->Deinitialize(service);
+                plugin->Release();
+            }
+
             RPC::IRemoteConnection* connection(service->RemoteConnection(_connectionId));
             VARIABLE_IS_NOT_USED uint32_t result = _implMath->Release();
             _implMath = nullptr;
-            
+
             ASSERT(result == Core::ERROR_DESTRUCTION_SUCCEEDED);
-            
-            // The process can disappear in the meantime...
+
             if (connection != nullptr) {
-                // But if it did not disappear in the meantime, forcefully terminate it. Shoot to kill
                 connection->Terminate();
                 connection->Release();
             }
         }
+
         _service->Release();
         _service = nullptr;
         _connectionId = 0;

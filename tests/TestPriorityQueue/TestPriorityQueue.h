@@ -94,7 +94,7 @@ namespace Plugin {
         
     private:
         // Timeout (2000ms) may be changed if necessary, however, it must not exceed RPC::CommunicationTimeOut
-        static constexpr uint32_t timeout = 2000;
+        static constexpr uint32_t timeout = Core::infinite;
 
         PluginHost::IShell* _service;
         uint32_t _connectionId;
