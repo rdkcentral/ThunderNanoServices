@@ -53,7 +53,7 @@ namespace Plugin {
         string Information() const;
 
         // the interface allows the json rpc call to provide the error code used which provides for easy testing
-        Core::hresult TriggerCustomError(const int32_t errorcode) const override 
+        Core::hresult TriggerCustomError(const int32_t errorcode) const override // note in this interface explicitly an int32_t so we indicate we can also test numbers bigger than int24_t otherwise the generated code might already block the overflowed number
         {
             // we simulate calling aanother COMRPC call which might return a custom error code (and in this case it will return a custom code)
             Core::hresult result = SimulatedComRPCCall(errorcode);
@@ -84,15 +84,15 @@ namespace Plugin {
 
     private:
         // simulate a COMRPC call that returns an Thunder defined error
-        Core::hresult SimulatedComRPCCall(const Core::hresult errorcode) const
+        Core::hresult SimulatedComRPCCall(const Core::hresult errorcode) const 
         {
             return errorcode;
         }
         // simulate a COMRPC call that returns an Custom Code 
-        Core::hresult SimulatedComRPCCall(const int32_t customerrorcode) const
+        Core::hresult SimulatedComRPCCall(const int32_t customerrorcode) const // note also here expicitly an int32_t so can also test numbers bigger than int24_t, other wise in debug this call would already trigger an assert in the overflow case
         {
             // when there is no error, just feed Core::ERROR_NONE into the Core::CustomCode(...) function to indicate there is no error as you would do with a normal hresult
-            int32_t result = Core::ERROR_NONE;
+            int24_t result = Core::ERROR_NONE;
 
             // suppose you detect an error situation and you want to set a custom code, just set the value assigned for this error
             if (customerrorcode != 0) {
@@ -105,11 +105,11 @@ namespace Plugin {
         {
             // here we handle an hresult in a detailed way in case we would like to extract the custom code for some reason (again not required, if you just want to handle an error situation you can just compare the hresult with Core::ERROR_NOE, nothing more to do 
             // (and if you need a text representation feed the hresult to ErrorToString or ErrorToStringExtended that will internnly handle the custom code correclty)
-            int32_t customcode = Core::IsCustomCode(errorcode);
+            int24_t customcode = Core::IsCustomCode(errorcode);
 
             if (customcode == 0) {
                 TRACE(Trace::Information, (_T("Thunder defined error received: %u"), errorcode));
-            } else if (customcode == std::numeric_limits<int32_t>::min()) {
+            } else if (customcode == std::numeric_limits<int32_t>::max()) {
                 TRACE(Trace::Information, (_T("Invalid custom code was passed")));
             } else {
                 TRACE(Trace::Information, (_T("Custom Code received: %i"), customcode));
