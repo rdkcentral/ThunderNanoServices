@@ -38,6 +38,7 @@ option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
 option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 option(EXAMPLE_GENERATORSHOWCASE_EXAMPLE "Include GeneratorShowCase example" OFF)
+option(EXAMPLE_CUSTOMCODE_EXAMPLE "Include Custom Code example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -98,4 +99,9 @@ endif()
 
 if (EXAMPLE_GENERATORSHOWCASE_EXAMPLE)
     add_subdirectory(GeneratorShowcase)
+endif()
+
+if (EXAMPLE_CUSTOMCODE_EXAMPLE)
+    add_subdirectory(CustomErrorCodes/CustomErrorCode)
+    add_subdirectory(CustomErrorCodes/CustomCodeToStringLibrary)
 endif()
