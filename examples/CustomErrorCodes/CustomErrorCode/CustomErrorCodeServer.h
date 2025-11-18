@@ -73,8 +73,9 @@ namespace Plugin {
             // we simulate calling aanother COMRPC call which might return a custom error code (and in this case it wil return a non custom code)
             Core::hresult result = SimulatedComRPCCall(errorcode);
 
-            // we check if there was an error, comparing to Core::ERROR_NONE is the only thing needed also with custom codes
-            // only if you want to deal with some specific error you need to handle that situation specifically which we wil do here as en example
+            // In case we do want to check ik the called comrpc code failed, comparing to Core::ERROR_NONE is the only thing required also with custom codes
+            // only if you want to deal with some specific error you need to handle that situation specifically which we wil do here as en example in the ExampleHandlingHResultWhichCouldContainCustomCode,
+            // but again this is in no way mandatory
             if (result != Core::ERROR_NONE) {
                 ExampleHandlingHResultWhichCouldContainCustomCode(result);
             }
@@ -91,12 +92,14 @@ namespace Plugin {
         // simulate a COMRPC call that returns an Custom Code 
         Core::hresult SimulatedComRPCCall(const int32_t customerrorcode) const // note also here expicitly an int32_t so can also test numbers bigger than int24_t, other wise in debug this call would already trigger an assert in the overflow case
         {
+            // so this is an example of what a "normal" comrpc function with also wants to return a Custom Code should look like, no other special handling needed
+
             // when there is no error, just feed Core::ERROR_NONE into the Core::CustomCode(...) function to indicate there is no error as you would do with a normal hresult
             int24_t result = Core::ERROR_NONE;
 
             // suppose you detect an error situation and you want to set a custom code, just set the value assigned for this error
             if (customerrorcode != 0) {
-                result = customerrorcode;
+                result = customerrorcode; // this will assert in debug when a too large customerrorcode was passsed, in release it will set the overflow value
             }
 
             return Core::CustomCode(result); // calling Core::CustomCode will convert the custom code into the correct hresult value so the custom code value gets stored appropriately in the hresult  
@@ -109,13 +112,15 @@ namespace Plugin {
 
             if (customcode == 0) {
                 TRACE(Trace::Information, (_T("Thunder defined error received: %u"), errorcode));
-            } else if (customcode == std::numeric_limits<int32_t>::max()) {
+            } else if (Core::Overflowed(customcode) == true) {
                 TRACE(Trace::Information, (_T("Invalid custom code was passed")));
             } else {
                 TRACE(Trace::Information, (_T("Custom Code received: %i"), customcode));
             }
 
-            // You can just feed any hresult to ErrorToString or ErrorToStringExtended, it will deal with the Custom Code internally
+            // You can just feed any hresult to ErrorToString or ErrorToStringExtended, it will deal with the Custom Code internally, so in case you only want to get the text fot the hresult,
+            // whether it is a "normal" hresult or Custom Code, all you need to do is call Core::ErrorToStringExtended, that will handle internally both cases and when in case of a CustomCode and
+            // when configured reach out to the CustomCode code2text library to get the string representation from there.
             TRACE(Trace::Information, (_T("Error received: %s"), Core::ErrorToStringExtended(errorcode).c_str()));
         }
 
