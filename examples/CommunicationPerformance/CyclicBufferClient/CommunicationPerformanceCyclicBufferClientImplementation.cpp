@@ -246,12 +246,6 @@ uint32_t SimplePluginCyclicBufferClientImplementation::Start(uint32_t waitTime)
         /* uint32_t */ Stop(waitTime);
     }
 
-    static_assert(  std::is_integral<decltype(std::time(nullptr))>::value
-                  , "'std::srand' requires an integral type as seed"
-    );
-
-    std::srand(std::time(nullptr));
-
     return result;
 }
 

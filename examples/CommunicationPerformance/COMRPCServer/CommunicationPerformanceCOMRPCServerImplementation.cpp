@@ -26,6 +26,8 @@
 #include <chrono>
 #endif
 
+#include <random>
+
 namespace Thunder {
 namespace Plugin {
 
@@ -280,8 +282,6 @@ uint32_t SimplePluginCOMRPCServerImplementation::Start(uint32_t waitTime)
                   , "'std::srand' requires an integral type as seed"
     );
 
-    std::srand(std::time(nullptr));
-
     return result;
 }
 
@@ -295,7 +295,7 @@ uint32_t SimplePluginCOMRPCServerImplementation::Stop(uint32_t waitTime)
     return result;
 }
 
-uint32_t SimplePluginCOMRPCServerImplementation::Task(STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+uint32_t SimplePluginCOMRPCServerImplementation::Task(STATE& state, uint32_t& waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 
@@ -310,11 +310,13 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             constexpr size_t numberOfBins = CommunicationPerformanceHelpers::NumberOfBins;
 
 #ifndef _USE_TESTDATA
+                            // Re-intialize as data may have been altered
                             std::array<uint8_t, bufferMaxSize> buffer = CommunicationPerformanceHelpers::ConstexprArray<uint8_t, bufferMaxSize>::values;
 
                             // Educated guess, system dependent, required for distribution
                             constexpr uint64_t upperBoundDuration = CommunicationPerformanceHelpers::UpperBoundDuration;
                             constexpr uint64_t lowerBoundDuration = CommunicationPerformanceHelpers::LowerBoundDuration;
+
                             constexpr uint16_t bufferMinSize = 0;
 
                             // Round trip time in ticks
@@ -322,8 +324,13 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
 
                             // Add some randomness
 
-                            using common_t = std::common_type<int, uint16_t>::type;
-                            const uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
+                            std::random_device rd; // Generate values between 0 and std:numeric_limits<unsigned int>::max()
+
+                            using common_t = std::common_type<unsigned int, uint16_t>::type;
+
+                            static_assert(static_cast<common_t>(std::numeric_limits<unsigned int>::max()) >= static_cast<common_t>(bufferMaxSize), "");
+
+                            const uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(rd()) % static_cast<common_t>(bufferMaxSize));
 
                             // With no mistakes this always holds 
                             ASSERT(bufferSize <= bufferMaxSize);

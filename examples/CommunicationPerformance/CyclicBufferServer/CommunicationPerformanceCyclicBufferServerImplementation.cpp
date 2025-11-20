@@ -26,6 +26,8 @@
 #include <chrono>
 #endif
 
+#include <random>
+
 namespace Thunder {
 namespace Plugin {
 
@@ -260,12 +262,6 @@ uint32_t SimplePluginCyclicBufferServerImplementation::Start(uint32_t waitTime)
         /* uint32_t */ Stop(waitTime);
     }
 
-    static_assert(  std::is_integral<decltype(std::time(nullptr))>::value
-                  , "'std::srand' requires an integral type as seed"
-    );
-
-    std::srand(std::time(nullptr));
-
     return result;
 }
 
@@ -302,8 +298,13 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
 
                             // Add some randomness
 
-                            using common_t = std::common_type<int, uint16_t>::type;
-                            uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
+                            std::random_device rd; // Generate values between 0 and std:numeric_limits<unsigned int>::max()
+
+                            using common_t = std::common_type<unsigned int, uint16_t>::type;
+
+                            static_assert(static_cast<common_t>(std::numeric_limits<unsigned int>::max()) >= static_cast<common_t>(bufferMaxSize), "");
+
+                            uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(rd()) % static_cast<common_t>(bufferMaxSize));
 
                             // With no mistakes this always holds
                             ASSERT(bufferSize <= bufferMaxSize);
