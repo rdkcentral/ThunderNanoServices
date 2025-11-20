@@ -315,7 +315,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             // Educated guess, system dependent, required for distribution
                             constexpr uint64_t upperBoundDuration = CommunicationPerformanceHelpers::UpperBoundDuration;
                             constexpr uint64_t lowerBoundDuration = CommunicationPerformanceHelpers::LowerBoundDuration;
-                            constexpr uint16_t bufferMinSize = 7000;
+                            constexpr uint16_t bufferMinSize = 0;
 
                             // Round trip time in ticks
                             uint64_t duration = 0;
@@ -323,9 +323,7 @@ PUSH_WARNING(DISABLE_WARNING_IMPLICIT_FALLTHROUGH);
                             // Add some randomness
 
                             using common_t = std::common_type<int, uint16_t>::type;
-                            /*const*/ uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
-
-                            bufferSize = (bufferSize % (bufferMaxSize - bufferMinSize) ) + bufferMinSize; 
+                            const uint16_t bufferSize = static_cast<uint16_t>(static_cast<common_t>(std::rand()) % static_cast<common_t>(bufferMaxSize));
 
                             // With no mistakes this always holds 
                             ASSERT(bufferSize <= bufferMaxSize);
