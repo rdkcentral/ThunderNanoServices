@@ -21,8 +21,6 @@
 
 #include <core/ICustomErrorCode.h>
 
-sajKSALjsaL
-
 const TCHAR* CustomCodeToString(const int32_t code) {
     const TCHAR* text = nullptr;
     if (code == 100) {
