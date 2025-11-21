@@ -2219,6 +2219,7 @@ Signals pin state changes.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
+| params?.pin | integer | optional | *...* |
 | params.high | boolean | mandatory | *...* |
 
 ### Example
@@ -2244,6 +2245,7 @@ Signals pin state changes.
   "jsonrpc": "2.0",
   "method": "myid.device#id1::pinChanged@0",
   "params": {
+    "pin": 0,
     "high": false
   }
 }
