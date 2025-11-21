@@ -817,7 +817,7 @@ namespace Plugin {
                 DeviceImpl& operator=(DeviceImpl&&) = delete;
 
             public:
-                Core::hresult Register(INotification* const notification) override
+                Core::hresult Register(INotification* const notification, const Core::OptionalType<uint8_t>& pin) override
                 {
                     Core::hresult result = Core::ERROR_NONE;
 
@@ -825,18 +825,30 @@ namespace Plugin {
 
                     _lock.Lock();
 
-                    auto it = std::find(_observers.begin(), _observers.end(), notification);
+                    auto it = std::find_if(_observers.begin(), _observers.end(), [notification, pin](std::pair<INotification*,Core::OptionalType<uint8_t>>& observer) {
+                        return ((observer.first == notification) && (observer.second == pin));
+                    });
+
                     ASSERT(it == _observers.end());
 
                     if (it == _observers.end()) {
-                        _observers.push_back(notification);
+                        _observers.push_back(std::pair<INotification*,Core::OptionalType<uint8_t>>(notification, pin));
                         notification->AddRef();
 
                         notification->StateChanged(_state);
 
-                        IteratePins([notification](const uint8_t pin, const bool high) {
-                            notification->PinChanged(pin, high);
-                        });
+                        if (pin.IsSet() == true) {
+                            if (PinStatus(pin.Value()) == true) {
+                                notification->PinChanged(pin.Value(), true);
+                            }
+                        }
+                        else {
+                            IteratePins([notification](const uint8_t pin, const bool high) {
+                                if (high == true) {
+                                    notification->PinChanged(pin, true);
+                                }
+                            });
+                        }
                     }
                     else {
                         result = Core::ERROR_ALREADY_CONNECTED;
@@ -846,7 +858,7 @@ namespace Plugin {
 
                     return (result);
                 }
-                Core::hresult Unregister(const INotification* const notification) override
+                Core::hresult Unregister(const INotification* const notification, const Core::OptionalType<uint8_t>& pin) override
                 {
                     Core::hresult result = Core::ERROR_NONE;
 
@@ -854,11 +866,14 @@ namespace Plugin {
 
                     _lock.Lock();
 
-                    auto it = std::find(_observers.begin(), _observers.end(), notification);
+                    auto it = std::find_if(_observers.begin(), _observers.end(), [notification, pin](std::pair<INotification*,Core::OptionalType<uint8_t>>& observer) {
+                        return ((observer.first == notification) && (observer.second == pin));
+                    });
+
                     ASSERT(it != _observers.end());
 
                     if (it != _observers.end()) {
-                        (*it)->Release();
+                        (*it).first->Release();
                         _observers.erase(it);
                     }
                     else {
@@ -965,7 +980,7 @@ namespace Plugin {
                         _name = name;
 
                         for (auto const& observer : _observers) {
-                            observer->NameChanged(name);
+                            observer.first->NameChanged(name);
                         }
                     }
 
@@ -980,7 +995,7 @@ namespace Plugin {
                         _state = state;
 
                         for (auto const& observer : _observers) {
-                            observer->StateChanged(state);
+                            observer.first->StateChanged(state);
                         }
                     }
 
@@ -997,7 +1012,10 @@ namespace Plugin {
                             (*it).second = high;
 
                             for (auto const& observer : _observers) {
-                                observer->PinChanged(pin, high);
+                                if ((observer.second.IsSet() == false) || ((observer.second.IsSet() == true) && (observer.second.Value() == pin))) {
+                                    observer.first->PinChanged(pin, high);
+                                    break;
+                                }
                             }
                         }
                     }
@@ -1005,7 +1023,10 @@ namespace Plugin {
                         _pins.emplace(pin, high);
 
                         for (auto const& observer : _observers) {
-                            observer->PinChanged(pin, high);
+                            if ((observer.second.IsSet() == false) || ((observer.second.IsSet() == true) && (observer.second.Value() == pin))) {
+                                observer.first->PinChanged(pin, high);
+                                break;
+                            }
                         }
                     }
 
@@ -1024,7 +1045,7 @@ namespace Plugin {
                 string _name;
                 Example::ISimpleInstanceObjects::state _state;
                 std::map<uint8_t, bool> _pins;
-                std::vector<Example::ISimpleInstanceObjects::IDevice::INotification*> _observers;
+                std::vector<std::pair<Example::ISimpleInstanceObjects::IDevice::INotification*, Core::OptionalType<uint8_t>>> _observers;
 
             }; // class Device
 
@@ -1555,7 +1576,7 @@ namespace Plugin {
                         ASSERT(_deviceNotificationSinks.find(device) == _deviceNotificationSinks.end());
                         _deviceNotificationSinks.emplace(device, impl);
 
-                        device->Register(impl);
+                        device->Register(impl, {});
                         _lock.Unlock();
                     }
                     else {
@@ -1572,7 +1593,7 @@ namespace Plugin {
                         if (it != _deviceNotificationSinks.end()) {
                             DeviceNotificationImpl* const impl = (*it).second;
                             ASSERT(impl != nullptr);
-                            device->Unregister(impl);
+                            device->Unregister(impl, {});
                             impl->Release();
                             device->Release();
                             _deviceNotificationSinks.erase(it);
@@ -1673,7 +1694,11 @@ namespace Plugin {
             }
             void PinChanged(const uint8_t pin, const bool high) override
             {
-                Example::JSimpleInstanceObjects::Event::PinChanged(_parent, _device, pin, high);
+                Example::JSimpleInstanceObjects::Event::PinChanged(_parent, _device, Core::OptionalType<uint8_t>(), pin, high);
+                Example::JSimpleInstanceObjects::Event::PinChanged(_parent, _device, pin, Core::OptionalType<uint8_t>(), high);
+
+                // Alternatively, to send to all and specific listeners, but always including the pin number:
+                //   Example::JSimpleInstanceObjects::Event::PinChanged(_parent, _device, pin, high);
             }
 
         public:
@@ -1858,22 +1883,30 @@ namespace Plugin {
                 Example::JSimpleInstanceObjects::Event::StateChanged(*this, object, device->State(), client);
             }
         }
-        void OnPinChangedEventRegistration(Example::ISimpleInstanceObjects::IDevice* object, const string& client, const string& index, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
+        void OnPinChangedEventRegistration(Example::ISimpleInstanceObjects::IDevice* object, const string& client, const Core::OptionalType<uint8_t>& pin, const PluginHost::JSONRPCSupportsEventStatus::Status status) override
         {
             string name;
             static_cast<const Example::ISimpleInstanceObjects::IDevice*>(object)->Name(name);
 
-            TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' pin %s state change notifications"), client.c_str(),
-                status == PluginHost::JSONRPCSupportsEventStatus::Status::registered? "registered" : "unregistered", name.c_str(), index.c_str()));
+            TRACE(Trace::Information, (_T("Client '%s' %s for device '%s' pin %u state change notifications"), client.c_str(),
+                status == PluginHost::JSONRPCSupportsEventStatus::Status::registered? "registered" : "unregistered", name.c_str(), pin));
 
             // A JSON-RPC client registered for "pinchanged" notifications, let them know the state if the pin is lit already.
             // Only the registering client will recieve this extra notification, via the default sendif method generated.
             if (status == PluginHost::JSONRPCSupportsEventStatus::Status::registered) {
                 ImaginaryHost::DeviceImpl* device = static_cast<ImaginaryHost::DeviceImpl*>(object);
 
-                const uint8_t pin = ::atoi(index.c_str());
-                if (device->PinStatus(pin) == true) {
-                    Example::JSimpleInstanceObjects::Event::PinChanged(*this, object, pin, true, client);
+                if (pin.IsSet() == true) {
+                    if (device->PinStatus(pin.Value()) == true) {
+                        Example::JSimpleInstanceObjects::Event::PinChanged(*this, object, pin, Core::OptionalType<uint8_t>(), true, client);
+                    }
+                }
+                else {
+                    device->IteratePins([this, object, client](const uint8_t pin, const bool high) {
+                        if (high == true) {
+                            Example::JSimpleInstanceObjects::Event::PinChanged(*this, object, Core::OptionalType<uint8_t>(), pin, true, client);
+                        }
+                    });
                 }
             }
         }
