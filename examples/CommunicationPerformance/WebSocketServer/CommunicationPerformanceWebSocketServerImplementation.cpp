@@ -74,7 +74,7 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchang
 
     std::basic_string<uint8_t> message{ buffer, bufferSize };
 
-    VARIABLE_IS_NOT_USED uint32_t waitTime = std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), duration); 
+    uint32_t waitTime = std::min(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()), duration); 
 
 #ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
     Core::StopWatch timer;
@@ -187,7 +187,7 @@ bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Sub
 }
 
 template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Response(std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED uint32_t waitTime)
+bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Response(std::basic_string<uint8_t>& message, uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 

@@ -246,7 +246,7 @@ void SimplePlugin::Deinitialize(PluginHost::IShell* service) /* override */
     }
 
     if (_simplePluginImplementation != nullptr) {
-        VARIABLE_IS_NOT_USED uint32_t result = _simplePluginImplementation->Unregister(&_simplePluginNotification);
+        uint32_t result = _simplePluginImplementation->Unregister(&_simplePluginNotification);
         ASSERT(result == Core::ERROR_NONE);
 
         result = _simplePluginImplementation->Release();

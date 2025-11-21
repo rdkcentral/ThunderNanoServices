@@ -270,7 +270,7 @@ uint32_t SimplePluginCyclicBufferServerImplementation::Stop(uint32_t waitTime)
     return _server.Stop(waitTime);
 }
 
-uint32_t SimplePluginCyclicBufferServerImplementation::Task(STATE& state, VARIABLE_IS_NOT_USED uint32_t& waitTime)
+uint32_t SimplePluginCyclicBufferServerImplementation::Task(STATE& state, uint32_t& waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 

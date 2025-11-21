@@ -168,6 +168,7 @@ public:
         void DoClear();
 
         void DoPrint() const;
+
     private:
         template<typename DISTRIBUTION>
         friend DISTRIBUTION& Measurements<A,B>::Instance();
@@ -220,7 +221,7 @@ public :
         Baton(bool rawSocket, const SOCKET& localSocket, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize);
         ~Baton();
 
-        uint32_t Signal(VARIABLE_IS_NOT_USED uint32_t waitTime);
+        uint32_t Signal(uint32_t waitTime);
         uint32_t Wait(uint32_t waitTime);
 
         uint32_t Open(uint32_t waitTime);
@@ -236,7 +237,7 @@ public :
 
         // Called if data has to be sent
         // Use Trigger() to create the event 
-        uint16_t SendData(uint8_t* dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxSendSize) override;
+        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
 
         // Called if data is received
         uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t maxReceiveSize) override;
