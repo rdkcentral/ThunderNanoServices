@@ -205,7 +205,7 @@ This method will return *True* for the following methods/properties: *connected,
   "id": 42,
   "method": "GeneratorShowcase.1.exists",
   "params": {
-    "method": "connected"
+    "method": "methodName"
   }
 }
 ```
@@ -227,7 +227,7 @@ Registers for an asynchronous JSON-RPC notification.
 
 ### Description
 
-This method supports the following event names: *[bindingChanged](#notification_bindingChanged), [statusChanged](#notification_statusChanged), [device#ID::nameChanged](#notification_device#ID::nameChanged), [device#ID::stateChanged](#notification_device#ID::stateChanged), [device#ID::pinChanged](#notification_device#ID::pinChanged), [added](#notification_added), [removed](#notification_removed), [accessory#ID::nameChanged](#notification_accessory#ID::nameChanged)*.
+This method supports the following event names: *[bindingChanged](#notification_bindingChanged), [statusChanged](#notification_statusChanged), [device::nameChanged](#notification_device__nameChanged), [device::stateChanged](#notification_device__stateChanged), [device::pinChanged](#notification_device__pinChanged), [added](#notification_added), [removed](#notification_removed), [accessory::nameChanged](#notification_accessory__nameChanged)*.
 
 ### Parameters
 
@@ -259,7 +259,7 @@ This method supports the following event names: *[bindingChanged](#notification_
   "id": 42,
   "method": "GeneratorShowcase.1.register",
   "params": {
-    "event": "bindingChanged",
+    "event": "eventName",
     "id": "myapp"
   }
 }
@@ -282,7 +282,7 @@ Unregisters from an asynchronous JSON-RPC notification.
 
 ### Description
 
-This method supports the following event names: *[bindingChanged](#notification_bindingChanged), [statusChanged](#notification_statusChanged), [device#ID::nameChanged](#notification_device#ID::nameChanged), [device#ID::stateChanged](#notification_device#ID::stateChanged), [device#ID::pinChanged](#notification_device#ID::pinChanged), [added](#notification_added), [removed](#notification_removed), [accessory#ID::nameChanged](#notification_accessory#ID::nameChanged)*.
+This method supports the following event names: *[bindingChanged](#notification_bindingChanged), [statusChanged](#notification_statusChanged), [device::nameChanged](#notification_device__nameChanged), [device::stateChanged](#notification_device__stateChanged), [device::pinChanged](#notification_device__pinChanged), [added](#notification_added), [removed](#notification_removed), [accessory::nameChanged](#notification_accessory__nameChanged)*.
 
 ### Parameters
 
@@ -314,7 +314,7 @@ This method supports the following event names: *[bindingChanged](#notification_
   "id": 42,
   "method": "GeneratorShowcase.1.unregister",
   "params": {
-    "event": "bindingChanged",
+    "event": "eventName",
     "id": "myapp"
   }
 }
@@ -1210,6 +1210,8 @@ Unlinks a device.
 
 Acquires a device.
 
+> This method creates an instance of a *device* object.
+
 ### Parameters
 
 | Name | Type | M/O | Description |
@@ -1221,7 +1223,7 @@ Acquires a device.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | integer | mandatory | Instance of the acquired device |
+| result | integer (instance ID) | mandatory | Instance of the acquired device<br> |
 
 ### Errors
 
@@ -1264,7 +1266,7 @@ Relinquishes a device.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.device | integer | mandatory | Device instance to relinquish |
+| params.device | integer (instance ID) | mandatory | Device instance to relinquish<br> |
 
 ### Result
 
@@ -1334,7 +1336,7 @@ This method takes no parameters.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::enable"
+  "method": "GeneratorShowcase.1.device#1::enable"
 }
 ```
 
@@ -1379,7 +1381,7 @@ This method takes no parameters.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::disable"
+  "method": "GeneratorShowcase.1.device#1::disable"
 }
 ```
 
@@ -1698,7 +1700,7 @@ Provides access to the name of the device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::name"
+  "method": "GeneratorShowcase.1.device#1::name"
 }
 ```
 
@@ -1718,7 +1720,7 @@ Provides access to the name of the device.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::name",
+  "method": "GeneratorShowcase.1.device#1::name",
   "params": {
     "value": "..."
   }
@@ -1775,7 +1777,7 @@ Provides access to the A pin.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::pin@0"
+  "method": "GeneratorShowcase.1.device#1::pin@0"
 }
 ```
 
@@ -1795,7 +1797,7 @@ Provides access to the A pin.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::pin@0",
+  "method": "GeneratorShowcase.1.device#1::pin@0",
   "params": {
     "value": false
   }
@@ -1831,7 +1833,7 @@ Provides access to the accessory by name.
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| (property) | string | mandatory | Accessory instance |
+| (property) | string (instance ID) | mandatory | Accessory instance<br> |
 
 ### Example
 
@@ -1851,7 +1853,7 @@ Provides access to the accessory by name.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "..."
+  "result": "id1"
 }
 ```
 
@@ -2065,6 +2067,8 @@ Signals completion of the Connect method.
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.bindingChanged@<address>``.
 
+> The *address* parameter is passed as index within the notification designator, i.e. ``<client-id>.bindingChanged@<address>``.
+
 <a id="notification_statusChanged"></a>
 ## *statusChanged [<sup>notification</sup>](#head_Notifications)*
 
@@ -2133,7 +2137,7 @@ Signals device name changes.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::register",
+  "method": "GeneratorShowcase.1.device#1::register",
   "params": {
     "event": "nameChanged",
     "id": "myid"
@@ -2146,7 +2150,7 @@ Signals device name changes.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "myid.device#id1::nameChanged",
+  "method": "myid.device#1::nameChanged",
   "params": {
     "state": "..."
   }
@@ -2179,7 +2183,7 @@ Signals device state changes.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::register",
+  "method": "GeneratorShowcase.1.device#1::register",
   "params": {
     "event": "stateChanged",
     "id": "myid"
@@ -2192,7 +2196,7 @@ Signals device state changes.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "myid.device#id1::stateChanged",
+  "method": "myid.device#1::stateChanged",
   "params": {
     "state": "DISABLED"
   }
@@ -2212,13 +2216,14 @@ Signals pin state changes.
 
 ### Parameters
 
-> The *pin* parameter shall be passed as index to the ``register`` call, i.e. ``register@<pin>``.
+> The *pin* parameter is optional. If set it shall be passed as index to the ``register`` call, i.e. ``register@<pin>``.
 
 ### Notification Parameters
 
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
+| params?.pin | integer | optional | *...* |
 | params.high | boolean | mandatory | *...* |
 
 ### Example
@@ -2229,7 +2234,7 @@ Signals pin state changes.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "method": "GeneratorShowcase.1.device#id1::register@0",
+  "method": "GeneratorShowcase.1.device#1::register@0",
   "params": {
     "event": "pinChanged",
     "id": "myid"
@@ -2242,14 +2247,17 @@ Signals pin state changes.
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "myid.device#id1::pinChanged@0",
+  "method": "myid.device#1::pinChanged@0",
   "params": {
+    "pin": 0,
     "high": false
   }
 }
 ```
 
 > The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::pinChanged@<pin>``.
+
+> The *pin* parameter is optionally passed as index within the notification designator, i.e. ``<client-id>.device#<device-id>::pinChanged@<pin>``.
 
 > The *device instance id* parameter is passed within the notification designator, i.e. ``<client-id>.device#<device-id>::pinChanged@<pin>``.
 
@@ -2265,7 +2273,7 @@ Signals addition of a accessory.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.accessory | string | mandatory | Accessory instance |
+| params.accessory | string (instance ID) | mandatory | Accessory instance<br> |
 
 ### Example
 
@@ -2290,7 +2298,7 @@ Signals addition of a accessory.
   "jsonrpc": "2.0",
   "method": "myid.added",
   "params": {
-    "accessory": "..."
+    "accessory": "id1"
   }
 }
 ```
@@ -2307,7 +2315,7 @@ Signals removal of a accessory.
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
 | params | object | mandatory | *...* |
-| params.accessory | string | mandatory | Accessory instance |
+| params.accessory | string (instance ID) | mandatory | Accessory instance<br> |
 
 ### Example
 
@@ -2332,7 +2340,7 @@ Signals removal of a accessory.
   "jsonrpc": "2.0",
   "method": "myid.removed",
   "params": {
-    "accessory": "..."
+    "accessory": "id1"
   }
 }
 ```
