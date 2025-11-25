@@ -28,7 +28,7 @@ namespace Thunder {
 namespace Plugin {
 
 // A single server to serve one to N clients
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE = Core::File::USER_READ | Core::File::USER_WRITE, bool OVERWRITE = false>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE = Core::File::USER_READ | Core::File::USER_WRITE, const bool OVERWRITE = false>
 class CyclicBufferServer {
 public :
     CyclicBufferServer() = delete;
@@ -42,11 +42,11 @@ public :
 
     ~CyclicBufferServer();
 
-    uint32_t Start(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
 
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
-    uint32_t Exchange(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration); 
+    uint32_t Exchange(uint8_t buffer[], uint16_t& bufferSize, const uint16_t bufferMaxSize, uint64_t& duration);
 
 private :
 
@@ -98,8 +98,8 @@ private :
     // Listening node
     Core::SocketServerType<BatonAcceptConnectionType> _batonListeningNode;
 
-    uint32_t Open(uint32_t waitTime);
-    uint32_t Close(uint32_t waitTime);
+    uint32_t Open(const uint32_t waitTime);
+    uint32_t Close(const uint32_t waitTime);
 };
 
 
@@ -116,9 +116,9 @@ public :
 
     ~SimplePluginCyclicBufferServerImplementation();
 
-    uint32_t Start(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
 
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
 private :
 // TODO: educated guess 1 MiB

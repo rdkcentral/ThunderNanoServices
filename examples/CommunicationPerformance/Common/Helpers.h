@@ -39,7 +39,7 @@ template<typename TYPE, size_t... N>
 struct ConstexprArray<TYPE, 0, N...>
 {
     // Users should provide the definition
-    constexpr static TYPE func(size_t n); 
+    constexpr static TYPE func(const size_t n);
 
     // Users should provide the definition
     constexpr static TYPE marker();

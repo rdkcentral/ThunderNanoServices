@@ -28,7 +28,7 @@ namespace Thunder {
 namespace Plugin {
 
 // TODO: buffer size is uint16_t
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
 class WebSocketServer {
 public :
     WebSocketServer(const WebSocketServer&) = delete;
@@ -40,10 +40,10 @@ public :
     WebSocketServer(const string& localNode);
     ~WebSocketServer();
 
-    uint32_t Start(uint32_t waitTime);
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
-    uint32_t Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration); 
+    uint32_t Exchange(uint8_t buffer[], const uint16_t bufferSize, const uint16_t bufferMaxSize, uint64_t& duration);
 
 private :
 
@@ -59,8 +59,8 @@ private :
         Server(const SOCKET& socket, const ::Thunder::Core::NodeId& remoteNode, Core::SocketServerType<Server>* socketServer /* our creator */);
         ~Server() override;
 
-        bool Submit(const std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
-        bool Response(std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
+        bool Submit(const std::basic_string<uint8_t>& message, const uint32_t waitTime = Core::infinite);
+        bool Response(std::basic_string<uint8_t>& message, const uint32_t waitTime = Core::infinite);
 
         // Web::WebSocketServerType methods
         // --------------------------------
@@ -98,8 +98,8 @@ private :
     // Enable listening with SocketServerType
     Core::SocketServerType<Server> _server;
 
-    uint32_t Open(uint32_t waitTime);
-    uint32_t Close(uint32_t waitTime);
+    uint32_t Open(const uint32_t waitTime);
+    uint32_t Close(const uint32_t waitTime);
 };
 
 class SimplePluginWebSocketServerImplementation : public SimplePluginImplementation<SimplePluginWebSocketServerImplementation> {
@@ -113,8 +113,8 @@ public :
     SimplePluginWebSocketServerImplementation();
     ~SimplePluginWebSocketServerImplementation();
 
-    uint32_t Start(uint32_t waitTime);
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
 private :
     WebSocketServer<1024, 1024, Core::SocketStream> _server;

@@ -43,21 +43,21 @@ public:
 
     ~COMRPCClient(); // no override !
     
-    uint32_t Start(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
 
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
     // This implementation is asked for a handle to the requested interface
-    Performance< COMRPCClient< THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS >& >* Acquire(uint32_t waitTime);
+    Performance< COMRPCClient< THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS >& >* Acquire(const uint32_t waitTime);
 
     // RPC::CommunicatorClient methods
     // -------------------------------
 
     // Offer the remote our implementation of the interface, e.g., inform a server this is implementing the given interface
-    uint32_t Offer(uint32_t waitTime);
+    uint32_t Offer(const uint32_t waitTime);
 
     // Revoke the available (earlier) offered interface
-    uint32_t Revoke(uint32_t waitTime);
+    uint32_t Revoke(const uint32_t waitTime);
 
 private:
 
@@ -91,9 +91,9 @@ public :
 
     ~SimplePluginCOMRPCClientImplementation();
 
-    uint32_t Start(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
 
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
 private :
 // TODO:

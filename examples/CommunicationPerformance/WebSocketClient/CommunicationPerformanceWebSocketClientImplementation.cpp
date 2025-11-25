@@ -27,7 +27,7 @@
 namespace Thunder {
 namespace Plugin {
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::WebSocketClient(  const string& remoteNode
                                                                                 , const string& uriPath     // HTTP URI part, empty path allowed
                                                                                 , const string& protocol    // Optional HTTP field, WebSocket sub-protocol, ie, Sec-WebSocket-Protocol
@@ -39,14 +39,14 @@ WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::WebSocketClient(
     , _client{ uriPath, protocol, uriQuery, origin, false /* use raw socket */ , _remoteNode.AnyInterface(), _remoteNode, SENDBUFFERSIZE /* send buffer size */, RECEIVEBUFFERSIZE /* receive buffer size */ }
 {}
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::~WebSocketClient()
 {
     /* uint32_t result = */ Stop(Core::infinite);
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Start(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -55,8 +55,8 @@ uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Start(u
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Stop(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -65,14 +65,14 @@ uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Stop(ui
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchange(uint8_t buffer[], VARIABLE_IS_NOT_USED uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchange(uint8_t buffer[], VARIABLE_IS_NOT_USED const uint16_t bufferSize, const uint16_t bufferMaxSize, uint64_t& duration)
 {
     return Core::ERROR_NOT_SUPPORTED;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Open(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Open(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -83,8 +83,8 @@ uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Open(ui
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Close(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Close(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -96,7 +96,7 @@ uint32_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Close(u
 }
 
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 template <typename... Args>
 WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::Client( const string& path
                                                                                      , const string& protocol
@@ -113,11 +113,11 @@ WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::Client( 
 {}
 
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::~Client()
 {}
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 bool WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::IsIdle() const
 {
     _guardPost.Lock();
@@ -129,11 +129,11 @@ bool WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::IsI
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 void WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::StateChange()
 {}
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 uint16_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
 {
     size_t count{ 0 };
@@ -184,7 +184,7 @@ uint16_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client:
     return static_cast<uint16_t>(count);
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 uint16_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
 {
     uint16_t count{ receivedSize };
@@ -223,8 +223,8 @@ uint16_t WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client:
 }
 
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-bool WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::Submit(const std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+bool WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::Submit(const std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED const uint32_t waitTime)
 {
     _guardPost.Lock();
 
@@ -250,8 +250,8 @@ bool WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::Sub
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-bool WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::Response(std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+bool WebSocketClient<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Client::Response(std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED const uint32_t waitTime)
 {
 // TODO : Wait for complete message to be available, but do not block the running thread
     uint32_t result = Core::ERROR_NONE;
@@ -282,7 +282,7 @@ SimplePluginWebSocketClientImplementation::~SimplePluginWebSocketClientImplement
     /* uint32_t */ Stop(Core::infinite);
 }
 
-uint32_t SimplePluginWebSocketClientImplementation::Start(uint32_t waitTime)
+uint32_t SimplePluginWebSocketClientImplementation::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -291,7 +291,7 @@ uint32_t SimplePluginWebSocketClientImplementation::Start(uint32_t waitTime)
     return result;
 }
 
- uint32_t SimplePluginWebSocketClientImplementation::Stop(uint32_t waitTime)
+ uint32_t SimplePluginWebSocketClientImplementation::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 

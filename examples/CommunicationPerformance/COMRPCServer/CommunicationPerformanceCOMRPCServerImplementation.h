@@ -52,11 +52,11 @@ public :
 
     ~COMRPCServer();
 
-    uint32_t Start(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
 
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
-    uint32_t Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration) const;
+    uint32_t Exchange(uint8_t buffer[], const uint16_t bufferSize, const uint16_t bufferMaxSize, uint64_t& duration) const;
 
 private :
 
@@ -85,7 +85,7 @@ private :
 
     private:
 
-        friend uint32_t COMRPCServer::Stop(uint32_t);
+        friend uint32_t COMRPCServer::Stop(const uint32_t);
 
         mutable Core::CriticalSection _lock;
 
@@ -112,9 +112,9 @@ private :
 
     mutable Core::CriticalSection _lock;
 
-    uint32_t Open(uint32_t waitTime);
+    uint32_t Open(const uint32_t waitTime);
 
-    uint32_t Close(uint32_t waitTime);
+    uint32_t Close(const uint32_t waitTime);
 };
 
 class SimplePluginCOMRPCServerImplementation : public SimplePluginImplementation<SimplePluginCOMRPCServerImplementation> {
@@ -130,9 +130,9 @@ public :
 
     ~SimplePluginCOMRPCServerImplementation();
 
-    uint32_t Start(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
 
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
 private :
 // TODO:

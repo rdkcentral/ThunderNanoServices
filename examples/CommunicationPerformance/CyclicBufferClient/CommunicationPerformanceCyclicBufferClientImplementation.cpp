@@ -29,7 +29,7 @@
 namespace Thunder {
 namespace Plugin {
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::CyclicBufferClient(const std::string& fileName)
     : _fileName{ fileName }
     , _buffer{ _fileName, ACCESSMODE | Core::File::USER_WRITE | Core::File::SHAREABLE /* required for multiple processes to share data */, 0 /* ineffective,  server controls size */ , false /* ineffective, server controls flag */ }
@@ -37,14 +37,14 @@ CyclicBufferClient<ACCESSMODE>::CyclicBufferClient(const std::string& fileName)
     , _batonConnectingNode{ Core::NodeId{ std::string{ _fileName + "Baton" }.c_str(), Core::NodeId::TYPE_DOMAIN } }
 {}
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::~CyclicBufferClient()
 {
     /* uint32_t result = */ Stop(Core::infinite);
 }
 
-template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Start(uint32_t waitTime)
+template <const Core::File::Mode ACCESSMODE>
+uint32_t CyclicBufferClient<ACCESSMODE>::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -53,8 +53,8 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Start(uint32_t waitTime)
     return result;
 }
 
-template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Stop(uint32_t waitTime)
+template <const Core::File::Mode ACCESSMODE>
+uint32_t CyclicBufferClient<ACCESSMODE>::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -71,8 +71,8 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Stop(uint32_t waitTime)
     return result;
 }
 
-template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration)
+template <const Core::File::Mode ACCESSMODE>
+uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED const uint16_t bufferMaxSize, uint64_t& duration)
 {
     ASSERT(bufferSize <= bufferMaxSize);
 
@@ -149,8 +149,8 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Exchange(uint8_t buffer[], uint16_t& bu
 
 }
 
-template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Open(uint32_t waitTime)
+template <const Core::File::Mode ACCESSMODE>
+uint32_t CyclicBufferClient<ACCESSMODE>::Open(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -176,8 +176,8 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Open(uint32_t waitTime)
     return result;
 }
 
-template <Core::File::Mode ACCESSMODE>
-uint32_t CyclicBufferClient<ACCESSMODE>::Close(uint32_t waitTime)
+template <const Core::File::Mode ACCESSMODE>
+uint32_t CyclicBufferClient<ACCESSMODE>::Close(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -199,32 +199,32 @@ uint32_t CyclicBufferClient<ACCESSMODE>::Close(uint32_t waitTime)
 }
 
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::CustomCyclicBuffer(const string& fileName, const uint32_t mode, const uint32_t bufferSize, const bool overwrite)
     : CyclicBuffer(fileName, mode, bufferSize, overwrite)
 {}
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::CustomCyclicBuffer(Core::DataElementFile& buffer, const bool initiator, const uint32_t offset, const uint32_t bufferSize, const bool overwrite)
     : CyclicBuffer(buffer, initiator, offset, bufferSize, overwrite)
 {}
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::~CustomCyclicBuffer()
 {}
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 void CyclicBufferClient<ACCESSMODE>::CustomCyclicBuffer::DataAvailable()
 {}
 
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::BatonConnectedType::BatonConnectedType(const Core::NodeId& remoteNodeId)
     // Use identical Type() of the remoteNodeId also locally
     : BatonConnectionType(false, remoteNodeId.AnyInterface(), remoteNodeId, 1024, 1024)
 {}
 
-template <Core::File::Mode ACCESSMODE>
+template <const Core::File::Mode ACCESSMODE>
 CyclicBufferClient<ACCESSMODE>::BatonConnectedType::~BatonConnectedType()
 {}
 
@@ -238,7 +238,7 @@ SimplePluginCyclicBufferClientImplementation::~SimplePluginCyclicBufferClientImp
     /* uint32_t */ Stop(Core::infinite);
 }
 
-uint32_t SimplePluginCyclicBufferClientImplementation::Start(uint32_t waitTime)
+uint32_t SimplePluginCyclicBufferClientImplementation::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -249,7 +249,7 @@ uint32_t SimplePluginCyclicBufferClientImplementation::Start(uint32_t waitTime)
     return result;
 }
 
-uint32_t SimplePluginCyclicBufferClientImplementation::Stop(uint32_t waitTime)
+uint32_t SimplePluginCyclicBufferClientImplementation::Stop(const uint32_t waitTime)
 {
     return _client.Stop(waitTime);
 }

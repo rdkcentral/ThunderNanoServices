@@ -170,9 +170,11 @@ template<typename A, typename B>
 template<typename DERIVED>
 template<typename TYPE>
 typename std::enable_if<std::is_unsigned<TYPE>::value && std::is_integral<TYPE>::value, TYPE>::type
-Measurements<A, B>::Distribution2D<DERIVED>::Average(TYPE value, TYPE average, TYPE& remainder, bool& negative)
+Measurements<A, B>::Distribution2D<DERIVED>::Average(const TYPE value, const TYPE averageInitialValue, TYPE& remainder, bool& negative)
 {
     ASSERT(_count > 0);
+
+    TYPE average{ averageInitialValue };
 
     // Recursive algorithm
     // a(n) = a[n-1] + 1/n * ( v(n) ) - a(n-1) )
@@ -488,14 +490,14 @@ template<typename DISTRIBUTION>
 
 
 template <typename DERIVED>
-SimplePluginImplementation<DERIVED>::Baton::Baton(bool rawSocket, const Core::NodeId& localNodeId, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize)
+SimplePluginImplementation<DERIVED>::Baton::Baton(const bool rawSocket, const Core::NodeId& localNodeId, const Core::NodeId& remoteNodeId, const uint16_t sendBufferSize, const uint16_t receiveBufferSize)
     : Core::SocketStream{ rawSocket, localNodeId, remoteNodeId, sendBufferSize, receiveBufferSize }
     , _handover{ false /* blCondition */, true /* blManualReset */ }
     , _send{ false }
 {}
 
 template <typename DERIVED>
-SimplePluginImplementation<DERIVED>::Baton::Baton(bool rawSocket, const SOCKET& localSocket, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize)
+SimplePluginImplementation<DERIVED>::Baton::Baton(const bool rawSocket, const SOCKET& localSocket, const Core::NodeId& remoteNodeId, const uint16_t sendBufferSize, const uint16_t receiveBufferSize)
     : Core::SocketStream{ rawSocket, localSocket, remoteNodeId, sendBufferSize, receiveBufferSize }
     , _handover{ false /* blCondition */, true /* blManualReset */ }
     , _send{ false }
@@ -566,7 +568,7 @@ bool SimplePluginImplementation<DERIVED>::Baton::NoDelay() const
 }
 
 template <typename DERIVED>
-uint16_t SimplePluginImplementation<DERIVED>::Baton::SendData(uint8_t* dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxSendSize)
+uint16_t SimplePluginImplementation<DERIVED>::Baton::SendData(uint8_t* const dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxSendSize)
 {
     using common_t = std::common_type<std::size_t, uint16_t>::type;
 
@@ -595,7 +597,7 @@ uint16_t SimplePluginImplementation<DERIVED>::Baton::SendData(uint8_t* dataFrame
 }
 
 template <typename DERIVED>
-uint16_t SimplePluginImplementation<DERIVED>::Baton::ReceiveData(uint8_t* dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxReceiveSize)
+uint16_t SimplePluginImplementation<DERIVED>::Baton::ReceiveData(uint8_t* const dataFrame, VARIABLE_IS_NOT_USED const uint16_t maxReceiveSize)
 {
     using common_t = std::common_type<std::size_t, uint16_t>::type;
 

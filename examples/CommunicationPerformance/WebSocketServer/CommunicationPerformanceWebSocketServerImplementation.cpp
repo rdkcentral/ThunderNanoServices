@@ -33,20 +33,20 @@
 namespace Thunder {
 namespace Plugin {
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::WebSocketServer(const string& localNode)
     : _localNode{ static_cast<const TCHAR*>(localNode.c_str()) } // listening node
     , _server{ _localNode }
 {}
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::~WebSocketServer()
 {
     /* uint32_t result = */ Stop(Core::infinite);
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Start(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -55,8 +55,8 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Start(u
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Stop(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -65,8 +65,8 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Stop(ui
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchange(uint8_t buffer[], const uint16_t bufferSize, const uint16_t bufferMaxSize, uint64_t& duration)
 {
     ASSERT(bufferSize < bufferMaxSize);
 
@@ -117,8 +117,8 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Exchang
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Open(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Open(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -128,8 +128,8 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Open(ui
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Close(uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Close(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
    
@@ -140,7 +140,7 @@ uint32_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Close(u
 }
 
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Server(const SOCKET& socket, const ::Thunder::Core::NodeId& remoteNode, VARIABLE_IS_NOT_USED Core::SocketServerType<Server>* socketServer /* our creator */)
     // A server should nevwer apply masking when sending frames to the client
     : Web::WebSocketServerType<STREAMTYPE>(false /* binary */, false /* masking */, /* <Arguments SocketStream> */ false /* use raw socket */, socket, remoteNode, SENDBUFFERSIZE, RECEIVEBUFFERSIZE /* </Arguments SocketStream> */)
@@ -151,14 +151,14 @@ WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Server(c
     , _messageAvailable{ false, false }
 {}
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::~Server()
 {
     /* uint32_t */ _messageAvailable.Unlock();
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Submit(const std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Submit(const std::basic_string<uint8_t>& message, VARIABLE_IS_NOT_USED const uint32_t waitTime)
 {
     _guardPost.Lock();
 
@@ -186,8 +186,8 @@ bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Sub
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
-bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Response(std::basic_string<uint8_t>& message, uint32_t waitTime)
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Response(std::basic_string<uint8_t>& message, const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 
@@ -223,7 +223,7 @@ bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Res
     return (message.size() > 0);
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::IsIdle() const
 {
     _guardPost.Lock();
@@ -235,7 +235,7 @@ bool WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::IsI
     return result;
 }
 
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 void WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::StateChange()
 {
 // TODO: transition IsOpen true to false, and, IsSupended false to true
@@ -248,7 +248,7 @@ void WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::Sta
 }
 
 // Reflects payload, effective after upgrade
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 uint16_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::SendData(uint8_t* dataFrame, const uint16_t maxSendSize)
 {
     size_t count{ 0 };
@@ -299,7 +299,7 @@ uint16_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server:
 }
 
 // Reflects payload, effective after upgrade
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE>
 uint16_t WebSocketServer<SENDBUFFERSIZE, RECEIVEBUFFERSIZE, STREAMTYPE>::Server::ReceiveData(uint8_t* dataFrame, const uint16_t receivedSize)
 {
     uint16_t count{ receivedSize };
@@ -346,7 +346,7 @@ SimplePluginWebSocketServerImplementation::~SimplePluginWebSocketServerImplement
     /* uint32_t */ Stop(Core::infinite);
 }
 
-uint32_t SimplePluginWebSocketServerImplementation::Start(uint32_t waitTime)
+uint32_t SimplePluginWebSocketServerImplementation::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -355,7 +355,7 @@ uint32_t SimplePluginWebSocketServerImplementation::Start(uint32_t waitTime)
     return result;
 }
 
- uint32_t SimplePluginWebSocketServerImplementation::Stop(uint32_t waitTime)
+ uint32_t SimplePluginWebSocketServerImplementation::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 

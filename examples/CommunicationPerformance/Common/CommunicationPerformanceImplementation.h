@@ -58,7 +58,7 @@ constexpr size_t NumberOfBins = 20;
 
 // User defined definition
 template<typename TYPE, size_t... N>
-constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(size_t n)
+constexpr TYPE ConstexprArray<TYPE, 0, N...>::func(const size_t n)
 {
     // (Integral) TYPE may not have the same range as size_t
 
@@ -147,7 +147,7 @@ public:
         // Algorithm has only been analysed for unsigned integral types, in particular integer values in the range 0 to max
         template<typename TYPE>
         typename std::enable_if<std::is_unsigned<TYPE>::value && std::is_integral<TYPE>::value, TYPE>::type
-        Average(TYPE value, TYPE average, TYPE& remainder, bool& negative = false);
+        Average(const TYPE value, const TYPE averageInitialvalue, TYPE& remainder, bool& negative = false);
     };
 
     template<size_t N, A UPPER_BOUND_A = std::numeric_limits<A>::max(), B UPPER_BOUND_B = std::numeric_limits<B>::max(), A LOWER_BOUND_A = 0, B LOWER_BOUND_B = 0>
@@ -217,14 +217,14 @@ public :
         Baton& operator=(const Baton&) = delete;
         Baton& operator=(Baton&&) = delete;
 
-        Baton(bool rawSocket, const Core::NodeId& localNodeId, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize);
-        Baton(bool rawSocket, const SOCKET& localSocket, const Core::NodeId& remoteNodeId, uint16_t sendBufferSize, uint16_t receiveBufferSize);
+        Baton(const bool rawSocket, const Core::NodeId& localNodeId, const Core::NodeId& remoteNodeId, const uint16_t sendBufferSize, const uint16_t receiveBufferSize);
+        Baton(const bool rawSocket, const SOCKET& localSocket, const Core::NodeId& remoteNodeId, const uint16_t sendBufferSize, const uint16_t receiveBufferSize);
         ~Baton();
 
-        uint32_t Signal(uint32_t waitTime);
-        uint32_t Wait(uint32_t waitTime);
+        uint32_t Signal(const uint32_t waitTime);
+        uint32_t Wait(const uint32_t waitTime);
 
-        uint32_t Open(uint32_t waitTime);
+        uint32_t Open(const uint32_t waitTime);
 
     private :
 
@@ -237,10 +237,10 @@ public :
 
         // Called if data has to be sent
         // Use Trigger() to create the event 
-        uint16_t SendData(uint8_t* dataFrame, const uint16_t maxSendSize) override;
+        uint16_t SendData(uint8_t * const dataFrame, const uint16_t maxSendSize) override;
 
         // Called if data is received
-        uint16_t ReceiveData(uint8_t* dataFrame, const uint16_t maxReceiveSize) override;
+        uint16_t ReceiveData(uint8_t* const dataFrame, const uint16_t maxReceiveSize) override;
 
         void StateChange() override;
 
@@ -294,7 +294,7 @@ private :
     // (Custom) class methods
     // ----------------------
 
-    void NotifyAll(const std::string& eventDesscription, uint32_t eventValue) const;
+    void NotifyAll(const std::string& eventDesscription, const uint32_t eventValue) const;
 };
 
 } } // namespace Thunder::Plugin

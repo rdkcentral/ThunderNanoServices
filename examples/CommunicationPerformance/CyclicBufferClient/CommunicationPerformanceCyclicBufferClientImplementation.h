@@ -27,7 +27,7 @@
 namespace Thunder {
 namespace Plugin {
 
-template <Core::File::Mode ACCESSMODE = Core::File::USER_READ>
+template <const Core::File::Mode ACCESSMODE = Core::File::USER_READ>
 class CyclicBufferClient {
 public:
     CyclicBufferClient() = delete;
@@ -41,11 +41,11 @@ public:
 
     ~CyclicBufferClient(); // no override !
 
-    uint32_t Start(uint32_t waitTime);
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
     // If bufferSize != bufferMaxSize then buffer may be partially filled
-    uint32_t Exchange(uint8_t buffer[], uint16_t& bufferSize, uint16_t bufferMaxSize, uint64_t& duration); 
+    uint32_t Exchange(uint8_t buffer[], uint16_t& bufferSize, const uint16_t bufferMaxSize, uint64_t& duration);
 
 private:
 
@@ -93,8 +93,8 @@ private:
     // Connecting node
     BatonConnectedType _batonConnectingNode;
 
-    uint32_t Open(uint32_t waitTime);
-    uint32_t Close(uint32_t waitTime);
+    uint32_t Open(const uint32_t waitTime);
+    uint32_t Close(const uint32_t waitTime);
 };
 
 
@@ -111,9 +111,9 @@ public :
 
     ~SimplePluginCyclicBufferClientImplementation();
 
-    uint32_t Start(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
 
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
 private :
     CyclicBufferClient<Core::File::USER_READ> _client;

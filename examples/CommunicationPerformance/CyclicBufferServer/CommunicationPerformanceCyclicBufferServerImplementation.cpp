@@ -31,7 +31,7 @@
 namespace Thunder {
 namespace Plugin {
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CyclicBufferServer(const std::string& fileName)
     : _fileName{ fileName }
     , _buffer{ _fileName, ACCESSMODE | Core::File::CREATE | Core::File::USER_WRITE | Core::File::SHAREABLE /* required for multiple processes to share data */, FILESIZE /* server controls size */ , OVERWRITE }
@@ -40,14 +40,14 @@ CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CyclicBufferServer(const st
     , _batonListeningNode{ Core::NodeId{ std::string{ _fileName + "Baton" }.c_str(), Core::NodeId::TYPE_DOMAIN } }
 {}
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::~CyclicBufferServer()
 {
     /* uint32_t result = */ Stop(Core::infinite);
 }
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Start(uint32_t waitTime)
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -56,8 +56,8 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Start(uint32_t wai
     return result;
 }
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t waitTime)
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -74,8 +74,8 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Stop(uint32_t wait
     return result;
 }
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED uint16_t bufferMaxSize, uint64_t& duration)
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Exchange(uint8_t buffer[], uint16_t& bufferSize, VARIABLE_IS_NOT_USED const uint16_t bufferMaxSize, uint64_t& duration)
 {
     ASSERT(bufferSize <= bufferMaxSize);
 
@@ -169,8 +169,8 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Exchange(uint8_t b
     return result;
 }
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Open(uint32_t waitTime)
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Open(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -196,8 +196,8 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Open(uint32_t wait
     return result;
 }
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
-uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Close(uint32_t waitTime)
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
+uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Close(const uint32_t waitTime)
 {
     uint32_t result = _batonListeningNode.Close(waitTime);
 
@@ -215,32 +215,32 @@ uint32_t CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::Close(uint32_t wai
 }
 
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::CustomCyclicBuffer(const string& fileName, const uint32_t mode, const uint32_t bufferSize, const bool overwrite)
     : CyclicBuffer(fileName, mode, bufferSize, overwrite)
 {}
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::CustomCyclicBuffer(Core::DataElementFile& buffer, const bool initiator, const uint32_t offset, const uint32_t bufferSize, const bool overwrite)
     : CyclicBuffer(buffer, initiator, offset, bufferSize, overwrite)
 {}
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::~CustomCyclicBuffer()
 {}
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 void CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::CustomCyclicBuffer::DataAvailable()
 {}
 
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::BatonAcceptConnectionType::BatonAcceptConnectionType(const SOCKET localSocket, const Core::NodeId& remoteNodeId, Core::SocketServerType<BatonAcceptConnectionType>* server)
     : BatonConnectionType( false, localSocket, remoteNodeId, 1024, 2024 )
     , _server{ *server }
 {}
 
-template <uint32_t FILESIZE, Core::File::Mode ACCESSMODE, bool OVERWRITE>
+template <const uint32_t FILESIZE, const Core::File::Mode ACCESSMODE, const bool OVERWRITE>
 CyclicBufferServer<FILESIZE, ACCESSMODE, OVERWRITE>::BatonAcceptConnectionType::~BatonAcceptConnectionType()
 {}
 
@@ -254,7 +254,7 @@ SimplePluginCyclicBufferServerImplementation::~SimplePluginCyclicBufferServerImp
     /* uint32_t */ Stop(Core::infinite);
 }
 
-uint32_t SimplePluginCyclicBufferServerImplementation::Start(uint32_t waitTime)
+uint32_t SimplePluginCyclicBufferServerImplementation::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -265,7 +265,7 @@ uint32_t SimplePluginCyclicBufferServerImplementation::Start(uint32_t waitTime)
     return result;
 }
 
-uint32_t SimplePluginCyclicBufferServerImplementation::Stop(uint32_t waitTime)
+uint32_t SimplePluginCyclicBufferServerImplementation::Stop(const uint32_t waitTime)
 {
     return _server.Stop(waitTime);
 }

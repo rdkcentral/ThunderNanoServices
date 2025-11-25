@@ -28,7 +28,7 @@ namespace Thunder {
 namespace Plugin {
 
 // TODO: buffer size is uint16_t
-template <size_t SENDBUFFERSIZE, size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
+template <const size_t SENDBUFFERSIZE, const size_t RECEIVEBUFFERSIZE, typename STREAMTYPE = Core::SocketStream>
 class WebSocketClient {
 public :
     WebSocketClient(const WebSocketClient&) = delete;
@@ -45,10 +45,10 @@ public :
     );
     ~WebSocketClient();
 
-    uint32_t Start(uint32_t waitTime);
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
-    uint32_t Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration);
+    uint32_t Exchange(uint8_t buffer[], const uint16_t bufferSize, const uint16_t bufferMaxSize, uint64_t& duration);
 
 private :
 
@@ -69,8 +69,8 @@ private :
         );
         ~Client() override;
 
-        bool Submit(const std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
-        bool Response(std::basic_string<uint8_t>& message, uint32_t waitTime = Core::infinite);
+        bool Submit(const std::basic_string<uint8_t>& message, const uint32_t waitTime = Core::infinite);
+        bool Response(std::basic_string<uint8_t>& message, const uint32_t waitTime = Core::infinite);
 
 
         // Web::WebSocketClientType methods
@@ -101,8 +101,8 @@ private :
 
     Client _client;
 
-    uint32_t Open(uint32_t waitTime);
-    uint32_t Close(uint32_t waitTime);
+    uint32_t Open(const uint32_t waitTime);
+    uint32_t Close(const uint32_t waitTime);
 };
 
 class SimplePluginWebSocketClientImplementation : public SimplePluginImplementation<SimplePluginWebSocketClientImplementation> {
@@ -116,8 +116,8 @@ public :
     SimplePluginWebSocketClientImplementation();
     ~SimplePluginWebSocketClientImplementation();
 
-    uint32_t Start(uint32_t waitTime);
-    uint32_t Stop(uint32_t waitTime);
+    uint32_t Start(const uint32_t waitTime);
+    uint32_t Stop(const uint32_t waitTime);
 
 private :
     WebSocketClient<1024, 1024, Core::SocketStream> _client;

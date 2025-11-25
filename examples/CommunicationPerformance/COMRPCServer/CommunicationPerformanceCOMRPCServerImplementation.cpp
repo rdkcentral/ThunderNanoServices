@@ -68,7 +68,7 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Start(uint32_t 
 }
 
 template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Stop(uint32_t waitTime)
+uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -92,7 +92,7 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Stop(uint32_t w
 }
 
 template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Exchange(uint8_t buffer[], uint16_t bufferSize, uint16_t bufferMaxSize, uint64_t& duration) const
+uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Exchange(uint8_t buffer[], const uint16_t bufferSize, const uint16_t bufferMaxSize, uint64_t& duration) const
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -111,7 +111,9 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Exchange(uint8_
         auto start = std::chrono::high_resolution_clock::now();
 #endif
 
-        result = interface->Exchange(bufferSize, buffer, bufferMaxSize);
+        VARIABLE_IS_NOT_USED uint16_t elementCount{ bufferSize };
+
+        result = interface->Exchange(elementCount, buffer, bufferMaxSize);
 
 #ifndef _USE_CHRONO_HIGH_RESOLUTION_CLOCK_
         duration = timer.Elapsed();
@@ -222,7 +224,7 @@ void COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Communicator::Dangl
 }
 
 template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Open(uint32_t waitTime)
+uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Open(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 
@@ -239,7 +241,7 @@ uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Open(uint32_t w
 }
 
 template <const uint8_t THREADPOOLCOUNT, const uint32_t STACKSIZE, const uint32_t MESSAGESLOTS>
-uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Close(uint32_t waitTime)
+uint32_t COMRPCServer<THREADPOOLCOUNT, STACKSIZE, MESSAGESLOTS>::Close(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_NONE;
 
@@ -270,7 +272,7 @@ SimplePluginCOMRPCServerImplementation::~SimplePluginCOMRPCServerImplementation(
     /* uint32_t */ Stop(Core::infinite);
 }
 
-uint32_t SimplePluginCOMRPCServerImplementation::Start(uint32_t waitTime)
+uint32_t SimplePluginCOMRPCServerImplementation::Start(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
@@ -285,7 +287,7 @@ uint32_t SimplePluginCOMRPCServerImplementation::Start(uint32_t waitTime)
     return result;
 }
 
-uint32_t SimplePluginCOMRPCServerImplementation::Stop(uint32_t waitTime)
+uint32_t SimplePluginCOMRPCServerImplementation::Stop(const uint32_t waitTime)
 {
     uint32_t result = Core::ERROR_GENERAL;
 
