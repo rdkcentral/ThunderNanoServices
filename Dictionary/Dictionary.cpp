@@ -288,19 +288,47 @@ namespace Plugin {
             return (result);
     }
 
+    bool Dictionary::IsUnderRegisteredNamespace(const string& registeredRawPath, const string& changedRawPath) const
+    {
+        string registeredPath = registeredRawPath;
+        string changedPath = changedRawPath;
+
+        if (!registeredPath.empty() && registeredPath[0] != '/') {
+            registeredPath = "/" + registeredPath;
+        }
+        if (!changedPath.empty() && changedPath[0] != '/') {
+            changedPath = "/" + changedPath;
+        }
+
+        if (registeredPath == "/") {
+            return true;
+        }
+
+        if (registeredPath == changedPath) {
+            return true;
+        }
+
+        if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0 && changedPath[registeredPath.size()] == '/') {
+            return true;
+        }
+
+        return false;
+    }
 
     void Dictionary::NotifyForUpdate(const string& path, const string& key, const string& value) const
     {
         ObserverMap::const_iterator index(_observers.cbegin());
 
         while (index != _observers.cend()) {
-            if (index->first == path) {
+            if (IsUnderRegisteredNamespace(index->first, path) == true) {
                 index->second->Modified(path, key, value);
             }
             index++;
         }
 
-        Exchange::JDictionary::Event::Modified(*this, path, key, value);
+        Exchange::JDictionary::Event::Modified(*this, path, key, value, [&path, this](const string&, const string& index_) -> bool {
+            return (this->IsUnderRegisteredNamespace(index_, path));
+        });
     }
 
     // Direct method to Set a value for a key in a certain namespace from the dictionary.
