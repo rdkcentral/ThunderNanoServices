@@ -203,6 +203,7 @@ namespace Plugin {
                 , _current(0)
                 , _completed(0)
                 , _state(IN_PROGRESS)
+                , _activeJobCount(0)
             {
                 Core::JSON::ArrayType<Core::JSONRPC::Message>::ConstIterator index(requests.Elements());
                 _requests.reserve(requests.Elements().Count());
@@ -289,10 +290,20 @@ namespace Plugin {
                 if (_current < _requests.size()) {
                     job = Core::ProxyType<Job>::Create(*this, _requests[_current]);
                     _current++;
+
+                    _lock.Lock();
+                    _activeJobCount++;
+                    _lock.Unlock();
+
                     TRACE(Trace::Information, (_T("Batch[%d] Provided job %d/%d"), _responseId, _current, _requests.size()));
                 }
 
                 return job;
+            }
+
+            bool IsActive() const
+            {
+                return _activeJobCount > 0;
             }
 
         private:
@@ -315,13 +326,15 @@ namespace Plugin {
                     _lock.Lock();
 
                     ++_completed;
-
-                    TRACE(Trace::Information, (_T("Batch[%d] completed request[%d] (%d/%d)"), _responseId, request.Id(), _completed, _requests.size()));
-
-                    if (_completed == _requests.size()) {
-                        _state = COMPLETED;
-                    }
                 }
+
+                if (_completed == _requests.size()) {
+                    _state = COMPLETED;
+                }
+
+                _activeJobCount--;
+
+                TRACE(Trace::Information, (_T("Batch[%d] completed request[%d] (%d/%d)"), _responseId, request.Id(), _completed, _requests.size()));
 
                 _lock.Unlock();
 
@@ -339,6 +352,7 @@ namespace Plugin {
             uint16_t _current;
             uint16_t _completed;
             mutable state _state;
+            uint16_t _activeJobCount;
         };
 
     public:
@@ -516,6 +530,10 @@ namespace Plugin {
 
                         // schedule as many jobs for this batch as allowed and as slots permit
                         while ((_activeJobs.size() < _maxConcurrentJobs)) {
+                            if (batch->Sequential() && batch->IsActive()) {
+                                break; // This batch already has a job, move to next batch
+                            }
+
                             Core::ProxyType<Batch::Job> job = batch->GetJob();
 
                             if (job.IsValid() == true) {
