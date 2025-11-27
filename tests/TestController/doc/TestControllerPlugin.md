@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Test_Controller_Plugin"></a>
+<a id="head_Test_Controller_Plugin"></a>
 # Test Controller Plugin
 
 **Version: 1.0**
@@ -10,27 +10,27 @@ TestController plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the TestController plugin. It includes detailed specification about its configuration, methods and properties provided.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -48,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -58,14 +58,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The TestController plugin enables executing of embedded test cases on the platform.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -77,26 +77,129 @@ The table below lists configuration options of the plugin.
 | locator | string | mandatory | Library name: *libThunderTestController.so* |
 | startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
 - [TestController.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/TestController.json) (version 1.0.0) (compliant format)
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the TestController plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
 
 TestController interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [run](#method.run) | Runs a single test or multiple tests |
+| [run](#method_run) | Runs a single test or multiple tests |
 
-<a name="method.run"></a>
-## *run [<sup>method</sup>](#head.Methods)*
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestController.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *categories, tests, description, versions, exists, run*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestController.1.exists",
+  "params": {
+    "method": "categories"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_run"></a>
+## *run [<sup>method</sup>](#head_Methods)*
 
 Runs a single test or multiple tests.
 
@@ -157,7 +260,7 @@ Runs a single test or multiple tests.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the TestController plugin:
@@ -166,12 +269,12 @@ TestController interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [categories](#property.categories) | read-only | List of test categories |
-| [tests](#property.tests) | read-only | List of tests for a category |
-| [description](#property.description) | read-only | Description of a test |
+| [categories](#property_categories) | read-only | List of test categories |
+| [tests](#property_tests) | read-only | List of tests for a category |
+| [description](#property_description) | read-only | Description of a test |
 
-<a name="property.categories"></a>
-## *categories [<sup>property</sup>](#head.Properties)*
+<a id="property_categories"></a>
+## *categories [<sup>property</sup>](#head_Properties)*
 
 Provides access to the list of test categories.
 
@@ -179,12 +282,10 @@ Provides access to the list of test categories.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | List of test categories |
-| result[#] | string | mandatory | Test category name |
+| (property) | array | mandatory | List of test categories |
+| (property)[#] | string | mandatory | Test category name |
 
 ### Example
 
@@ -210,14 +311,14 @@ Provides access to the list of test categories.
 }
 ```
 
-<a name="property.tests"></a>
-## *tests [<sup>property</sup>](#head.Properties)*
+<a id="property_tests"></a>
+## *tests [<sup>property</sup>](#head_Properties)*
 
 Provides access to the list of tests for a category.
 
 > This property is **read-only**.
 
-> The *category* parameter shall be passed as the index to the property, e.g. ``TestController.1.tests@<category>``.
+> The *category* parameter shall be passed as the index to the property, i.e. ``tests@<category>``.
 
 ### Index
 
@@ -227,12 +328,10 @@ Provides access to the list of tests for a category.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | List of tests for a category |
-| result[#] | string | mandatory | Test name |
+| (property) | array | mandatory | List of tests for a category |
+| (property)[#] | string | mandatory | Test name |
 
 ### Errors
 
@@ -265,14 +364,14 @@ Provides access to the list of tests for a category.
 }
 ```
 
-<a name="property.description"></a>
-## *description [<sup>property</sup>](#head.Properties)*
+<a id="property_description"></a>
+## *description [<sup>property</sup>](#head_Properties)*
 
 Provides access to the description of a test.
 
 > This property is **read-only**.
 
-> The *test* parameter shall be passed as the index to the property, e.g. ``TestController.1.description@<test>``.
+> The *test* parameter shall be passed as the index to the property, i.e. ``description@<test>``.
 
 ### Index
 
@@ -282,12 +381,10 @@ Provides access to the description of a test.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | object | mandatory | Description of a test |
-| result.description | string | mandatory | Test description |
+| (property) | object | mandatory | Description of a test |
+| (property).description | string | mandatory | Test description |
 
 ### Errors
 

@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.DIAL_Server_Plugin"></a>
+<a id="head_DIAL_Server_Plugin"></a>
 # DIAL Server Plugin
 
 **Version: 1.0**
@@ -10,27 +10,28 @@ DIALServer plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the DIALServer plugin. It includes detailed specification about its configuration, properties provided and notifications sent.
+This document describes purpose and functionality of the DIALServer plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -52,7 +53,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="term.Controller">Controller</a> | An internal plugin that allows activating and deactivating of services/plugins configured for use in the framework. |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -63,14 +64,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The DIAL Server plugin implements the server side of the DIAL protocol, allowing second-screen devices discovering and launching applications on a first-screen device, utilizing SSDP protocol and RESTful API. For more invormation about the DIAL protocol please refer to [[DIAL](#ref.DIAL)].
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -102,14 +103,234 @@ The table below lists configuration options of the plugin.
 | configuration.apps[#]?.url | string | optional | A URL related to the application |
 | configuration.apps[#]?.allowstop | boolean | optional | Denotes if the application can be stopped *(true)* or not *(false, default)* |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
 
 - [DIALServer.json](https://github.com/rdkcentral/ThunderInterfaces/blob/master/jsonrpc/DIALServer.json) (version 1.0.0) (uncompliant-extended format)
 
-<a name="head.Properties"></a>
+<a id="head_Methods"></a>
+# Methods
+
+The following methods are provided by the DIALServer plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
+| [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
+| [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
+
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DIALServer.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *state, versions, exists, register, unregister*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DIALServer.1.exists",
+  "params": {
+    "method": "state"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_register"></a>
+## *register [<sup>method</sup>](#head_Methods)*
+
+Registers for an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[start](#notification_start), [stop](#notification_stop), [hide](#notification_hide), [show](#notification_show), [change](#notification_change)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_REGISTERED``` | Failed to register for the notification (e.g. already registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DIALServer.1.register",
+  "params": {
+    "event": "start",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unregister"></a>
+## *unregister [<sup>method</sup>](#head_Methods)*
+
+Unregisters from an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[start](#notification_start), [stop](#notification_stop), [hide](#notification_hide), [show](#notification_show), [change](#notification_change)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_UNREGISTERED``` | Failed to unregister from the notification (e.g. not yet registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "DIALServer.1.unregister",
+  "params": {
+    "event": "start",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the DIALServer plugin:
@@ -118,10 +339,10 @@ DIALServer interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [state](#property.state) | read/write | Current application running state |
+| [state](#property_state) | read/write | Current application running state |
 
-<a name="property.state"></a>
-## *state [<sup>property</sup>](#head.Properties)*
+<a id="property_state"></a>
+## *state [<sup>property</sup>](#head_Properties)*
 
 Provides access to the current application running state.
 
@@ -129,7 +350,7 @@ Provides access to the current application running state.
 
 This property can be used to update the running status of an un-managed application (i.e. running in *passive mode*). For DIALServer-managed applications this property shall be considered *read-only*.
 
-> The *application name* parameter shall be passed as the index to the property, e.g. ``DIALServer.1.state@<application-name>``.
+> The *application name* parameter shall be passed as the index to the property, i.e. ``state@<application-name>``.
 
 ### Index
 
@@ -143,11 +364,9 @@ This property can be used to update the running status of an un-managed applicat
 | :-------- | :-------- | :-------- | :-------- |
 | (property) | string | mandatory | Current application running state (must be one of the following: *Hidden, Started, Stopped*) |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Current application running state (must be one of the following: *Hidden, Started, Stopped*) |
+| (property) | string | mandatory | Current application running state (must be one of the following: *Hidden, Started, Stopped*) |
 
 ### Errors
 
@@ -174,7 +393,7 @@ This property can be used to update the running status of an un-managed applicat
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "Stopped"
+  "result": "Started"
 }
 ```
 
@@ -185,7 +404,7 @@ This property can be used to update the running status of an un-managed applicat
   "jsonrpc": "2.0",
   "id": 42,
   "method": "DIALServer.1.state@YouTube",
-  "params": "Stopped"
+  "params": "Started"
 }
 ```
 
@@ -199,7 +418,7 @@ This property can be used to update the running status of an un-managed applicat
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -210,14 +429,14 @@ DIALServer interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [start](#notification.start) | Signals that application launch (or show if previously hidden) was requested over DIAL |
-| [stop](#notification.stop) | Signals that application stop was requested over DIAL |
-| [hide](#notification.hide) | Signals that application hide was requested over DIAL |
-| [show](#notification.show) <sup>deprecated</sup> | Signals that application show was requested over DIAL |
-| [change](#notification.change) <sup>deprecated</sup> | Signals that application URL change was requested over DIAL |
+| [start](#notification_start) | Signals that application launch (or show if previously hidden) was requested over DIAL |
+| [stop](#notification_stop) | Signals that application stop was requested over DIAL |
+| [hide](#notification_hide) | Signals that application hide was requested over DIAL |
+| [show](#notification_show) <sup>deprecated</sup> | Signals that application show was requested over DIAL |
+| [change](#notification_change) <sup>deprecated</sup> | Signals that application URL change was requested over DIAL |
 
-<a name="notification.start"></a>
-## *start [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_start"></a>
+## *start [<sup>notification</sup>](#head_Notifications)*
 
 Signals that application launch (or show if previously hidden) was requested over DIAL.
 
@@ -264,8 +483,10 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 }
 ```
 
-<a name="notification.stop"></a>
-## *stop [<sup>notification</sup>](#head.Notifications)*
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.start``.
+
+<a id="notification_stop"></a>
+## *stop [<sup>notification</sup>](#head_Notifications)*
 
 Signals that application stop was requested over DIAL.
 
@@ -310,8 +531,10 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 }
 ```
 
-<a name="notification.hide"></a>
-## *hide [<sup>notification</sup>](#head.Notifications)*
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.stop``.
+
+<a id="notification_hide"></a>
+## *hide [<sup>notification</sup>](#head_Notifications)*
 
 Signals that application hide was requested over DIAL.
 
@@ -354,8 +577,10 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 }
 ```
 
-<a name="notification.show"></a>
-## *show [<sup>notification</sup>](#head.Notifications)*
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.hide``.
+
+<a id="notification_show"></a>
+## *show [<sup>notification</sup>](#head_Notifications)*
 
 Signals that application show was requested over DIAL.
 
@@ -400,8 +625,10 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
 }
 ```
 
-<a name="notification.change"></a>
-## *change [<sup>notification</sup>](#head.Notifications)*
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.show``.
+
+<a id="notification_change"></a>
+## *change [<sup>notification</sup>](#head_Notifications)*
 
 Signals that application URL change was requested over DIAL.
 
@@ -445,4 +672,6 @@ This event is sent out only for un-managed applications (i.e. in *passive mode*)
   }
 }
 ```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.change``.
 

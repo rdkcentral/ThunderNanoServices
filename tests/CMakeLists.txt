@@ -29,6 +29,7 @@ option(TEST_AUTOMATION_TOOLS "Utility to verify Thunder functions trigerred by A
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TESTTEXTOPTIONS "Utility to verify the name of JSONRPC functions" OFF)
+option(PLUGIN_TESTPRIORITYQUEUE "Utility to verify the PriorityQueue implementation" OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
@@ -50,4 +51,8 @@ endif()
 
 if(PLUGIN_TESTTEXTOPTIONS)
     add_subdirectory(TestTextOptions)
+endif()
+
+if(PLUGIN_TESTPRIORITYQUEUE)
+    add_subdirectory(TestPriorityQueue)
 endif()

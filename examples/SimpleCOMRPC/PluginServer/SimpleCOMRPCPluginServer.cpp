@@ -99,9 +99,10 @@ namespace Plugin {
         return (_parent == nullptr ? 0 : result.Ticks());
     }
 
-    void SimpleCOMRPCPluginServer::OnRevoke(const Exchange::IWallClock::ICallback* remote) {
+    void SimpleCOMRPCPluginServer::OnInterfaceDangling(const Exchange::IWallClock::ICallback* remote)
+    {
         // Looks like we need to stop the callback from being called, it is a dead object now anyway :-)
-        TRACE(Trace::Information, (_T("Revoking a callback, it will not fire anymore")));
+        TRACE(Trace::Information, (_T("Callback is dangling, disarming it so it will not fire anymore")));
         _notifier.Disarm(remote);
     }
 

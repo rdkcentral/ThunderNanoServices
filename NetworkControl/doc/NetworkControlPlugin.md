@@ -1,5 +1,5 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Network_Control_Plugin"></a>
+<a id="head_Network_Control_Plugin"></a>
 # Network Control Plugin
 
 **Version: 1.0**
@@ -10,28 +10,28 @@ NetworkControl plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Interfaces](#head.Interfaces)
-- [Methods](#head.Methods)
-- [Properties](#head.Properties)
-- [Notifications](#head.Notifications)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
+- [Notifications](#head_Notifications)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
 This document describes purpose and functionality of the NetworkControl plugin. It includes detailed specification about its configuration, methods and properties as well as sent notifications.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
 All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -49,7 +49,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -59,14 +59,14 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
 The Network Control plugin provides functionality for network interface management.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
@@ -82,7 +82,7 @@ The table below lists configuration options of the plugin.
 | configuration?.response | integer | optional | Maximum response time out of the DHCP server |
 | configuration?.retries | integer | optional | Maximum number of retries to the DHCP server |
 
-<a name="head.Interfaces"></a>
+<a id="head_Interfaces"></a>
 # Interfaces
 
 This plugin implements the following interfaces:
@@ -90,19 +90,234 @@ This plugin implements the following interfaces:
 - INetworkControl ([INetworkControl.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/INetworkControl.h)) (version 1.0.0) (compliant format)
 > This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
 
-<a name="head.Methods"></a>
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the NetworkControl plugin:
+
+Built-in methods:
+
+| Method | Description |
+| :-------- | :-------- |
+| [versions](#method_versions) | Retrieves a list of JSON-RPC interfaces offered by this service |
+| [exists](#method_exists) | Checks if a JSON-RPC method or property exists |
+| [register](#method_register) | Registers for an asynchronous JSON-RPC notification |
+| [unregister](#method_unregister) | Unregisters from an asynchronous JSON-RPC notification |
 
 NetworkControl interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [flush](#method.flush) | Flush and reload requested interface |
+| [flush](#method_flush) | Flush and reload requested interface |
 
-<a name="method.flush"></a>
-## *flush [<sup>method</sup>](#head.Methods)*
+<a id="method_versions"></a>
+## *versions [<sup>method</sup>](#head_Methods)*
+
+Retrieves a list of JSON-RPC interfaces offered by this service.
+
+### Parameters
+
+This method takes no parameters.
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | array | mandatory | A list ofsinterfaces with their version numbers<br>*Array length must be at most 255 elements.* |
+| result[#] | object | mandatory | *...* |
+| result[#].name | string | mandatory | Name of the interface |
+| result[#].major | integer | mandatory | Major part of version number |
+| result[#].minor | integer | mandatory | Minor part of version number |
+| result[#].patch | integer | mandatory | Patch part of version version number |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "NetworkControl.1.versions"
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "JMyInterface",
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  ]
+}
+```
+
+<a id="method_exists"></a>
+## *exists [<sup>method</sup>](#head_Methods)*
+
+Checks if a JSON-RPC method or property exists.
+
+### Description
+
+This method will return *True* for the following methods/properties: *interfaces, status, network, dns, up, versions, exists, register, unregister, flush*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.method | string | mandatory | Name of the method or property to look up |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | boolean | mandatory | Denotes if the method exists or not |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "NetworkControl.1.exists",
+  "params": {
+    "method": "interfaces"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": false
+}
+```
+
+<a id="method_register"></a>
+## *register [<sup>method</sup>](#head_Methods)*
+
+Registers for an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[update](#notification_update)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_REGISTERED``` | Failed to register for the notification (e.g. already registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "NetworkControl.1.register",
+  "params": {
+    "event": "update",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_unregister"></a>
+## *unregister [<sup>method</sup>](#head_Methods)*
+
+Unregisters from an asynchronous JSON-RPC notification.
+
+### Description
+
+This method supports the following event names: *[update](#notification_update)*.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.event | string | mandatory | Name of the notification to register for |
+| params.id | string | mandatory | Client identifier |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_FAILED_UNREGISTERED``` | Failed to unregister from the notification (e.g. not yet registered) |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "NetworkControl.1.unregister",
+  "params": {
+    "event": "update",
+    "id": "myapp"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_flush"></a>
+## *flush [<sup>method</sup>](#head_Methods)*
 
 Flush and reload requested interface.
 
@@ -144,7 +359,7 @@ Flush and reload requested interface.
 }
 ```
 
-<a name="head.Properties"></a>
+<a id="head_Properties"></a>
 # Properties
 
 The following properties are provided by the NetworkControl plugin:
@@ -153,14 +368,14 @@ NetworkControl interface properties:
 
 | Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| [interfaces](#property.interfaces) | read-only | Currently available interfaces |
-| [status](#property.status) | read-only | Status of requested interface |
-| [network](#property.network) | read/write | Network info of requested interface |
-| [dns](#property.dns) | read/write | DNS list |
-| [up](#property.up) | read/write | Provides given requested interface is up or not |
+| [interfaces](#property_interfaces) | read-only | Currently available interfaces |
+| [status](#property_status) | read-only | Status of requested interface |
+| [network](#property_network) | read/write | Network info of requested interface |
+| [dns](#property_dns) | read/write | DNS list |
+| [up](#property_up) | read/write | Provides given requested interface is up or not |
 
-<a name="property.interfaces"></a>
-## *interfaces [<sup>property</sup>](#head.Properties)*
+<a id="property_interfaces"></a>
+## *interfaces [<sup>property</sup>](#head_Properties)*
 
 Provides access to the currently available interfaces.
 
@@ -168,12 +383,10 @@ Provides access to the currently available interfaces.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Currently available interfaces |
-| result[#] | string | mandatory | *...* |
+| (property) | array | mandatory | Currently available interfaces |
+| (property)[#] | string | mandatory | *...* |
 
 ### Example
 
@@ -199,14 +412,14 @@ Provides access to the currently available interfaces.
 }
 ```
 
-<a name="property.status"></a>
-## *status [<sup>property</sup>](#head.Properties)*
+<a id="property_status"></a>
+## *status [<sup>property</sup>](#head_Properties)*
 
 Provides access to the status of requested interface.
 
 > This property is **read-only**.
 
-> The *interface* parameter shall be passed as the index to the property, e.g. ``NetworkControl.1.status@<interface>``.
+> The *interface* parameter shall be passed as the index to the property, i.e. ``status@<interface>``.
 
 ### Index
 
@@ -216,11 +429,9 @@ Provides access to the status of requested interface.
 
 ### Value
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | string | mandatory | Status of requested interface (must be one of the following: *Available, Unavailable*) |
+| (property) | string | mandatory | Status of requested interface (must be one of the following: *Available, Unavailable*) |
 
 ### Example
 
@@ -240,16 +451,16 @@ Provides access to the status of requested interface.
 {
   "jsonrpc": "2.0",
   "id": 42,
-  "result": "Unavailable"
+  "result": "Available"
 }
 ```
 
-<a name="property.network"></a>
-## *network [<sup>property</sup>](#head.Properties)*
+<a id="property_network"></a>
+## *network [<sup>property</sup>](#head_Properties)*
 
 Provides access to the network info of requested interface.
 
-> The *interface* parameter shall be passed as the index to the property, e.g. ``NetworkControl.1.network@<interface>``.
+> The *interface* parameter shall be passed as the index to the property, i.e. ``network@<interface>``.
 
 ### Index
 
@@ -269,16 +480,14 @@ Provides access to the network info of requested interface.
 | (property).value[#].mask | integer | mandatory | Network mask |
 | (property).value[#].mode | string | mandatory | Mode of interface activation Dynamic or Static (must be one of the following: *Dynamic, Static*) |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | Info about requested interface |
-| result[#] | object | mandatory | *...* |
-| result[#].address | string | mandatory | IP Address |
-| result[#].defaultgateway | string | mandatory | Default Gateway |
-| result[#].mask | integer | mandatory | Network mask |
-| result[#].mode | string | mandatory | Mode of interface activation Dynamic or Static (must be one of the following: *Dynamic, Static*) |
+| (property) | array | mandatory | Info about requested interface |
+| (property)[#] | object | mandatory | *...* |
+| (property)[#].address | string | mandatory | IP Address |
+| (property)[#].defaultgateway | string | mandatory | Default Gateway |
+| (property)[#].mask | integer | mandatory | Network mask |
+| (property)[#].mode | string | mandatory | Mode of interface activation Dynamic or Static (must be one of the following: *Dynamic, Static*) |
 
 ### Errors
 
@@ -309,7 +518,7 @@ Provides access to the network info of requested interface.
       "address": "...",
       "defaultgateway": "...",
       "mask": 0,
-      "mode": "Static"
+      "mode": "Dynamic"
     }
   ]
 }
@@ -328,7 +537,7 @@ Provides access to the network info of requested interface.
         "address": "...",
         "defaultgateway": "...",
         "mask": 0,
-        "mode": "Static"
+        "mode": "Dynamic"
       }
     ]
   }
@@ -345,8 +554,8 @@ Provides access to the network info of requested interface.
 }
 ```
 
-<a name="property.dns"></a>
-## *dns [<sup>property</sup>](#head.Properties)*
+<a id="property_dns"></a>
+## *dns [<sup>property</sup>](#head_Properties)*
 
 Provides access to the DNS list.
 
@@ -358,12 +567,10 @@ Provides access to the DNS list.
 | (property).value | array | mandatory | *...* |
 | (property).value[#] | string | mandatory | *...* |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | array | mandatory | List of DNS |
-| result[#] | string | mandatory | *...* |
+| (property) | array | mandatory | List of DNS |
+| (property)[#] | string | mandatory | *...* |
 
 ### Errors
 
@@ -420,12 +627,12 @@ Provides access to the DNS list.
 }
 ```
 
-<a name="property.up"></a>
-## *up [<sup>property</sup>](#head.Properties)*
+<a id="property_up"></a>
+## *up [<sup>property</sup>](#head_Properties)*
 
 Provides access to the provides given requested interface is up or not.
 
-> The *interface* parameter shall be passed as the index to the property, e.g. ``NetworkControl.1.up@<interface>``.
+> The *interface* parameter shall be passed as the index to the property, i.e. ``up@<interface>``.
 
 ### Index
 
@@ -440,11 +647,9 @@ Provides access to the provides given requested interface is up or not.
 | (property) | object | mandatory | Provides given requested interface is up or not |
 | (property).value | boolean | mandatory | *...* |
 
-### Result
-
 | Name | Type | M/O | Description |
 | :-------- | :-------- | :-------- | :-------- |
-| result | boolean | mandatory | Up/Down requested interface |
+| (property) | boolean | mandatory | Up/Down requested interface |
 
 ### Errors
 
@@ -497,7 +702,7 @@ Provides access to the provides given requested interface is up or not.
 }
 ```
 
-<a name="head.Notifications"></a>
+<a id="head_Notifications"></a>
 # Notifications
 
 Notifications are autonomous events triggered by the internals of the implementation and broadcasted via JSON-RPC to all registered observers. Refer to [[Thunder](#ref.Thunder)] for information on how to register for a notification.
@@ -508,10 +713,10 @@ NetworkControl interface events:
 
 | Notification | Description |
 | :-------- | :-------- |
-| [update](#notification.update) | Signal interface update |
+| [update](#notification_update) | Signal interface update |
 
-<a name="notification.update"></a>
-## *update [<sup>notification</sup>](#head.Notifications)*
+<a id="notification_update"></a>
+## *update [<sup>notification</sup>](#head_Notifications)*
 
 Signal interface update.
 
@@ -549,4 +754,6 @@ Signal interface update.
   }
 }
 ```
+
+> The *client ID* parameter is passed within the notification designator, i.e. ``<client-id>.update``.
 
