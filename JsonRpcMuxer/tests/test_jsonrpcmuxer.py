@@ -19,7 +19,7 @@ class TestConfig:
     host: str = "localhost"
     port: int = 55555
     timeout: int = 5000
-    max_batch_size: int = 10
+    max_batch_size: int = 100
     max_batches: int = 5
 
 
@@ -575,8 +575,8 @@ def main():
     parser.add_argument("--host", default="localhost", help="Thunder host (default: localhost)")
     parser.add_argument("--port", type=int, default=55555, help="Thunder port (default: 55555)")
     parser.add_argument("--timeout", type=int, default=5000, help="Timeout in ms (default: 5000)")
-    parser.add_argument("--max-batch-size", type=int, default=10, help="Expected max batch size (default: 10)")
-    parser.add_argument("--max-batches", type=int, default=5, help="Expected max concurrent batches (default: 5)")
+    parser.add_argument("--max-batch-size", type=int, default=100, help="Expected max batch size (default: 10)")
+    parser.add_argument("--max-batches", type=int, default=10, help="Expected max concurrent batches (default: 5)")
     
     args = parser.parse_args()
     
