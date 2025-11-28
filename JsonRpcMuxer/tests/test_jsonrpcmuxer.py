@@ -499,7 +499,7 @@ class JsonRpcMuxerTester:
             print_fail(f"Expected {total_runs * self.config.max_batches} results, got {len(results)}")
             self.failed += 1
     
-    def test_http_invalid_methode(self):
+    def test_http_invalid_method(self):
         """Test HTTP interface with an invalid method"""
         print_test("HTTP: Invalid method (should reject)")
         
@@ -508,6 +508,39 @@ class JsonRpcMuxerTester:
             "id": 104,
             "method": "JsonRpcMuxer.1.invalidmethod",
             "params": []
+        }
+        
+        try:
+            response = requests.post(
+                self.http_url,
+                json=payload,
+                timeout=self.config.timeout / 1000
+            )
+            
+            data = response.json()
+
+            print_test(f"Response {data}")
+            
+            if "error" in data:
+                print_pass(f"Correctly rejected: {data['error'].get('message', 'Unknown error')}")
+                self.passed += 1
+            else:
+                print_fail("Should have been rejected but wasn't")
+                self.failed += 1
+                
+        except Exception as e:
+            print_fail(f"Exception: {e}")
+            self.failed += 1
+
+    def test_http_batch_parse_error(self):
+        """Test HTTP interface rejects invalid JSON-RPC requests with parse errors."""
+        print_test("HTTP: Parse  error(should reject)")
+        
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 122,
+            "method": "JsonRpcMuxer.1.sequential",
+            "params": "{this is a bad batch}"
         }
         
         try:
@@ -538,7 +571,8 @@ class JsonRpcMuxerTester:
         
         # HTTP tests
         print(f"\n{Colors.BOLD}=== HTTP Tests ==={Colors.RESET}")
-        self.test_http_invalid_methode()
+        self.test_http_invalid_method()
+        self.test_http_batch_parse_error()
 
         self.test_http_single_batch("parallel")
         self.test_http_max_batch_size("parallel")
