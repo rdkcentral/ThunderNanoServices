@@ -21,11 +21,14 @@
 
 #include "Module.h"
 #include <interfaces/ISwitchBoard.h>
+#include <interfaces/json/JSwitchBoard.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class SwitchBoard : public PluginHost::IPlugin, PluginHost::IWeb, Exchange::ISwitchBoard {
+    class SwitchBoard : public Exchange::ISwitchBoard
+                      , public PluginHost::IPlugin
+                      , public PluginHost::JSONRPC {
 
     public:
         class Config : public Core::JSON::Container {
@@ -396,31 +399,20 @@ namespace Plugin {
         // to this plugin. This Metadata can be used by the MetData plugin to publish this information to the ouside world.
         string Information() const override;
 
-        //  IWeb methods
-        // -------------------------------------------------------------------------------------------------------
-        // Whenever a request is received, it might carry some additional data in the body. This method allows
-        // the plugin to attach a deserializable data object (ref counted) to be loaded with any potential found
-        // in the body of the request.
-        void Inbound(Web::Request& request) override;
-
-        // If everything is received correctly, the request is passed to us, on a thread from the thread pool, to
-        // do our thing and to return the result in the response object. Here the actual specific module work,
-        // based on a a request is handled.
-        Core::ProxyType<Web::Response> Process(const Web::Request& request) override;
-
-        //  IUnknown methods
-        // -------------------------------------------------------------------------------------------------------
-
         // ISwitchBoard interface
-        void Register(Exchange::ISwitchBoard::INotification* notification) override;
-        void Unregister(Exchange::ISwitchBoard::INotification* notification) override;
-        bool IsActive(const string& callsign) const override;
-        uint32_t Activate(const string& callsign) override;
-        uint32_t Deactivate(const string& callsign) override;
+        Core::hresult Register(Exchange::ISwitchBoard::INotification* const notification) override;
+        Core::hresult Unregister(const Exchange::ISwitchBoard::INotification* const notification) override;
+
+        Core::hresult Switches(Exchange::ISwitchBoard::IStringIterator*& switches) const override;
+        Core::hresult Default(string& callsign) const override;
+
+        Core::hresult IsActive(const string& callsign, bool& active) const override;
+        Core::hresult Activate(const string& callsign) override;
+        Core::hresult Deactivate(const string& callsign) override;
 
         BEGIN_INTERFACE_MAP(SwitchBoard)
             INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(PluginHost::IWeb)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
             INTERFACE_ENTRY(Exchange::ISwitchBoard)
         END_INTERFACE_MAP
 
