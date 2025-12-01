@@ -320,7 +320,7 @@ namespace Plugin {
         ObserverMap::const_iterator index(_observers.cbegin());
 
         while (index != _observers.cend()) {
-            if (IsUnderRegisteredNamespace(index->first, path) == true) {
+            if (IsUnderRegisteredNamespace(index->first, path)) {
                 index->second->Modified(path, key, value);
             }
             index++;
