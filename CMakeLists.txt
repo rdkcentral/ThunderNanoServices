@@ -37,6 +37,7 @@ option(PLUGIN_DICTIONARY "Include Dictionary plugin" OFF)
 option(PLUGIN_DOGGO "Include watchdog plugin" OFF)
 option(PLUGIN_IOCONNECTOR "Include IOConnector plugin" OFF)
 option(PLUGIN_INPUTSWITCH "Include InputSwitch plugin" OFF)
+option(PLUGIN_JSONRPCMUXER "Include JsonRpcMuxer plugin capable to execute batched jsonRPC messages" OFF)
 option(PLUGIN_FIRMWARECONTROL "Include FirmwareControl Plugin" OFF)
 option(PLUGIN_PROCESSMONITOR "Include Process Monitor plugin" OFF)
 option(PLUGIN_LANGUAGEADMINISTRATOR "Include LanguageAdministrator plugin" OFF)
@@ -156,6 +157,10 @@ endif()
 
 if(PLUGIN_INPUTSWITCH)
     add_subdirectory(InputSwitch)
+endif()
+
+if(PLUGIN_JSONRPCMUXER)
+    add_subdirectory(JsonRpcMuxer)
 endif()
 
 if(PLUGIN_SICONTROL)

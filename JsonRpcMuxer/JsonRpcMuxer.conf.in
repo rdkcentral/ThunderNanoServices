@@ -1,0 +1,9 @@
+startmode = "@PLUGIN_JSONRPCMUXER_STARTMODE@"
+
+configuration = JSON()
+
+if @PLUGIN_JSONRPCMUXER_MAX_CONCURRENT_JOBS@:
+    configuration.add("maxconcurrentjobs", "@PLUGIN_JSONRPCMUXER_MAX_CONCURRENT_JOBS@")
+
+if @PLUGIN_JSONRPCMUXER_MAX_BATCH_SIZE@:
+    configuration.add("maxbatchsize", "@PLUGIN_JSONRPCMUXER_MAX_BATCH_SIZE@")
