@@ -300,19 +300,19 @@ namespace Plugin {
             changedPath = "/" + changedPath;
         }
 
+        bool result = false;
+
         if (registeredPath == "/") {
             return true;
         }
 
         if (registeredPath == changedPath) {
-            return true;
+            result = true;
+        } else if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0 && changedPath.at(registeredPath.size()) == '/') {
+            result = true;
         }
 
-        if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0 && changedPath[registeredPath.size()] == '/') {
-            return true;
-        }
-
-        return false;
+        return result;
     }
 
     void Dictionary::NotifyForUpdate(const string& path, const string& key, const string& value) const
