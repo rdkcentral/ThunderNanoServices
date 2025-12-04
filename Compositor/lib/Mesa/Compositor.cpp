@@ -46,6 +46,7 @@ namespace Thunder {
 namespace Plugin {
     const Compositor::Color pink = { 1.0f, 0.411f, 0.705f, 1.0f };
     const Compositor::Color black = { 0.f, 0.f, 0.f, 1.0f };
+    constexpr char DefaultRenderNode[] = "/dev/dri/renderD128";
 
     class CompositorImplementation
         : public Exchange::IComposition,
@@ -62,7 +63,7 @@ namespace Plugin {
 
             Config()
                 : Core::JSON::Container()
-                , Render()
+                , Render(DefaultRenderNode)
                 , Resolution(Exchange::IDeviceVideoCapabilities::ScreenResolution::ScreenResolution_Unknown) // Auto-detect
                 , Format(DRM_FORMAT_INVALID) // auto select
                 , Modifier(DRM_FORMAT_MOD_INVALID) // auto select
@@ -961,7 +962,7 @@ namespace Plugin {
             , _engine()
             , _dispatcher(nullptr)
             , _renderDescriptor(Compositor::InvalidFileDescriptor)
-            , _renderNode()
+            , _renderNode(DefaultRenderNode)
             , _present(*this)
             , _autoScale(true)
             , _commitMutex()
@@ -1035,14 +1036,15 @@ namespace Plugin {
             }
 
             if ((config.Render.IsSet() == true) && (config.Render.Value().empty() == false)) {
-                _renderDescriptor = ::open(config.Render.Value().c_str(), O_RDWR | O_CLOEXEC);
-            } else {
-                TRACE(Trace::Error, (_T("Render node is not set in the configuration")));
-                return Core::ERROR_INCOMPLETE_CONFIG;
+                _renderNode = config.Render.Value();
             }
 
+            TRACE(Trace::Error, (_T("Selected render node %s"), _renderNode.c_str()));
+
+            _renderDescriptor = ::open(_renderNode.c_str(), O_RDWR | O_CLOEXEC);
+
             if (_renderDescriptor < 0) {
-                TRACE(Trace::Error, (_T("Failed to open render node %s, error %d"), config.Render.Value().c_str(), errno));
+                TRACE(Trace::Error, (_T("Failed to open render node %s, error %d"), _renderNode.c_str(), errno));
                 return Core::ERROR_OPENING_FAILED;
             }
 
@@ -1219,7 +1221,7 @@ namespace Plugin {
         }
         string Port() const override
         {
-            return string("Mesa3d");
+            return _renderNode;
         }
         // Useless Resolution functions, this should be controlled by DisplayControl
         uint32_t Resolution(const Exchange::IComposition::ScreenResolution format VARIABLE_IS_NOT_USED) override
