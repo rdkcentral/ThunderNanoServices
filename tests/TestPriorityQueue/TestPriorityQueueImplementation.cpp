@@ -78,7 +78,7 @@ namespace Plugin {
             }
             return string();
         }
-        void Deinitialize(PluginHost::IShell* service) override
+        void Deinitialize(PluginHost::IShell* /* service */) override
         {
             ASSERT(service == _service);
 
