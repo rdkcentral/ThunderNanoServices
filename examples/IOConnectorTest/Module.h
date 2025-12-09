@@ -30,8 +30,3 @@
 #include <interfaces/IExternal.h>
 #include <interfaces/IInputPin.h>
 
-#if defined(__WINDOWS__) && defined(CRYPTALGO_EXPORTS)
-#undef EXTERNAL
-#define EXTERNAL EXTERNAL_EXPORT
-#endif
-
