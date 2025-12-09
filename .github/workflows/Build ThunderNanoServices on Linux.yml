@@ -20,4 +20,4 @@ jobs:
 
   ThunderNanoServices:
     needs: ThunderInterfaces
-    uses: rdkcentral/ThunderNanoServices/.github/workflows/Linux build template.yml@master
+    uses: rdkcentral/ThunderNanoServices/.github/workflows/Linux build template.yml@development/adding-more-to-actions
