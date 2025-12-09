@@ -17,16 +17,7 @@
  * limitations under the License.
  */
 
-#ifndef MODULE_NAME
-#define MODULE_NAME IOConnectorTest
-#endif
-
-#include <com/com.h>
-#include <core/core.h>
-#include <websocket/websocket.h>
-
-#include <interfaces/IExternal.h>
-#include <interfaces/IInputPin.h>
+#include "Module.h"
 
 #define INPUT_PIN_ID    16
 #define OUTPUT_PIN_ID   20

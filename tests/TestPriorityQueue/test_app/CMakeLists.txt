@@ -19,13 +19,18 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}COM CONFIG REQUIRED)
 
-add_executable(TestPriorityQueueApp TestPriorityQueueApp.cpp)
+set(TEST_APP_NAME TestPriorityQueueApp)
 
-target_link_libraries(TestPriorityQueueApp
+add_executable(${TEST_APP_NAME}
+    TestPriorityQueueApp.cpp
+    Module.cpp
+)
+
+target_link_libraries(${TEST_APP_NAME}
     PUBLIC
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}COM::${NAMESPACE}COM
 )
 
-install(TARGETS TestPriorityQueueApp DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)
+install(TARGETS ${TEST_APP_NAME} DESTINATION ${CMAKE_INSTALL_BINDIR}/${NAMESPACE}Tests COMPONENT ${NAMESPACE}_Test)
