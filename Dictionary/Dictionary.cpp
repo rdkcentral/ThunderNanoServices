@@ -288,28 +288,22 @@ namespace Plugin {
             return (result);
     }
 
-    bool Dictionary::IsUnderRegisteredNamespace(const string& registeredRawPath, const string& changedRawPath) const
+    bool Dictionary::IsUnderRegisteredNamespace(const string& registeredPath, const string& changedPath) const
     {
-        string registeredPath = registeredRawPath;
-        string changedPath = changedRawPath;
-
-        if (!registeredPath.empty() && registeredPath[0] != '/') {
-            registeredPath = "/" + registeredPath;
-        }
-        if (!changedPath.empty() && changedPath[0] != '/') {
-            changedPath = "/" + changedPath;
-        }
+        const string& delimiter = Delimiter(); 
 
         bool result = false;
 
-        if (registeredPath == "/") {
-            return true;
+        if (registeredPath == delimiter) {
+            result = true;
         }
 
-        if (registeredPath == changedPath) {
-            result = true;
-        } else if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0 && changedPath.at(registeredPath.size()) == '/') {
-            result = true;
+        if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0) {
+            if (changedPath.size() == registeredPath.size()) {
+                result = true;
+            } else if (changedPath.at(registeredPath.size()) == delimiter[0]) {
+                result = true;
+            }
         }
 
         return result;
