@@ -296,9 +296,7 @@ namespace Plugin {
 
         if (registeredPath == delimiter) {
             result = true;
-        }
-
-        if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0) {
+        } else if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0) {
             if (changedPath.size() == registeredPath.size()) {
                 result = true;
             } else if (changedPath.at(registeredPath.size()) == delimiter[0]) {
