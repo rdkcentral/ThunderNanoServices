@@ -321,6 +321,7 @@ namespace Plugin {
         bool CreateInternalDictionary(const string& currentSpace, const NameSpace& data);
         void CreateExternalDictionary(const string& currentSpace, NameSpace& data) const;
         inline void NotifyForUpdate(const string& path, const string& key, const string& value) const;
+        bool IsUnderRegisteredNamespace(const string& registeredPath, const string& changedPath) const;
 
         const string& Delimiter() const {
             static string delimiter{ Exchange::IDictionary::namespaceDelimiter };
