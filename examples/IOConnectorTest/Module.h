@@ -30,3 +30,5 @@
 #include <interfaces/IExternal.h>
 #include <interfaces/IInputPin.h>
 
+#undef EXTERNAL
+#define EXTERNAL
