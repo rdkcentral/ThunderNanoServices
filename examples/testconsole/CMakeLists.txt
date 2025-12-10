@@ -18,6 +18,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 set (PLUGIN_TEST_TESTCONSOLE_SOURCES
         testconsole.cpp
+        Module.cpp
         ../testserver/DataContainer.cpp
 )
 

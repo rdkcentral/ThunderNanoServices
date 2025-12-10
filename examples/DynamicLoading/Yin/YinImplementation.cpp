@@ -200,7 +200,7 @@ namespace Plugin {
                 Core::File dataFile(_service->DataPath() + _dataFile);
 
                 if (dataFile.Open(true) == true) {
-                    const uint64_t size = std::min(dataFile.Size(), 4096ULL);
+                    const uint64_t size = std::min(dataFile.Size(), static_cast<uint64_t>(4096));
                     uint8_t *data = static_cast<uint8_t*>(ALLOCA(size + 1));
                     ASSERT(data != nullptr);
                     dataFile.Read(data, size);

@@ -44,8 +44,10 @@ jobs:
         PKGS="python3-venv python3-pip build-essential cmake ninja-build libusb-1.0-0-dev"
         if [ "${{ matrix.architecture }}" = "32" ]; then
           PKGS="$PKGS zlib1g-dev:i386 libssl-dev:i386 libsbc-dev:i386 gcc-13-multilib g++-13-multilib"
+          PKGS="$PKGS libicu-dev:i386 libpng-dev:i386 libdrm-dev:i386 libgbm-dev:i386 libegl-dev:i386 libgles2-mesa-dev:i386"
         else
           PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev"
+          PKGS="$PKGS libicu-dev libpng-dev libdrm-dev libgbm-dev libegl-dev libgles2-mesa-dev"
         fi
         for attempt in {1..4}; do
           if sudo apt-get install -y --no-install-recommends $PKGS; then
@@ -94,18 +96,32 @@ jobs:
     - name: Build ThunderNanoServices
       run: |
         source venv/bin/activate
+        ${{matrix.architecture == '32' && 'export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig:$PKG_CONFIG_PATH' || 'PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH'}}
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
         -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
         -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
+        -DEXAMPLE_CLIENT_SERVER=ON \
         -DEXAMPLE_COMRPCCLIENT=ON \
+        -DEXAMPLE_CUSTOMCODE_EXAMPLE=ON \
+        -DEXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE=ON \
+        -DEXAMPLE_DYNAMICLOADING=ON \
+        -DEXAMPLE_DYNAMICLOADING_YIN=ON \
+        -DEXAMPLE_DYNAMICLOADING_YANG=ON \
+        -DEXAMPLE_GENERATORSHOWCASE_EXAMPLE=ON \
+        -DEXAMPLE_IOCONNECTOR_TEST=ON \
+        -DEXAMPLE_MESSAGECONTROL_UDP_CLIENT=ON \
+        -DEXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE=ON \
+        -DEXAMPLE_SIMPLECOMRPC_TEST=ON \
         -DPLUGIN_BLUETOOTH=ON \
         -DPLUGIN_BLUETOOTHREMOTECONTROL=ON \
         -DPLUGIN_BLUETOOTHAUDIO=ON \
         -DPLUGIN_BLUETOOTHSDPSERVER=ON \
         -DPLUGIN_CECCONTROL=ON \
         -DPLUGIN_COMMANDER=ON \
+        -DPLUGIN_COMPOSITOR=ON \
+        -DPLUGIN_COMPOSITOR_IMPLEMENTATION=RPI \
         -DPLUGIN_CONFIGUPDATEEXAMPLE=ON \
         -DPLUGIN_DHCPSERVER=ON \
         -DPLUGIN_DIALSERVER=ON \
@@ -114,19 +130,32 @@ jobs:
         -DPLUGIN_INPUTSWITCH=ON \
         -DPLUGIN_IOCONNECTOR=ON \
         -DPLUGIN_JSONRPC=ON \
+        -DPLUGIN_JSONRPCMUXER=ON \
+        -DPLUGIN_LANGUAGEADMINISTRATOR=ON \
         -DPLUGIN_NETWORKCONTROL=ON \
         -DPLUGIN_OUTOFPROCESS=ON \
+        -DPLUGIN_PERFORMANCEMONITOR=ON \
+        -DPLUGIN_PLUGININITIALIZERSERVICE=ON \
+        -DPLUGIN_POWER=ON \
+        -DPLUGIN_PROCESSCONTAINERS=ON \
         -DPLUGIN_PROCESSMONITOR=ON \
+        -DPLUGIN_REMOTECONTROL=ON \
         -DPLUGIN_RESOURCEMONITOR=ON \
+        -DPLUGIN_SNAPSHOT=ON \
         -DPLUGIN_STATECONTROLLER=ON \
+        -DPLUGIN_SUBSYSTEMCONTROLLER=ON \
         -DPLUGIN_SWITCHBOARD=ON \
         -DPLUGIN_SYSTEMCOMMANDS=ON \
         -DPLUGIN_TESTCONTROLLER=ON \
+        -DPLUGIN_TESTPRIORITYQUEUE=ON \
+        -DPLUGIN_TESTTEXTOPTIONS=ON \
         -DPLUGIN_TESTUTILITY=ON \
+        -DPLUGIN_TIMESYNC=ON \
         -DPLUGIN_WEBPROXY=ON \
         -DPLUGIN_WEBSERVER=ON \
         -DPLUGIN_WEBSHELL=ON \
         -DPLUGIN_WIFICONTROL=ON \
+        -DPLUGIN_VOLUMECONTROL=ON \
         -DSTORE_TEST=ON \
         -DTEST_AUTOMATION_TOOLS=ON \
         ${{steps.plugins.outputs.first_match}}

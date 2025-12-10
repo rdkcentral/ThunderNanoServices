@@ -33,7 +33,12 @@ find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(${NAMESPACE}WebSocket REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
-add_executable(${MODULE_NAME} IOConnectorTest.cpp)
+set(IOCONNECTOR_TEST_SOURCES
+        IOConnectorTest.cpp
+        Module.cpp
+)
+
+add_executable(${MODULE_NAME} ${IOCONNECTOR_TEST_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11

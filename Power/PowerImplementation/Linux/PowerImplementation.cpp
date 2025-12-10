@@ -130,7 +130,9 @@ public:
             if (_triggerFile < 0) {
                 TRACE(Trace::Error, (_T("Not able to access %s."), TriggerFile));
             } else {
+PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT)
                 ::write(_triggerFile, "0", 1);
+POP_WARNING()
             }
         }
     }
@@ -213,6 +215,7 @@ private:
                     case Exchange::IPower::PCState::PassiveStandby: break;
                     case Exchange::IPower::PCState::SuspendToRAM:
                         {
+PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT)
                             ::write(_triggerFile, "1", 1);
                             /* We will be able to write state only if we are in 'On' State. */
                             ::write(_stateFile, newMode->label, newMode->length);
@@ -221,6 +224,7 @@ private:
                             ::read(_triggerFile, &value, 1);
                             /* Reset the early wakeup trigger for low level drivers. */
                             ::write(_triggerFile, "0", 1);
+POP_WARNING()
                             /* Reset the State to 'On' once device wakes-up. */
                             RevokeJob();
                             SetState(Exchange::IPower::PCState::On, 0);
@@ -228,7 +232,9 @@ private:
                         break;
                     case Exchange::IPower::PCState::Hibernate: break;
                     case Exchange::IPower::PCState::PowerOff:
+PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT)
                         system("poweroff");
+POP_WARNING()
                         break;
                     default:
                         TRACE(Trace::Error, (_T("Should not reach here at any case...!!!")));
