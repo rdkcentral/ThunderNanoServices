@@ -1257,7 +1257,14 @@ namespace Plugin
 
             if (subSystem != nullptr) {
                 if (subSystem->IsActive(PluginHost::ISubSystem::NETWORK) ^ fullSet) {
-                    subSystem->Set(fullSet ? PluginHost::ISubSystem::NETWORK : PluginHost::ISubSystem::NOT_NETWORK, nullptr);
+                    if (fullSet != false) {
+                        VARIABLE_IS_NOT_USED Core::hresult result = subSystem->Set(PluginHost::ISubSystem::NETWORK, /* information */ nullptr);
+                        ASSERT(result == Core::ERROR_NONE);
+                    } else {
+                        /* DEPRECATED */ VARIABLE_IS_NOT_USED Core::hresult result = subSystem->Set(PluginHost::ISubSystem::NOT_NETWORK, /* information */ nullptr);
+//                        VARIABLE_IS_NOT_USED Core::hresult result = subSystem->Unset(PluginHost::ISubSystem::NETWORK);
+                        ASSERT(result == Core::ERROR_NONE);
+                    }
                 }
 
                 subSystem->Release();
