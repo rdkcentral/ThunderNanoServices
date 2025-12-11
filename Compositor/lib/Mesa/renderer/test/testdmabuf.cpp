@@ -72,7 +72,7 @@ public:
         ASSERT(renderFd >= 0);
 
         _textureBuffer = Core::ProxyType<Compositor::DmaBuffer>::Create(renderFd, Texture::TvTexture);
-        _texture = renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(_textureBuffer));
+        _texture = renderer->CreateTexture(Core::ProxyType<Exchange::IGraphicsBuffer>(_textureBuffer));
 
         ASSERT(_texture != nullptr);
         ASSERT(_texture->IsValid());
@@ -196,7 +196,7 @@ protected:
             Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, rotation, renderer->Projection());
 
             const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
-            renderer->Render(_texture, textureBox, matrix, alpha);
+            renderer->Render(_texture->Identifier(), textureBox, matrix, alpha);
 
             renderer->End(false);
             renderer->Unbind(frameBuffer);

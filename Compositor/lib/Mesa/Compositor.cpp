@@ -550,6 +550,11 @@ namespace Plugin {
             }
             ~Client() override
             {
+                for (unsigned int i = 0; i < _buffers.Count(); i++) {
+                    Core::ProxyType<Compositor::IRenderer::ITexture> texture = _buffers[i]->Texture();
+                    _parent.DestroyTexture(texture);
+                }
+
                 _buffers.Clear();
 
                 _parent.Render(); // request a render to remove this surface from the composition.
@@ -774,7 +779,7 @@ namespace Plugin {
 
                     if (buffer.IsValid() == true) {
                         int index = _buffers.Add(buffer);
-                        buffer->Configure(index, _parent.Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(buffer)));
+                        buffer->Configure(index, _parent.CreateTexture(Core::ProxyType<Exchange::IGraphicsBuffer>(buffer)));
                         result = Core::ERROR_NONE;
                     } else {
                         result = Core::ERROR_GENERAL;
@@ -1175,10 +1180,18 @@ namespace Plugin {
             _adminLock.Unlock();
         }
 
-        Core::ProxyType<Compositor::IRenderer::ITexture> Texture(Core::ProxyType<Exchange::IGraphicsBuffer> buffer)
+        Core::ProxyType<Compositor::IRenderer::ITexture> CreateTexture(Core::ProxyType<Exchange::IGraphicsBuffer> buffer)
         {
             ASSERT(buffer.IsValid());
-            return _renderer->Texture(buffer);
+            return _renderer->CreateTexture(buffer);
+        }
+
+        void DestroyTexture(Core::ProxyType<Compositor::IRenderer::ITexture> texture)
+        {
+            if (texture.IsValid()) {
+                _renderer->DestroyTexture(texture->Identifier());
+                texture.Release(); 
+            }
         }
 
         void Announce(Exchange::IComposition::IClient* client)
@@ -1384,7 +1397,7 @@ namespace Plugin {
 
                 const float alpha = float(client->Opacity()) / float(Exchange::IComposition::maxOpacity);
 
-                _renderer->Render(texture, clientArea, clientProjection, alpha);
+                _renderer->Render(texture->Identifier(), clientArea, clientProjection, alpha);
 
                 const uint64_t duration = Core::Time::Now().Ticks() - start;
                 UpdateClientStats(client->Name(), duration, false);
