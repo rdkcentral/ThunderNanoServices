@@ -196,7 +196,7 @@ namespace Plugin {
             
         if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))) {
 
-            std::list<Exchange::IDictionary::PathEntry> pathentries;
+            std::vector<Exchange::IDictionary::PathEntry> pathentries;
 
             if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
         
