@@ -337,7 +337,8 @@ namespace Plugin
                 auto dns = request.Body<const Core::JSON::ArrayType<Core::JSON::String>>()->Elements();
 
                 if (dns.Count()) {
-                      std::vector<string> elements;
+                    std::vector<string> elements;
+                    elements.reserve(dns.Count());
                     while (dns.Next() == true) {
                         elements.push_back(dns.Current());
                     }
@@ -362,6 +363,8 @@ namespace Plugin
 
                 if (network.Count()) {
                     std::vector<Exchange::INetworkControl::NetworkInfo> elements;
+                    elements.reserve(network.Count());
+
                     while (network.Next() == true) {
                         elements.push_back(network.Current());
                     }

@@ -111,6 +111,8 @@ namespace Plugin {
                     }
 
                     std::vector<string> _elements;
+                    _elements.reserve(updates);
+
                     for(uint32_t i = 0; i<updates; ++i) {
                         string s("UserScripts_Updated_");
                         s += std::to_string(i);

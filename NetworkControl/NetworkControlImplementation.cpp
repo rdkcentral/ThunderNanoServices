@@ -968,6 +968,8 @@ namespace Plugin
             DNS(servers);
 
             std::vector<string> dnsList;
+            dnsList.reserve(servers.size());
+
             for (const Core::NodeId& entry : servers) {
 
                 dnsList.push_back(entry.HostAddress());
@@ -1437,6 +1439,8 @@ namespace Plugin
 
         void Interfaces(std::vector<string>& interfaces) const
         {
+            interfaces.reserve(_info.size());
+
             for (const auto& info : _info) {
                  interfaces.push_back(info.first);
             }
