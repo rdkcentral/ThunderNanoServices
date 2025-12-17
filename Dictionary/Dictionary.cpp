@@ -198,10 +198,6 @@ namespace Plugin {
 
             std::vector<Exchange::IDictionary::PathEntry> pathentries;
 
-            _adminLock.Lock();
-            pathentries.reserve(_dictionary.size());
-            _adminLock.Unlock();
-
             if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
         
                 _adminLock.Lock();
