@@ -541,9 +541,11 @@ namespace Plugin {
                 , _geometryChanged(false)
                 , _buffers(MaxClientBuffers)
                 , _requestQueue()
-                , _pendingQueue()
                 , _currentId(InvalidBufferId)
                 , _renderingId(InvalidBufferId)
+                , _pendingId(InvalidBufferId)
+                , _activeId(InvalidBufferId)
+                , _retiredId(InvalidBufferId)
                 , _stats()
             {
                 TRACE(Trace::Information, (_T("Client Constructed %s[%p] id:%d %dx%d"), _callsign.c_str(), this, _id, _width, _height));
@@ -615,9 +617,10 @@ namespace Plugin {
                 return _stats;
             }
 
-            Core::ProxyType<Compositor::IRenderer::ITexture> Acquire()
+            Core::ProxyType<Compositor::IRenderer::ITexture> Acquire(bool& isNewFrame)
             {
                 Core::ProxyType<Compositor::IRenderer::ITexture> texture;
+                isNewFrame = false;
 
                 uint8_t id;
                 uint64_t acquireTime = Core::Time::Now().Ticks();
@@ -626,6 +629,7 @@ namespace Plugin {
                 if (_requestQueue.Pop(id)) {
                     // New frame requested! Update current
                     _currentId.store(id, std::memory_order_release);
+                    isNewFrame = true;
                 } else {
                     // No new frame, use current buffer (static content)
                     id = _currentId.load(std::memory_order_acquire);
@@ -670,37 +674,83 @@ namespace Plugin {
                 return texture;
             }
 
-            void Relinquish()
+            // -------------------------------------------------------------------------
+            // Called during RenderClient - releases texture reference
+            // Does NOT signal client - stores buffer as pending for later
+            // Only stores if this was a NEW frame (not re-rendering current)
+            // -------------------------------------------------------------------------
+            void Relinquish(bool newFrame)
             {
                 uint8_t id = _renderingId.exchange(InvalidBufferId, std::memory_order_acq_rel);
 
-                if (id != InvalidBufferId) {
+                if (id != InvalidBufferId && id < _buffers.Count() && _buffers[id].IsValid()) {
                     _buffers[id]->Relinquish();
 
-                    bool queued = _pendingQueue.Push(id, false);
-
-                    if (!queued) {
-                        TRACE(Trace::Error, (_T("Queue full! Buffer %d rejected"), id));
+                    // Only mark as pending if this was a NEW frame submission
+                    // Re-rendered static content should not trigger state changes
+                    if (newFrame) {
+                        _pendingId.store(id, std::memory_order_release);
                     }
-
-                    ASSERT(queued == true);
-
-                    if (_buffers[id].IsValid()) {
-                        _buffers[id]->Rendered();
-                    }
-                } else {
-                    TRACE(Trace::Error, (_T("Can't release invalid buffers")));
                 }
             }
 
-            void Completed()
+            // -------------------------------------------------------------------------
+            // Called AFTER renderer->Finish() - GPU is done
+            // Promotes pending → active, active → retired
+            // Signals Rendered to client
+            // -------------------------------------------------------------------------
+            void SignalRendered()
             {
-                uint8_t bufferId;
+                uint8_t id = _pendingId.exchange(InvalidBufferId, std::memory_order_acq_rel);
 
-                if (_pendingQueue.Pop(bufferId)) {
-                    if (_buffers[bufferId].IsValid()) {
-                        _buffers[bufferId]->Published();
+                // Only process if there's actually a pending buffer
+                if (id == InvalidBufferId) {
+                    return; // No new frame was submitted, nothing to signal
+                }
+
+                if (id < _buffers.Count() && _buffers[id].IsValid()) {
+                    // Get current active (will become retired)
+                    uint8_t oldActive = _activeId.exchange(id, std::memory_order_acq_rel);
+
+                    // Only retire if there WAS an active buffer AND it's different from new one
+                    // AND it's not already retired (or invalid)
+                    if (oldActive != InvalidBufferId && oldActive != id) {
+                        uint8_t currentRetired = _retiredId.load(std::memory_order_acquire);
+
+                        if (currentRetired == InvalidBufferId) {
+                            // No retired buffer, safe to retire oldActive
+                            _retiredId.store(oldActive, std::memory_order_release);
+                        } else {
+                            // Already have a retired buffer waiting - this shouldn't happen
+                            // but if it does, force-publish the old retired one
+                            if (_buffers[currentRetired].IsValid()) {
+                                _buffers[currentRetired]->Published();
+                            }
+
+                            _retiredId.store(oldActive, std::memory_order_release);
+                        }
                     }
+
+                    // Signal client - safe to render next frame
+                    _buffers[id]->Rendered();
+                }
+            }
+
+            // -------------------------------------------------------------------------
+            // Called on VSync - scanout complete
+            // Signals Published for retired buffer
+            // -------------------------------------------------------------------------
+            void SignalPublished()
+            {
+                uint8_t id = _retiredId.exchange(InvalidBufferId, std::memory_order_acq_rel);
+
+                if (id != InvalidBufferId && id < _buffers.Count() && _buffers[id].IsValid()) {
+                    // Signal client - safe to release buffer back to GBM
+                    _buffers[id]->Published();
+
+                    // TRACE(Trace::Information,
+                    //     (_T("Client %s: buffer %d Published signaled (can release to GBM)"),
+                    //      _callsign.c_str(), id));
                 }
             }
 
@@ -765,7 +815,10 @@ namespace Plugin {
             }
             void Revoke()
             {
-                _pendingQueue.Clear();
+                // Clear any pending state
+                _pendingId.store(InvalidBufferId, std::memory_order_release);
+                _activeId.store(InvalidBufferId, std::memory_order_release);
+                _retiredId.store(InvalidBufferId, std::memory_order_release);
 
                 _parent.Revoke(this);
             }
@@ -804,9 +857,14 @@ namespace Plugin {
             bool _geometryChanged;
             Core::ProxyList<ExternalBuffer> _buffers; // the actual pixel buffers that are used by this client but are owed by the compositorclient.
             AtomicFifo<uint8_t, MaxClientBuffers> _requestQueue;
-            AtomicFifo<uint8_t, MaxClientBuffers> _pendingQueue;
-            std::atomic<uint8_t> _currentId;
-            std::atomic<uint8_t> _renderingId;
+
+            // Buffer state tracking - single buffer per state, no queues needed
+            std::atomic<uint8_t> _currentId; // Last known buffer from client
+            std::atomic<uint8_t> _renderingId; // Temp: being composed this frame
+            std::atomic<uint8_t> _pendingId; // Waiting for Rendered (after Finish)
+            std::atomic<uint8_t> _activeId; // On screen (waiting for next frame)
+            std::atomic<uint8_t> _retiredId; // Waiting for Published (after VSync)
+
             Stats _stats;
 
             static uint32_t _sequence;
@@ -1258,13 +1316,15 @@ namespace Plugin {
                 return;
             }
 
+            // Signal Published to all clients - retired buffers can be released to GBM
             {
                 std::lock_guard<std::mutex> lock(_clientLock);
                 _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
-                    client->Completed();
+                    client->SignalPublished();
                 });
             }
 
+            // Allow next commit
             {
                 std::lock_guard<std::mutex> lock(_commitMutex);
                 _canCommit.store(true, std::memory_order_release);
@@ -1339,6 +1399,14 @@ namespace Plugin {
                         TRACE(Trace::Error, (_T("GPU sync failed: %d"), syncResult));
                     }
 
+                    // NOW signal Rendered to all clients - GPU is done with all client buffers
+                    {
+                        std::lock_guard<std::mutex> lock(_clientLock);
+                        _clients.Visit([&](const string& /*name*/, const Core::ProxyType<Client> client) {
+                            client->SignalRendered();
+                        });
+                    }
+
                     _renderer->Unbind(frameBuffer);
 
                     _totalRenderTime.fetch_add((Core::Time::Now().Ticks() - start), std::memory_order_relaxed);
@@ -1376,7 +1444,8 @@ namespace Plugin {
 
             const uint64_t start(Core::Time::Now().Ticks());
 
-            Core::ProxyType<Compositor::IRenderer::ITexture> texture = client->Acquire();
+            bool isNewFrame = false;
+            Core::ProxyType<Compositor::IRenderer::ITexture> texture = client->Acquire(isNewFrame);
 
             if ((texture.IsValid() == true)) {
                 Exchange::IComposition::Rectangle renderBox;
@@ -1411,7 +1480,7 @@ namespace Plugin {
                 }
             }
 
-            client->Relinquish();
+            client->Relinquish(isNewFrame);
         }
 
         class Presenter : public Core::Thread {
