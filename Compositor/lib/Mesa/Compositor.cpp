@@ -386,12 +386,18 @@ namespace Plugin {
 
                 uint32_t Release() const override
                 {
+                    uint32_t result = Core::ERROR_NONE;
+
                     if (Core::InterlockedDecrement(_refCount) == 0) {
                         // Time to say goodby, all remote clients died..
+                        _client.AddRef(); 
                         const_cast<Client&>(_client).Revoke();
-                        return (Core::ERROR_DESTRUCTION_SUCCEEDED);
+                        _client.Release();
+                        
+                        result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                     }
-                    return Core::ERROR_NONE;
+
+                    return result;
                 }
 
                 // Exchange::IComposition::IClient methods
@@ -1248,7 +1254,7 @@ namespace Plugin {
         {
             if (texture.IsValid()) {
                 _renderer->DestroyTexture(texture->Identifier());
-                texture.Release(); 
+                texture.Release();
             }
         }
 
