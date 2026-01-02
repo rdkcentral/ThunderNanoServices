@@ -390,10 +390,10 @@ namespace Plugin {
 
                     if (Core::InterlockedDecrement(_refCount) == 0) {
                         // Time to say goodby, all remote clients died..
-                        _client.AddRef(); 
+                        _client.AddRef();
                         const_cast<Client&>(_client).Revoke();
                         _client.Release();
-                        
+
                         result = Core::ERROR_DESTRUCTION_SUCCEEDED;
                     }
 
@@ -558,20 +558,15 @@ namespace Plugin {
             }
             ~Client() override
             {
-                for (unsigned int i = 0; i < _buffers.Count(); i++) {
-                    Core::ProxyType<Compositor::IRenderer::ITexture> texture = _buffers[i]->Texture();
-                    _parent.DestroyTexture(texture);
+                if (_buffers.Count() > 0) {
+                    for (unsigned int i = 0; i < _buffers.Count(); i++) {
+                        Core::ProxyType<Compositor::IRenderer::ITexture> texture = _buffers[i]->Texture();
+                        if (texture.IsValid()) {
+                            _parent.DestroyTexture(texture);
+                        }
+                    }
+                    _buffers.Clear();
                 }
-
-                _buffers.Clear();
-
-                _parent.Render(); // request a render to remove this surface from the composition.
-
-                // while (_pendingQueue.Pop(bufferId)) {
-                //     if (_buffers[bufferId].IsValid()) {
-                //         _buffers[bufferId]->Published();
-                //     }
-                // }
 
                 TRACE(Trace::Information, (_T("Client %s[%p] destroyed"), _callsign.c_str(), this));
             }
@@ -826,7 +821,17 @@ namespace Plugin {
                 _activeId.store(InvalidBufferId, std::memory_order_release);
                 _retiredId.store(InvalidBufferId, std::memory_order_release);
 
+                // Clean up textures immediately
+                for (unsigned int i = 0; i < _buffers.Count(); i++) {
+                    Core::ProxyType<Compositor::IRenderer::ITexture> texture = _buffers[i]->Texture();
+                    _parent.DestroyTexture(texture);
+                }
+
+                _buffers.Clear();
+
                 _parent.Revoke(this);
+
+                _parent.Render(); // Request a render to remove this surface from the composition
             }
 
             uint32_t AttachBuffer(Core::PrivilegedRequest::Container& descriptors)
@@ -967,6 +972,30 @@ namespace Plugin {
         private:
             Sink _sink;
             Core::ProxyType<Compositor::IOutput> _connector;
+        };
+
+        class DetachedNotificationJob : public Core::IDispatch {
+        public:
+            DetachedNotificationJob(Exchange::IComposition::INotification* observer, const string& clientName)
+                : _observer(observer)
+                , _clientName(clientName)
+            {
+                _observer->AddRef();
+            }
+
+            ~DetachedNotificationJob() override
+            {
+                _observer->Release();
+            }
+
+            void Dispatch() override
+            {
+                _observer->Detached(_clientName);
+            }
+
+        private:
+            Exchange::IComposition::INotification* _observer;
+            string _clientName;
         };
 
         using Clients = Core::ProxyMapType<string, Client>;
@@ -1270,10 +1299,15 @@ namespace Plugin {
 
         void Revoke(Exchange::IComposition::IClient* client)
         {
+            ASSERT(client != nullptr);
+
+            string clientName = client->Name();
             _adminLock.Lock();
 
             for (auto& observer : _observers) {
-                observer->Detached(client->Name());
+                Core::IWorkerPool::Instance().Submit(
+                    Core::ProxyType<Core::IDispatch>(
+                        Core::ProxyType<DetachedNotificationJob>::Create(observer, clientName)));
             }
 
             _adminLock.Unlock();
