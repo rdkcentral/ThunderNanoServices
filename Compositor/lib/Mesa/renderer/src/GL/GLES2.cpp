@@ -344,17 +344,13 @@ namespace Compositor {
                 {
                     GLES_DEBUG_SCOPE("FrameBuffer::Unbind");
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
-
-                    glFlush();
                     glBindFramebuffer(GL_FRAMEBUFFER, 0);
                 }
 
                 void Bind() const override
                 {
                     GLES_DEBUG_SCOPE("FrameBuffer::Bind");
-
                     ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
-
                     glBindFramebuffer(GL_FRAMEBUFFER, _glFrameBuffer);
                 }
 
@@ -813,100 +809,98 @@ namespace Compositor {
                 GLESTexture& operator=(GLESTexture&&) = delete;
                 GLESTexture& operator=(const GLESTexture&) = delete;
 
-                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer)
+                GLESTexture(GLES& parent, const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer, ITexture::Id id)
                     : _parent(parent)
+                    , _id(id)
                     , _target(GL_TEXTURE_2D)
                     , _textureId(0)
                     , _image(EGL_NO_IMAGE)
                     , _buffer(buffer)
+                    , _invalidated(false)
                 {
                     ASSERT(_buffer != nullptr);
-
-                    _parent.Add(this);
-
-                    if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
-                        ImportDMABuffer();
-                    }
-
-                    if (buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
-                        ImportSHMBuffer();
-                    }
-
-                    ASSERT(_textureId != 0);
-
-                    // Snapshot();
                 }
 
                 ~GLESTexture() override
                 {
-                    _parent.Remove(this);
-
-                    Renderer::EGL::ContextBackup backup;
-                    _parent.Egl().SetCurrent();
-
-                    glDeleteTextures(1, &_textureId);
-
-                    if (_image != EGL_NO_IMAGE) {
-                        _parent.Egl().DestroyImage(_image);
-                    }
-                }
-
-                /**
-                 *  IRenderer::ITexture
-                 */
-                virtual bool IsValid() const
-                {
-                    return (_textureId != 0);
                 }
 
                 bool Invalidate()
                 {
-                    bool result(
-                        (_buffer->Type() != Exchange::IGraphicsBuffer::TYPE_DMA)
-                        || ((_image != EGL_NO_IMAGE) && (_target == GL_TEXTURE_EXTERNAL_OES)));
-
-                    if ((_image != EGL_NO_IMAGE) && (_target != GL_TEXTURE_EXTERNAL_OES)) {
-                        Renderer::EGL::ContextBackup backup;
-
-                        _parent.Egl().SetCurrent();
-
-                        glBindTexture(_target, _textureId);
-                        _parent.Gles().glEGLImageTargetTexture2DOES(_target, _image);
-                        glBindTexture(_target, 0);
-                    }
-                    return result;
+                    return _invalidated.exchange(true, std::memory_order_relaxed);
                 }
-
+                
+                /**
+                 *  IRenderer::ITexture
+                 */
+                virtual bool IsValid() const override { return (_textureId != 0); }
+                ITexture::Id Identifier() const override { return _id; }
                 uint32_t Width() const override { return _buffer->Width(); }
                 uint32_t Height() const override { return _buffer->Height(); }
                 GLenum Target() const { return _target; }
                 GLuint Id() const { return _textureId; }
 
+
                 bool Draw(const float& alpha, const Matrix& matrix, const PointCoordinates& coordinates) const
                 {
-                    GLES_DEBUG_SCOPE("GLESTexture::Draw");
                     bool result(false);
-                    bool hasAlpha(DRM::HasAlpha(_buffer->Format()));
 
-                    if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
-                        ExternalProgram* program = _parent.Programs().QueryType<ExternalProgram>();
-                        ASSERT(program != nullptr);
-                        result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
-                    }
+                    if ((_invalidated.load(std::memory_order_relaxed) == false) && (IsValid() == true)) {
+                        ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
 
-                    if ((_target == GL_TEXTURE_2D)) {
-                        if (hasAlpha == true) {
-                            RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
+                        GLES_DEBUG_SCOPE("GLESTexture::Draw");
+
+                        bool hasAlpha(DRM::HasAlpha(_buffer->Format()));
+
+                        if ((_target == GL_TEXTURE_EXTERNAL_OES)) {
+                            ExternalProgram* program = _parent.Programs().QueryType<ExternalProgram>();
                             ASSERT(program != nullptr);
                             result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
-                        } else {
-                            RGBXProgram* program = _parent.Programs().QueryType<RGBXProgram>();
-                            ASSERT(program != nullptr);
-                            result = program->Draw(_textureId, _target, false, alpha, matrix, coordinates);
+                        }
+
+                        if ((_target == GL_TEXTURE_2D)) {
+                            if (hasAlpha == true) {
+                                RGBAProgram* program = _parent.Programs().QueryType<RGBAProgram>();
+                                ASSERT(program != nullptr);
+                                result = program->Draw(_textureId, _target, hasAlpha, alpha, matrix, coordinates);
+                            } else {
+                                RGBXProgram* program = _parent.Programs().QueryType<RGBXProgram>();
+                                ASSERT(program != nullptr);
+                                result = program->Draw(_textureId, _target, false, alpha, matrix, coordinates);
+                            }
                         }
                     }
 
                     return result;
+                }
+
+                bool Initialize()
+                {
+                    ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
+
+                    if (_textureId == 0) {
+                        if (_buffer->Type() == Exchange::IGraphicsBuffer::TYPE_DMA) {
+                            ImportDMABuffer();
+                        } else if (_buffer->Type() == Exchange::IGraphicsBuffer::TYPE_RAW) {
+                            ImportSHMBuffer();
+                        }
+                    }
+                    return _textureId != 0;
+                }
+
+                void Deinitialize()
+                {
+                    ASSERT(eglGetCurrentContext() != EGL_NO_CONTEXT);
+
+                    if (_textureId != 0) {
+                        glDeleteTextures(1, &_textureId);
+                        _textureId = 0;
+                    }
+
+                    if (_image != EGL_NO_IMAGE) {
+                        _parent.Egl().DestroyImage(_image);
+                        _image = EGL_NO_IMAGE;
+                    }
                 }
 
             private:
@@ -927,11 +921,6 @@ namespace Compositor {
                 void ImportDMABuffer()
                 {
                     bool external(false);
-
-                    Renderer::EGL::ContextBackup backup;
-
-                    _parent.Egl().SetCurrent();
-                    ASSERT(eglGetError() == EGL_SUCCESS);
 
                     GLES_DEBUG_SCOPE("ImportDMABuffer");
 
@@ -985,9 +974,6 @@ namespace Compositor {
 
                         GLPixelFormat glFormat = ConvertFormat(_buffer->Format());
 
-                        Renderer::EGL::ContextBackup backup;
-                        _parent.Egl().SetCurrent();
-
                         GLES_DEBUG_SCOPE("ImportPixelBuffer");
 
                         glGenTextures(1, &_textureId);
@@ -1017,10 +1003,12 @@ namespace Compositor {
 
             private:
                 GLES& _parent;
+                const ITexture::Id _id;
                 GLenum _target;
                 GLuint _textureId;
                 EGLImageKHR _image;
                 Core::ProxyType<Exchange::IGraphicsBuffer> _buffer;
+                std::atomic<bool> _invalidated;
             }; //  class GLESTexture
 
         public:
@@ -1034,6 +1022,9 @@ namespace Compositor {
                 , _viewportHeight(0)
                 , _programs()
                 , _rendering(false)
+                , _nextTextureId(1)
+                , _textures()
+                , _pendingSync(EGL_NO_SYNC)
             {
                 _egl.SetCurrent();
 
@@ -1072,20 +1063,16 @@ namespace Compositor {
             virtual ~GLES()
             {
                 _egl.SetCurrent();
-#ifdef __DEBUG__
+                _egl.DestroySync(_pendingSync);
 
+#ifdef __DEBUG__
                 const std::string glExtensions(reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS)));
 
                 if (API::HasExtension(glExtensions, "GL_KHR_debug")) {
                     glDisable(GL_DEBUG_OUTPUT_KHR);
                     _gles.glDebugMessageCallbackKHR(nullptr, nullptr);
                 }
-
 #endif
-
-                // glFinish();
-                // glFlush();
-                // glGetError();
 
                 _egl.ResetCurrent();
 
@@ -1129,6 +1116,8 @@ namespace Compositor {
 
                 GLES_DEBUG_SCOPE("GLES::Begin");
 
+                ProcessPending();
+
                 _rendering = true;
 
                 if (_gles.glGetGraphicsResetStatusKHR != nullptr) {
@@ -1170,9 +1159,47 @@ namespace Compositor {
                     }
                 }
 
-                // nothing to do
+                if (_pendingSync != EGL_NO_SYNC) {
+                    _egl.DestroySync(_pendingSync);
+                }
+
+                _pendingSync = _egl.CreateSync();
+
+                if (_pendingSync == EGL_NO_SYNC) {
+                    TRACE(Trace::Error, ("Failed to create GPU fence: 0x%x", eglGetError()));
+                }
 
                 _rendering = false;
+            }
+
+            uint32_t Finish(uint32_t timeoutMs) override
+            {
+                glFlush();
+
+                uint32_t result = Core::ERROR_NONE;
+
+                if (_pendingSync == EGL_NO_SYNC) {
+                    TRACE(Trace::GL, ("No GPU fence pending"));
+                    return Core::ERROR_NONE;
+                }
+
+                // Convert ms to ns for EGL API
+                const uint64_t timeoutNs = static_cast<uint64_t>(timeoutMs) * 1000000;
+
+                EGLint syncResult = _egl.WaitSync(_pendingSync, timeoutNs);
+                _egl.DestroySync(_pendingSync);
+
+                if (syncResult != EGL_CONDITION_SATISFIED) {
+                    if (syncResult == EGL_TIMEOUT_EXPIRED) {
+                        TRACE(Trace::Error, ("GPU fence timeout after %u ms", timeoutMs));
+                        result = Core::ERROR_TIMEDOUT;
+                    } else {
+                        TRACE(Trace::Error, ("GPU fence wait failed: 0x%x", eglGetError()));
+                        result = Core::ERROR_GENERAL;
+                    }
+                }
+
+                return result;
             }
 
             PUSH_WARNING(DISABLE_WARNING_OVERLOADED_VIRTUALS)
@@ -1206,23 +1233,42 @@ namespace Compositor {
                 return (Core::ProxyType<IFrameBuffer>(Core::ProxyType<GLESFrameBuffer>::Create(*this, buffer)));
             };
 
-            Core::ProxyType<ITexture> Texture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
+            Core::ProxyType<ITexture> CreateTexture(const Core::ProxyType<Exchange::IGraphicsBuffer>& buffer) override
             {
-                return (Core::ProxyType<ITexture>(Core::ProxyType<GLESTexture>::Create(*this, buffer)));
-            };
+                ITexture::Id id = _nextTextureId++;
 
-            uint32_t Render(const Core::ProxyType<ITexture>& texture, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
+                Core::ProxyType<GLESTexture> texture = _textures.Instance<GLESTexture>(id, *this, buffer, id);
+
+                if (texture.IsValid()) {
+                    _queueLock.Lock();
+                    _importQueue.push_back(texture);
+                    _queueLock.Unlock();
+                }
+
+                return Core::ProxyType<ITexture>(texture);
+            }
+
+            void DestroyTexture(ITexture::Id id) override
             {
-                GLES_DEBUG_SCOPE("GLES::Render");
-                ASSERT((_rendering == true) && (_egl.IsCurrent() == true) && (texture != nullptr));
+                auto texture = _textures.Find(id);
+                if (texture.IsValid()) {
+                    bool wasInvalidated = texture->Invalidate();
+                    if (!wasInvalidated) { // Only queue once
+                        _queueLock.Lock();
+                        _removeQueue.push_back(texture);
+                        _queueLock.Unlock();
+                    }
+                    texture.Release();
+                }
+            }
 
-                const auto index = std::find(_textures.begin(), _textures.end(), &(*texture));
-
+            uint32_t Render(const ITexture::Id id, const Exchange::IComposition::Rectangle& region, const Matrix transformation, const float alpha) override
+            {
                 uint32_t result(Core::ERROR_BAD_REQUEST);
 
-                if (index != _textures.end()) {
-                    const GLESTexture* glesTexture = reinterpret_cast<const GLESTexture*>(*index);
+                Core::ProxyType<GLESTexture> glesTexture = _textures.Find(id);
 
+                if (glesTexture.IsValid()) {
                     Matrix gl_matrix;
                     Transformation::Multiply(gl_matrix, _projection, transformation);
                     Transformation::Multiply(gl_matrix, Transformation::Transformations[Transformation::TRANSFORM_NORMAL], transformation);
@@ -1315,21 +1361,23 @@ namespace Compositor {
                 return glGetError() == GL_NO_ERROR;
             }
 
-            void Add(IRenderer::ITexture* texture)
+            void ProcessPending()
             {
-                auto index = std::find(_textures.begin(), _textures.end(), texture);
+                _queueLock.Lock();
+                std::vector<Core::ProxyType<GLESTexture>> importWork = std::move(_importQueue);
+                std::vector<Core::ProxyType<GLESTexture>> removeWork = std::move(_removeQueue);
+                _queueLock.Unlock();
 
-                ASSERT(index == _textures.end());
+                for (auto& texture : importWork) {
+                    if (texture.IsValid()) {
+                        texture->Initialize();
+                    }
+                }
 
-                _textures.emplace_back(texture);
-            }
-
-            void Remove(IRenderer::ITexture* texture)
-            {
-                auto index = std::find(_textures.begin(), _textures.end(), texture);
-
-                if (index != _textures.end()) {
-                    _textures.erase(index);
+                for (auto& texture : removeWork) {
+                    if (texture.IsValid()) {
+                        texture->Deinitialize();
+                    }
                 }
             }
 
@@ -1337,8 +1385,6 @@ namespace Compositor {
             {
                 return _programs;
             }
-
-            using TextureRegister = std::list<IRenderer::ITexture*>;
 
         private:
             static API::GL _gles;
@@ -1350,7 +1396,12 @@ namespace Compositor {
             Matrix _projection;
             ProgramRegistry _programs;
             mutable bool _rendering;
-            TextureRegister _textures;
+            std::atomic<ITexture::Id> _nextTextureId;
+            Core::ProxyMapType<ITexture::Id, GLESTexture> _textures;
+            EGLSync _pendingSync;
+            std::vector<Core::ProxyType<GLESTexture>> _importQueue;
+            std::vector<Core::ProxyType<GLESTexture>> _removeQueue;
+            Core::CriticalSection _queueLock;
         }; // class GLES
 
         API::GL GLES::_gles;
