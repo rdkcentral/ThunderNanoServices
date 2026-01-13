@@ -640,7 +640,7 @@ namespace Plugin {
                             observer->BindingChanged(_macAddress, false);
                         }
 
-                        _macAddress = {};
+                        _macAddress = Core::MACAddress();
                     }
                     else {
                         result = Core::ERROR_UNKNOWN_KEY;
