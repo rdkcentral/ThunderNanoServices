@@ -833,7 +833,7 @@ namespace Plugin
         uint32_t Interfaces(Exchange::INetworkControl::IStringIterator*& interfaces /* @out */) const override
         {
             uint32_t result = Core::ERROR_UNAVAILABLE;
-            std::list<string> interfaceList;
+            std::vector<string> interfaceList;
             Interfaces(interfaceList);
 
             if (interfaceList.empty() != true) {
@@ -931,7 +931,7 @@ namespace Plugin
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
             _adminLock.Lock();
-            std::list<Exchange::INetworkControl::NetworkInfo> networksInfo;
+            std::vector<Exchange::INetworkControl::NetworkInfo> networksInfo;
             if (interface.empty() != true) {
                 const auto entry = _dhcpInterfaces.find(interface);
                 if (entry != _dhcpInterfaces.end()) {
@@ -967,7 +967,9 @@ namespace Plugin
             NameServers servers;
             DNS(servers);
 
-            std::list<string> dnsList;
+            std::vector<string> dnsList;
+            dnsList.reserve(servers.size());
+
             for (const Core::NodeId& entry : servers) {
 
                 dnsList.push_back(entry.HostAddress());
@@ -1435,14 +1437,16 @@ namespace Plugin
             }
         }
 
-        void Interfaces(std::list<string>& interfaces) const
+        void Interfaces(std::vector<string>& interfaces) const
         {
+            interfaces.reserve(_info.size());
+
             for (const auto& info : _info) {
                  interfaces.push_back(info.first);
             }
         }
 
-        uint32_t NetworkInfo(const Networks::const_iterator& engine, std::list<Exchange::INetworkControl::NetworkInfo>& networksInfo) const
+        uint32_t NetworkInfo(const Networks::const_iterator& engine, std::vector<Exchange::INetworkControl::NetworkInfo>& networksInfo) const
         {
             Exchange::INetworkControl::NetworkInfo networkInfo;
             networkInfo.address = engine->second.Info().Address().HostAddress();
