@@ -1,0 +1,14 @@
+{
+    "$schema": "plugin.schema.json",
+    "info": {
+      "title": "Input Switch Plugin",
+      "callsign": "InputSwitch",
+      "locator": "libWPEInputSwitch.so",
+      "status": "production",
+      "description": "The InputSwitch plugin allows switching between different input sources.",
+      "version": "1.0"
+    },
+    "interface": [
+      { "$ref": "{cppinterfacedir}/IInputSwitch.h" }
+    ]
+  }
