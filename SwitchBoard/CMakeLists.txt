@@ -37,16 +37,21 @@ endif()
 
 # This is a plugin so we need the Plugin configuration section.
 find_package(${NAMESPACE}Plugins REQUIRED)
-find_package(CompileSettingsDebug  REQUIRED)
+find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
     SwitchBoard.cpp
     Module.cpp)
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+        CXX_STANDARD 11
+        CXX_STANDARD_REQUIRED YES)
+target_compile_options (${MODULE_NAME} PRIVATE -Wno-psabi)
+
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        CompileSettingsDebug::CompileSettingsDebug)
+        CompileSettingsDebug::CompileSettingsDebug
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 # Library installation section
 string(TOLOWER ${NAMESPACE} STORAGENAME)
