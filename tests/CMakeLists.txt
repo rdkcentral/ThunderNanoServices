@@ -30,6 +30,7 @@ option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TESTTEXTOPTIONS "Utility to verify the name of JSONRPC functions" OFF)
 option(PLUGIN_TESTPRIORITYQUEUE "Utility to verify the PriorityQueue implementation" OFF)
+option(PLUGIN_TESTCHANNELCLOSE "Server and client to test COM-RPC channel close functionality" OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
@@ -56,3 +57,10 @@ endif()
 if(PLUGIN_TESTPRIORITYQUEUE)
     add_subdirectory(TestPriorityQueue)
 endif()
+
+if(PLUGIN_TESTCHANNELCLOSE)
+  add_subdirectory(TestChannelClosedInvoke/COMRPCClient)
+  add_subdirectory(TestChannelClosedInvoke/PluginServer)
+endif()
+
+
