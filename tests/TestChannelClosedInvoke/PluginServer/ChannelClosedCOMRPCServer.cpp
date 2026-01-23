@@ -63,7 +63,13 @@ namespace Plugin {
     const string ChannelClosedCOMRPCServer::Initialize(PluginHost::IShell* service) /* override */
     {
         ASSERT(service != nullptr);
+
+        #ifdef __WINDOWS__
         _comserver = Core::ProxyType<COMServer>::Create(Core::NodeId("127.0.0.1:62010"), service->ProxyStubPath());
+        #else
+        _comserver = Core::ProxyType<COMServer>::Create(Core::NodeId("/tmp/communicator"), service->ProxyStubPath());
+        #endif
+
         return (EMPTY_STRING);
     }
 
