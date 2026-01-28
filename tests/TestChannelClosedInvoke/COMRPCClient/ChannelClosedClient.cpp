@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 
                 Core::ProxyType<RPC::CommunicatorClient> client = Core::ProxyType<RPC::CommunicatorClient>::Create(endPoint, Core::ProxyType<Core::IIPCServer>(Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create()));
 
-                QualityAssurance::ITestChannelClosed* testinterface = client->Open<QualityAssurance::ITestChannelClosed>(_T("TestChannelClosed"));
+                QualityAssurance::ITestChannelClosed* testinterface = client->Open<QualityAssurance::ITestChannelClosed>(_T("TestChannelClosed"), ~0, 2000);
 
                 if (testinterface == nullptr) {
                     printf("Could not acquire testinterface\n");
