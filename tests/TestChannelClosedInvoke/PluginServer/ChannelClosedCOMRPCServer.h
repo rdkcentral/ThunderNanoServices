@@ -66,7 +66,7 @@ namespace Plugin {
         private:
         };
 
-    class COMServer : public RPC::Communicator {
+        class COMServer : public RPC::Communicator {
         public:
             COMServer(const COMServer&) = delete;
             COMServer& operator=(const COMServer&) = delete;
@@ -91,6 +91,27 @@ namespace Plugin {
 
         private:
             void* Acquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override;
+        };
+
+        class Config : public Core::JSON::Container {
+        public:
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+            Config()
+                : Core::JSON::Container()
+            #ifdef __WINDOWS__
+                , Connector("127.0.0.1:62010")
+            #else
+                , Connector("/tmp/ChannelCloseInvoke")
+            #endif
+            {
+                Add(_T("connector"), &Connector);
+            }
+
+            ~Config() = default;
+
+        public:
+            Core::JSON::String Connector;
         };
 
     public:

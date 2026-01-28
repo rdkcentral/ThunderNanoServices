@@ -1,2 +1,4 @@
 startmode = "Activated"
 
+configuration = JSON();
+configuration.add("connector", "/tmp/ChannelClosedInvoke")

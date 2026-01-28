@@ -19,7 +19,6 @@
 
 #include "ChannelClosedCOMRPCServer.h"
 
-
 namespace Thunder {
 
 namespace Plugin {
@@ -37,7 +36,6 @@ namespace Plugin {
             {}
         );
     }
-
 
     void* ChannelClosedCOMRPCServer::COMServer::Acquire(const string& className VARIABLE_IS_NOT_USED, const uint32_t interfaceId, const uint32_t versionId) 
     {
@@ -64,13 +62,19 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
-        #ifdef __WINDOWS__
-        _comserver = Core::ProxyType<COMServer>::Create(Core::NodeId("127.0.0.1:62010"), service->ProxyStubPath());
-        #else
-        _comserver = Core::ProxyType<COMServer>::Create(Core::NodeId("/tmp/communicator"), service->ProxyStubPath());
-        #endif
+        std::string result{ EMPTY_STRING };
 
-        return (EMPTY_STRING);
+        Config config;
+
+        /* bool */ config.FromString(service->ConfigLine());
+
+        _comserver = Core::ProxyType<COMServer>::Create(Core::NodeId(config.Connector.Value().data()), service->ProxyStubPath());
+
+        if (_comserver.IsValid() != true) {
+            result = "Unable to Initialize ChannelClosedCOMRPCServer. Check the configuration!";
+        }
+
+        return (result);
     }
 
     void ChannelClosedCOMRPCServer::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED) /* override */
