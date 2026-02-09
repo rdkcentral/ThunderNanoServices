@@ -201,13 +201,11 @@ namespace Compositor {
                         _connectors.Visit([&](const string& /*name*/, const Core::ProxyType<Connector> connector) {
                             connector->Presented(0, 0); // notify connector implementation the buffer failed to display.
                         });
+                    } else {
+                        if (doModeSet) {
+                            _firstCommit = false;
+                        }
                     }
-
-                    if (doModeSet) {
-                        _firstCommit = false;
-                    }
-
-                    TRACE_GLOBAL(Trace::Information, ("Committed connectors: %u", result));
                 } else {
                     TRACE_GLOBAL(Trace::Information, ("Commit in progress, skipping commit request"));
                     result = Core::ERROR_INPROGRESS;
@@ -228,8 +226,6 @@ namespace Compositor {
                             presentationTimestamp.tv_nsec = useconds * 1000;
 
                             connector->Presented(sequence, Core::Time(presentationTimestamp).Ticks());
-                            // TODO: Check with Bram the intention of the Release()
-                            // connector->Release();
 
                             TRACE(Trace::Backend, ("Pageflip finished for %s", name.c_str()));
                         }
