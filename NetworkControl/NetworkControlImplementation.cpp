@@ -713,7 +713,7 @@ namespace Plugin
             return Core::ERROR_NONE;
         }
 
-        uint32_t Unregister(Exchange::INetworkControl::INotification* notification) override
+        uint32_t Unregister(const Exchange::INetworkControl::INotification* notification) override
         {
             ASSERT(notification);
 

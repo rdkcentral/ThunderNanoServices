@@ -1060,7 +1060,7 @@ namespace Plugin {
                 }
             }
 
-            void Unregister(PluginHost::IShell* service)
+            void Unregister(const PluginHost::IShell* service)
             {
                 ASSERT(service != nullptr);
 

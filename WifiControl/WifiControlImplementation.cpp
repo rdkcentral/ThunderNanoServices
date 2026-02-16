@@ -903,7 +903,7 @@ namespace Plugin
             return Core::ERROR_NONE;
         }
 
-        uint32_t Unregister(Exchange::IWifiControl::INotification* notification) override
+        uint32_t Unregister(const Exchange::IWifiControl::INotification* notification) override
         {
             ASSERT(notification);
             _adminLock.Lock();

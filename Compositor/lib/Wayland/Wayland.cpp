@@ -373,7 +373,7 @@ namespace Plugin {
             }
             g_implementationLock.Unlock();
         }
-        /* virtual */ void Unregister(Exchange::IComposition::INotification* notification) override
+        /* virtual */ void Unregister(const Exchange::IComposition::INotification* notification) override
         {
             ASSERT(notification != nullptr);
 

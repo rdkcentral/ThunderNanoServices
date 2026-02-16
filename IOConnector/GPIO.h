@@ -79,7 +79,7 @@ namespace GPIO {
                 _parent.Unlock();
             }
 
-            void Unregister(IInputPin::INotification* sink) 
+            void Unregister(const IInputPin::INotification* sink) 
             {
                 ASSERT(sink != nullptr);
 
@@ -223,7 +223,7 @@ namespace GPIO {
         // IInput pin functionality. Get triggered by an IOPin if a marker has been reached
         // ---------------------------------------------------------------------------------
         void Register(IInputPin::INotification* sink) override;
-        void Unregister(IInputPin::INotification* sink) override;
+        void Unregister(const IInputPin::INotification* sink) override;
 
         void AddMarker(const uint32_t marker) override;
         void RemoveMarker(const uint32_t marker) override;

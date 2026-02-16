@@ -413,7 +413,7 @@ namespace Plugin {
 
         // ISwitchBoard interface
         void Register(Exchange::ISwitchBoard::INotification* notification) override;
-        void Unregister(Exchange::ISwitchBoard::INotification* notification) override;
+        void Unregister(const Exchange::ISwitchBoard::INotification* notification) override;
         bool IsActive(const string& callsign) const override;
         uint32_t Activate(const string& callsign) override;
         uint32_t Deactivate(const string& callsign) override;
