@@ -65,7 +65,6 @@ option(PLUGIN_WEBSERVER "Include WebServer plugin" OFF)
 option(PLUGIN_WEBSHELL "Include WebShell plugin" OFF)
 option(PLUGIN_WIFICONTROL "Include WifiControl plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
-option(PLUGIN_PLUGININITIALIZERSERVICE "Include PluginInitializerService plugin" OFF)
 
 
 if(ENABLE_STRICT_COMPILER_SETTINGS)
@@ -231,10 +230,6 @@ if(PLUGIN_SYSTEMCOMMANDS)
     add_subdirectory(SystemCommands)
 endif()
 
-if(PLUGIN_SYSTEMDCONNECTOR)
-    add_subdirectory(SystemdConnector)
-endif()
-
 if(PLUGIN_SWITCHBOARD)
     add_subdirectory(SwitchBoard)
 endif()
@@ -273,10 +268,6 @@ endif()
 
 if(PLUGIN_FILETRANSFER)
     add_subdirectory(FileTransfer)
-endif()
-
-if(PLUGIN_PLUGININITIALIZERSERVICE)
-    add_subdirectory(PluginInitializerService)
 endif()
 
 add_subdirectory(examples)
