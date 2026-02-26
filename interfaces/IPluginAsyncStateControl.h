@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2025 RDK Management
+ * Copyright 2025 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,13 +47,13 @@ namespace Exchange {
 
         // @brief Activate a plugin. Passed callbcak will be called on failure or success
         // @param callsign: callsign of plugin to activate
-        // @param maxnumberretries: maximum number of retries to initialize the plugin (default used when not specified)
-        // @param delay: delay to be used (in ms) between initialization retries (default used when not specified)
+        // @param maxnumberretries: maximum number of retries to initialize the plugin (default used when 0 is passed)
+        // @param delay: delay to be used (in ms) between initialization retries (default used when 0 is passed)
         // @param cb: callback interface called on success or failure
         // @retval ERROR_INPROGRESS Activation request is already in progress for this callsign
         // @retval ERROR_ILLEGAL_STATE Plugin with this callsign is in an invalid state for it to be able to be started (e.g. DESTROYED or UNAVAILABLE)
         // @retval ERROR_NOT_EXIST Plugin is unknown to Thunder (at this moment in case of Dynamic plugins)
-        virtual Core::hresult Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IActivationCallback* const cb) = 0;
+        virtual Core::hresult Activate(const string& callsign, const uint8_t& maxnumberretries, const uint16_t& delay, IActivationCallback* const cb) = 0;
 
         // @brief Abort a previously started Activate request
         // @retval ERROR_NOT_EXIST There is no ongoing activation request 

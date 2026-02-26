@@ -17,6 +17,7 @@
 
 cmake_minimum_required(VERSION 3.15)
 
+include(GNUInstallDirs)
 project(ExtensionsMarshalling
         VERSION 5.0.0
 	DESCRIPTION "Component that abstracts the logic to transfer and receive COM-RPC objects of Thunder Extensions"
