@@ -28,6 +28,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_PLUGININITIALIZERSERVICE_STARTMODE "Activated" CACHE STRING "Automatically start PluginInitializerService plugin")
+set(PLUGIN_PLUGININITIALIZERSERVICE_STARTUPORDER "1" CACHE STRING "Set the Startup order to be first")
 set(PLUGIN_PLUGININITIALIZERSERVICE_MAXPARALLEL "2" CACHE STRING "Maximum number of plugins that can be started in parallel")
 set(PLUGIN_PLUGININITIALIZERSERVICE_DEFAULTMAXRETRIES "10" CACHE STRING "Default maximum number of retries used starting a plugin")
 set(PLUGIN_PLUGININITIALIZERSERVICE_DEFAULTDELAY "500" CACHE STRING "Default delay between retries starting a plugin (ms)")
