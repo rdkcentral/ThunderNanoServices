@@ -22,7 +22,7 @@ project(ExtensionsMarshalling
 	DESCRIPTION "Component that abstracts the logic to transfer and receive COM-RPC objects of Thunder Extensions"
         LANGUAGES CXX)
 
-find_package(Thunder)
+find_package(WPEFramework)
 
 find_package(CompileSettingsDebug REQUIRED)
 find_package(ProxyStubGenerator REQUIRED)
@@ -35,6 +35,7 @@ if(NOT GENERATOR_SEARCH_PATH)
     set(GENERATOR_SEARCH_PATH ${CMAKE_SYSROOT}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE})
 endif()
 
+message("GENERATOR_SEARCH_PATH ${GENERATOR_SEARCH_PATH}")
 separate_arguments(INTERFACES_PATTERNS)
 file(GLOB INTERFACES_HEADERS ${INTERFACES_PATTERNS})
 ProxyStubGenerator(INPUT "${INTERFACES_HEADERS}" OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/generated" INCLUDE_PATH ${GENERATOR_SEARCH_PATH})

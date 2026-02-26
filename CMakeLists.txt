@@ -18,7 +18,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(Extensions)
 
-find_package(Thunder)
+find_package(WPEFramework)
 
 option(EXT_PLUGIN_INITIALIZER "Include Plugin Initializer Extension" OFF)
 option(EXT_SYSTEMD_CONNECTOR "Include Systemd Connector Extension" OFF)

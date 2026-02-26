@@ -20,7 +20,7 @@
 #pragma once
 #include "Module.h"
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Exchange {
 
     struct EXTERNAL IPluginAsyncStateControl : virtual public Core::IUnknown {

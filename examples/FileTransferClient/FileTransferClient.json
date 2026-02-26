@@ -1,7 +1,0 @@
-{
-  "filepath":"./messages",
-  "destination":{
-   "port":2202,
-   "binding":"0.0.0.0"
-  }
-}

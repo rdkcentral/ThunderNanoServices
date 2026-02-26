@@ -19,7 +19,7 @@ project(PluginInitializerService)
 
 cmake_minimum_required(VERSION 3.15)
 
-find_package(Thunder)
+find_package(WPEFramework)
 
 project_version(1.0.0)
 

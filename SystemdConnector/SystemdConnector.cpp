@@ -21,7 +21,7 @@
 
 #include <systemd/sd-daemon.h>
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
 
     namespace {
@@ -76,4 +76,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace Thunder
+} // namespace WPEFramework

@@ -3,7 +3,7 @@
   "info": {
     "title": "PluginInitializerService Plugin",
     "callsign": "PluginInitializerService",
-    "locator": "libThunderPluginInitializerService.so",
+    "locator": "libWPEFrameworkPluginInitializerService.so",
     "status": "development",
     "description": [
     "Service that can be used to activate plugin(s) asynchronously"

@@ -19,7 +19,7 @@
 
 #include "PluginInitializerService.h"
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
     
     namespace {
@@ -44,22 +44,14 @@ namespace Plugin {
 
         Config config;
         config.FromString(service->ConfigLine());
-        const Exchange::Controller::IMetadata* metadata = service->QueryInterfaceByCallsign<Exchange::Controller::IMetadata>(_T(""));
-        ASSERT(metadata != nullptr);
-
-        Exchange::Controller::IMetadata::Data::BuildInfo buildinfo{};
-        VARIABLE_IS_NOT_USED Core::hresult result = metadata->BuildInfo(buildinfo);
-        metadata->Release();
-        metadata = nullptr;
-        ASSERT(result == Core::ERROR_NONE);
 
         if (config.MaxParallel.IsSet() == true) {
             _maxparallel = config.MaxParallel.Value();
-            if ((_maxparallel == 0) || (_maxparallel > (buildinfo.ThreadPoolCount-1))) {
+            if (_maxparallel == 0)  {
                 message = _T("maxparallel configured incorrectly");
             }
         } else {
-            _maxparallel = ((buildinfo.ThreadPoolCount / 2) > 0 ? (buildinfo.ThreadPoolCount / 2) : 1 );
+            _maxparallel = 2;
         }
         _maxretries = config.MaxRetries.Value();
         _delay = config.Delay.Value();
@@ -94,9 +86,10 @@ namespace Plugin {
     // note we will not specifically handle the connection from the client and the plugin being closed after we stored the callback.
     // worst case: the connection being closed without abort called but in that case we will call the callback on a dead proxy and then 
     // release it, so no leaks (no need to go through the trouble to handle the dangling proxies here)
-    Core::hresult PluginInitializerService::Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IPluginAsyncStateControl::IActivationCallback* const cb)
+    Core::hresult PluginInitializerService::Activate(const string& callsign, const uint8_t& maxnumberretries, const uint16_t& delay, IPluginAsyncStateControl::IActivationCallback* const cb)
     {
         TRACE(Trace::Information, (_T("Plugin Activate request received for plugin [%s]"), callsign.c_str()));
+        SYSLOG(Logging::Startup, (_T("Plugin Activate request received for plugin [%s]"), callsign.c_str()));
 
         Core::hresult result = Core::ERROR_NONE;
 
@@ -110,26 +103,32 @@ namespace Plugin {
                 (state == PluginHost::IShell::PRECONDITION) ) // note PRECONDITION can be both reached during deactivation and activation, for the purpose here it does not matter, we only have to monitor if the activation succeeds and report back or monitor deinitialization failure and retry
             {
                 TRACE(Trace::Information, (_T("Plugin Activate request received for plugin [%s] in state [%s]"), callsign.c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
+                SYSLOG(Logging::Startup, (_T("Plugin Activate request received for plugin [%s] in state [%s]"), callsign.c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
                 if (NewPluginStarter(requestedpluginShell
-                                    , (maxnumberretries.IsSet() == true ? maxnumberretries.Value() : _maxretries)
-                                    , (delay.IsSet() == true ? delay.Value() : _delay)
+                                    , (maxnumberretries > 0 ? maxnumberretries : _maxretries)
+                                    , (delay > 0 ? delay : _delay)
                                     , cb) == true) {
                     TRACE(Trace::DetailedInfo, (_T("Plugin start entry created for plugin [%s]"), callsign.c_str()));
+                    SYSLOG(Logging::Startup, (_T("Plugin start entry created for plugin [%s]"), callsign.c_str()));
                 } else {
                     TRACE(Trace::Warning, (_T("Plugin start entry not created for plugin [%s], there was already a pending request for this plugin"), callsign.c_str()));
+                    SYSLOG(Logging::Startup, (_T("Plugin start entry not created for plugin [%s], there was already a pending request for this plugin"), callsign.c_str()));
                     result = Core::ERROR_INPROGRESS;
                 }
             } else if ((state == PluginHost::IShell::ACTIVATED) || 
                        (state == PluginHost::IShell::HIBERNATED)) {
                 TRACE(Trace::Warning, (_T("Plugin Activate received for plugin [%s] that was already active, state [%s]"), callsign.c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
+                SYSLOG(Logging::Startup, (_T("Plugin Activate received for plugin [%s] that was already active, state [%s]"), callsign.c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
 
                 if (cb != nullptr)
                 {
                     TRACE(Trace::DetailedInfo, (_T("Result callback success called for plugin [%s]"), callsign.c_str()));
+                    SYSLOG(Logging::Startup, (_T("Result callback success called for plugin [%s]"), callsign.c_str()));
                     cb->Finished(callsign, Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS, 0);
                 }
             } else { // DESTROYED || UNAVAILABLE
                 TRACE(Trace::Error, (_T("Could not start activating plugin [%s] as it is in an illegal state [%s]"), callsign.c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
+                SYSLOG(Logging::Startup, (_T("Could not start activating plugin [%s] as it is in an illegal state [%s]"), callsign.c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
                 result = Core::ERROR_ILLEGAL_STATE;
             }
 
@@ -138,6 +137,7 @@ namespace Plugin {
 
         } else {
             TRACE(Trace::Error, (_T("Could not start activating plugin [%s] as it is unknown"), callsign.c_str()));
+            SYSLOG(Logging::Startup, (_T("Could not start activating plugin [%s] as it is unknown"), callsign.c_str()));
             result = Core::ERROR_NOT_EXIST;        
         }
 
@@ -147,14 +147,17 @@ namespace Plugin {
     Core::hresult PluginInitializerService::AbortActivate(const string& callsign)
     {
         TRACE(Trace::Information, (_T("Plugin Abort Activate request received for plugin [%s]"), callsign.c_str()));
+        SYSLOG(Logging::Startup, (_T("Plugin Abort Activate request received for plugin [%s]"), callsign.c_str()));
 
         Core::hresult result = Core::ERROR_NONE;
 
         if (CancelPluginStarter(callsign) == true) {
             TRACE(Trace::DetailedInfo, (_T("Plugin Activate request was canceled for plugin [%s]"), callsign.c_str()));
+            SYSLOG(Logging::Startup, (_T("Plugin Activate request was canceled for plugin [%s]"), callsign.c_str()));
         } else {
             // note this is not necessarily an error, the abort request could just have crossed the successful activation (or failure to do so for that matter) so it was just removed from the list
             TRACE(Trace::Warning, (_T("Plugin Abort Activate request: plugin was not in activation list [%s]"), callsign.c_str()));
+            SYSLOG(Logging::Startup, (_T("Plugin Abort Activate request: plugin was not in activation list [%s]"), callsign.c_str()));
             result = Core::ERROR_NOT_EXIST;
         }
 
@@ -162,4 +165,4 @@ namespace Plugin {
     }
     
 } // Plugin
-} // Thunder
+} // WPEFramework

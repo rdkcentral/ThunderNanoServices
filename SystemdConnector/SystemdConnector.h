@@ -22,7 +22,7 @@
 
 #include "Module.h"
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
 
     class SystemdConnector : public PluginHost::IPlugin {
@@ -48,6 +48,6 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace Thunder
+} // namespace WPEFramework
 
 #endif // SYSTEMDCONNECTOR_H
